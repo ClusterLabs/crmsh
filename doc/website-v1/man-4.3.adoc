@@ -1,0 +1,5160 @@
+:man source:   crm
+:man version:  4.0.0
+:man manual:   crmsh documentation
+
+crm(8)
+======
+
+NAME
+----
+crm - Pacemaker command line interface for configuration and management
+
+
+SYNOPSIS
+--------
+*crm* [OPTIONS] [SUBCOMMAND ARGS...]
+
+
+[[topics_Description,Program description]]
+DESCRIPTION
+-----------
+The `crm` shell is a command-line based cluster configuration and
+management tool. Its goal is to assist as much as possible with the
+configuration and maintenance of Pacemaker-based High Availability
+clusters.
+
+For more information on Pacemaker itself, see http://clusterlabs.org/.
+
+`crm` works both as a command-line tool to be called directly from the
+system shell, and as an interactive shell with extensive tab
+completion and help.
+
+The primary focus of the `crm` shell is to provide a simplified and
+consistent interface to Pacemaker, but it also provides tools for
+managing the creation and configuration of High Availability clusters
+from scratch. To learn more about this aspect of `crm`, see the
+`cluster` section below.
+
+The `crm` shell can be used to manage every aspect of configuring and
+maintaining a cluster. It provides a simplified line-based syntax on
+top of the XML configuration format used by Pacemaker, commands for
+starting and stopping resources, tools for exploring the history of a
+cluster including log scraping and a set of cluster scripts useful for
+automating the setup and installation of services on the cluster
+nodes.
+
+The `crm` shell is line oriented: every command must start and finish
+on the same line. It is possible to use a continuation character (+\+)
+to write one command in two or more lines. The continuation character
+is commonly used when displaying configurations.
+
+[[topics_CommandLine,Command line options]]
+OPTIONS
+-------
+*-f, --file*='FILE'::
+    Load commands from the given file. If a dash +-+ is used in place
+    of a file name, `crm` will read commands from the shell standard
+    input (`stdin`).
+
+*-c, --cib*='CIB'::
+    Start the session using the given shadow CIB file.
+    Equivalent to +cib use <CIB>+.
+
+*-D, --display=*'OUTPUT_TYPE'::
+    Choose one of the output options: +plain+, +color-always+, +color+,
+    or +uppercase+. The default is +color+ if the terminal emulation
+    supports colors. Otherwise, +plain+ is used.
+
+*-F, --force*::
+    Make `crm` proceed with applying changes where it would normally
+    ask the user to confirm before proceeding. This option is mainly
+    useful in scripts, and should be used with care.
+
+*-w, --wait*::
+    Make `crm` wait for the cluster transition to finish (for the
+    changes to take effect) after each processed line.
+
+*-H, --history*='DIR|FILE|SESSION'::
+    A directory or file containing a cluster report to load
+    into the `history` commands, or the name of a previously
+    saved history session.
+
+*-h, --help*::
+    Print help page.
+
+*--version*::
+    Print crmsh version and build information (Mercurial Hg changeset
+    hash).
+
+*-d, --debug*::
+    Print verbose debugging information.
+
+*-R, --regression-tests*::
+    Enables extra verbose trace logging used by the regression
+    tests. Logs all external calls made by crmsh.
+
+*--scriptdir*='DIR'::
+    Extra directory where crm looks for cluster scripts, or a list of
+    directories separated by semi-colons (e.g. +/dir1;/dir2;etc.+).
+
+*-o, --opt*='OPTION=VALUE'::
+     Set crmsh option temporarily. If the options are saved using
+     +options save+ then the value passed here will also be saved.
+     Multiple options can be set by using +-o+ multiple times.
+
+[[topics_Introduction,Introduction]]
+== Introduction
+
+This section of the user guide covers general topics about the user
+interface and describes some of the features of `crmsh` in detail.
+
+[[topics_Introduction_Interface,User interface]]
+=== User interface
+
+The main purpose of `crmsh` is to provide a simple yet powerful
+interface to the cluster stack. There are two main modes of operation
+with the user interface of `crmsh`:
+
+* Command line (single-shot) use - Use `crm` as a regular UNIX command
+  from your usual shell. `crm` has full bash completion built in, so
+  using it in this manner should be as comfortable and familiar as
+  using any other command-line tool.
+
+* Interactive mode - By calling `crm` without arguments, or by calling
+  it with only a sublevel as argument, `crm` enters the interactive
+  mode. In this mode, it acts as its own command shell, which
+  remembers which sublevel you are currently in and allows for rapid
+  and convenient execution of multiple commands within the same
+  sublevel. This mode also has full tab completion, as well as
+  built-in interactive help and syntax highlighting.
+
+Here are a few examples of using `crm` both as a command-line tool and
+as an interactive shell:
+
+.Command line (one-shot) use:
+........
+# crm resource stop www_app
+........
+
+.Interactive use:
+........
+# crm
+crm(live)# resource
+crm(live)resource# unmanage tetris_1
+crm(live)resource# up
+crm(live)# node standby node4
+........
+
+.Cluster configuration:
+........
+# crm configure<<EOF
+  #
+  # resources
+  #
+  primitive disk0 iscsi \
+    params portal=192.168.2.108:3260 target=iqn.2008-07.com.suse:disk0
+  primitive fs0 Filesystem \
+    params device=/dev/disk/by-label/disk0 directory=/disk0 fstype=ext3
+  primitive internal_ip IPaddr params ip=192.168.1.101
+  primitive apache apache \
+    params configfile=/disk0/etc/apache2/site0.conf
+  primitive apcfence stonith:apcsmart \
+    params ttydev=/dev/ttyS0 hostlist="node1 node2" \
+    op start timeout=60s
+  primitive pingd pingd \
+    params name=pingd dampen=5s multiplier=100 host_list="r1 r2"
+  #
+  # monitor apache and the UPS
+  #
+  monitor apache 60s:30s
+  monitor apcfence 120m:60s
+  #
+  # cluster layout
+  #
+  group internal_www \
+    disk0 fs0 internal_ip apache
+  clone fence apcfence \
+    meta globally-unique=false clone-max=2 clone-node-max=1
+  clone conn pingd \
+    meta globally-unique=false clone-max=2 clone-node-max=1
+  location node_pref internal_www \
+    rule 50: #uname eq node1 \
+    rule pingd: defined pingd
+  #
+  # cluster properties
+  #
+  property stonith-enabled=true
+  commit
+EOF
+........
+
+The `crm` interface is hierarchical, with commands organized into
+separate levels by functionality. To list the available levels and
+commands, either execute +help <level>+, or, if at the top level of
+the shell, simply typing `help` will provide an overview of all
+available levels and commands.
+
+The +(live)+ string in the `crm` prompt signifies that the current CIB
+in use is the cluster live configuration. It is also possible to
+work with so-called <<topics_Features_Shadows,shadow CIBs>>. These are separate, inactive
+configurations stored in files, that can be applied and thereby
+replace the live configuration at any time.
+
+[[topics_Introduction_Completion,Tab completion]]
+=== Tab completion
+
+The `crm` makes extensive use of tab completion. The completion
+is both static (i.e. for `crm` commands) and dynamic. The latter
+takes into account the current status of the cluster or
+information from installed resource agents. Sometimes, completion
+may also be used to get short help on resource parameters. Here
+are a few examples:
+
+...............
+crm(live)resource# <TAB><TAB>
+ban           demote        maintenance   param         scores        trace 
+cd            failcount     manage        promote       secret        unmanage 
+cleanup       help          meta          quit          start         untrace 
+clear         locate        move          refresh       status        up 
+constraints   ls            operations    restart       stop          utilization
+
+crm(live)configure# primitive fence-1 <TAB><TAB>
+lsb:      ocf:      service:  stonith:  systemd:
+
+crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
+apcmaster                external/ippower9258     fence_legacy
+apcmastersnmp            external/kdumpcheck      ibmhmc
+apcsmart                 external/libvirt         ipmilan
+
+crm(live)configure# primitive fence-1 stonith:ipmilan params <TAB><TAB>
+auth=      hostname=  ipaddr=    login=     password=  port=      priv=
+
+crm(live)configure# primitive fence-1 stonith:ipmilan params auth=<TAB><TAB>
+auth* (string)
+    The authorization type of the IPMI session ("none", "straight", "md2", or "md5")
+...............
+
+`crmsh` also comes with bash completion usable directly from the
+system shell. This should be installed automatically with the command
+itself.
+
+[[topics_Introduction_Shorthand,Shorthand syntax]]
+=== Shorthand syntax
+
+When using the `crm` shell to manage clusters, you will end up typing
+a lot of commands many times over. Clear command names like
++configure+ help in understanding and learning to use the cluster
+shell, but is easy to misspell and is tedious to type repeatedly. The
+interactive mode and tab completion both help with this, but the `crm`
+shell also has the ability to understand a variety of shorthand
+aliases for all of the commands.
+
+For example, instead of typing `crm status`, you can type `crm st` or
+`crm stat`. Instead of `crm configure` you can type `crm cfg` or even
+`crm cf`. `crm resource` can be shorted as `crm rsc`, and so on.
+
+The exact list of accepted aliases is too long to print in full, but
+experimentation and typoes should help in discovering more of them.
+
+[[topics_Features,Features]]
+== Features
+
+The feature set of crmsh covers a wide range of functionality, and
+understanding how and when to use the various features of the shell
+can be difficult. This section of the guide describes some of the
+features and use cases of `crmsh` in more depth. The intention is to
+provide a deeper understanding of these features, but also to serve as
+a guide to using them.
+
+[[topics_Features_Shadows,Shadow CIB usage]]
+=== Shadow CIB usage
+
+A Shadow CIB is a normal cluster configuration stored in a file.
+They may be manipulated in much the same way as the _live_ CIB, with
+the key difference that changes to a shadow CIB have no effect on the
+actual cluster resources. An administrator may choose to apply any of
+them to the cluster, thus replacing the running configuration with the
+one found in the shadow CIB.
+
+The `crm` prompt always contains the name of the configuration which
+is currently in use, or the string _live_ if using the live cluster
+configuration.
+
+When editing the configuration in the `configure` level, no changes
+are actually applied until the `commit` command is executed. It is
+possible to start editing a configuration as usual, but instead of
+committing the changes to the active CIB, save them to a shadow CIB.
+
+The following example `configure` session demonstrates how this can be
+done:
+...............
+crm(live)configure# cib new test-2
+INFO: test-2 shadow CIB created
+crm(test-2)configure# commit
+...............
+
+[[topics_Features_Checks,Configuration semantic checks]]
+=== Configuration semantic checks
+
+Resource definitions may be checked against the meta-data
+provided with the resource agents. These checks are currently
+carried out:
+
+- are required parameters set
+- existence of defined parameters
+- timeout values for operations
+
+The parameter checks are obvious and need no further explanation.
+Failures in these checks are treated as configuration errors.
+
+The timeouts for operations should be at least as long as those
+recommended in the meta-data. Too short timeout values are a
+common mistake in cluster configurations and, even worse, they
+often slip through if cluster testing was not thorough. Though
+operation timeouts issues are treated as warnings, make sure that
+the timeouts are usable in your environment. Note also that the
+values given are just _advisory minimum_---your resources may
+require longer timeouts.
+
+User may tune the frequency of checks and the treatment of errors
+by the <<cmdhelp_options_check-frequency,`check-frequency`>> and
+<<cmdhelp_options_check-mode,`check-mode`>> preferences.
+
+Note that if the +check-frequency+ is set to +always+ and the
++check-mode+ to +strict+, errors are not tolerated and such
+configuration cannot be saved.
+
+[[topics_Features_Templates,Configuration templates]]
+=== Configuration templates
+
+.Deprecation note
+****************************
+Configuration templates have been deprecated in favor of the more
+capable `cluster scripts`. To learn how to use cluster scripts, see
+the dedicated documentation on the `crmsh` website at
+http://crmsh.github.io/, or in the <<cmdhelp_script,Script section>>.
+****************************
+
+Configuration templates are ready made configurations created by
+cluster experts. They are designed in such a way so that users
+may generate valid cluster configurations with minimum effort.
+If you are new to Pacemaker, templates may be the best way to
+start.
+
+We will show here how to create a simple yet functional Apache
+configuration:
+...............
+# crm configure
+crm(live)configure# template
+crm(live)configure template# list templates
+apache       filesystem   virtual-ip
+crm(live)configure template# new web <TAB><TAB>
+apache       filesystem   virtual-ip
+crm(live)configure template# new web apache
+INFO: pulling in template apache
+INFO: pulling in template virtual-ip
+crm(live)configure template# list
+web2-d       web2     vip2     web3     vip      web
+...............
+
+We enter the `template` level from `configure`. Use the `list`
+command to show templates available on the system. The `new`
+command creates a configuration from the +apache+ template. You
+can use tab completion to pick templates. Note that the apache
+template depends on a virtual IP address which is automatically
+pulled along. The `list` command shows the just created +web+
+configuration, among other configurations (I hope that you,
+unlike me, will use more sensible and descriptive names).
+
+The `show` command, which displays the resulting configuration,
+may be used to get an idea about the minimum required changes
+which have to be done. All +ERROR+ messages show the line numbers
+in which the respective parameters are to be defined:
+...............
+crm(live)configure template# show
+ERROR: 23: required parameter ip not set
+ERROR: 61: required parameter id not set
+ERROR: 65: required parameter configfile not set
+crm(live)configure template# edit
+...............
+
+The `edit` command invokes the preferred text editor with the
++web+ configuration. At the top of the file, the user is advised
+how to make changes. A good template should require from the user
+to specify only parameters. For example, the +web+ configuration
+we created above has the following required and optional
+parameters (all parameter lines start with +%%+):
+...............
+$ grep -n ^%% ~/.crmconf/web
+23:%% ip
+31:%% netmask
+35:%% lvs_support
+61:%% id
+65:%% configfile
+71:%% options
+76:%% envfiles
+...............
+
+These lines are the only ones that should be modified. Simply
+append the parameter value at the end of the line. For instance,
+after editing this template, the result could look like this (we
+used tabs instead of spaces to make the values stand out):
+...............
+$ grep -n ^%% ~/.crmconf/web
+23:%% ip        192.168.1.101
+31:%% netmask
+35:%% lvs_support
+61:%% id        websvc
+65:%% configfile    /etc/apache2/httpd.conf
+71:%% options
+76:%% envfiles
+...............
+
+As you can see, the parameter line format is very simple:
+...............
+%% <name> <value>
+...............
+
+After editing the file, use `show` again to display the
+configuration:
+...............
+crm(live)configure template# show
+primitive virtual-ip IPaddr \
+    params ip=192.168.1.101
+primitive apache apache \
+    params configfile="/etc/apache2/httpd.conf"
+monitor apache 120s:60s
+group websvc \
+    apache virtual-ip
+...............
+
+The target resource of the apache template is a group which we
+named +websvc+ in this sample session.
+
+This configuration looks exactly as you could type it at the
+`configure` level. The point of templates is to save you some
+typing. It is important, however, to understand the configuration
+produced.
+
+Finally, the configuration may be applied to the current
+crm configuration (note how the configuration changed slightly,
+though it is still equivalent, after being digested at the
+`configure` level):
+...............
+crm(live)configure template# apply
+crm(live)configure template# cd ..
+crm(live)configure# show
+node xen-b
+node xen-c
+primitive apache apache \
+    params configfile="/etc/apache2/httpd.conf" \
+    op monitor interval=120s timeout=60s
+primitive virtual-ip IPaddr \
+    params ip=192.168.1.101
+group websvc apache virtual-ip
+...............
+
+Note that this still does not commit the configuration to the CIB
+which is used in the shell, either the running one (+live+) or
+some shadow CIB. For that you still need to execute the `commit`
+command.
+
+To complete our example, we should also define the preferred node
+to run the service:
+
+...............
+crm(live)configure# location websvc-pref websvc 100: xen-b
+...............
+
+If you are not happy with some resource names which are provided
+by default, you can rename them now:
+
+...............
+crm(live)configure# rename virtual-ip intranet-ip
+crm(live)configure# show
+node xen-b
+node xen-c
+primitive apache apache \
+    params configfile="/etc/apache2/httpd.conf" \
+    op monitor interval=120s timeout=60s
+primitive intranet-ip IPaddr \
+    params ip=192.168.1.101
+group websvc apache intranet-ip
+location websvc-pref websvc 100: xen-b
+...............
+
+To summarize, working with templates typically consists of the
+following steps:
+
+- `new`: create a new configuration from templates
+- `edit`: define parameters, at least the required ones
+- `show`: see if the configuration is valid
+- `apply`: apply the configuration to the `configure` level
+
+[[topics_Features_Testing,Resource testing]]
+=== Resource testing
+
+The amount of detail in a cluster makes all configurations prone
+to errors. By far the largest number of issues in a cluster is
+due to bad resource configuration. The shell can help quickly
+diagnose such problems. And considerably reduce your keyboard
+wear.
+
+Let's say that we entered the following configuration:
+...............
+node xen-b
+node xen-c
+node xen-d
+primitive fencer stonith:external/libvirt \
+    params hypervisor_uri="qemu+tcp://10.2.13.1/system" \
+        hostlist="xen-b xen-c xen-d" \
+    op monitor interval=2h
+primitive svc Xinetd \
+    params service=systat \
+    op monitor interval=30s
+primitive intranet-ip IPaddr2 \
+    params ip=10.2.13.100 \
+    op monitor interval=30s
+primitive apache apache \
+    params configfile="/etc/apache2/httpd.conf" \
+    op monitor interval=120s timeout=60s
+group websvc apache intranet-ip
+location websvc-pref websvc 100: xen-b
+...............
+
+Before typing `commit` to submit the configuration to the cib we
+can make sure that all resources are usable on all nodes:
+...............
+crm(live)configure# rsctest websvc svc fencer
+...............
+
+It is important that resources being tested are not running on
+any nodes. Otherwise, the `rsctest` command will refuse to do
+anything. Of course, if the current configuration resides in a
+CIB shadow, then a `commit` is irrelevant. The point being that
+resources are not running on any node.
+
+.Note on stopping all resources
+****************************
+Alternatively to not committing a configuration, it is also
+possible to tell Pacemaker not to start any resources:
+
+...............
+crm(live)configure# property stop-all-resources=yes
+...............
+Almost none---resources of class stonith are still started. But
+shell is not as strict when it comes to stonith resources.
+****************************
+
+Order of resources is significant insofar that a resource depends
+on all resources to its left. In most configurations, it's
+probably practical to test resources in several runs, based on
+their dependencies.
+
+Apart from groups, `crm` does not interpret constraints and
+therefore knows nothing about resource dependencies. It also
+doesn't know if a resource can run on a node at all in case of an
+asymmetric cluster. It is up to the user to specify a list of
+eligible nodes if a resource is not meant to run on every node.
+
+[[topics_Features_Security,Access Control Lists (ACL)]]
+=== Access Control Lists (ACL)
+
+.Note on ACLs in Pacemaker 1.1.12
+****************************
+The support for ACLs has been revised in Pacemaker version 1.1.12 and
+up. Depending on which version you are using, the information in this
+section may no longer be accurate. Look for the `acl_target`
+configuration element for more details on the new syntax.
+****************************
+
+By default, the users from the +haclient+ group have full access
+to the cluster (or, more precisely, to the CIB). Access control
+lists allow for finer access control to the cluster.
+
+Access control lists consist of an ordered set of access rules.
+Each rule allows read or write access or denies access
+completely. Rules are typically combined to produce a specific
+role. Then, users may be assigned a role.
+
+For instance, this is a role which defines a set of rules
+allowing management of a single resource:
+
+...............
+role bigdb_admin \
+    write meta:bigdb:target-role \
+    write meta:bigdb:is-managed \
+    write location:bigdb \
+    read ref:bigdb
+...............
+
+The first two rules allow modifying the +target-role+ and
++is-managed+ meta attributes which effectively enables users in
+this role to stop/start and manage/unmanage the resource. The
+constraints write access rule allows moving the resource around.
+Finally, the user is granted read access to the resource
+definition.
+
+For proper operation of all Pacemaker programs, it is advisable
+to add the following role to all users:
+
+...............
+role read_all \
+    read cib
+...............
+
+For finer grained read access try with the rules listed in the
+following role:
+
+...............
+role basic_read \
+    read node attribute:uname \
+    read node attribute:type \
+    read property \
+    read status
+...............
+
+It is however possible that some Pacemaker programs (e.g.
+`ptest`) may not function correctly if the whole CIB is not
+readable.
+
+Some of the ACL rules in the examples above are expanded by the
+shell to XPath specifications. For instance, 
++meta:bigdb:target-role+ expands to:
+
+........
+//primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']
+........
+
+You can see the expansion by showing XML:
+
+...............
+crm(live) configure# show xml bigdb_admin
+...
+<acls>
+  <acl_role id="bigdb_admin">
+      <write id="bigdb_admin-write"
+      xpath="//primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']"/>
+...............
+
+Many different XPath expressions can have equal meaning. For
+instance, the following two are equal, but only the first one is
+going to be recognized as shortcut:
+
+...............
+//primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']
+//resources/primitive[@id='bigdb']/meta_attributes/nvpair[@name='target-role']
+...............
+
+XPath is a powerful language, but you should try to keep your ACL
+xpaths simple and the builtin shortcuts should be used whenever
+possible.
+
+[[topics_Features_Resourcesets,Syntax: Resource sets]]
+=== Syntax: Resource sets
+
+Using resource sets can be a bit confusing unless one knows the
+details of the implementation in Pacemaker as well as how to interpret
+the syntax provided by `crmsh`.
+
+Three different types of resource sets are provided by `crmsh`, and
+each one implies different values for the two resource set attributes,
++sequential+ and +require-all+.
+
++sequential+::
+  If false, the resources in the set do not depend on each other
+  internally. Setting +sequential+ to +true+ implies a strict order of
+  dependency within the set.
+
++require-all+::
+  If false, only one resource in the set is required to fulfil the
+  requirements of the set. The set of A, B and C with +require-all+
+  set to +false+ is be read as "A OR B OR C" when its dependencies
+  are resolved.
+
+The three types of resource sets modify the attributes in the
+following way:
+
+1. Implicit sets (no brackets). +sequential=true+, +require-all=true+
+2. Parenthesis set (+(+ ... +)+). +sequential=false+, +require-all=true+
+3. Bracket set (+[+ ... +]+). +sequential=false+, +require-all=false+
+
+To create a set with the properties +sequential=true+ and
++require-all=false+, explicitly set +sequential+ in a bracketed set,
++[ A B C sequential=true ]+.
+
+To create multiple sets with both +sequential+ and +require-all+ set to
+true, explicitly set +sequential+ in a parenthesis set:
++A B ( C D sequential=true )+.
+
+[[topics_Features_AttributeListReferences,Syntax: Attribute list references]]
+=== Syntax: Attribute list references
+
+Attribute lists are used to set attributes and parameters for
+resources, constraints and property definitions. For example, to set
+the virtual IP used by an +IPAddr2+ resource the attribute +ip+ can be
+set in an attribute list for that resource.
+
+Attribute lists can have identifiers that name them, and other
+resources can reuse the same attribute list by referring to that name
+using an +$id-ref+. For example, the following statement defines a
+simple dummy resource with an attribute list which sets the parameter
++state+ to the value 1 and sets the identifier for the attribute list
+to +on-state+:
+
+..............
+primitive dummy-1 Dummy params $id=on-state state=1
+..............
+
+To refer to this attribute list from a different resource, refer to
+the +on-state+ name using an id-ref:
+
+..............
+primitive dummy-2 Dummy params $id-ref=on-state
+..............
+
+The resource +dummy-2+ will now also have the parameter +state+ set to the value 1.
+
+[[topics_Features_AttributeReferences,Syntax: Attribute references]]
+=== Syntax: Attribute references
+
+In some cases, referencing complete attribute lists is too
+coarse-grained, for example if two different parameters with different
+names should have the same value set. Instead of having to copy the
+value in multiple places, it is possible to create references to
+individual attributes in attribute lists.
+
+To name an attribute in order to be able to refer to it later, prefix
+the attribute name with a +$+ character (as seen above with the
+special names +$id+ and +$id-ref+:
+
+............
+primitive dummy-1 Dummy params $state=1
+............
+
+The identifier +state+ can now be used to refer to this attribute from other
+primitives, using the +@<id>+ syntax:
+
+............
+primitive dummy-2 Dummy params @state
+............
+
+In some cases, using the attribute name as the identifier doesn't work
+due to name clashes. In this case, the syntax +$<id>:<name>=<value>+
+can be used to give the attribute a different identifier:
+
+............
+primitive dummy-1 params $dummy-state-on:state=1
+primitive dummy-2 params @dummy-state-on
+............
+
+There is also the possibility that two resources both use the same
+attribute value but with different names. For example, a web server
+may have a parameter +server_ip+ for setting the IP address where it
+listens for incoming requests, and a virtual IP resource may have a
+parameter called +ip+ which sets the IP address it creates. To
+configure these two resources with an IP without repeating the value,
+the reference can be given a name using the syntax +@<id>:<name>+.
+
+Example:
+............
+primitive virtual-ip IPaddr2 params $vip:ip=192.168.1.100
+primitive webserver apache params @vip:server_ip
+............
+
+[[topics_Syntax_RuleExpressions,Syntax: Rule expressions]]
+=== Syntax: Rule expressions
+
+Many of the configuration commands in `crmsh` now support the use of
+_rule expressions_, which can influence what attributes apply to a
+resource or under which conditions a constraint is applied, depending
+on changing conditions like date, time, the value of attributes and
+more.
+
+Here is an example of a simple rule expression used to apply a
+a different resource parameter on the node named `node1`:
+
+..............
+primitive my_resource Special \
+  params 2: rule #uname eq node1 interface=eth1 \
+  params 1: interface=eth0
+..............
+
+This primitive resource has two lists of parameters with descending
+priority. The parameter list with the highest priority is applied
+first, but only if the rule expressions for that parameter list all
+apply. In this case, the rule `#uname eq node1` limits the parameter
+list so that it is only applied on `node1`.
+
+Note that rule expressions are not terminated and are immediately
+followed by the data to which the rule is applied. In this case, the
+name-value pair `interface=eth1`.
+
+Rule expressions can contain multiple expressions connected using the
+boolean operator `or` and `and`. The full syntax for rule expressions
+is listed below.
+
+..............
+rules ::
+  rule [id_spec] [$role=<role>] <score>: <expression>
+  [rule [id_spec] [$role=<role>] <score>: <expression> ...]
+
+id_spec :: $id=<id> | $id-ref=<id>
+score :: <number> | <attribute> | [-]inf
+expression :: <simple_exp> [<bool_op> <simple_exp> ...]
+bool_op :: or | and
+simple_exp :: <attribute> [type:]<binary_op> <value>
+          | <unary_op> <attribute>
+          | date <date_expr>
+type :: <string> | <version> | <number>
+binary_op :: lt | gt | lte | gte | eq | ne
+unary_op :: defined | not_defined
+
+date_expr :: lt <end>
+         | gt <start>
+         | in start=<start> end=<end>
+         | in start=<start> <duration>
+         | spec <date_spec>
+duration|date_spec ::
+         hours=<value>
+         | monthdays=<value>
+         | weekdays=<value>
+         | yearsdays=<value>
+         | months=<value>
+         | weeks=<value>
+         | years=<value>
+         | weekyears=<value>
+         | moon=<value>
+..............
+
+[[topics_Lifetime,Lifetime parameter format]]
+== Lifetime parameter format
+
+Lifetimes can be specified in the ISO 8601 time format or the ISO 8601
+duration format. To distinguish between months and minutes, use the PT
+prefix before specifying minutes. The duration format is one of
++PnYnMnDTnHnMnS+, +PnW+, +P<date>T<time>+.
+
+P = duration. Y = year. M = month. W = week. D = day. T = time. H =
+hour. M = minute. S = second.
+
+Examples:
+.................
+PT5M = 5 minutes later.
+3D = 3 days later.
+PT1H = 1 hour later.
+.................
+
+The cluster checks lifetimes at an interval defined by the
+cluster-recheck-interval property (default 15 minutes).
+
+
+[[topics_Reference,Command reference]]
+== Command reference
+
+The commands are structured to be compatible with the shell command
+line. Sometimes, the underlying Pacemaker grammar uses characters that
+have special meaning in bash, that will need to be quoted. This
+includes the hash or pound sign (`#`), single and double quotes, and
+any significant whitespace.
+
+Whitespace is also significant when assigning values, meaning that
++key=value+ is different from +key = value+.
+
+Commands can be referenced using short-hand as long as the short-hand
+is unique. This can be either a prefix of the command name or a prefix
+string of characters found in the name.
+
+For example, +status+ can be abbreviated as +st+ or +su+, and
++configure+ as +conf+ or +cfg+.
+
+The syntax for the commands is given below in an informal, BNF-like
+grammar.
+
+* `<value>` denotes a string.
+* `[value]` means that the construct is optional.
+* The ellipsis (`...`) signifies that the previous construct may be
+  repeated.
+* `first|second` means either first or second.
+* The rest are literals (strings, `:`, `=`).
+
+[[cmdhelp_root_status,Cluster status]]
+=== `status`
+
+Show cluster status. The status is displayed by `crm_mon`. Supply
+additional arguments for more information or different format.
+See `crm_mon(8)` for more details.
+
+Example:
+...............
+status
+status simple
+status full
+...............
+
+Usage:
+...............
+status [<option> ...]
+
+option :: full
+        | bynode
+        | inactive
+        | ops
+        | timing
+        | failcounts
+        | verbose
+        | quiet
+        | html
+        | xml
+        | simple
+        | tickets
+        | noheaders
+        | detail
+        | brief
+...............
+
+[[cmdhelp_root_verify,Verify cluster status]]
+=== `verify`
+
+Performs basic checks for the cluster configuration and
+current status, reporting potential issues.
+
+See `crm_verify(8)` and `crm_simulate(8)` for more details.
+
+Example:
+...............
+verify
+verify scores
+...............
+
+Usage:
+...............
+verify [scores]
+...............
+
+[[cmdhelp_cluster,Cluster setup and management]]
+=== `cluster` - Cluster setup and management
+
+Whole-cluster configuration management with High Availability
+awareness.
+
+The commands on the cluster level allows configuration and
+modification of the underlying cluster infrastructure, and also
+supplies tools to do whole-cluster systems management.
+
+These commands enable easy installation and maintenance of a HA
+cluster, by providing support for package installation, configuration
+of the cluster messaging layer, file system setup and more.
+
+[[cmdhelp_cluster_add,Add a new node to the cluster,From Code]]
+==== `add`
+See "crm cluster help add" or "crm cluster add --help"
+
+[[cmdhelp_cluster_copy,Copy file to other cluster nodes]]
+==== `copy`
+
+Copy file to other cluster nodes.
+
+Copies the given file to all other nodes unless given a
+list of nodes to copy to as argument.
+
+Usage:
+...............
+copy <filename> [nodes ...]
+...............
+
+Example:
+...............
+copy /etc/motd
+...............
+
+[[cmdhelp_cluster_diff,Diff file across cluster]]
+==== `diff`
+
+Displays the difference, if any, between a given file
+on different nodes. If the second argument is `--checksum`,
+a checksum of the file will be calculated and displayed for
+each node.
+
+Usage:
+...............
+diff <file> [--checksum] [nodes...]
+...............
+
+Example:
+...............
+diff /etc/crm/crm.conf node2
+diff /etc/resolv.conf --checksum
+...............
+
+[[cmdhelp_cluster_disable,Disable cluster services]]
+==== `disable`
+
+Disable the cluster-related system services on this node.
+
+Usage:
+...............
+disable
+...............
+
+[[cmdhelp_cluster_enable,Enable cluster services]]
+==== `enable`
+
+Enable the cluster-related system services on this node.
+
+Usage:
+...............
+enable
+...............
+
+[[cmdhelp_cluster_geo_init,Configure cluster as geo cluster,From Code]]
+==== `geo-init`
+See "crm cluster help geo_init" or "crm cluster geo_init --help"
+
+[[cmdhelp_cluster_geo_init_arbitrator,Initialize node as geo cluster arbitrator,From Code]]
+==== `geo-init-arbitrator`
+See "crm cluster help geo_init_arbitrator" or "crm cluster geo_init_arbitrator --help"
+
+[[cmdhelp_cluster_geo_join,Join cluster to existing geo cluster,From Code]]
+==== `geo-join`
+See "crm cluster help geo_join" or "crm cluster geo_join --help"
+
+[[cmdhelp_cluster_health,Cluster health check]]
+==== `health`
+
+Runs a larger set of tests and queries on all nodes in the cluster to
+verify the general system health and detect potential problems.
+
+Usage:
+...............
+health
+...............
+
+[[cmdhelp_cluster_init,Initializes a new HA cluster,From Code]]
+==== `init`
+See "crm cluster help init" or "crm cluster init --help"
+
+[[cmdhelp_cluster_join,Join existing cluster,From Code]]
+==== `join`
+See "crm cluster help join" or "crm cluster join --help"
+
+[[cmdhelp_cluster_remove,Remove node(s) from the cluster,From Code]]
+==== `remove`
+See "crm cluster help remove" or "crm cluster remove --help"
+
+[[cmdhelp_cluster_crash_test,Cluster crash test tool set,From Code]]
+==== `crash_test`
+See "crm cluster help crash_test" or "crm cluster crash_test --help"
+
+[[cmdhelp_cluster_restart,Restart cluster services]]
+==== `restart`
+
+Restarts the cluster-related system services on this node.
+
+Usage:
+.........
+restart
+.........
+
+[[cmdhelp_cluster_rename,Rename the cluster]]
+==== `rename`
+
+Rename the cluster name 
+
+Usage:
+...............
+rename <new_cluster_name>
+...............
+
+
+[[cmdhelp_cluster_run,Execute an arbitrary command on all nodes/specific node]]
+==== `run`
+
+This command takes a shell statement as argument, executes that
+statement on all nodes in the cluster or a specific node,
+and reports the result.
+
+Usage:
+...............
+run <command> [node ...]
+...............
+
+Example:
+...............
+run "cat /proc/uptime" 
+run "ls" node1 node2
+...............
+
+[[cmdhelp_cluster_start,Start cluster services]]
+==== `start`
+
+Starts the cluster-related system services on this node.
+
+Usage:
+.........
+start
+.........
+
+[[cmdhelp_cluster_status,Cluster status check]]
+==== `status`
+
+Reports the status for the cluster messaging layer on the local
+node.
+
+Usage:
+...............
+status
+...............
+
+[[cmdhelp_cluster_stop,Stop cluster services]]
+==== `stop`
+
+Stops the cluster-related system services on this node.
+
+Usage:
+.........
+stop
+.........
+
+[[cmdhelp_cluster_wait_for_startup,Wait for cluster to start]]
+==== `wait_for_startup`
+
+Mostly useful in scripts or automated workflows, this command will
+attempt to connect to the local cluster node repeatedly. The command
+will keep trying until the cluster node responds, or the `timeout`
+elapses. The timeout can be changed by supplying a value in seconds as
+an argument.
+
+Usage:
+........
+wait_for_startup
+........
+
+[[cmdhelp_script,Cluster script management]]
+=== `script` - Cluster script management
+
+A big part of the configuration and management of a cluster is
+collecting information about all cluster nodes and deploying changes
+to those nodes. Often, just performing the same procedure on all nodes
+will encounter problems, due to subtle differences in the
+configuration.
+
+For example, when configuring a cluster for the first time, the
+software needs to be installed and configured on all nodes before the
+cluster software can be launched and configured using `crmsh`. This
+process is cumbersome and error-prone, and the goal is for scripts to
+make this process easier.
+
+Scripts are implemented using the python `parallax` package which
+provides a thin wrapper on top of SSH. This allows the scripts to
+function through the usual SSH channels used for system maintenance,
+requiring no additional software to be installed or maintained.
+
+[[cmdhelp_script_json,JSON API for cluster scripts]]
+==== `json`
+
+This command provides a JSON API for the cluster scripts, intended for
+use in user interface tools that want to interact with the cluster via
+scripts.
+
+The command takes a single argument, which should be a JSON array with
+the first member identifying the command to perform.
+
+The output is line-based: Commands that return multiple results will
+return them line-by-line, ending with a terminator value: "end".
+
+When providing parameter values to this command, they should be
+provided as nested objects, so +virtual-ip:ip=192.168.0.5+ on the
+command line becomes the JSON object
++{"virtual-ip":{"ip":"192.168.0.5"}}+.
+
+API:
+........
+["list"]
+=> [{name, shortdesc, category}]
+
+["show", <name>]
+=> [{name, shortdesc, longdesc, category, <<steps>>}]
+
+<<steps>> := [{name, shortdesc], longdesc, required, parameters, steps}]
+
+<<params>> := [{name, shortdesc, longdesc, required, unique, advanced,
+                type, value, example}]
+
+["verify", <name>, <<values>>]
+=> [{shortdesc, longdesc, text, nodes}]
+
+["run", <name>, <<values>>]
+=> [{shortdesc, rc, output|error}]
+........
+
+
+[[cmdhelp_script_list,List available scripts]]
+==== `list`
+
+Lists the available scripts, sorted by category. Scripts that have the
+special `Script` category are hidden by default, since they are mainly
+used by other scripts or commands. To also show these, pass `all` as
+argument.
+
+To get a flat list of script names, not sorted by category, pass
+`names` as an extra argument.
+
+Usage:
+............
+list [all] [names]
+............
+
+Example:
+............
+list
+list all names
+............
+
+[[cmdhelp_script_run,Run the script]]
+==== `run`
+
+Given a list of parameter values, this command will execute the
+actions specified by the cluster script. The format for the parameter
+values is the same as for the `verify` command.
+
+Can optionally take at least two parameters:
+* `nodes=<nodes>`: List of nodes that the script runs over
+* `dry_run=yes|no`: If set, the script will not perform any modifications.
+
+Additional parameters may be available depending on the script.
+
+Use the `show` command to see what parameters are available.
+
+Usage:
+.............
+run <script> [args...]
+.............
+
+Example:
+.............
+run apache install=true
+run sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
+.............
+
+[[cmdhelp_script_show,Describe the script]]
+==== `show`
+
+Prints a description and short summary of the script, with
+descriptions of the accepted parameters.
+
+Advanced parameters are hidden by default. To show the complete list
+of parameters accepted by the script, pass `all` as argument.
+
+Usage:
+............
+show <script> [all]
+............
+
+Example:
+............
+show virtual-ip
+............
+
+[[cmdhelp_script_verify,Verify the script]]
+==== `verify`
+
+Checks the given parameter values, and returns a list
+of actions that will be executed when running the script
+if provided the same list of parameter values.
+
+Usage:
+............
+verify <script> [args...]
+............
+
+Example:
+............
+verify sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
+............
+
+[[cmdhelp_corosync,Corosync management]]
+=== `corosync` - Corosync management
+
+Corosync is the underlying messaging layer for most HA clusters.
+This level provides commands for editing and managing the corosync
+configuration.
+
+[[cmdhelp_corosync_add-node,Add a corosync node]]
+==== `add-node`
+
+Adds a node to the corosync configuration. This is used with the `udpu`
+type configuration in corosync.
+
+A nodeid for the added node is generated automatically.
+
+Note that this command assumes that only a single ring is used, and
+sets only the address for ring0.
+
+Usage:
+.........
+add-node <addr> [name]
+.........
+
+[[cmdhelp_corosync_del-node,Remove a corosync node]]
+==== `del-node`
+
+Removes a node from the corosync configuration. The argument given is
+the `ring0_addr` address set in the configuration file.
+
+Usage:
+.........
+del-node <addr>
+.........
+
+[[cmdhelp_corosync_diff,Diffs the corosync configuration]]
+==== `diff`
+
+Diffs the corosync configurations on different nodes. If no nodes are
+given as arguments, the corosync configurations on all nodes in the
+cluster are compared.
+
+`diff` takes an option argument `--checksum`, to display a checksum
+for each file instead of calculating a diff.
+
+Usage:
+.........
+diff [--checksum] [node...]
+.........
+
+[[cmdhelp_corosync_edit,Edit the corosync configuration]]
+==== `edit`
+
+Opens the Corosync configuration file in an editor.
+
+Usage:
+.........
+edit
+.........
+
+[[cmdhelp_corosync_get,Get a corosync configuration value]]
+==== `get`
+
+Returns the value configured in `corosync.conf`, which is not
+necessarily the value used in the running configuration. See `reload`
+for telling corosync about configuration changes.
+
+The argument is the complete dot-separated path to the value.
+
+If there are multiple values configured with the same path, the
+command returns all values for that path. For example, to get all
+configured `ring0_addr` values, use this command:
+
+Example:
+........
+get nodelist.node.ring0_addr
+........
+
+[[cmdhelp_corosync_log,Show the corosync log file]]
+==== `log`
+
+Opens the log file specified in the corosync configuration file. If no
+log file is configured, this command returns an error.
+
+The pager used can be configured either using the PAGER
+environment variable or in `crm.conf`.
+
+Usage:
+.........
+log
+.........
+
+[[cmdhelp_corosync_pull,Pulls the corosync configuration]]
+==== `pull`
+
+Gets the corosync configuration from another node and copies
+it to this node.
+
+Usage:
+.........
+pull <node>
+.........
+
+[[cmdhelp_corosync_push,Push the corosync configuration]]
+==== `push`
+
+Pushes the corosync configuration file on this node to
+the list of nodes provided. If no target nodes are given,
+the configuration is pushed to all other nodes in the cluster.
+
+It is recommended to use `csync2` to distribute the cluster
+configuration files rather than relying on this command.
+
+Usage:
+.........
+push [node] ...
+.........
+
+Example:
+.........
+push node-2 node-3
+.........
+
+[[cmdhelp_corosync_reload,Reload the corosync configuration]]
+==== `reload`
+
+Tells all instances of corosync in this cluster to reload
+`corosync.conf`.
+
+After pushing a new configuration to all cluster nodes, call this
+command to make corosync use the new configuration.
+
+Usage:
+.........
+reload
+.........
+
+[[cmdhelp_corosync_set,Set a corosync configuration value]]
+==== `set`
+
+Sets the value identified by the given path. If the value does not
+exist in the configuration file, it will be added. However, if the
+section containing the value does not exist, the command will fail.
+
+Usage:
+.........
+set quorum.expected_votes 2
+.........
+
+[[cmdhelp_corosync_show,Display the corosync configuration]]
+==== `show`
+
+Displays the corosync configuration on the current node.
+
+.........
+show
+.........
+
+[[cmdhelp_corosync_status,Display the corosync status]]
+==== `status`
+
+Displays the corosync ring status(default), also can display quorum/qdevice/qnetd status.
+
+Usage:
+.........
+status [ring|quorum|qdevice|qnetd]
+.........
+
+[[cmdhelp_cib,CIB shadow management]]
+=== `cib` - CIB shadow management
+
+This level is for management of shadow CIBs. It is available both
+at the top level and the `configure` level.
+
+All the commands are implemented using `cib_shadow(8)` and the
+`CIB_shadow` environment variable. The user prompt always
+includes the name of the currently active shadow or the live CIB.
+
+[[cmdhelp_cib_cibstatus,CIB status management and editing]]
+==== `cibstatus`
+
+Enter edit and manage the CIB status section level. See the
+<<cmdhelp_cibstatus,CIB status management section>>.
+
+[[cmdhelp_cib_commit,copy a shadow CIB to the cluster]]
+==== `commit`
+
+Apply a shadow CIB to the cluster. If the shadow name is omitted
+then the current shadow CIB is applied.
+
+Temporary shadow CIBs are removed automatically on commit.
+
+Usage:
+...............
+commit [<cib>]
+...............
+
+[[cmdhelp_cib_delete,delete a shadow CIB]]
+==== `delete`
+
+Delete an existing shadow CIB.
+
+Usage:
+...............
+delete <cib>
+...............
+
+[[cmdhelp_cib_diff,diff between the shadow CIB and the live CIB]]
+==== `diff`
+
+Print differences between the current cluster configuration and
+the active shadow CIB.
+
+Usage:
+...............
+diff
+...............
+
+[[cmdhelp_cib_import,import a CIB or PE input file to a shadow]]
+==== `import`
+
+At times it may be useful to create a shadow file from the
+existing CIB. The CIB may be specified as file or as a PE input
+file number. The shell will look up files in the local directory
+first and then in the PE directory (typically `/var/lib/pengine`).
+Once the CIB file is found, it is copied to a shadow and this
+shadow is immediately available for use at both `configure` and
+`cibstatus` levels.
+
+If the shadow name is omitted then the target shadow is named
+after the input CIB file.
+
+Note that there are often more than one PE input file, so you may
+need to specify the full name.
+
+Usage:
+...............
+import {<file>|<number>} [<shadow>]
+...............
+Examples:
+...............
+import pe-warn-2222
+import 2289 issue2
+...............
+
+[[cmdhelp_cib_list,list all shadow CIBs]]
+==== `list`
+
+List existing shadow CIBs.
+
+Usage:
+...............
+list
+...............
+
+[[cmdhelp_cib_new,create a new shadow CIB]]
+==== `new`
+
+Create a new shadow CIB. The live cluster configuration and
+status is copied to the shadow CIB.
+
+If the name of the shadow is omitted, we create a temporary CIB
+shadow. It is useful if multiple level sessions are desired
+without affecting the cluster. A temporary CIB shadow is short
+lived and will be removed either on `commit` or on program exit.
+Note that if the temporary shadow is not committed all changes in
+the temporary shadow are lost.
+
+Specify `withstatus` if you want to edit the status section of
+the shadow CIB (see the <<cmdhelp_cibstatus,cibstatus section>>).
+Add `force` to force overwriting the existing shadow CIB.
+
+To start with an empty configuration that is not copied from the live
+CIB, specify the `empty` keyword. (This also allows a shadow CIB to be
+created in case no cluster is running.)
+
+Usage:
+...............
+new [<cib>] [withstatus] [force] [empty]
+...............
+
+[[cmdhelp_cib_reset,copy live cib to a shadow CIB]]
+==== `reset`
+
+Copy the current cluster configuration into the shadow CIB.
+
+Usage:
+...............
+reset <cib>
+...............
+
+[[cmdhelp_cib_use,change working CIB]]
+==== `use`
+
+Choose a CIB source. If you want to edit the status from the
+shadow CIB specify `withstatus` (see <<cmdhelp_cibstatus,`cibstatus`>>).
+Leave out the CIB name to switch to the running CIB.
+
+Usage:
+...............
+use [<cib>] [withstatus]
+...............
+
+[[cmdhelp_ra,Resource Agents (RA) lists and documentation]]
+=== `ra` - Resource Agents (RA) lists and documentation
+
+This level contains commands which show various information about
+the installed resource agents. It is available both at the top
+level and at the `configure` level.
+
+[[cmdhelp_ra_classes,list classes and providers]]
+==== `classes`
+
+Print all resource agents' classes and, where appropriate, a list
+of available providers.
+
+Usage:
+...............
+classes
+...............
+
+[[cmdhelp_ra_info,show meta data for a RA]]
+==== `info` (`meta`)
+
+Show the meta-data of a resource agent type. This is where users
+can find information on how to use a resource agent. It is also
+possible to get information from some programs: `pengine`,
+`crmd`, `cib`, and `stonithd`. Just specify the program name
+instead of an RA.
+
+Usage:
+...............
+info [<class>:[<provider>:]]<type>
+info <type> <class> [<provider>] (obsolete)
+...............
+Example:
+...............
+info apache
+info ocf:pacemaker:Dummy
+info stonith:ipmilan
+info pengine
+...............
+
+[[cmdhelp_ra_list,list RA for a class (and provider)]]
+==== `list`
+
+List available resource agents for the given class. If the class
+is `ocf`, supply a provider to get agents which are available
+only from that provider.
+
+Usage:
+...............
+list <class> [<provider>]
+...............
+Example:
+...............
+list ocf pacemaker
+...............
+
+[[cmdhelp_ra_providers,show providers for a RA and a class]]
+==== `providers`
+
+List providers for a resource agent type. The class parameter
+defaults to `ocf`.
+
+Usage:
+...............
+providers <type> [<class>]
+...............
+Example:
+...............
+providers apache
+...............
+
+[[cmdhelp_ra_validate,validate parameters for RA]]
+==== `validate`
+
+If the resource agent supports the `validate-all` action, this calls
+the action with the given parameters, printing any warnings or errors
+reported by the agent.
+
+Usage:
+................
+validate <agent> [<key>=<value> ...]
+................
+
+[[cmdhelp_resource,Resource management]]
+=== `resource` - Resource management
+
+At this level resources may be managed.
+
+All (or almost all) commands are implemented with the CRM tools
+such as `crm_resource(8)`.
+
+[[cmdhelp_resource_ban,ban a resource from a node]]
+==== `ban`
+
+Ban a resource from running on a certain node. If no node is given
+as argument, the resource is banned from the current location.
+
+See `move` for details on other arguments.
+
+Usage:
+...............
+ban <rsc> [<node>] [<lifetime>] [force]
+...............
+
+[[cmdhelp_resource_cleanup,cleanup resource status]]
+==== `cleanup`
+
+If resource has any past failures, clear its history and fail
+count. Typically done after the resource has temporarily
+failed.
+
+If a node is omitted, cleanup on all nodes.
+
++(Pacemaker 1.1.14)+ Pass force to cleanup the resource itself,
+otherwise the cleanup command will apply to the parent resource (if
+any).
+
+Usage:
+...............
+cleanup [<rsc>] [<node>] [force]
+...............
+
+[[cmdhelp_resource_clear,Clear any relocation constraint]]
+==== `clear` (`unmove`, `unmigrate`, `unban`)
+
+Remove any relocation constraint created by
+the `move`, `migrate` or `ban` command.
+
+Usage:
+...............
+clear <rsc>
+unmigrate <rsc>
+unban <rsc>
+...............
+
+[[cmdhelp_resource_constraints,Show constraints affecting a resource]]
+==== `constraints`
+
+Display the location and colocation constraints affecting the
+resource.
+
+Usage:
+................
+constraints <rsc>
+................
+
+[[cmdhelp_resource_demote,demote a master-slave resource]]
+==== `demote`
+
+Demote a master-slave resource using the `target-role`
+attribute.
+
+Usage:
+...............
+demote <rsc>
+...............
+
+[[cmdhelp_resource_failcount,manage failcounts]]
+==== `failcount`
+
+Show/edit/delete the failcount of a resource.
+When `set` a non-zero value, `operation` and `interval` should be 
+provided when multiple operation failcount entries exist.
+`interval` is a value in seconds.
+
+Usage:
+...............
+failcount <rsc> set <node> <value> [operation] [interval]
+failcount <rsc> delete <node>
+failcount <rsc> show <node>
+...............
+Example:
+...............
+failcount fs_0 delete node2
+...............
+
+[[cmdhelp_resource_locate,show the location of resources]]
+==== `locate`
+
+Show the current location of one or more resources.
+
+Usage:
+...............
+locate [<rsc> ...]
+...............
+
+[[cmdhelp_resource_maintenance,Enable/disable per-resource maintenance mode]]
+==== `maintenance`
+
+Enables or disables the per-resource maintenance mode. When this mode
+is enabled, no monitor operations will be triggered for the resource.
+`maintenance` attribute conflicts with the `is-managed`. When setting
+the `maintenance` attribute, the user is proposed to remove the
+`is-managed` attribute if it exists.
+
+Usage:
+..................
+maintenance <resource> [on|off|true|false]
+..................
+
+Example:
+..................
+maintenance rsc1
+maintenance rsc2 off
+..................
+
+[[cmdhelp_resource_manage,put a resource into managed mode]]
+==== `manage`
+
+Manage a resource using the `is-managed` attribute. If there
+are multiple meta attributes sets, the attribute is set in all of
+them. If the resource is a clone, all `is-managed` attributes are
+removed from the children resources.
+`is-managed` attribute conflicts with the `maintenance`. When setting
+the `is-managed` attribute, the user is proposed to remove the
+`maintenance` attribute if it exists.
+
+For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
+
+Usage:
+...............
+manage <rsc>
+...............
+
+[[cmdhelp_resource_meta,manage a meta attribute]]
+==== `meta`
+
+Show/edit/delete a meta attribute of a resource. Currently, all
+meta attributes of a resource may be managed with other commands
+such as `resource stop`.
+
+Usage:
+...............
+meta <rsc> set <attr> <value>
+meta <rsc> delete <attr>
+meta <rsc> show <attr>
+...............
+Example:
+...............
+meta ip_0 set target-role stopped
+...............
+
+[[cmdhelp_resource_move,Move a resource to another node]]
+==== `move` (`migrate`)
+
+Move a resource away from its current location.
+
+If the destination node is left out, the resource is migrated by
+creating a constraint which prevents it from running on the current
+node. For this type of constraint to be created, the +force+ argument
+is required.
+
+A lifetime may be given for the constraint. Once it expires, the
+location constraint will no longer be active.
+
+Usage:
+...............
+move <rsc> [<node>] [<lifetime>] [force]
+...............
+
+[[cmdhelp_resource_operations,Show active resource operations]]
+==== `operations`
+
+Show active operations, optionally filtered by resource and node.
+
+Usage:
+................
+operations [<rsc>] [<node>]
+................
+
+[[cmdhelp_resource_param,manage a parameter of a resource]]
+==== `param`
+
+Show/edit/delete a parameter of a resource.
+
+Usage:
+...............
+param <rsc> set <param> <value>
+param <rsc> delete <param>
+param <rsc> show <param>
+...............
+Example:
+...............
+param ip_0 show ip
+...............
+
+[[cmdhelp_resource_promote,promote a master-slave resource]]
+==== `promote`
+
+Promote a master-slave resource using the `target-role`
+attribute.
+
+Usage:
+...............
+promote <rsc>
+...............
+
+[[cmdhelp_resource_refresh,Recheck current resource status and drop failure history]]
+==== `refresh`
+
+Delete resource's history (including failures) so its current state is rechecked.
+
+Usage:
+...............
+refresh [<rsc>] [<node>] [force]
+...............
+
+[[cmdhelp_resource_restart,restart resources]]
+==== `restart`
+
+Restart one or more resources. This is essentially a shortcut for
+resource stop followed by a start. The shell is first going to wait
+for the stop to finish, that is for all resources to really stop, and
+only then to order the start action. Due to this command
+entailing a whole set of operations, informational messages are
+printed to let the user see some progress.
+
+For details on group management see
+<<cmdhelp_options_manage-children,`options manage-children`>>.
+
+Usage:
+...............
+restart <rsc> [<rsc> ...]
+...............
+Example:
+...............
+# crm resource restart g_webserver
+INFO: ordering g_webserver to stop
+waiting for stop to finish .... done
+INFO: ordering g_webserver to start
+#
+...............
+
+[[cmdhelp_resource_scores,Display resource scores]]
+==== `scores`
+
+Display the allocation scores for all resources.
+
+Usage:
+................
+scores
+................
+
+[[cmdhelp_resource_secret,manage sensitive parameters]]
+==== `secret`
+
+Sensitive parameters can be kept in local files rather than CIB
+in order to prevent accidental data exposure. Use the `secret`
+command to manage such parameters. `stash` and `unstash` move the
+value from the CIB and back to the CIB respectively. The `set`
+subcommand sets the parameter to the provided value. `delete`
+removes the parameter completely. `show` displays the value of
+the parameter from the local file. Use `check` to verify if the
+local file content is valid.
+
+Usage:
+...............
+secret <rsc> set <param> <value>
+secret <rsc> stash <param>
+secret <rsc> unstash <param>
+secret <rsc> delete <param>
+secret <rsc> show <param>
+secret <rsc> check <param>
+...............
+Example:
+...............
+secret fence_1 show password
+secret fence_1 stash password
+secret fence_1 set password secret_value
+...............
+
+[[cmdhelp_resource_start,start resources]]
+==== `start`
+
+Start one or more resources by setting the `target-role` attribute. If
+there are multiple meta attributes sets, the attribute is set in all
+of them. If the resource is a clone, all `target-role` attributes are
+removed from the children resources.
+
+For details on group management see
+<<cmdhelp_options_manage-children,`options manage-children`>>.
+
+Usage:
+...............
+start <rsc> [<rsc> ...]
+...............
+
+[[cmdhelp_resource_status,show status of resources]]
+==== `status` (`show`, `list`)
+
+Print resource status. More than one resource can be shown at once. If
+the resource parameter is left out, the status of all resources is
+printed.
+
+Usage:
+...............
+status [<rsc> ...]
+...............
+
+[[cmdhelp_resource_stop,stop resources]]
+==== `stop`
+
+Stop one or more resources using the `target-role` attribute. If there
+are multiple meta attributes sets, the attribute is set in all of
+them. If the resource is a clone, all `target-role` attributes are
+removed from the children resources.
+
+For details on group management see
+<<cmdhelp_options_manage-children,`options manage-children`>>.
+
+Usage:
+...............
+stop <rsc> [<rsc> ...]
+...............
+
+[[cmdhelp_resource_trace,start RA tracing]]
+==== `trace`
+
+Start tracing RA for the given operation. The trace files are
+stored in `$HA_VARLIB/trace_ra`. If the operation to be traced is
+monitor, note that the number of trace files can grow very
+quickly.
+
+If no operation name is given, crmsh will attempt to trace all
+operations for the RA. This includes any configured operations, start
+and stop as well as promote/demote for multistate resources.
+
+To trace the probe operation which exists for all resources, either
+set a trace for `monitor` with interval `0`, or use `probe` as the
+operation name.
+
+Note: RA tracing is only supported by OCF resource agents;
+The pacemaker-execd daemon does not log recurring monitor operations
+unless an error occurred.
+
+Usage:
+...............
+trace <rsc> [<op> [<interval>] ]
+...............
+Example:
+...............
+trace fs start
+trace webserver
+trace webserver probe
+trace fs monitor 0
+...............
+
+[[cmdhelp_resource_unmanage,put a resource into unmanaged mode]]
+==== `unmanage`
+
+Unmanage a resource using the `is-managed` attribute. If there
+are multiple meta attributes sets, the attribute is set in all of
+them. If the resource is a clone, all `is-managed` attributes are
+removed from the children resources.
+
+For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
+
+Usage:
+...............
+unmanage <rsc>
+...............
+
+[[cmdhelp_resource_untrace,stop RA tracing]]
+==== `untrace`
+
+Stop tracing RA for the given operation. If no operation name is
+given, crmsh will attempt to stop tracing all operations in resource.
+
+Usage:
+...............
+untrace <rsc> [<op> [<interval>] ]
+...............
+Example:
+...............
+untrace fs start
+untrace webserver
+...............
+
+[[cmdhelp_resource_utilization,manage a utilization attribute]]
+==== `utilization`
+
+Show/edit/delete a utilization attribute of a resource. These
+attributes describe hardware requirements. By setting the
+`placement-strategy` cluster property appropriately, it is
+possible then to distribute resources based on resource
+requirements and node size. See also <<cmdhelp_node_utilization,node utilization attributes>>.
+
+Usage:
+...............
+utilization <rsc> set <attr> <value>
+utilization <rsc> delete <attr>
+utilization <rsc> show <attr>
+...............
+Example:
+...............
+utilization xen1 set memory 4096
+...............
+
+[[cmdhelp_node,Node management]]
+=== `node` - Node management
+
+Node management and status commands.
+
+[[cmdhelp_node_attribute,manage attributes]]
+==== `attribute`
+
+Edit node attributes. This kind of attribute should refer to
+relatively static properties, such as memory size.
+
+Usage:
+...............
+attribute <node> set <attr> <value>
+attribute <node> delete <attr>
+attribute <node> show <attr>
+...............
+Example:
+...............
+attribute node_1 set memory_size 4096
+...............
+
+[[cmdhelp_node_clearstate,Clear node state]]
+==== `clearstate`
+
+Resets and clears the state of the specified node. This node is
+afterwards assumed clean and offline. This command can be used to
+manually confirm that a node has been fenced (e.g., powered off).
+
+Be careful! This can cause data corruption if you confirm that a node is
+down that is, in fact, not cleanly down - the cluster will proceed as if
+the fence had succeeded, possibly starting resources multiple times.
+
+Usage:
+...............
+clearstate <node>
+...............
+
+[[cmdhelp_node_delete,delete node]]
+==== `delete`
+
+Delete a node. This command will remove the node from the CIB
+and, in case the cluster stack is running, use the appropriate
+program (`crm_node` or `hb_delnode`) to remove the node from the
+membership.
+
+If the node is still listed as active and a member of our
+partition we refuse to remove it. With the global force option
+(`-F`) we will try to delete the node anyway.
+
+Usage:
+...............
+delete <node>
+...............
+
+[[cmdhelp_node_fence,fence node]]
+==== `fence`
+
+Make CRM fence a node. This functionality depends on stonith
+resources capable of fencing the specified node. No such stonith
+resources, no fencing will happen.
+
+Usage:
+...............
+fence <node>
+...............
+
+[[cmdhelp_node_maintenance,put node into maintenance mode]]
+==== `maintenance`
+
+Set the node status to maintenance. This is equivalent to the
+cluster-wide `maintenance-mode` property but puts just one node
+into the maintenance mode. If there are maintenaned resources on
+the node, the user will be proposed to remove the maintenance
+property from them.
+
+The node parameter defaults to the node where the command is run.
+
+Usage:
+...............
+maintenance [<node>]
+...............
+
+[[cmdhelp_node_online,set node online]]
+==== `online`
+
+Set a node to online status.
+
+The node parameter defaults to the node where the command is run.
+
+Usage:
+...............
+online [<node>]
+...............
+
+[[cmdhelp_node_ready,put node into ready mode]]
+==== `ready`
+
+Set the node's maintenance status to `off`. The node should be
+now again fully operational and capable of running resource
+operations.
+
+The node parameter defaults to the node where the command is run.
+
+Usage:
+...............
+ready [<node>]
+...............
+
+[[cmdhelp_node_server,show node hostname or server address]]
+==== `server`
+
+Remote nodes may have a configured server address which should
+be used when contacting the node. This command prints the
+server address if configured, else the node name.
+
+If no parameter is given, the addresses or names for all nodes
+are printed.
+
+Usage:
+...............
+server [<node> ...]
+...............
+
+[[cmdhelp_node_show,show node]]
+==== `show`
+
+Show a node definition. If the node parameter is omitted then all
+nodes are shown.
+
+Usage:
+...............
+show [<node>]
+...............
+
+[[cmdhelp_node_standby,put node into standby]]
+==== `standby`
+
+Set a node to standby status. The node parameter defaults to the
+node where the command is run.
+
+Additionally, you may specify a lifetime for the standby---if set to
+`reboot`, the node will be back online once it reboots. `forever` will
+keep the node in standby after reboot. The life time defaults to
+`forever`.
+
+Usage:
+...............
+standby [<node>] [<lifetime>]
+
+lifetime :: reboot | forever
+...............
+
+Example:
+...............
+standby bob reboot
+...............
+
+[[cmdhelp_node_status-attr,manage status attributes]]
+==== `status-attr`
+
+Edit node attributes which are in the CIB status section, i.e.
+attributes which hold properties of a more volatile nature. One
+typical example is attribute generated by the `pingd` utility.
+
+Usage:
+...............
+status-attr <node> set <attr> <value>
+status-attr <node> delete <attr>
+status-attr <node> show <attr>
+...............
+Example:
+...............
+status-attr node_1 show pingd
+...............
+
+[[cmdhelp_node_utilization,manage utilization attributes]]
+==== `utilization`
+
+Edit node utilization attributes. These attributes describe
+hardware characteristics as integer numbers such as memory size
+or the number of CPUs. By setting the `placement-strategy`
+cluster property appropriately, it is possible then to distribute
+resources based on resource requirements and node size. See also
+<<cmdhelp_resource_utilization,resource utilization attributes>>.
+
+Usage:
+...............
+utilization <node> set <attr> <value>
+utilization <node> delete <attr>
+utilization <node> show <attr>
+...............
+Examples:
+...............
+utilization node_1 set memory 16384
+utilization node_1 show cpu
+...............
+
+[[cmdhelp_site,GEO clustering site support]]
+=== `site` - GEO clustering site support
+
+A cluster may consist of two or more subclusters in different and
+distant locations. This set of commands supports such setups.
+
+[[cmdhelp_site_ticket,manage site tickets]]
+==== `ticket`
+
+Tickets are cluster-wide attributes. They can be managed at the
+site where this command is executed.
+
+It is then possible to constrain resources depending on the
+ticket availability (see the <<cmdhelp_configure_rsc_ticket,`rsc_ticket`>> command
+for more details).
+
+Usage:
+...............
+ticket {grant|revoke|standby|activate|show|time|delete} <ticket>
+...............
+Example:
+...............
+ticket grant ticket1
+...............
+
+[[cmdhelp_options,User preferences]]
+=== `options` - User preferences
+
+The user may set various options for the crm shell itself.
+
+[[cmdhelp_options_add-quotes,add quotes around parameters containing spaces]]
+==== `add-quotes`
+
+The shell (as in `/bin/sh`) parser strips quotes from the command
+line. This may sometimes make it really difficult to type values
+which contain white space. One typical example is the configure
+filter command. The crm shell will supply extra quotes around
+arguments which contain white space. The default is `yes`.
+
+.Note on quotes use
+****************************
+Adding quotes around arguments automatically has been introduced
+with version 1.2.2 and it is technically a regression. Being a
+regression is the only reason the `add-quotes` option exists. If
+you have custom shell scripts which would break, just set the
+`add-quotes` option to `no`.
+
+For instance, with adding quotes enabled, it is possible to do
+the following:
+...............
+# crm configure primitive d1 Dummy \
+    meta description="some description here"
+# crm configure filter 'sed "s/hostlist=./&node-c /"' fencing
+...............
+****************************
+
+[[cmdhelp_options_check-frequency,when to perform semantic check]]
+==== `check-frequency`
+
+Semantic check of the CIB or elements modified or created may be
+done on every configuration change (`always`), when verifying
+(`on-verify`) or `never`. It is by default set to `always`.
+Experts may want to change the setting to `on-verify`.
+
+The checks require that resource agents are present. If they are
+not installed at the configuration time set this preference to
+`never`.
+
+See <<topics_Features_Checks,Configuration semantic checks>> for more details.
+
+[[cmdhelp_options_check-mode,how to treat semantic errors]]
+==== `check-mode`
+
+Semantic check of the CIB or elements modified or created may be
+done in the `strict` mode or in the `relaxed` mode. In the former
+certain problems are treated as configuration errors. In the
+`relaxed` mode all are treated as warnings. The default is `strict`.
+
+See <<topics_Features_Checks,Configuration semantic checks>> for more details.
+
+[[cmdhelp_options_colorscheme,set colors for output]]
+==== `colorscheme`
+
+With `output` set to `color`, a comma separated list of colors
+from this option are used to emphasize:
+
+- keywords
+- object ids
+- attribute names
+- attribute values
+- scores
+- resource references
+
+`crm` can show colors only if there is curses support for python
+installed (usually provided by the `python-curses` package). The
+colors are whatever is available in your terminal. Use `normal`
+if you want to keep the default foreground color.
+
+This user preference defaults to
+`yellow,normal,cyan,red,green,magenta` which is good for
+terminals with dark background. You may want to change the color
+scheme and save it in the preferences file for other color
+setups.
+
+Example:
+...............
+colorscheme yellow,normal,blue,red,green,magenta
+...............
+
+[[cmdhelp_options_editor,set preferred editor program]]
+==== `editor`
+
+The `edit` command invokes an editor. Use this to specify your
+preferred editor program. If not set, it will default to either
+the value of the `EDITOR` environment variable or to one of the
+standard UNIX editors (`vi`,`emacs`,`nano`).
+
+Usage:
+...............
+editor program
+...............
+Example:
+...............
+editor vim
+...............
+
+[[cmdhelp_options_manage-children,how to handle children resource attributes]]
+==== `manage-children`
+
+Some resource management commands, such as `resource stop`, when
+the target resource is a group, may not always produce desired
+result. Each element, group and the primitive members, can have a
+meta attribute and those attributes may end up with conflicting
+values. Consider the following construct:
+...............
+crm(live)# configure show svc fs virtual-ip
+primitive fs Filesystem \
+    params device="/dev/drbd0" directory="/srv/nfs" fstype=ext3 \
+    op monitor interval=10s \
+    meta target-role=Started
+primitive virtual-ip IPaddr2 \
+    params ip=10.2.13.110 iflabel=1 \
+    op monitor interval=10s \
+    op start interval=0 \
+    meta target-role=Started
+group svc fs virtual-ip \
+    meta target-role=Stopped
+...............
+
+Even though the element +svc+ should be stopped, the group is
+actually running because all its members have the +target-role+
+set to +Started+:
+...............
+crm(live)# resource show svc
+resource svc is running on: xen-f
+...............
+
+Hence, if the user invokes +resource stop svc+ the intention is
+not clear. This preference gives the user an opportunity to
+better control what happens if attributes of group members have
+values which are in conflict with the same attribute of the group
+itself.
+
+Possible values are +ask+ (the default), +always+, and +never+.
+If set to +always+, the crm shell removes all children attributes
+which have values different from the parent. If set to +never+,
+all children attributes are left intact. Finally, if set to
++ask+, the user will be asked for each member what is to be done.
+
+[[cmdhelp_options_output,set output type]]
+==== `output`
+
+`crm` can adorn configurations in two ways: in color (similar to
+for instance the `ls --color` command) and by showing keywords in
+upper case. Possible values are `plain`, `color-always`, `color`,
+and 'uppercase'. It is possible to combine `uppercase` with one
+of the color values in order to get an upper case xmass tree. Just
+set this option to `color,uppercase` or `color-always,uppercase`.
+In case you need color codes in pipes, `color-always` forces color
+codes even in case the terminal is not a tty (just like `ls
+--color=always`).
+
+[[cmdhelp_options_pager,set preferred pager program]]
+==== `pager`
+
+The `view` command displays text through a pager. Use this to
+specify your preferred pager program. If not set, it will default
+to either the value of the `PAGER` environment variable or to one
+of the standard UNIX system pagers (`less`,`more`,`pg`).
+
+[[cmdhelp_options_reset,reset user preferences to factory defaults]]
+==== `reset`
+
+This command resets all user options to the defaults. If used as
+a single-shot command, the rc file (+$HOME/.config/crm/rc+) is
+reset to the defaults too.
+
+[[cmdhelp_options_save,save the user preferences to the rc file]]
+==== `save`
+
+Save current settings to the rc file (+$HOME/.config/crm/rc+). On
+further `crm` runs, the rc file is automatically read and parsed.
+
+[[cmdhelp_options_set,Set the value of a given option]]
+==== `set`
+
+Sets the value of an option. Takes the fully qualified
+name of the option as argument, as displayed by +show all+.
+
+The modified option value is stored in the user-local
+configuration file, usually found in +~/.config/crm/crm.conf+.
+
+Usage:
+........
+set <option> <value>
+........
+
+Example:
+........
+set color.warn "magenta bold"
+set editor nano
+........
+
+[[cmdhelp_options_show,show current user preference]]
+==== `show`
+
+Display all current settings.
+
+Given an option name as argument, `show` will display only the value
+of that argument.
+
+Given +all+ as argument, `show` displays all available user options.
+
+Usage:
+........
+show [all|<option>]
+........
+
+Example:
+........
+show
+show skill-level
+show all
+........
+
+[[cmdhelp_options_skill-level,set skill level]]
+==== `skill-level`
+
+Based on the skill-level setting, the user is allowed to use only
+a subset of commands. There are three levels: operator,
+administrator, and expert. The operator level allows only
+commands at the `resource` and `node` levels, but not editing
+or deleting resources. The administrator may do that and may also
+configure the cluster at the `configure` level and manage the
+shadow CIBs. The expert may do all.
+
+Usage:
+...............
+skill-level <level>
+
+level :: operator | administrator | expert
+...............
+
+.Note on security
+****************************
+The `skill-level` option is advisory only. There is nothing
+stopping any users change their skill level (see
+<<topics_Features_Security,Access Control Lists (ACL)>> on how to enforce
+access control).
+****************************
+
+[[cmdhelp_options_sort-elements,sort CIB elements]]
+==== `sort-elements`
+
+`crm` by default sorts CIB elements. If you want them appear in
+the order they were created, set this option to `no`.
+
+Usage:
+...............
+sort-elements {yes|no}
+...............
+Example:
+...............
+sort-elements no
+...............
+
+[[cmdhelp_options_user,set the cluster user]]
+==== `user`
+
+Sufficient privileges are necessary in order to manage a
+cluster: programs such as `crm_verify` or `crm_resource` and,
+ultimately, `cibadmin` have to be run either as `root` or as the
+CRM owner user (typically `hacluster`). You don't have to worry
+about that if you run `crm` as `root`. A more secure way is to
+run the program with your usual privileges, set this option to
+the appropriate user (such as `hacluster`), and setup the
+`sudoers` file.
+
+Usage:
+...............
+user system-user
+...............
+Example:
+...............
+user hacluster
+...............
+
+[[cmdhelp_options_wait,synchronous operation]]
+==== `wait`
+
+In normal operation, `crm` runs a command and gets back
+immediately to process other commands or get input from the user.
+With this option set to `yes` it will wait for the started
+transition to finish. In interactive mode dots are printed to
+indicate progress.
+
+Usage:
+...............
+wait {yes|no}
+...............
+Example:
+...............
+wait yes
+...............
+
+[[cmdhelp_configure,CIB configuration]]
+=== `configure` - CIB configuration
+
+This level enables all CIB object definition commands.
+
+The configuration may be logically divided into four parts:
+nodes, resources, constraints, and (cluster) properties and
+attributes.  Each of these commands support one or more basic CIB
+objects.
+
+Nodes and attributes describing nodes are managed using the
+`node` command.
+
+Commands for resources are:
+
+- `primitive`
+- `monitor`
+- `group`
+- `clone`
+- `ms`/`master` (master-slave)
+
+In order to streamline large configurations, it is possible to
+define a template which can later be referenced in primitives:
+
+- `rsc_template`
+
+In that case the primitive inherits all attributes defined in the
+template.
+
+There are three types of constraints:
+
+- `location`
+- `colocation`
+- `order`
+
+It is possible to define fencing order (stonith resource
+priorities):
+
+- `fencing_topology`
+
+Finally, there are the cluster properties, resource meta
+attributes defaults, and operations defaults. All are just a set
+of attributes. These attributes are managed by the following
+commands:
+
+- `property`
+- `rsc_defaults`
+- `op_defaults`
+
+In addition to the cluster configuration, the Access Control
+Lists (ACL) can be setup to allow access to parts of the CIB for
+users other than +root+ and +hacluster+. The following commands
+manage ACL:
+
+- `user`
+- `role`
+
+In Pacemaker 1.1.12 and up, this command replaces the `user` command
+for handling ACLs:
+
+- `acl_target`
+
+The changes are applied to the current CIB only on ending the
+configuration session or using the `commit` command.
+
+Comments start with +#+ in the first line. The comments are tied
+to the element which follows. If the element moves, its comments
+will follow.
+
+[[cmdhelp_configure_acl_target,Define target access rights]]
+==== `acl_target`
+
+Defines an ACL target.
+
+Usage:
+................
+acl_target <tid> [<role> ...]
+................
+Example:
+................
+acl_target joe resource_admin constraint_editor
+................
+
+[[cmdhelp_configure_alert,Event-driven alerts]]
+==== `alert`
+
+.Version note
+****************************
+This feature is only available
+in Pacemaker 1.1.15+.
+****************************
+
+Event-driven alerts enables calling scripts whenever interesting
+events occur in the cluster (nodes joining or leaving, resources
+starting or stopping, etc.).
+
+The +path+ is an arbitrary file path to an alert script.  Existing
+external scripts used with ClusterMon resources can be used as alert
+scripts, since the interface is compatible.
+
+Each alert may have a number of receipients configured.  These will be
+passed to the script as arguments. The first recipient will also be
+passed as the +CRM_alert_recipient+ environment variable, for
+compatibility with existing scripts that only support one recipient.
+
+The available meta attributes are +timeout+ (default 30s) and
++timestamp-format+ (default `"%H:%M:%S.%06N"`).
+
+Some configurations may require each recipient to be delimited by
+brackets, to avoid ambiguity. In the example +alert-2+ below, the meta
+attribute for `timeout` is defined after the recipient, so the
+brackets are used to ensure that the meta attribute is set for the
+alert and not just the recipient. This can be avoided by setting any
+alert attributes before defining the recipients.
+
+Usage:
+...............
+alert <id> <path> \
+  [attributes <nvpair> ...] \
+  [meta <nvpair> ...] \
+  [select [nodes | fencing | resources | attributes '{' <attribute> ... '}' ] ...] \
+  [to [{] <recipient>
+    [attributes <nvpair> ...] \
+    [meta <nvpair> ...] [}] \
+    ...]
+...............
+
+Example:
+...............
+alert alert-1 /srv/pacemaker/pcmk_alert_sample.sh \
+    to /var/log/cluster-alerts.log
+
+alert alert-2 /srv/pacemaker/example_alert.sh \
+    meta timeout=60s \
+    to { /var/log/cluster-alerts.log }
+
+alert alert-3 /srv/pacemaker/example_alert.sh \
+    select fencing \
+    to { /var/log/fencing-alerts.log }
+
+...............
+
+[[cmdhelp_configure_bundle,Container bundle]]
+==== `bundle`
+
+A bundle is a single resource specifying the settings, networking
+requirements, and storage requirements for any number of containers
+generated from the same container image.
+
+Pacemaker bundles support Docker (since version 1.1.17) and rkt (since
+version 1.1.18) container technologies.
+
+A bundle must contain exactly one +docker+ or +rkt+ element.
+
+The bundle definition may contain a reference to a primitive
+resource which defining the resource running inside the
+container.
+
+Example:
+...............
+
+primitive httpd-apache ocf:heartbeat:apache
+
+bundle httpd \
+    docker image=pcmk:httpd replicas=3 \
+    network ip-range-start=10.10.10.123 host-netmask=24 \
+    port-mapping port=80 \
+    storage \
+        storage-mapping target-dir=/var/www/html source-dir=/srv/www options=rw \
+    primitive httpd-apache
+
+...............
+
+[[cmdhelp_configure_cib,CIB shadow management]]
+==== `cib`
+
+This level is for management of shadow CIBs. It is available at
+the `configure` level to enable saving intermediate changes to a
+shadow CIB instead of to the live cluster. This short excerpt
+shows how:
+...............
+crm(live)configure# cib new test-2
+INFO: test-2 shadow CIB created
+crm(test-2)configure# commit
+...............
+Note how the current CIB in the prompt changed from +live+ to
++test-2+ after issuing the `cib new` command. See also the
+<<cmdhelp_cib,CIB shadow management>> for more information.
+
+[[cmdhelp_configure_cibstatus,CIB status management and editing]]
+==== `cibstatus`
+
+Enter edit and manage the CIB status section level. See the
+<<cmdhelp_cibstatus,CIB status management section>>.
+
+[[cmdhelp_configure_clone,define a clone]]
+==== `clone`
+
+The `clone` command creates a resource clone. It may contain a
+single primitive resource or one group of resources.
+
+Usage:
+...............
+clone <name> <rsc>
+  [description=<description>]
+  [meta <attr_list>]
+  [params <attr_list>]
+
+attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+...............
+Example:
+...............
+clone cl_fence apc_1 \
+  meta clone-node-max=1 globally-unique=false
+
+clone disk1 drbd1 \
+  meta promotable=true notify=true globally-unique=false
+...............
+
+[[cmdhelp_configure_colocation,colocate resources]]
+==== `colocation` (`collocation`)
+
+This constraint expresses the placement relation between two
+or more resources. If there are more than two resources, then the
+constraint is called a resource set.
+
+The score is used to indicate the priority of the constraint. A
+positive score indicates that the resources should run on the same
+node. A negative score that they should not run on the same
+node. Values of positive or negative +infinity+ indicate a mandatory
+constraint.
+
+In the two resource form, the cluster will place +<with-rsc>+ first,
+and then decide where to put the +<rsc>+ resource.
+
+Collocation resource sets have an extra attribute (+sequential+)
+to allow for sets of resources which don't depend on each other
+in terms of state. The shell syntax for such sets is to put
+resources in parentheses.
+
+Sets cannot be nested.
+
+The optional +node-attribute+ can be used to colocate resources on a
+set of nodes and not necessarily on the same node. For example, by
+setting a node attribute +color+ on all nodes and setting the
++node-attribute+ value to +color+ as well, the colocated resources
+will be placed on any node that has the same color.
+
+For more details on how to configure resource sets, see
+<<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
+
+Usage:
+...............
+colocation <id> <score>: <rsc>[:<role>] <with-rsc>[:<role>]
+  [node-attribute=<node_attr>]
+
+colocation <id> <score>: <resource_sets>
+  [node-attribute=<node_attr>]
+
+resource_sets :: <resource_set> [<resource_set> ...]
+
+resource_set :: ["("|"["] <rsc>[:<role>] [<rsc>[:<role>] ...] \
+                [<attributes>]  [")"|"]"]
+
+attributes :: [require-all=(true|false)] [sequential=(true|false)]
+
+...............
+Example:
+...............
+colocation never_put_apache_with_dummy -inf: apache dummy
+colocation c1 inf: A ( B C )
+...............
+
+[[cmdhelp_configure_commit,commit the changes to the CIB]]
+==== `commit`
+
+Commit the current configuration to the CIB in use. As noted
+elsewhere, commands in a configure session don't have immediate
+effect on the CIB. All changes are applied at one point in time,
+either using `commit` or when the user leaves the configure
+level. In case the CIB in use changed in the meantime, presumably
+by somebody else, the crm shell will refuse to apply the changes.
+
+If you know that it's fine to still apply them, add +force+ to the
+command line.
+
+To disable CIB patching and apply the changes by replacing the CIB
+completely, add +replace+ to the command line. Note that this can lead
+to previous changes being overwritten if some other process
+concurrently modifies the CIB.
+
+Usage:
+...............
+commit [force] [replace]
+...............
+
+[[cmdhelp_configure_default-timeouts,set timeouts for operations to minimums from the meta-data]]
+==== `default-timeouts`
+
+This command takes the timeouts from the actions section of the
+resource agent meta-data and sets them for the operations of the
+primitive.
+
+Usage:
+...............
+default-timeouts <id> [<id>...]
+...............
+
+.Note on `default-timeouts`
+****************************
+The use of this command is discouraged in favor of manually
+determining the best timeouts required for the particular
+configuration. Relying on the resource agent to supply appropriate
+timeouts can cause the resource to fail at the worst possible moment.
+
+Appropriate timeouts for resource actions are context-sensitive, and
+should be carefully considered with the whole configuration in mind.
+****************************
+
+[[cmdhelp_configure_delete,delete CIB objects]]
+==== `delete`
+
+Delete one or more objects. If an object to be deleted belongs to
+a container object, such as a group, and it is the only resource
+in that container, then the container is deleted as well. Any
+related constraints are removed as well.
+
+If the object is a started resource, it will not be deleted unless the
++--force+ flag is passed to the command, or the +force+ option is set.
+
+Usage:
+...............
+delete [--force] <id> [<id>...]
+...............
+
+[[cmdhelp_configure_edit,edit CIB objects]]
+==== `edit`
+
+This command invokes the editor with the object description. As
+with the `show` command, the user may choose to edit all objects
+or a set of objects.
+
+If the user insists, he or she may edit the XML edition of the
+object. If you do that, don't modify any id attributes.
+
+Usage:
+...............
+edit [xml] [<id> ...]
+edit [xml] changed
+...............
+
+.Note on renaming element ids
+****************************
+The edit command sometimes cannot properly handle modifying
+element ids. In particular for elements which belong to group or
+ms resources. Group and ms resources themselves also cannot be
+renamed. Please use the `rename` command instead.
+****************************
+
+[[cmdhelp_configure_erase,erase the CIB]]
+==== `erase`
+
+The `erase` clears all configuration. Apart from nodes. To remove
+nodes, you have to specify an additional keyword `nodes`.
+
+Note that removing nodes from the live cluster may have some
+strange/interesting/unwelcome effects.
+
+Usage:
+...............
+erase [nodes]
+...............
+
+[[cmdhelp_configure_fencing_topology,node fencing order]]
+==== `fencing_topology`
+
+If multiple fencing (stonith) devices are available capable of
+fencing a node, their order may be specified by +fencing_topology+.
+The order is specified per node.
+
+Stonith resources can be separated by +,+ in which case all of
+them need to succeed. If they fail, the next stonith resource (or
+set of resources) is used. In other words, use comma to separate
+resources which all need to succeed and whitespace for serial
+order. It is not allowed to use whitespace around comma.
+
+If the node is left out, the order is used for all nodes.
+That should reduce the configuration size in some stonith setups.
+
+From Pacemaker version 1.1.14, it is possible to use a node attribute
+as the +target+ in a fencing topology. The syntax for this usage is
+described below.
+
+From Pacemaker version 1.1.14, it is also possible to use regular
+expression patterns as the +target+ in a fencing topology. The configured
+fencing sequence then applies to all devices matching the pattern.
+
+Usage:
+...............
+fencing_topology <stonith_resources> [<stonith_resources> ...]
+fencing_topology <fencing_order> [<fencing_order> ...]
+
+fencing_order :: <target> <stonith_resources> [<stonith_resources> ...]
+
+stonith_resources :: <rsc>[,<rsc>...]
+target :: <node>: | attr:<node-attribute>=<value> | pattern:<pattern>
+...............
+Example:
+...............
+# Only kill the power if poison-pill fails
+fencing_topology poison-pill power
+
+# As above for node-a, but a different strategy for node-b
+fencing_topology \
+    node-a: poison-pill power \
+    node-b: ipmi serial
+
+# Fencing anything on rack 1 requires fencing via both APC 1 and 2,
+# to defeat the redundancy provided by two separate UPS units.
+fencing_topology attr:rack=1 apc01,apc02
+
+# Fencing for all machines named green.* is done using the pear
+# fencing device first, while all machines named red.* are fenced
+# using the apple fencing device first.
+fencing_topology \
+    pattern:green.* pear apple \
+    pattern:red.* apple pear
+...............
+
+[[cmdhelp_configure_filter,filter CIB objects]]
+==== `filter`
+
+This command filters the given CIB elements through an external
+program. The program should accept input on `stdin` and send
+output to `stdout` (the standard UNIX filter conventions). As
+with the `show` command, the user may choose to filter all or
+just a subset of elements.
+
+It is possible to filter the XML representation of objects, but
+probably not as useful as the configuration language. The
+presentation is somewhat different from what would be displayed
+by the `show` command---each element is shown on a single line,
+i.e. there are no backslashes and no other embelishments.
+
+Don't forget to put quotes around the filter if it contains
+spaces.
+
+Usage:
+...............
+filter <prog> [xml] [<id> ...]
+filter <prog> [xml] changed
+...............
+Examples:
+...............
+filter "sed '/^primitive/s/target-role=[^ ]*//'"
+# crm configure filter "sed '/^primitive/s/target-role=[^ ]*//'"
+crm configure <<END
+  filter "sed '/threshold=\"1\"/s/=\"1\"/=\"0\"/g'"
+END
+...............
+
+.Note on quotation marks
+**************************
+Filter commands which feature a blend of quotation marks can be
+difficult to get right, especially when used directly from bash, since
+bash does its own quotation parsing. In these cases, it can be easier
+to supply the filter command as standard input. See the last example
+above.
+**************************
+
+[[cmdhelp_configure_get_property,Get property value]]
+==== `get-property`
+
+Show the value of the given property. If the value is not set, the
+command will print the default value for the property, if known.
+
+If no property name is passed to the command, the list of known
+cluster properties is printed.
+
+If the property is set multiple times, for example using multiple
+property sets with different rule expressions, the output of this
+command is undefined.
+
+Pass the argument +-t+ or +--true+ to `get-property` to translate
+the argument value into +true+ or +false+. If the value is not
+set, the command will print +false+.
+
+Usage:
+...............
+get-property [-t|--true] [<name>]
+...............
+
+Example:
+...............
+get-property stonith-enabled
+get-property -t maintenance-mode
+...............
+
+[[cmdhelp_configure_graph,generate a directed graph]]
+==== `graph`
+
+Create a graphviz graphical layout from the current cluster
+configuration.
+
+Currently, only `dot` (directed graph) is supported. It is
+essentially a visualization of resource ordering.
+
+The graph may be saved to a file which can be used as source for
+various graphviz tools (by default it is displayed in the user's
+X11 session). Optionally, by specifying the format, one can also
+produce an image instead.
+
+For more or different graphviz attributes, it is possible to save
+the default set of attributes to an ini file. If this file exists
+it will always override the builtin settings. The +exportsettings+
+subcommand also prints the location of the ini file.
+
+Usage:
+...............
+graph [<gtype> [<file> [<img_format>]]]
+graph exportsettings
+
+gtype :: dot
+img_format :: `dot` output format (see the +-T+ option)
+...............
+Example:
+...............
+graph dot
+graph dot clu1.conf.dot
+graph dot clu1.conf.svg svg
+...............
+
+[[cmdhelp_configure_group,define a group]]
+==== `group`
+
+The `group` command creates a group of resources. This can be useful
+when resources depend on other resources and require that those
+resources start in order on the same node. A common use of resource
+groups is to ensure that a server and a virtual IP are located
+together, and that the virtual IP is started before the server.
+
+Grouped resources are started in the order they appear in the group,
+and stopped in the reverse order. If a resource in the group cannot
+run anywhere, resources following it in the group will not start.
+
+`group` can be passed the "container" meta attribute, to indicate that
+it is to be used to group VM resources monitored using Nagios. The
+resource referred to by the container attribute must be of type
+`ocf:heartbeat:Xen`, `ocf:heartbeat:VirtualDomain` or `ocf:heartbeat:lxc`.
+
+Usage:
+...............
+group <name> <rsc> [<rsc>...]
+  [description=<description>]
+  [meta attr_list]
+  [params attr_list]
+
+attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+...............
+Example:
+...............
+group internal_www disk0 fs0 internal_ip apache \
+  meta target_role=stopped
+
+group vm-and-services vm vm-sshd meta container="vm"
+...............
+
+[[cmdhelp_configure_load,import the CIB from a file]]
+==== `load`
+
+Load a part of configuration (or all of it) from a local file or
+a network URL. The +replace+ method replaces the current
+configuration with the one from the source. The +update+ method
+tries to import the contents into the current configuration. The
++push+ method imports the contents into the current configuration
+and removes any lines that are not present in the given
+configuration.
+The file may be a CLI file or an XML file.
+
+If the URL is `-`, the configuration is read from standard input.
+
+Usage:
+...............
+load [xml] <method> URL
+
+method :: replace | update | push
+...............
+Example:
+...............
+load xml update myfirstcib.xml
+load xml replace http://storage.big.com/cibs/bigcib.xml
+load xml push smallcib.xml
+...............
+
+[[cmdhelp_configure_location,a location preference]]
+==== `location`
+
+`location` defines the preference of nodes for the given
+resource. The location constraints consist of one or more rules
+which specify a score to be awarded if the rule matches.
+
+The resource referenced by the location constraint can be one of the
+following:
+
+* Plain resource reference: +location loc1 webserver 100: node1+
+* Resource set in curly brackets: +location loc1 { virtual-ip webserver } 100: node1+
+* Tag containing resource ids: +location loc1 tag1 100: node1+
+* Resource pattern: +location loc1 /web.*/ 100: node1+
+
+The +resource-discovery+ attribute allows probes to be selectively
+enabled or disabled per resource and node.
+
+The syntax for resource sets is described in detail for
+<<cmdhelp_configure_colocation,`colocation`>>.
+
+For more details on how to configure resource sets, see
+<<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
+
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
+Usage:
+...............
+location <id> <rsc> [<attributes>] {<node_pref>|<rules>}
+
+rsc :: /<rsc-pattern>/
+        | { resource_sets }
+        | <rsc>
+
+attributes :: role=<role> | resource-discovery=always|never|exclusive
+
+node_pref :: <score>: <node>
+
+rules ::
+  rule [id_spec] [$role=<role>] <score>: <expression>
+  [rule [id_spec] [$role=<role>] <score>: <expression> ...]
+
+id_spec :: $id=<id> | $id-ref=<id>
+score :: <number> | <attribute> | [-]inf
+expression :: <simple_exp> [<bool_op> <simple_exp> ...]
+bool_op :: or | and
+simple_exp :: <attribute> [type:]<binary_op> <value>
+          | <unary_op> <attribute>
+          | date <date_expr>
+type :: string | version | number
+binary_op :: lt | gt | lte | gte | eq | ne
+unary_op :: defined | not_defined
+
+date_expr :: lt <end>
+         | gt <start>
+         | in start=<start> end=<end>
+         | in start=<start> <duration>
+         | spec <date_spec>
+duration|date_spec ::
+         hours=<value>
+         | monthdays=<value>
+         | weekdays=<value>
+         | yearsdays=<value>
+         | months=<value>
+         | weeks=<value>
+         | years=<value>
+         | weekyears=<value>
+         | moon=<value>
+...............
+Examples:
+...............
+location conn_1 internal_www 100: node1
+
+location conn_1 internal_www \
+  rule 50: #uname eq node1 \
+  rule pingd: defined pingd
+
+location conn_2 dummy_float \
+  rule -inf: not_defined pingd or pingd number:lte 0
+
+# never probe for rsc1 on node1
+location no-probe rsc1 resource-discovery=never -inf: node1
+...............
+
+[[cmdhelp_configure_modgroup,modify group]]
+==== `modgroup`
+
+Add or remove primitives in a group. The `add` subcommand appends
+the new group member by default. Should it go elsewhere, there
+are `after` and `before` clauses.
+
+Usage:
+...............
+modgroup <id> add <id> [after <id>|before <id>]
+modgroup <id> remove <id>
+...............
+Examples:
+...............
+modgroup share1 add storage2 before share1-fs
+...............
+
+[[cmdhelp_configure_monitor,add monitor operation to a primitive]]
+==== `monitor`
+
+Monitor is by far the most common operation. It is possible to
+add it without editing the whole resource. Also, long primitive
+definitions may be a bit uncluttered. In order to make this
+command as concise as possible, less common operation attributes
+are not available. If you need them, then use the `op` part of
+the `primitive` command.
+
+Usage:
+...............
+monitor <rsc>[:<role>] <interval>[:<timeout>]
+...............
+Example:
+...............
+monitor apcfence 60m:60s
+...............
+
+Note that after executing the command, the monitor operation may
+be shown as part of the primitive definition.
+
+[[cmdhelp_configure_ms,define a master-slave resource]]
+==== `ms` (`master`)
+
+The `ms` command creates a master/slave resource type. It may contain a
+single primitive resource or one group of resources.
+
+Usage:
+...............
+ms <name> <rsc>
+  [description=<description>]
+  [meta attr_list]
+  [params attr_list]
+
+attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+...............
+Example:
+...............
+ms disk1 drbd1 \
+  meta notify=true globally-unique=false
+...............
+
+.Note on `ms` deprecated
+****************************
+From Pacemaker-2.0, the resource type referred to as "master/slave",
+"stateful", or "multi-state" is no longer a separate resource type,
+but a variation of clone now referred to as a "promotable clone".
+For backward compatibility, above configurations are also accepted.
+...............
+clone disk1 drbd1 \
+  meta promotable=true notify=true globally-unique=false
+...............
+****************************
+
+.Note on `id-ref` usage
+****************************
+Instance or meta attributes (`params` and `meta`) may contain
+a reference to another set of attributes. In that case, no other
+attributes are allowed. Since attribute sets' ids, though they do
+exist, are not shown in the `crm`, it is also possible to
+reference an object instead of an attribute set. `crm` will
+automatically replace such a reference with the right id:
+
+...............
+crm(live)configure# primitive a2 www-2 meta $id-ref=a1
+crm(live)configure# show a2
+primitive a2 apache \
+    meta $id-ref=a1-meta_attributes
+    [...]
+...............
+It is advisable to give meaningful names to attribute sets which
+are going to be referenced.
+****************************
+
+[[cmdhelp_configure_node,define a cluster node]]
+==== `node`
+
+The node command describes a cluster node. Nodes in the CIB are
+commonly created automatically by the CRM. Hence, you should not
+need to deal with nodes unless you also want to define node
+attributes. Note that it is also possible to manage node
+attributes at the `node` level.
+
+Usage:
+...............
+node [$id=<id>] <uname>[:<type>]
+  [description=<description>]
+  [attributes [$id=<id>] [<score>:] [rule...]
+    <param>=<value> [<param>=<value>...]] | $id-ref=<ref>
+  [utilization [$id=<id>] [<score>:] [rule...]
+    <param>=<value> [<param>=<value>...]] | $id-ref=<ref>
+
+type :: normal | member | ping | remote
+...............
+Example:
+...............
+node node1
+node big_node attributes memory=64
+...............
+
+[[cmdhelp_configure_op_defaults,set resource operations defaults]]
+==== `op_defaults`
+
+Set defaults for the operations meta attributes.
+
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
+Usage:
+...............
+op_defaults [$id=<set_id>] [rule ...] <option>=<value> [<option>=<value> ...]
+...............
+Example:
+...............
+op_defaults record-pending=true
+...............
+
+[[cmdhelp_configure_order,order resources]]
+==== `order`
+
+This constraint expresses the order of actions on two resources
+or more resources. If there are more than two resources, then the
+constraint is called a resource set.
+
+Ordered resource sets have an extra attribute to allow for sets
+of resources whose actions may run in parallel. The shell syntax
+for such sets is to put resources in parentheses.
+
+If the subsequent resource can start or promote after any one of the
+resources in a set has done, enclose the set in brackets (+[+ and +]+).
+
+Sets cannot be nested.
+
+Three strings are reserved to specify a kind of order constraint:
++Mandatory+, +Optional+, and +Serialize+. It is preferred to use
+one of these settings instead of score. Previous versions mapped
+scores +0+ and +inf+ to keywords +advisory+ and +mandatory+.
+That is still valid but deprecated.
+
+For more details on how to configure resource sets, see
+<<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
+
+Usage:
+...............
+order <id> [kind:] first then [symmetrical=<bool>]
+
+order <id> [kind:] resource_sets [symmetrical=<bool>]
+
+kind :: Mandatory | Optional | Serialize
+
+first :: <rsc>[:<action>]
+
+then ::  <rsc>[:<action>]
+
+resource_sets :: resource_set [resource_set ...]
+
+resource_set :: ["["|"("] <rsc>[:<action>] [<rsc>[:<action>] ...] \
+                [attributes] ["]"|")"]
+
+attributes :: [require-all=(true|false)] [sequential=(true|false)]
+
+...............
+Example:
+...............
+order o-1 Mandatory: apache:start ip_1
+order o-2 Serialize: A ( B C )
+order o-4 first-resource then-resource
+...............
+
+[[cmdhelp_configure_primitive,define a resource]]
+==== `primitive`
+
+The primitive command describes a resource. It may be referenced
+only once in group, clone, or master-slave objects. If it's not
+referenced, then it is placed as a single resource in the CIB.
+
+Operations may be specified anonymously, as a group or by reference:
+
+* "Anonymous", as a list of +op+ specifications. Use this
+  method if you don't need to reference the set of operations
+  elsewhere. This is the most common way to define operations.
+
+* If reusing operation sets is desired, use the +operations+ keyword
+  along with an id to give the operations set a name. Use the
+  +operations+ keyword and an id-ref value set to the id of another
+  operations set, to apply the same set of operations to this
+  primitive.
+
+Operation attributes which are not recognized are saved as
+instance attributes of that operation. A typical example is
++OCF_CHECK_LEVEL+.
+
+For multistate resources, roles are specified as +role=<role>+.
+
+A template may be defined for resources which are of the same
+type and which share most of the configuration. See
+<<cmdhelp_configure_rsc_template,`rsc_template`>> for more information.
+
+Attributes containing time values, such as the +interval+ attribute on
+operations, are configured either as a plain number, which is
+interpreted as a time in seconds, or using one of the following
+suffixes:
+
+* +s+, +sec+ - time in seconds (same as no suffix)
+* +ms+, +msec+ - time in milliseconds
+* +us+, +usec+ - time in microseconds
+* +m+, +min+ - time in minutes
+* +h+, +hr+ - time in hours
+
+Usage:
+...............
+primitive <rsc> {[<class>:[<provider>:]]<type>|@<template>}
+  [description=<description>]
+  [[params] attr_list]
+  [meta attr_list]
+  [utilization attr_list]
+  [operations id_spec]
+    [op op_type [<attribute>=<value>...]
+                [[op_params] attr_list]
+                [op_meta attr_list] ...]
+
+attr_list :: [$id=<id>] [<score>:] [rule...]
+             <attr>=<val> [<attr>=<val>...]] | $id-ref=<id>
+id_spec :: $id=<id> | $id-ref=<id>
+op_type :: start | stop | monitor
+...............
+Example:
+...............
+primitive apcfence stonith:apcsmart \
+  params ttydev=/dev/ttyS0 hostlist="node1 node2" \
+  op start timeout=60s \
+  op monitor interval=30m timeout=60s
+
+primitive www8 apache \
+  configfile=/etc/apache/www8.conf \
+  operations $id-ref=apache_ops
+
+primitive db0 mysql \
+  params config=/etc/mysql/db0.conf \
+  op monitor interval=60s \
+  op monitor interval=300s OCF_CHECK_LEVEL=10
+
+primitive r0 ocf:linbit:drbd \
+  params drbd_resource=r0 \
+  op monitor role=Master interval=60s \
+  op monitor role=Slave interval=300s
+
+primitive xen0 @vm_scheme1 xmfile=/etc/xen/vm/xen0
+
+primitive mySpecialRsc Special \
+  params 3: rule #uname eq node1 interface=eth1 \
+  params 2: rule #uname eq node2 interface=eth2 port=8888 \
+  params 1: interface=eth0 port=9999
+
+primitive A ocf:pacemaker:Dummy \
+  op start \
+    op_meta 2: rule #ra-version version:gt 1.0 timeout=120s \
+    op_meta 1: timeout=60s
+...............
+
+[[cmdhelp_configure_property,set a cluster property]]
+==== `property`
+
+Set cluster configuration properties. To list the
+available cluster configuration properties, use the
+<<cmdhelp_ra_info,`ra info`>> command with +pengine+, +crmd+,
++cib+ and +stonithd+ as arguments.
+When setting the +maintenance-mode+ property, it will
+inform the user if there are nodes or resources that
+have the +maintenance+ property.
+
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
+Usage:
+...............
+property [<set_id>:] [rule ...] <option>=<value> [<option>=<value> ...]
+...............
+Example:
+...............
+property stonith-enabled=true
+property rule date spec years=2014 stonith-enabled=false
+...............
+
+[[cmdhelp_configure_ptest,show cluster actions if changes were committed]]
+==== `ptest` (`simulate`)
+
+Show PE (Policy Engine) motions using `ptest(8)` or
+`crm_simulate(8)`.
+
+A CIB is constructed using the current user edited configuration
+and the status from the running CIB. The resulting CIB is run
+through `ptest` (or `crm_simulate`) to show changes which would
+happen if the configuration is committed.
+
+The status section may be loaded from another source and modified
+using the <<cmdhelp_cibstatus,`cibstatus`>> level commands. In that case, the
+`ptest` command will issue a message informing the user that the
+Policy Engine graph is not calculated based on the current status
+section and therefore won't show what would happen to the
+running but some imaginary cluster.
+
+If you have graphviz installed and X11 session, `dotty(1)` is run
+to display the changes graphically.
+
+Add a string of +v+ characters to increase verbosity. `ptest`
+can also show allocation scores. +utilization+ turns on
+information about the remaining capacity of nodes. With the
++actions+ option, `ptest` will print all resource actions.
+
+The `ptest` program has been replaced by `crm_simulate` in newer
+Pacemaker versions. In some installations both could be
+installed. Use `simulate` to enfore using `crm_simulate`.
+
+Usage:
+...............
+ptest [nograph] [v...] [scores] [actions] [utilization]
+...............
+Examples:
+...............
+ptest scores
+ptest vvvvv
+simulate actions
+...............
+
+[[cmdhelp_configure_refresh,refresh from CIB]]
+==== `refresh`
+
+Refresh the internal structures from the CIB. All changes made
+during this session are lost.
+
+Usage:
+...............
+refresh
+...............
+
+[[cmdhelp_configure_rename,rename a CIB object]]
+==== `rename`
+
+Rename an object. It is recommended to use this command to rename
+a resource, because it will take care of updating all related
+constraints and a parent resource. Changing ids with the edit
+command won't have the same effect.
+
+If you want to rename a resource, it must be in the stopped state.
+
+Usage:
+...............
+rename <old_id> <new_id>
+...............
+
+[[cmdhelp_configure_role,define role access rights]]
+==== `role`
+
+An ACL role is a set of rules which describe access rights to
+CIB. Rules consist of an access right +read+, +write+, or +deny+
+and a specification denoting part of the configuration to which
+the access right applies. The specification can be an XPath or a
+combination of tag and id references. If an attribute is
+appended, then the specification applies only to that attribute
+of the matching element.
+
+There is a number of shortcuts for XPath specifications. The
++meta+, +params+, and +utilization+ shortcuts reference resource
+meta attributes, parameters, and utilization respectively. The
+`location` may be used to specify location constraints most of
+the time to allow resource `move` and `unmove` commands. The
+`property` references cluster properties. The `node` allows
+reading node attributes. +nodeattr+ and +nodeutil+ reference node
+attributes and node capacity (utilization). The `status` shortcut
+references the whole status section of the CIB. Read access to
+status is necessary for various monitoring tools such as
+`crm_mon(8)` (aka `crm status`).
+
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
+Usage:
+...............
+role <role-id> rule [rule ...]
+
+rule :: acl-right cib-spec [attribute:<attribute>]
+
+acl-right :: read | write | deny
+
+cib-spec :: xpath-spec | tag-ref-spec
+xpath-spec :: xpath:<xpath> | shortcut
+tag-ref-spec :: tag:<tag> | ref:<id> | tag:<tag> ref:<id>
+
+shortcut :: meta:<rsc>[:<attr>]
+        params:<rsc>[:<attr>]
+        utilization:<rsc>
+        location:<rsc>
+        property[:<attr>]
+        node[:<node>]
+        nodeattr[:<attr>]
+        nodeutil[:<node>]
+        status
+...............
+Example:
+...............
+role app1_admin \
+    write meta:app1:target-role \
+    write meta:app1:is-managed \
+    write location:app1 \
+    read ref:app1
+...............
+
+[[cmdhelp_configure_rsc_defaults,set resource defaults]]
+==== `rsc_defaults`
+
+Set defaults for the resource meta attributes.
+
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
+Usage:
+...............
+rsc_defaults [<set_id>:] [rule ...] <option>=<value> [<option>=<value> ...]
+...............
+Example:
+...............
+rsc_defaults failure-timeout=3m
+...............
+
+[[cmdhelp_configure_rsc_template,define a resource template]]
+==== `rsc_template`
+
+The `rsc_template` command creates a resource template. It may be
+referenced in primitives. It is used to reduce large
+configurations with many similar resources.
+
+Usage:
+...............
+rsc_template <name> [<class>:[<provider>:]]<type>
+  [description=<description>]
+  [params attr_list]
+  [meta attr_list]
+  [utilization attr_list]
+  [operations id_spec]
+    [op op_type [<attribute>=<value>...] ...]
+
+attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
+id_spec :: $id=<id> | $id-ref=<id>
+op_type :: start | stop | monitor
+...............
+Example:
+...............
+rsc_template public_vm Xen \
+  op start timeout=300s \
+  op stop timeout=300s \
+  op monitor interval=30s timeout=60s \
+  op migrate_from timeout=600s \
+  op migrate_to timeout=600s
+primitive xen0 @public_vm \
+  params xmfile=/etc/xen/xen0
+primitive xen1 @public_vm \
+  params xmfile=/etc/xen/xen1
+...............
+
+[[cmdhelp_configure_rsc_ticket,resources ticket dependency]]
+==== `rsc_ticket`
+
+This constraint expresses dependency of resources on cluster-wide
+attributes, also known as tickets. Tickets are mainly used in
+geo-clusters, which consist of multiple sites. A ticket may be
+granted to a site, thus allowing resources to run there.
+
+The +loss-policy+ attribute specifies what happens to the
+resource (or resources) if the ticket is revoked. The default is
+either +stop+ or +demote+ depending on whether a resource is
+multi-state.
+
+See also the <<cmdhelp_site_ticket,`site`>> set of commands.
+
+Usage:
+...............
+rsc_ticket <id> <ticket_id>: <rsc>[:<role>] [<rsc>[:<role>] ...]
+  [loss-policy=<loss_policy_action>]
+
+loss_policy_action :: stop | demote | fence | freeze
+...............
+Example:
+...............
+rsc_ticket ticket-A_public-ip ticket-A: public-ip
+rsc_ticket ticket-A_bigdb ticket-A: bigdb loss-policy=fence
+rsc_ticket ticket-B_storage ticket-B: drbd-a:Master drbd-b:Master
+...............
+
+
+[[cmdhelp_configure_rsctest,test resources as currently configured]]
+==== `rsctest`
+
+Test resources with current resource configuration. If no nodes
+are specified, tests are run on all known nodes.
+
+The order of resources is significant: it is assumed that later
+resources depend on earlier ones.
+
+If a resource is multi-state, it is assumed that the role on
+which later resources depend is master.
+
+Tests are run sequentially to prevent running the same resource
+on two or more nodes. Tests are carried out only if none of the
+specified nodes currently run any of the specified resources.
+However, it won't verify whether resources run on the other
+nodes.
+
+Superuser privileges are obviously required: either run this as
+root or setup the `sudoers` file appropriately.
+
+Note that resource testing may take some time.
+
+Usage:
+...............
+rsctest <rsc_id> [<rsc_id> ...] [<node_id> ...]
+...............
+Examples:
+...............
+rsctest my_ip websvc
+rsctest websvc nodeB
+...............
+
+[[cmdhelp_configure_save,save the CIB to a file]]
+==== `save`
+
+Save the current configuration to a file. Optionally, as XML. Use
++-+ instead of file name to write the output to `stdout`.
+
+The `save` command accepts the same selection arguments as the `show`
+command. See the <<cmdhelp_configure_show,help section>> for `show`
+for more details.
+
+Usage:
+...............
+save [xml] [<id> | type:<type | tag:<tag> |
+            related:<obj> | changed ...] <file>
+...............
+Example:
+...............
+save myfirstcib.txt
+save web-server server-config.txt
+...............
+
+[[cmdhelp_configure_schema,set or display current CIB RNG schema]]
+==== `schema`
+
+CIB's content is validated by a RNG schema. Pacemaker supports
+several, depending on version. At least the following schemas are
+accepted by `crmsh`:
+
+* +pacemaker-1.0+
+* +pacemaker-1.1+
+* +pacemaker-1.2+
+* +pacemaker-1.3+
+* +pacemaker-2.0+
+
+Use this command to display or switch to another RNG schema.
+
+Usage:
+...............
+schema [<schema>]
+...............
+Example:
+...............
+schema pacemaker-1.1
+...............
+
+[[cmdhelp_configure_set,set an attribute value]]
+==== `set`
+
+Set the value of a configured attribute. The attribute must
+configured previously, and can be an agent parameter, meta attribute,
+utilization value or operation value.
+
+The first argument to the command is a path to an attribute.
+This is a dot-separated sequence beginning with the name of
+the resource or object, and ending with the name of the attribute to
+set. To set operation value, `op_type` should be specified; when multi
+operations exist like multi monitors, `interval` should be specified.
+
+Usage:
+...............
+set <path> <value>
+
+path:: id.[op_type.][interval.]name
+...............
+Examples:
+...............
+set vip1.ip 192.168.20.5
+set vm-a.force_stop 1
+set vip1.monitor.on-fail ignore
+set drbd.monitor.10s.interval 20s
+...............
+
+[[cmdhelp_configure_show,display CIB objects]]
+==== `show`
+
+The `show` command displays CIB objects. Without any argument, it
+displays all objects in the CIB, but the set of objects displayed by
+`show` can be limited to only objects with the given IDs or by using
+one or more of the special prefixes described below.
+
+The XML representation for the objects can be displayed by passing
++xml+ as the first argument.
+
+To show one or more specific objects, pass the object IDs as
+arguments.
+
+To show all objects of a certain type, use the +type:+ prefix.
+
+To show all objects in a tag, use the +tag:+ prefix.
+
+To show all constraints related to a primitive, use the +related:+ prefix.
+
+To show all modified objects, pass the argument +changed+.
+
+The prefixes can be used together on a single command line. For
+example, to show both the tag itself and the objects tagged by it the
+following combination can be used: +show tag:my-tag my-tag+.
+
+To refine a selection of objects using multiple modifiers, the keywords
++and+ and +or+ can be used. For example, to select all primitives tagged
++foo+, the following combination can be used:
++show type:primitive and tag:foo+.
+
+To hide values when displaying the configuration, use the
++obscure:<glob>+ argument. This can be useful when sending the
+configuration over a public channel, to avoid exposing potentially
+sensitive information. The +<glob>+ argument is a bash-style pattern
+matching attribute keys.
+
+In +/etc/crm/crm.conf+, +obscure_pattern+ option is the persisent configuration of CLI.
+Example, for the high security concern,
+...............
+[core]
+obscure_pattern = passw* | ip
+...............
+Which makes +crm configure show+ is equal to
+...............
+node-1:~ # crm configure show obscure:passw* obscure:ip
+node 1084783297: node1
+primitive fence_device stonith:fence_ilo5 \
+        params password="******"
+primitive ip IPaddr2 \
+        params ip="******"
+...............
+The default suggestion is +passw*+
+If you don't want to obscure, change the value to blank.
+
+Usage:
+...............
+show [xml] [<id>
+           | changed
+           | type:<type>
+           | tag:<id>
+           | related:<obj>
+           | obscure:<glob>
+           ...]
+
+type :: node | primitive | group | clone | ms | rsc_template
+      | location | colocation | order
+      | rsc_ticket
+      | property | rsc_defaults | op_defaults
+      | fencing_topology
+      | role | user | acl_target
+      | tag
+...............
+
+Example:
+...............
+show webapp
+show type:primitive
+show xml tag:db tag:fs
+show related:webapp
+show type:primitive obscure:passwd
+...............
+
+[[cmdhelp_configure_tag,Define resource tags]]
+==== `tag`
+
+Define a resource tag. A tag is an id referring to one or more
+resources, without implying any constraints between the tagged
+resources. This can be useful for grouping conceptually related
+resources.
+
+Usage:
+...............
+tag <tag-name>: <rsc> [<rsc> ...]
+tag <tag-name> <rsc> [<rsc> ...]
+...............
+Example:
+...............
+tag web: p-webserver p-vip
+tag ips server-vip admin-vip
+...............
+
+[[cmdhelp_configure_template,edit and import a configuration from a template]]
+==== `template`
+
+The specified template is loaded into the editor. It's up to the
+user to make a good CRM configuration out of it. See also the
+<<cmdhelp_template,template section>>.
+
+Usage:
+...............
+template [xml] url
+...............
+Example:
+...............
+template two-apaches.txt
+...............
+
+[[cmdhelp_configure_upgrade,upgrade the CIB]]
+==== `upgrade`
+
+Attempts to upgrade the CIB to validate with the current
+version. Commonly, this is required if the error
+`CIB not supported` occurs. It typically means that the
+active CIB version is coming from an older release.
+
+As a safety precaution, the force argument is required if the
++validation-with+ attribute is set to anything other than
++0.6+. Thus in most cases, it is required.
+
+Usage:
+...............
+upgrade [force]
+...............
+
+Example:
+...............
+upgrade force
+...............
+
+[[cmdhelp_configure_user,define user access rights]]
+==== `user`
+
+Users which normally cannot view or manage cluster configuration
+can be allowed access to parts of the CIB. The access is defined
+by a set of +read+, +write+, and +deny+ rules as in role
+definitions or by referencing roles. The latter is considered
+best practice.
+
+For more information on rule expressions, see
+<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+
+Usage:
+...............
+user <uid> {roles|rules}
+
+roles :: role:<role-ref> [role:<role-ref> ...]
+rules :: rule [rule ...]
+...............
+Example:
+...............
+user joe \
+    role:app1_admin \
+    role:read_all
+...............
+
+[[cmdhelp_configure_validate_all,call agent validate-all for resource]]
+==== `validate-all`
+
+Call the `validate-all` action for the resource, if possible.
+
+Limitations:
+
+* The resource agent must implement the `validate-all` action.
+* The current user must be root.
+* The primitive resource must not use nvpair references.
+
+Usage:
+...............
+validate-all <rsc>
+...............
+
+
+[[cmdhelp_configure_verify,verify the CIB with crm_verify]]
+==== `verify`
+
+Verify the contents of the CIB which would be committed.
+
+Usage:
+...............
+verify
+...............
+
+[[cmdhelp_configure_xml,raw xml]]
+==== `xml`
+
+Even though we promissed no xml, it may happen, but hopefully
+very very seldom, that an element from the CIB cannot be rendered
+in the configuration language. In that case, the element will be
+shown as raw xml, prefixed by this command. That element can then
+be edited like any other. If the shell finds out that after the
+change it can digest it, then it is going to be converted into
+the normal configuration language. Otherwise, there is no need to
+use `xml` for configuration.
+
+Usage:
+...............
+xml <xml>
+...............
+
+[[cmdhelp_template,edit and import a configuration from a template]]
+=== `template` - Import configuration from templates
+
+User may be assisted in the cluster configuration by templates
+prepared in advance. Templates consist of a typical ready
+configuration which may be edited to suit particular user needs.
+
+This command enters a template level where additional commands
+for configuration/template management are available.
+
+[[cmdhelp_template_apply,process and apply the current configuration to the current CIB]]
+==== `apply`
+
+Copy the current or given configuration to the current CIB. By
+default, the CIB is replaced, unless the method is set to
+"update".
+
+Usage:
+...............
+apply [<method>] [<config>]
+
+method :: replace | update
+...............
+
+[[cmdhelp_template_delete,delete a configuration]]
+==== `delete`
+
+Remove a configuration. The loaded (active) configuration may be
+removed by force.
+
+Usage:
+...............
+delete <config> [force]
+...............
+
+[[cmdhelp_template_edit,edit a configuration]]
+==== `edit`
+
+Edit current or given configuration using your favourite editor.
+
+Usage:
+...............
+edit [<config>]
+...............
+
+[[cmdhelp_template_list,list configurations/templates]]
+==== `list`
+
+When called with no argument, lists existing templates and
+configurations.
+
+Given the argument +templates+, lists the available templates.
+
+Given the argument +configs+, lists the available configurations.
+
+Usage:
+...............
+list [templates|configs]
+...............
+
+[[cmdhelp_template_load,load a configuration]]
+==== `load`
+
+Load an existing configuration. Further `edit`, `show`, and
+`apply` commands will refer to this configuration.
+
+Usage:
+...............
+load <config>
+...............
+
+[[cmdhelp_template_new,create a new configuration from templates]]
+==== `new`
+
+Create a new configuration from one or more templates. Note that
+configurations and templates are kept in different places, so it
+is possible to have a configuration name equal a template name.
+
+If you already know which parameters are required, you can set
+them directly on the command line.
+
+The parameter name +id+ is set by default to the name of the
+configuration.
+
+If no parameters are being set and you don't want a particular name
+for your configuration, you can call this command with a template name
+as the only parameter. A unique configuration name based on the
+template name will be generated.
+
+Usage:
+...............
+new [<config>] <template> [<template> ...] [params name=value ...]
+...............
+
+Example:
+...............
+new vip virtual-ip
+new bigfs ocfs2 params device=/dev/sdx8 directory=/bigfs
+new apache
+...............
+
+[[cmdhelp_template_show,show the processed configuration]]
+==== `show`
+
+Process the current or given configuration and display the result.
+
+Usage:
+...............
+show [<config>]
+...............
+
+[[cmdhelp_cibstatus,CIB status management and editing]]
+=== `cibstatus` - CIB status management and editing
+
+The `status` section of the CIB keeps the current status of nodes
+and resources. It is modified _only_ on events, i.e. when some
+resource operation is run or node status changes. For obvious
+reasons, the CRM has no user interface with which it is possible
+to affect the status section. From the user's point of view, the
+status section is essentially a read-only part of the CIB. The
+current status is never even written to disk, though it is
+available in the PE (Policy Engine) input files which represent
+the history of cluster motions. The current status may be read
+using the +cibadmin -Q+ command.
+
+It may sometimes be of interest to see how status changes would
+affect the Policy Engine. The set of `cibstatus` level commands
+allow the user to load status sections from various sources and
+then insert or modify resource operations or change nodes' state.
+
+The effect of those changes may then be observed by running the
+<<cmdhelp_configure_ptest,`ptest`>> command at the `configure` level
+or `simulate` and `run` commands at this level. The `ptest`
+runs with the user edited CIB whereas the latter two commands
+run with the CIB which was loaded along with the status section.
+
+The `simulate` and `run` commands as well as all status
+modification commands are implemented using `crm_simulate(8)`.
+
+[[cmdhelp_cibstatus_load,load the CIB status section]]
+==== `load`
+
+Load a status section from a file, a shadow CIB, or the running
+cluster. By default, the current (+live+) status section is
+modified. Note that if the +live+ status section is modified it
+is not going to be updated if the cluster status changes, because
+that would overwrite the user changes. To make `crm` drop changes
+and resume use of the running cluster status, run +load live+.
+
+All CIB shadow configurations contain the status section which is
+a snapshot of the status section taken at the time the shadow was
+created. Obviously, this status section doesn't have much to do
+with the running cluster status, unless the shadow CIB has just
+been created. Therefore, the `ptest` command by default uses the
+running cluster status section.
+
+Usage:
+...............
+load {<file>|shadow:<cib>|live}
+...............
+Example:
+...............
+load bug-12299.xml
+load shadow:test1
+...............
+
+[[cmdhelp_cibstatus_node,change node status]]
+==== `node`
+
+Change the node status. It is possible to throw a node out of
+the cluster, make it a member, or set its state to unclean.
+
++online+:: Set the +node_state+ `crmd` attribute to +online+
+and the +expected+ and +join+ attributes to +member+. The effect
+is that the node becomes a cluster member.
+
++offline+:: Set the +node_state+ `crmd` attribute to +offline+
+and the +expected+ attribute to empty. This makes the node
+cleanly removed from the cluster.
+
++unclean+:: Set the +node_state+ `crmd` attribute to +offline+
+and the +expected+ attribute to +member+. In this case the node
+has unexpectedly disappeared.
+
+Usage:
+...............
+node <node> {online|offline|unclean}
+...............
+Example:
+...............
+node xen-b unclean
+...............
+
+[[cmdhelp_cibstatus_op,edit outcome of a resource operation]]
+==== `op`
+
+Edit the outcome of a resource operation. This way you can
+tell CRM that it ran an operation and that the resource agent
+returned certain exit code. It is also possible to change the
+operation's status. In case the operation status is set to
+something other than +done+, the exit code is effectively
+ignored.
+
+Usage:
+...............
+op <operation> <resource> <exit_code> [<op_status>] [<node>]
+
+operation :: probe | monitor[:<n>] | start | stop |
+   promote | demote | notify | migrate_to | migrate_from
+exit_code :: <rc> | success | generic | args |
+   unimplemented | perm | installed | configured | not_running |
+   master | failed_master
+op_status :: pending | done | cancelled | timeout | notsupported | error
+
+n :: the monitor interval in seconds; if omitted, the first
+   recurring operation is referenced
+rc :: numeric exit code in range 0..9
+...............
+Example:
+...............
+op start d1 xen-b generic
+op start d1 xen-b 1
+op monitor d1 xen-b not_running
+op stop d1 xen-b 0 timeout
+...............
+
+[[cmdhelp_cibstatus_origin,display origin of the CIB status section]]
+==== `origin`
+
+Show the origin of the status section currently in use. This
+essentially shows the latest `load` argument.
+
+Usage:
+...............
+origin
+...............
+
+[[cmdhelp_cibstatus_quorum,set the quorum]]
+==== `quorum`
+
+Set the quorum value.
+
+Usage:
+...............
+quorum <bool>
+...............
+Example:
+...............
+quorum false
+...............
+
+[[cmdhelp_cibstatus_run,run policy engine]]
+==== `run`
+
+Run the policy engine with the edited status section.
+
+Add a string of +v+ characters to increase verbosity. Specify
++scores+ to see allocation scores also. +utilization+ turns on
+information about the remaining capacity of nodes.
+
+If you have graphviz installed and X11 session, `dotty(1)` is run
+to display the changes graphically.
+
+Usage:
+...............
+run [nograph] [v...] [scores] [utilization]
+...............
+Example:
+...............
+run
+...............
+
+[[cmdhelp_cibstatus_save,save the CIB status section]]
+==== `save`
+
+The current internal status section with whatever modifications
+were performed can be saved to a file or shadow CIB.
+
+If the file exists and contains a complete CIB, only the status
+section is going to be replaced and the rest of the CIB will
+remain intact. Otherwise, the current user edited configuration
+is saved along with the status section.
+
+Note that all modifications are saved in the source file as soon
+as they are run.
+
+Usage:
+...............
+save [<file>|shadow:<cib>]
+...............
+Example:
+...............
+save bug-12299.xml
+...............
+
+[[cmdhelp_cibstatus_show,show CIB status section]]
+==== `show`
+
+Show the current status section in the XML format. Brace yourself
+for some unreadable output. Add +changed+ option to get a human
+readable output of all changes.
+
+Usage:
+...............
+show [changed]
+...............
+
+[[cmdhelp_cibstatus_simulate,simulate cluster transition]]
+==== `simulate`
+
+Run the policy engine with the edited status section and simulate
+the transition.
+
+Add a string of +v+ characters to increase verbosity. Specify
++scores+ to see allocation scores also. +utilization+ turns on
+information about the remaining capacity of nodes.
+
+If you have graphviz installed and X11 session, `dotty(1)` is run
+to display the changes graphically.
+
+Usage:
+...............
+simulate [nograph] [v...] [scores] [utilization]
+...............
+Example:
+...............
+simulate
+...............
+
+[[cmdhelp_cibstatus_ticket,manage tickets]]
+==== `ticket`
+
+Modify the ticket status. Tickets can be granted and revoked.
+Granted tickets could be activated or put in standby.
+
+Usage:
+...............
+ticket <ticket> {grant|revoke|activate|standby}
+...............
+Example:
+...............
+ticket ticketA grant
+...............
+
+[[cmdhelp_assist,Configuration assistant]]
+=== `assist` - Configuration assistant
+
+The `assist` sublevel is a collection of helper
+commands that create or modify resources and
+constraints, to simplify the creation of certain
+configurations.
+
+For more information on individual commands, see
+the help text for those commands.
+
+[[cmdhelp_assist_template,Create template for primitives]]
+==== `template`
+
+This command takes a list of primitives as argument, and creates a new
+`rsc_template` for these primitives. It can only do this if the
+primitives do not already share a template and are of the same type.
+
+Usage:
+........
+template primitive-1 primitive-2 primitive-3
+........
+
+[[cmdhelp_assist_weak-bond,Create a weak bond between resources]]
+==== `weak-bond`
+
+A colocation between a group of resources says that the resources
+should be located together, but it also means that those resources are
+dependent on each other. If one of the resources fails, the others
+will be restarted.
+
+If this is not desired, it is possible to circumvent: By placing the
+resources in a non-sequential set and colocating the set with a dummy
+resource which is not monitored, the resources will be placed together
+but will have no further dependency on each other.
+
+This command creates both the constraint and the dummy resource needed
+for such a colocation.
+
+Usage:
+........
+weak-bond resource-1 resource-2
+........
+
+[[cmdhelp_maintenance,Maintenance mode commands]]
+=== `maintenance` - Maintenance mode commands
+
+Maintenance mode commands are commands that manipulate resources
+directly without going through the cluster infrastructure. Therefore,
+it is essential to ensure that the cluster does not attempt to monitor
+or manipulate the resources while these commands are being executed.
+
+To ensure this, these commands require that maintenance mode is set
+either for the particular resource, or for the whole cluster.
+
+[[cmdhelp_maintenance_action,Invoke a resource action]]
+==== `action`
+
+Invokes the given action for the resource. This is
+done directly via the resource agent, so the command must
+be issued while the cluster or the resource is in 
+maintenance mode.
+
+Unless the action is `start` or `monitor`, the action must be invoked
+on the same node as where the resource is running. If the resource is
+running on multiple nodes, the command will fail.
+
+To use SSH for executing resource actions on multiple nodes, append
+`ssh` after the action name. This requires SSH access to be configured
+between the nodes and the parallax python package to be installed.
+
+Usage:
+...............
+action <rsc> <action>
+action <rsc> <action> ssh
+...............
+Example:
+...............
+action webserver reload
+action webserver monitor ssh
+...............
+
+[[cmdhelp_maintenance_off,Disable maintenance mode]]
+==== `off`
+
+Disables maintenances mode, either for the whole cluster
+or for the given resource.
+
+Usage:
+...............
+off
+off <rsc>
+...............
+Example:
+...............
+off rsc1
+...............
+
+[[cmdhelp_maintenance_on,Enable maintenance mode]]
+==== `on`
+
+Enables maintenances mode, either for the whole cluster
+or for the given resource.
+
+Usage:
+...............
+on
+on <rsc>
+...............
+Example:
+...............
+on rsc1
+...............
+
+[[cmdhelp_history,Cluster history]]
+=== `history` - Cluster history
+
+Examining Pacemaker's history is a particularly involved task. The
+number of subsystems to be considered, the complexity of the
+configuration, and the set of various information sources, most of
+which are not exactly human readable, keep analyzing resource or node
+problems accessible to only the most knowledgeable. Or, depending on
+the point of view, to the most persistent. The following set of
+commands has been devised in hope to make cluster history more
+accessible.
+
+Of course, looking at _all_ history could be time consuming regardless
+of how good the tools at hand are. Therefore, one should first say
+which period he or she wants to analyze. If not otherwise specified,
+the last hour is considered. Logs and other relevant information is
+collected using `crm report`. Since this process takes some time and
+we always need fresh logs, information is refreshed in a much faster
+way using the python parallax module. If +python-parallax+ is not
+found on the system, examining a live cluster is still possible --
+though not as comfortable.
+
+Apart from examining a live cluster, events may be retrieved from a
+report generated by `crm report` (see also the +-H+ option). In that
+case we assume that the period stretching the whole report needs to be
+investigated. Of course, it is still possible to further reduce the
+time range.
+
+If you have discovered an issue that you want to show someone else,
+you can use the `session pack` command to save the current session as
+a tarball, similar to those generated by `crm report`.
+
+In order to minimize the size of the tarball, and to make it easier
+for others to find the interesting events, it is recommended to limit
+the time frame which the saved session covers. This can be done using
+the `timeframe` command (example below).
+
+It is also possible to name the saved session using the `session save`
+command.
+
+Example:
+...............
+crm(live)history# limit "Jul 18 12:00" "Jul 18 12:30"
+crm(live)history# session save strange_restart
+crm(live)history# session pack
+Report saved in .../strange_restart.tar.bz2
+crm(live)history#
+...............
+
+[[cmdhelp_history_detail,set the level of detail shown]]
+==== `detail`
+
+How much detail to show from the logs. Valid detail levels are either
+`0` or `1`, where `1` is the highest detail level. The default detail
+level is `0`.
+
+Usage:
+...............
+detail <detail_level>
+
+detail_level :: small integer (defaults to 0)
+...............
+Example:
+...............
+detail 1
+...............
+
+[[cmdhelp_history_diff,cluster states/transitions difference]]
+==== `diff`
+
+A transition represents a change in cluster configuration or
+state. Use `diff` to see what has changed between two
+transitions.
+
+If you want to specify the current cluster configuration and
+status, use the string +live+.
+
+Normally, the first transition specified should be the one which
+is older, but we are not going to enforce that.
+
+Note that a single configuration update may result in more than
+one transition.
+
+Usage:
+...............
+diff <pe> <pe> [status] [html]
+
+pe :: <number>|<index>|<file>|live
+...............
+Examples:
+...............
+diff 2066 2067
+diff pe-input-2080.bz2 live status
+...............
+
+[[cmdhelp_history_events,Show events in log]]
+==== `events`
+
+By analysing the log output and looking for particular
+patterns, the `events` command helps sifting through
+the logs to find when particular events like resources
+changing state or node failure may have occurred.
+
+This can be used to generate a combined list of events
+from all nodes.
+
+Usage:
+...............
+events
+...............
+
+Example:
+...............
+events
+...............
+
+[[cmdhelp_history_exclude,exclude log messages]]
+==== `exclude`
+
+If a log is infested with irrelevant messages, those messages may
+be excluded by specifying a regular expression. The regular
+expressions used are Python extended. This command is additive.
+To drop all regular expressions, use +exclude clear+. Run
+`exclude` only to see the current list of regular expressions.
+Excludes are saved along with the history sessions.
+
+Usage:
+...............
+exclude [<regex>|clear]
+...............
+Example:
+...............
+exclude kernel.*ocfs2
+...............
+
+[[cmdhelp_history_graph,generate a directed graph from the PE file]]
+==== `graph`
+
+Create a graphviz graphical layout from the PE file (the
+transition). Every transition contains the cluster configuration
+which was active at the time. See also <<cmdhelp_configure_graph,generate a directed graph
+from configuration>>.
+
+Usage:
+...............
+graph <pe> [<gtype> [<file> [<img_format>]]]
+
+gtype :: dot
+img_format :: `dot` output format (see the +-T+ option)
+...............
+Example:
+...............
+graph -1
+graph 322 dot clu1.conf.dot
+graph 322 dot clu1.conf.svg svg
+...............
+
+[[cmdhelp_history_info,Cluster information summary]]
+==== `info`
+
+The `info` command provides a summary of the information source, which
+can be either a live cluster snapshot or a previously generated
+report.
+
+Usage:
+...............
+info
+...............
+Example:
+...............
+info
+...............
+
+[[cmdhelp_history_latest,show latest news from the cluster]]
+==== `latest`
+
+The `latest` command shows a bit of recent history, more
+precisely whatever happened since the last cluster change (the
+latest transition). If the transition is running, the shell will
+first wait until it finishes.
+
+Usage:
+...............
+latest
+...............
+Example:
+...............
+latest
+...............
+
+[[cmdhelp_history_limit,limit timeframe to be examined]]
+==== `limit` (`timeframe`)
+
+This command can be used to modify the time span to examine. All
+history commands look at events within a certain time span.
+
+For the `live` source, the default time span is the _last hour_.
+
+There is no time span limit for the `hb_report` source.
+
+The time period is parsed by the `dateutil` python module. It
+covers a wide range of date formats. For instance:
+
+- 3:00          (today at 3am)
+- 15:00         (today at 3pm)
+- 2010/9/1 2pm  (September 1st 2010 at 2pm)
+
+For more examples of valid time/date statements, please refer to the
+`python-dateutil` documentation:
+
+- https://dateutil.readthedocs.org/[dateutil.readthedocs.org]
+
+If the dateutil module is not available, then the time is parsed using
+strptime and only the kind as printed by `date(1)` is allowed:
+
+- Tue Sep 15 20:46:27 CEST 2010
+
+Usage:
+...............
+limit [<from_time>] [<to_time>]
+...............
+Examples:
+...............
+limit 10:15
+limit 15h22m 16h
+limit "Sun 5 20:46" "Sun 5 22:00"
+...............
+
+[[cmdhelp_history_log,log content]]
+==== `log`
+
+Show messages logged on one or more nodes. Leaving out a node
+name produces combined logs of all nodes. Messages are sorted by
+time and, if the terminal emulations supports it, displayed in
+different colours depending on the node to allow for easier
+reading.
+
+The sorting key is the timestamp as written by syslog which
+normally has the maximum resolution of one second. Obviously,
+messages generated by events which share the same timestamp may
+not be sorted in the same way as they happened. Such close events
+may actually happen fairly often.
+
+Usage:
+...............
+log [<node> [<node> ...] ]
+...............
+Example:
+...............
+log node-a
+...............
+
+[[cmdhelp_history_node,node events]]
+==== `node`
+
+Show important events that happened on a node. Important events
+are node lost and join, standby and online, and fence. Use either
+node names or extended regular expressions.
+
+Usage:
+...............
+node <node> [<node> ...]
+...............
+Example:
+...............
+node node1
+...............
+
+[[cmdhelp_history_peinputs,list or get PE input files]]
+==== `peinputs`
+
+Every event in the cluster results in generating one or more
+Policy Engine (PE) files. These files describe future motions of
+resources. The files are listed as full paths in the current
+report directory. Add +v+ to also see the creation time stamps.
+
+Usage:
+...............
+peinputs [{<range>|<number>} ...] [v]
+
+range :: <n1>:<n2>
+...............
+Example:
+...............
+peinputs
+peinputs 440:444 446
+peinputs v
+...............
+
+[[cmdhelp_history_refresh,refresh live report]]
+==== `refresh`
+
+This command makes sense only for the +live+ source and makes
+`crm` collect the latest logs and other relevant information from
+the logs. If you want to make a completely new report, specify
++force+.
+
+Usage:
+...............
+refresh [force]
+...............
+
+[[cmdhelp_history_resource,resource events]]
+==== `resource`
+
+Show actions and any failures that happened on all specified
+resources on all nodes. Normally, one gives resource names as
+arguments, but it is also possible to use extended regular
+expressions. Note that neither groups nor clones or master/slave
+names are ever logged. The resource command is going to expand
+all of these appropriately, so that clone instances or resources
+which are part of a group are shown.
+
+Usage:
+...............
+resource <rsc> [<rsc> ...]
+...............
+Example:
+...............
+resource bigdb public_ip
+resource my_.*_db2
+resource ping_clone
+...............
+
+[[cmdhelp_history_session,manage history sessions]]
+==== `session`
+
+Sometimes you may want to get back to examining a particular
+history period or bug report. In order to make that easier, the
+current settings can be saved and later retrieved.
+
+If the current history being examined is coming from a live
+cluster the logs, PE inputs, and other files are saved too,
+because they may disappear from nodes. For the existing reports
+coming from `hb_report`, only the directory location is saved
+(not to waste space).
+
+A history session may also be packed into a tarball which can
+then be sent to support.
+
+Leave out subcommand to see the current session.
+
+Usage:
+...............
+session [{save|load|delete} <name> | pack [<name>] | update | list]
+...............
+Examples:
+...............
+session save bnc966622
+session load rsclost-2
+session list
+...............
+
+[[cmdhelp_history_setnodes,set the list of cluster nodes]]
+==== `setnodes`
+
+In case the host this program runs on is not part of the cluster,
+it is necessary to set the list of nodes.
+
+Usage:
+...............
+setnodes node <node> [<node> ...]
+...............
+Example:
+...............
+setnodes node_a node_b
+...............
+
+[[cmdhelp_history_show,show status or configuration of the PE input file]]
+==== `show`
+
+Every transition is saved as a PE file. Use this command to
+render that PE file either as configuration or status. The
+configuration output is the same as `crm configure show`.
+
+Usage:
+...............
+show <pe> [status]
+
+pe :: <number>|<index>|<file>|live
+...............
+Examples:
+...............
+show 2066
+show pe-input-2080.bz2 status
+...............
+
+[[cmdhelp_history_source,set source to be examined]]
+==== `source`
+
+Events to be examined can come from the current cluster or from a
+`hb_report` report. This command sets the source. `source live`
+sets source to the running cluster and system logs. If no source
+is specified, the current source information is printed.
+
+In case a report source is specified as a file reference, the file
+is going to be unpacked in place where it resides. This directory
+is not removed on exit.
+
+Usage:
+...............
+source [<dir>|<file>|live]
+...............
+Examples:
+...............
+source live
+source /tmp/customer_case_22.tar.bz2
+source /tmp/customer_case_22
+source
+...............
+
+[[cmdhelp_history_transition,show transition]]
+==== `transition`
+
+This command will print actions planned by the PE and run
+graphviz (`dotty`) to display a graphical representation of the
+transition. Of course, for the latter an X11 session is required.
+This command invokes `ptest(8)` in background.
+
+The +showdot+ subcommand runs graphviz (`dotty`) to display a
+graphical representation of the +.dot+ file which has been
+included in the report. Essentially, it shows the calculation
+produced by `pengine` which is installed on the node where the
+report was produced. In optimal case this output should not
+differ from the one produced by the locally installed `pengine`.
+
+The `log` subcommand shows the full log for the duration of the
+transition.
+
+A transition can also be saved to a CIB shadow for further
+analysis or use with `cib` or `configure` commands (use the
+`save` subcommand). The shadow file name defaults to the name of
+the PE input file.
+
+If the PE input file number is not provided, it defaults to the
+last one, i.e. the last transition. The last transition can also
+be referenced with number 0. If the number is negative, then the
+corresponding transition relative to the last one is chosen.
+
+If there are warning and error PE input files or different nodes
+were the DC in the observed timeframe, it may happen that PE
+input file numbers collide. In that case provide some unique part
+of the path to the file.
+
+After the `ptest` output, logs about events that happened during
+the transition are printed.
+
+The `tags` subcommand scans the logs for the transition and return a
+list of key events during that transition. For example, the tag
++error+ will be returned if there are any errors logged during the
+transition.
+
+Usage:
+...............
+transition [<number>|<index>|<file>] [nograph] [v...] [scores] [actions] [utilization]
+transition showdot [<number>|<index>|<file>]
+transition log [<number>|<index>|<file>]
+transition save [<number>|<index>|<file> [name]]
+transition tags [<number>|<index>|<file>]
+...............
+Examples:
+...............
+transition
+transition 444
+transition -1
+transition pe-error-3.bz2
+transition node-a/pengine/pe-input-2.bz2
+transition showdot 444
+transition log
+transition save 0 enigma-22
+...............
+
+[[cmdhelp_history_transitions,List transitions]]
+==== `transitions`
+
+A transition represents a change in cluster configuration or
+state. This command lists the transitions in the current timeframe.
+
+Usage:
+...............
+transitions
+...............
+Example:
+...............
+transitions
+...............
+
+
+[[cmdhelp_history_wdiff,cluster states/transitions difference]]
+==== `wdiff`
+
+A transition represents a change in cluster configuration or
+state. Use `wdiff` to see what has changed between two
+transitions as word differences on a line-by-line basis.
+
+If you want to specify the current cluster configuration and
+status, use the string +live+.
+
+Normally, the first transition specified should be the one which
+is older, but we are not going to enforce that.
+
+Note that a single configuration update may result in more than
+one transition.
+
+Usage:
+...............
+wdiff <pe> <pe> [status]
+
+pe :: <number>|<index>|<file>|live
+...............
+Examples:
+...............
+wdiff 2066 2067
+wdiff pe-input-2080.bz2 live status
+...............
+
+[[cmdhelp_root_report,Create cluster status report]]
+=== `report`
+
+Interface to a tool for creating a cluster report. A report is an
+archive containing log files, configuration files, system information
+and other relevant data for a given time period. This is a useful tool
+for collecting data to attach to bug reports, or for detecting the
+root cause of errors resulting in resource failover, for example.
+
+See `crmsh_hb_report(8)` for more details on arguments,
+or call `crm report -h`
+
+Usage:
+...............
+report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
+       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog]
+       [-MSDZAVsvhd] [dest]
+...............
+
+Examples:
+...............
+report -f 2pm report_1
+report -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
+report -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug report_3
+report -f "09sep07 2:00" -u hbadmin report_4
+report -f 18:00 -p "usern.*" -p "admin.*" report_5
+report -f cts:133 ctstest_133
+...............
+
+=== `end` (`cd`, `up`)
+
+The `end` command ends the current level and the user moves to
+the parent level. This command is available everywhere.
+
+Usage:
+...............
+end
+...............
+
+=== `help`
+
+The `help` command prints help for the current level or for the
+specified topic (command). This command is available everywhere.
+
+Usage:
+...............
+help [<topic>]
+...............
+
+=== `quit` (`exit`, `bye`)
+
+Leave the program.
+
+BUGS
+----
+Even though all sensible configurations (and most of those that
+are not) are going to be supported by the crm shell, I suspect
+that it may still happen that certain XML constructs may confuse
+the tool. When that happens, please file a bug report.
+
+The crm shell will not try to update the objects it does not
+understand. Of course, it is always possible to edit such objects
+in the XML format.
+
+AUTHORS
+-------
+Dejan Muhamedagic, <dejan@suse.de>
+Kristoffer Gronlund <kgronlund@suse.com>
+and many OTHERS
+
+SEE ALSO
+--------
+crm_resource(8), crm_attribute(8), crm_mon(8), cib_shadow(8),
+ptest(8), dotty(1), crm_simulate(8), cibadmin(8)
+
+
+COPYING
+-------
+Copyright \(C) 2008-2013 Dejan Muhamedagic.
+Copyright \(C) 2013 Kristoffer Gronlund.
+
+Free use of this software is granted under the terms of the GNU General Public License (GPL).
+
+//////////////////////
+ vim:ts=4:sw=4:expandtab:
+//////////////////////
