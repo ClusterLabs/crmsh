@@ -467,7 +467,7 @@ class TestSBDManager(unittest.TestCase):
         mock_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice = mock.Mock()
         self.sbd_inst_diskless._context = mock.Mock(profiles_dict={})
         self.sbd_inst_diskless._initialize_sbd()
-        mock_info.assert_called_once_with("Initializing diskless SBD")
+        mock_info.assert_called_once_with("Configuring diskless SBD")
         mock_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice.assert_called_once_with()
 
     @mock.patch('crmsh.utils.fatal')
