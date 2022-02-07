@@ -294,6 +294,7 @@ class SBDManager(object):
         self._context = context
         self._delay_start = False
         self.timeout_inst = None
+        self.no_overwrite = False
 
     @staticmethod
     def _get_device_uuid(dev, node=None):
@@ -345,6 +346,7 @@ class SBDManager(object):
 
         configured_dev_list = self._get_sbd_device_from_config()
         if configured_dev_list and not bootstrap.confirm("SBD is already configured to use {} - overwrite?".format(';'.join(configured_dev_list))):
+            self.no_overwrite = True
             return configured_dev_list
 
         dev_list = []
@@ -391,7 +393,13 @@ class SBDManager(object):
         For diskless-sbd, set sbd_watchdog_timeout then return;
         For disk-based-sbd, also calculate the msgwait value, then initialize the SBD device.
         """
-        logger.info("Initializing {}SBD".format("diskless " if self.diskless_sbd else ""))
+        msg = ""
+        if self.diskless_sbd:
+            msg = "Configuring diskless SBD"
+        elif not self.no_overwrite:
+            msg = "Initializing SBD"
+        if msg:
+            logger.info(msg)
         self.timeout_inst = SBDTimeout(self._context)
         self.timeout_inst.set_sbd_watchdog_timeout()
         if self.diskless_sbd:
@@ -402,6 +410,8 @@ class SBDManager(object):
         opt = "-4 {} -1 {}".format(self.timeout_inst.sbd_msgwait, self.timeout_inst.sbd_watchdog_timeout)
 
         for dev in self._sbd_devices:
+            if self.no_overwrite and SBDManager.has_sbd_device_already_initialized(dev):
+                continue
             rc, _, err = bootstrap.invoke("sbd {} -d {} create".format(opt, dev))
             if not rc:
                 utils.fatal("Failed to initialize SBD device {}: {}".format(dev, err))
@@ -410,6 +420,10 @@ class SBDManager(object):
         """
         Update /etc/sysconfig/sbd
         """
+        if self.no_overwrite:
+            bootstrap.csync2_update(SYSCONFIG_SBD)
+            return
+
         shutil.copyfile(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
         sbd_config_dict = {
                 "SBD_WATCHDOG_DEV": self._watchdog_inst.watchdog_device_name,
@@ -587,3 +601,12 @@ class SBDManager(object):
         conf = utils.parse_sysconfig(SYSCONFIG_SBD)
         res = conf.get(key)
         return res
+
+    @staticmethod
+    def has_sbd_device_already_initialized(dev):
+        """
+        Check if sbd device already initialized
+        """
+        cmd = "sbd -d {} dump".format(dev)
+        rc, _, _ = utils.get_stdout_stderr(cmd)
+        return rc == 0
