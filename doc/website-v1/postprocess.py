@@ -6,6 +6,7 @@ import re
 import argparse
 
 TOC_PAGES = ['man/index.html',
+             'man-4.3/index.html',
              'man-3/index.html',
              'man-2.0/index.html',
              'man-1.2/index.html']
