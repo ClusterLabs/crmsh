@@ -449,7 +449,7 @@ class TestSBDManager(unittest.TestCase):
 
         mock_package.assert_called_once_with("sbd")
         mock_get_device.assert_called_once_with()
-        mock_status.assert_called_once_with("Initializing diskless SBD...")
+        mock_status.assert_called_once_with("Configuring diskless SBD")
         mock_initialize.assert_called_once_with()
         mock_update.assert_called_once_with()
         mock_watchdog.assert_called_once_with(_input=None)
