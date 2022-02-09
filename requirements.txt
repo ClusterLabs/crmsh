@@ -1,4 +1,4 @@
 lxml
 PyYAML
-py-dateutil
+python-dateutil
 parallax

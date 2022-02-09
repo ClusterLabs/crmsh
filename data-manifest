@@ -91,7 +91,6 @@ test/list-undocumented-commands.py
 test/profile-history.sh
 test/README.regression
 test/regression.sh
-test/run
 test/run-in-container.sh
 test/run-in-travis.sh
 test/testcases/acl
@@ -148,7 +147,6 @@ test/unittests/bug-862577_corosync.conf
 test/unittests/corosync.conf.1
 test/unittests/corosync.conf.2
 test/unittests/corosync.conf.3
-test/unit-tests-in-container.sh
 test/unittests/__init__.py
 test/unittests/pacemaker.log
 test/unittests/pacemaker_unicode.log
@@ -203,6 +201,7 @@ test/unittests/test_time.py
 test/unittests/test_ui_cluster.py
 test/unittests/test_utils.py
 test/unittests/test_watchdog.py
+test/unittests/test_xmlutil.py
 test/update-expected-output.sh
 utils/crm_clean.py
 utils/crm_init.py

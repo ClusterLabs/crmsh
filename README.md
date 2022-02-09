@@ -46,8 +46,12 @@ make install
 
 There are two sets of tests: Unit tests and regression tests.
 
-To run the unit tests, call `test/run`. This uses `nosetests` to run a
-set of test cases that don't need a full Pacemaker environment.
+#### Unit tests
+In local:
+- `pip install tox`
+- In root directory of crmsh project, run `tox`
+
+[In github action](https://github.com/ClusterLabs/crmsh/actions/workflows/crmsh-ci.yml)
 
 To run the regression tests in a docker container, use the
 `test/containerized-regression-tests.sh` script. This relies on having
