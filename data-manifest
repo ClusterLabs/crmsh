@@ -142,7 +142,6 @@ test/testcases/scripts.filter
 test/testcases/shadow
 test/testcases/shadow.exp
 test/testcases/xmlonly.sh
-test/travis-tests.sh
 test/unittests/bug-862577_corosync.conf
 test/unittests/corosync.conf.1
 test/unittests/corosync.conf.2

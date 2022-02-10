@@ -30,7 +30,7 @@ deploy_node() {
   elif [ "$node_name" == "node-without-ssh" ];then
     docker exec -t $node_name /bin/sh -c "systemctl stop sshd.service"
   else
-    docker exec -t $node_name /bin/sh -c "cd /app; ./test/run-in-travis.sh build"
+    docker exec -t $node_name /bin/sh -c "cd /app; ./test/run-in-container.sh build"
   fi
   docker exec -t $node_name /bin/sh -c "rm -rf /run/nologin"
   echo "##### Deploy $node_name finished"
@@ -54,7 +54,7 @@ before() {
 }
 
 run() {
-  docker exec -t hanode1 /bin/sh -c "cd /app; ./test/run-in-travis.sh $1 $2"
+  docker exec -t hanode1 /bin/sh -c "cd /app; ./test/run-in-container.sh $1 $2"
 }
 
 usage() {

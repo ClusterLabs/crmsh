@@ -1,31 +1,14 @@
 #!/bin/sh
-
-oname=$1
-ogroup=$2
-ouid=$3
-ogid=$4
-
-cat /etc/group | awk '{ FS = ":" } { print $3 }' | grep -q "$ogid" || groupadd -g "$ogid"
-id -u $oname >/dev/null 2>&1 || useradd -u $ouid -g $ogid $oname
-
-preamble() {
-	systemctl start dbus
-}
-
-unit_tests() {
-	echo "** Unit tests"
-	su $oname -c "./test/run"
-}
-
 configure() {
 	echo "** Autogen / Configure"
-	su $oname -c "./autogen.sh"
-	su $oname -c "./configure --prefix /usr"
+	./autogen.sh
+	./configure --prefix /usr
 }
 
 make_install() {
 	echo "** Make / Install"
 	make install
+	make install-crmconfDATA prefix=
 }
 
 regression_tests() {
@@ -33,10 +16,22 @@ regression_tests() {
 	sh /usr/share/crmsh/tests/regression.sh
 }
 
-preamble
-unit_tests
-configure
-make_install
-regression_tests
+functional_tests() {
+	echo "**  $1 process tests using python-behave"
+        SUFFIX="${2:-*}"
+        behave --no-logcapture --tags "@$1" --tags "~@wip" /usr/share/crmsh/tests/features/$1_$SUFFIX.feature
+}
 
-chown $oname:$ogroup /app/crmtestout/*
+case "$1" in
+	build)
+		configure
+		make_install
+		exit $?;;
+	bootstrap|qdevice|crm_report|resource|geo|configure|constraints|ocfs2)
+		functional_tests $1 $2
+		exit $?;;
+	*|original)
+		configure
+		make_install
+		regression_tests;;
+esac
