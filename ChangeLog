@@ -1,5 +1,19 @@
-* Thu Jan 14 2022 Xin Liang <XLiang@suse.com>
+* Thu Feb 17 2022 Xin Liang <XLiang@suse.com>
 - Release 4.4.0
+- Dev: README: update with unit tests steps
+- Dev: crmsh-ci.yml: Add python3.6 and 3.10 into unit test list
+- Dev: tox: Adjust tox.ini, add py36 and py310 in envlist
+
+* Thu Feb 8 2022 Xin Liang <XLiang@suse.com>
+- Release 4.4.0 rc2
+- Fix: sbd: not overwrite SYSCONFIG_SBD and sbd-disk-metadata if input 'n'(bsc#1194870)
+- Dev: bootstrap: the joining node retries an active cluster
+- Dev: behave: Change docker cgroup driver as systemd
+- Dev: ui_node: Use diff and patch instead of replace cib
+- Dev: crm report: Add dpkg support
+
+* Thu Jan 14 2022 Xin Liang <XLiang@suse.com>
+- Release 4.4.0 rc1
 - Fix: bootstrap: Don't change pacemaker.service bootup preference (bsc#1194616)
 - Fix: log: Change the log file owner as hacluster:haclient (bsc#1194619)
 - Dev: crm.conf: Add OCF_1_1_SUPPORT flag to control ocf 1.1 feature
