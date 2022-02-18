@@ -99,11 +99,12 @@ class RemoteLock(Lock):
     MIN_LOCK_TIMEOUT = 120
     WAIT_INTERVAL = 10
 
-    def __init__(self, remote_node):
+    def __init__(self, remote_node, for_join=True):
         """
         Init function
         """
         self.remote_node = remote_node
+        self.for_join = for_join
         super(__class__, self).__init__()
 
     def _run(self, cmd):
@@ -157,11 +158,12 @@ class RemoteLock(Lock):
                 # Success
                 break
 
-            # Might lose claiming lock again, start to wait again
-            online_list = self._get_online_nodelist()
-            if pre_online_list and pre_online_list != online_list:
-                timeout = current_time + self.lock_timeout
-            pre_online_list = online_list
+            if self.for_join:
+                # Might lose claiming lock again, start to wait again
+                online_list = self._get_online_nodelist()
+                if pre_online_list and pre_online_list != online_list:
+                    timeout = current_time + self.lock_timeout
+                pre_online_list = online_list
 
             if not warned_once:
                 warned_once = True

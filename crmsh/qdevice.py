@@ -1,14 +1,29 @@
 import os
 import re
 import socket
+import functools
 from . import utils
 from . import parallax
 from . import corosync
+from . import lock
 from . import log
 
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
+
+
+def qnetd_lock(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        lock_inst = lock.RemoteLock(args[0].qnetd_addr, for_join=False)
+        try:
+            with lock_inst.lock():
+                func(*args, **kwargs)
+        except (lock.SSHError, lock.ClaimLockError) as err:
+            utils.fatal(err)
+    return wrapper
+
 
 
 class QDevice(object):
@@ -201,6 +216,7 @@ class QDevice(object):
     def stop_qnetd(self):
         utils.stop_service(self.qnetd_service, remote_addr=self.qnetd_addr)
 
+    @qnetd_lock
     def init_db_on_qnetd(self):
         """
         Certificate process for init
