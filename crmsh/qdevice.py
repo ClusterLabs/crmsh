@@ -235,8 +235,8 @@ class QDevice(object):
             return
 
         cmd = "corosync-qnetd-certutil -i"
-        desc = "Step 1: Initialize database on {}".format(self.qnetd_addr)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 1: Initialize database on {}".format(utils.this_node(), self.qnetd_addr)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         parallax.parallax_call([self.qnetd_addr], cmd, self.askpass)
@@ -250,8 +250,8 @@ class QDevice(object):
         if os.path.exists(self.qnetd_cacert_on_local):
             return
 
-        desc = "Step 2: Fetch {} from {}".format(self.qnetd_cacert_filename, self.qnetd_addr)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 2: Fetch {} from {}".format(utils.this_node(), self.qnetd_cacert_filename, self.qnetd_addr)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         parallax.parallax_slurp([self.qnetd_addr], self.qdevice_path, self.qnetd_cacert_on_qnetd, self.askpass)
@@ -266,8 +266,8 @@ class QDevice(object):
         if not node_list:
             return
 
-        desc = "Step 3: Copy exported {} to {}".format(self.qnetd_cacert_filename, node_list)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 3: Copy exported {} to {}".format(utils.this_node(), self.qnetd_cacert_filename, node_list)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         parallax.parallax_copy(
@@ -285,8 +285,8 @@ class QDevice(object):
         """
         node_list = utils.list_cluster_nodes()
         cmd = "corosync-qdevice-net-certutil -i -c {}".format(self.qnetd_cacert_on_local)
-        desc = "Step 4: Initialize database on {}".format(node_list)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 4: Initialize database on {}".format(utils.this_node(), node_list)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         parallax.parallax_call(node_list, cmd, self.askpass)
@@ -299,7 +299,7 @@ class QDevice(object):
         /usr/sbin/corosync-qdevice-net-certutil -r -n Cluster
         (Cluster name must match cluster_name key in the corosync.conf)
         """
-        logger_utils.log_only_to_file("Step 5: Generate certificate request {}".format(self.qdevice_crq_filename))
+        logger.info("[{}]Step 5: Generate certificate request {}".format(utils.this_node(), self.qdevice_crq_filename))
         self.cluster_name = corosync.get_value('totem.cluster_name')
         if not self.cluster_name:
             raise ValueError("No cluster_name found in {}".format(corosync.conf()))
@@ -312,8 +312,8 @@ class QDevice(object):
         Step 6
         Copy exported CRQ to QNetd server
         """
-        desc = "Step 6: Copy {} to {}".format(self.qdevice_crq_filename, self.qnetd_addr)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 6: Copy {} to {}".format(utils.this_node(), self.qdevice_crq_filename, self.qnetd_addr)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         parallax.parallax_copy(
@@ -329,8 +329,8 @@ class QDevice(object):
         On QNetd server sign and export cluster certificate by running
         corosync-qnetd-certutil -s -c qdevice-net-node.crq -n Cluster
         """
-        desc = "Step 7: Sign and export cluster certificate on {}".format(self.qnetd_addr)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 7: Sign and export cluster certificate on {}".format(utils.this_node(), self.qnetd_addr)
+        logger.info(desc)
         cmd = "corosync-qnetd-certutil -s -c {} -n {}".\
                 format(self.qdevice_crq_on_qnetd, self.cluster_name)
         if self.askpass:
@@ -343,8 +343,8 @@ class QDevice(object):
         Step 8
         Copy exported CRT to node where certificate request was created
         """
-        desc = "Step 8: Fetch {} from {}".format(os.path.basename(self.qnetd_cluster_crt_on_qnetd), self.qnetd_addr)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 8: Fetch {} from {}".format(utils.this_node(), os.path.basename(self.qnetd_cluster_crt_on_qnetd), self.qnetd_addr)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         parallax.parallax_slurp(
@@ -360,7 +360,7 @@ class QDevice(object):
         Import certificate on node where certificate request was created by
         running /usr/sbin/corosync-qdevice-net-certutil -M -c cluster-Cluster.crt
         """
-        logger_utils.log_only_to_file("Step 9: Import certificate file {} on local".format(os.path.basename(self.qnetd_cluster_crt_on_local)))
+        logger.info("[{}]Step 9: Import certificate file {} on local".format(utils.this_node(), os.path.basename(self.qnetd_cluster_crt_on_local)))
         cmd = "corosync-qdevice-net-certutil -M -c {}".format(self.qnetd_cluster_crt_on_local)
         utils.get_stdout_or_raise_error(cmd)
 
@@ -374,8 +374,8 @@ class QDevice(object):
         if not node_list:
             return
 
-        desc = "Step 10: Copy {} to {}".format(self.qdevice_p12_filename, node_list)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 10: Copy {} to {}".format(utils.this_node(), self.qdevice_p12_filename, node_list)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         parallax.parallax_copy(
@@ -395,8 +395,8 @@ class QDevice(object):
         if not node_list:
             return
 
-        desc = "Step 11: Import {} on {}".format(self.qdevice_p12_filename, node_list)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 11: Import {} on {}".format(utils.this_node(), self.qdevice_p12_filename, node_list)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         cmd = "corosync-qdevice-net-certutil -m -c {}".format(self.qdevice_p12_on_local)
@@ -427,8 +427,8 @@ class QDevice(object):
         if os.path.exists(self.qnetd_cacert_on_cluster):
             return
 
-        desc = "Step 1: Fetch {} from {}".format(self.qnetd_cacert_filename, self.cluster_node)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 1: Fetch {} from {}".format(utils.this_node(), self.qnetd_cacert_filename, self.cluster_node)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         parallax.parallax_slurp(
@@ -447,7 +447,7 @@ class QDevice(object):
         if os.path.exists(self.qdevice_db_path):
             utils.rmdir_r(self.qdevice_db_path)
 
-        logger_utils.log_only_to_file("Step 2: Initialize database on local")
+        logger.info("[{}]Step 2: Initialize database on local".format(utils.this_node()))
         cmd = "corosync-qdevice-net-certutil -i -c {}".format(self.qnetd_cacert_on_cluster)
         utils.get_stdout_or_raise_error(cmd)
 
@@ -460,8 +460,8 @@ class QDevice(object):
         if os.path.exists(self.qdevice_p12_on_cluster):
             return
 
-        desc = "Step 3: Fetch {} from {}".format(self.qdevice_p12_filename, self.cluster_node)
-        logger_utils.log_only_to_file(desc)
+        desc = "[{}]Step 3: Fetch {} from {}".format(utils.this_node(), self.qdevice_p12_filename, self.cluster_node)
+        logger.info(desc)
         if self.askpass:
             print(desc)
         parallax.parallax_slurp(
@@ -476,7 +476,7 @@ class QDevice(object):
         Step 4
         Import cluster certificate and key
         """
-        logger_utils.log_only_to_file("Step 4: Import cluster certificate and key")
+        logger.info("[{}]Step 4: Import cluster certificate and key".format(utils.this_node()))
         cmd = "corosync-qdevice-net-certutil -m -c {}".format(self.qdevice_p12_on_cluster)
         utils.get_stdout_or_raise_error(cmd)
 
