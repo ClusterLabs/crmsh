@@ -23,7 +23,6 @@ import yaml
 from string import Template
 from lxml import etree
 from pathlib import Path
-from enum import Enum
 from contextlib import contextmanager
 from . import config
 from . import utils
@@ -57,8 +56,6 @@ PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service"]
 USER_LIST = ["root", "hacluster"]
-QDEVICE_ADD = "add"
-QDEVICE_REMOVE = "remove"
 WATCHDOG_CFG = "/etc/modules-load.d/watchdog.conf"
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
@@ -69,12 +66,6 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
 INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
-
-
-class QdevicePolicy(Enum):
-    QDEVICE_RELOAD = 0
-    QDEVICE_RESTART = 1
-    QDEVICE_RESTART_LATER = 2
 
 
 class Context(object):
@@ -110,7 +101,6 @@ class Context(object):
         self.qdevice_heuristics = None
         self.qdevice_heuristics_mode = None
         self.qdevice_rm_flag = None
-        self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
         self.ocfs2_devices = []
         self.use_cluster_lvm2 = None
         self.mount_point = None
@@ -160,7 +150,8 @@ class Context(object):
                 tie_breaker=self.qdevice_tie_breaker,
                 tls=self.qdevice_tls,
                 cmds=self.qdevice_heuristics,
-                mode=self.qdevice_heuristics_mode)
+                mode=self.qdevice_heuristics_mode,
+                is_stage=self.stage == "qdevice")
 
     def _validate_sbd_option(self):
         """
@@ -1251,34 +1242,6 @@ def init_admin():
     wait_for_resource("Configuring virtual IP ({})".format(adminaddr), "admin-ip")
 
 
-def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
-    """
-    While adding/removing qdevice, get current expected votes and actual total votes,
-    to calculate after adding/removing qdevice, whether cluster has quorum
-    return different policy
-    """
-    quorum_votes_dict = utils.get_quorum_votes_dict()
-    expected_votes = int(quorum_votes_dict["Expected"])
-    actual_votes = int(quorum_votes_dict["Total"])
-    if mode == QDEVICE_ADD:
-        expected_votes += 1
-    elif mode == QDEVICE_REMOVE:
-        actual_votes -= 1
-
-    if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
-        # safe to use reload
-        return QdevicePolicy.QDEVICE_RELOAD
-    elif xmlutil.CrmMonXmlParser.is_any_resource_running():
-        # will lose quorum, and with RA running
-        # no reload, no restart cluster service
-        # just leave a warning
-        return QdevicePolicy.QDEVICE_RESTART_LATER
-    else:
-        # will lose quorum, without RA running
-        # safe to restart cluster service
-        return QdevicePolicy.QDEVICE_RESTART
-
-
 def configure_qdevice_interactive():
     """
     Configure qdevice on interactive mode
@@ -1304,7 +1267,8 @@ def configure_qdevice_interactive():
             tie_breaker=qdevice_tie_breaker,
             tls=qdevice_tls,
             cmds=qdevice_heuristics,
-            mode=qdevice_heuristics_mode)
+            mode=qdevice_heuristics_mode,
+            is_stage=_context.stage == "qdevice")
     _context.qdevice_inst.valid_qdevice_options()
 
 
@@ -1318,19 +1282,6 @@ def init_qdevice():
     if not _context.qdevice_inst:
         utils.disable_service("corosync-qdevice.service")
         return
-    if _context.stage == "qdevice":
-        from .sbd import SBDManager, SBDTimeout
-        utils.check_all_nodes_reachable()
-        using_diskless_sbd = SBDManager.is_using_diskless_sbd()
-        _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
-        # add qdevice after diskless sbd started
-        if using_diskless_sbd:
-            res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
-            if not res or int(res) < SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
-                sbd_watchdog_timeout_qdevice = SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
-                SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
-                utils.set_property(stonith_timeout=SBDTimeout.get_stonith_timeout())
-
     logger.info("""Configure Qdevice/Qnetd:""")
     qdevice_inst = _context.qdevice_inst
     qnetd_addr = qdevice_inst.qnetd_addr
@@ -1342,60 +1293,13 @@ def init_qdevice():
             utils.fatal("Failed to copy ssh key: {}".format(err))
     # Start qdevice service if qdevice already configured
     if utils.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
-        start_qdevice_service()
+        qdevice_inst.start_qdevice_service()
         return
 
     # Validate qnetd node
     qdevice_inst.valid_qnetd()
-    # Config qdevice
-    config_qdevice()
-    # Execute certificate process when tls flag is on
-    if utils.is_qdevice_tls_on():
-        with logger_utils.status_long("Qdevice certification process"):
-            qdevice_inst.certificate_process_on_init()
 
-    start_qdevice_service()
-
-
-def start_qdevice_service():
-    """
-    Start qdevice and qnetd service
-    """
-    qdevice_inst = _context.qdevice_inst
-    qnetd_addr = qdevice_inst.qnetd_addr
-
-    logger.info("Enable corosync-qdevice.service in cluster")
-    utils.cluster_run_cmd("systemctl enable corosync-qdevice")
-    if _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
-        logger.info("Starting corosync-qdevice.service in cluster")
-        utils.cluster_run_cmd("systemctl restart corosync-qdevice")
-    elif _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
-        logger.info("Restarting cluster service")
-        utils.cluster_run_cmd("crm cluster restart")
-        wait_for_cluster()
-    else:
-        logger.warning("To use qdevice service, need to restart cluster service manually on each node")
-
-    logger.info("Enable corosync-qnetd.service on {}".format(qnetd_addr))
-    qdevice_inst.enable_qnetd()
-    logger.info("Starting corosync-qnetd.service on {}".format(qnetd_addr))
-    qdevice_inst.start_qnetd()
-
-
-def config_qdevice():
-    """
-    Process of config qdevice
-    """
-    qdevice_inst = _context.qdevice_inst
-
-    qdevice_inst.remove_qdevice_db()
-    qdevice_inst.write_qdevice_config()
-    if not corosync.is_unicast():
-        corosync.add_nodelist_from_cmaptool()
-    with logger_utils.status_long("Update configuration"):
-        update_expected_votes()
-        if _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
-            utils.cluster_run_cmd("crm corosync reload")
+    qdevice_inst.config_and_start_qdevice()
 
 
 def init():
@@ -2150,11 +2054,11 @@ def remove_qdevice():
         return
 
     utils.check_all_nodes_reachable()
-    _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_REMOVE)
+    qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
 
     logger.info("Disable corosync-qdevice.service")
     invoke("crm cluster run 'systemctl disable corosync-qdevice'")
-    if _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+    if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
         logger.info("Stopping corosync-qdevice.service")
         invoke("crm cluster run 'systemctl stop corosync-qdevice'")
 
@@ -2166,9 +2070,9 @@ def remove_qdevice():
         qdevice_inst.remove_qdevice_db()
         qdevice_inst.remove_certification_files_on_qnetd()
         update_expected_votes()
-    if _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+    if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
         invoke("crm cluster run 'crm corosync reload'")
-    elif _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
+    elif qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART:
         logger.info("Restarting cluster service")
         utils.cluster_run_cmd("crm cluster restart")
         wait_for_cluster()

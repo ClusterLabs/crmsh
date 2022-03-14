@@ -1,14 +1,55 @@
 import os
 import re
 import socket
+from enum import Enum
 from . import utils
 from . import parallax
 from . import corosync
+from . import xmlutil
+from . import bootstrap
 from . import log
 
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
+
+
+QDEVICE_ADD = "add"
+QDEVICE_REMOVE = "remove"
+
+
+class QdevicePolicy(Enum):
+    QDEVICE_RELOAD = 0
+    QDEVICE_RESTART = 1
+    QDEVICE_RESTART_LATER = 2
+
+
+def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
+    """
+    While adding/removing qdevice, get current expected votes and actual total votes,
+    to calculate after adding/removing qdevice, whether cluster has quorum
+    return different policy
+    """
+    quorum_votes_dict = utils.get_quorum_votes_dict()
+    expected_votes = int(quorum_votes_dict["Expected"])
+    actual_votes = int(quorum_votes_dict["Total"])
+    if mode == QDEVICE_ADD:
+        expected_votes += 1
+    elif mode == QDEVICE_REMOVE:
+        actual_votes -= 1
+
+    if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
+        # safe to use reload
+        return QdevicePolicy.QDEVICE_RELOAD
+    elif xmlutil.CrmMonXmlParser.is_any_resource_running():
+        # will lose quorum, and with RA running
+        # no reload, no restart cluster service
+        # just leave a warning
+        return QdevicePolicy.QDEVICE_RESTART_LATER
+    else:
+        # will lose quorum, without RA running
+        # safe to restart cluster service
+        return QdevicePolicy.QDEVICE_RESTART
 
 
 class QDevice(object):
@@ -44,7 +85,7 @@ class QDevice(object):
     qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
 
     def __init__(self, qnetd_addr, port=5403, algo="ffsplit", tie_breaker="lowest",
-            tls="on", cluster_node=None, cmds=None, mode=None, cluster_name=None):
+            tls="on", cluster_node=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
         """
         Init function
         """
@@ -57,6 +98,8 @@ class QDevice(object):
         self.cmds = cmds
         self.mode = mode
         self.cluster_name = cluster_name
+        self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
+        self.is_stage = is_stage
 
     @property
     def qnetd_cacert_on_qnetd(self):
@@ -494,3 +537,65 @@ class QDevice(object):
         utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)
         cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=self.qdevice_crq_on_qnetd)
         utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)
+
+    def config_qdevice(self):
+        """
+        Update configuration and reload corosync if necessary
+        """
+        self.write_qdevice_config()
+        if not corosync.is_unicast():
+            corosync.add_nodelist_from_cmaptool()
+        with logger_utils.status_long("Update configuration"):
+            bootstrap.update_expected_votes()
+            if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+                utils.cluster_run_cmd("crm corosync reload")
+
+    def start_qdevice_service(self):
+        """
+        Start qdevice and qnetd service
+        """
+        logger.info("Enable corosync-qdevice.service in cluster")
+        utils.cluster_run_cmd("systemctl enable corosync-qdevice")
+        if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+            logger.info("Starting corosync-qdevice.service in cluster")
+            utils.cluster_run_cmd("systemctl restart corosync-qdevice")
+        elif self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
+            logger.info("Restarting cluster service")
+            utils.cluster_run_cmd("crm cluster restart")
+            bootstrap.wait_for_cluster()
+        else:
+            logger.warning("To use qdevice service, need to restart cluster service manually on each node")
+
+        logger.info("Enable corosync-qnetd.service on {}".format(self.qnetd_addr))
+        self.enable_qnetd()
+        logger.info("Starting corosync-qnetd.service on {}".format(self.qnetd_addr))
+        self.start_qnetd()
+
+    def adjust_sbd_watchdog_timeout_with_qdevice(self):
+        """
+        Adjust SBD_WATCHDOG_TIMEOUT when configuring qdevice and diskless SBD
+        """
+        if self.is_stage:
+            from .sbd import SBDManager, SBDTimeout
+            utils.check_all_nodes_reachable()
+            using_diskless_sbd = SBDManager.is_using_diskless_sbd()
+            self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
+            # add qdevice after diskless sbd started
+            if using_diskless_sbd:
+                res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
+                if not res or int(res) < SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
+                    sbd_watchdog_timeout_qdevice = SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
+                    SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
+                    utils.set_property(stonith_timeout=SBDTimeout.get_stonith_timeout())
+
+    def config_and_start_qdevice(self):
+        """
+        Wrap function to collect functions to config and start qdevice
+        """
+        self.remove_qdevice_db()
+        if self.tls == "on":
+            with logger_utils.status_long("Qdevice certification process"):
+                self.certificate_process_on_init()
+        self.adjust_sbd_watchdog_timeout_with_qdevice()
+        self.config_qdevice()
+        self.start_qdevice_service()
