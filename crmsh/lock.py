@@ -100,13 +100,14 @@ class RemoteLock(Lock):
     MIN_LOCK_TIMEOUT = 120
     WAIT_INTERVAL = 10
 
-    def __init__(self, remote_node, for_join=True, lock_dir=None, wait=True):
+    def __init__(self, remote_node, for_join=True, lock_dir=None, wait=True, no_warn=False):
         """
         Init function
         """
         self.remote_node = remote_node
         self.for_join = for_join
         self.wait = wait
+        self.no_warn = no_warn
         super(__class__, self).__init__(lock_dir=lock_dir)
 
     def _run(self, cmd):
@@ -167,7 +168,7 @@ class RemoteLock(Lock):
                     timeout = current_time + self.lock_timeout
                 pre_online_list = online_list
 
-            if not warned_once:
+            if not self.no_warn and not warned_once:
                 warned_once = True
                 logger.warning("Might have unfinished process on other nodes, wait %ss...", self.lock_timeout)
 

@@ -1,12 +1,14 @@
 import os
 import re
 import socket
+import functools
 from enum import Enum
 from . import utils
 from . import parallax
 from . import corosync
 from . import xmlutil
 from . import bootstrap
+from . import lock
 from . import log
 
 
@@ -50,6 +52,18 @@ def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
         # will lose quorum, without RA running
         # safe to restart cluster service
         return QdevicePolicy.QDEVICE_RESTART
+
+
+def qnetd_lock_for_multi_cluster(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        lock_inst = lock.RemoteLock(args[0].qnetd_addr, for_join=False, no_warn=True)
+        try:
+            with lock_inst.lock():
+                func(*args, **kwargs)
+        except (lock.SSHError, lock.ClaimLockError) as err:
+            utils.fatal(err)
+    return wrapper
 
 
 class QDevice(object):
@@ -245,6 +259,7 @@ class QDevice(object):
     def stop_qnetd(self):
         utils.stop_service(self.qnetd_service, remote_addr=self.qnetd_addr)
 
+    @qnetd_lock_for_multi_cluster
     def init_db_on_qnetd(self):
         """
         Certificate process for init
