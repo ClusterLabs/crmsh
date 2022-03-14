@@ -44,7 +44,7 @@ class QDevice(object):
     qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
 
     def __init__(self, qnetd_addr, port=5403, algo="ffsplit", tie_breaker="lowest",
-            tls="on", cluster_node=None, cmds=None, mode=None):
+            tls="on", cluster_node=None, cmds=None, mode=None, cluster_name=None):
         """
         Init function
         """
@@ -56,7 +56,7 @@ class QDevice(object):
         self.cluster_node = cluster_node
         self.cmds = cmds
         self.mode = mode
-        self.cluster_name = None
+        self.cluster_name = cluster_name
 
     @property
     def qnetd_cacert_on_qnetd(self):
@@ -84,7 +84,7 @@ class QDevice(object):
         """
         Return path of qdevice-net-node.crq on qnetd node
         """
-        return "{}/nssdb/{}".format(self.qnetd_path, self.qdevice_crq_filename)
+        return "{}/nssdb/{}.{}".format(self.qnetd_path, self.qdevice_crq_filename, self.cluster_name)
     
     @property
     def qdevice_crq_on_local(self):
@@ -185,6 +185,11 @@ class QDevice(object):
             exception_msg += "\nCluster service already successfully started on this node except qdevice service\nIf you still want to use qdevice, {}\nThen run command \"crm cluster init\" with \"qdevice\" stage, like:\n  crm cluster init qdevice qdevice_related_options\nThat command will setup qdevice separately".format(suggest)
             raise ValueError(exception_msg)
 
+        if not self.cluster_name:
+            self.cluster_name = corosync.get_value('totem.cluster_name')
+        if not self.cluster_name:
+            raise ValueError("No cluster_name found in {}".format(corosync.conf()))
+
     def enable_qnetd(self):
         utils.enable_service(self.qnetd_service, remote_addr=self.qnetd_addr)
 
@@ -269,9 +274,6 @@ class QDevice(object):
         (Cluster name must match cluster_name key in the corosync.conf)
         """
         logger_utils.log_only_to_file("Step 5: Generate certificate request {}".format(self.qdevice_crq_filename))
-        self.cluster_name = corosync.get_value('totem.cluster_name')
-        if not self.cluster_name:
-            raise ValueError("No cluster_name found in {}".format(corosync.conf()))
         cmd = "corosync-qdevice-net-certutil -r -n {}".format(self.cluster_name)
         utils.get_stdout_or_raise_error(cmd)
 
@@ -286,7 +288,7 @@ class QDevice(object):
         parallax.parallax_copy(
                 [self.qnetd_addr],
                 self.qdevice_crq_on_local,
-                os.path.dirname(self.qdevice_crq_on_qnetd))
+                self.qdevice_crq_on_qnetd)
 
     def sign_crq_on_qnetd(self):
         """
@@ -483,3 +485,12 @@ class QDevice(object):
         node_list = utils.list_cluster_nodes()
         cmd = "rm -rf {}/*".format(self.qdevice_path)
         parallax.parallax_call(node_list, cmd)
+
+    def remove_certification_files_on_qnetd(self):
+        """
+        Remove this cluster related .crq and .crt files on qnetd
+        """
+        cmd = "test -f {crt_file} && rm -f {crt_file}".format(crt_file=self.qnetd_cluster_crt_on_qnetd)
+        utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)
+        cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=self.qdevice_crq_on_qnetd)
+        utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)

@@ -2160,9 +2160,11 @@ def remove_qdevice():
 
     with logger_utils.status_long("Removing QDevice configuration from cluster"):
         qnetd_host = corosync.get_value('quorum.device.net.host')
-        qdevice_inst = qdevice.QDevice(qnetd_host)
+        cluster_name = corosync.get_value('totem.cluster_name')
+        qdevice_inst = qdevice.QDevice(qnetd_host, cluster_name=cluster_name)
         qdevice_inst.remove_qdevice_config()
         qdevice_inst.remove_qdevice_db()
+        qdevice_inst.remove_certification_files_on_qnetd()
         update_expected_votes()
     if _context.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
         invoke("crm cluster run 'crm corosync reload'")
