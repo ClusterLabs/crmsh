@@ -1295,7 +1295,7 @@ def init_qdevice():
     if utils.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
         qdevice_inst.start_qdevice_service()
         return
-
+    qdevice_inst.set_cluster_name()
     # Validate qnetd node
     qdevice_inst.valid_qnetd()
 

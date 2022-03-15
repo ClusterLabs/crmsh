@@ -54,7 +54,29 @@ def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
         return QdevicePolicy.QDEVICE_RESTART
 
 
+def qnetd_lock_for_same_cluster_name(func):
+    """
+    Decorator to claim lock on qnetd, to avoid the same cluster name added in qnetd
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        cluster_name = args[0].cluster_name
+        lock_dir = "/run/.crmsh_qdevice_lock_for_{}".format(cluster_name)
+        lock_inst = lock.RemoteLock(args[0].qnetd_addr, for_join=False, lock_dir=lock_dir, wait=False)
+        try:
+            with lock_inst.lock():
+                func(*args, **kwargs)
+        except lock.ClaimLockError:
+            utils.fatal("Duplicated cluster name \"{}\"!".format(cluster_name))
+        except lock.SSHError as err:
+            utils.fatal(err)
+    return wrapper
+
+
 def qnetd_lock_for_multi_cluster(func):
+    """
+    Decorator to claim lock on qnetd, to avoid possible race condition
+    """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         lock_inst = lock.RemoteLock(args[0].qnetd_addr, for_join=False, no_warn=True)
@@ -231,21 +253,33 @@ class QDevice(object):
         """
         exception_msg = ""
         suggest = ""
-        if utils.service_is_active("pacemaker", self.qnetd_addr):
-            exception_msg = "host for qnetd must be a non-cluster node"
-            suggest = "change to another host or stop cluster service on {}".format(self.qnetd_addr)
-        elif not utils.package_is_installed("corosync-qnetd", self.qnetd_addr):
-            exception_msg = "Package \"corosync-qnetd\" not installed on {}".format(self.qnetd_addr)
+        duplicated_cluster_name = False
+        if not utils.package_is_installed("corosync-qnetd", self.qnetd_addr):
+            exception_msg = "Package \"corosync-qnetd\" not installed on {}!".format(self.qnetd_addr)
             suggest = "install \"corosync-qnetd\" on {}".format(self.qnetd_addr)
+        elif utils.service_is_active("corosync-qnetd", self.qnetd_addr):
+            cmd = "corosync-qnetd-tool -l -c {}".format(self.cluster_name)
+            if utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr):
+                duplicated_cluster_name = True
+        else:
+            cmd = "test -f {}".format(self.qnetd_cluster_crt_on_qnetd)
+            try:
+                utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)
+            except ValueError:
+                # target file not exist
+                pass
+            else:
+                duplicated_cluster_name = True
+        if duplicated_cluster_name:
+            exception_msg = "This cluster's name \"{}\" already exists on qnetd server!".format(self.cluster_name)
+            suggest = "consider to use the different cluster-name property"
 
         if exception_msg:
-            exception_msg += "\nCluster service already successfully started on this node except qdevice service\nIf you still want to use qdevice, {}\nThen run command \"crm cluster init\" with \"qdevice\" stage, like:\n  crm cluster init qdevice qdevice_related_options\nThat command will setup qdevice separately".format(suggest)
+            if self.is_stage:
+                exception_msg += "\nPlease {}.".format(suggest)
+            else:
+                exception_msg += "\nCluster service already successfully started on this node except qdevice service.\nIf you still want to use qdevice, {}.\nThen run command \"crm cluster init\" with \"qdevice\" stage, like:\n  crm cluster init qdevice qdevice_related_options\nThat command will setup qdevice separately.".format(suggest)
             raise ValueError(exception_msg)
-
-        if not self.cluster_name:
-            self.cluster_name = corosync.get_value('totem.cluster_name')
-        if not self.cluster_name:
-            raise ValueError("No cluster_name found in {}".format(corosync.conf()))
 
     def enable_qnetd(self):
         utils.enable_service(self.qnetd_service, remote_addr=self.qnetd_addr)
@@ -258,6 +292,12 @@ class QDevice(object):
 
     def stop_qnetd(self):
         utils.stop_service(self.qnetd_service, remote_addr=self.qnetd_addr)
+
+    def set_cluster_name(self):
+        if not self.cluster_name:
+            self.cluster_name = corosync.get_value('totem.cluster_name')
+        if not self.cluster_name:
+            raise ValueError("No cluster_name found in {}".format(corosync.conf()))
 
     @qnetd_lock_for_multi_cluster
     def init_db_on_qnetd(self):
@@ -603,6 +643,7 @@ class QDevice(object):
                     SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
                     utils.set_property(stonith_timeout=SBDTimeout.get_stonith_timeout())
 
+    @qnetd_lock_for_same_cluster_name
     def config_and_start_qdevice(self):
         """
         Wrap function to collect functions to config and start qdevice
