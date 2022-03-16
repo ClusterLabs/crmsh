@@ -565,7 +565,8 @@ class QDevice(object):
                 p.set('quorum.device.heuristics.{}'.format(exec_name), cmd)
         utils.str2file(p.to_string(), corosync.conf())
 
-    def remove_qdevice_config(self):
+    @staticmethod
+    def remove_qdevice_config():
         """
         Remove configuration of qdevice
         """
@@ -574,24 +575,31 @@ class QDevice(object):
             p.remove("quorum.device")
         utils.str2file(p.to_string(), corosync.conf())
 
-    def remove_qdevice_db(self):
+    @staticmethod
+    def remove_qdevice_db(addr_list=[]):
         """
         Remove qdevice database
         """
-        if not os.path.exists(self.qdevice_db_path):
+        if not os.path.exists(QDevice.qdevice_db_path):
             return
-        node_list = utils.list_cluster_nodes()
-        cmd = "rm -rf {}/*".format(self.qdevice_path)
+        node_list = addr_list if addr_list else utils.list_cluster_nodes()
+        cmd = "rm -rf {}/*".format(QDevice.qdevice_path)
         parallax.parallax_call(node_list, cmd)
 
-    def remove_certification_files_on_qnetd(self):
+    @classmethod
+    def remove_certification_files_on_qnetd(cls):
         """
         Remove this cluster related .crq and .crt files on qnetd
         """
-        cmd = "test -f {crt_file} && rm -f {crt_file}".format(crt_file=self.qnetd_cluster_crt_on_qnetd)
-        utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)
-        cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=self.qdevice_crq_on_qnetd)
-        utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)
+        if not utils.is_qdevice_configured():
+            return
+        qnetd_host = corosync.get_value('quorum.device.net.host')
+        cluster_name = corosync.get_value('totem.cluster_name')
+        cls_inst = cls(qnetd_host, cluster_name=cluster_name)
+        cmd = "test -f {crt_file} && rm -f {crt_file}".format(crt_file=cls_inst.qnetd_cluster_crt_on_qnetd)
+        utils.get_stdout_or_raise_error(cmd, remote=qnetd_host)
+        cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=cls_inst.qdevice_crq_on_qnetd)
+        utils.get_stdout_or_raise_error(cmd, remote=qnetd_host)
 
     def config_qdevice(self):
         """
@@ -648,7 +656,7 @@ class QDevice(object):
         """
         Wrap function to collect functions to config and start qdevice
         """
-        self.remove_qdevice_db()
+        QDevice.remove_qdevice_db()
         if self.tls == "on":
             with logger_utils.status_long("Qdevice certification process"):
                 self.certificate_process_on_init()

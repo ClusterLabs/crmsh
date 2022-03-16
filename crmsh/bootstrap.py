@@ -1829,6 +1829,7 @@ def remove_node_from_cluster():
     set_cluster_node_ip()
 
     stop_services(SERVICES_STOP_LIST, remote_addr=node)
+    qdevice.QDevice.remove_qdevice_db([node])
 
     # delete configuration files from the node to be removed
     rc, _, err = invoke('ssh {} root@{} "bash -c \\\"rm -f {}\\\""'.format(SSH_OPTION, node, " ".join(_context.rm_list)))
@@ -2063,12 +2064,9 @@ def remove_qdevice():
         invoke("crm cluster run 'systemctl stop corosync-qdevice'")
 
     with logger_utils.status_long("Removing QDevice configuration from cluster"):
-        qnetd_host = corosync.get_value('quorum.device.net.host')
-        cluster_name = corosync.get_value('totem.cluster_name')
-        qdevice_inst = qdevice.QDevice(qnetd_host, cluster_name=cluster_name)
-        qdevice_inst.remove_qdevice_config()
-        qdevice_inst.remove_qdevice_db()
-        qdevice_inst.remove_certification_files_on_qnetd()
+        qdevice.QDevice.remove_certification_files_on_qnetd()
+        qdevice.QDevice.remove_qdevice_config()
+        qdevice.QDevice.remove_qdevice_db()
         update_expected_votes()
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
         invoke("crm cluster run 'crm corosync reload'")
@@ -2142,6 +2140,8 @@ def remove_self():
     else:
         # disable and stop cluster
         stop_services(SERVICES_STOP_LIST)
+        qdevice.QDevice.remove_certification_files_on_qnetd()
+        qdevice.QDevice.remove_qdevice_db([utils.this_node()])
         # remove all trace of cluster from this node
         # delete configuration files from the node to be removed
         if not invokerc('bash -c "rm -f {}"'.format(" ".join(_context.rm_list))):
