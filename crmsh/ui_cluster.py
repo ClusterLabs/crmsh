@@ -11,6 +11,7 @@ from . import scripts
 from . import completers as compl
 from . import bootstrap
 from . import corosync
+from . import qdevice
 from .cibconfig import cib_factory
 from . import constants
 
@@ -166,6 +167,8 @@ class Cluster(command.UI):
         if start_qdevice:
             utils.start_service("corosync-qdevice", node_list=node_list)
         bootstrap.start_pacemaker(node_list)
+        if start_qdevice:
+            qdevice.QDevice.check_qdevice_vote()
         for node in node_list:
             logger.info("Cluster services started on {}".format(node))
 

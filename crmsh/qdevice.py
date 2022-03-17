@@ -663,3 +663,14 @@ class QDevice(object):
         self.adjust_sbd_watchdog_timeout_with_qdevice()
         self.config_qdevice()
         self.start_qdevice_service()
+
+    @staticmethod
+    def check_qdevice_vote():
+        """
+        Check if qdevice can contribute vote
+        """
+        out = utils.get_stdout_or_raise_error("corosync-quorumtool -s", success_val_list=[0, 2])
+        res = re.search(r'\s+0\s+0\s+Qdevice', out)
+        if res:
+            qnetd_host = corosync.get_value('quorum.device.net.host')
+            logger.warning("Qdevice's vote is 0, which simply means Qdevice can't talk to Qnetd({}) for various reasons.".format(qnetd_host))
