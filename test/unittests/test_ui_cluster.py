@@ -56,13 +56,14 @@ class TestCluster(unittest.TestCase):
             mock.call("Cluster services already started on node2")
             ])
 
+    @mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
     @mock.patch('crmsh.bootstrap.start_pacemaker')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     @mock.patch('crmsh.utils.start_service')
     @mock.patch('crmsh.utils.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
-    def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_start_pacemaker):
+    def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_start_pacemaker, mock_check_qdevice):
         context_inst = mock.Mock()
         mock_parse_nodes.return_value = ["node1"]
         mock_active.side_effect = [False, False]
