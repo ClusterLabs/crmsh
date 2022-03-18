@@ -527,10 +527,31 @@ def test_valid_nodeid_true(mock_is_active, mock_nodeinfo):
     mock_nodeinfo.assert_called_once_with()
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
-def test_detect_aws(mock_run):
-    mock_run.return_value = "in amazon host"
+def test_detect_aws_false(mock_run):
+    mock_run.side_effect = ["test", "test"]
+    assert utils.detect_aws() is False
+    mock_run.assert_has_calls([
+        mock.call("dmidecode -s system-version"),
+        mock.call("dmidecode -s system-manufacturer")
+        ])
+
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_detect_aws_xen(mock_run):
+    mock_run.side_effect = ["4.2.amazon", "Xen"]
     assert utils.detect_aws() is True
-    mock_run.assert_called_once_with("dmidecode -s system-version")
+    mock_run.assert_has_calls([
+        mock.call("dmidecode -s system-version"),
+        mock.call("dmidecode -s system-manufacturer")
+        ])
+
+@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+def test_detect_aws_kvm(mock_run):
+    mock_run.side_effect = ["Not Specified", "Amazon EC2"]
+    assert utils.detect_aws() is True
+    mock_run.assert_has_calls([
+        mock.call("dmidecode -s system-version"),
+        mock.call("dmidecode -s system-manufacturer")
+        ])
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
 def test_detect_azure_false(mock_run):
