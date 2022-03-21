@@ -1993,8 +1993,13 @@ def detect_aws():
     """
     Detect if in AWS
     """
-    system_version = get_stdout_or_raise_error("dmidecode -s system-version")
-    return re.search(r".*amazon.*", system_version) is not None
+    # will match on xen instances
+    xen_test = get_stdout_or_raise_error("dmidecode -s system-version").lower()
+    # will match on nitro/kvm instances
+    kvm_test = get_stdout_or_raise_error("dmidecode -s system-manufacturer").lower()
+    if "amazon" in xen_test or "amazon" in kvm_test:
+        return True
+    return False
 
 
 def detect_azure():
