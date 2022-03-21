@@ -1,14 +1,91 @@
 import os
 import re
 import socket
+import functools
+from enum import Enum
 from . import utils
 from . import parallax
 from . import corosync
+from . import xmlutil
+from . import bootstrap
+from . import lock
 from . import log
 
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
+
+
+QDEVICE_ADD = "add"
+QDEVICE_REMOVE = "remove"
+
+
+class QdevicePolicy(Enum):
+    QDEVICE_RELOAD = 0
+    QDEVICE_RESTART = 1
+    QDEVICE_RESTART_LATER = 2
+
+
+def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
+    """
+    While adding/removing qdevice, get current expected votes and actual total votes,
+    to calculate after adding/removing qdevice, whether cluster has quorum
+    return different policy
+    """
+    quorum_votes_dict = utils.get_quorum_votes_dict()
+    expected_votes = int(quorum_votes_dict["Expected"])
+    actual_votes = int(quorum_votes_dict["Total"])
+    if mode == QDEVICE_ADD:
+        expected_votes += 1
+    elif mode == QDEVICE_REMOVE:
+        actual_votes -= 1
+
+    if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
+        # safe to use reload
+        return QdevicePolicy.QDEVICE_RELOAD
+    elif xmlutil.CrmMonXmlParser.is_any_resource_running():
+        # will lose quorum, and with RA running
+        # no reload, no restart cluster service
+        # just leave a warning
+        return QdevicePolicy.QDEVICE_RESTART_LATER
+    else:
+        # will lose quorum, without RA running
+        # safe to restart cluster service
+        return QdevicePolicy.QDEVICE_RESTART
+
+
+def qnetd_lock_for_same_cluster_name(func):
+    """
+    Decorator to claim lock on qnetd, to avoid the same cluster name added in qnetd
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        cluster_name = args[0].cluster_name
+        lock_dir = "/run/.crmsh_qdevice_lock_for_{}".format(cluster_name)
+        lock_inst = lock.RemoteLock(args[0].qnetd_addr, for_join=False, lock_dir=lock_dir, wait=False)
+        try:
+            with lock_inst.lock():
+                func(*args, **kwargs)
+        except lock.ClaimLockError:
+            utils.fatal("Duplicated cluster name \"{}\"!".format(cluster_name))
+        except lock.SSHError as err:
+            utils.fatal(err)
+    return wrapper
+
+
+def qnetd_lock_for_multi_cluster(func):
+    """
+    Decorator to claim lock on qnetd, to avoid possible race condition
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        lock_inst = lock.RemoteLock(args[0].qnetd_addr, for_join=False, no_warn=True)
+        try:
+            with lock_inst.lock():
+                func(*args, **kwargs)
+        except (lock.SSHError, lock.ClaimLockError) as err:
+            utils.fatal(err)
+    return wrapper
 
 
 class QDevice(object):
@@ -44,7 +121,7 @@ class QDevice(object):
     qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
 
     def __init__(self, qnetd_addr, port=5403, algo="ffsplit", tie_breaker="lowest",
-            tls="on", cluster_node=None, cmds=None, mode=None):
+            tls="on", cluster_node=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
         """
         Init function
         """
@@ -54,10 +131,11 @@ class QDevice(object):
         self.tie_breaker = tie_breaker
         self.tls = tls
         self.cluster_node = cluster_node
-        self.askpass = False
         self.cmds = cmds
         self.mode = mode
-        self.cluster_name = None
+        self.cluster_name = cluster_name
+        self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
+        self.is_stage = is_stage
 
     @property
     def qnetd_cacert_on_qnetd(self):
@@ -85,7 +163,7 @@ class QDevice(object):
         """
         Return path of qdevice-net-node.crq on qnetd node
         """
-        return "{}/nssdb/{}".format(self.qnetd_path, self.qdevice_crq_filename)
+        return "{}/nssdb/{}.{}".format(self.qnetd_path, self.qdevice_crq_filename, self.cluster_name)
     
     @property
     def qdevice_crq_on_local(self):
@@ -173,20 +251,34 @@ class QDevice(object):
         """
         Validate on qnetd node
         """
-        if utils.check_ssh_passwd_need(self.qnetd_addr):
-            self.askpass = True
-
         exception_msg = ""
         suggest = ""
-        if utils.service_is_active("pacemaker", self.qnetd_addr):
-            exception_msg = "host for qnetd must be a non-cluster node"
-            suggest = "change to another host or stop cluster service on {}".format(self.qnetd_addr)
-        elif not utils.package_is_installed("corosync-qnetd", self.qnetd_addr):
-            exception_msg = "Package \"corosync-qnetd\" not installed on {}".format(self.qnetd_addr)
+        duplicated_cluster_name = False
+        if not utils.package_is_installed("corosync-qnetd", self.qnetd_addr):
+            exception_msg = "Package \"corosync-qnetd\" not installed on {}!".format(self.qnetd_addr)
             suggest = "install \"corosync-qnetd\" on {}".format(self.qnetd_addr)
+        elif utils.service_is_active("corosync-qnetd", self.qnetd_addr):
+            cmd = "corosync-qnetd-tool -l -c {}".format(self.cluster_name)
+            if utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr):
+                duplicated_cluster_name = True
+        else:
+            cmd = "test -f {}".format(self.qnetd_cluster_crt_on_qnetd)
+            try:
+                utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)
+            except ValueError:
+                # target file not exist
+                pass
+            else:
+                duplicated_cluster_name = True
+        if duplicated_cluster_name:
+            exception_msg = "This cluster's name \"{}\" already exists on qnetd server!".format(self.cluster_name)
+            suggest = "consider to use the different cluster-name property"
 
         if exception_msg:
-            exception_msg += "\nCluster service already successfully started on this node except qdevice service\nIf you still want to use qdevice, {}\nThen run command \"crm cluster init\" with \"qdevice\" stage, like:\n  crm cluster init qdevice qdevice_related_options\nThat command will setup qdevice separately".format(suggest)
+            if self.is_stage:
+                exception_msg += "\nPlease {}.".format(suggest)
+            else:
+                exception_msg += "\nCluster service already successfully started on this node except qdevice service.\nIf you still want to use qdevice, {}.\nThen run command \"crm cluster init\" with \"qdevice\" stage, like:\n  crm cluster init qdevice qdevice_related_options\nThat command will setup qdevice separately.".format(suggest)
             raise ValueError(exception_msg)
 
     def enable_qnetd(self):
@@ -201,6 +293,13 @@ class QDevice(object):
     def stop_qnetd(self):
         utils.stop_service(self.qnetd_service, remote_addr=self.qnetd_addr)
 
+    def set_cluster_name(self):
+        if not self.cluster_name:
+            self.cluster_name = corosync.get_value('totem.cluster_name')
+        if not self.cluster_name:
+            raise ValueError("No cluster_name found in {}".format(corosync.conf()))
+
+    @qnetd_lock_for_multi_cluster
     def init_db_on_qnetd(self):
         """
         Certificate process for init
@@ -208,10 +307,8 @@ class QDevice(object):
         Initialize database on QNetd server by running corosync-qnetd-certutil -i
         """
         cmd = "test -f {}".format(self.qnetd_cacert_on_qnetd)
-        if self.askpass:
-            print("Test whether {} exists on QNetd server({})".format(self.qnetd_cacert_on_qnetd, self.qnetd_addr))
         try:
-            parallax.parallax_call([self.qnetd_addr], cmd, self.askpass)
+            parallax.parallax_call([self.qnetd_addr], cmd)
         except ValueError:
             # target file not exist
             pass
@@ -221,9 +318,7 @@ class QDevice(object):
         cmd = "corosync-qnetd-certutil -i"
         desc = "Step 1: Initialize database on {}".format(self.qnetd_addr)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
-        parallax.parallax_call([self.qnetd_addr], cmd, self.askpass)
+        parallax.parallax_call([self.qnetd_addr], cmd)
 
     def fetch_qnetd_crt_from_qnetd(self):
         """
@@ -236,9 +331,7 @@ class QDevice(object):
 
         desc = "Step 2: Fetch {} from {}".format(self.qnetd_cacert_filename, self.qnetd_addr)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
-        parallax.parallax_slurp([self.qnetd_addr], self.qdevice_path, self.qnetd_cacert_on_qnetd, self.askpass)
+        parallax.parallax_slurp([self.qnetd_addr], self.qdevice_path, self.qnetd_cacert_on_qnetd)
 
     def copy_qnetd_crt_to_cluster(self):
         """
@@ -252,13 +345,10 @@ class QDevice(object):
 
         desc = "Step 3: Copy exported {} to {}".format(self.qnetd_cacert_filename, node_list)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
         parallax.parallax_copy(
                 node_list,
                 os.path.dirname(self.qnetd_cacert_on_local),
-                self.qdevice_path,
-                self.askpass)
+                self.qdevice_path)
 
     def init_db_on_cluster(self):
         """
@@ -271,9 +361,7 @@ class QDevice(object):
         cmd = "corosync-qdevice-net-certutil -i -c {}".format(self.qnetd_cacert_on_local)
         desc = "Step 4: Initialize database on {}".format(node_list)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
-        parallax.parallax_call(node_list, cmd, self.askpass)
+        parallax.parallax_call(node_list, cmd)
 
     def create_ca_request(self):
         """
@@ -284,9 +372,6 @@ class QDevice(object):
         (Cluster name must match cluster_name key in the corosync.conf)
         """
         logger_utils.log_only_to_file("Step 5: Generate certificate request {}".format(self.qdevice_crq_filename))
-        self.cluster_name = corosync.get_value('totem.cluster_name')
-        if not self.cluster_name:
-            raise ValueError("No cluster_name found in {}".format(corosync.conf()))
         cmd = "corosync-qdevice-net-certutil -r -n {}".format(self.cluster_name)
         utils.get_stdout_or_raise_error(cmd)
 
@@ -298,13 +383,10 @@ class QDevice(object):
         """
         desc = "Step 6: Copy {} to {}".format(self.qdevice_crq_filename, self.qnetd_addr)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
         parallax.parallax_copy(
                 [self.qnetd_addr],
                 self.qdevice_crq_on_local,
-                os.path.dirname(self.qdevice_crq_on_qnetd),
-                self.askpass)
+                self.qdevice_crq_on_qnetd)
 
     def sign_crq_on_qnetd(self):
         """
@@ -317,9 +399,7 @@ class QDevice(object):
         logger_utils.log_only_to_file(desc)
         cmd = "corosync-qnetd-certutil -s -c {} -n {}".\
                 format(self.qdevice_crq_on_qnetd, self.cluster_name)
-        if self.askpass:
-            print(desc)
-        parallax.parallax_call([self.qnetd_addr], cmd, self.askpass)
+        parallax.parallax_call([self.qnetd_addr], cmd)
 
     def fetch_cluster_crt_from_qnetd(self):
         """
@@ -329,13 +409,10 @@ class QDevice(object):
         """
         desc = "Step 8: Fetch {} from {}".format(os.path.basename(self.qnetd_cluster_crt_on_qnetd), self.qnetd_addr)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
         parallax.parallax_slurp(
                 [self.qnetd_addr],
                 self.qdevice_path,
-                self.qnetd_cluster_crt_on_qnetd,
-                self.askpass)
+                self.qnetd_cluster_crt_on_qnetd)
 
     def import_cluster_crt(self):
         """
@@ -360,13 +437,10 @@ class QDevice(object):
 
         desc = "Step 10: Copy {} to {}".format(self.qdevice_p12_filename, node_list)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
         parallax.parallax_copy(
                 node_list,
                 self.qdevice_p12_on_local,
-                os.path.dirname(self.qdevice_p12_on_local),
-                self.askpass)
+                os.path.dirname(self.qdevice_p12_on_local))
 
     def import_p12_on_cluster(self):
         """
@@ -381,10 +455,8 @@ class QDevice(object):
 
         desc = "Step 11: Import {} on {}".format(self.qdevice_p12_filename, node_list)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
         cmd = "corosync-qdevice-net-certutil -m -c {}".format(self.qdevice_p12_on_local)
-        parallax.parallax_call(node_list, cmd, self.askpass)
+        parallax.parallax_call(node_list, cmd)
 
     def certificate_process_on_init(self):
         """
@@ -413,13 +485,10 @@ class QDevice(object):
 
         desc = "Step 1: Fetch {} from {}".format(self.qnetd_cacert_filename, self.cluster_node)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
         parallax.parallax_slurp(
                 [self.cluster_node],
                 self.qdevice_path,
-                self.qnetd_cacert_on_local,
-                self.askpass)
+                self.qnetd_cacert_on_local)
 
     def init_db_on_local(self):
         """
@@ -446,13 +515,10 @@ class QDevice(object):
 
         desc = "Step 3: Fetch {} from {}".format(self.qdevice_p12_filename, self.cluster_node)
         logger_utils.log_only_to_file(desc)
-        if self.askpass:
-            print(desc)
         parallax.parallax_slurp(
                 [self.cluster_node],
                 self.qdevice_path,
-                self.qdevice_p12_on_local,
-                self.askpass)
+                self.qdevice_p12_on_local)
 
     def import_p12_on_local(self):
         """
@@ -499,7 +565,8 @@ class QDevice(object):
                 p.set('quorum.device.heuristics.{}'.format(exec_name), cmd)
         utils.str2file(p.to_string(), corosync.conf())
 
-    def remove_qdevice_config(self):
+    @staticmethod
+    def remove_qdevice_config():
         """
         Remove configuration of qdevice
         """
@@ -508,14 +575,102 @@ class QDevice(object):
             p.remove("quorum.device")
         utils.str2file(p.to_string(), corosync.conf())
 
-    def remove_qdevice_db(self):
+    @staticmethod
+    def remove_qdevice_db(addr_list=[]):
         """
         Remove qdevice database
         """
-        if not os.path.exists(self.qdevice_db_path):
+        if not os.path.exists(QDevice.qdevice_db_path):
             return
-        node_list = utils.list_cluster_nodes()
-        cmd = "rm -rf {}/*".format(self.qdevice_path)
-        if self.askpass:
-            print("Remove database on cluster nodes")
-        parallax.parallax_call(node_list, cmd, self.askpass)
+        node_list = addr_list if addr_list else utils.list_cluster_nodes()
+        cmd = "rm -rf {}/*".format(QDevice.qdevice_path)
+        parallax.parallax_call(node_list, cmd)
+
+    @classmethod
+    def remove_certification_files_on_qnetd(cls):
+        """
+        Remove this cluster related .crq and .crt files on qnetd
+        """
+        if not utils.is_qdevice_configured():
+            return
+        qnetd_host = corosync.get_value('quorum.device.net.host')
+        cluster_name = corosync.get_value('totem.cluster_name')
+        cls_inst = cls(qnetd_host, cluster_name=cluster_name)
+        cmd = "test -f {crt_file} && rm -f {crt_file}".format(crt_file=cls_inst.qnetd_cluster_crt_on_qnetd)
+        utils.get_stdout_or_raise_error(cmd, remote=qnetd_host)
+        cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=cls_inst.qdevice_crq_on_qnetd)
+        utils.get_stdout_or_raise_error(cmd, remote=qnetd_host)
+
+    def config_qdevice(self):
+        """
+        Update configuration and reload corosync if necessary
+        """
+        self.write_qdevice_config()
+        if not corosync.is_unicast():
+            corosync.add_nodelist_from_cmaptool()
+        with logger_utils.status_long("Update configuration"):
+            bootstrap.update_expected_votes()
+            if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+                utils.cluster_run_cmd("crm corosync reload")
+
+    def start_qdevice_service(self):
+        """
+        Start qdevice and qnetd service
+        """
+        logger.info("Enable corosync-qdevice.service in cluster")
+        utils.cluster_run_cmd("systemctl enable corosync-qdevice")
+        if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+            logger.info("Starting corosync-qdevice.service in cluster")
+            utils.cluster_run_cmd("systemctl restart corosync-qdevice")
+        elif self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
+            logger.info("Restarting cluster service")
+            utils.cluster_run_cmd("crm cluster restart")
+            bootstrap.wait_for_cluster()
+        else:
+            logger.warning("To use qdevice service, need to restart cluster service manually on each node")
+
+        logger.info("Enable corosync-qnetd.service on {}".format(self.qnetd_addr))
+        self.enable_qnetd()
+        logger.info("Starting corosync-qnetd.service on {}".format(self.qnetd_addr))
+        self.start_qnetd()
+
+    def adjust_sbd_watchdog_timeout_with_qdevice(self):
+        """
+        Adjust SBD_WATCHDOG_TIMEOUT when configuring qdevice and diskless SBD
+        """
+        if self.is_stage:
+            from .sbd import SBDManager, SBDTimeout
+            utils.check_all_nodes_reachable()
+            using_diskless_sbd = SBDManager.is_using_diskless_sbd()
+            self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
+            # add qdevice after diskless sbd started
+            if using_diskless_sbd:
+                res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
+                if not res or int(res) < SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
+                    sbd_watchdog_timeout_qdevice = SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
+                    SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
+                    utils.set_property(stonith_timeout=SBDTimeout.get_stonith_timeout())
+
+    @qnetd_lock_for_same_cluster_name
+    def config_and_start_qdevice(self):
+        """
+        Wrap function to collect functions to config and start qdevice
+        """
+        QDevice.remove_qdevice_db()
+        if self.tls == "on":
+            with logger_utils.status_long("Qdevice certification process"):
+                self.certificate_process_on_init()
+        self.adjust_sbd_watchdog_timeout_with_qdevice()
+        self.config_qdevice()
+        self.start_qdevice_service()
+
+    @staticmethod
+    def check_qdevice_vote():
+        """
+        Check if qdevice can contribute vote
+        """
+        out = utils.get_stdout_or_raise_error("corosync-quorumtool -s", success_val_list=[0, 2])
+        res = re.search(r'\s+0\s+0\s+Qdevice', out)
+        if res:
+            qnetd_host = corosync.get_value('quorum.device.net.host')
+            logger.warning("Qdevice's vote is 0, which simply means Qdevice can't talk to Qnetd({}) for various reasons.".format(qnetd_host))

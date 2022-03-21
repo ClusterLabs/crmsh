@@ -59,37 +59,50 @@ Feature: corosync qdevice/qnetd options validate
       """
 
   @clean
-  Scenario: Node for qnetd is a cluster node
-    Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y" on "hanode2"
-    Then    Cluster service is "started" on "hanode2"
-    When    Try "crm cluster init --qnetd-hostname=hanode2 -y"
-    Then    Except multiple lines
-      """
-      ERROR: cluster.init: host for qnetd must be a non-cluster node
-      Cluster service already successfully started on this node except qdevice service
-      If you still want to use qdevice, change to another host or stop cluster service on hanode2
-      Then run command "crm cluster init" with "qdevice" stage, like:
-        crm cluster init qdevice qdevice_related_options
-      That command will setup qdevice separately
-      """
-    And     Cluster service is "started" on "hanode1"
-    When    Run "crm cluster stop" on "hanode2"
-
-  @clean
   Scenario: Node for qnetd not installed corosync-qnetd
     Given   Cluster service is "stopped" on "hanode2"
     When    Try "crm cluster init --qnetd-hostname=hanode2 -y"
     Then    Except multiple lines
       """
-      ERROR: cluster.init: Package "corosync-qnetd" not installed on hanode2
-      Cluster service already successfully started on this node except qdevice service
-      If you still want to use qdevice, install "corosync-qnetd" on hanode2
+      ERROR: cluster.init: Package "corosync-qnetd" not installed on hanode2!
+      Cluster service already successfully started on this node except qdevice service.
+      If you still want to use qdevice, install "corosync-qnetd" on hanode2.
       Then run command "crm cluster init" with "qdevice" stage, like:
         crm cluster init qdevice qdevice_related_options
-      That command will setup qdevice separately
+      That command will setup qdevice separately.
       """
     And     Cluster service is "started" on "hanode1"
+
+  @clean
+  Scenario: Raise error when adding qdevice stage with the same cluster name
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -n cluster1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster init -n cluster1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Try "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1,hanode2"
+    Then    Except "ERROR: cluster.init: Duplicated cluster name "cluster1"!"
+    When    Run "crm cluster stop" on "hanode1"
+    When    Run "crm cluster stop" on "hanode2"
+
+  @clean
+  Scenario: Raise error when the same cluster name already exists on qnetd
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Try "crm cluster init -n cluster1 --qnetd-hostname=qnetd-node -y" on "hanode2"
+    When    Try "crm cluster init -n cluster1 --qnetd-hostname=qnetd-node -y"
+    Then    Except multiple lines
+      """
+      ERROR: cluster.init: This cluster's name "cluster1" already exists on qnetd server!
+      Cluster service already successfully started on this node except qdevice service.
+      If you still want to use qdevice, consider to use the different cluster-name property.
+      Then run command "crm cluster init" with "qdevice" stage, like:
+        crm cluster init qdevice qdevice_related_options
+      That command will setup qdevice separately.
+      """
+    And     Cluster service is "started" on "hanode1"
+    And     Cluster service is "started" on "hanode2"
 
   @clean
   Scenario: Run qdevice stage on inactive cluster node

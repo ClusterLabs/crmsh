@@ -120,3 +120,14 @@ Feature: corosync qdevice/qnetd setup/remove process
     And     Service "corosync-qdevice" is "started" on "hanode2"
     And     Service "corosync-qdevice" is "started" on "hanode1"
     And     Show status from qnetd
+
+  @clean
+  Scenario: One qnetd for multi cluster, add in parallel
+    When    Run "crm cluster init -n cluster1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster init -n cluster2 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "crm cluster init qdevice --qnetd-hostname qnetd-node -y" on "hanode1,hanode2"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode2"
+    And     Service "corosync-qnetd" is "started" on "qnetd-node"

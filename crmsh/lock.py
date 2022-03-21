@@ -31,16 +31,15 @@ class Lock(object):
     A base class define a lock mechanism used to exclude other nodes
     """
 
-    LOCK_DIR = "/run/.crmsh_lock_directory"
-    MKDIR_CMD = "mkdir {}".format(LOCK_DIR)
-    RM_CMD = "rm -rf {}".format(LOCK_DIR)
+    LOCK_DIR_DEFAULT = "/run/.crmsh_lock_directory"
 
-    def __init__(self):
+    def __init__(self, lock_dir=None):
         """
         Init function
         """
         # only the lock owner can unlock
         self.lock_owner = False
+        self.lock_dir = lock_dir or self.LOCK_DIR_DEFAULT
 
     def _run(self, cmd):
         """
@@ -52,7 +51,8 @@ class Lock(object):
         """
         Create lock directory, mkdir command was atomic
         """
-        rc, _, _ = self._run(self.MKDIR_CMD)
+        cmd = "mkdir {}".format(self.lock_dir)
+        rc, _, _ = self._run(cmd)
         if rc == 0:
             self.lock_owner = True
             return True
@@ -63,14 +63,15 @@ class Lock(object):
         Raise ClaimLockError if claiming lock failed
         """
         if not self._create_lock_dir():
-            raise ClaimLockError("Failed to claim lock (the lock directory exists at {})".format(self.LOCK_DIR))
+            raise ClaimLockError("Failed to claim lock (the lock directory exists at {})".format(self.lock_dir))
 
     def _unlock(self):
         """
         Remove the lock directory
         """
         if self.lock_owner:
-            self._run(self.RM_CMD)
+            cmd = "rm -rf {}".format(self.lock_dir)
+            self._run(cmd)
 
     @contextmanager
     def lock(self):
@@ -99,12 +100,15 @@ class RemoteLock(Lock):
     MIN_LOCK_TIMEOUT = 120
     WAIT_INTERVAL = 10
 
-    def __init__(self, remote_node):
+    def __init__(self, remote_node, for_join=True, lock_dir=None, wait=True, no_warn=False):
         """
         Init function
         """
         self.remote_node = remote_node
-        super(__class__, self).__init__()
+        self.for_join = for_join
+        self.wait = wait
+        self.no_warn = no_warn
+        super(__class__, self).__init__(lock_dir=lock_dir)
 
     def _run(self, cmd):
         """
@@ -146,7 +150,7 @@ class RemoteLock(Lock):
         warned_once = False
         online_list = []
         pre_online_list = []
-        expired_error_str = "Cannot continue since the lock directory exists at the node ({}:{})".format(self.remote_node, self.LOCK_DIR)
+        expired_error_str = "Cannot continue since the lock directory exists at the node ({}:{})".format(self.remote_node, self.lock_dir)
 
         current_time = int(time.time())
         timeout = current_time + self.lock_timeout
@@ -157,13 +161,14 @@ class RemoteLock(Lock):
                 # Success
                 break
 
-            # Might lose claiming lock again, start to wait again
-            online_list = self._get_online_nodelist()
-            if pre_online_list and pre_online_list != online_list:
-                timeout = current_time + self.lock_timeout
-            pre_online_list = online_list
+            if self.for_join:
+                # Might lose claiming lock again, start to wait again
+                online_list = self._get_online_nodelist()
+                if pre_online_list and pre_online_list != online_list:
+                    timeout = current_time + self.lock_timeout
+                pre_online_list = online_list
 
-            if not warned_once:
+            if not self.no_warn and not warned_once:
                 warned_once = True
                 logger.warning("Might have unfinished process on other nodes, wait %ss...", self.lock_timeout)
 
@@ -180,7 +185,10 @@ class RemoteLock(Lock):
         Might raise SSHError, ClaimLockError and ValueError
         """
         try:
-            self._lock_or_wait()
+            if self.wait:
+                self._lock_or_wait()
+            else:
+                self._lock_or_fail()
             yield
         except:
             raise
