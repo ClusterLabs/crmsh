@@ -1471,7 +1471,6 @@ def get_pcmk_version(dflt):
         if rc != 0:
             logger.error("%s exited with %d [err: %s][out: %s]", cmd, rc, err, s)
         else:
-            logger.debug("pacemaker version: [err: %s][out: %s]", err, s)
             if err.startswith("CRM Version:"):
                 version = s.split()[0]
             else:
