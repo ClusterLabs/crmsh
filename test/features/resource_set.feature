@@ -2,6 +2,7 @@
 Feature: Use "crm configure set" to update attributes and operations
 
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1 hanode2
 
   Background: Setup cluster and configure some resources
     Given     Cluster service is "stopped" on "hanode1"
@@ -11,9 +12,9 @@ Feature: Use "crm configure set" to update attributes and operations
     Then      Cluster service is "started" on "hanode2"
     When      Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
     Then      Resource "d" type "Dummy" is "Started"
-    When      Run "crm configure primitive vip IPaddr2 params ip=10.10.10.123 op monitor interval=3s" on "hanode1"
+    When      Run "crm configure primitive vip IPaddr2 params ip=@vip.0 op monitor interval=3s" on "hanode1"
     Then      Resource "vip" type "IPaddr2" is "Started"
-    And       Cluster virtual IP is "10.10.10.123"
+    And       Cluster virtual IP is "@vip.0"
     When      Run "crm configure primitive s ocf:pacemaker:Stateful op monitor role=Promoted interval=3s op monitor role=Unpromoted interval=5s" on "hanode1"
     Then      Resource "s" type "Stateful" is "Started"
 
@@ -36,8 +37,8 @@ Feature: Use "crm configure set" to update attributes and operations
 
   @clean
   Scenario: Using configure.set to update resource parameters and operation values
-    When    Run "crm configure set vip.ip 10.10.10.124" on "hanode1"
-    Then    Cluster virtual IP is "10.10.10.124"
+    When    Run "crm configure set vip.ip @vip.0" on "hanode1"
+    Then    Cluster virtual IP is "@vip.0"
     When    Run "crm configure set d.monitor.on-fail ignore" on "hanode1"
     And     Run "crm configure show d" on "hanode1"
     Then    Expected "on-fail=ignore" in stdout

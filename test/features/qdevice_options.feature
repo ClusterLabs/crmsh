@@ -7,6 +7,7 @@ Feature: corosync qdevice/qnetd options
       "--qdevice-tls":         Whether using TLS on QDevice/QNetd(on/off/required, default:on)
       "--qdevice-heuristics":  COMMAND to run with absolute path. For multiple commands, use ";" to separate
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1 hanode2 qnetd-node
 
   @clean
   Scenario: Use "--qdevice-algo" to change qnetd decision algorithm to "lms"

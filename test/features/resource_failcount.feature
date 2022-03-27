@@ -2,6 +2,7 @@
 Feature: Use "crm resource failcount" to manage failcounts
 
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1
 
   Background: Setup one node cluster and configure a Dummy resource
     Given     Cluster service is "stopped" on "hanode1"

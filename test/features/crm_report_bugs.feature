@@ -2,6 +2,7 @@
 Feature: crm report functional test for verifying bugs
 
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1 hanode2
 
   Background: Setup a two nodes cluster
     Given   Cluster service is "stopped" on "hanode1"
@@ -72,12 +73,12 @@ Feature: crm report functional test for verifying bugs
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"
 
     # mask password and ip address by using crm.conf
-    When    Run "crm configure primitive ip2 IPaddr2 params ip=10.10.10.124" on "hanode1"
+    When    Run "crm configure primitive ip2 IPaddr2 params ip=@vip.0" on "hanode1"
     And     Run "sed -i 's/; \[report\]/[report]/' /etc/crm/crm.conf" on "hanode1"
     And     Run "sed -i 's/; sanitize_rule = .*$/sanitize_rule = passw.*|ip.*:raw/g' /etc/crm/crm.conf" on "hanode1"
     And     Run "crm report report" on "hanode1"
     And     Run "tar jxf report.tar.bz2" on "hanode1"
-    And     Try "grep -R -E "10.10.10.124|qwertyui" report"
+    And     Try "grep -R -E "@vip.0|qwertyui" report"
     # No password here
     Then    Expected return code is "1"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"

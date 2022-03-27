@@ -2,6 +2,7 @@
 Feature: Regression test for bootstrap bugs
 
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1 hanode2 hanode3
 
   @clean
   Scenario: Set placement-strategy value as "default"(bsc#1129462)
@@ -55,7 +56,7 @@ Feature: Regression test for bootstrap bugs
     When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     When    Run "crm corosync get nodelist.node.ring0_addr" on "hanode1"
-    Then    Expected "10.10.10.3" in stdout
+    Then    Expected "@hanode2.ip.0" in stdout
     #And     Service "hawk.service" is "started" on "hanode2"
     When    Run "crm cluster remove hanode2 -y" on "hanode1"
     Then    Online nodes are "hanode1"
@@ -63,7 +64,7 @@ Feature: Regression test for bootstrap bugs
     # verify bsc#1175708
     #And     Service "hawk.service" is "stopped" on "hanode2"
     When    Run "crm corosync get nodelist.node.ring0_addr" on "hanode1"
-    Then    Expected "10.10.10.3" not in stdout
+    Then    Expected "@hanode2.ip.0" not in stdout
 
   @clean
   Scenario: Multi nodes join in parallel(bsc#1175976)
@@ -101,8 +102,8 @@ Feature: Regression test for bootstrap bugs
   Scenario: Change host name in /etc/hosts as alias(bsc#1183654)
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
-    When    Run "echo '10.10.10.2 HANODE1' >> /etc/hosts" on "hanode1"
-    When    Run "echo '10.10.10.3 HANODE2' >> /etc/hosts" on "hanode2"
+    When    Run "echo '@hanode1.ip.0 HANODE1' >> /etc/hosts" on "hanode1"
+    When    Run "echo '@hanode2.ip.0 HANODE2' >> /etc/hosts" on "hanode2"
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Run "crm cluster join -c HANODE1 -y" on "hanode2"
