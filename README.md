@@ -51,13 +51,28 @@ In local:
 - `pip install tox`
 - In root directory of crmsh project, run `tox`
 
-[In github action](https://github.com/ClusterLabs/crmsh/actions/workflows/crmsh-ci.yml)
+#### Functional tests
+In local:
+- In root directory of crmsh project, run `./test/run-functional-tests [OPTIONS]|[TESTCASE INDEX]`
 
-To run the regression tests in a docker container, use the
-`test/containerized-regression-tests.sh` script. This relies on having
-access to `docker` to pull down the base image and run the regression
-test suite. The docker base image used is defined in the `Dockerfile`
-included in the repository.
+```
+# ./test/run-functional-tests -h
+Usage: run-functional-tests [OPTIONS]|[TESTCASE INDEX]
+run-functional-tests is a tool for developers to setup the cluster in containers to run functional tests.
+The container image is based on Tumbleweed with preinstalled packages of the cluster stack include pacemaker/corosync/crmsh and many others.
+Users can make the code change under crmsh.git including test cases. This tool will pick up the code change and "make install" to all running containers.
+
+OPTIONS:
+  -h, --help		Show this help message and exit
+  -l            	List existing functional test cases and exit
+  -n NUM        	Only setup a cluster with NUM nodes(containers)
+  -x			Don't config corosync on containers(with -n option)
+  -d            	Cleanup the cluster containers
+```
+
+The docker base image used is defined in the `Dockerfile` included in the repository.
+
+[In github action](https://github.com/ClusterLabs/crmsh/actions/workflows/crmsh-ci.yml)
 
 ## Manifest
 
