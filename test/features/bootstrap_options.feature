@@ -8,6 +8,7 @@ Feature: crmsh bootstrap process - options
       "-n":      Set the name of the configured cluster
       "-A":      Configure IP address as an administration virtual IP
       "-u":      Configure corosync to communicate over unicast
+      "-U":      Configure corosync to communicate over multicast
   Tag @clean means need to stop cluster service if the service is available
 
   @clean
@@ -58,6 +59,7 @@ Feature: crmsh bootstrap process - options
     And     IP "172.17.0.2" is used by corosync on "hanode1"
     And     IP "10.10.10.2" is used by corosync on "hanode1"
     And     Show corosync ring status
+    And     Corosync working on "unicast" mode
 
   @clean
   Scenario: Using multiple network interface using "-i" option
@@ -103,7 +105,7 @@ Feature: crmsh bootstrap process - options
     When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     IP "2001:db8:10::3" is used by corosync on "hanode2"
-    And     Corosync working on "multicast" mode
+    And     Corosync working on "unicast" mode
 
   @clean
   Scenario: Init cluster service with ipv6 unicast using "-I" and "-u" option
@@ -117,3 +119,14 @@ Feature: crmsh bootstrap process - options
     And     IP "2001:db8:10::3" is used by corosync on "hanode2"
     And     Show cluster status on "hanode1"
     And     Corosync working on "unicast" mode
+
+  @clean
+  Scenario: Init cluster service with multicast using "-U" option (bsc#1132375)
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -U -i eth1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Show cluster status on "hanode1"
+    And     Corosync working on "multicast" mode
