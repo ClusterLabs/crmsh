@@ -362,7 +362,7 @@ class TestSBDManager(unittest.TestCase):
         mock_parse_inst.get.return_value = None
 
         res = self.sbd_inst._get_sbd_device_from_config()
-        assert res is None
+        assert res == []
 
         mock_parse.assert_called_once_with("/etc/sysconfig/sbd")
         mock_parse_inst.get.assert_called_once_with("SBD_DEVICE")

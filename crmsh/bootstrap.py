@@ -396,7 +396,7 @@ If you want to use diskless SBD for two-nodes cluster, should be combined with Q
         if res:
             return utils.re_split_string(self.PARSE_RE, res)
         else:
-            return None
+            return []
 
     def _restart_cluster_and_configure_sbd_ra(self):
         """
