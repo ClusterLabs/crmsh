@@ -41,7 +41,7 @@ Feature: Verify usercase master survive when split-brain
     # Setup a two-nodes cluster
     When    Run "crm cluster init -y -i eth0" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    When    Run "crm cluster join -c hanode1 -y -i eth0" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
 
     # Generate script to check whether this node is master

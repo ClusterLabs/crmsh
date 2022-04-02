@@ -259,7 +259,7 @@ def step_impl(context, cmd):
 @then('Corosync working on "{transport_type}" mode')
 def step_impl(context, transport_type):
     if transport_type == "multicast":
-        assert corosync.get_value("totem.transport") != "udpu"
+        assert corosync.get_value("totem.transport") is None
     if transport_type == "unicast":
         assert corosync.get_value("totem.transport") == "udpu"
 
