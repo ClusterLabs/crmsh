@@ -8,8 +8,9 @@ primitive p2 Delay \
 primitive p3 ocf:pacemaker:Dummy
 primitive st stonith:null \
 	params hostlist=node1
-ms m1 p2
 clone c1 p1
+clone m1 p2 \
+       meta promotable=true
 op_defaults op-options: \
 	timeout=60s
 .TRY configure erase nodes
@@ -42,8 +43,9 @@ primitive p3 ocf:pacemaker:Dummy
 primitive st stonith:null \
 	params hostlist=node1
 # comment
-ms m1 p2
 clone c1 p1
+clone m1 p2 \
+       meta promotable=true
 property cib-bootstrap-options: \
 	cluster-recheck-interval=10m
 op_defaults op-options: \

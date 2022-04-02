@@ -5,7 +5,7 @@ import os
 import sys
 from .msg import common_err, common_debug, common_warn, common_info
 from .utils import rmdir_r, quote, this_node, ext_cmd
-from .xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms, is_cloned
+from .xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms_or_promotable_clone, is_cloned
 
 
 #
@@ -67,8 +67,8 @@ class RADriver(object):
     def debug(self, s):
         common_debug("%s: %s" % (self.id_str(), s))
 
-    def is_ms(self):
-        return is_ms(get_topmost_rsc(self.rscdef_node))
+    def is_ms_or_promotable_clone(self):
+        return is_ms_or_promotable_clone(get_topmost_rsc(self.rscdef_node))
 
     def nvset2env(self, set_n):
         if set_n is None:
@@ -193,7 +193,7 @@ class RADriver(object):
         """
         Make sure resource is stopped on node.
         """
-        if self.is_ms():
+        if self.is_ms_or_promotable_clone():
             self.runop("demote", (node,))
         self.runop("stop", (node,))
         ok = self.is_ok(node)
@@ -207,7 +207,7 @@ class RADriver(object):
         Perform test of resource on node.
         """
         self.runop("start", (node,))
-        if self.is_ms() and self.is_ok(node):
+        if self.is_ms_or_promotable_clone() and self.is_ok(node):
             self.runop("promote", (node,))
         return self.is_ok(node)
 
@@ -225,7 +225,7 @@ class RADriver(object):
         if not stopped:
             if self.is_ok(node):
                 self.warn("resource running at %s" % (node))
-            elif self.is_ms() and self.is_master(node):
+            elif self.is_ms_or_promotable_clone() and self.is_master(node):
                 self.warn("resource is master at %s" % (node))
             else:
                 self.warn("resource not clean at %s" % (node))
