@@ -3095,4 +3095,14 @@ def diff_and_patch(orig_cib_str, current_cib_str):
         logger.error("Failed to patch")
         return False
     return True
+
+
+def read_from_file(infile):
+    """
+    Read data from file in a save way, to avoid UnicodeDecodeError
+    """
+    data = None
+    with open(infile, 'rt', encoding='utf-8', errors='replace') as f:
+        data = f.read()
+    return to_ascii(data)
 # vim:ts=4:sw=4:et:

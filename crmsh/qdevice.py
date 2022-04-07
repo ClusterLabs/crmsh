@@ -543,9 +543,7 @@ class QDevice(object):
         """
         Write qdevice attributes to config file
         """
-        with open(corosync.conf()) as f:
-            p = corosync.Parser(f.read())
-
+        p = corosync.Parser(utils.read_from_file(corosync.conf()))
         p.remove("quorum.device")
         p.add('quorum', corosync.make_section('quorum.device', []))
         p.set('quorum.device.votes', '1')
@@ -570,9 +568,8 @@ class QDevice(object):
         """
         Remove configuration of qdevice
         """
-        with open(corosync.conf()) as f:
-            p = corosync.Parser(f.read())
-            p.remove("quorum.device")
+        p = corosync.Parser(utils.read_from_file(corosync.conf()))
+        p.remove("quorum.device")
         utils.str2file(p.to_string(), corosync.conf())
 
     @staticmethod
