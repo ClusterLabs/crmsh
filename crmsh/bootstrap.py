@@ -86,7 +86,8 @@ class Context(object):
         self.cluster_name = None
         self.watchdog = None
         self.no_overwrite_sshkey = None
-        self.nic_list = None
+        self.nic_list = []
+        self.nodes = []
         self.unicast = None
         self.multicast = None
         self.admin_ip = None
@@ -111,7 +112,7 @@ class Context(object):
         self.clusters = None
         self.tickets = None
         self.sbd_manager = None
-        self.sbd_devices = None
+        self.sbd_devices = []
         self.diskless_sbd = None
         self.stage = None
         self.args = None
@@ -167,6 +168,21 @@ class Context(object):
             if self.cluster_is_running:
                 utils.check_all_nodes_reachable()
 
+    def _validate_nodes_option(self):
+        """
+        Validate -N/--nodes option
+        """
+        self.nodes = utils.parse_append_action_argument(self.nodes)
+        me = utils.this_node()
+        if me in self.nodes:
+            self.nodes.remove(me)
+        if self.nodes and self.stage:
+            utils.fatal("Can't use -N/--nodes option and stage({}) together".format(self.stage))
+        if utils.has_dup_value(self.nodes):
+            utils.fatal("Duplicated input for -N/--nodes option")
+        for node in self.nodes:
+            utils.ping_node(node)
+
     def validate_option(self):
         """
         Validate options
@@ -178,14 +194,15 @@ class Context(object):
         if self.nic_list:
             if len(self.nic_list) > 2:
                 utils.fatal("Maximum number of interface is 2")
-            if len(self.nic_list) != len(set(self.nic_list)):
-                utils.fatal("Duplicated input")
+            if utils.has_dup_value(self.nic_list):
+                utils.fatal("Duplicated input for -i/--interface option")
         if self.no_overwrite_sshkey:
             logger.warning("--no-overwrite-sshkey option is deprecated since crmsh does not overwrite ssh keys by default anymore and will be removed in future versions")
         if self.type == "join" and self.watchdog:
             logger.warning("-w option is deprecated and will be removed in future versions")
         if self.ocfs2_devices or self.stage == "ocfs2":
             ocfs2.OCFS2Manager.verify_ocfs2(self)
+        self._validate_nodes_option()
         self._validate_sbd_option()
 
     def init_sbd_manager(self):
@@ -688,19 +705,27 @@ def install_tmp(tmpfile, to):
                 dst.write(line)
 
 
-def append(fromfile, tofile):
-    logger_utils.log_only_to_file("+ cat %s >> %s" % (fromfile, tofile))
-    with open(tofile, "a") as tf:
-        with open(fromfile, "r") as ff:
-            tf.write(ff.read())
+def append(fromfile, tofile, remote=None):
+    cmd = "cat {} >> {}".format(fromfile, tofile)
+    utils.get_stdout_or_raise_error(cmd, remote=remote)
 
 
-def append_unique(fromfile, tofile):
+def append_unique(fromfile, tofile, remote=None, from_local=False):
     """
     Append unique content from fromfile to tofile
+    
+    if from_local and remote:
+        append local fromfile to remote tofile
+    elif remote:
+        append remote fromfile to remote tofile
+    if not remote:
+        append fromfile to tofile, locally
     """
-    if not utils.check_file_content_included(fromfile, tofile):
-        append(fromfile, tofile)
+    if not utils.check_file_content_included(fromfile, tofile, remote=remote, source_local=from_local):
+        if from_local and remote:
+            append_to_remote_file(fromfile, remote, tofile)
+        else:
+            append(fromfile, tofile, remote=remote)
 
 
 def rmfile(path, ignore_errors=False):
@@ -735,7 +760,29 @@ def init_ssh():
     """
     utils.start_service("sshd.service", enable=True)
     for user in USER_LIST:
-        configure_local_ssh_key(user)
+        configure_ssh_key(user)
+
+    # If not use -N/--nodes option
+    if not _context.nodes:
+        return
+
+    print()
+    node_list = _context.nodes
+    # Swap public ssh key between remote node and local
+    for node in node_list:
+        swap_public_ssh_key(node, add=True)
+        if utils.service_is_active("pacemaker.service", node):
+            utils.fatal("Cluster is currently active on {} - can't run".format(node))
+    # Swap public ssh key between one remote node and other remote nodes
+    if len(node_list) > 1:
+        _, _, authorized_file = key_files("root").values()
+        for node in node_list:
+            public_key_file_remote = fetch_public_key_from_remote_node(node)
+            for other_node in node_list:
+                if other_node == node:
+                    continue
+                append_unique(public_key_file_remote, authorized_file, remote=other_node, from_local=True)
+    print()
 
 
 def key_files(user):
@@ -772,9 +819,9 @@ def change_user_shell(user):
         invoke("usermod -s /bin/bash {}".format(user))
 
 
-def configure_local_ssh_key(user="root"):
+def configure_ssh_key(user="root", remote=None):
     """
-    Configure ssh rsa key locally
+    Configure ssh rsa key on local or remote
 
     If <home_dir>/.ssh/id_rsa not exist, generate a new one
     Add <home_dir>/.ssh/id_rsa.pub to <home_dir>/.ssh/authorized_keys anyway, make sure itself authorized
@@ -782,17 +829,17 @@ def configure_local_ssh_key(user="root"):
     change_user_shell(user)
 
     private_key, public_key, authorized_file = key_files(user).values()
-    if not os.path.exists(private_key):
-        logger.info("Generating SSH key for {}".format(user))
-        cmd = "ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(private_key, utils.this_node())
+    if not utils.detect_file(private_key, remote=remote):
+        logger.info("SSH key for {} does not exist, hence generate it now".format(user))
+        cmd = "ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(private_key, remote if remote else utils.this_node())
         cmd = utils.add_su(cmd, user)
-        rc, _, err = invoke(cmd)
-        if not rc:
-            utils.fatal("Failed to generate ssh key for {}: {}".format(user, err))
+        utils.get_stdout_or_raise_error(cmd, remote=remote)
 
-    if not os.path.exists(authorized_file):
-        open(authorized_file, 'w').close()
-    append_unique(public_key, authorized_file)
+    if not utils.detect_file(authorized_file, remote=remote):
+        cmd = "touch {}".format(authorized_file)
+        utils.get_stdout_or_raise_error(cmd, remote=remote)
+
+    append_unique(public_key, authorized_file, remote=remote)
 
 
 def init_ssh_remote():
@@ -813,19 +860,28 @@ def init_ssh_remote():
             append(fn + ".pub", authorized_keys_file)
 
 
+def copy_ssh_key(source_key, user, remote_node):
+    """
+    Copy ssh key from local to remote's authorized_keys
+    """
+    err_details_string = """
+    crmsh has no way to help you to setup up passwordless ssh among nodes at this time.
+    As the hint, likely, `PasswordAuthentication` is 'no' in /etc/ssh/sshd_config.
+    Given in this case, users must setup passwordless ssh beforehand, or change it to 'yes' and manage passwords properly
+    """
+    cmd = "ssh-copy-id -i {} {}@{}".format(source_key, user, remote_node)
+    try:
+        utils.get_stdout_or_raise_error(cmd)
+    except ValueError as err:
+        utils.fatal("{}\n{}".format(str(err), err_details_string))
+
+
 def append_to_remote_file(fromfile, remote_node, tofile):
     """
     Append content of fromfile to tofile on remote_node
     """
-    err_details_string = """
-    crmsh has no way to help you to setup up passwordless ssh among nodes at this time. 
-    As the hint, likely, `PasswordAuthentication` is 'no' in /etc/ssh/sshd_config. 
-    Given in this case, users must setup passwordless ssh beforehand, or change it to 'yes' and manage passwords properly
-    """
     cmd = "cat {} | ssh {} root@{} 'cat >> {}'".format(fromfile, SSH_OPTION, remote_node, tofile)
-    rc, _, err = invoke(cmd)
-    if not rc:
-        utils.fatal("Failed to append contents of {} to {}:\n\"{}\"\n{}".format(fromfile, remote_node, err, err_details_string))
+    utils.get_stdout_or_raise_error(cmd)
 
 
 def init_csync2():
@@ -1321,7 +1377,7 @@ def join_ssh(seed_host):
 
     utils.start_service("sshd.service", enable=True)
     for user in USER_LIST:
-        configure_local_ssh_key(user)
+        configure_ssh_key(user)
         swap_public_ssh_key(seed_host, user)
 
     # This makes sure the seed host has its own SSH keys in its own
@@ -1333,7 +1389,7 @@ def join_ssh(seed_host):
         utils.fatal("Can't invoke crm cluster init -i {} ssh_remote on {}: {}".format(_context.default_nic_list[0], seed_host, err))
 
 
-def swap_public_ssh_key(remote_node, user="root"):
+def swap_public_ssh_key(remote_node, user="root", add=False):
     """
     Swap public ssh key between remote_node and local
     """
@@ -1346,7 +1402,13 @@ def swap_public_ssh_key(remote_node, user="root"):
         # If no passwordless configured, paste /root/.ssh/id_rsa.pub to remote_node's /root/.ssh/authorized_keys
         logger.info("Configuring SSH passwordless with {}@{}".format(user, remote_node))
         # After this, login to remote_node is passwordless
-        append_to_remote_file(public_key, remote_node, authorized_file)
+        if user == "root":
+            copy_ssh_key(public_key, user, remote_node)
+        else:
+            append_to_remote_file(public_key, remote_node, authorized_file)
+
+    if add:
+        configure_ssh_key(remote=remote_node)
 
     try:
         # Fetch public key file from remote_node
@@ -1680,7 +1742,6 @@ def join_cluster(seed_host):
                 break
             if not rrp_flag:
                 break
-        print("")
         invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
         try:
             corosync.add_node_ucast(ringXaddr_res)
@@ -1911,19 +1972,16 @@ def bootstrap_init(context):
     # vgfs stage requires running cluster, everything else requires inactive cluster,
     # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
     # just in case this breaks ha-cluster-join on another node).
-    corosync_active = utils.service_is_active("corosync.service")
     if stage in ("vgfs", "admin", "qdevice", "ocfs2"):
-        if not corosync_active:
+        if not _context.cluster_is_running:
             utils.fatal("Cluster is inactive - can't run %s stage" % (stage))
     elif stage == "":
-        if corosync_active:
+        if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run")
     elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote", "sbd", "ocfs2"):
-        if corosync_active:
+        if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run %s stage" % (stage))
 
-    _context.initialize_qdevice()
-    _context.validate_option()
     _context.load_profiles()
     _context.init_sbd_manager()
 
@@ -1959,6 +2017,29 @@ def bootstrap_init(context):
             utils.fatal(err)
 
     bootstrap_finished()
+
+
+def bootstrap_add(context):
+    """
+    Adds the given node to the cluster.
+    """
+    if not context.nodes:
+        return
+
+    global _context
+    _context = context
+
+    options = ""
+    for nic in _context.nic_list:
+        options += '-i {} '.format(nic)
+    options = " {}".format(options.strip()) if options else ""
+
+    for node in _context.nodes:
+        print()
+        logger.info("Adding node {} to cluster".format(node))
+        cmd = "crm cluster join{} -c {}{}".format(" -y" if _context.yes_to_all else "", utils.this_node(), options)
+        logger.info("Running command on {}: {}".format(node, cmd))
+        utils.ext_cmd_nosudo("ssh{} root@{} {} '{}'".format("" if _context.yes_to_all else " -t", node, SSH_OPTION, cmd))
 
 
 def bootstrap_join(context):
