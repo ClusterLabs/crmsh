@@ -3,6 +3,7 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   Test corosync qdevice/qnetd setup/remove process
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1 hanode2 hanode3 hanode4 qnetd-node
 
   Background: Cluster and qdevice service are stopped
     Given   Cluster service is "stopped" on "hanode1"
@@ -115,7 +116,7 @@ Feature: corosync qdevice/qnetd setup/remove process
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
-    When    Run "crm cluster init qdevice --qnetd-hostname 2001:db8:10::7 -y" on "hanode1"
+    When    Run "crm cluster init qdevice --qnetd-hostname @qnetd-node.ip6.0 -y" on "hanode1"
     Then    Show corosync qdevice configuration
     And     Service "corosync-qdevice" is "started" on "hanode2"
     And     Service "corosync-qdevice" is "started" on "hanode1"

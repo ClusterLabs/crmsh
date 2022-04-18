@@ -2,6 +2,7 @@
 Feature: Verify constraints(order/colocation/location) bug
 
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1 hanode2
 
   Background: Setup a two nodes cluster
     Given   Cluster service is "stopped" on "hanode1"

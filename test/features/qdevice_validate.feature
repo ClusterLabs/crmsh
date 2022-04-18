@@ -2,6 +2,7 @@
 Feature: corosync qdevice/qnetd options validate
 
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1 hanode2 qnetd-node node-without-ssh
 
   @clean
   Scenario: Option "--qnetd-hostname" use the same node
@@ -10,7 +11,7 @@ Feature: corosync qdevice/qnetd options validate
 
   @clean
   Scenario: Option "--qnetd-hostname" use hanode1's IP
-    When    Try "crm cluster init --qnetd-hostname=10.10.10.2"
+    When    Try "crm cluster init --qnetd-hostname=@hanode1.ip.0"
     Then    Except "ERROR: cluster.init: host for qnetd must be a remote one"
 
   @clean

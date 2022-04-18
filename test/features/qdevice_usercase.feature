@@ -11,6 +11,7 @@ Feature: Verify usercase master survive when split-brain
   6. Check whether hanode1 has quorum, while hanode2 doesn't
 
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1 hanode2 qnetd-node
 
   Background: Cluster and qdevice service are stopped
     Given   Cluster service is "stopped" on "hanode1"
@@ -69,8 +70,8 @@ Feature: Verify usercase master survive when split-brain
     When    Run "ssh root@hanode2 corosync-quorumtool -s" on "hanode1"
     Then    Expected "Quorate:          Yes" in stdout
     # Use iptables command to simulate split-brain
-    When    Run "iptables -I INPUT -s 172.17.0.3 -j DROP; iptables -I OUTPUT -d 172.17.0.3 -j DROP" on "hanode1"
-    And     Run "iptables -I INPUT -s 172.17.0.2 -j DROP; iptables -I OUTPUT -d 172.17.0.2 -j DROP" on "hanode2"
+    When    Run "iptables -I INPUT -s @hanode2.ip.default -j DROP; iptables -I OUTPUT -d @hanode2.ip.default -j DROP" on "hanode1"
+    And     Run "iptables -I INPUT -s @hanode1.ip.default -j DROP; iptables -I OUTPUT -d @hanode1.ip.default -j DROP" on "hanode2"
     # Check whether hanode1 has quorum, while hanode2 doesn't
     And     Run "sleep 20" on "hanode1"
     When    Run "crm corosync status quorum" on "hanode1"

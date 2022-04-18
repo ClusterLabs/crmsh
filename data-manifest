@@ -59,11 +59,9 @@ test/cibtests/004.exp.xml
 test/cibtests/004.input
 test/cib-tests.sh
 test/cibtests/shadow.base
-test/containerized-regression-tests.sh
 test/crm-interface
 test/defaults
 test/descriptions
-test/docker_scripts.sh
 test/evaltest.sh
 test/features/bootstrap_bugs.feature
 test/features/bootstrap_init_join_remove.feature
@@ -91,8 +89,7 @@ test/list-undocumented-commands.py
 test/profile-history.sh
 test/README.regression
 test/regression.sh
-test/run-in-container.sh
-test/run-in-travis.sh
+test/run-functional-tests
 test/testcases/acl
 test/testcases/acl.excl
 test/testcases/acl.exp
@@ -142,7 +139,6 @@ test/testcases/scripts.filter
 test/testcases/shadow
 test/testcases/shadow.exp
 test/testcases/xmlonly.sh
-test/travis-tests.sh
 test/unittests/bug-862577_corosync.conf
 test/unittests/corosync.conf.1
 test/unittests/corosync.conf.2

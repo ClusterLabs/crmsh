@@ -3,6 +3,7 @@ Feature: crmsh bootstrap process - init, join and remove
 
   Test crmsh bootstrap init/join/remove process
   Tag @clean means need to stop cluster service if the service is available
+  Need nodes: hanode1 hanode2
 
   Background: Setup a two nodes cluster
     Given   Cluster service is "stopped" on "hanode1"
