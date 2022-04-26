@@ -298,7 +298,7 @@ Note:
         parser.add_argument("-q", "--quiet", action="store_true", dest="quiet",
                             help="Be quiet (don't describe what's happening, just do it)")
         parser.add_argument("-y", "--yes", action="store_true", dest="yes_to_all",
-                            help='Answer "yes" to all prompts (use with caution, this is destructive, especially those storage related configurations and stages. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
+                            help='Answer "yes" to all prompts (use with caution, this is destructive, especially those storage related configurations and stages.)')
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
         parser.add_argument("-N", "--nodes", metavar="NODES", dest="nodes",
@@ -309,7 +309,7 @@ Note:
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
                             help="Use the given watchdog device or driver name")
         parser.add_argument("--no-overwrite-sshkey", action="store_true", dest="no_overwrite_sshkey",
-                            help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default)')
+                            help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default; Deprecated)')
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(),
