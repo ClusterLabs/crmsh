@@ -6,6 +6,9 @@ import os
 import parallax
 
 
+Error = parallax.Error
+
+
 class Parallax(object):
     """
     # Parallax SSH API

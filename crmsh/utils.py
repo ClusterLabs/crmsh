@@ -1927,30 +1927,25 @@ def remote_checksum(local_path, nodes, this_node):
         print("%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest()))
 
 
-def cluster_copy_file(local_path, nodes=None):
+def cluster_copy_file(local_path, nodes=None, output=True, strict=True):
     """
     Copies given file to all other cluster nodes.
     """
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("parallax is required to copy cluster files")
     if not nodes:
-        nodes = list_cluster_nodes()
-        nodes.remove(this_node())
-    opts = parallax.Options()
-    opts.timeout = 60
-    opts.ssh_options += ['ControlPersist=no']
-    ok = True
-    for host, result in parallax.copy(nodes,
-                                      local_path,
-                                      local_path, opts).items():
+        nodes = list_cluster_nodes_except_me()
+    rc = True
+    if not nodes:
+        return rc
+    results = parallax.parallax_copy(nodes, local_path, local_path, strict=strict)
+    for host, result in results:
         if isinstance(result, parallax.Error):
-            logger.error("Failed to push %s to %s: %s", local_path, host, result)
-            ok = False
-        else:
+            logger.error("Failed to copy %s to %s: %s", local_path, host, result)
+            rc = False
+        elif output:
             logger.info(host)
-    return ok
+        else:
+            logger.debug("Sync file %s to %s", local_path, host)
+    return rc
 
 
 # a set of fnmatch patterns to match attributes whose values
@@ -3106,4 +3101,26 @@ def read_from_file(infile):
     with open(infile, 'rt', encoding='utf-8', errors='replace') as f:
         data = f.read()
     return to_ascii(data)
+
+
+def fetch_cluster_node_list_from_node(init_node):
+    """
+    Fetch cluster member list from one known cluster node
+    """
+    cluster_nodes_list = []
+    out = get_stdout_or_raise_error("crm_node -l", remote=init_node)
+    for line in out.splitlines():
+        # Parse line in format: <id> <nodename> <state>, and collect the nodename.
+        tokens = line.split()
+        if len(tokens) == 0:
+            pass  # Skip any spurious empty line.
+        elif len(tokens) < 3:
+            logger.warning("Unable to configure passwordless ssh with nodeid %s. \
+                    The node has no known name and/or state information", tokens[0])
+        elif tokens[2] != "member":
+            logger.warning("Skipping configuration of passwordless ssh with node %s in state '%s'. \
+                    The node is not a current member", tokens[1], tokens[2])
+        else:
+            cluster_nodes_list.append(tokens[1])
+    return cluster_nodes_list
 # vim:ts=4:sw=4:et:

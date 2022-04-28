@@ -9,7 +9,6 @@
 # Implemented as a straight-forward set of python functions for
 # simplicity and flexibility.
 #
-# TODO: Make csync2 usage optional
 # TODO: Configuration file for bootstrap?
 
 import os
@@ -65,7 +64,7 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
-INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+INIT_STAGES = ("ssh", "ssh_remote", "csync2", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
 
 
 class Context(object):
@@ -127,6 +126,7 @@ class Context(object):
         self.default_ip_list = []
         self.local_ip_list = []
         self.local_network_list = []
+        self.node_list = []
         self.rm_list = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
                 COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*"]
 
@@ -390,7 +390,7 @@ def is_online():
     # The communication IP maybe mis-configured
     if not xmlutil.CrmMonXmlParser.is_node_online(peer_node):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
-        csync2_update(corosync.conf())
+        sync_file(corosync.conf())
         utils.stop_service("corosync")
         print()
         utils.fatal("Cannot see peer node \"{}\", please check the communication IP".format(peer_node))
@@ -829,31 +829,79 @@ def append_to_remote_file(fromfile, remote_node, tofile):
 
 
 def init_csync2():
-    logger.info("Configuring csync2")
-    if os.path.exists(CSYNC2_KEY):
-        if not confirm("csync2 is already configured - overwrite?"):
-            return
+    """
+    Sync files configured by csync2
+    """
+    validate_csync2()
+    with logger_utils.status_long("csync2 syncing files in cluster"):
+        csync2_update("/")
 
-    invoke("rm", "-f", CSYNC2_KEY)
-    with logger_utils.status_long("Generating csync2 shared key (this may take a while)"):
+
+def validate_csync2(joining=False):
+    """
+    Validate csync2 configuration
+    Return csync2 configure file content if no exception
+    """
+    if not os.path.exists(CSYNC2_CFG):
+        utils.fatal("csync2 configure file {} not exists".format(CSYNC2_CFG))
+    if not os.path.exists(CSYNC2_KEY):
+        utils.fatal("csync2 key file {} not exists".format(CSYNC2_KEY))
+    with open(CSYNC2_CFG) as fd:
+        csync2_cfg_data = fd.read()
+    if not csync2_cfg_data:
+        utils.fatal("csync2 configure file {} is empty".format(CSYNC2_CFG))
+    csync2_hosts = re.findall("host (.*);", csync2_cfg_data)
+    if not csync2_hosts:
+        utils.fatal("No host configured in {}".format(CSYNC2_CFG))
+    node_list = utils.list_cluster_nodes()
+    me = utils.this_node()
+    if joining and me in node_list:
+        node_list.remove(me)
+    for node in node_list:
+        if node not in csync2_hosts:
+            utils.fatal("Cluster node {} not configured in {}".format(node, CSYNC2_CFG))
+    return csync2_cfg_data
+
+
+def configure_csync2():
+    """
+    Configure csync2, enable and start csync2.socket on both init and join side
+    """
+    logger.info("Configuring csync2")
+    me = utils.this_node()
+
+    # on join side
+    if _context.type == "join":
+        csync2_cfg_data = validate_csync2(joining=True)
+        if not re.search("host {};".format(me), csync2_cfg_data):
+            cmd = "sed -i '/host\s*{};/a host {};' {}".format(_context.node_list[-1], me, CSYNC2_CFG)
+            utils.get_stdout_or_raise_error(cmd)
+            sync_file(CSYNC2_CFG)
+    # on init side
+    else:
+        if os.path.exists(CSYNC2_KEY):
+            if not confirm("csync2 is already configured - overwrite?"):
+                return
+        invoke("rm", "-f", CSYNC2_KEY)
         if not invokerc("csync2", "-k", CSYNC2_KEY):
             utils.fatal("Can't create csync2 key {}".format(CSYNC2_KEY))
 
-    csync2_file_list = ""
-    for f in FILES_TO_SYNC:
-        csync2_file_list += "include {};\n".format(f)
-
-    utils.str2file("""group ha_group
+        csync2_file_list = ""
+        for f in FILES_TO_SYNC:
+            csync2_file_list += "include {};\n".format(f)
+        utils.str2file("""group ha_group
 {{
 key /etc/csync2/key_hagroup;
 host {};
 {}
 }}
-    """.format(utils.this_node(), csync2_file_list), CSYNC2_CFG)
+        """.format(me, csync2_file_list), CSYNC2_CFG)
 
+    logger.info("Enable and start csync2.socket")
     utils.start_service("csync2.socket", enable=True)
-    with logger_utils.status_long("csync2 checking files"):
-        invoke("csync2", "-cr", "/")
+
+    if _context.type == "join":
+        logger.warning("csync2 database is not initiated yet. Before using csync2 for the first time, please run \"crm cluster init csync2\" on any one node. Note, this may take a while.")
 
 
 def csync2_update(path):
@@ -868,38 +916,6 @@ def csync2_update(path):
     invoke("csync2 -rf {}".format(path))
     if not invokerc("csync2 -rxv {}".format(path)):
         logger.warning("{} was not synced".format(path))
-
-
-def init_csync2_remote():
-    """
-    It would be nice if we could just have csync2.cfg include a directory,
-    which in turn included one file per node which would be referenced via
-    something like "group ha_group { ... config: /etc/csync2/hosts/*; }"
-    That way, adding a new node would just mean adding a single new file
-    to that directory.  Unfortunately, the 'config' statement only allows
-    inclusion of specific individual files, not multiple files via wildcard.
-    So we have this function which is called by ha-cluster-join to add the new
-    remote node to csync2 config on some existing node.  It is intentionally
-    not documented in ha-cluster-init's user-visible usage information.
-    """
-    newhost = _context.cluster_node
-    if not newhost:
-        utils.fatal("Hostname not specified")
-
-    curr_cfg = open(CSYNC2_CFG).read()
-
-    was_quiet = _context.quiet
-    try:
-        _context.quiet = True
-        # if host doesn't already exist in csync2 config, add it
-        if not re.search(r"^\s*host.*\s+%s\s*;" % (newhost), curr_cfg, flags=re.M):
-            curr_cfg = re.sub(r"\bhost.*\s+\S+\s*;", r"\g<0>\n\thost %s;" % (utils.doublequote(newhost)), curr_cfg, count=1)
-            utils.str2file(curr_cfg, CSYNC2_CFG)
-            csync2_update("/")
-        else:
-            logger_utils.log_only_to_file(": Not updating %s - remote host %s already exists" % (CSYNC2_CFG, newhost))
-    finally:
-        _context.quiet = was_quiet
 
 
 def init_corosync_auth():
@@ -1062,7 +1078,6 @@ def init_corosync_unicast():
             transport="udpu",
             ipv6=_context.ipv6,
             two_rings=two_rings)
-    csync2_update(corosync.conf())
 
 
 def init_corosync_multicast():
@@ -1139,7 +1154,6 @@ def init_corosync_multicast():
         ipv6=_context.ipv6,
         nodeid=nodeid,
         two_rings=two_rings)
-    csync2_update(corosync.conf())
 
 
 def adjust_corosync_parameters_according_to_profiles():
@@ -1384,64 +1398,10 @@ def fetch_public_key_from_remote_node(node, user="root"):
     raise ValueError("No ssh key exist on {}".format(node))
 
 
-def join_csync2(seed_host):
-    """
-    Csync2 configuration for joining node.
-    """
-    if not seed_host:
-        utils.fatal("No existing IP/hostname specified (use -c option)")
-    with logger_utils.status_long("Configuring csync2"):
-
-        # Necessary if re-running join on a node that's been configured before.
-        rmfile("/var/lib/csync2/{}.db3".format(utils.this_node()), ignore_errors=True)
-
-        # Not automatically updating /etc/hosts - risky in the general case.
-        # etc_hosts_add_me
-        # local hosts_line=$(etc_hosts_get_me)
-        # [ -n "$hosts_line" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
-
-        # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
-        # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-        cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
-        rc, _, err = invoke("ssh {} root@{} {}".format(SSH_OPTION, seed_host, cmd))
-        if not rc:
-            utils.fatal("Can't invoke \"{}\" on {}: {}".format(cmd, seed_host, err))
-
-        # This is necessary if syncing /etc/hosts (to ensure everyone's got the
-        # same list of hosts)
-        # local tmp_conf=/etc/hosts.$$
-        # invoke scp root@seed_host:/etc/hosts $tmp_conf \
-        #   || error "Can't retrieve /etc/hosts from seed_host"
-        # install_tmp $tmp_conf /etc/hosts
-        rc, _, err = invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host))
-        if not rc:
-            utils.fatal("Can't retrieve csync2 config from {}: {}".format(seed_host, err))
-
-        utils.start_service("csync2.socket", enable=True)
-
-        # Sync new config out.  This goes to all hosts; csync2.cfg definitely
-        # needs to go to all hosts (else hosts other than the seed and the
-        # joining host won't have the joining host in their config yet).
-        # Strictly, the rest of the files need only go to the new host which
-        # could theoretically be effected using `csync2 -xv -P $(hostname)`,
-        # but this still leaves all the other files in dirty state (becuase
-        # they haven't gone to all nodes in the cluster, which means a
-        # subseqent join of another node can fail its sync of corosync.conf
-        # when it updates expected_votes.  Grrr...
-        if not invokerc('ssh {} root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(SSH_OPTION, seed_host)):
-            print("")
-            logger.warning("csync2 run failed - some files may not be sync'd")
-
-
 def join_ssh_merge(_cluster_node):
     logger.info("Merging known_hosts")
 
-    hosts = [m.group(1)
-             for m in re.finditer(r"^\s*host\s*([^ ;]+)\s*;", open(CSYNC2_CFG).read(), re.M)]
-    if not hosts:
-        hosts = [_cluster_node]
-        logger.warning("Unable to extract host list from %s" % (CSYNC2_CFG))
-
+    hosts = _context.node_list
     try:
         import parallax
     except ImportError:
@@ -1549,7 +1509,7 @@ def update_expected_votes():
         corosync.set_value("quorum.device.votes", device_votes)
     corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
 
-    csync2_update(corosync.conf())
+    sync_file(corosync.conf())
 
 
 def setup_passwordless_with_other_nodes(init_node):
@@ -1558,39 +1518,12 @@ def setup_passwordless_with_other_nodes(init_node):
 
     Should fetch the node list from init node, then swap the key
     """
-    # Fetch cluster nodes list
-    cmd = "ssh {} root@{} crm_node -l".format(SSH_OPTION, init_node)
-    rc, out, err = utils.get_stdout_stderr(cmd)
-    if rc != 0:
-        utils.fatal("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
-    cluster_nodes_list = []
-    for line in out.splitlines():
-        # Parse line in format: <id> <nodename> <state>, and collect the
-        # nodename.
-        tokens = line.split()
-        if len(tokens) == 0:
-            pass  # Skip any spurious empty line.
-        elif len(tokens) < 3:
-            logger.warning("Unable to configure passwordless ssh with nodeid {}. The "
-                 "node has no known name and/or state information".format(
-                     tokens[0]))
-        elif tokens[2] != "member":
-            logger.warning("Skipping configuration of passwordless ssh with node {} in "
-                 "state '{}'. The node is not a current member".format(
-                     tokens[1], tokens[2]))
-        else:
-            cluster_nodes_list.append(tokens[1])
-
-    # Filter out init node from cluster_nodes_list
-    cmd = "ssh {} root@{} hostname".format(SSH_OPTION, init_node)
-    rc, out, err = utils.get_stdout_stderr(cmd)
-    if rc != 0:
-        utils.fatal("Can't fetch hostname of {}: {}".format(init_node, err))
-    if out in cluster_nodes_list:
-        cluster_nodes_list.remove(out)
-
+    init_hostname = utils.get_stdout_or_raise_error("hostname", remote=init_node)
     # Swap ssh public key between join node and other cluster nodes
-    for node in cluster_nodes_list:
+    for node in _context.node_list:
+        # Filter out init node
+        if node == init_hostname:
+            continue
         for user in USER_LIST:
             swap_public_ssh_key(node, user)
 
@@ -1686,7 +1619,7 @@ def join_cluster(seed_host):
             corosync.add_node_ucast(ringXaddr_res)
         except corosync.IPAlreadyConfiguredError as e:
             logger.warning(e)
-        csync2_update(corosync.conf())
+        sync_file(corosync.conf())
         invoke("ssh {} root@{} corosync-cfgtool -R".format(SSH_OPTION, seed_host))
 
     _context.sbd_manager.join_sbd(seed_host)
@@ -1754,8 +1687,7 @@ def join_cluster(seed_host):
 
         if ipv6_flag and not is_unicast:
             # for ipv6 mcast
-            # after csync2_update, all config files are same
-            # but nodeid must be uniqe
+            # nodeid must be uniqe
             for node in list(nodeid_dict.keys()):
                 if node == utils.this_node():
                     continue
@@ -1777,7 +1709,7 @@ def start_qdevice_on_join_node(seed_host):
     with logger_utils.status_long("Starting corosync-qdevice.service"):
         if not corosync.is_unicast():
             corosync.add_nodelist_from_cmaptool()
-            csync2_update(corosync.conf())
+            sync_file(corosync.conf())
             invoke("crm corosync reload")
         if utils.is_qdevice_tls_on():
             qnetd_addr = corosync.get_value("quorum.device.net.host")
@@ -1821,10 +1753,6 @@ def remove_node_from_cluster():
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
     """
-    if utils.service_is_active("sbd.service"):
-        from .sbd import SBDTimeout
-        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration(removing=True)
-
     node = _context.cluster_node
     set_cluster_node_ip()
 
@@ -1853,8 +1781,11 @@ def remove_node_from_cluster():
     decrease_expected_votes()
 
     logger.info("Propagating configuration changes across the remaining nodes")
-    csync2_update(CSYNC2_CFG)
-    csync2_update(corosync.conf())
+    if utils.service_is_active("sbd.service"):
+        from .sbd import SBDTimeout
+        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration(removing=True)
+    sync_file(CSYNC2_CFG)
+    sync_file(corosync.conf())
 
     # Trigger corosync config reload to ensure expected_votes is propagated
     invoke("corosync-cfgtool -R")
@@ -1908,17 +1839,14 @@ def bootstrap_init(context):
     if stage is None:
         stage = ""
 
-    # vgfs stage requires running cluster, everything else requires inactive cluster,
-    # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
-    # just in case this breaks ha-cluster-join on another node).
     corosync_active = utils.service_is_active("corosync.service")
-    if stage in ("vgfs", "admin", "qdevice", "ocfs2"):
+    if stage in ("vgfs", "admin", "qdevice", "ocfs2", "csync2"):
         if not corosync_active:
             utils.fatal("Cluster is inactive - can't run %s stage" % (stage))
     elif stage == "":
         if corosync_active:
             utils.fatal("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote", "sbd", "ocfs2"):
+    elif stage not in ("ssh", "ssh_remote", "sbd", "ocfs2"):
         if corosync_active:
             utils.fatal("Cluster is currently active - can't run %s stage" % (stage))
 
@@ -1927,23 +1855,16 @@ def bootstrap_init(context):
     _context.load_profiles()
     _context.init_sbd_manager()
 
-    # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
-    if stage not in ('ssh_remote', 'csync2_remote'):
+    # Need hostname resolution to work, want NTP (but don't block ssh_remote)
+    if stage not in ('ssh_remote',):
         check_tty()
         if not check_prereqs(stage):
             return
-    elif stage == 'csync2_remote':
-        args = _context.args
-        logger_utils.log_only_to_file("args: {}".format(args))
-        if len(args) != 2:
-            utils.fatal("Expected NODE argument to csync2_remote")
-        _context.cluster_node = args[1]
 
     if stage != "":
         globals()["init_" + stage]()
     else:
         init_ssh()
-        init_csync2()
         init_corosync()
         init_remote_auth()
         init_sbd()
@@ -1955,6 +1876,7 @@ def bootstrap_init(context):
                 init_admin()
                 init_qdevice()
                 init_ocfs2()
+                configure_csync2()
         except lock.ClaimLockError as err:
             utils.fatal(err)
 
@@ -1996,7 +1918,6 @@ def bootstrap_join(context):
             _context.cluster_node = cluster_node
 
         utils.ping_node(cluster_node)
-
         join_ssh(cluster_node)
 
         n = 0
@@ -2012,13 +1933,14 @@ def bootstrap_join(context):
         lock_inst = lock.RemoteLock(cluster_node)
         try:
             with lock_inst.lock():
+                _context.node_list = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node)
-                join_remote_auth(cluster_node)
-                join_csync2(cluster_node)
+                retrieve_all_config_files(cluster_node)
                 join_ssh_merge(cluster_node)
                 probe_partitions()
                 join_ocfs2(cluster_node)
                 join_cluster(cluster_node)
+                configure_csync2()
         except (lock.SSHError, lock.ClaimLockError) as err:
             utils.fatal(err)
 
@@ -2035,14 +1957,6 @@ def join_ocfs2(peer_host):
     """
     ocfs2_inst = ocfs2.OCFS2Manager(_context)
     ocfs2_inst.join_ocfs2(peer_host)
-
-
-def join_remote_auth(node):
-    if os.path.exists(PCMK_REMOTE_AUTH):
-        rmfile(PCMK_REMOTE_AUTH)
-    pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
-    mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
-    invoke("touch {}".format(PCMK_REMOTE_AUTH))
 
 
 def remove_qdevice():
@@ -2225,7 +2139,6 @@ def bootstrap_init_geo(context):
     create_booth_authkey()
     create_booth_config(_context.arbitrator, _context.clusters, _context.tickets)
     logger.info("Sync booth configuration across cluster")
-    csync2_update(BOOTH_DIR)
     init_csync2_geo()
     geo_cib_config(_context.clusters)
 
@@ -2277,7 +2190,7 @@ def bootstrap_join_geo(context):
     check_tty()
     geo_fetch_config(_context.cluster_node)
     logger.info("Sync booth configuration across cluster")
-    csync2_update(BOOTH_DIR)
+    sync_file(BOOTH_DIR)
     geo_cib_config(_context.clusters)
 
 
@@ -2312,4 +2225,30 @@ def get_stonith_timeout_generally_expected():
         return None
 
     return STONITH_TIMEOUT_DEFAULT + corosync.token_and_consensus_timeout()
+
+
+def retrieve_all_config_files(cluster_node):
+    """
+    Retrieve config files if exists
+    """
+    with logger_utils.status_long("Retrieve all config files"):
+        for f in FILES_TO_SYNC:
+            if not invokerc("ssh {} root@{} test -f {}".format(SSH_OPTION, cluster_node, f)):
+                continue
+            if not invokerc("scp {} root@{}:{} {}".format(SSH_OPTION, cluster_node, f, os.path.dirname(f))):
+                utils.fatal("Can't retrieve {} from {}".format(f, cluster_node))
+            if f in [PCMK_REMOTE_AUTH]:
+                utils.chown(PCMK_REMOTE_AUTH, "hacluster", "haclient")
+
+
+def sync_file(path):
+    """
+    Sync files between cluster nodes
+    """
+    node_list = _context.node_list
+    if not node_list:
+        node_list = utils.list_cluster_nodes()
+    me = utils.this_node()
+    node_list = [n for n in node_list if n != me]
+    utils.cluster_copy_file(path, nodes=node_list, output=False)
 # EOF

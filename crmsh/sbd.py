@@ -206,7 +206,7 @@ class SBDTimeout(object):
         utils.mkdirp(SBD_SYSTEMD_DELAY_START_DIR)
         sbd_delay_start_file = "{}/sbd_delay_start.conf".format(SBD_SYSTEMD_DELAY_START_DIR)
         utils.str2file("[Service]\nTimeoutSec={}".format(int(1.2*int(sbd_delay_start_value))), sbd_delay_start_file)
-        bootstrap.csync2_update(SBD_SYSTEMD_DELAY_START_DIR)
+        bootstrap.sync_file(SBD_SYSTEMD_DELAY_START_DIR)
         utils.cluster_run_cmd("systemctl daemon-reload")
 
     def adjust_stonith_timeout(self):
@@ -421,7 +421,7 @@ class SBDManager(object):
         Update /etc/sysconfig/sbd
         """
         if self.no_overwrite:
-            bootstrap.csync2_update(SYSCONFIG_SBD)
+            bootstrap.sync_file(SYSCONFIG_SBD)
             return
 
         shutil.copyfile(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
@@ -432,7 +432,7 @@ class SBDManager(object):
         if self._sbd_devices:
             sbd_config_dict["SBD_DEVICE"] = ';'.join(self._sbd_devices)
         utils.sysconfig_set(SYSCONFIG_SBD, **sbd_config_dict)
-        bootstrap.csync2_update(SYSCONFIG_SBD)
+        bootstrap.sync_file(SYSCONFIG_SBD)
 
     def _get_sbd_device_from_config(self):
         """
@@ -591,7 +591,7 @@ class SBDManager(object):
         Update and sync sbd configuration
         """
         utils.sysconfig_set(SYSCONFIG_SBD, **sbd_config_dict)
-        bootstrap.csync2_update(SYSCONFIG_SBD)
+        bootstrap.sync_file(SYSCONFIG_SBD)
 
     @staticmethod
     def get_sbd_value_from_config(key):
