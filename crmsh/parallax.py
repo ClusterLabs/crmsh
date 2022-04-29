@@ -14,10 +14,11 @@ class Parallax(object):
     # slurp: Copies files from a set of remote hosts to local folders
     """
     def __init__(self, nodes, cmd=None, localdir=None, filename=None,
-                 src=None, dst=None, askpass=False, ssh_options=None):
+            src=None, dst=None, askpass=False, ssh_options=None, strict=True):
         self.nodes = nodes
         self.askpass = askpass
         self.ssh_options = ssh_options
+        self.strict = strict
 
         # used for call
         self.cmd = cmd
@@ -45,7 +46,9 @@ class Parallax(object):
     def handle(self, results):
         for host, result in results:
             if isinstance(result, parallax.Error):
-                raise ValueError("Failed on {}: {}".format(host, result))
+                exception_str = "Failed on {}: {}".format(host, result)
+                if self.strict:
+                    raise ValueError(exception_str)
         return results
 
     def call(self):
@@ -62,7 +65,7 @@ class Parallax(object):
         return self.handle(list(results.items()))
 
 
-def parallax_call(nodes, cmd, askpass=False, ssh_options=None):
+def parallax_call(nodes, cmd, askpass=False, ssh_options=None, strict=True):
     """
     Executes the given command on a set of hosts, collecting the output
     nodes:       a set of hosts
@@ -71,11 +74,11 @@ def parallax_call(nodes, cmd, askpass=False, ssh_options=None):
     ssh_options: Extra options to pass to SSH
     Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
     """
-    p = Parallax(nodes, cmd=cmd, askpass=askpass, ssh_options=ssh_options)
+    p = Parallax(nodes, cmd=cmd, askpass=askpass, ssh_options=ssh_options, strict=strict)
     return p.call()
 
 
-def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None):
+def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None, strict=True):
     """
     Copies from the remote node to the local node
     nodes:       a set of hosts
@@ -86,11 +89,11 @@ def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None):
     Returns [(host, (rc, stdout, stdin, localpath)), ...] or ValueError exception
     """
     p = Parallax(nodes, localdir=localdir, filename=filename,
-                 askpass=askpass, ssh_options=ssh_options)
+            askpass=askpass, ssh_options=ssh_options, strict=strict)
     return p.slurp()
 
 
-def parallax_copy(nodes, src, dst, askpass=False, ssh_options=None):
+def parallax_copy(nodes, src, dst, askpass=False, ssh_options=None, strict=True):
     """
     Copies from the local node to a set of remote hosts
     nodes:       a set of hosts
@@ -100,5 +103,5 @@ def parallax_copy(nodes, src, dst, askpass=False, ssh_options=None):
     ssh_options: Extra options to pass to SSH
     Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
     """
-    p = Parallax(nodes, src=src, dst=dst, askpass=askpass, ssh_options=ssh_options)
+    p = Parallax(nodes, src=src, dst=dst, askpass=askpass, ssh_options=ssh_options, strict=strict)
     return p.copy()
