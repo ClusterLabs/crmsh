@@ -334,12 +334,13 @@ class TestCorosyncParser(unittest.TestCase):
     @mock.patch("re.search")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
-    @mock.patch("builtins.open", new_callable=mock.mock_open, read_data="corosync conf data")
-    def test_find_configured_ip_no_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
+    @mock.patch("crmsh.utils.read_from_file")
+    def test_find_configured_ip_no_exception(self, mock_read_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
         mock_conf.return_value = "/etc/corosync/corosync.conf"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
         mock_parser_inst.all_paths.return_value = ["nodelist.node.ring0_addr"]
+        mock_read_file.return_value = "data"
         mock_search.return_value = mock.Mock()
         mock_parser_inst.get_all.return_value = ["10.10.10.1"]
         mock_isv6.return_value = False
@@ -348,9 +349,9 @@ class TestCorosyncParser(unittest.TestCase):
         corosync.find_configured_ip(["10.10.10.2"])
 
         mock_conf.assert_called_once_with()
+        mock_parser.assert_called_once_with("data")
         mock_parser_inst.all_paths.assert_called_once_with()
         mock_parser_inst.get_all.assert_called_once_with("nodelist.node.ring0_addr")
-        mock_open_file.assert_called_once_with(mock_conf.return_value)
         mock_isv6.assert_called_once_with("10.10.10.2")
         mock_ip_local.assert_called_once_with(False)
         mock_search.assert_called_once_with("nodelist.node.ring[0-9]*_addr", "nodelist.node.ring0_addr")
@@ -360,12 +361,13 @@ class TestCorosyncParser(unittest.TestCase):
     @mock.patch("re.search")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
-    @mock.patch("builtins.open", new_callable=mock.mock_open, read_data="corosync conf data")
-    def test_find_configured_ip_exception(self, mock_open_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
+    @mock.patch("crmsh.utils.read_from_file")
+    def test_find_configured_ip_exception(self, mock_read_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
         mock_conf.return_value = "/etc/corosync/corosync.conf"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
         mock_parser_inst.all_paths.return_value = ["nodelist.node.ring0_addr"]
+        mock_read_file.return_value = "data"
         mock_search.return_value = mock.Mock()
         mock_parser_inst.get_all.return_value = ["10.10.10.1", "10.10.10.2"]
         mock_isv6.return_value = False
@@ -376,9 +378,9 @@ class TestCorosyncParser(unittest.TestCase):
         self.assertEqual("IP 10.10.10.2 was already configured", str(err.exception))
 
         mock_conf.assert_called_once_with()
+        mock_parser.assert_called_once_with("data")
         mock_parser_inst.all_paths.assert_called_once_with()
         mock_parser_inst.get_all.assert_called_once_with("nodelist.node.ring0_addr")
-        mock_open_file.assert_called_once_with(mock_conf.return_value)
         mock_isv6.assert_called_once_with("10.10.10.2")
         mock_ip_local.assert_called_once_with(False)
         # For some reason mock_search.assert_called_once_with does not work
@@ -390,17 +392,14 @@ class TestCorosyncParser(unittest.TestCase):
     @mock.patch("crmsh.corosync.make_value")
     @mock.patch("crmsh.corosync.get_free_nodeid")
     @mock.patch("crmsh.corosync.Parser")
-    @mock.patch("builtins.open", create=True)
+    @mock.patch("crmsh.utils.read_from_file")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("crmsh.corosync.find_configured_ip")
-    def test_add_node_ucast(self, mock_find_ip, mock_conf, mock_open_file, mock_parser,
+    def test_add_node_ucast(self, mock_find_ip, mock_conf, mock_read_file, mock_parser,
             mock_free_id, mock_make_value, mock_get_values, mock_make_section, mock_str2file):
         mock_parser_inst = mock.Mock()
         mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
-        mock_open_read = mock.mock_open(read_data="read data")
-        mock_open_file.side_effect = [
-                mock_open_read.return_value,
-                ]
+        mock_read_file.return_value = "data"
         mock_parser.return_value = mock_parser_inst
         mock_free_id.return_value = 2
         mock_make_value.side_effect = [["value1"], ["value2"]]
@@ -413,12 +412,7 @@ class TestCorosyncParser(unittest.TestCase):
         corosync.add_node_ucast(['10.10.10.1'])
 
         mock_find_ip.assert_called_once_with(['10.10.10.1'])
-        mock_open_file.assert_has_calls([
-            mock.call("corosync.conf"),
-            ])
-        file_handle = mock_open_read.return_value.__enter__.return_value
-        file_handle.read.assert_called_once_with()
-        mock_parser.assert_called_once_with("read data")
+        mock_parser.assert_called_once_with("data")
         mock_free_id.assert_called_once_with(mock_parser_inst)
         mock_make_value.assert_has_calls([
             mock.call('nodelist.node.ring0_addr', '10.10.10.1'),

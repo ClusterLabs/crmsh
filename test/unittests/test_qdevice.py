@@ -840,16 +840,13 @@ class TestQDevice(unittest.TestCase):
     @mock.patch("crmsh.corosync.make_section")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
-    @mock.patch("builtins.open")
-    def test_write_qdevice_config(self, mock_open_file, mock_conf, mock_parser, mock_mksection, mock_str2file):
-        open_return_value_1 = mock.mock_open(read_data=F2).return_value
-        mock_open_file.side_effect = [
-            open_return_value_1,
-        ]
+    @mock.patch("crmsh.utils.read_from_file")
+    def test_write_qdevice_config(self, mock_read_file, mock_conf, mock_parser, mock_mksection, mock_str2file):
         mock_mksection.side_effect = [
             ["device {", "}"],
             ["net {", "}"]
         ]
+        mock_read_file.return_value = "data"
         mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
         mock_instance = mock.Mock()
         mock_parser.return_value = mock_instance
@@ -857,11 +854,8 @@ class TestQDevice(unittest.TestCase):
 
         self.qdevice_with_ip.write_qdevice_config()
 
-        mock_open_file.assert_has_calls([
-            mock.call("corosync.conf"),
-        ])
         mock_conf.assert_has_calls([mock.call(), mock.call()])
-        mock_parser.assert_called_once_with(F2)
+        mock_parser.assert_called_once_with("data")
         mock_instance.remove.assert_called_once_with("quorum.device")
         mock_instance.add.assert_has_calls([
             mock.call('quorum', ["device {", "}"]),
@@ -886,24 +880,18 @@ class TestQDevice(unittest.TestCase):
     @mock.patch("crmsh.utils.str2file")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
-    @mock.patch("builtins.open")
-    def test_remove_qdevice_config(self, mock_open_file, mock_conf, mock_parser, mock_str2file):
-        open_return_value_1 = mock.mock_open(read_data=F4).return_value
-        mock_open_file.side_effect = [
-            open_return_value_1,
-        ]
+    @mock.patch("crmsh.utils.read_from_file")
+    def test_remove_qdevice_config(self, mock_read_file, mock_conf, mock_parser, mock_str2file):
         mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
+        mock_read_file.return_value = "data"
         mock_instance = mock.Mock()
         mock_parser.return_value = mock_instance
         mock_instance.to_string.return_value = "string data"
 
         self.qdevice_with_ip.remove_qdevice_config()
 
-        mock_open_file.assert_has_calls([
-            mock.call("corosync.conf"),
-        ])
         mock_conf.assert_has_calls([mock.call(), mock.call()])
-        mock_parser.assert_called_once_with(F4)
+        mock_parser.assert_called_once_with("data")
         mock_instance.remove.assert_called_once_with("quorum.device")
         mock_instance.to_string.assert_called_once_with()
         mock_str2file.assert_called_once_with("string data", "corosync.conf")
