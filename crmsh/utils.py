@@ -2931,4 +2931,14 @@ def detect_virt():
     """
     rc, _, _ = get_stdout_stderr("systemd-detect-virt")
     return rc == 0
+
+
+def read_from_file(infile):
+    """
+    Read data from file in a save way, to avoid UnicodeDecodeError
+    """
+    data = None
+    with open(infile, 'rt', encoding='utf-8', errors='replace') as f:
+        data = f.read()
+    return to_ascii(data)
 # vim:ts=4:sw=4:et:

@@ -871,10 +871,10 @@ def get_command_info_timeout(cmd, timeout=5):
 def get_conf_var(option, default=None):
     ret = default
     if os.path.isfile(constants.CONF):
-        with open(constants.CONF, 'r') as f:
-            for line in f.read().split('\n'):
-                if re.match("^\s*%s\s*:" % option, line):
-                    ret = line.split(':')[1].lstrip()
+        data = read_from_file(constants.CONF)
+        for line in data.split('\n'):
+            if re.match("^\s*%s\s*:" % option, line):
+                ret = line.split(':')[1].lstrip()
     return ret
 
 
@@ -1163,15 +1163,15 @@ def head(n, indata):
 def is_conf_set(option, subsys=None):
     subsys_start = 0
     if os.path.isfile(constants.CONF):
-        with open(constants.CONF, 'r') as f:
-            for line in f.read().split('\n'):
-                if re.search("^\s*subsys\s*:\s*%s$" % subsys, line):
-                    subsys_start = 1
-                if subsys_start == 1 and re.search("^\s*}", line):
-                    subsys_start = 0
-                if re.match("^\s*%s\s*:\s*(on|yes)$" % option, line):
-                    if not subsys or subsys_start == 1:
-                        return True
+        data = read_from_file(constants.CONF)
+        for line in data.split('\n'):
+            if re.search("^\s*subsys\s*:\s*%s$" % subsys, line):
+                subsys_start = 1
+            if subsys_start == 1 and re.search("^\s*}", line):
+                subsys_start = 0
+            if re.match("^\s*%s\s*:\s*(on|yes)$" % option, line):
+                if not subsys or subsys_start == 1:
+                    return True
     return False
 
 

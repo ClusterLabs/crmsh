@@ -634,8 +634,7 @@ class QDevice(object):
         """
         Write qdevice attributes to config file
         """
-        with open(conf()) as f:
-            p = Parser(f.read())
+        p = Parser(utils.read_from_file(conf()))
 
         p.remove("quorum.device")
         p.add('quorum', make_section('quorum.device', []))
@@ -660,9 +659,8 @@ class QDevice(object):
         """
         Remove configuration of qdevice
         """
-        with open(conf()) as f:
-            p = Parser(f.read())
-            p.remove("quorum.device")
+        p = Parser(utils.read_from_file(conf()))
+        p.remove("quorum.device")
         utils.str2file(p.to_string(), conf())
 
     def remove_qdevice_db(self):
@@ -968,26 +966,22 @@ def get_ip(node):
 
 
 def get_all_paths():
-    f = open(conf()).read()
-    p = Parser(f)
+    p = Parser(utils.read_from_file(conf()))
     return p.all_paths()
 
 
 def get_value(path):
-    f = open(conf()).read()
-    p = Parser(f)
+    p = Parser(utils.read_from_file(conf()))
     return p.get(path)
 
 
 def get_values(path):
-    f = open(conf()).read()
-    p = Parser(f)
+    p = Parser(utils.read_from_file(conf()))
     return p.get_all(path)
 
 
 def set_value(path, value):
-    f = open(conf()).read()
-    p = Parser(f)
+    p = Parser(utils.read_from_file(conf()))
     p.set(path, value)
     utils.str2file(p.to_string(), conf())
 
@@ -1001,9 +995,7 @@ def find_configured_ip(ip_list):
     find if the same IP already configured
     If so, raise IPAlreadyConfiguredError
     """
-    with open(conf()) as f:
-        p = Parser(f.read())
-
+    p = Parser(utils.read_from_file(conf()))
     # get exist ip list from corosync.conf
     corosync_iplist = []
     for path in set(p.all_paths()):
@@ -1031,9 +1023,7 @@ def add_node_ucast(ip_list, node_id=None):
 
     find_configured_ip(ip_list)
 
-    with open(conf()) as f:
-        p = Parser(f.read())
-
+    p = Parser(utils.read_from_file(conf()))
     if node_id is None:
         node_id = get_free_nodeid(p)
     node_value = []
@@ -1080,8 +1070,7 @@ def add_node(addr, name=None):
         err_buf.warning("%s already in configuration" % (name))
         return
 
-    f = open(conf()).read()
-    p = Parser(f)
+    p = Parser(utils.read_from_file(conf()))
 
     node_addr = addr
     node_id = get_free_nodeid(p)
@@ -1118,8 +1107,7 @@ def del_node(addr):
     '''
     Remove node from corosync
     '''
-    f = open(conf()).read()
-    p = Parser(f)
+    p = Parser(utils.read_from_file(conf()))
     nth = p.remove_section_where('nodelist.node', 'ring0_addr', addr)
     if nth == -1:
         return
