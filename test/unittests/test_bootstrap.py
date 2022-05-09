@@ -261,6 +261,180 @@ class TestBootstrap(unittest.TestCase):
         Global tearDown.
         """
 
+    @mock.patch('crmsh.utils.cluster_copy_file')
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    def test_sync_file(self, mock_list_nodes, mock_this_node, mock_copy):
+        bootstrap._context = mock.Mock(node_list=[])
+        mock_list_nodes.return_value = ["node1", "node2"]
+        mock_this_node.return_value = "node2"
+        bootstrap.sync_file("/etc/corosync/corosync.conf")
+        mock_list_nodes.assert_called_once_with()
+        mock_this_node.assert_called_once_with()
+        mock_copy.assert_called_once_with("/etc/corosync/corosync.conf", nodes=["node1"], output=False)
+
+    @mock.patch('os.path.dirname')
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('crmsh.bootstrap.invokerc')
+    @mock.patch('crmsh.log.LoggerUtils.status_long')
+    def test_retrieve_all_config_files_fatal(self, mock_status_long, mock_invokerc, mock_fatal, mock_dirname):
+        mock_status_long.return_value.__enter__ = mock.Mock()
+        bootstrap.FILES_TO_SYNC = ["file1"]
+        mock_invokerc.side_effect = [True, False]
+        mock_dirname.return_value = "dirname"
+        mock_fatal.side_effect = ValueError
+        with self.assertRaises(ValueError) as err:
+            bootstrap.retrieve_all_config_files("node1")
+        mock_status_long.assert_called_once_with("Retrieve all config files")
+        mock_fatal.assert_called_once_with("Can't retrieve file1 from node1")
+        mock_invokerc.assert_has_calls([
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 test -f file1"),
+            mock.call("scp -o StrictHostKeyChecking=no root@node1:file1 dirname")
+            ])
+
+    @mock.patch('crmsh.utils.chown')
+    @mock.patch('os.path.dirname')
+    @mock.patch('crmsh.bootstrap.invokerc')
+    @mock.patch('crmsh.log.LoggerUtils.status_long')
+    def test_retrieve_all_config_files(self, mock_status_long, mock_invokerc, mock_dirname, mock_chown):
+        mock_status_long.return_value.__enter__ = mock.Mock()
+        mock_status_long.return_value.__exit__ = mock.Mock()
+        bootstrap.FILES_TO_SYNC = [bootstrap.PCMK_REMOTE_AUTH]
+        mock_invokerc.side_effect = [True, True]
+        mock_dirname.return_value = "dirname"
+        bootstrap.retrieve_all_config_files("node1")
+        mock_status_long.assert_called_once_with("Retrieve all config files")
+        mock_invokerc.assert_has_calls([
+            mock.call("ssh -o StrictHostKeyChecking=no root@node1 test -f {}".format(bootstrap.PCMK_REMOTE_AUTH)),
+            mock.call("scp -o StrictHostKeyChecking=no root@node1:{} dirname".format(bootstrap.PCMK_REMOTE_AUTH))
+            ])
+        mock_chown.assert_called_once_with(bootstrap.PCMK_REMOTE_AUTH, "hacluster", "haclient")
+
+    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.log.LoggerUtils.status_long')
+    @mock.patch('crmsh.bootstrap.validate_csync2')
+    def test_init_csync2(self, mock_validate, mock_status_long, mock_update):
+        mock_status_long.return_value.__enter__ = mock.Mock()
+        mock_status_long.return_value.__exit__ = mock.Mock()
+        bootstrap.init_csync2()
+        mock_validate.assert_called_once_with()
+        mock_update.assert_called_once_with("/")
+        mock_status_long.assert_called_once_with("csync2 syncing files in cluster")
+
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('os.path.exists')
+    def test_validate_csync2_not_exists(self, mock_exists, mock_fatal):
+        mock_exists.return_value = False
+        mock_fatal.side_effect = SystemExit
+        with self.assertRaises(SystemExit) as err:
+            bootstrap.validate_csync2()
+        mock_fatal.assert_called_once_with("csync2 configure file {} not exists".format(bootstrap.CSYNC2_CFG))
+        mock_exists.assert_called_once_with(bootstrap.CSYNC2_CFG)
+
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('os.path.exists')
+    def test_validate_csync2_key_not_exists(self, mock_exists, mock_fatal):
+        mock_exists.side_effect = [True, False]
+        mock_fatal.side_effect = SystemExit
+        with self.assertRaises(SystemExit) as err:
+            bootstrap.validate_csync2()
+        mock_fatal.assert_called_once_with("csync2 key file {} not exists".format(bootstrap.CSYNC2_KEY))
+        mock_exists.assert_has_calls([
+            mock.call(bootstrap.CSYNC2_CFG),
+            mock.call(bootstrap.CSYNC2_KEY)
+            ])
+
+    @mock.patch('builtins.open')
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('os.path.exists')
+    def test_validate_csync2_empty(self, mock_exists, mock_fatal, mock_open_file):
+        mock_open_file.return_value = mock.mock_open(read_data="").return_value
+        mock_exists.side_effect = [True, True]
+        mock_fatal.side_effect = SystemExit
+        with self.assertRaises(SystemExit) as err:
+            bootstrap.validate_csync2()
+        mock_fatal.assert_called_once_with("csync2 configure file {} is empty".format(bootstrap.CSYNC2_CFG))
+        mock_exists.assert_has_calls([
+            mock.call(bootstrap.CSYNC2_CFG),
+            mock.call(bootstrap.CSYNC2_KEY)
+            ])
+        mock_open_file.assert_called_once_with(bootstrap.CSYNC2_CFG)
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('builtins.open')
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('os.path.exists')
+    def test_validate_csync2(self, mock_exists, mock_fatal, mock_open_file, mock_list_nodes, mock_me):
+        data = """
+xxxxxxxxxxxx
+host tbw-2;
+xxxxxxxxxxxx
+        """
+        mock_open_file.return_value = mock.mock_open(read_data=data).return_value
+        mock_list_nodes.return_value = ["tbw-1", "tbw-2", "tbw-3"]
+        mock_me.return_value = "tbw-3"
+        mock_exists.side_effect = [True, True]
+        mock_fatal.side_effect = SystemExit
+        with self.assertRaises(SystemExit) as err:
+            bootstrap.validate_csync2(joining=True)
+        mock_fatal.assert_called_once_with("Cluster node tbw-1 not configured in {}".format(bootstrap.CSYNC2_CFG))
+        mock_exists.assert_has_calls([
+            mock.call(bootstrap.CSYNC2_CFG),
+            mock.call(bootstrap.CSYNC2_KEY)
+            ])
+        mock_open_file.assert_called_once_with(bootstrap.CSYNC2_CFG)
+
+    @mock.patch('crmsh.utils.start_service')
+    @mock.patch('crmsh.bootstrap.sync_file')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.bootstrap.validate_csync2')
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('logging.Logger.warning')
+    @mock.patch('logging.Logger.info')
+    def test_configure_csync2_join(self, mock_info, mock_warn, mock_this_node, mock_validate, mock_run, mock_sync, mock_start):
+        bootstrap._context = mock.Mock(type="join", node_list=["node2", "node3"])
+        mock_this_node.return_value = "node1"
+        mock_validate.return_value = "data"
+
+        bootstrap.configure_csync2()
+
+        mock_info.assert_has_calls([
+            mock.call("Configuring csync2"),
+            mock.call("Enable and start csync2.socket")
+            ])
+        mock_this_node.assert_called_once_with()
+        mock_validate.assert_called_once_with(joining=True)
+        mock_run.assert_called_once_with("sed -i '/host\s*node3;/a host node1;' {}".format(bootstrap.CSYNC2_CFG))
+        mock_sync.assert_called_once_with(bootstrap.CSYNC2_CFG)
+        mock_start.assert_called_once_with("csync2.socket", enable=True)
+        mock_warn.assert_called_once_with("csync2 database is not initiated yet. Before using csync2 for the first time, please run \"crm cluster init csync2\" on any one node. Note, this may take a while.")
+
+    @mock.patch('crmsh.utils.start_service')
+    @mock.patch('crmsh.utils.str2file')
+    @mock.patch('crmsh.bootstrap.invokerc')
+    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('os.path.exists')
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('logging.Logger.info')
+    def test_configure_csync2_init(self, mock_info, mock_this_node, mock_exists, mock_invoke, mock_invokerc, mock_str2file, mock_start):
+        bootstrap._context = mock.Mock(type="init")
+        mock_this_node.return_value = "node1"
+        mock_exists.return_value = True
+        mock_invokerc.return_value = True
+
+        bootstrap.configure_csync2()
+
+        mock_info.assert_has_calls([
+            mock.call("Configuring csync2"),
+            mock.call("Enable and start csync2.socket")
+            ])
+        mock_this_node.assert_called_once_with()
+        mock_start.assert_called_once_with("csync2.socket", enable=True)
+        mock_exists.assert_called_once_with(bootstrap.CSYNC2_KEY)
+        mock_invoke.assert_called_once_with("rm", "-f", bootstrap.CSYNC2_KEY)
+        mock_invokerc.assert_called_once_with("csync2", "-k", bootstrap.CSYNC2_KEY)
+
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     @mock.patch('crmsh.utils.start_service')
     @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_delay_start_sec_from_sysconfig')
@@ -499,58 +673,15 @@ class TestBootstrap(unittest.TestCase):
         mock_fetch.assert_called_once_with("node1", "root")
         mock_append_unique.assert_called_once_with("file1", "/root/.ssh/authorized_keys")
 
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_setup_passwordless_with_other_nodes_failed_fetch_nodelist(self, mock_run, mock_error):
-        mock_run.return_value = (1, None, None)
-        mock_error.side_effect = SystemExit
-
-        with self.assertRaises(SystemExit):
-            bootstrap.setup_passwordless_with_other_nodes("node1")
-
-        mock_run.assert_called_once_with("ssh {} root@node1 crm_node -l".format(constants.SSH_OPTION))
-        mock_error.assert_called_once_with("Can't fetch cluster nodes list from node1: None")
-
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_setup_passwordless_with_other_nodes_failed_fetch_hostname(self, mock_run, mock_error):
-        out_node_list = """1 node1 member
-        2 node2 member"""
-        mock_run.side_effect = [
-                (0, out_node_list, None),
-                (1, None, None)
-                ]
-        mock_error.side_effect = SystemExit
-
-        with self.assertRaises(SystemExit):
-            bootstrap.setup_passwordless_with_other_nodes("node1")
-
-        mock_run.assert_has_calls([
-            mock.call("ssh {} root@node1 crm_node -l".format(constants.SSH_OPTION)),
-            mock.call("ssh {} root@node1 hostname".format(constants.SSH_OPTION))
-            ])
-        mock_error.assert_called_once_with("Can't fetch hostname of node1: None")
-
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     def test_setup_passwordless_with_other_nodes(self, mock_run, mock_swap):
-        out_node_list = """1 node1 member
-        2 node2 member"""
-        mock_run.side_effect = [
-                (0, out_node_list, None),
-                (0, "node1", None)
-                ]
-
+        mock_run.return_value = "node1"
+        bootstrap._context = mock.Mock(node_list=["node1", "node2"])
+        bootstrap.USER_LIST = ["user1"]
         bootstrap.setup_passwordless_with_other_nodes("node1")
-
-        mock_run.assert_has_calls([
-            mock.call("ssh {} root@node1 crm_node -l".format(constants.SSH_OPTION)),
-            mock.call("ssh {} root@node1 hostname".format(constants.SSH_OPTION))
-            ])
-        mock_swap.assert_has_calls([
-            mock.call("node2", "root"),
-            mock.call("node2", "hacluster")
-            ])
+        mock_run.assert_called_once_with("hostname", remote="node1")
+        mock_swap.assert_called_once_with("node2", "user1")
 
     @mock.patch('builtins.open')
     @mock.patch('crmsh.bootstrap.append')
@@ -636,14 +767,14 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.stop_service')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
     def test_is_online_peer_offline(self, mock_is_online, mock_get_peer, mock_this_node,
-            mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
+            mock_copy, mock_corosync_conf, mock_sync, mock_stop_service, mock_error):
         mock_is_online.side_effect = [True, False]
         bootstrap.COROSYNC_CONF_ORIG = "/tmp/crmsh_tmpfile"
         mock_this_node.return_value = "node2"
@@ -660,20 +791,20 @@ class TestBootstrap(unittest.TestCase):
             mock.call()
             ])
         mock_copy.assert_called_once_with(bootstrap.COROSYNC_CONF_ORIG, "/etc/corosync/corosync.conf")
-        mock_csync2.assert_called_once_with("/etc/corosync/corosync.conf")
+        mock_sync.assert_called_once_with("/etc/corosync/corosync.conf")
         mock_stop_service.assert_called_once_with("corosync")
         mock_error.assert_called_once_with("Cannot see peer node \"node1\", please check the communication IP")
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.stop_service')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
     def test_is_online_both_online(self, mock_is_online, mock_get_peer, mock_this_node,
-            mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
+            mock_copy, mock_corosync_conf, mock_sync, mock_stop_service, mock_error):
         mock_is_online.side_effect = [True, True]
         mock_this_node.return_value = "node2"
         mock_get_peer.return_value = "node1"
@@ -684,7 +815,7 @@ class TestBootstrap(unittest.TestCase):
         mock_get_peer.assert_called_once_with()
         mock_corosync_conf.assert_not_called()
         mock_copy.assert_not_called()
-        mock_csync2.assert_not_called()
+        mock_sync.assert_not_called()
         mock_stop_service.assert_not_called()
         mock_error.assert_not_called()
 
@@ -904,13 +1035,13 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.get_value')
     @mock.patch('crmsh.utils.is_qdevice_tls_on')
     @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('crmsh.corosync.add_nodelist_from_cmaptool')
     @mock.patch('crmsh.corosync.is_unicast')
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     def test_start_qdevice_on_join_node(self, mock_status_long, mock_is_unicast, mock_add_nodelist,
-            mock_conf, mock_csync2_update, mock_invoke, mock_qdevice_tls,
+            mock_conf, mock_sync, mock_invoke, mock_qdevice_tls,
             mock_get_value, mock_qdevice, mock_start_service):
         mock_is_unicast.return_value = False
         mock_qdevice_tls.return_value = True
@@ -926,7 +1057,7 @@ class TestBootstrap(unittest.TestCase):
         mock_is_unicast.assert_called_once_with()
         mock_add_nodelist.assert_called_once_with()
         mock_conf.assert_called_once_with()
-        mock_csync2_update.assert_called_once_with("corosync.conf")
+        mock_sync.assert_called_once_with("corosync.conf")
         mock_invoke.assert_called_once_with("crm corosync reload")
         mock_qdevice_tls.assert_called_once_with()
         mock_get_value.assert_called_once_with("quorum.device.net.host")
@@ -1417,7 +1548,7 @@ class TestValidation(unittest.TestCase):
             ])
         mock_error.assert_called_once_with("Removing the node node1 from {} failed".format(bootstrap.CSYNC2_CFG))
 
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.bootstrap.decrease_expected_votes')
     @mock.patch('crmsh.corosync.del_node')
     @mock.patch('crmsh.corosync.get_values')
@@ -1428,7 +1559,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
     def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
-            mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_decrease, mock_csync2):
+            mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_decrease, mock_sync):
         mock_invoke.side_effect = [(True, None, None), (True, None, None), (True, None, None)]
         mock_invokerc.return_value = True
         mock_get_values.return_value = ["10.10.10.1"]
@@ -1454,7 +1585,7 @@ class TestValidation(unittest.TestCase):
         mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
         mock_del.assert_called_once_with("node1")
         mock_decrease.assert_called_once_with()
-        mock_csync2.assert_has_calls([
+        mock_sync.assert_has_calls([
             mock.call(bootstrap.CSYNC2_CFG),
             mock.call("/etc/corosync/corosync.conf")
             ])

@@ -1701,3 +1701,21 @@ def test_handle_role_for_ocf_1_1_return(mock_support):
 
 def test_handle_role_for_ocf_1_1_return_not_role():
     assert utils.handle_role_for_ocf_1_1("test", name='other') == "test"
+
+
+@mock.patch('logging.Logger.warning')
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_fetch_cluster_node_list_from_node(mock_run, mock_warn):
+    mock_run.return_value = """
+1 tbw-1 member
+2 tbw-2 lost
+3
+
+    """
+    res_list = utils.fetch_cluster_node_list_from_node("node1")
+    assert res_list == ["tbw-1"]
+    mock_run.assert_called_once_with("crm_node -l", remote="node1")
+    mock_warn.assert_has_calls([
+        mock.call("Skipping configuration of passwordless ssh with node %s in state '%s'.                     The node is not a current member", 'tbw-2', 'lost'),
+        mock.call('Unable to configure passwordless ssh with nodeid %s.                     The node has no known name and/or state information', '3')
+        ])

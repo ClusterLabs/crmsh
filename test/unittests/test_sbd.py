@@ -247,13 +247,13 @@ class TestSBDTimeout(unittest.TestCase):
         mock_mkdirp.assert_not_called()
 
     @mock.patch('crmsh.utils.cluster_run_cmd')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.utils.mkdirp')
     @mock.patch('crmsh.utils.get_systemd_timeout_start_in_sec')
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
-    def test_adjust_systemd_start_timeout_no_delay_start(self, mock_get_sbd_value, mock_run, mock_get_systemd_sec, mock_mkdirp, mock_str2file, mock_csync2, mock_cluster_run):
+    def test_adjust_systemd_start_timeout_no_delay_start(self, mock_get_sbd_value, mock_run, mock_get_systemd_sec, mock_mkdirp, mock_str2file, mock_sync, mock_cluster_run):
         mock_get_sbd_value.return_value = "100"
         mock_run.return_value = "1min 30s"
         mock_get_systemd_sec.return_value = 90
@@ -262,7 +262,7 @@ class TestSBDTimeout(unittest.TestCase):
         mock_get_systemd_sec.assert_called_once_with("1min 30s")
         mock_mkdirp.assert_called_once_with(bootstrap.SBD_SYSTEMD_DELAY_START_DIR)
         mock_str2file.assert_called_once_with('[Service]\nTimeoutSec=120', '/etc/systemd/system/sbd.service.d/sbd_delay_start.conf')
-        mock_csync2.assert_called_once_with(bootstrap.SBD_SYSTEMD_DELAY_START_DIR)
+        mock_sync.assert_called_once_with(bootstrap.SBD_SYSTEMD_DELAY_START_DIR)
         mock_cluster_run.assert_called_once_with("systemctl daemon-reload")
 
     @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
@@ -492,7 +492,7 @@ class TestSBDManager(unittest.TestCase):
             ])
         mock_error.assert_called_once_with("Failed to initialize SBD device /dev/sdc1: error")
 
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.utils.sysconfig_set')
     @mock.patch('shutil.copyfile')
     def test_update_configuration(self, mock_copy, mock_sysconfig, mock_update):
@@ -869,9 +869,9 @@ class TestSBDManager(unittest.TestCase):
         mock_context.assert_called_once_with()
         mock_get_sbd.assert_called_once_with()
 
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.utils.sysconfig_set')
-    def test_update_configuration_static(self, mock_config_set, mock_csync2):
+    def test_update_configuration_static(self, mock_config_set, mock_sync):
         sbd_config_dict = {
                 "SBD_PACEMAKER": "yes",
                 "SBD_STARTMODE": "always",
@@ -879,4 +879,4 @@ class TestSBDManager(unittest.TestCase):
                 }
         self.sbd_inst.update_configuration(sbd_config_dict)
         mock_config_set.assert_called_once_with(bootstrap.SYSCONFIG_SBD, **sbd_config_dict)
-        mock_csync2.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
+        mock_sync.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
