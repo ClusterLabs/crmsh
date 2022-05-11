@@ -888,16 +888,10 @@ def wait4dc(what="", show_progress=True):
             return False
         cmd = "crmadmin -S %s" % dc
         rc, s = get_stdout(add_sudo(cmd))
-        if not s.startswith("Status"):
-            common_warn("%s unexpected output: %s (exit code: %d)" %
-                        (cmd, s, rc))
+        if rc != 0:
+            common_err("Exit code of command {} is {}".format(cmd, rc))
             return False
-        try:
-            dc_status = s.split()[-2]
-        except:
-            common_warn("%s unexpected output: %s" % (cmd, s))
-            return False
-        if dc_status == "S_IDLE":
+        if re.search("S_IDLE.*ok", s):
             if output_started:
                 sys.stderr.write(" done\n")
             return True
