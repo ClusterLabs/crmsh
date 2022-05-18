@@ -155,7 +155,7 @@ class Context(object):
                             ret = [t for t in ret if t.startswith(tokens[-1])]
 
                         if not ret or self.command_info.aliases:
-                            if not token in self.current_level().get_completions():
+                            if token not in self.current_level().get_completions():
                                 return self.current_level().get_completions()
                         if self.command_name in self.command_info.aliases and not self.command_args:
                             return [self.command_name]

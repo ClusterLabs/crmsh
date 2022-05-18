@@ -2363,7 +2363,7 @@ class InterfacesInfo(object):
         for line in out.splitlines():
             _, nic, _, ip_with_mask, *_ = line.split()
             # maybe from tun interface
-            if not '/' in ip_with_mask:
+            if '/' not in ip_with_mask:
                 continue
             interface_inst = Interface(ip_with_mask)
             if interface_inst.is_loopback:

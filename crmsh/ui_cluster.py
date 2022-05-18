@@ -428,6 +428,10 @@ If stage is not specified, each stage will be invoked in sequence.
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
+        for service in ["sbd", "corosync", "pacemaker", "corosync-qdevice"]:
+            if utils.service_is_active(service):
+                logger.warning("'{}' service must be stopped to proceed.".format(service))
+                return
 
         stage = ""
         if len(args) == 1:
