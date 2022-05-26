@@ -148,6 +148,11 @@ def analyze_one(workdir, file_):
 def base_check():
     if not which("which"):
         log_fatal("please install the which(1) program")
+    if not os.path.exists(constants.BIN_CRM):
+        if os.path.exists("/usr/bin/crm"):
+            constants.BIN_CRM = "/usr/bin/crm"
+        else:
+            log_fatal("Cannot find crm command!")
 
 
 def booth_info():
@@ -1518,13 +1523,13 @@ def stdchannel_redirected(stdchannel, dest_filename):
 
 
 def start_slave_collector(node, arg_str):
+    cmd = "{} report __slave".format(constants.BIN_CRM)
     if node == constants.WE:
-        cmd = r"/usr/sbin/hb_report __slave".format(os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
     else:
-        cmd = r'ssh {} {} "/usr/sbin/hb_report __slave"'.format(constants.SSH_OPTS, node, os.getcwd())
+        cmd = r'ssh {} {} "{} {}"'.format(constants.SSH_OPTS, node, constants.SUDO, cmd)
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         code, out, err = crmutils.get_stdout_stderr(cmd)
