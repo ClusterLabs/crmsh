@@ -1517,6 +1517,7 @@ def stdchannel_redirected(stdchannel, dest_filename):
             dest_file.close()
 
 
+
 def start_slave_collector(node, arg_str):
     if node == constants.WE:
         cmd = r"/usr/sbin/hb_report __slave".format(os.getcwd())
