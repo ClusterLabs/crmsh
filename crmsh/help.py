@@ -1,6 +1,6 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
-# See COPYING for license information.
+# See  COPYING for license information.
 
 '''
 The commands exposed by this module all
