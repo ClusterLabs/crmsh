@@ -434,32 +434,6 @@ If stage is not specified, each stage will be invoked in sequence.
 
         return True
 
-    @command.completers_repeating(compl.call(scripts.param_completion_list, 'add'))
-    @command.skill_level('administrator')
-    def do_add(self, context, *args):
-        '''
-        Add the given node(s) to the cluster.
-        Installs packages, sets up corosync and pacemaker, etc.
-        Must be executed from a node in the existing cluster.
-        '''
-        parser = ArgParser(description="""
-Add a new node to the cluster. The new node will be
-configured as a cluster member.""",
-                usage="add [options] [node ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
-        parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(),
-                help="Bind to IP address on interface IF. Use -i second time for second interface")
-        parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        options, args = parse_options(parser, args)
-        if options is None or args is None:
-            return
-
-        add_context = bootstrap.Context.set_context(options)
-        add_context.nodes = args
-        bootstrap.bootstrap_add(add_context)
-
-        return True
-
     @command.alias("delete")
     @command.completers_repeating(_remove_completer)
     @command.skill_level('administrator')
