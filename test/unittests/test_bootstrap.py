@@ -2012,22 +2012,25 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.status')
     @mock.patch('crmsh.utils.service_is_active')
     def test_stop_services(self, mock_active, mock_status, mock_stop):
-        mock_active.side_effect = [True, True, True]
+        mock_active.side_effect = [True, True, True, True]
         bootstrap.stop_services(bootstrap.SERVICES_STOP_LIST)
         mock_active.assert_has_calls([
             mock.call("corosync-qdevice.service", remote_addr=None),
             mock.call("corosync.service", remote_addr=None),
-            mock.call("hawk.service", remote_addr=None)
+            mock.call("hawk.service", remote_addr=None),
+            mock.call("csync2.socket", remote_addr=None)
             ])
         mock_status.assert_has_calls([
             mock.call("Stopping the corosync-qdevice.service"),
             mock.call("Stopping the corosync.service"),
-            mock.call("Stopping the hawk.service")
+            mock.call("Stopping the hawk.service"),
+            mock.call("Stopping the csync2.socket")
             ])
         mock_stop.assert_has_calls([
             mock.call("corosync-qdevice.service", disable=True, remote_addr=None),
             mock.call("corosync.service", disable=True, remote_addr=None),
-            mock.call("hawk.service", disable=True, remote_addr=None)
+            mock.call("hawk.service", disable=True, remote_addr=None),
+            mock.call("csync2.socket", disable=True, remote_addr=None)
             ])
 
     @mock.patch('crmsh.bootstrap.error')
