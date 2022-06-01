@@ -65,9 +65,7 @@ optional arguments:
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution, this is
                         destructive, especially those storage related
-                        configurations and stages. The /root/.ssh/id_rsa key
-                        will be overwritten unless the option "--no-overwrite-
-                        sshkey" is used)
+                        configurations and stages.)
   -n NAME, --name NAME  Set the name of the configured cluster.
   -N NODES, --nodes NODES
                         Additional nodes to add to the created cluster. May
@@ -79,7 +77,7 @@ optional arguments:
                         Use the given watchdog device or driver name
   --no-overwrite-sshkey
                         Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is
-                        used (False by default)
+                        used (False by default; Deprecated)
 
 Network configuration:
   Options for configuring the network and messaging layer.
