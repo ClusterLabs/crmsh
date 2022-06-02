@@ -98,8 +98,8 @@ def set_deep_meta_attr_node(target_node, attr, value):
         for nvpair in nvpairs:
             nvpair.set("value", value)
     else:
-        for n in xmlutil.get_set_nodes(target_node, "meta_attributes", create=True):
-            xmlutil.set_attr(n, attr, value)
+        nodes = xmlutil.get_set_nodes(target_node, "meta_attributes", create=True)
+        xmlutil.set_attr(nodes[0], attr, value)
     return True
 
 
