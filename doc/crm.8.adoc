@@ -946,10 +946,6 @@ These commands enable easy installation and maintenance of a HA
 cluster, by providing support for package installation, configuration
 of the cluster messaging layer, file system setup and more.
 
-[[cmdhelp_cluster_add,Add a new node to the cluster,From Code]]
-==== `add`
-See "crm cluster help add" or "crm cluster add --help"
-
 [[cmdhelp_cluster_copy,Copy file to other cluster nodes]]
 ==== `copy`
 
