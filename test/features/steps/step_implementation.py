@@ -276,7 +276,6 @@ def step_impl(context, cmd):
     cmd_help["crm"] = const.CRM_H_OUTPUT
     cmd_help["crm_cluster_init"] = const.CRM_CLUSTER_INIT_H_OUTPUT
     cmd_help["crm_cluster_join"] = const.CRM_CLUSTER_JOIN_H_OUTPUT
-    cmd_help["crm_cluster_add"] = const.CRM_CLUSTER_ADD_H_OUTPUT
     cmd_help["crm_cluster_remove"] = const.CRM_CLUSTER_REMOVE_H_OUTPUT
     cmd_help["crm_cluster_geo-init"] = const.CRM_CLUSTER_GEO_INIT_H_OUTPUT
     cmd_help["crm_cluster_geo-join"] = const.CRM_CLUSTER_GEO_JOIN_H_OUTPUT
