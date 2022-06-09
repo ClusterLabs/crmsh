@@ -148,6 +148,11 @@ def analyze_one(workdir, file_):
 def base_check():
     if not which("which"):
         log_fatal("please install the which(1) program")
+    if not os.path.exists(constants.BIN_CRM):
+        if os.path.exists("/usr/bin/crm"):
+            constants.BIN_CRM = "/usr/bin/crm"
+        else:
+            log_fatal("Cannot find crm command!")
 
 
 def booth_info():
@@ -581,12 +586,10 @@ def find_getstampproc_raw(line):
     res = get_stamp_syslog(line)
     if res:
         func = "syslog"
-        logger.debug("the log file is in the syslog format")
         return func
     res = get_stamp_rfc5424(line)
     if res:
         func = "rfc5424"
-        logger.debug("the log file is in the rfc5424 format")
         return func
     res = get_stamp_legacy(line)
     if res:
@@ -1358,13 +1361,13 @@ def stdchannel_redirected(stdchannel, dest_filename):
 
 
 def start_slave_collector(node, arg_str):
+    cmd = "{} report __slave".format(constants.BIN_CRM)
     if node == constants.WE:
-        cmd = r"crm report __slave".format(os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
     else:
-        cmd = r'ssh {} {} "crm report __slave"'.format(constants.SSH_OPTS, node, os.getcwd())
+        cmd = r'ssh {} {} "{} {}"'.format(constants.SSH_OPTS, node, constants.SUDO, cmd)
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         code, out, err = crmutils.get_stdout_stderr(cmd)
@@ -1377,6 +1380,8 @@ def start_slave_collector(node, arg_str):
                 if code != 0:
                     logger.warning(err)
                 break
+        if err:
+            print(err)
 
     compress_data = ""
     for data in out.split('\n'):
