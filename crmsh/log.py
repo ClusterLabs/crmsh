@@ -441,8 +441,9 @@ def setup_logging(only_help=False):
     else:
         setup_directory_for_logfile()
     logging.config.dictConfig(LOGGING_CFG)
-    if os.path.exists(CRMSH_LOG_FILE):
+    if os.getuid() == 0 and os.path.exists(CRMSH_LOG_FILE):
         shutil.chown(CRMSH_LOG_FILE, constants.HA_USER, constants.HA_GROUP)
+        os.chmod(CRMSH_LOG_FILE, 0o664)
 
 
 def setup_logger(name):
