@@ -120,14 +120,16 @@ class TestContext(unittest.TestCase):
             ctx.validate_option()
         mock_error.assert_called_once_with("Maximum number of interface is 2")
 
+    @mock.patch('crmsh.utils.has_dup_value')
     @mock.patch('crmsh.utils.fatal')
-    def test_validate_option_error_nic_dup(self, mock_error):
+    def test_validate_option_error_nic_dup(self, mock_error, mock_dup):
+        mock_dup.return_value = True
         mock_error.side_effect = SystemExit
         options = mock.Mock(nic_list=["eth2", "eth2"])
         ctx = self.ctx_inst.set_context(options)
         with self.assertRaises(SystemExit):
             ctx.validate_option()
-        mock_error.assert_called_once_with("Duplicated input")
+        mock_error.assert_called_once_with("Duplicated input for -i/--interface option")
 
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.bootstrap.Validation.valid_admin_ip')
@@ -277,9 +279,10 @@ class TestBootstrap(unittest.TestCase):
         mock_long.assert_called_once_with('Starting pacemaker(delaying start of sbd for 60s)')
         mock_start.assert_called_once_with('pacemaker.service', enable=False, node_list=[])
 
-    @mock.patch('crmsh.bootstrap.configure_local_ssh_key')
+    @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.start_service')
     def test_init_ssh(self, mock_start_service, mock_config_ssh):
+        bootstrap._context = mock.Mock(node_list=[])
         bootstrap.init_ssh()
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
         mock_config_ssh.assert_has_calls([
@@ -325,79 +328,74 @@ class TestBootstrap(unittest.TestCase):
         mock_nologin.assert_called_once_with("hacluster")
         mock_invoke.assert_called_once_with("usermod -s /bin/bash hacluster")
 
-    @mock.patch('crmsh.utils.this_node')
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('logging.Logger.info')
-    @mock.patch('os.path.exists')
-    @mock.patch('crmsh.bootstrap.key_files')
-    @mock.patch('crmsh.bootstrap.change_user_shell')
-    def test_configure_local_ssh_key_error(self, mock_change_shell, mock_key_files, mock_exists, mock_status, mock_invoke, mock_error, mock_this_node):
-        mock_key_files.return_value = {"private": "/root/.ssh/id_rsa", "public": "/root/.ssh/id_rsa.pub", "authorized": "/root/.ssh/authorized_keys"}
-        mock_exists.return_value = False
-        mock_invoke.return_value = (False, None, "error")
-        mock_this_node.return_value = "node1"
-        mock_error.side_effect = SystemExit
-
-        with self.assertRaises(SystemExit) as err:
-            bootstrap.configure_local_ssh_key("root")
-
-        mock_change_shell.assert_called_once_with("root")
-        mock_key_files.assert_called_once_with("root")
-        mock_exists.assert_called_once_with("/root/.ssh/id_rsa")
-        mock_status.assert_called_once_with("Generating SSH key for root")
-        mock_invoke.assert_called_once_with("ssh-keygen -q -f /root/.ssh/id_rsa -C 'Cluster Internal on node1' -N ''")
-        mock_error.assert_called_once_with("Failed to generate ssh key for root: error")
-
     @mock.patch('crmsh.bootstrap.append_unique')
-    @mock.patch('builtins.open', create=True)
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     @mock.patch('crmsh.utils.add_su')
-    @mock.patch('crmsh.utils.this_node')
     @mock.patch('logging.Logger.info')
-    @mock.patch('os.path.exists')
+    @mock.patch('crmsh.utils.detect_file')
     @mock.patch('crmsh.bootstrap.key_files')
     @mock.patch('crmsh.bootstrap.change_user_shell')
-    def test_configure_local_ssh_key(self, mock_change_shell, mock_key_files, mock_exists, mock_status, mock_this_node, mock_su, mock_invoke, mock_open_file, mock_append):
-        bootstrap._context = mock.Mock(yes_to_all=True)
+    def test_configure_ssh_key_remote(self, mock_change_shell, mock_key_files, mock_detect, mock_info, mock_su, mock_run, mock_append):
         mock_key_files.return_value = {"private": "/test/.ssh/id_rsa", "public": "/test/.ssh/id_rsa.pub", "authorized": "/test/.ssh/authorized_keys"}
-        mock_exists.side_effect = [False, False]
-        mock_this_node.return_value = "node1"
-        mock_invoke.return_value = (True, None, None)
+        mock_detect.side_effect = [False, True]
         mock_su.return_value = "cmd with su"
 
-        bootstrap.configure_local_ssh_key("test")
+        bootstrap.configure_ssh_key("test", remote="node1")
 
         mock_change_shell.assert_called_once_with("test")
         mock_key_files.assert_called_once_with("test")
-        mock_exists.assert_has_calls([
-            mock.call("/test/.ssh/id_rsa"),
-            mock.call("/test/.ssh/authorized_keys")
+        mock_detect.assert_has_calls([
+            mock.call("/test/.ssh/id_rsa", remote="node1"),
+            mock.call("/test/.ssh/authorized_keys", remote="node1")
             ])
-        mock_status.assert_called_once_with("Generating SSH key for test")
-        mock_invoke.assert_called_once_with("cmd with su")
+        mock_info.assert_called_once_with("SSH key for test does not exist, hence generate it now")
         mock_su.assert_called_once_with("ssh-keygen -q -f /test/.ssh/id_rsa -C 'Cluster Internal on node1' -N ''", "test")
-        mock_this_node.assert_called_once_with()
-        mock_open_file.assert_called_once_with("/test/.ssh/authorized_keys", 'w')
-        mock_append.assert_called_once_with("/test/.ssh/id_rsa.pub", "/test/.ssh/authorized_keys")
+        mock_run.assert_has_calls([
+            mock.call("cmd with su", remote="node1")
+            ])
+        mock_append.assert_called_once_with("/test/.ssh/id_rsa.pub", "/test/.ssh/authorized_keys", remote="node1")
+
+    @mock.patch('crmsh.bootstrap.append_unique')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.utils.detect_file')
+    @mock.patch('crmsh.bootstrap.key_files')
+    @mock.patch('crmsh.bootstrap.change_user_shell')
+    def test_configure_ssh_key(self, mock_change_shell, mock_key_files, mock_detect, mock_run, mock_append_unique):
+        mock_key_files.return_value = {"private": "/test/.ssh/id_rsa", "public": "/test/.ssh/id_rsa.pub", "authorized": "/test/.ssh/authorized_keys"}
+        mock_detect.side_effect = [True, False]
+
+        bootstrap.configure_ssh_key("test")
+
+        mock_change_shell.assert_called_once_with("test")
+        mock_key_files.assert_called_once_with("test")
+        mock_detect.assert_has_calls([
+            mock.call("/test/.ssh/id_rsa", remote=None),
+            mock.call("/test/.ssh/authorized_keys", remote=None)
+            ])
+        mock_append_unique.assert_called_once_with("/test/.ssh/id_rsa.pub", "/test/.ssh/authorized_keys", remote=None)
+        mock_run.assert_called_once_with('touch /test/.ssh/authorized_keys', remote=None)
+
+    @mock.patch('crmsh.bootstrap.append_to_remote_file')
+    @mock.patch('crmsh.utils.check_file_content_included')
+    def test_append_unique_remote(self, mock_check, mock_append):
+        mock_check.return_value = False
+        bootstrap.append_unique("fromfile", "tofile", remote="node1", from_local=True)
+        mock_check.assert_called_once_with("fromfile", "tofile", remote="node1", source_local=True)
+        mock_append.assert_called_once_with("fromfile", "node1", "tofile")
 
     @mock.patch('crmsh.bootstrap.append')
     @mock.patch('crmsh.utils.check_file_content_included')
     def test_append_unique(self, mock_check, mock_append):
         mock_check.return_value = False
         bootstrap.append_unique("fromfile", "tofile")
-        mock_check.assert_called_once_with("fromfile", "tofile")
-        mock_append.assert_called_once_with("fromfile", "tofile")
+        mock_check.assert_called_once_with("fromfile", "tofile", remote=None, source_local=False)
+        mock_append.assert_called_once_with("fromfile", "tofile", remote=None)
 
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.bootstrap.invoke')
-    def test_append_to_remote_file(self, mock_invoke, mock_error):
-        mock_invoke.return_value = (False, None, "error")
-        error_string = 'Failed to append contents of fromfile to node1:\n"error"\n\n    crmsh has no way to help you to setup up passwordless ssh among nodes at this time. \n    As the hint, likely, `PasswordAuthentication` is \'no\' in /etc/ssh/sshd_config. \n    Given in this case, users must setup passwordless ssh beforehand, or change it to \'yes\' and manage passwords properly\n    '
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_append_to_remote_file(self, mock_run):
         bootstrap.append_to_remote_file("fromfile", "node1", "tofile")
         cmd = "cat fromfile | ssh {} root@node1 'cat >> tofile'".format(constants.SSH_OPTION)
-        mock_invoke.assert_called_once_with(cmd)
-        mock_error.assert_called_once_with(error_string)
+        mock_run.assert_called_once_with(cmd)
 
     @mock.patch('crmsh.bootstrap.invokerc')
     def test_fetch_public_key_from_remote_node_exception(self, mock_invoke):
@@ -439,7 +437,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
-    @mock.patch('crmsh.bootstrap.configure_local_ssh_key')
+    @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.start_service')
     def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_swap, mock_invoke, mock_error):
         bootstrap._context = mock.Mock(default_nic_list=["eth1"])
@@ -489,15 +487,36 @@ class TestBootstrap(unittest.TestCase):
         mock_key_files.return_value = {"private": "/root/.ssh/id_rsa", "public": "/root/.ssh/id_rsa.pub", "authorized": "/root/.ssh/authorized_keys"}
         mock_check_passwd.return_value = True
         mock_fetch.return_value = "file1"
+        bootstrap._context = mock.Mock(with_other_user=True)
 
-        bootstrap.swap_public_ssh_key("node1")
+        bootstrap.swap_public_ssh_key("node1", user="other")
 
-        mock_key_files.assert_called_once_with("root")
-        mock_check_passwd.assert_called_once_with("node1", "root")
-        mock_status.assert_called_once_with("Configuring SSH passwordless with root@node1")
+        mock_key_files.assert_called_once_with("other")
+        mock_check_passwd.assert_called_once_with("node1", "other")
+        mock_status.assert_called_once_with("Configuring SSH passwordless with other@node1")
         mock_append_remote.assert_called_once_with("/root/.ssh/id_rsa.pub", "node1", "/root/.ssh/authorized_keys")
-        mock_fetch.assert_called_once_with("node1", "root")
+        mock_fetch.assert_called_once_with("node1", "other")
         mock_append_unique.assert_called_once_with("file1", "/root/.ssh/authorized_keys")
+
+    @mock.patch('crmsh.utils.this_node')
+    def test_bootstrap_add_return(self, mock_this_node):
+        ctx = mock.Mock(node_list=[])
+        bootstrap.bootstrap_add(ctx)
+        mock_this_node.assert_not_called()
+
+    @mock.patch('crmsh.utils.ext_cmd_nosudo')
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.utils.this_node')
+    def test_bootstrap_add(self, mock_this_node, mock_info, mock_ext):
+        ctx = mock.Mock(node_list=["node2", "node3"], nic_list=["eth1"])
+        mock_this_node.return_value = "node1"
+        bootstrap.bootstrap_add(ctx)
+        mock_info.assert_has_calls([
+            mock.call("Adding node node2 to cluster"),
+            mock.call("Running command on node2: crm cluster join -y -c node1 -i eth1"),
+            mock.call("Adding node node3 to cluster"),
+            mock.call("Running command on node3: crm cluster join -y -c node1 -i eth1")
+            ])
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.get_stdout_stderr')

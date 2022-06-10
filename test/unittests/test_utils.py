@@ -68,28 +68,34 @@ def test_package_is_installed_remote(mock_run_remote):
             "Check whether crmsh is installed on other_node")
 
 
-@mock.patch('os.path.exists')
-def test_check_file_content_included_target_not_exist(mock_exists):
-    mock_exists.side_effect = [True, False]
+@mock.patch('crmsh.utils.detect_file')
+def test_check_file_content_included_target_not_exist(mock_detect):
+    mock_detect.side_effect = [True, False]
     res = utils.check_file_content_included("file1", "file2")
     assert res is False
-    mock_exists.assert_has_calls([mock.call("file1"), mock.call("file2")])
+    mock_detect.assert_has_calls([
+        mock.call("file1", remote=None),
+        mock.call("file2", remote=None)
+        ])
 
 
-@mock.patch("builtins.open")
-@mock.patch('os.path.exists')
-def test_check_file_content_included(mock_exists, mock_open_file):
-    mock_exists.side_effect = [True, True]
-    mock_open_file.side_effect = [
-            mock.mock_open(read_data="data1").return_value,
-            mock.mock_open(read_data="data2").return_value
-        ]
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.utils.detect_file')
+def test_check_file_content_included(mock_detect, mock_run):
+    mock_detect.side_effect = [True, True]
+    mock_run.side_effect = ["data data", "data"]
 
     res = utils.check_file_content_included("file1", "file2")
-    assert res is False
+    assert res is True
 
-    mock_exists.assert_has_calls([mock.call("file1"), mock.call("file2")])
-    mock_open_file.assert_has_calls([mock.call("file2", 'r'), mock.call("file1", 'r')])
+    mock_detect.assert_has_calls([
+        mock.call("file1", remote=None),
+        mock.call("file2", remote=None)
+        ])
+    mock_run.assert_has_calls([
+        mock.call("cat file2", remote=None),
+        mock.call("cat file1", remote=None)
+        ])
 
 
 @mock.patch("crmsh.utils.get_stdout_stderr")
