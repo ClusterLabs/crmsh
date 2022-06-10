@@ -7,6 +7,7 @@ from . import clidisplay
 from . import options
 
 ERR_STREAM = sys.stderr
+INFO_STREAM = sys.stdout
 
 
 class ErrorBuffer(object):
@@ -84,8 +85,8 @@ class ErrorBuffer(object):
     def error(self, s):
         self._prefix(clidisplay.error("ERROR"), s)
 
-    def warning(self, s):
-        self._prefix(clidisplay.warn("WARNING"), s)
+    def warning(self, s, to=None):
+        self._prefix(clidisplay.warn("WARNING"), s, to=to)
 
     def one_warning(self, s):
         if s not in self.written:
@@ -93,8 +94,8 @@ class ErrorBuffer(object):
             self.writemsg(self._render(clidisplay.warn("WARNING")) + ": %s" %
                           self.add_lineno(s))
 
-    def info(self, s):
-        self._prefix(clidisplay.info("INFO"), s)
+    def info(self, s, to=None):
+        self._prefix(clidisplay.info("INFO"), s, to=to)
 
     def debug(self, s):
         if config.core.debug:
@@ -129,6 +130,14 @@ def warn_once(s):
 
 def common_info(s):
     err_buf.info(s)
+
+
+def log_info(s):
+    err_buf.info(s, to=INFO_STREAM)
+
+
+def log_warn(s):
+    err_buf.warning(s, to=INFO_STREAM)
 
 
 def common_debug(s):

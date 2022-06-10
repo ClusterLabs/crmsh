@@ -1336,7 +1336,7 @@ def timestamp_to_datetime(ts):
     return make_datetime_naive(datetime.datetime.fromtimestamp(ts).replace(tzinfo=dateutil.tz.tzlocal()))
 
 
-def parse_time(t):
+def parse_time(t, quiet=False):
     '''
     Try to make sense of the user provided time spec.
     Use dateutil if available, otherwise strptime.
@@ -1360,7 +1360,8 @@ def parse_time(t):
             # convert to UTC from local time
             dt = dt - tz.tzlocal().utcoffset(dt)
     except ValueError as msg:
-        common_err("parse_time %s: %s" % (t, msg))
+        if not quiet:
+            common_err("parse_time %s: %s" % (t, msg))
         return None
     except ImportError as msg:
         try:
@@ -1372,7 +1373,7 @@ def parse_time(t):
     return dt
 
 
-def parse_to_timestamp(t):
+def parse_to_timestamp(t, quiet=False):
     '''
     Read a string and convert it into a UNIX timestamp.
     Added as an optimization of parse_time to avoid
@@ -1388,7 +1389,8 @@ def parse_to_timestamp(t):
         # convert to UTC from local time
         return total_seconds(dt - tz.tzlocal().utcoffset(dt) - datetime.datetime(1970, 1, 1))
     except ValueError as msg:
-        common_err("parse_time %s: %s" % (t, msg))
+        if not quiet:
+            common_err("parse_time %s: %s" % (t, msg))
         return None
     except ImportError as msg:
         try:

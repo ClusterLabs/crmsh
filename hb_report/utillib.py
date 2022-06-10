@@ -148,6 +148,11 @@ def analyze_one(workdir, file_):
 def base_check():
     if not which("which"):
         log_fatal("please install the which(1) program")
+    if not os.path.exists(constants.BIN_CRM):
+        if os.path.exists("/usr/bin/crm"):
+            constants.BIN_CRM = "/usr/bin/crm"
+        else:
+            log_fatal("Cannot find crm command!")
 
 
 def booth_info():
@@ -646,12 +651,10 @@ def find_getstampproc_raw(line):
     res = get_stamp_syslog(line)
     if res:
         func = "syslog"
-        log_debug("the log file is in the syslog format")
         return func
     res = get_stamp_rfc5424(line)
     if res:
         func = "rfc5424"
-        log_debug("the log file is in the rfc5424 format")
         return func
     res = get_stamp_legacy(line)
     if res:
@@ -1052,7 +1055,7 @@ def get_pkg_mgr():
 
 def get_stamp_legacy(line):
     try:
-        res = crmutils.parse_time(line.split()[1])
+        res = crmutils.parse_time(line.split()[1], quiet=True)
     except:
         return None
     return res
@@ -1060,7 +1063,7 @@ def get_stamp_legacy(line):
 
 def get_stamp_rfc5424(line):
     try:
-        res = crmutils.parse_time(line.split()[0])
+        res = crmutils.parse_time(line.split()[0], quiet=True)
     except:
         return None
     return res
@@ -1068,7 +1071,7 @@ def get_stamp_rfc5424(line):
 
 def get_stamp_syslog(line):
     try:
-        res = crmutils.parse_time(' '.join(line.split()[0:3]))
+        res = crmutils.parse_time(' '.join(line.split()[0:3]), quiet=True)
     except:
         return None
     return res
@@ -1223,11 +1226,11 @@ def load_ocf_dirs():
 
 def log_debug(msg):
     if constants.VERBOSITY > 0 or crmsh.config.core.debug:
-        crmmsg.common_info("%s# %s" % (constants.WE, msg))
+        crmmsg.log_info("%s# %s" % (constants.WE, msg))
 
 
 def log_info(msg):
-    crmmsg.common_info("%s# %s" % (constants.WE, msg))
+    crmmsg.log_info("%s# %s" % (constants.WE, msg))
 
 
 def log_fatal(msg):
@@ -1242,7 +1245,7 @@ def log_size(logf, outf):
 
 
 def log_warning(msg):
-    crmmsg.common_warn("%s# %s" % (constants.WE, msg))
+    crmmsg.log_warn("%s# %s" % (constants.WE, msg))
 
 
 def make_temp_dir():
@@ -1518,13 +1521,13 @@ def stdchannel_redirected(stdchannel, dest_filename):
 
 
 def start_slave_collector(node, arg_str):
+    cmd = "{} report __slave".format(constants.BIN_CRM)
     if node == constants.WE:
-        cmd = r"/usr/sbin/hb_report __slave".format(os.getcwd())
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
     else:
-        cmd = r'ssh {} {} "/usr/sbin/hb_report __slave"'.format(constants.SSH_OPTS, node, os.getcwd())
+        cmd = r'ssh {} {} "{} {}"'.format(constants.SSH_OPTS, node, constants.SUDO, cmd)
         for item in arg_str.split():
             cmd += " {}".format(str(item))
         code, out, err = crmutils.get_stdout_stderr(cmd)
@@ -1537,6 +1540,8 @@ def start_slave_collector(node, arg_str):
                 if code != 0:
                     log_warning(err)
                 break
+        if err:
+            print(err)
 
     compress_data = ""
     for data in out.split('\n'):
