@@ -269,8 +269,8 @@ def run():
             if constants.SSH_USER:
                 constants.SSH_OPTS += " -o User=%s" % constants.SSH_USER
         # assume that only root can collect data
-        if ((not constants.SSH_USER) and (os.getuid() != 0)) or \
-           constants.SSH_USER and constants.SSH_USER != "root":
+        if ((not constants.SSH_USER) and (os.getuid() not in [0, 90])) or \
+           constants.SSH_USER and constants.SSH_USER not in ["root", "hacluster"]:
             logger.debug("ssh user other than root, use sudo")
             constants.SUDO = "sudo -u root"
         if os.getuid() != 0:

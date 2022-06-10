@@ -4,6 +4,7 @@
 import socket
 from crmsh import config
 
+BIN_CRM = "/usr/sbin/crm"
 ARGOPTS_VALUE = "f:t:l:u:X:p:L:e:E:n:MSDZVsvhdQ"
 B_CONF = None
 CIB_DIR = None
