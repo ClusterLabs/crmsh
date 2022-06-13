@@ -102,6 +102,18 @@ class DebugCustomFilter(logging.Filter):
             return True
 
 
+class GroupWriteRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """
+    A custom rotating file handler which keeps log files group wirtable after rotating
+    Source: https://stackoverflow.com/a/6779307
+    """
+    def _open(self):
+        prevumask=os.umask(0o002)
+        rtv=logging.handlers.RotatingFileHandler._open(self)
+        os.umask(prevumask)
+        return rtv
+
+
 LOGGING_CFG = {
     "version": 1,
     "disable_existing_loggers": "False",
@@ -141,7 +153,7 @@ LOGGING_CFG = {
             "flushLevel": logging.CRITICAL,
         },
         "file": {
-            "class": "logging.handlers.RotatingFileHandler",
+            "()": GroupWriteRotatingFileHandler,
             "filename": CRMSH_LOG_FILE,
             "formatter": "file",
             "filters": ["filter"],
