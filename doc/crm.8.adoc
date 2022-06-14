@@ -3853,7 +3853,8 @@ To show all objects of a certain type, use the +type:+ prefix.
 
 To show all objects in a tag, use the +tag:+ prefix.
 
-To show all constraints related to a primitive, use the +related:+ prefix.
+To show all constraints related to a primitive, or 
+to show all objects of a certain RA type, use the +related:+ prefix.
 
 To show all modified objects, pass the argument +changed+.
 
@@ -3915,6 +3916,8 @@ show webapp
 show type:primitive
 show xml tag:db tag:fs
 show related:webapp
+show related:IPaddr2
+show related:ocf:heartbeat:Dummy
 show type:primitive obscure:passwd
 ...............
 
