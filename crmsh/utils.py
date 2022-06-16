@@ -3082,7 +3082,13 @@ def diff_and_patch(orig_cib_str, current_cib_str):
     """
     # In cibconfig.py, _patch_cib method doesn't include status section
     # So here should make a function to handle common cases
-    cmd = "crm_diff -u -O '{}' -N '{}'".format(orig_cib_str, current_cib_str)
+    from . import tmpfiles
+    orig_cib_file = str2tmp(orig_cib_str, suffix=".xml")
+    current_cib_file = str2tmp(current_cib_str, suffix=".xml")
+    tmpfiles.add(orig_cib_file)
+    tmpfiles.add(current_cib_file)
+
+    cmd = "crm_diff -u -o '{}' -n '{}'".format(orig_cib_file, current_cib_file)
     rc, cib_diff, err = get_stdout_stderr(cmd)
     if rc == 0: # no difference
         return True
