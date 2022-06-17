@@ -694,7 +694,13 @@ def start_pacemaker(node_list=[], enable_flag=False):
             utils.service_is_enabled("sbd.service") and \
             SBDTimeout.is_sbd_delay_start():
         pacemaker_start_msg += "(delaying start of sbd for {}s)".format(SBDTimeout.get_sbd_delay_start_sec_from_sysconfig())
+
     with logger_utils.status_long(pacemaker_start_msg):
+        # To avoid possible JOIN flood in corosync
+        if len(node_list) > 5:
+            for node in node_list:
+                time.sleep(0.25)
+                utils.start_service("corosync.service", remote_addr=node)
         utils.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
