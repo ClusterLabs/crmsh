@@ -156,7 +156,42 @@ Stage can be one of:
 
 Note:
   - If stage is not specified, the script will run through each stage
-    in sequence, with prompts for required information.'''
+    in sequence, with prompts for required information.
+
+Examples:
+  # Setup the cluster on the current node
+  crm cluster init -y
+
+  # Setup the cluster with multiple nodes
+  (NOTE: the current node will be part of the cluster even not listed in the -N option as below)
+  crm cluster init -N node1 -N node2 -N node3 -y
+
+  # Setup the cluster on the current node, with two network interfaces
+  crm cluster init -i eth1 -i eth2 -y
+
+  # Setup the cluster on the current node, with disk-based SBD
+  crm cluster init -s <share disk> -y
+
+  # Setup the cluster on the current node, with diskless SBD
+  crm cluster init -S  -y
+
+  # Setup the cluster on the current node, with QDevice
+  crm cluster init --qnetd-hostname <qnetd addr> -y
+
+  # Setup the cluster on the current node, with SBD+OCFS2
+  crm cluster init -s <share disk1> -o <share disk2> -y
+
+  # Setup the cluster on the current node, with SBD+OCFS2+Cluster LVM
+  crm cluster init -s <share disk1> -o <share disk2> -o <share disk3> -C -y
+
+  # Add SBD on a running cluster
+  crm cluster init sbd -s <share disk> -y
+
+  # Add QDevice on a running cluster
+  crm cluster init qdevice --qnetd-hostname <qnetd addr> -y
+
+  # Add OCFS2+Cluster LVM on a running cluster
+  crm cluster init ocfs2 -o <share disk1> -o <share disk2> -C -y'''
 
 
 CRM_CLUSTER_JOIN_H_OUTPUT = '''usage: join [options] [STAGE]
@@ -189,7 +224,14 @@ Stage can be one of:
                 already be configured).
     cluster     Start the cluster on this node
 
-If stage is not specified, each stage will be invoked in sequence.'''
+If stage is not specified, each stage will be invoked in sequence.
+
+Examples:
+  # Join with a cluster node
+  crm cluster join -c <node> -y
+
+  # Join with a cluster node, with the same network interface used by that node
+  crm cluster join -c <node> -i eth1 -i eth2 -y'''
 
 
 CRM_CLUSTER_ADD_H_OUTPUT = '''usage: add [options] [node ...]
