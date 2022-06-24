@@ -202,7 +202,7 @@ class LoggerUtils(object):
             if getattr(h, '_name') == _type:
                 return h
         else:
-            raise ValueError("Failed to find \"\" handler in logger \"\"".format(_type, self.logger.name))
+            raise ValueError("Failed to find \"{}\" handler in logger \"{}\"".format(_type, self.logger.name))
 
     def disable_info_in_console(self):
         """
