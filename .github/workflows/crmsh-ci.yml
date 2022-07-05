@@ -4,11 +4,7 @@
 
 name: crmsh CI
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 env:
   DOCKER_SCRIPT: ./test/run-functional-tests
