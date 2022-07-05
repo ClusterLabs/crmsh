@@ -52,7 +52,7 @@ def dump_env():
     env_dict["SKIP_LVL"] = constants.SKIP_LVL
     env_dict["EXTRA_LOGS"] = constants.EXTRA_LOGS
     env_dict["PCMK_LOG"] = constants.PCMK_LOG
-    env_dict["VERBOSITY"] = int(constants.VERBOSITY)
+    env_dict["VERBOSITY"] = int(config.report.verbosity) or (1 if config.core.debug else 0)
 
     res_str = ""
     for k, v in env_dict.items():
@@ -133,8 +133,7 @@ def load_env(env_str):
     constants.SKIP_LVL = utillib.str_to_bool(env_dict["SKIP_LVL"])
     constants.EXTRA_LOGS = env_dict["EXTRA_LOGS"]
     constants.PCMK_LOG = env_dict["PCMK_LOG"]
-    constants.VERBOSITY = int(env_dict["VERBOSITY"])
-    config.report.verbosity = constants.VERBOSITY
+    config.report.verbosity = env_dict["VERBOSITY"]
 
 
 def parse_argument(argv):
@@ -151,6 +150,7 @@ def parse_argument(argv):
     else:
         usage("short")
 
+    verbosity = 0
     for args, option in opt:
         if args == '-h':
             usage()
@@ -191,10 +191,11 @@ def parse_argument(argv):
         if args == "-E":
             constants.EXTRA_LOGS += " %s" % option
         if args == "-v":
-            constants.VERBOSITY += 1
-            config.report.verbosity = constants.VERBOSITY
+            verbosity += 1
         if args == '-d':
             constants.COMPRESS = False
+
+    config.report.verbosity = verbosity
 
     if config.report.sanitize_rule:
         constants.DO_SANITIZE = True
