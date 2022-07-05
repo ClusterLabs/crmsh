@@ -473,19 +473,21 @@ class Report(object):
             nodes_option = "'-n %s'" % ' '.join(self.setnodes)
         utils.mkdirp(os.path.dirname(d))
         logger.info("Retrieving information from cluster nodes, please wait...")
-        rc = utils.pipe_cmd_nosudo("%s -Z -Q -f '%s' %s %s %s %s" %
-                                   (extcmd,
-                                    self.from_dt.ctime(),
-                                    to_option,
-                                    nodes_option,
-                                    str(config.core.report_tool_options),
-                                    d))
+        cmd = "{} {} -Z -Q -f '{}' {} {} {} {}".format(extcmd,
+                "-v" if config.core.debug else "", self.from_dt.ctime(),
+                to_option, nodes_option, str(config.core.report_tool_options), d)
+        logger.debug("Running command: {}".format(cmd))
+        rc, out, err = utils.get_stdout_stderr(cmd)
         if rc != 0:
+            if err:
+                print(err)
             if os.path.isfile(tarball):
                 self.warn("report thinks it failed, proceeding anyway")
             else:
                 self.error("report failed")
                 return None
+        if out:
+            print(out)
         self.last_live_update = time.time()
         return self.unpack_report(tarball)
 
