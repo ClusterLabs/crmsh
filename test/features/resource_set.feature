@@ -53,37 +53,37 @@ Feature: Use "crm configure set" to update attributes and operations
     Given   Resource "d" is started on "hanode1"
     # move <res> <node>
     When    Run "crm resource move d hanode2" on "hanode1"
-    When    Run "sleep 2" on "hanode1"
+    When    Run "sleep 5" on "hanode1"
     Then    Resource "d" is started on "hanode2"
     When    Run "crm resource clear d" on "hanode1"
 
     # move <res> <node> force
     When    Run "crm resource move d hanode1" on "hanode1"
-    When    Run "sleep 2" on "hanode1"
+    When    Run "sleep 5" on "hanode1"
     Then    Resource "d" is started on "hanode1"
     When    Run "crm resource clear d" on "hanode1"
 
     # move <res> force
     When    Run "crm resource move d force" on "hanode1"
-    When    Run "sleep 2" on "hanode1"
+    When    Run "sleep 5" on "hanode1"
     Then    Resource "d" is started on "hanode2"
     When    Run "crm resource clear d" on "hanode1"
 
     # move <res> <lifetime> force
     When    Run "crm resource move d PT5M force" on "hanode1"
-    When    Run "sleep 2" on "hanode1"
+    When    Run "sleep 5" on "hanode1"
     Then    Resource "d" is started on "hanode1"
     When    Run "crm resource clear d" on "hanode1"
 
     # move <res> <node> <lifetime>
     When    Run "crm resource move d hanode2 PT5M" on "hanode1"
-    When    Run "sleep 2" on "hanode1"
+    When    Run "sleep 5" on "hanode1"
     Then    Resource "d" is started on "hanode2"
     When    Run "crm resource clear d" on "hanode1"
 
     # move <res> <node> <lifetime> force
     When    Run "crm resource move d hanode1 PT5M force" on "hanode1"
-    When    Run "sleep 2" on "hanode1"
+    When    Run "sleep 5" on "hanode1"
     Then    Resource "d" is started on "hanode1"
     When    Run "crm resource clear d" on "hanode1"
 
