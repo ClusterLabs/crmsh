@@ -301,7 +301,7 @@ Note:
                             help='Answer "yes" to all prompts (use with caution, this is destructive, especially those storage related configurations and stages. The /root/.ssh/id_rsa key will be overwritten unless the option "--no-overwrite-sshkey" is used)')
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
-        parser.add_argument("-N", "--nodes", metavar="NODES", dest="nodes", action="append", default=[],
+        parser.add_argument("-N", "--node", metavar="NODENAME", dest="node_list", action="append", default=[],
                             help='The member node of the cluster. Note: the current node is always get initialized during bootstrap in the beginning.')
         parser.add_argument("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
                             help="Enable SBD even if no SBD device is configured (diskless mode)")

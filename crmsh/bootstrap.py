@@ -87,7 +87,7 @@ class Context(object):
         self.watchdog = None
         self.no_overwrite_sshkey = None
         self.nic_list = []
-        self.nodes = []
+        self.node_list = []
         self.unicast = None
         self.multicast = None
         self.admin_ip = None
@@ -172,15 +172,15 @@ class Context(object):
         """
         Validate -N/--nodes option
         """
-        self.nodes = utils.parse_append_action_argument(self.nodes)
+        self.node_list = utils.parse_append_action_argument(self.node_list)
         me = utils.this_node()
-        if me in self.nodes:
-            self.nodes.remove(me)
-        if self.nodes and self.stage:
+        if me in self.node_list:
+            self.node_list.remove(me)
+        if self.node_list and self.stage:
             utils.fatal("Can't use -N/--nodes option and stage({}) together".format(self.stage))
-        if utils.has_dup_value(self.nodes):
+        if utils.has_dup_value(self.node_list):
             utils.fatal("Duplicated input for -N/--nodes option")
-        for node in self.nodes:
+        for node in self.node_list:
             utils.ping_node(node)
 
     def validate_option(self):
@@ -763,11 +763,11 @@ def init_ssh():
         configure_ssh_key(user)
 
     # If not use -N/--nodes option
-    if not _context.nodes:
+    if not _context.node_list:
         return
 
     print()
-    node_list = _context.nodes
+    node_list = _context.node_list
     # Swap public ssh key between remote node and local
     for node in node_list:
         swap_public_ssh_key(node, add=True)
@@ -2023,7 +2023,7 @@ def bootstrap_add(context):
     """
     Adds the given node to the cluster.
     """
-    if not context.nodes:
+    if not context.node_list:
         return
 
     global _context
@@ -2034,7 +2034,7 @@ def bootstrap_add(context):
         options += '-i {} '.format(nic)
     options = " {}".format(options.strip()) if options else ""
 
-    for node in _context.nodes:
+    for node in _context.node_list:
         print()
         logger.info("Adding node {} to cluster".format(node))
         cmd = "crm cluster join{} -c {}{}".format(" -y" if _context.yes_to_all else "", utils.this_node(), options)
