@@ -302,7 +302,7 @@ Note:
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
         parser.add_argument("-N", "--nodes", metavar="NODES", dest="nodes", action="append", default=[],
-                            help='Additional nodes to add to the created cluster. May include the current node, which will always be the initial cluster node.')
+                            help='The member node of the cluster. Note: the current node is always get initialized during bootstrap in the beginning.')
         parser.add_argument("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
                             help="Enable SBD even if no SBD device is configured (diskless mode)")
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
