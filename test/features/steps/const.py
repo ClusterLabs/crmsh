@@ -67,10 +67,10 @@ optional arguments:
                         destructive, especially those storage related
                         configurations and stages.)
   -n NAME, --name NAME  Set the name of the configured cluster.
-  -N NODES, --nodes NODES
-                        Additional nodes to add to the created cluster. May
-                        include the current node, which will always be the
-                        initial cluster node.
+  -N NODENAME, --node NODENAME
+                        The member node of the cluster. Note: the current node
+                        is always get initialized during bootstrap in the
+                        beginning.
   -S, --enable-sbd      Enable SBD even if no SBD device is configured
                         (diskless mode)
   -w WATCHDOG, --watchdog WATCHDOG
@@ -232,16 +232,6 @@ Examples:
 
   # Join with a cluster node, with the same network interface used by that node
   crm cluster join -c <node> -i eth1 -i eth2 -y'''
-
-
-CRM_CLUSTER_ADD_H_OUTPUT = '''usage: add [options] [node ...]
-
-Add a new node to the cluster. The new node will be
-configured as a cluster member.
-
-optional arguments:
-  -h, --help  Show this help message
-  -y, --yes   Answer "yes" to all prompts (use with caution)'''
 
 
 CRM_CLUSTER_REMOVE_H_OUTPUT = '''usage: remove [options] [<node> ...]

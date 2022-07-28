@@ -2,7 +2,7 @@
 Feature: crmsh bootstrap process - options
 
   Test crmsh bootstrap options:
-      "--nodes": Additional nodes to add to the created cluster
+      "--node": Additional nodes to add to the created cluster
       "-i":      Bind to IP address on interface IF
       "-M":      Configure corosync with second heartbeat line
       "-n":      Set the name of the configured cluster
@@ -20,8 +20,6 @@ Feature: crmsh bootstrap process - options
     Then    Output is the same with expected "crm cluster init" help output
     When    Run "crm cluster join -h" on "hanode1"
     Then    Output is the same with expected "crm cluster join" help output
-    When    Run "crm cluster add -h" on "hanode1"
-    Then    Output is the same with expected "crm cluster add" help output
     When    Run "crm cluster remove -h" on "hanode1"
     Then    Output is the same with expected "crm cluster remove" help output
     When    Run "crm cluster geo_init -h" on "hanode1"
@@ -32,10 +30,10 @@ Feature: crmsh bootstrap process - options
     Then    Output is the same with expected "crm cluster geo-init-arbitrator" help output
 
   @clean
-  Scenario: Init whole cluster service on node "hanode1" using "--nodes" option
+  Scenario: Init whole cluster service on node "hanode1" using "--node" option
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y --nodes \"hanode1 hanode2\"" on "hanode1"
+    When    Run "crm cluster init -y --node \"hanode1 hanode2\"" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
@@ -131,3 +129,11 @@ Feature: crmsh bootstrap process - options
     Then    Cluster service is "started" on "hanode2"
     And     Show cluster status on "hanode1"
     And     Corosync working on "multicast" mode
+
+  @clean
+  Scenario: Init cluster with -N option (bsc#1175863)
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -N hanode1 -N hanode2 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Cluster service is "started" on "hanode2"

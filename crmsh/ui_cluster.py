@@ -336,9 +336,8 @@ Examples:
                             help='Answer "yes" to all prompts (use with caution, this is destructive, especially those storage related configurations and stages.)')
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
-        parser.add_argument("-N", "--nodes", metavar="NODES", dest="nodes",
-                            help='Additional nodes to add to the created cluster. May include the current node, which will always be the initial cluster node.')
-        # parser.add_argument("--quick-start", dest="quickstart", action="store_true", help="Perform basic system configuration (NTP, watchdog, /etc/hosts)")
+        parser.add_argument("-N", "--node", metavar="NODENAME", dest="node_list", action="append", default=[],
+                            help='The member node of the cluster. Note: the current node is always get initialized during bootstrap in the beginning.')
         parser.add_argument("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
                             help="Enable SBD even if no SBD device is configured (diskless mode)")
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
@@ -347,7 +346,7 @@ Examples:
                             help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default; Deprecated)')
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
-        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(),
+        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(), default=[],
                                    help="Bind to IP address on interface IF. Use -i second time for second interface")
         network_group.add_argument("-u", "--unicast", action="store_true", dest="unicast",
                                    help="Configure corosync to communicate over unicast(udpu). This is the default transport type")
@@ -377,7 +376,7 @@ Examples:
                                    help="MODE of operation of heuristics (on/sync/off, default:sync)")
 
         storage_group = parser.add_argument_group("Storage configuration", "Options for configuring shared storage.")
-        storage_group.add_argument("-s", "--sbd-device", dest="sbd_devices", metavar="DEVICE", action="append",
+        storage_group.add_argument("-s", "--sbd-device", dest="sbd_devices", metavar="DEVICE", action="append", default=[],
                                    help="Block device to use for SBD fencing, use \";\" as separator or -s multiple times for multi path (up to 3 devices)")
         storage_group.add_argument("-o", "--ocfs2-device", dest="ocfs2_devices", metavar="DEVICE", action="append", default=[],
                 help="Block device to use for OCFS2; When using Cluster LVM2 to manage the shared storage, user can specify one or multiple raw disks, use \";\" as separator or -o multiple times for multi path (must specify -C option) NOTE: this is a Technical Preview")
@@ -414,20 +413,11 @@ Examples:
         boot_context.args = args
         boot_context.cluster_is_running = utils.service_is_active("pacemaker.service")
         boot_context.type = "init"
+        boot_context.initialize_qdevice()
+        boot_context.validate_option()
 
         bootstrap.bootstrap_init(boot_context)
-
-        # if options.geo:
-        #    bootstrap.bootstrap_init_geo()
-
-        if options.nodes is not None:
-            nodelist = [n for n in re.split('[ ,;]+', options.nodes)]
-            for node in nodelist:
-                if node == utils.this_node():
-                    continue
-                logger.info("\n\nAdd node {} (may prompt for root password):".format(node))
-                if not self._add_node(node, yes_to_all=options.yes_to_all):
-                    return False
+        bootstrap.bootstrap_add(boot_context)
 
         return True
 
@@ -465,7 +455,7 @@ Examples:
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of existing cluster node", metavar="HOST")
-        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(),
+        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(), default=[],
                 help="Bind to IP address on interface IF. Use -i second time for second interface")
         options, args = parse_options(parser, args)
         if options is None or args is None:
@@ -485,37 +475,6 @@ Examples:
         bootstrap.bootstrap_join(join_context)
 
         return True
-
-    def _add_node(self, node, yes_to_all=False):
-        '''
-        Adds the given node to the cluster.
-        '''
-        me = utils.this_node()
-        cmd = "crm cluster join{} -c {}".format(" -y" if yes_to_all else "", me)
-        rc = utils.ext_cmd_nosudo("ssh{} root@{} -o StrictHostKeyChecking=no '{}'".format("" if yes_to_all else " -t", node, cmd))
-        return rc == 0
-
-    @command.completers_repeating(compl.call(scripts.param_completion_list, 'add'))
-    @command.skill_level('administrator')
-    def do_add(self, context, *args):
-        '''
-        Add the given node(s) to the cluster.
-        Installs packages, sets up corosync and pacemaker, etc.
-        Must be executed from a node in the existing cluster.
-        '''
-        parser = ArgParser(description="""
-Add a new node to the cluster. The new node will be
-configured as a cluster member.""",
-                usage="add [options] [node ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
-        parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
-        parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        options, args = parse_options(parser, args)
-        if options is None or args is None:
-            return
-
-        for node in args:
-            if not self._add_node(node, yes_to_all=options.yes_to_all):
-                return False
 
     @command.alias("delete")
     @command.completers_repeating(_remove_completer)
