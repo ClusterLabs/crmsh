@@ -828,10 +828,14 @@ def configure_ssh_key(user="root", remote=None):
     """
     change_user_shell(user)
 
+    cmd = ""
     private_key, public_key, authorized_file = key_files(user).values()
     if not utils.detect_file(private_key, remote=remote):
         logger.info("SSH key for {} does not exist, hence generate it now".format(user))
         cmd = "ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(private_key, remote if remote else utils.this_node())
+    elif not utils.detect_file(public_key, remote=remote):
+        cmd = "ssh-keygen -y -f {} > {}".format(private_key, public_key)
+    if cmd:
         cmd = utils.add_su(cmd, user)
         utils.get_stdout_or_raise_error(cmd, remote=remote)
 
