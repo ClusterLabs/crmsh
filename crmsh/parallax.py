@@ -6,6 +6,9 @@ import os
 import parallax
 
 
+Error = parallax.Error
+
+
 class Parallax(object):
     """
     # Parallax SSH API
@@ -45,10 +48,8 @@ class Parallax(object):
 
     def handle(self, results):
         for host, result in results:
-            if isinstance(result, parallax.Error):
-                exception_str = "Failed on {}: {}".format(host, result)
-                if self.strict:
-                    raise ValueError(exception_str)
+            if isinstance(result, parallax.Error) and self.strict:
+                raise ValueError("Failed on {}: {}".format(host, result))
         return results
 
     def call(self):
