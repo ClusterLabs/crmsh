@@ -618,9 +618,9 @@ def configure_firewall(tcp=None, udp=None):
 
 def firewall_open_basic_ports():
     """
-    Open ports for csync2, mgmtd, hawk & dlm respectively
+    Open ports for csync2, hawk & dlm respectively
     """
-    configure_firewall(tcp=["30865", "5560", "7630", "21064"])
+    configure_firewall(tcp=["30865", "7630", "21064"])
 
 
 def firewall_open_corosync_ports():
