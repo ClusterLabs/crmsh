@@ -951,7 +951,6 @@ def init_csync2_remote():
         if not re.search(r"^\s*host.*\s+%s\s*;" % (newhost), curr_cfg, flags=re.M):
             curr_cfg = re.sub(r"\bhost.*\s+\S+\s*;", r"\g<0>\n\thost %s;" % (utils.doublequote(newhost)), curr_cfg, count=1)
             utils.str2file(curr_cfg, CSYNC2_CFG)
-            csync2_update("/")
         else:
             logger_utils.log_only_to_file(": Not updating %s - remote host %s already exists" % (CSYNC2_CFG, newhost))
     finally:
