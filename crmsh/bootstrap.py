@@ -1376,7 +1376,7 @@ def init_qdevice():
     qdevice_inst.config_and_start_qdevice()
 
     if _context.stage == "qdevice":
-        adjust_pcmk_delay_max_and_stonith_timeout()
+        adjust_properties()
 
 
 def init():
@@ -1788,7 +1788,7 @@ def join_cluster(seed_host):
     # attempt to join the cluster failed)
     init_cluster_local()
 
-    adjust_pcmk_delay_max_and_stonith_timeout()
+    adjust_properties()
 
     with logger_utils.status_long("Reloading cluster configuration"):
 
@@ -1842,6 +1842,39 @@ def join_cluster(seed_host):
         start_qdevice_on_join_node(seed_host)
     else:
         utils.disable_service("corosync-qdevice.service")
+
+
+def adjust_priority_in_rsc_defaults(is_2node_wo_qdevice):
+    """
+    Adjust priority in rsc_defaults
+
+    Set priority=1 when current cluster is 2 nodes without qdevice;
+    else set priority=0
+    """
+    if is_2node_wo_qdevice:
+        utils.set_property("priority", 1, property_type="rsc_defaults", conditional=True)
+    else:
+        utils.set_property("priority", 0, property_type="rsc_defaults")
+
+
+def adjust_priority_fencing_delay(is_2node_wo_qdevice):
+    """
+    Adjust priority-fencing-delay
+
+    When pcmk_delay_max is set in fence agent,
+    and the current cluster is 2 nodes without qdevice,
+    set priority-fencing-delay=2*pcmk_delay_max
+    """
+    out = utils.get_stdout_or_raise_error("crm configure show related:stonith")
+    if not out:
+        return
+    pcmk_delay_max_v_list = re.findall("pcmk_delay_max=(\w+)", out)
+    if pcmk_delay_max_v_list:
+        max_value = max([int(utils.crm_msec(v)/1000) for v in pcmk_delay_max_v_list])
+    if pcmk_delay_max_v_list and is_2node_wo_qdevice:
+        utils.set_property("priority-fencing-delay", 2*max_value, conditional=True)
+    else:
+        utils.set_property("priority-fencing-delay", 0)
 
 
 def start_qdevice_on_join_node(seed_host):
@@ -1922,7 +1955,7 @@ def remove_node_from_cluster():
 
     decrease_expected_votes()
 
-    adjust_pcmk_delay_max_and_stonith_timeout()
+    adjust_properties()
 
     logger.info("Propagating configuration changes across the remaining nodes")
     csync2_update(CSYNC2_CFG)
@@ -2169,7 +2202,7 @@ def remove_qdevice():
     else:
         logger.warning("To remove qdevice service, need to restart cluster service manually on each node")
 
-    adjust_pcmk_delay_max_and_stonith_timeout()
+    adjust_properties()
 
 
 def bootstrap_remove(context):
@@ -2408,7 +2441,7 @@ def get_stonith_timeout_generally_expected():
     return STONITH_TIMEOUT_DEFAULT + corosync.token_and_consensus_timeout()
 
 
-def adjust_pcmk_delay_max():
+def adjust_pcmk_delay_max(is_2node_wo_qdevice):
     """
     For each fence agent,
     add parameter pcmk_delay_max when cluster is two-node cluster without qdevice
@@ -2416,7 +2449,7 @@ def adjust_pcmk_delay_max():
     """
     cib_factory.refresh()
 
-    if utils.is_2node_cluster_without_qdevice():
+    if is_2node_wo_qdevice:
         for res in cib_factory.fence_id_list_without_pcmk_delay():
             cmd = "crm resource param {} set pcmk_delay_max {}s".format(res, PCMK_DELAY_MAX)
             utils.get_stdout_or_raise_error(cmd)
@@ -2438,20 +2471,28 @@ def adjust_stonith_timeout():
     else:
         value = get_stonith_timeout_generally_expected()
         if value:
-            utils.set_property_conditionally("stonith-timeout", value)
+            utils.set_property("stonith-timeout", value, conditional=True)
 
 
-def adjust_pcmk_delay_max_and_stonith_timeout():
+def adjust_properties():
     """
-    Adjust pcmk_delay_max and stonith-timeout for all configured fence agents
+    Adjust properties for the cluster:
+    - pcmk_delay_max
+    - stonith-timeout
+    - priority in rsc_defaults
+    - priority-fencing-delay
 
     Call it when:
     - node join/remove
-    - qdevice add/remove
+    - add qdevice via stage
+    - remove qdevice
     - add sbd via stage
     """
     if not utils.service_is_active("pacemaker.service"):
         return
-    adjust_pcmk_delay_max()
+    is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
+    adjust_pcmk_delay_max(is_2node_wo_qdevice)
     adjust_stonith_timeout()
+    adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
+    adjust_priority_fencing_delay(is_2node_wo_qdevice)
 # EOF
