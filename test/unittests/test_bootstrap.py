@@ -362,7 +362,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.change_user_shell')
     def test_configure_ssh_key(self, mock_change_shell, mock_key_files, mock_detect, mock_run, mock_append_unique):
         mock_key_files.return_value = {"private": "/test/.ssh/id_rsa", "public": "/test/.ssh/id_rsa.pub", "authorized": "/test/.ssh/authorized_keys"}
-        mock_detect.side_effect = [True, False]
+        mock_detect.side_effect = [True, True, False]
 
         bootstrap.configure_ssh_key("test")
 
@@ -370,6 +370,7 @@ class TestBootstrap(unittest.TestCase):
         mock_key_files.assert_called_once_with("test")
         mock_detect.assert_has_calls([
             mock.call("/test/.ssh/id_rsa", remote=None),
+            mock.call("/test/.ssh/id_rsa.pub", remote=None),
             mock.call("/test/.ssh/authorized_keys", remote=None)
             ])
         mock_append_unique.assert_called_once_with("/test/.ssh/id_rsa.pub", "/test/.ssh/authorized_keys", remote=None)
