@@ -242,7 +242,7 @@ def step_impl(context):
 def step_impl(context, res, res_type, state):
     try_count = 0
     result = None
-    while try_count < 5:
+    while try_count < 20:
         time.sleep(1)
         _, out = run_command(context, "crm_mon -1rR")
         if out:
