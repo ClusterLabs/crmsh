@@ -35,6 +35,7 @@ from . import userdir
 from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT, REJOIN_COUNT, REJOIN_INTERVAL
 from . import ocfs2
 from . import qdevice
+from . import parallax
 from . import log
 
 
@@ -1433,6 +1434,9 @@ def join_csync2(seed_host):
 
 
 def join_ssh_merge(_cluster_node):
+    """
+    Ensure known_hosts is the same in all nodes
+    """
     logger.info("Merging known_hosts")
 
     hosts = [m.group(1)
@@ -1441,22 +1445,14 @@ def join_ssh_merge(_cluster_node):
         hosts = [_cluster_node]
         logger.warning("Unable to extract host list from %s" % (CSYNC2_CFG))
 
-    try:
-        import parallax
-    except ImportError:
-        utils.fatal("parallax python library is missing")
+    # To create local entry in known_hosts
+    utils.get_stdout_or_raise_error("ssh {} {} true".format(SSH_OPTION, utils.this_node()))
 
-    opts = parallax.Options()
-    opts.ssh_options = ['StrictHostKeyChecking=no']
-
-    # The act of using pssh to connect to every host (without strict host key
-    # checking) ensures that at least *this* host has every other host in its
-    # known_hosts
     known_hosts_new = set()
     cat_cmd = "[ -e /root/.ssh/known_hosts ] && cat /root/.ssh/known_hosts || true"
     logger_utils.log_only_to_file("parallax.call {} : {}".format(hosts, cat_cmd))
-    results = parallax.call(hosts, cat_cmd, opts)
-    for host, result in results.items():
+    results = parallax.parallax_call(hosts, cat_cmd, strict=False)
+    for host, result in results:
         if isinstance(result, parallax.Error):
             logger.warning("Failed to get known_hosts from {}: {}".format(host, str(result)))
         else:
@@ -1466,8 +1462,8 @@ def join_ssh_merge(_cluster_node):
         hoststxt = "\n".join(sorted(known_hosts_new))
         tmpf = utils.str2tmp(hoststxt)
         logger_utils.log_only_to_file("parallax.copy {} : {}".format(hosts, hoststxt))
-        results = parallax.copy(hosts, tmpf, "/root/.ssh/known_hosts")
-        for host, result in results.items():
+        results = parallax.parallax_copy(hosts, tmpf, "/root/.ssh/known_hosts", strict=False)
+        for host, result in results:
             if isinstance(result, parallax.Error):
                 logger.warning("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
 
