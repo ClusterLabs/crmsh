@@ -13,6 +13,8 @@ from . import constants
 
 
 CRMSH_LOG_FILE = "/var/log/crmsh/crmsh.log"
+STATUS_LONG_PREFIX = "%s..."
+BUFFER_MSG_LIST = []
 
 
 class ConsoleCustomHandler(logging.StreamHandler):
@@ -29,8 +31,15 @@ class ConsoleCustomHandler(logging.StreamHandler):
         else:
             stream = sys.stderr
         msg = self.format(record)
-        stream.write(msg)
-        stream.write(self.terminator)
+        # to record msg during status_long
+        if not self.terminator \
+                and record.msg != STATUS_LONG_PREFIX \
+                and record.lineno < logging.ERROR:
+            global BUFFER_MSG_LIST
+            BUFFER_MSG_LIST.append(record)
+        else:
+            stream.write(msg)
+            stream.write(self.terminator)
 
 
 class ConsoleCustomFormatter(logging.Formatter):
@@ -323,15 +332,22 @@ class LoggerUtils(object):
         """
         To wait and mark something finished, start with msg, end of done
         """
-        with self.suppress_new_line():
-            self.logger.info("%s...", msg)
+        console_handler = self.get_handler("console")
+        console_handler.terminator = ""
+        self.logger.info(STATUS_LONG_PREFIX, msg)
         try:
             yield
         except:
             print("")
+            console_handler.terminator = "\n"
             raise
         else:
+            console_handler.terminator = "\n"
             self.status_done()
+            global BUFFER_MSG_LIST
+            for item in BUFFER_MSG_LIST:
+                self.logger.log(item.levelno, item.msg)
+            BUFFER_MSG_LIST = []
 
     def wait_input(self, prompt_string, default=""):
         """
