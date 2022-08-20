@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DOCKER_IMAGE=${DOCKER_IMAGE:-"liangxin1300/hatbw"}
+DOCKER_IMAGE=${DOCKER_IMAGE:-"liangxin1300/haleap:15.4"}
 DOCKER_SERVICE="docker.service"
 COROSYNC_CONF="/etc/corosync/corosync.conf"
 COROSYNC_AUTH="/etc/corosync/authkey"
