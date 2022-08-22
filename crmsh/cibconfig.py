@@ -3254,6 +3254,10 @@ class CibFactory(object):
             return False
         return self.modified_elems() or self.remove_queue
 
+    def ensure_cib_updated(self):
+        if options.interactive and not self.has_cib_changed():
+            self.refresh()
+
     def _verify_constraints(self, node):
         '''
         Check if all resources referenced in a constraint exist
