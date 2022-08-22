@@ -1,12 +1,12 @@
-FROM opensuse/tumbleweed
+FROM opensuse/leap:15.4
 MAINTAINER Xin Liang <XLiang@suse.com>
 
 ARG ssh_prv_key
 ARG ssh_pub_key
-# docker build -t hatbw --build-arg ssh_prv_key="$(cat /root/.ssh/id_rsa)" --build-arg ssh_pub_key="$(cat /root/.ssh/id_rsa.pub)" .
+# docker build -t haleap --build-arg ssh_prv_key="$(cat /root/.ssh/id_rsa)" --build-arg ssh_pub_key="$(cat /root/.ssh/id_rsa.pub)" .
 # docker login
-# docker tag hatbw liangxin1300/hatbw
-# docker push liangxin1300/hatbw
+# docker tag haleap liangxin1300/haleap:15.4
+# docker push liangxin1300/haleap:15.4
 
 RUN zypper ref
 RUN zypper -n install systemd
