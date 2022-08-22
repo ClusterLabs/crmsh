@@ -514,6 +514,7 @@ class CibConfig(command.UI):
     @command.name('_test')
     @command.skill_level('administrator')
     def do_check_structure(self, context):
+        cib_factory.ensure_cib_updated()
         return cib_factory.check_structure()
 
     @command.name('_regtest')
@@ -569,6 +570,7 @@ class CibConfig(command.UI):
             # regrex here also filter out possible spaces
             osargs = re.split('\s*\|\s*|\s+', config.core.obscure_pattern.strip('|'))
         args = [arg for arg in args if not arg.startswith('obscure:')]
+        cib_factory.ensure_cib_updated()
         with obscure(osargs):
             set_obj = mkset_obj(*args)
             return set_obj.show()
@@ -591,6 +593,7 @@ class CibConfig(command.UI):
                 print(utils.canonical_boolean(v))
             else:
                 print(v)
+        cib_factory.ensure_cib_updated()
         for p in properties:
             v = cib_factory.get_property_w_default(p)
             if v is not None:
@@ -604,6 +607,7 @@ class CibConfig(command.UI):
     @command.completers_repeating(compl.null, _id_xml_list, _id_list)
     def do_filter(self, context, filterprog, *args):
         "usage: filter <prog> [xml] [<id>...]"
+        cib_factory.ensure_cib_updated()
         set_obj = mkset_obj(*args)
         return set_obj.filter(filterprog)
 
@@ -620,6 +624,7 @@ class CibConfig(command.UI):
         if len(path_list) < 2 or len(path_list) > 4:
             context.fatal_error(path_errmsg)
 
+        cib_factory.ensure_cib_updated()
         obj_id, *other_path_list = path_list
         rsc = cib_factory.find_object(obj_id)
         if not rsc:
@@ -676,6 +681,7 @@ class CibConfig(command.UI):
                                     len(args))
             after_before = args[0]
             ref_member_id = args[1]
+        cib_factory.ensure_cib_updated()
         g = cib_factory.find_object(group_id)
         if not g:
             context.fatal_error("group %s does not exist" % group_id)
@@ -708,6 +714,7 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_xml_list, _id_list)
     def do_edit(self, context, *args):
         "usage: edit [xml] [<id>...]"
+        cib_factory.ensure_cib_updated()
         with logger_utils.buffer():  # keep error messages
             set_obj = mkset_obj(*args)
         return set_obj.edit()
@@ -723,6 +730,7 @@ class CibConfig(command.UI):
     @command.skill_level('administrator')
     def do_verify(self, context):
         "usage: verify"
+        cib_factory.ensure_cib_updated()
         set_obj_all = mkset_obj("xml")
         return self._verify(set_obj_all, set_obj_all)
 
@@ -732,6 +740,7 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_list)
     def do_validate_all(self, context, rsc):
         "usage: validate-all <rsc>"
+        cib_factory.ensure_cib_updated()
         from . import ra
         from . import cibconfig
         from . import cliformat
@@ -761,6 +770,7 @@ class CibConfig(command.UI):
         "usage: save [xml] [<id>...] <filename>"
         if not args:
             context.fatal_error("Expected 1 argument (0 given)")
+        cib_factory.ensure_cib_updated()
         filename = args[-1]
         setargs = args[:-1]
         set_obj = mkset_obj(*setargs)
@@ -786,6 +796,7 @@ class CibConfig(command.UI):
             xml = False
         if method not in ("replace", "update", "push"):
             context.fatal_error("Unknown method %s" % method)
+        cib_factory.ensure_cib_updated()
         if method == "replace":
             if options.interactive and cib_factory.has_cib_changed():
                 if not utils.ask("This operation will erase all changes. Do you want to proceed?"):
@@ -803,6 +814,7 @@ class CibConfig(command.UI):
         "usage: graph [<gtype> [<file> [<img_format>]]]"
         if args and args[0] == "exportsettings":
             return utils.save_graphviz_file(userdir.GRAPHVIZ_USER_FILE, constants.graph)
+        cib_factory.ensure_cib_updated()
         set_obj = mkset_obj()
         rc = set_obj.query_graph(*args)
         if rc is None:
@@ -832,6 +844,7 @@ class CibConfig(command.UI):
         if arg_force or config.core.force:
             if self._stop_if_running(argl) > 0:
                 utils.wait4dc(what="Stopping %s" % (", ".join(argl)))
+        cib_factory.ensure_cib_updated()
         return cib_factory.delete(*argl)
 
     @command.name('default-timeouts')
@@ -839,18 +852,21 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_list)
     def do_default_timeouts(self, context, *args):
         "usage: default-timeouts <id> [<id>...]"
+        cib_factory.ensure_cib_updated()
         return cib_factory.default_timeouts(*args)
 
     @command.skill_level('administrator')
     @command.completers(_id_list)
     def do_rename(self, context, old_id, new_id):
         "usage: rename <old_id> <new_id>"
+        cib_factory.ensure_cib_updated()
         return cib_factory.rename(old_id, new_id)
 
     @command.skill_level('administrator')
     @command.completers(compl.choice(['nodes']))
     def do_erase(self, context, nodes=None):
         "usage: erase [nodes]"
+        cib_factory.ensure_cib_updated()
         if nodes is None:
             return cib_factory.erase()
         if nodes != 'nodes':
@@ -918,6 +934,7 @@ class CibConfig(command.UI):
         "usage: upgrade [force]"
         if force and force != "force":
             context.fatal_error("Expected 'force' or no argument")
+        cib_factory.ensure_cib_updated()
         return cib_factory.upgrade_validate_with(force=config.core.force or force)
 
     @command.skill_level('administrator')
@@ -962,6 +979,7 @@ class CibConfig(command.UI):
                 not cib_factory.is_elem_supported(cmd):
             logger.error("%s not supported by the RNG schema" % cmd)
             return False
+        cib_factory.ensure_cib_updated()
         if not args:
             return cib_factory.create_object(cmd, *args)
         if args[0].startswith("id="):
@@ -1176,6 +1194,7 @@ class CibConfig(command.UI):
     @command.completers_repeating(_rsc_id_list)
     def do_rsctest(self, context, *args):
         "usage: rsctest <rsc_id> [<rsc_id> ...] [<node_id> ...]"
+        cib_factory.ensure_cib_updated()
         rc = True
         rsc_l = []
         node_l = []
