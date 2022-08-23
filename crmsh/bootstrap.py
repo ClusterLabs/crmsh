@@ -685,6 +685,8 @@ def start_pacemaker(node_list=[], enable_flag=False):
     """
     Start pacemaker service with wait time for sbd
     When node_list set, start pacemaker service in parallel
+
+    Return success node list
     """
     from .sbd import SBDTimeout
     pacemaker_start_msg = "Starting pacemaker"
@@ -698,10 +700,14 @@ def start_pacemaker(node_list=[], enable_flag=False):
     with logger_utils.status_long(pacemaker_start_msg):
         # To avoid possible JOIN flood in corosync
         if len(node_list) > 5:
-            for node in node_list:
+            for node in node_list[:]:
                 time.sleep(0.25)
-                utils.start_service("corosync.service", remote_addr=node)
-        utils.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
+                try:
+                    utils.start_service("corosync.service", remote_addr=node)
+                except ValueError as err:
+                    node_list.remove(node)
+                    logger.error(err)
+        return utils.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
 def install_tmp(tmpfile, to):
@@ -1348,6 +1354,9 @@ def init_qdevice():
         utils.disable_service("corosync-qdevice.service")
         return
     logger.info("""Configure Qdevice/Qnetd:""")
+    for node in utils.list_cluster_nodes():
+        if not utils.service_is_available("corosync-qdevice.service", node):
+            utils.fatal("corosync-qdevice.service is not available on {}".format(node))
     qdevice_inst = _context.qdevice_inst
     qnetd_addr = qdevice_inst.qnetd_addr
     # Configure ssh passwordless to qnetd if detect password is needed
@@ -1686,6 +1695,10 @@ def join_cluster(seed_host):
         else:
             corosync.set_value("totem.nodeid", nodeid)
 
+    is_qdevice_configured = utils.is_qdevice_configured()
+    if is_qdevice_configured and not utils.service_is_available("corosync-qdevice.service"):
+        utils.fatal("corosync-qdevice.service is not available")
+
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
     # check if use IPv6
@@ -1762,7 +1775,6 @@ def join_cluster(seed_host):
         local_nodeid = get_local_nodeid()
         update_nodeid(local_nodeid)
 
-    is_qdevice_configured = utils.is_qdevice_configured()
     if is_qdevice_configured and not is_unicast:
         # expected_votes here maybe is "0", set to "3" to make sure cluster can start
         corosync.set_value("quorum.expected_votes", "3")
