@@ -37,7 +37,9 @@ class Parallax(object):
     def prepare(self):
         opts = parallax.Options()
         if self.ssh_options is None:
-            self.ssh_options = ['StrictHostKeyChecking=no', 'ConnectTimeout=10']
+            self.ssh_options = ['StrictHostKeyChecking=no',
+                    'ConnectTimeout=10',
+                    'LogLevel=error']
         opts.ssh_options = self.ssh_options
         opts.askpass = self.askpass
         # warn_message will available from parallax-1.0.5
