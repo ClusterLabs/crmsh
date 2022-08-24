@@ -2539,13 +2539,10 @@ class ServiceManager(object):
         elif self.remote_addr and self.remote_addr != this_node():
             prompt_msg = "Run \"{}\" on {}".format(cmd, self.remote_addr)
             rc, output, err = run_cmd_on_remote(cmd, self.remote_addr, prompt_msg)
-            # see "EXIT STATUS" in man systemctl
-            if rc > 4:
-                raise ValueError("Run \"{}\" error: {}".format(cmd, err))
         else:
             rc, output, err = get_stdout_stderr(cmd)
-            if rc != 0 and err:
-                raise ValueError("Run \"{}\" error: {}".format(cmd, err))
+        if rc != 0 and err:
+            raise ValueError("Run \"{}\" error: {}".format(cmd, err))
         return rc == 0, output
 
     @property

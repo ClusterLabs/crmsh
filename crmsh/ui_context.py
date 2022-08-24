@@ -90,14 +90,7 @@ class Context(object):
                     break
             if cmd:
                 rv = self.execute_command() is not False
-        except ValueError as msg:
-            if config.core.debug or options.regression_tests:
-                import traceback
-                traceback.print_exc()
-                sys.stdout.flush()
-            logger.error("%s: %s", self.get_qualified_name(), msg)
-            rv = False
-        except IOError as msg:
+        except (ValueError, IOError) as msg:
             if config.core.debug or options.regression_tests:
                 import traceback
                 traceback.print_exc()
