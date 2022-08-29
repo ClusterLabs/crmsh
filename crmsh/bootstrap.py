@@ -344,20 +344,20 @@ def wait_for_resource(message, resource):
     """
     Wait for resource started
     """
-    with logger_utils.status_long(message):
+    with logger_utils.status_long(message) as progress_bar:
         while True:
             if xmlutil.CrmMonXmlParser.is_resource_started(resource):
                 break
-            status_progress()
+            status_progress(progress_bar)
             sleep(1)
 
 
 def wait_for_cluster():
-    with logger_utils.status_long("Waiting for cluster"):
+    with logger_utils.status_long("Waiting for cluster") as progress_bar:
         while True:
             if is_online():
                 break
-            status_progress()
+            status_progress(progress_bar)
             sleep(2)
 
 
@@ -421,10 +421,9 @@ def sleep(t):
     time.sleep(t)
 
 
-def status_progress():
+def status_progress(progress_bar):
     if not _context or not _context.quiet:
-        sys.stdout.write(".")
-        sys.stdout.flush()
+        progress_bar.progress()
 
 
 def partprobe():
