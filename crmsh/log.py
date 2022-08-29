@@ -303,7 +303,7 @@ class LoggerUtils(object):
         """
         self.logger.info("BEGIN %s", msg)
         try:
-            yield
+            yield ProgressBar()
         except Exception:
             self.logger.error("FAIL %s", msg)
             raise
@@ -398,6 +398,22 @@ class LoggerUtils(object):
             self.logger.info("offending xml diff: %s", xml)
         else:
             self.logger.info("offending xml: %s", xml)
+
+
+class ProgressBar:
+    def __init__(self):
+        self._i = 0
+
+    def progress(self):
+        try:
+            width, _ = os.get_terminal_size()
+        except OSError:
+            # not a terminal
+            return
+        self._i = (self._i + 1) % width
+        line = '\r{}{}'.format('.' * self._i, ' ' * (width - self._i))
+        sys.stdout.write(line)
+        sys.stdout.flush()
 
 
 def setup_directory_for_logfile():
