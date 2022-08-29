@@ -46,14 +46,11 @@ class ConsoleCustomFormatter(logging.Formatter):
         "ERROR": constants.RED
     }
     FORMAT = "%(levelname)s: %(message)s"
-    FORMAT_RAW = "%(message)s"
 
-    def __init__(self, lineno=-1, raw_msg=False, fmt=None):
+    def __init__(self, lineno=-1, fmt=None):
         self.lineno = lineno
         if fmt:
             super().__init__(fmt=fmt)
-        elif raw_msg:
-            super().__init__(fmt=self.FORMAT_RAW)
         else:
             super().__init__(fmt=self.FORMAT)
 
@@ -246,18 +243,6 @@ class LoggerUtils(object):
             console_handler.terminator = "\n"
 
     @contextmanager
-    def raw_msg(self):
-        """
-        Only print raw message, without levelname
-        """
-        console_handler = self.get_handler("console")
-        try:
-            console_handler.setFormatter(ConsoleCustomFormatter(raw_msg=True))
-            yield
-        finally:
-            console_handler.setFormatter(ConsoleCustomFormatter())
-
-    @contextmanager
     def only_file(self):
         """
         Only log to file in bootstrap logger
@@ -311,27 +296,19 @@ class LoggerUtils(object):
         finally:
             self.reset_lineno(self.__save_lineno)
 
-    def status_done(self):
-        """
-        Log info message "done" in console
-        """
-        with self.raw_msg():
-            self.logger.info("done")
-
     @contextmanager
     def status_long(self, msg):
         """
-        To wait and mark something finished, start with msg, end of done
+        To wait and mark something finished, start with BEGIN msg, end of END msg
         """
-        with self.suppress_new_line():
-            self.logger.info("%s...", msg)
+        self.logger.info("BEGIN %s", msg)
         try:
-            yield
-        except:
-            print("")
+            yield ProgressBar()
+        except Exception:
+            self.logger.error("FAIL %s", msg)
             raise
         else:
-            self.status_done()
+            self.logger.info("END %s", msg)
 
     def wait_input(self, prompt_string, default=""):
         """
@@ -421,6 +398,22 @@ class LoggerUtils(object):
             self.logger.info("offending xml diff: %s", xml)
         else:
             self.logger.info("offending xml: %s", xml)
+
+
+class ProgressBar:
+    def __init__(self):
+        self._i = 0
+
+    def progress(self):
+        try:
+            width, _ = os.get_terminal_size()
+        except OSError:
+            # not a terminal
+            return
+        self._i = (self._i + 1) % width
+        line = '\r{}{}'.format('.' * self._i, ' ' * (width - self._i))
+        sys.stdout.write(line)
+        sys.stdout.flush()
 
 
 def setup_directory_for_logfile():
