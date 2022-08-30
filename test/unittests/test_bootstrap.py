@@ -1359,10 +1359,10 @@ class TestValidation(unittest.TestCase):
             mock.call("csync2.socket", remote_addr=None)
             ])
         mock_status.assert_has_calls([
-            mock.call("Stopping the corosync-qdevice.service"),
-            mock.call("Stopping the corosync.service"),
-            mock.call("Stopping the hawk.service"),
-            mock.call("Stopping the csync2.socket")
+            mock.call('Stopping the %s%s', 'corosync-qdevice.service', ''),
+            mock.call('Stopping the %s%s', 'corosync.service', ''),
+            mock.call('Stopping the %s%s', 'hawk.service', ''),
+            mock.call('Stopping the %s%s', 'csync2.socket', '')
             ])
         mock_stop.assert_has_calls([
             mock.call("corosync-qdevice.service", disable=True, remote_addr=None),
