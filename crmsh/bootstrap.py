@@ -1807,7 +1807,7 @@ def stop_services(stop_list, remote_addr=None):
     """
     for service in stop_list:
         if utils.service_is_active(service, remote_addr=remote_addr):
-            logger.info("Stopping the {}".format(service))
+            logger.info("Stopping the %s%s", service, " on {}".format(remote_addr) if remote_addr else "")
             utils.stop_service(service, disable=True, remote_addr=remote_addr)
 
 
