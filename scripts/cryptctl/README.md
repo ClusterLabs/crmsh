@@ -15,7 +15,7 @@ The cryptctl server needs following resources
 
 ## Setup
 
-### Setuo cryptctl
+### Setp cryptctl server
 As first step you have to setup the cryptctl server:
 ```shell
 cryptctl init-server
@@ -25,13 +25,13 @@ cryptctl init-server
 If not already done you have to setup a basic cluster with at last two nodes. It is very important that Node1 must be the server where you have confiugred the cryptctl server.
 
 ```shell
-crm cluster init -i '''NetDev''' -A '''AdminIP''' -n '''ClusterName''' -N '''Node1'''
+crm cluster init -i <NetDev> -A <AdminIP> -n <ClusterName> -N <Node1>
 ```
 
 Join the cluster from other nodes:
 ```shell
-ssh '''Node2'''
-crm cluster join '''Node1'''
+ssh <Node2>
+crm cluster join <Node1>
 ```
 
 ### Setup the resource group for the cryptctl server
@@ -39,16 +39,16 @@ crm cluster join '''Node1'''
 You can setup all needed resource agents and copy all files to all nodes whit the cryptcl crm-shell-script in one step. It is scrictly recommended to verify the setup in first step:
 
 ```shell
-crm script verify cert-path='''/etc/cryptctl/servertls/certificate-name''' \
-                  cert-key-path='''/etc/cryptctl/servertls/certificate-key-name''' \
-                  virtual-ip:ip='''IP-Address''' \
-                  filesystem:device='''Path to the device''' 
+crm script verify cert-path=</etc/cryptctl/servertls/certificate-name> \
+                  cert-key-path=</etc/cryptctl/servertls/certificate-key-name> \
+                  virtual-ip:ip=<IP-Address> \
+                  filesystem:device=<Path to the device> 
 ```
 
 If the check was succesfull you have to setup the cluster group by running the script:
 ```shell
-crm script run cert-path='''/etc/cryptctl/servertls/certificate-name''' \
-                  cert-key-path='''/etc/cryptctl/servertls/certificate-key-name''' \
-                  virtual-ip:ip='''IP-Address''' \
-                  filesystem:device='''Path to the device''' 
+crm script run cert-path=</etc/cryptctl/servertls/certificate-name> \
+                  cert-key-path=</etc/cryptctl/servertls/certificate-key-name> \
+                  virtual-ip:ip=<IP-Address> \
+                  filesystem:device=<Path to the device> 
 ```
