@@ -39,7 +39,8 @@ crm cluster join <Node1>
 You can setup all needed resource agents and copy all files to all nodes whit the cryptcl crm-shell-script in one step. It is scrictly recommended to verify the setup in first step:
 
 ```shell
-crm script verify cert-path=</etc/cryptctl/servertls/certificate-name> \
+crm script verify cryptctl \
+                  cert-path=</etc/cryptctl/servertls/certificate-name> \
                   cert-key-path=</etc/cryptctl/servertls/certificate-key-name> \
                   virtual-ip:ip=<IP-Address> \
                   filesystem:device=<Path to the device> 
@@ -47,7 +48,8 @@ crm script verify cert-path=</etc/cryptctl/servertls/certificate-name> \
 
 If the check was succesfull you have to setup the cluster group by running the script:
 ```shell
-crm script run cert-path=</etc/cryptctl/servertls/certificate-name> \
+crm script run cryptctl \
+                  cert-path=</etc/cryptctl/servertls/certificate-name> \
                   cert-key-path=</etc/cryptctl/servertls/certificate-key-name> \
                   virtual-ip:ip=<IP-Address> \
                   filesystem:device=<Path to the device> 

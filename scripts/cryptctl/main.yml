@@ -27,12 +27,6 @@ include:
     parameters:
       - name: id
         value: "{{id}}-vip"
-      - name: ip
-        value: 192.168.100.2
-      - name: cidr_netmask
-        value: 24
-      - name: nic
-        value: eth0
   - script: filesystem
     shortdesc: Filesystem resource containing the disk encryption keys and records
     required: true
