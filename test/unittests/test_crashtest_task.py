@@ -327,7 +327,7 @@ class TestTaskSplitBrain(TestCase):
 
     def test_header(self):
         expected_res = """==============================================
-Testcase:          Simulate split brain by blocking corosync ports
+Testcase:          Simulate split brain by blocking traffic between cluster nodes
 Expected Result:   One of nodes get fenced
 Fence action:      reboot
 Fence timeout:     60
@@ -365,46 +365,6 @@ Fence timeout:     60
         mock_run.assert_called_once_with("which iptables")
         mock_online_nodes.assert_called_once_with()
 
-    @mock.patch('crmsh.crash_test.task.crmshutils.service_is_active')
-    def test_do_block_firewalld_disactive(self, mock_active):
-        mock_active.return_value = False
-        self.task_sp_inst.do_block_iptables = mock.Mock()
-        self.task_sp_inst.un_block = mock.Mock()
-        with self.task_sp_inst.do_block():
-            pass
-        mock_active.assert_called_once_with("firewalld.service")
-        self.task_sp_inst.do_block_iptables.assert_called_once_with()
-        self.task_sp_inst.un_block.assert_called_once_with()
-
-    @mock.patch('crmsh.crash_test.task.crmshutils.service_is_active')
-    def test_do_block_firewalld_active(self, mock_active):
-        mock_active.return_value = True
-        self.task_sp_inst.do_block_firewalld = mock.Mock()
-        self.task_sp_inst.un_block = mock.Mock()
-        with self.task_sp_inst.do_block():
-            pass
-        mock_active.assert_called_once_with("firewalld.service")
-        self.task_sp_inst.do_block_firewalld.assert_called_once_with()
-        self.task_sp_inst.un_block.assert_called_once_with()
-
-    @mock.patch('crmsh.crash_test.utils.corosync_port_list')
-    def test_do_block_firewalld_error(self, mock_port_list):
-        mock_port_list.return_value = []
-        with self.assertRaises(task.TaskError) as err:
-            self.task_sp_inst.do_block_firewalld()
-        self.assertEqual("Can not get corosync's port", str(err.exception))
-        mock_port_list.assert_called_once_with()
-
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.crash_test.task.Task.info')
-    @mock.patch('crmsh.crash_test.utils.corosync_port_list')
-    def test_do_block_firewalld(self, mock_port_list, mock_info, mock_run):
-        mock_port_list.return_value = ["1234"]
-        self.task_sp_inst.do_block_firewalld()
-        mock_port_list.assert_called_once_with()
-        mock_info.assert_called_once_with("Trying to temporarily block port 1234")
-        mock_run.assert_called_once_with(config.REMOVE_PORT.format(port=1234))
-
     @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.crmshutils.get_iplist_from_name')
     @mock.patch('crmsh.crash_test.task.Task.info')
@@ -429,28 +389,10 @@ Fence timeout:     60
             mock.call(config.BLOCK_IP.format(action='I', peer_ip="20.20.20.2"))
             ])
 
-    @mock.patch('crmsh.crash_test.task.TaskSplitBrain.un_block_firewalld')
-    def test_un_block_firewalld_enabled(self, mock_unblock_firewalld):
-        self.task_sp_inst.firewalld_enabled = True
-        self.task_sp_inst.un_block()
-        mock_unblock_firewalld.assert_called_once_with()
-
     @mock.patch('crmsh.crash_test.task.TaskSplitBrain.un_block_iptables')
     def test_un_block(self, mock_unblock_iptables):
-        self.task_sp_inst.firewalld_enabled = False
         self.task_sp_inst.un_block()
         mock_unblock_iptables.assert_called_once_with()
-
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
-    @mock.patch('crmsh.crash_test.task.Task.info')
-    def test_un_block_firewalld(self, mock_info, mock_run):
-        self.task_sp_inst.ports = ["5405", "5407"]
-        self.task_sp_inst.un_block_firewalld()
-        mock_info.assert_called_once_with("Trying to add port 5405,5407")
-        mock_run.assert_has_calls([
-            mock.call(config.ADD_PORT.format(port=5405)),
-            mock.call(config.ADD_PORT.format(port=5407))
-            ])
 
     @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.crmshutils.get_iplist_from_name')

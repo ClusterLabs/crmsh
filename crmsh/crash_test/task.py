@@ -437,14 +437,14 @@ Expected State:    {}
 
 class TaskSplitBrain(Task):
     """
-    Class to define how to simulate split brain by blocking corosync ports
+    Class to define how to simulate split brain by blocking traffic between cluster nodes
     """
 
     def  __init__(self, force=False):
         """
         Init function
         """
-        self.description = "Simulate split brain by blocking corosync ports"
+        self.description = "Simulate split brain by blocking traffic between cluster nodes"
         self.expected = "One of nodes get fenced"
         self.ports = []
         self.peer_nodelist = []
@@ -493,26 +493,11 @@ Fence timeout:     {}
         """
         Context manager to block and unblock ip/ports
         """
-        self.firewalld_enabled = crmshutils.service_is_active("firewalld.service")
-        if self.firewalld_enabled:
-            self.do_block_firewalld()
-        else:
-            self.do_block_iptables()
+        self.do_block_iptables()
         try:
             yield
         finally:
             self.un_block()
-
-    def do_block_firewalld(self):
-        """
-        Block corosync ports
-        """
-        self.ports = utils.corosync_port_list()
-        if not self.ports:
-            raise TaskError("Can not get corosync's port")
-        self.info("Trying to temporarily block port {}".format(','.join(self.ports)))
-        for p in self.ports:
-            crmshutils.get_stdout_stderr(config.REMOVE_PORT.format(port=p))
 
     def do_block_iptables(self):
         """
@@ -528,18 +513,7 @@ Fence timeout:     {}
         """
         Unblock corosync ip/ports
         """
-        if self.firewalld_enabled:
-            self.un_block_firewalld()
-        else:
-            self.un_block_iptables()
-
-    def un_block_firewalld(self):
-        """
-        Unblock corosync ports
-        """
-        self.info("Trying to add port {}".format(','.join(self.ports)))
-        for p in self.ports:
-            crmshutils.get_stdout_stderr(config.ADD_PORT.format(port=p))
+        self.un_block_iptables()
 
     def un_block_iptables(self):
         """
