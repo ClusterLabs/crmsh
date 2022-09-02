@@ -20,7 +20,7 @@
 target=data-manifest
 [ -f $target ] && (printf "Removing $target..."; rm $target)
 printf "Generating $target..."
-cat <<EOF | sort > $target
+cat <<EOF | sort -df > $target
 version
 $(git ls-files scripts templates utils test)
 EOF

@@ -16,6 +16,21 @@ env:
   TARGET_PROJECT: ${{ secrets.TARGET_PROJECT }}
 
 jobs:
+  general_check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: check data-manifest
+      run: |
+        ./update-data-manifest.sh
+        output=`git --no-pager diff data-manifest`
+        [[ -z $output ]] || {
+                echo "$output"
+                echo "A new version of data-manifest is needed."
+                echo "Please run ./update-data-manifest.sh && git add ./data-manifest in your local environment and push the code again."
+                exit 1
+        }
+
   unit_test:
     runs-on: ubuntu-latest
     strategy:
@@ -179,7 +194,8 @@ jobs:
         $DOCKER_SCRIPT 14
 
   delivery:
-    needs: [unit_test,
+    needs: [general_check,
+      unit_test,
       functional_test_crm_report_bugs,
       functional_test_bootstrap_bugs,
       functional_test_bootstrap_common,
