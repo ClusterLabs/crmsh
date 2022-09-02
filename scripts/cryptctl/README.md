@@ -10,7 +10,7 @@ The cryptctl server needs following resources
 
 * /etc/sysconfig/cryptctl-server The configuration of the server. This will be created once the server was setup and will be only modified if the configuration will be changed like changing the administrator password. It is sufficient to copy this file to all nodes when the cluster will be created.
 * The server certificate files in the directory /etc/cryptctl/servertls/. The content of this directory will not be changed until the certifcates are valid. It is sufficient to copy these files to all nodes when the cluster will be created.
-* /var/lib/cryptctl/keydb The content of this directory must be provided on shared storage like NAS or NFS server. The encryption keys will be saved here. For these directory a Filesystem resource agent will be created.
+* /var/lib/cryptctl/keydb The content of this directory must be provided on shared storage like SAN NAS or NFS server. The encryption keys will be saved here. For these directory a Filesystem resource agent will be created.
 * An IP address the cryptctl-server is listening on. An IPAddr2 resource agent will be created for this reason.
 
 ## Setup
