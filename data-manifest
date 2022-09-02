@@ -4,6 +4,8 @@ scripts/check-uptime/main.yml
 scripts/check-uptime/report.py
 scripts/clvm/main.yml
 scripts/clvm-vg/main.yml
+scripts/cryptctl/main.yml
+scripts/cryptctl/README.md
 scripts/database/main.yml
 scripts/db2-hadr/main.yml
 scripts/db2/main.yml
