@@ -1,0 +1,70 @@
+# Copyright (C) 2022 Peter Varkoly
+# License: GNU General Public License (GPL)
+version: 2.2
+category: System/Management
+shortdesc:  A utility for setting up LUKS-based disk encryption
+longdesc: |
+  Configure a resource group containing a virtual IP address,
+  a filesystem resource containing the disk encryption keys and records,
+  and a systemd instance of the cryptctl server.
+
+  Furthermore a resource group will be created to bind all resources on the same node.
+parameters:
+  - name: id
+    shortdesc: ID of the resource group
+    value: cryptctl
+  - name: cert-path
+    shortdesc: The path to the created certificate
+    required: true
+  - name: cert-key-path
+    shortdesc: The path to the created certificate key
+    required: true
+
+include:
+  - script: virtual-ip
+    shortdesc: The IP address configured here will start before the cryptctl instance.
+    required: true
+    parameters:
+      - name: id
+        value: "{{id}}-vip"
+  - script: filesystem
+    shortdesc: Filesystem resource containing the disk encryption keys and records
+    required: true
+    parameters:
+      - name: id
+        value: "{{id}}-filesystem"
+      - name: directory
+        value: "/var/lib/cryptctl/keydb"
+  - agent: systemd:cryptctl-server
+    name: cryptctl-server
+    parameters:
+      - name: id
+        value: cryptctl-server-service
+    ops: |
+      op monitor interval=10s
+
+actions:
+  - service: "cryptctl-server:disable"
+    nodes: all
+    shortdesc: "Disable cryptctl-server service on all nodes."
+  - copy: "/etc/sysconfig/cryptctl-server"
+    to: "/etc/sysconfig/cryptctl-server"
+    nodes: all
+    shortdesc: "Copy the configuration to all nodes"
+  - copy: "{{cert-path}}"
+    to: "{{cert-path}}"
+    nodes: all
+    shortdesc: "Copy the certificat file to all nodes"
+  - copy: "{{cert-key-path}}"
+    to: "{{cert-key-path}}"
+    nodes: all
+    shortdesc: "Copy the certificat key file to all nodes"
+  - include: virtual-ip
+  - include: filesystem
+  - include: cryptctl-server
+  - cib: |
+      group group-{{id}}
+        {{virtual-ip:id}}
+        {{filesystem:id}}
+        {{cryptctl-server:id}}
+
