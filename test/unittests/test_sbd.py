@@ -42,6 +42,15 @@ class TestSBDTimeout(unittest.TestCase):
         Global tearDown.
         """
 
+    def test_initialize_timeout(self):
+        self.sbd_timeout_inst._set_sbd_watchdog_timeout = mock.Mock()
+        self.sbd_timeout_inst._set_sbd_msgwait = mock.Mock()
+        self.sbd_timeout_inst._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice = mock.Mock()
+        self.sbd_timeout_inst.initialize_timeout()
+        self.sbd_timeout_inst._set_sbd_watchdog_timeout.assert_called_once()
+        self.sbd_timeout_inst._set_sbd_msgwait.assert_not_called()
+        self.sbd_timeout_inst._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice.assert_called_once()
+
     @mock.patch('logging.Logger.warning')
     def test_set_sbd_watchdog_timeout(self, mock_warn):
         self.sbd_timeout_inst._set_sbd_watchdog_timeout()
