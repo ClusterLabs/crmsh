@@ -37,7 +37,14 @@ class SBDTimeout(object):
         self.removing = removing
         self.two_node_without_qdevice = False
 
-    def set_sbd_watchdog_timeout(self):
+    def initialize_timeout(self):
+        self._set_sbd_watchdog_timeout()
+        if self.context.diskless_sbd:
+            self._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
+        else:
+            self._set_sbd_msgwait()
+
+    def _set_sbd_watchdog_timeout(self):
         """
         Set sbd_watchdog_timeout from profiles.yml if exists
         Then adjust it if in s390 environment
@@ -48,7 +55,7 @@ class SBDTimeout(object):
             logger.warning("sbd_watchdog_timeout is set to %d for s390, it was %d", self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self.sbd_watchdog_timeout)
             self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390
 
-    def set_sbd_msgwait(self):
+    def _set_sbd_msgwait(self):
         """
         Set sbd msgwait from profiles.yml if exists
         Default is 2 * sbd_watchdog_timeout
@@ -62,7 +69,7 @@ class SBDTimeout(object):
                 sbd_msgwait = sbd_msgwait_default
         self.sbd_msgwait = sbd_msgwait
 
-    def adjust_sbd_watchdog_timeout_with_diskless_and_qdevice(self):
+    def _adjust_sbd_watchdog_timeout_with_diskless_and_qdevice(self):
         """
         When using diskless SBD with Qdevice, adjust value of sbd_watchdog_timeout
         """
@@ -401,12 +408,10 @@ class SBDManager(object):
         if msg:
             logger.info(msg)
         self.timeout_inst = SBDTimeout(self._context)
-        self.timeout_inst.set_sbd_watchdog_timeout()
+        self.timeout_inst.initialize_timeout()
         if self.diskless_sbd:
-            self.timeout_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
             return
 
-        self.timeout_inst.set_sbd_msgwait()
         opt = "-4 {} -1 {}".format(self.timeout_inst.sbd_msgwait, self.timeout_inst.sbd_watchdog_timeout)
 
         for dev in self._sbd_devices:
@@ -524,6 +529,9 @@ class SBDManager(object):
             utils.set_property(stonith_enabled="true")
         # disk-less sbd
         else:
+            if self.timeout_inst is None:
+                self.timeout_inst = SBDTimeout(self._context)
+                self.timeout_inst.initialize_timeout()
             cmd = self.DISKLESS_CRM_CMD.format(self.timeout_inst.stonith_watchdog_timeout, constants.STONITH_TIMEOUT_DEFAULT)
             utils.get_stdout_or_raise_error(cmd)
 
