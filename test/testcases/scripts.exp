@@ -5,6 +5,7 @@
 .EXT crm_resource --show-metadata ocf:heartbeat:IPaddr2
 .EXT crm_resource --show-metadata ocf:heartbeat:Filesystem
 .EXT crm_resource --show-metadata ocf:heartbeat:mysql
+.EXT crm_resource --show-metadata systemd:cryptctl-server
 .EXT crm_resource --show-metadata ocf:heartbeat:db2
 .EXT crm_resource --show-metadata ocf:heartbeat:exportfs
 .EXT crm_resource --show-metadata systemd:haproxy
@@ -61,6 +62,10 @@ Stonith:
 libvirt          STONITH for libvirt (kvm / Xen)
 sbd              SBD, Shared storage based fencing
 vmware           Fencing using vCenter / ESX Server
+
+System/management:
+
+cryptctl         A utility for setting up LUKS-based disk encryption
 
 .INP: list all
 Basic:
@@ -123,10 +128,15 @@ libvirt          STONITH for libvirt (kvm / Xen)
 sbd              SBD, Shared storage based fencing
 vmware           Fencing using vCenter / ESX Server
 
+System/management:
+
+cryptctl         A utility for setting up LUKS-based disk encryption
+
 .INP: list names
 apache
 clvm
 clvm-vg
+cryptctl
 database
 db2
 db2-hadr
@@ -158,6 +168,7 @@ apache
 check-uptime
 clvm
 clvm-vg
+cryptctl
 database
 db2
 db2-hadr
@@ -195,6 +206,7 @@ apache
 check-uptime
 clvm
 clvm-vg
+cryptctl
 database
 db2
 db2-hadr
