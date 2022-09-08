@@ -42,15 +42,24 @@ class TestSBDTimeout(unittest.TestCase):
         Global tearDown.
         """
 
+    def test_initialize_timeout(self):
+        self.sbd_timeout_inst._set_sbd_watchdog_timeout = mock.Mock()
+        self.sbd_timeout_inst._set_sbd_msgwait = mock.Mock()
+        self.sbd_timeout_inst._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice = mock.Mock()
+        self.sbd_timeout_inst.initialize_timeout()
+        self.sbd_timeout_inst._set_sbd_watchdog_timeout.assert_called_once()
+        self.sbd_timeout_inst._set_sbd_msgwait.assert_not_called()
+        self.sbd_timeout_inst._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice.assert_called_once()
+
     @mock.patch('logging.Logger.warning')
     def test_set_sbd_watchdog_timeout(self, mock_warn):
-        self.sbd_timeout_inst.set_sbd_watchdog_timeout()
+        self.sbd_timeout_inst._set_sbd_watchdog_timeout()
         mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to %d for s390, it was %d", sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, 5)
 
     @mock.patch('logging.Logger.warning')
     def test_set_sbd_msgwait(self, mock_warn):
         self.sbd_timeout_inst.sbd_watchdog_timeout = 15
-        self.sbd_timeout_inst.set_sbd_msgwait()
+        self.sbd_timeout_inst._set_sbd_msgwait()
         mock_warn.assert_called_once_with("sbd msgwait is set to %d, it was %d", 30, 10)
 
     @mock.patch('logging.Logger.warning')
@@ -62,7 +71,7 @@ class TestSBDTimeout(unittest.TestCase):
         mock_is_active.return_value = True
         mock_get_sync.return_value = 15
         self.sbd_timeout_inst.sbd_watchdog_timeout = 5
-        self.sbd_timeout_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
+        self.sbd_timeout_inst._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
         mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to 20 for qdevice, it was 5")
 
     @mock.patch('logging.Logger.warning')
@@ -70,7 +79,7 @@ class TestSBDTimeout(unittest.TestCase):
     def test_adjust_sbd_watchdog_timeout_with_diskless_and_qdevice_all(self, mock_is_configured, mock_warn):
         mock_is_configured.return_value = False
         self.sbd_timeout_inst.sbd_watchdog_timeout = 5
-        self.sbd_timeout_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
+        self.sbd_timeout_inst._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
         mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to 35 for qdevice, it was 5")
 
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
@@ -463,12 +472,10 @@ class TestSBDManager(unittest.TestCase):
     def test_initialize_sbd_return(self, mock_info, mock_sbd_timeout):
         mock_inst = mock.Mock()
         mock_sbd_timeout.return_value = mock_inst
-        mock_inst.set_sbd_watchdog_timeout = mock.Mock()
-        mock_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice = mock.Mock()
         self.sbd_inst_diskless._context = mock.Mock(profiles_dict={})
         self.sbd_inst_diskless._initialize_sbd()
         mock_info.assert_called_once_with("Configuring diskless SBD")
-        mock_inst.adjust_sbd_watchdog_timeout_with_diskless_and_qdevice.assert_called_once_with()
+        mock_inst.initialize_timeout.assert_called_once_with()
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.bootstrap.invoke')
