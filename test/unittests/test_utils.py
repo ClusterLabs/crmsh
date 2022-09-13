@@ -1042,6 +1042,7 @@ class TestServiceManager(unittest.TestCase):
         """
         self.service_local = utils.ServiceManager("service1")
         self.service_remote = utils.ServiceManager("service1", "node1")
+        self.service_node_list = utils.ServiceManager("service1", node_list=["node1", "node2"])
 
     def tearDown(self):
         """
@@ -1067,110 +1068,105 @@ class TestServiceManager(unittest.TestCase):
         self.assertEqual("Run \"systemctl start service1\" error: this command failed", str(err.exception))
         mock_run.assert_called_once_with("systemctl start service1")
 
-    @mock.patch("crmsh.utils.run_cmd_on_remote")
-    def test_do_action_remote(self, mock_run_remote):
-        mock_run_remote.return_value = (0, "data", None)
-        rc, out = self.service_remote._do_action("start")
-        assert rc == True
-        assert out == "data"
-        mock_run_remote.assert_called_once_with("systemctl start service1",
-                "node1",
-                "Run \"systemctl start service1\" on node1")
+    @mock.patch('crmsh.parallax.parallax_call')
+    def test_do_action_node_list(self, mock_call):
+        self.service_node_list._do_action("start")
+        mock_call.assert_called_once_with(["node1", "node2"], "systemctl start service1", strict=False)
 
-    def test_is_available(self):
-        self.service_local._do_action = mock.Mock()
-        self.service_local._do_action.return_value = (True, "service1 service2")
-        assert self.service_local.is_available == True
-        self.service_local._do_action.assert_called_once_with("list-unit-files")
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.run_cmd_on_remote')
+    def test_do_action_remote(self, mock_remote, mock_this_node):
+        mock_this_node.return_value = "node2"
+        mock_remote.return_value = (0, None, None)
+        self.service_remote._do_action("start")
+        mock_remote.assert_called_once_with("systemctl start service1", "node1", 'Run "systemctl start service1" on node1')
+  
+    @mock.patch('crmsh.utils.ServiceManager._handle_action_result')
+    @mock.patch('crmsh.utils.ServiceManager._do_action')
+    def test_action_and_handle_result(self, mock_action, mock_handle):
+        self.service_local.action_and_handle_result("start")
+        mock_action.assert_called_once_with("start")
+        mock_handle.assert_called_once_with("start")
 
-    def test_is_enabled(self):
-        self.service_local._do_action = mock.Mock()
-        self.service_local._do_action.return_value = (True, None)
-        assert self.service_local.is_enabled == True
-        self.service_local._do_action.assert_called_once_with("is-enabled")
+    def test_service_is_available(self):
+        def _helper(self, val):
+            self.target_node = "node1"
+            self.nodes_dict = {"node1": True}
 
-    def test_is_active(self):
-        self.service_local._do_action = mock.Mock()
-        self.service_local._do_action.return_value = (True, None)
-        assert self.service_local.is_active == True
-        self.service_local._do_action.assert_called_once_with("is-active")
+        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
+            mock_action.side_effect = _helper
+            assert utils.ServiceManager.service_is_available("service1")
+            assert mock_action.call_count == 1
 
-    def test_start(self):
-        self.service_local._do_action = mock.Mock()
-        self.service_local._do_action.return_value = (True, None)
-        self.service_local.start()
-        self.service_local._do_action.assert_called_once_with("start")
+    def test_service_is_enabled(self):
+        def _helper(self, val):
+            self.target_node = "node1"
+            self.nodes_dict = {"node1": True}
 
-    def test_stop(self):
-        self.service_local._do_action = mock.Mock()
-        self.service_local._do_action.return_value = (True, None)
-        self.service_local.stop()
-        self.service_local._do_action.assert_called_once_with("stop")
+        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
+            mock_action.side_effect = _helper
+            assert utils.ServiceManager.service_is_enabled("service1")
+            assert mock_action.call_count == 1
 
-    def test_enable(self):
-        self.service_local._do_action = mock.Mock()
-        self.service_local._do_action.return_value = (True, None)
-        self.service_local.enable()
-        self.service_local._do_action.assert_called_once_with("enable")
+    def test_service_is_active(self):
+        def _helper(self, val):
+            self.target_node = "node1"
+            self.nodes_dict = {"node1": True}
 
-    def test_disable(self):
-        self.service_local._do_action = mock.Mock()
-        self.service_local._do_action.return_value = (True, None)
-        self.service_local.disable()
-        self.service_local._do_action.assert_called_once_with("disable")
+        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
+            mock_action.side_effect = _helper
+            assert utils.ServiceManager.service_is_active("service1")
+            assert mock_action.call_count == 1
 
-    @mock.patch("crmsh.utils.ServiceManager.is_available", new_callable=mock.PropertyMock)
-    def test_service_is_available(self, mock_available):
-        mock_available.return_value = True
-        res = utils.ServiceManager.service_is_available("service1")
-        self.assertEqual(res, True)
-        mock_available.assert_called_once_with()
+    def test_start_service(self):
+        def _helper(self, val):
+            self.success_nodes = expected_values
+        expected_values = ["node1", "node2"]
 
-    @mock.patch("crmsh.utils.ServiceManager.is_enabled", new_callable=mock.PropertyMock)
-    def test_service_is_enabled(self, mock_enabled):
-        mock_enabled.return_value = True
-        res = utils.ServiceManager.service_is_enabled("service1")
-        self.assertEqual(res, True)
-        mock_enabled.assert_called_once_with()
+        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
+            mock_action.side_effect = _helper
+            assert utils.ServiceManager.start_service("service1", enable=True) == ["node1", "node2"]
+            assert mock_action.call_count == 2
 
-    @mock.patch("crmsh.utils.ServiceManager.is_active", new_callable=mock.PropertyMock)
-    def test_service_is_active(self, mock_active):
-        mock_active.return_value = True
-        res = utils.ServiceManager.service_is_active("service1")
-        self.assertEqual(res, True)
-        mock_active.assert_called_once_with()
+    def test_stop_service(self):
+        def _helper(self, val):
+            self.success_nodes = expected_values
+        expected_values = ["node1"]
 
-    @mock.patch('crmsh.utils.ServiceManager.start')
-    @mock.patch('crmsh.utils.ServiceManager.enable')
-    def test_start_service(self, mock_enable, mock_start):
-        utils.ServiceManager.start_service("service1", enable=True)
-        mock_enable.assert_called_once_with()
-        mock_start.assert_called_once_with()
+        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
+            mock_action.side_effect = _helper
+            assert utils.ServiceManager.stop_service("service1", disable=True) == ["node1"]
+            assert mock_action.call_count == 2
 
-    @mock.patch('crmsh.utils.ServiceManager.stop')
-    @mock.patch('crmsh.utils.ServiceManager.disable')
-    def test_stop_service(self, mock_disable, mock_stop):
-        utils.ServiceManager.stop_service("service1", disable=True)
-        mock_disable.assert_called_once_with()
-        mock_stop.assert_called_once_with()
+    def test_enable_service(self):
+        def _helper(self, val):
+            self.success_nodes = expected_values
+        expected_values = ["node1"]
 
-    @mock.patch('crmsh.utils.ServiceManager.enable')
-    @mock.patch('crmsh.utils.ServiceManager.is_enabled', new_callable=mock.PropertyMock)
-    @mock.patch('crmsh.utils.ServiceManager.is_available', new_callable=mock.PropertyMock)
-    def test_enable_service(self, mock_available, mock_enabled, mock_enable):
-        mock_available.return_value = True
-        mock_enabled.return_value = False
-        utils.ServiceManager.enable_service("service1")
-        mock_enable.assert_called_once_with()
+        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
+            mock_action.side_effect = _helper
+            assert utils.ServiceManager.enable_service("service1") == ["node1"]
+            assert mock_action.called
 
-    @mock.patch('crmsh.utils.ServiceManager.disable')
-    @mock.patch('crmsh.utils.ServiceManager.is_enabled', new_callable=mock.PropertyMock)
-    @mock.patch('crmsh.utils.ServiceManager.is_available', new_callable=mock.PropertyMock)
-    def test_disable_service(self, mock_available, mock_enabled, mock_disable):
-        mock_available.return_value = True
-        mock_enabled.return_value = True
-        utils.ServiceManager.disable_service("service1")
-        mock_disable.assert_called_once_with()
+    def test_disable_service_none(self):
+        def _helper(self, val):
+            self.success_nodes = expected_values
+        expected_values = []
+
+        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
+            mock_action.side_effect = _helper
+            assert utils.ServiceManager.disable_service("service1") == []
+            assert mock_action.call_count == 1
+
+    def test_disable_service(self):
+        def _helper(self, val):
+            self.success_nodes = expected_values
+        expected_values = ["node1", "node2"]
+
+        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
+            mock_action.side_effect = _helper
+            assert utils.ServiceManager.disable_service("service1") == ["node1", "node2"]
+            assert mock_action.call_count == 2
 
 
 @mock.patch("crmsh.utils.get_nodeid_from_name")

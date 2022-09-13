@@ -65,6 +65,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_start_pacemaker, mock_check_qdevice):
         context_inst = mock.Mock()
+        mock_start_pacemaker.return_value = ["node1"]
         mock_parse_nodes.return_value = ["node1"]
         mock_active.side_effect = [False, False]
         mock_qdevice_configured.return_value = True
@@ -104,6 +105,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     def test_do_stop(self, mock_parse_nodes, mock_active, mock_get_dc, mock_dlm_running, mock_is_quorate, mock_set_dlm, mock_stop, mock_info, mock_debug):
         context_inst = mock.Mock()
+        mock_stop.side_effect = [["node1"], ["ndoe1"], ["node1"]]
         mock_parse_nodes.return_value = ["node1"]
         mock_active.side_effect = [True, True]
         mock_dlm_running.return_value = True

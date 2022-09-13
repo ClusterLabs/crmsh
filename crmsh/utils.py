@@ -2515,6 +2515,7 @@ class ServiceManager(object):
             "is_active": "is-active",
             "is_available": "list-unit-files"
             }
+    IGNORE_ERRORS_IN_PARALLAX = ["is_enabled", "is_active", "is_available"]
 
     def __init__(self, service_name, remote_addr=None, node_list=[]):
         """
@@ -2522,8 +2523,15 @@ class ServiceManager(object):
         When node_list set, execute action between nodes in parallel
         """
         self.service_name = service_name
+        if remote_addr and node_list:
+            raise ValueError("Cannot assign remote_addr and node_list at the same time")
         self.remote_addr = remote_addr
+        self.target_node = remote_addr or this_node()
         self.node_list = node_list
+        self.rc = False
+        self.parallax_res = None
+        self.nodes_dict = {}
+        self.success_nodes = []
 
     def _do_action(self, action_type):
         """
@@ -2534,40 +2542,33 @@ class ServiceManager(object):
 
         cmd = "systemctl {} {}".format(action_type, self.service_name)
         if self.node_list:
-            cluster_run_cmd(cmd, self.node_list)
-            return True, None
+            self.parallax_res = parallax.parallax_call(self.node_list, cmd, strict=False)
+            return
         elif self.remote_addr and self.remote_addr != this_node():
             prompt_msg = "Run \"{}\" on {}".format(cmd, self.remote_addr)
-            rc, output, err = run_cmd_on_remote(cmd, self.remote_addr, prompt_msg)
+            rc, _, err = run_cmd_on_remote(cmd, self.remote_addr, prompt_msg)
         else:
-            rc, output, err = get_stdout_stderr(cmd)
+            rc, _, err = get_stdout_stderr(cmd)
         if rc != 0 and err:
             raise ValueError("Run \"{}\" error: {}".format(cmd, err))
-        return rc == 0, output
+        self.rc = rc == 0
 
-    @property
-    def is_available(self):
-        return self.service_name in self._do_action(self.ACTION_MAP["is_available"])[1]
+    def _handle_action_result(self, action):
+        if self.parallax_res:
+            for host, result in self.parallax_res:
+                if isinstance(result, parallax.Error):
+                    if action not in self.IGNORE_ERRORS_IN_PARALLAX:
+                        logger.error("Failed to %s %s on %s: %s", action, self.service_name, host, str(result))
+                    self.nodes_dict[host] = False
+                else:
+                    self.nodes_dict[host] = True
+        else:
+            self.nodes_dict[self.target_node] = self.rc
+        self.success_nodes = [node for node in self.nodes_dict if self.nodes_dict[node]]
 
-    @property
-    def is_enabled(self):
-        return self._do_action(self.ACTION_MAP["is_enabled"])[0]
-
-    @property
-    def is_active(self):
-        return self._do_action(self.ACTION_MAP["is_active"])[0]
-
-    def start(self):
-        self._do_action(self.ACTION_MAP["start"])
-
-    def stop(self):
-        self._do_action(self.ACTION_MAP["stop"])
-
-    def enable(self):
-        self._do_action(self.ACTION_MAP["enable"])
-
-    def disable(self):
-        self._do_action(self.ACTION_MAP["disable"])
+    def action_and_handle_result(self, action):
+        self._do_action(self.ACTION_MAP[action])
+        self._handle_action_result(action)
 
     @classmethod
     def service_is_available(cls, name, remote_addr=None):
@@ -2575,7 +2576,8 @@ class ServiceManager(object):
         Check whether service is available
         """
         inst = cls(name, remote_addr)
-        return inst.is_available
+        inst.action_and_handle_result("is_available")
+        return inst.nodes_dict[inst.target_node]
 
     @classmethod
     def service_is_enabled(cls, name, remote_addr=None):
@@ -2583,7 +2585,8 @@ class ServiceManager(object):
         Check whether service is enabled
         """
         inst = cls(name, remote_addr)
-        return inst.is_enabled
+        inst.action_and_handle_result("is_enabled")
+        return inst.nodes_dict[inst.target_node]
 
     @classmethod
     def service_is_active(cls, name, remote_addr=None):
@@ -2591,45 +2594,56 @@ class ServiceManager(object):
         Check whether service is active
         """
         inst = cls(name, remote_addr)
-        return inst.is_active
+        inst.action_and_handle_result("is_active")
+        return inst.nodes_dict[inst.target_node]
 
     @classmethod
     def start_service(cls, name, enable=False, remote_addr=None, node_list=[]):
         """
         Start service
+        Return success node list
         """
         inst = cls(name, remote_addr, node_list)
         if enable:
-            inst.enable()
-        inst.start()
+            inst.action_and_handle_result("enable")
+        inst.action_and_handle_result("start")
+        return inst.success_nodes
 
     @classmethod
     def stop_service(cls, name, disable=False, remote_addr=None, node_list=[]):
         """
         Stop service
+        Return success node list
         """
         inst = cls(name, remote_addr, node_list)
         if disable:
-            inst.disable()
-        inst.stop()
+            inst.action_and_handle_result("disable")
+        inst.action_and_handle_result("stop")
+        return inst.success_nodes
 
     @classmethod
     def enable_service(cls, name, remote_addr=None, node_list=[]):
         """
         Enable service
+        Return success node list
         """
         inst = cls(name, remote_addr, node_list)
-        if inst.is_available and not inst.is_enabled:
-            inst.enable()
+        inst.action_and_handle_result("enable")
+        return inst.success_nodes
 
     @classmethod
     def disable_service(cls, name, remote_addr=None, node_list=[]):
         """
         Disable service
+        Return success node list
         """
         inst = cls(name, remote_addr, node_list)
-        if inst.is_available and inst.is_enabled:
-            inst.disable()
+        inst.action_and_handle_result("is_available")
+        if not inst.success_nodes:
+            return []
+        inst.node_list = inst.success_nodes
+        inst.action_and_handle_result("disable")
+        return inst.success_nodes
 
 
 service_is_available = ServiceManager.service_is_available

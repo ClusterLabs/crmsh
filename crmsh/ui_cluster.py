@@ -166,7 +166,7 @@ class Cluster(command.UI):
 
         if start_qdevice:
             utils.start_service("corosync-qdevice", node_list=node_list)
-        bootstrap.start_pacemaker(node_list)
+        node_list = bootstrap.start_pacemaker(node_list)
         if start_qdevice:
             qdevice.QDevice.check_qdevice_vote()
         for node in node_list:
@@ -200,12 +200,12 @@ class Cluster(command.UI):
             utils.set_dlm_option(enable_quorum_fencing=0, enable_quorum_lockspace=0)
 
         # Stop pacemaker since it can make sure cluster has quorum until stop corosync
-        utils.stop_service("pacemaker", node_list=node_list)
+        node_list = utils.stop_service("pacemaker", node_list=node_list)
         # Then, stop qdevice if is active
         if utils.service_is_active("corosync-qdevice.service"):
             utils.stop_service("corosync-qdevice.service", node_list=node_list)
         # Last, stop corosync
-        utils.stop_service("corosync", node_list=node_list)
+        node_list = utils.stop_service("corosync", node_list=node_list)
 
         for node in node_list:
             logger.info("Cluster services stopped on {}".format(node))
@@ -219,31 +219,28 @@ class Cluster(command.UI):
         self.do_stop(context, *args)
         self.do_start(context, *args)
 
-    def _enable_disable_common(self, context, *args):
-        '''
-        Common part for enable and disable
-        '''
-        node_list = parse_option_for_nodes(context, *args)
-        action = context.get_command_name()
-        utils.cluster_run_cmd("systemctl {} pacemaker.service".format(action), node_list)
-        if utils.service_is_available("corosync-qdevice.service") and (utils.is_qdevice_configured() or action == "disable"):
-            utils.cluster_run_cmd("systemctl {} corosync-qdevice.service".format(action), node_list)
-        for node in node_list:
-            logger.info("Cluster services %s on %s", action+'d', node)
-
     @command.skill_level('administrator')
     def do_enable(self, context, *args):
         '''
         Enable the cluster services on this node
         '''
-        self._enable_disable_common(context, *args)
+        node_list = parse_option_for_nodes(context, *args)
+        node_list = utils.enable_service("pacemaker.service", node_list=node_list)
+        if utils.service_is_available("corosync-qdevice.service") and utils.is_qdevice_configured():
+            utils.enable_service("corosync-qdevice.service", node_list=node_list)
+        for node in node_list:
+            logger.info("Cluster services enabled on %s", node)
 
     @command.skill_level('administrator')
     def do_disable(self, context, *args):
         '''
         Disable the cluster services on this node
         '''
-        self._enable_disable_common(context, *args)
+        node_list = parse_option_for_nodes(context, *args)
+        node_list = utils.disable_service("pacemaker.service", node_list=node_list)
+        utils.disable_service("corosync-qdevice.service", node_list=node_list)
+        for node in node_list:
+            logger.info("Cluster services disabled on %s", node)
 
     def _args_implicit(self, context, args, name):
         '''
@@ -399,6 +396,8 @@ Examples:
             parser.error("Invalid stage (%s)" % (stage))
 
         if options.qnetd_addr:
+            if not utils.service_is_available("corosync-qdevice.service"):
+                utils.fatal("corosync-qdevice.service is not available")
             if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
                 parser.error("Option --qdevice-heuristics is required if want to configure heuristics mode")
             options.qdevice_heuristics_mode = options.qdevice_heuristics_mode or "sync"
