@@ -155,7 +155,7 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
     group_mutual.add_argument('--fence-node', dest='fence_node', metavar='NODE',
                               help='Fence specific node')
     group_mutual.add_argument('--split-brain-iptables', dest='sp_iptables', action='store_true',
-                              help='Make split brain by blocking corosync ports')
+                              help='Make split brain by blocking traffic between cluster nodes')
     parser.add_argument('-l', '--kill-loop', dest='loop', action='store_true',
                         help='Kill process in loop')
 
