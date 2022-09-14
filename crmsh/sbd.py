@@ -258,7 +258,7 @@ class SBDTimeout(object):
         cls_inst = cls(removing=removing)
         cls_inst._load_configurations()
 
-        message = "Adjusting sbd related timeout values for 2-node cluster"
+        message = "Adjusting sbd related timeout values"
         with logger_utils.status_long(message):
             cls_inst.adjust_sbd_delay_start()
             cls_inst.adjust_pcmk_delay_max()
