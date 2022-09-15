@@ -981,7 +981,7 @@ Membership information
         mock_evaluate.assert_called_once_with(qdevice.QDEVICE_ADD, True)
         mock_get_sbd_value.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
         mock_update_config.assert_called_once_with({"SBD_WATCHDOG_TIMEOUT": str(sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)})
-        mock_set_property.assert_called_once_with(stonith_timeout=100)
+        mock_set_property.assert_called_once_with("stonith-timeout", 100)
 
     @mock.patch('crmsh.qdevice.QDevice.start_qnetd')
     @mock.patch('crmsh.qdevice.QDevice.enable_qnetd')

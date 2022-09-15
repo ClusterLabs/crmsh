@@ -798,11 +798,13 @@ class TestBootstrap(unittest.TestCase):
         mock_confirm.assert_called_once_with("Qdevice is already configured - overwrite?")
         self.qdevice_with_ip.start_qdevice_service.assert_called_once_with()
 
+    @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
+    @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice(self, mock_info, mock_ssh, mock_qdevice_configured, mock_list_nodes):
+    def test_init_qdevice(self, mock_info, mock_ssh, mock_qdevice_configured, mock_list_nodes, mock_adjust_priority, mock_adjust_fence_delay):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
         mock_list_nodes.return_value = []
         mock_ssh.return_value = False
@@ -905,6 +907,8 @@ class TestBootstrap(unittest.TestCase):
         mock_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Removing QDevice service and configuration from cluster: Are you sure?")
 
+    @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
+    @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
     @mock.patch('crmsh.qdevice.QDevice.remove_certification_files_on_qnetd')
     @mock.patch('crmsh.qdevice.QDevice.remove_qdevice_db')
     @mock.patch('crmsh.qdevice.QDevice.remove_qdevice_config')
@@ -917,7 +921,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     def test_remove_qdevice_reload(self, mock_qdevice_configured, mock_confirm, mock_reachable, mock_evaluate,
-            mock_status, mock_invoke, mock_status_long, mock_update_votes, mock_remove_config, mock_remove_db, mock_remove_files):
+            mock_status, mock_invoke, mock_status_long, mock_update_votes, mock_remove_config, mock_remove_db, mock_remove_files, mock_adjust_priority, mock_adjust_fence_delay):
         mock_qdevice_configured.return_value = True
         mock_confirm.return_value = True
         mock_evaluate.return_value = qdevice.QdevicePolicy.QDEVICE_RELOAD
@@ -1007,26 +1011,22 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
     @mock.patch('crmsh.bootstrap.cib_factory')
-    def test_adjust_pcmk_delay_2node(self, mock_cib_factory, mock_2node, mock_run, mock_debug):
+    def test_adjust_pcmk_delay_2node(self, mock_cib_factory, mock_run, mock_debug):
         mock_cib_factory.refresh = mock.Mock()
         mock_cib_factory.fence_id_list_without_pcmk_delay = mock.Mock()
         mock_cib_factory.fence_id_list_without_pcmk_delay.return_value = ["res_1"]
-        mock_2node.return_value = True
-        bootstrap.adjust_pcmk_delay_max()
+        bootstrap.adjust_pcmk_delay_max(True)
         mock_run.assert_called_once_with("crm resource param res_1 set pcmk_delay_max {}s".format(constants.PCMK_DELAY_MAX))
 
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-    @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
     @mock.patch('crmsh.bootstrap.cib_factory')
-    def test_adjust_pcmk_delay(self, mock_cib_factory, mock_2node, mock_run, mock_debug):
+    def test_adjust_pcmk_delay(self, mock_cib_factory, mock_run, mock_debug):
         mock_cib_factory.refresh = mock.Mock()
         mock_cib_factory.fence_id_list_with_pcmk_delay = mock.Mock()
         mock_cib_factory.fence_id_list_with_pcmk_delay.return_value = ["res_1"]
-        mock_2node.return_value = False
-        bootstrap.adjust_pcmk_delay_max()
+        bootstrap.adjust_pcmk_delay_max(False)
         mock_run.assert_called_once_with("crm resource param res_1 delete pcmk_delay_max")
 
     @mock.patch('crmsh.sbd.SBDTimeout')
@@ -1037,30 +1037,60 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.adjust_stonith_timeout()
         mock_sbd_timeout.adjust_sbd_timeout_related_cluster_configuration.assert_called_once_with()
 
-    @mock.patch('crmsh.utils.set_property_conditionally')
+    @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.bootstrap.get_stonith_timeout_generally_expected')
     @mock.patch('crmsh.utils.service_is_active')
     def test_adjust_stonith_timeout(self, mock_is_active, mock_get_timeout, mock_set):
         mock_is_active.return_value = False
         mock_get_timeout.return_value = 30
         bootstrap.adjust_stonith_timeout()
-        mock_set.assert_called_once_with("stonith-timeout", 30)
+        mock_set.assert_called_once_with("stonith-timeout", 30, conditional=True)
+
+    @mock.patch('crmsh.utils.set_property')
+    def test_adjust_priority_in_rsc_defaults_2node(self, mock_set):
+        bootstrap.adjust_priority_in_rsc_defaults(True)
+        mock_set.assert_called_once_with('priority', 1, property_type='rsc_defaults', conditional=True)
+
+    @mock.patch('crmsh.utils.set_property')
+    def test_adjust_priority_in_rsc_defaults(self, mock_set):
+        bootstrap.adjust_priority_in_rsc_defaults(False)
+        mock_set.assert_called_once_with('priority', 0, property_type='rsc_defaults')
+
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_adjust_priority_fencing_delay_no_fence_agent(self, mock_run):
+        mock_run.return_value = None
+        bootstrap.adjust_priority_fencing_delay(False)
+        mock_run.assert_called_once_with("crm configure show related:stonith")
+
+    @mock.patch('crmsh.utils.set_property')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_adjust_priority_fencing_delay_no_pcmk_delay(self, mock_run, mock_set):
+        mock_run.return_value = "data"
+        bootstrap.adjust_priority_fencing_delay(False)
+        mock_run.assert_called_once_with("crm configure show related:stonith")
+        mock_set.assert_called_once_with("priority-fencing-delay", 0)
 
     @mock.patch('crmsh.utils.service_is_active')
-    def test_adjust_pcmk_delay_and_stonith_timeout_return(self, mock_is_active):
+    def test_adjust_properties_no_service(self, mock_is_active):
         mock_is_active.return_value = False
-        bootstrap.adjust_pcmk_delay_max_and_stonith_timeout()
+        bootstrap.adjust_properties()
         mock_is_active.assert_called_once_with("pacemaker.service")
 
+    @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
+    @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
     @mock.patch('crmsh.bootstrap.adjust_stonith_timeout')
     @mock.patch('crmsh.bootstrap.adjust_pcmk_delay_max')
+    @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
     @mock.patch('crmsh.utils.service_is_active')
-    def test_adjust_pcmk_delay_and_stonith_timeout(self, mock_is_active, mock_adjust_pcmk_delay, mock_adjust_timeout):
+    def test_adjust_properties(self, mock_is_active, mock_2node_qdevice, mock_adj_pcmk, mock_adj_stonith, mock_adj_priority, mock_adj_fence):
         mock_is_active.return_value = True
-        bootstrap.adjust_pcmk_delay_max_and_stonith_timeout()
+        mock_2node_qdevice.return_value = True
+        bootstrap.adjust_properties()
         mock_is_active.assert_called_once_with("pacemaker.service")
-        mock_adjust_pcmk_delay.assert_called_once_with()
-        mock_adjust_timeout.assert_called_once_with()
+        mock_adj_pcmk.assert_called_once_with(True)
+        mock_adj_stonith.assert_called_once_with()
+        mock_adj_priority.assert_called_once_with(True)
+        mock_adj_fence.assert_called_once_with(True)
 
 
 class TestValidation(unittest.TestCase):
@@ -1517,6 +1547,8 @@ class TestValidation(unittest.TestCase):
             ])
         mock_error.assert_called_once_with("Removing the node node1 from {} failed".format(bootstrap.CSYNC2_CFG))
 
+    @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
+    @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
     @mock.patch('crmsh.bootstrap.csync2_update')
     @mock.patch('crmsh.bootstrap.decrease_expected_votes')
     @mock.patch('crmsh.corosync.del_node')
@@ -1528,7 +1560,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
     def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
-            mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_decrease, mock_csync2):
+            mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_decrease, mock_csync2, mock_adjust_priority, mock_adjust_fence_delay):
         mock_invoke.side_effect = [(True, None, None), (True, None, None), (True, None, None)]
         mock_invokerc.return_value = True
         mock_get_values.return_value = ["10.10.10.1"]

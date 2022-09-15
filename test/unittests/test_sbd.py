@@ -689,7 +689,7 @@ class TestSBDManager(unittest.TestCase):
         mock_enabled.assert_called_once_with("sbd.service")
         mock_configured.assert_called_once_with(sbd.SBDManager.SBD_RA)
         mock_run.assert_called_once_with("crm configure primitive {} {}".format(sbd.SBDManager.SBD_RA_ID, sbd.SBDManager.SBD_RA))
-        mock_set_property.assert_called_once_with(stonith_enabled="true")
+        mock_set_property.assert_called_once_with("stonith-enabled", "true")
 
     @mock.patch('crmsh.utils.package_is_installed')
     def test_join_sbd_config_not_installed(self, mock_package):

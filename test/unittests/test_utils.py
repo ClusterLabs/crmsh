@@ -1616,10 +1616,31 @@ def test_get_property(mock_run, mock_env):
     mock_run.assert_called_once_with("CIB_file=cib.xml crm configure get_property no-quorum-policy")
 
 
+@mock.patch('logging.Logger.warning')
 @mock.patch('crmsh.utils.get_stdout_or_raise_error')
-def test_set_property(mock_run):
-    utils.set_property(no_quorum_policy="stop")
+@mock.patch('crmsh.utils.get_property')
+def test_set_property(mock_get, mock_run, mock_warn):
+    mock_get.return_value = "start"
+    utils.set_property("no-quorum-policy", "stop")
     mock_run.assert_called_once_with("crm configure property no-quorum-policy=stop")
+    mock_warn.assert_called_once_with('"no-quorum-policy" in crm_config is set to stop, it was start')
+
+
+@mock.patch('crmsh.utils.get_property')
+def test_set_property_the_same(mock_get):
+    mock_get.return_value = "value1"
+    utils.set_property("no-quorum-policy", "value1")
+    mock_get.assert_called_once_with("no-quorum-policy", "crm_config")
+
+
+@mock.patch('crmsh.utils.crm_msec')
+@mock.patch('crmsh.utils.get_property')
+def test_set_property_conditional(mock_get, mock_msec):
+    mock_get.return_value = "10s"
+    mock_msec.side_effect = ["1000", "1000"]
+    utils.set_property("timeout", "10", conditional=True)
+    mock_get.assert_called_once_with("timeout", "crm_config")
+    mock_msec.assert_has_calls([mock.call("10s"), mock.call("10")])
 
 
 @mock.patch('crmsh.utils.is_dlm_configured')
@@ -1655,14 +1676,6 @@ def test_is_2node_cluster_without_qdevice(mock_list, mock_is_qdevice):
 def test_get_systemd_timeout_start_in_sec():
     res = utils.get_systemd_timeout_start_in_sec("1min 31s")
     assert res == 91
-
-
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
-@mock.patch('crmsh.utils.get_property')
-def test_set_property_conditionally(mock_get_property, mock_run):
-    mock_get_property.return_value = "100s"
-    utils.set_property_conditionally("stonith-timeout", 101)
-    mock_run.assert_called_once_with("crm configure property stonith-timeout=101")
 
 
 @mock.patch('crmsh.utils.is_larger_than_min_version')
