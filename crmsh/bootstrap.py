@@ -1375,6 +1375,10 @@ def init_qdevice():
 
     qdevice_inst.config_and_start_qdevice()
 
+    if _context.stage == "qdevice" and utils.service_is_active("sbd.service"):
+        from .sbd import SBDTimeout
+        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+
 
 def init():
     """
@@ -2173,6 +2177,10 @@ def remove_qdevice():
         wait_for_cluster()
     else:
         logger.warning("To remove qdevice service, need to restart cluster service manually on each node")
+
+    if utils.service_is_active("sbd.service"):
+        from .sbd import SBDTimeout
+        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
 
 
 def bootstrap_remove(context):

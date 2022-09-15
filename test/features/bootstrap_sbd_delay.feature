@@ -229,3 +229,23 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "35"
     And     Cluster property "stonith-timeout" is "95"
     And     Cluster property "stonith-watchdog-timeout" is "-1"
+
+  @clean
+  Scenario: Add and remove qdevice from cluster with sbd running
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
+    When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode2"
+    And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
+    When    Run "crm cluster remove --qdevice -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "stopped" on "hanode1"
+    And     Service "corosync-qdevice" is "stopped" on "hanode2"
+    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
