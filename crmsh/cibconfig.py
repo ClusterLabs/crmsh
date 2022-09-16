@@ -3135,30 +3135,37 @@ class CibFactory(object):
         return [x for x in self.cib_objects
                 if x.updated or x.origin == "user"]
 
-    def get_elems_on_ra_type(self, spec):
+    def get_elems_of_ra_partial_search(self, spec):
         """
-        Get elements by given ra class:provider:type or class:type or only type
+        Get elements by given ra class:provider:type or class:type or only class/provider/type
         return [] if no results
         """
+        def match_type(obj, tp):
+            type_res = obj.node.get("type")
+            return type_res and tp.lower() in type_res.lower()
+
         content_list = spec.split(':')[1:]
         if len(content_list) > 3:
             return []
         if len(content_list) == 3:
             cls, provider, tp = content_list
             return [x for x in self.cib_objects 
-                    if x.node.get("type") == tp
+                    if match_type(x, tp)
                     and x.node.get("provider") == provider
                     and x.node.get("class") == cls]
         if len(content_list) == 2:
             cls, tp = content_list
             return [x for x in self.cib_objects 
-                    if x.node.get("type") == tp
+                    if match_type(x, tp)
                     and x.node.get("class") == cls]
         if len(content_list) == 1:
             tp = content_list[0]
             if not tp:
                 return []
-            return [x for x in self.cib_objects if x.node.get("type") == tp]
+            return [x for x in self.cib_objects
+                    if match_type(x, tp) or
+                    x.node.get("class") == tp or
+                    x.node.get("provider") == tp]
 
     def get_elems_on_type(self, spec):
         if not spec.startswith("type:"):
@@ -3223,7 +3230,7 @@ class CibFactory(object):
                 obj = self.find_object(name)
                 if obj is not None:
                     obj_set |= orderedset.oset(self.related_elements(obj))
-                obj_set |= orderedset.oset(self.get_elems_on_ra_type(spec))
+                obj_set |= orderedset.oset(self.get_elems_of_ra_partial_search(spec))
             else:
                 objs = self.find_objects(spec) or []
                 for obj in objs:
