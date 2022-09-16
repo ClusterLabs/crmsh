@@ -2890,6 +2890,32 @@ class CibFactory(object):
         "List of primitives ids (for group completion)."
         return [x.obj_id for x in self.cib_objects if x.obj_type == "primitive"]
 
+    def fence_id_list(self):
+        """
+        List all configured fence agent's id
+        """
+        return [x.obj_id for x in self.cib_objects if x.node.get('class') == "stonith"]
+
+    def fence_id_list_with_pcmk_delay(self):
+        """
+        List all fence agent's id which configured pcmk_delay_max
+        """
+        id_list = []
+        for x in self.cib_objects:
+            if x.node.get("class") != "stonith":
+                continue
+            for c in x.node.xpath('.//nvpair'):
+                if c.get("name") == "pcmk_delay_max" and int(c.get("value").strip('s')) > 0:
+                    id_list.append(x.obj_id)
+                    break
+        return id_list
+
+    def fence_id_list_without_pcmk_delay(self):
+        """
+        List all fence agent's id which not configured pcmk_delay_max
+        """
+        return [_id for _id in self.fence_id_list() if _id not in self.fence_id_list_with_pcmk_delay()]
+
     def children_id_list(self):
         "List of child ids (for clone/master completion)."
         return [x.obj_id for x in self.cib_objects if x.obj_type in constants.children_tags]

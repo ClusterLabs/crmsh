@@ -32,7 +32,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT, REJOIN_COUNT, REJOIN_INTERVAL
+from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT, REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX
 from . import ocfs2
 from . import qdevice
 from . import parallax
@@ -1375,9 +1375,8 @@ def init_qdevice():
 
     qdevice_inst.config_and_start_qdevice()
 
-    if _context.stage == "qdevice" and utils.service_is_active("sbd.service"):
-        from .sbd import SBDTimeout
-        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+    if _context.stage == "qdevice":
+        adjust_pcmk_delay_max_and_stonith_timeout()
 
 
 def init():
@@ -1789,13 +1788,7 @@ def join_cluster(seed_host):
     # attempt to join the cluster failed)
     init_cluster_local()
 
-    if utils.service_is_active("sbd.service"):
-        from .sbd import SBDTimeout
-        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
-    else:
-        value = get_stonith_timeout_generally_expected()
-        if value:
-            utils.set_property_conditionally("stonith-timeout", value)
+    adjust_pcmk_delay_max_and_stonith_timeout()
 
     with logger_utils.status_long("Reloading cluster configuration"):
 
@@ -1902,10 +1895,6 @@ def remove_node_from_cluster():
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
     """
-    if utils.service_is_active("sbd.service"):
-        from .sbd import SBDTimeout
-        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration(removing=True)
-
     node = _context.cluster_node
     set_cluster_node_ip()
 
@@ -1932,6 +1921,8 @@ def remove_node_from_cluster():
         corosync.del_node(del_target)
 
     decrease_expected_votes()
+
+    adjust_pcmk_delay_max_and_stonith_timeout()
 
     logger.info("Propagating configuration changes across the remaining nodes")
     csync2_update(CSYNC2_CFG)
@@ -2178,9 +2169,7 @@ def remove_qdevice():
     else:
         logger.warning("To remove qdevice service, need to restart cluster service manually on each node")
 
-    if utils.service_is_active("sbd.service"):
-        from .sbd import SBDTimeout
-        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+    adjust_pcmk_delay_max_and_stonith_timeout()
 
 
 def bootstrap_remove(context):
@@ -2417,4 +2406,52 @@ def get_stonith_timeout_generally_expected():
         return None
 
     return STONITH_TIMEOUT_DEFAULT + corosync.token_and_consensus_timeout()
+
+
+def adjust_pcmk_delay_max():
+    """
+    For each fence agent,
+    add parameter pcmk_delay_max when cluster is two-node cluster without qdevice
+    else remove pcmk_delay_max
+    """
+    cib_factory.refresh()
+
+    if utils.is_2node_cluster_without_qdevice():
+        for res in cib_factory.fence_id_list_without_pcmk_delay():
+            cmd = "crm resource param {} set pcmk_delay_max {}s".format(res, PCMK_DELAY_MAX)
+            utils.get_stdout_or_raise_error(cmd)
+            logger.debug("Add parameter 'pcmk_delay_max={}s' for resource '{}'".format(PCMK_DELAY_MAX, res))
+    else:
+        for res in cib_factory.fence_id_list_with_pcmk_delay():
+            cmd = "crm resource param {} delete pcmk_delay_max".format(res)
+            utils.get_stdout_or_raise_error(cmd)
+            logger.debug("Delete parameter 'pcmk_delay_max' for resource '{}'".format(res))
+
+
+def adjust_stonith_timeout():
+    """
+    Adjust stonith-timeout for sbd and other scenarios
+    """
+    if utils.service_is_active("sbd.service"):
+        from .sbd import SBDTimeout
+        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+    else:
+        value = get_stonith_timeout_generally_expected()
+        if value:
+            utils.set_property_conditionally("stonith-timeout", value)
+
+
+def adjust_pcmk_delay_max_and_stonith_timeout():
+    """
+    Adjust pcmk_delay_max and stonith-timeout for all configured fence agents
+
+    Call it when:
+    - node join/remove
+    - qdevice add/remove
+    - add sbd via stage
+    """
+    if not utils.service_is_active("pacemaker.service"):
+        return
+    adjust_pcmk_delay_max()
+    adjust_stonith_timeout()
 # EOF

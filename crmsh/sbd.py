@@ -24,7 +24,7 @@ class SBDTimeout(object):
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
     QDEVICE_SYNC_TIMEOUT_MARGIN = 5
 
-    def __init__(self, context=None, removing=False):
+    def __init__(self, context=None):
         """
         Init function
         """
@@ -34,7 +34,6 @@ class SBDTimeout(object):
         self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT
         self.stonith_watchdog_timeout = self.STONITH_WATCHDOG_TIMEOUT_DEFAULT
         self.sbd_delay_start = None
-        self.removing = removing
         self.two_node_without_qdevice = False
 
     def initialize_timeout(self):
@@ -123,7 +122,7 @@ class SBDTimeout(object):
         """
         Load necessary configurations for both disk-based/disk-less sbd
         """
-        self.two_node_without_qdevice = utils.is_2node_cluster_without_qdevice(self.removing)
+        self.two_node_without_qdevice = utils.is_2node_cluster_without_qdevice()
 
         dev_list = SBDManager.get_sbd_device_from_config()
         if dev_list:  # disk-based
@@ -222,21 +221,6 @@ class SBDTimeout(object):
         """
         utils.set_property_conditionally("stonith-timeout", self.get_stonith_timeout_expected())
 
-    def adjust_pcmk_delay_max(self):
-        """
-        Adjust pcmk_delay_max parameter for sbd ra
-        """
-        # TODO this function should be outside of sbd.py, to adjust any fence device
-
-        if not xmlutil.CrmMonXmlParser.is_resource_configured(SBDManager.SBD_RA):
-            return
-
-        if self.two_node_without_qdevice:
-            cmd = "crm resource param {} set pcmk_delay_max {}s".format(SBDManager.SBD_RA_ID, self.pcmk_delay_max)
-        else:
-            cmd = "crm resource param {} delete pcmk_delay_max".format(SBDManager.SBD_RA_ID)
-        utils.get_stdout_or_raise_error(cmd)
-
     def adjust_sbd_delay_start(self):
         """
         Adjust SBD_DELAY_START in /etc/sysconfig/sbd
@@ -251,17 +235,16 @@ class SBDTimeout(object):
             SBDManager.update_configuration({"SBD_DELAY_START": expected_value})
 
     @classmethod
-    def adjust_sbd_timeout_related_cluster_configuration(cls, removing=False):
+    def adjust_sbd_timeout_related_cluster_configuration(cls):
         """
         Adjust sbd timeout related configurations
         """
-        cls_inst = cls(removing=removing)
+        cls_inst = cls()
         cls_inst._load_configurations()
 
         message = "Adjusting sbd related timeout values"
         with logger_utils.status_long(message):
             cls_inst.adjust_sbd_delay_start()
-            cls_inst.adjust_pcmk_delay_max()
             cls_inst.adjust_stonith_timeout()
             cls_inst.adjust_systemd_start_timeout()
 
@@ -537,7 +520,7 @@ class SBDManager(object):
 
         # in sbd stage
         if self._context.cluster_is_running:
-            SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+            bootstrap.adjust_pcmk_delay_max_and_stonith_timeout()
 
     def join_sbd(self, peer_host):
         """
