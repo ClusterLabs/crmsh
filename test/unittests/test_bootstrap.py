@@ -1005,6 +1005,63 @@ class TestBootstrap(unittest.TestCase):
         mock_isfile.assert_has_calls([mock.call("file1"), mock.call("file2")])
         mock_cluster_cmd.assert_called_once_with("sync file1 file2")
 
+    @mock.patch('logging.Logger.debug')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
+    @mock.patch('crmsh.bootstrap.cib_factory')
+    def test_adjust_pcmk_delay_2node(self, mock_cib_factory, mock_2node, mock_run, mock_debug):
+        mock_cib_factory.refresh = mock.Mock()
+        mock_cib_factory.fence_id_list_without_pcmk_delay = mock.Mock()
+        mock_cib_factory.fence_id_list_without_pcmk_delay.return_value = ["res_1"]
+        mock_2node.return_value = True
+        bootstrap.adjust_pcmk_delay_max()
+        mock_run.assert_called_once_with("crm resource param res_1 set pcmk_delay_max {}s".format(constants.PCMK_DELAY_MAX))
+
+    @mock.patch('logging.Logger.debug')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
+    @mock.patch('crmsh.bootstrap.cib_factory')
+    def test_adjust_pcmk_delay(self, mock_cib_factory, mock_2node, mock_run, mock_debug):
+        mock_cib_factory.refresh = mock.Mock()
+        mock_cib_factory.fence_id_list_with_pcmk_delay = mock.Mock()
+        mock_cib_factory.fence_id_list_with_pcmk_delay.return_value = ["res_1"]
+        mock_2node.return_value = False
+        bootstrap.adjust_pcmk_delay_max()
+        mock_run.assert_called_once_with("crm resource param res_1 delete pcmk_delay_max")
+
+    @mock.patch('crmsh.sbd.SBDTimeout')
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_adjust_stonith_timeout_sbd(self, mock_is_active, mock_sbd_timeout):
+        mock_is_active.return_value = True
+        mock_sbd_timeout.adjust_sbd_timeout_related_cluster_configuration = mock.Mock()
+        bootstrap.adjust_stonith_timeout()
+        mock_sbd_timeout.adjust_sbd_timeout_related_cluster_configuration.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.set_property_conditionally')
+    @mock.patch('crmsh.bootstrap.get_stonith_timeout_generally_expected')
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_adjust_stonith_timeout(self, mock_is_active, mock_get_timeout, mock_set):
+        mock_is_active.return_value = False
+        mock_get_timeout.return_value = 30
+        bootstrap.adjust_stonith_timeout()
+        mock_set.assert_called_once_with("stonith-timeout", 30)
+
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_adjust_pcmk_delay_and_stonith_timeout_return(self, mock_is_active):
+        mock_is_active.return_value = False
+        bootstrap.adjust_pcmk_delay_max_and_stonith_timeout()
+        mock_is_active.assert_called_once_with("pacemaker.service")
+
+    @mock.patch('crmsh.bootstrap.adjust_stonith_timeout')
+    @mock.patch('crmsh.bootstrap.adjust_pcmk_delay_max')
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_adjust_pcmk_delay_and_stonith_timeout(self, mock_is_active, mock_adjust_pcmk_delay, mock_adjust_timeout):
+        mock_is_active.return_value = True
+        bootstrap.adjust_pcmk_delay_max_and_stonith_timeout()
+        mock_is_active.assert_called_once_with("pacemaker.service")
+        mock_adjust_pcmk_delay.assert_called_once_with()
+        mock_adjust_timeout.assert_called_once_with()
+
 
 class TestValidation(unittest.TestCase):
     """

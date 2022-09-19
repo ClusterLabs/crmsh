@@ -29,7 +29,6 @@ class TestSBDTimeout(unittest.TestCase):
         _dict = {"sbd.watchdog_timeout": 5, "sbd.msgwait": 10}
         _inst_q = mock.Mock()
         self.sbd_timeout_inst = sbd.SBDTimeout(mock.Mock(profiles_dict=_dict, is_s390=True, qdevice_inst=_inst_q))
-        self.sbd_timeout_inst_removing = sbd.SBDTimeout(mock.Mock(), True)
 
     def tearDown(self):
         """
@@ -150,7 +149,7 @@ class TestSBDTimeout(unittest.TestCase):
 
         self.sbd_timeout_inst._load_configurations()
 
-        mock_2node.assert_called_once_with(False)
+        mock_2node.assert_called_once_with()
         mock_get_sbd_dev.assert_called_once_with()
         mock_get_msgwait.assert_called_once_with("/dev/sda1")
         mock_pcmk_delay.assert_called_once_with(True)
@@ -173,7 +172,7 @@ class TestSBDTimeout(unittest.TestCase):
 
         self.sbd_timeout_inst._load_configurations()
 
-        mock_2node.assert_called_once_with(False)
+        mock_2node.assert_called_once_with()
         mock_get_sbd_dev.assert_called_once_with()
         mock_get_watchdog_timeout.assert_called_once_with()
         mock_get_stonith_watchdog_timeout.assert_called_once_with()
