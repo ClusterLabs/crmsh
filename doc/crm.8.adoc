@@ -3913,7 +3913,14 @@ show type:primitive
 show xml tag:db tag:fs
 show related:webapp
 show related:IPaddr2
+show related:ipad
 show related:ocf:heartbeat:Dummy
+show related:ocf:heartbeat:dum
+show related:ocf
+show related:heartbeat
+show related:pacemaker
+show related:suse
+show related:stonith
 show type:primitive obscure:passwd
 ...............
 
