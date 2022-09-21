@@ -2980,14 +2980,13 @@ def is_quorate():
         raise ValueError("Failed to get quorate status from corosync-quorumtool")
 
 
-def is_2node_cluster_without_qdevice(removing=False):
+def is_2node_cluster_without_qdevice():
     """
     Check if current cluster has two nodes without qdevice
     """
     current_num = len(list_cluster_nodes())
-    remove_num = 1 if removing else 0
     qdevice_num = 1 if is_qdevice_configured() else 0
-    return (current_num - remove_num + qdevice_num) == 2
+    return (current_num + qdevice_num) == 2
 
 
 def get_pcmk_delay_max(two_node_without_qdevice=False):
