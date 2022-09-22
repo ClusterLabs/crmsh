@@ -521,7 +521,6 @@ SCHEMA_MIN_VER_SUPPORT_OCF_1_1 = "pacemaker-3.7"
 REJOIN_COUNT = 60
 REJOIN_INTERVAL = 10
 DC_DEADTIME_DEFAULT = 20
-
 ADVISED_ACTION_LIST = ['monitor', 'start', 'stop', 'promote', 'demote']
 ADVISED_KEY_LIST = ['timeout', 'interval', 'role']
 DEFAULT_INTERVAL_IN_ACTION = "20s"
