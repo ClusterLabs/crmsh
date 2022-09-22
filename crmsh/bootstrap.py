@@ -26,6 +26,7 @@ from pathlib import Path
 from contextlib import contextmanager
 from . import config
 from . import utils
+from . import remoteutil
 from . import xmlutil
 from .cibconfig import mkset_obj, cib_factory
 from . import corosync
@@ -896,8 +897,10 @@ def append_to_remote_file(fromfile, remote_node, tofile):
     """
     Append content of fromfile to tofile on remote_node
     """
-    cmd = "cat {} | ssh {} root@{} 'cat >> {}'".format(fromfile, SSH_OPTION, remote_node, tofile)
-    utils.get_stdout_or_raise_error(cmd)
+    with open(fromfile, 'rb') as ifile:
+        idata = ifile.read()
+    # TODO(nice to have): implement reading stdin from file
+    remoteutil.check_call(remote_node, "cat >> {}".format(tofile), stdin=idata, use_shell=True)
 
 
 def init_csync2():
@@ -1402,6 +1405,7 @@ def join_ssh(seed_host):
         configure_ssh_key(user)
         swap_public_ssh_key(seed_host, user)
 
+
     # This makes sure the seed host has its own SSH keys in its own
     # authorized_keys file (again, to help with the case where the
     # user has done manual initial setup without the assistance of
@@ -1427,7 +1431,15 @@ def swap_public_ssh_key(remote_node, user="root", add=False):
         if user == "root":
             copy_ssh_key(public_key, user, remote_node)
         else:
-            append_to_remote_file(public_key, remote_node, authorized_file)
+            try:
+                append_to_remote_file(public_key, remote_node, authorized_file)
+            except remoteutil.CalledProcessError as e:
+                if re.search(b'no such file', e.stderr, re.IGNORECASE):
+                    logger.error(
+                        'SSH keys is not initialized on %s@%s. Please run crm cluster init ssh -y on %s.',
+                        user, remote_node, remote_node
+                    )
+                raise
 
     if add:
         configure_ssh_key(remote=remote_node)
@@ -1436,8 +1448,11 @@ def swap_public_ssh_key(remote_node, user="root", add=False):
         # Fetch public key file from remote_node
         public_key_file_remote = fetch_public_key_from_remote_node(remote_node, user)
     except ValueError as err:
-        logger.warning(err)
-        return
+        logger.error(
+            'SSH keys is not initialized on %s@%s. Please run crm cluster init ssh -y on %s.',
+            user, remote_node, remote_node
+        )
+        raise
     # Append public key file from remote_node to local's /root/.ssh/authorized_keys
     # After this, login from remote_node is passwordless
     # Should do this step even passwordless is True, to make sure we got two-way passwordless
