@@ -1607,11 +1607,13 @@ def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem):
         ])
 
 
+@mock.patch('os.getenv')
 @mock.patch('crmsh.utils.get_stdout_stderr')
-def test_get_property(mock_run):
+def test_get_property(mock_run, mock_env):
     mock_run.return_value = (0, "data", None)
+    mock_env.return_value = "cib.xml"
     assert utils.get_property("no-quorum-policy") == "data"
-    mock_run.assert_called_once_with("crm configure get_property no-quorum-policy")
+    mock_run.assert_called_once_with("CIB_file=cib.xml crm configure get_property no-quorum-policy")
 
 
 @mock.patch('crmsh.utils.get_stdout_or_raise_error')
