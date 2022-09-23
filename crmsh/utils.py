@@ -837,10 +837,8 @@ def append_file(dest, src):
         return False
 
 
-def get_dc(timeout=None):
-    cmd = "crmadmin -D"
-    if timeout:
-        cmd += " -t {}".format(timeout)
+def get_dc():
+    cmd = "crmadmin -D -t 1"
     rc, s, _ = get_stdout_stderr(add_sudo(cmd))
     if rc != 0:
         return None
@@ -3002,7 +3000,8 @@ def get_property(name):
     """
     Get cluster properties
     """
-    cmd = "crm configure get_property " + name
+    cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
+    cmd = "CIB_file={} crm configure get_property {}".format(cib_path, name)
     rc, stdout, _ = get_stdout_stderr(cmd)
     return stdout if rc == 0 else None
 
@@ -3134,4 +3133,20 @@ def detect_file(_file, remote=None):
         code, _, _ = get_stdout_stderr(cmd)
         rc = code == 0
     return rc
+
+
+def check_function_with_timeout(check_function, wait_timeout=30, interval=1):
+    """
+    Run check_function in a loop
+    Return when check_function is true
+    Raise TimeoutError when timeout
+    """
+    current_time = int(time.time())
+    timeout = current_time + wait_timeout
+    while current_time <= timeout:
+        if check_function():
+            return
+        time.sleep(interval)
+        current_time = int(time.time())
+    raise TimeoutError
 # vim:ts=4:sw=4:et:

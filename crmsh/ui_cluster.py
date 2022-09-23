@@ -186,10 +186,18 @@ class Cluster(command.UI):
                 else:
                     logger.info("Cluster services already stopped on {}".format(node))
                 node_list.remove(node)
+            elif not utils.service_is_active("pacemaker.service", remote_addr=node):
+                utils.stop_service("corosync", remote_addr=node)
+                logger.info("Cluster services stopped on {}".format(node))
+                node_list.remove(node)
         if not node_list:
             return
 
-        if not utils.get_dc(timeout=5):
+        dc_deadtime = utils.get_property("dc-deadtime") or constants.DC_DEADTIME_DEFAULT
+        dc_timeout = int(dc_deadtime.strip('s')) + 5
+        try:
+            utils.check_function_with_timeout(utils.get_dc, wait_timeout=dc_timeout)
+        except TimeoutError:
             logger.error("No DC found currently, please wait if the cluster is still starting")
             return False
 
