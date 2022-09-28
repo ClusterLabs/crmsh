@@ -60,7 +60,6 @@ TRY_SSH = "root hacluster"
 # UNIQUE_MSG = "Mark:HB_REPORT:%d" % now_second
 USER_CLUSTER_TYPE = "Corosync/Pacemaker"
 USER_NODES = ""
-VERBOSITY = 0
 WE = socket.gethostname()
 WORKDIR = None
 
