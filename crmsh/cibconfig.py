@@ -2905,7 +2905,7 @@ class CibFactory(object):
             if x.node.get("class") != "stonith":
                 continue
             for c in x.node.xpath('.//nvpair'):
-                if c.get("name") == "pcmk_delay_max" and int(c.get("value").strip('s')) > 0:
+                if c.get("name") == "pcmk_delay_max" and utils.crm_msec(c.get("value")) > 0:
                     id_list.append(x.obj_id)
                     break
         return id_list

@@ -646,7 +646,7 @@ class QDevice(object):
                 if not res or int(res) < SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
                     sbd_watchdog_timeout_qdevice = SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
                     SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
-                    utils.set_property(stonith_timeout=SBDTimeout.get_stonith_timeout())
+                    utils.set_property("stonith-timeout", SBDTimeout.get_stonith_timeout())
 
     @qnetd_lock_for_same_cluster_name
     def config_and_start_qdevice(self):

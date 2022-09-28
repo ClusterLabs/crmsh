@@ -1001,7 +1001,7 @@ def crm_msec(t):
     }
     if not t:
         return -1
-    r = re.match(r"\s*(\d+)\s*([a-zA-Z]+)?", t)
+    r = re.match(r"\s*(\d+)\s*([a-zA-Z]+)?", str(t))
     if not r:
         return -1
     if not r.group(2):
@@ -2996,25 +2996,19 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
     return 0
 
 
-def get_property(name):
+def get_property(name, property_type="crm_config"):
     """
     Get cluster properties
+
+    "property_type" can be crm_config|rsc_defaults|op_defaults
     """
-    cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
-    cmd = "CIB_file={} crm configure get_property {}".format(cib_path, name)
+    if property_type == "crm_config":
+        cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
+        cmd = "CIB_file={} crm configure get_property {}".format(cib_path, name)
+    else:
+        cmd = "crm_attribute -t {} -n {} -Gq".format(property_type, name)
     rc, stdout, _ = get_stdout_stderr(cmd)
     return stdout if rc == 0 else None
-
-
-def set_property(**kwargs):
-    """
-    Set cluster properties
-    """
-    set_str = ""
-    for key, value in kwargs.items():
-        set_str += "{}={} ".format(key, value)
-    cmd = "crm configure property " + set_str.strip().replace('_', '-')
-    get_stdout_or_raise_error(cmd)
 
 
 def check_no_quorum_policy_with_dlm():
@@ -3028,15 +3022,24 @@ def check_no_quorum_policy_with_dlm():
         logger.warning("The DLM cluster best practice suggests to set the cluster property \"no-quorum-policy=freeze\"")
 
 
-def set_property_conditionally(property_name, value_from_calculation):
+def set_property(property_name, property_value, property_type="crm_config", conditional=False):
     """
-    Set cluster property if calculated value is larger then current cib value
+    Set property for cluster, resource and operator
+
+    "property_type" can be crm_config|rsc_defaults|op_defaults
+    When "conditional" is True, set the property if given "property_value" is larger then value from cib
     """
-    _value = get_property(property_name)
-    value_from_cib = int(_value.strip('s')) if _value else 0
-    if value_from_cib < value_from_calculation:
-        cmd = "crm configure property {}={}".format(property_name, value_from_calculation)
-        get_stdout_or_raise_error(cmd)
+    origin_value = get_property(property_name, property_type)
+    if origin_value and str(origin_value) == str(property_value):
+        return
+    if conditional:
+        if crm_msec(origin_value) >= crm_msec(property_value):
+            return
+    if origin_value and str(origin_value) != str(property_value):
+        logger.warning("\"{}\" in {} is set to {}, it was {}".format(property_name, property_type, property_value, origin_value))
+    property_sub_cmd = "property" if property_type == "crm_config" else property_type
+    cmd = "crm configure {} {}={}".format(property_sub_cmd, property_name, property_value)
+    get_stdout_or_raise_error(cmd)
 
 
 def get_systemd_timeout_start_in_sec(time_res):

@@ -219,7 +219,7 @@ class SBDTimeout(object):
         """
         Adjust stonith-timeout property
         """
-        utils.set_property_conditionally("stonith-timeout", self.get_stonith_timeout_expected())
+        utils.set_property("stonith-timeout", self.get_stonith_timeout_expected(), conditional=True)
 
     def adjust_sbd_delay_start(self):
         """
@@ -509,7 +509,7 @@ class SBDManager(object):
         # disk-based sbd
         if self._get_sbd_device_from_config():
             utils.get_stdout_or_raise_error("crm configure primitive {} {}".format(self.SBD_RA_ID, self.SBD_RA))
-            utils.set_property(stonith_enabled="true")
+            utils.set_property("stonith-enabled", "true")
         # disk-less sbd
         else:
             if self.timeout_inst is None:
@@ -520,7 +520,7 @@ class SBDManager(object):
 
         # in sbd stage
         if self._context.cluster_is_running:
-            bootstrap.adjust_pcmk_delay_max_and_stonith_timeout()
+            bootstrap.adjust_properties()
 
     def join_sbd(self, peer_host):
         """

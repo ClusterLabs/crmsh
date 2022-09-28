@@ -356,6 +356,12 @@ def step_impl(context, key, value):
     assert res is not None and str(res) == value
 
 
+@then('Property "{key}" in "{type}" is "{value}"')
+def step_impl(context, key, type, value):
+    res = crmutils.get_property(key, type)
+    assert res is not None and str(res) == value
+
+
 @then('Parameter "{param_name}" not configured in "{res_id}"')
 def step_impl(context, param_name, res_id):
     _, out = run_command(context, "crm configure show {}".format(res_id))
