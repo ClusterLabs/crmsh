@@ -37,15 +37,21 @@ Feature: crmsh bootstrap sbd management
     And     Resource "stonith:external/sbd" not configured
 
   @clean
-  Scenario: Configure diskless sbd
+  Scenario: Configure diskless sbd(bsc#1181907)
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -S -y" on "hanode1"
+    Then    Expected "Diskless SBD requires cluster with three or more nodes." in stdout
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Expected "Diskless SBD requires cluster with three or more nodes." in stdout
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode3"
+    Then    Expected "Diskless SBD requires cluster with three or more nodes." not in stdout
+    Then    Cluster service is "started" on "hanode3"
+    And     Service "sbd" is "started" on "hanode3"
     And     Resource "stonith:external/sbd" not configured
 
   @clean
@@ -136,3 +142,19 @@ Feature: crmsh bootstrap sbd management
     Then    Service "sbd" is "started" on "hanode2"
     When    Run "sleep 20" on "hanode1"
     Then    Resource "stonith-sbd" type "external/sbd" is "Started"
+
+  @clean
+  Scenario: Configure sbd when no watchdog device(bsc#1154927, bsc#1178869)
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Try "lsmod |grep softdog && rmmod softdog" on "hanode1"
+    And     Try "lsmod |grep softdog && rmmod softdog" on "hanode2"
+    When    Run "crm cluster init -s /dev/sda1 -w softdog -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode1"
+    When    Try "lsmod |grep softdog"
+    Then    Expected return code is "0"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
