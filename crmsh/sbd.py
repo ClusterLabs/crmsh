@@ -284,7 +284,8 @@ class SBDManager(object):
         self._context = context
         self._delay_start = False
         self.timeout_inst = None
-        self.no_overwrite = False
+        self.no_overwrite_map = {}
+        self.no_update_config = False
 
     @staticmethod
     def _get_device_uuid(dev, node=None):
@@ -320,6 +321,12 @@ class SBDManager(object):
                 raise ValueError("{} doesn't look like a block device".format(dev))
             self._compare_device_uuid(dev, compare_node_list)
 
+    def _no_overwrite_check(self, dev):
+        """
+        Check if device already initialized and if need to overwrite
+        """
+        return SBDManager.has_sbd_device_already_initialized(dev) and not bootstrap.confirm("SBD is already configured to use {} - overwrite?".format(dev))
+
     def _get_sbd_device_interactive(self):
         """
         Get sbd device on interactive mode
@@ -335,8 +342,10 @@ class SBDManager(object):
             return
 
         configured_dev_list = self._get_sbd_device_from_config()
-        if configured_dev_list and not bootstrap.confirm("SBD is already configured to use {} - overwrite?".format(';'.join(configured_dev_list))):
-            self.no_overwrite = True
+        for dev in configured_dev_list:
+            self.no_overwrite_map[dev] = self._no_overwrite_check(dev)
+        if self.no_overwrite_map and all(self.no_overwrite_map.values()):
+            self.no_update_config = True
             return configured_dev_list
 
         dev_list = []
@@ -348,14 +357,22 @@ class SBDManager(object):
             if dev == "none":
                 self.diskless_sbd = True
                 return
+
             dev_list = utils.re_split_string(self.PARSE_RE, dev)
             try:
                 self._verify_sbd_device(dev_list)
             except ValueError as err_msg:
                 logger.error(str(err_msg))
                 continue
-            for dev_item in dev_list:
-                logger.warning("All data on {} will be destroyed!".format(dev_item))
+
+            for dev in dev_list:
+                if dev not in self.no_overwrite_map:
+                    self.no_overwrite_map[dev] = self._no_overwrite_check(dev)
+                if self.no_overwrite_map[dev]:
+                    if dev == dev_list[-1]:
+                        return dev_list
+                    continue
+                logger.warning("All data on {} will be destroyed!".format(dev))
                 if bootstrap.confirm('Are you sure you wish to use this device?'):
                     dev_looks_sane = True
                 else:
@@ -372,6 +389,10 @@ class SBDManager(object):
         if self.sbd_devices_input:
             dev_list = utils.parse_append_action_argument(self.sbd_devices_input)
             self._verify_sbd_device(dev_list)
+            for dev in dev_list:
+                self.no_overwrite_map[dev] = self._no_overwrite_check(dev)
+            if all(self.no_overwrite_map.values()) and dev_list == self._get_sbd_device_from_config():
+                self.no_update_config = True
         elif not self.diskless_sbd:
             dev_list = self._get_sbd_device_interactive()
         self._sbd_devices = dev_list
@@ -386,7 +407,7 @@ class SBDManager(object):
         msg = ""
         if self.diskless_sbd:
             msg = "Configuring diskless SBD"
-        elif not self.no_overwrite:
+        elif not all(self.no_overwrite_map.values()):
             msg = "Initializing SBD"
         if msg:
             logger.info(msg)
@@ -398,7 +419,7 @@ class SBDManager(object):
         opt = "-4 {} -1 {}".format(self.timeout_inst.sbd_msgwait, self.timeout_inst.sbd_watchdog_timeout)
 
         for dev in self._sbd_devices:
-            if self.no_overwrite and SBDManager.has_sbd_device_already_initialized(dev):
+            if dev in self.no_overwrite_map and self.no_overwrite_map[dev]:
                 continue
             rc, _, err = bootstrap.invoke("sbd {} -d {} create".format(opt, dev))
             if not rc:
@@ -408,7 +429,7 @@ class SBDManager(object):
         """
         Update /etc/sysconfig/sbd
         """
-        if self.no_overwrite:
+        if self.no_update_config:
             bootstrap.csync2_update(SYSCONFIG_SBD)
             return
 

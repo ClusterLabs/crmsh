@@ -335,13 +335,15 @@ class TestSBDManager(unittest.TestCase):
         mock_status.assert_called_once_with(sbd.SBDManager.SBD_STATUS_DESCRIPTION)
         mock_warn.assert_called_once_with("Not configuring SBD - STONITH will be disabled.")
 
+    @mock.patch('crmsh.sbd.SBDManager._no_overwrite_check')
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('logging.Logger.info')
-    def test_get_sbd_device_interactive_already_configured(self, mock_status, mock_confirm, mock_from_config):
+    def test_get_sbd_device_interactive_already_configured(self, mock_status, mock_confirm, mock_from_config, mock_no_overwrite):
         self.sbd_inst._context = mock.Mock(yes_to_all=False)
-        mock_confirm.side_effect = [True, False]
+        mock_confirm.return_value = True
         mock_from_config.return_value = ["/dev/sda1"]
+        mock_no_overwrite.return_value = True
 
         res = self.sbd_inst._get_sbd_device_interactive()
         self.assertEqual(res, ["/dev/sda1"])
@@ -349,19 +351,20 @@ class TestSBDManager(unittest.TestCase):
         mock_status.assert_called_once_with(sbd.SBDManager.SBD_STATUS_DESCRIPTION)
         mock_confirm.assert_has_calls([
             mock.call("Do you wish to use SBD?"),
-            mock.call("SBD is already configured to use /dev/sda1 - overwrite?")
             ])
         mock_status.assert_called_once_with(sbd.SBDManager.SBD_STATUS_DESCRIPTION)
         mock_from_config.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.sbd.SBDManager._no_overwrite_check')
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('logging.Logger.info')
-    def test_get_sbd_device_interactive_diskless(self, mock_status, mock_confirm, mock_from_config, mock_prompt):
+    def test_get_sbd_device_interactive_diskless(self, mock_status, mock_confirm, mock_from_config, mock_no_overwrite, mock_prompt):
         self.sbd_inst._context = mock.Mock(yes_to_all=False)
         mock_confirm.return_value = True
-        mock_from_config.return_value = None
+        mock_no_overwrite.return_value = False
+        mock_from_config.return_value = []
         mock_prompt.return_value = "none"
 
         self.sbd_inst._get_sbd_device_interactive()
@@ -371,13 +374,15 @@ class TestSBDManager(unittest.TestCase):
         mock_prompt.assert_called_once_with('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', 'none|\\/.*')
 
     @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.sbd.SBDManager._no_overwrite_check')
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('logging.Logger.info')
-    def test_get_sbd_device_interactive_null_and_diskless(self, mock_status, mock_confirm, mock_from_config, mock_prompt):
+    def test_get_sbd_device_interactive_null_and_diskless(self, mock_status, mock_confirm, mock_from_config, mock_no_overwrite, mock_prompt):
         self.sbd_inst._context = mock.Mock(yes_to_all=False)
         mock_confirm.return_value = True
-        mock_from_config.return_value = None
+        mock_no_overwrite.return_value = False
+        mock_from_config.return_value = []
         mock_prompt.side_effect = [None, "none"]
 
         self.sbd_inst._get_sbd_device_interactive()
@@ -394,13 +399,15 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('logging.Logger.error')
     @mock.patch('crmsh.sbd.SBDManager._verify_sbd_device')
     @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.sbd.SBDManager._no_overwrite_check')
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('logging.Logger.info')
-    def test_get_sbd_device_interactive(self, mock_status, mock_confirm, mock_from_config, mock_prompt, mock_verify, mock_error_msg, mock_warn, mock_split):
+    def test_get_sbd_device_interactive(self, mock_status, mock_confirm, mock_from_config, mock_no_overwrite, mock_prompt, mock_verify, mock_error_msg, mock_warn, mock_split):
         self.sbd_inst._context = mock.Mock(yes_to_all=False)
         mock_confirm.side_effect = [True, False, True]
-        mock_from_config.return_value = None
+        mock_from_config.return_value = []
+        mock_no_overwrite.return_value = False
         mock_prompt.side_effect = ["/dev/test1", "/dev/sda1", "/dev/sdb1"]
         mock_split.side_effect = [["/dev/test1"], ["/dev/sda1"], ["/dev/sdb1"]]
         mock_verify.side_effect = [ValueError("/dev/test1 error"), None, None]
