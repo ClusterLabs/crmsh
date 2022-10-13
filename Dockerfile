@@ -13,6 +13,10 @@ RUN zypper -n install systemd
 RUN zypper -n install make autoconf automake vim which libxslt-tools mailx iproute2 iputils bzip2 openssh tar file glibc-locale-base firewalld libopenssl1_1 dos2unix iptables
 RUN zypper -n install python3 python3-lxml python3-python-dateutil python3-parallax python3-setuptools python3-PyYAML python3-curses python3-behave
 RUN zypper -n install csync2 libglue-devel corosync corosync-qdevice pacemaker booth corosync-qnetd
+RUN zypper --non-interactive up zypper
+RUN zypper ar -f -G https://download.opensuse.org/repositories/network:/ha-clustering:/Factory/SLE_15_SP4 repo_nhf
+RUN zypper --non-interactive refresh
+RUN zypper --non-interactive up --allow-vendor-change -y python3-parallax
 
 RUN mkdir -p /var/log/crmsh
 RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
