@@ -6,6 +6,7 @@ import shlex
 import re
 import inspect
 from lxml import etree
+from . import ra
 from . import constants
 from .ra import disambiguate_ra_type, ra_type_validate
 from . import schema
@@ -169,12 +170,13 @@ class BaseParser(object):
         self.begin(cmd, min_args=min_args)
         return self.match_dispatch(errmsg="Unknown command")
 
-    def do_parse(self, cmd, ignore_empty):
+    def do_parse(self, cmd, ignore_empty, complete_op_advised):
         """
         Called by CliParser. Calls parse()
         Parsers should pass their return value through this method.
         """
         self.ignore_empty = ignore_empty
+        self.complete_op_advised = complete_op_advised
         out = self.parse(cmd)
         if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
@@ -653,6 +655,75 @@ class BaseParser(object):
             else:
                 break
 
+        self.complete_advised_ops(out)
+
+    def complete_advised_ops(self, out):
+        """
+        Complete operation actions advised values
+        """
+        if not self.complete_op_advised or out.tag != "primitive":
+            return
+        ra_inst = ra.RAInfo(out.get('class'), out.get('type'), out.get('provider'))
+        ra_actions_dict = ra_inst.actions()
+        if not ra_actions_dict:
+            return
+
+        def extract_advised_monitor_value(advised_dict, attr, role=None):
+            adv_attr_value = None
+            try:
+                if role:
+                    for monitor_item in advised_dict['monitor']:
+                        if role == monitor_item['role']:
+                            adv_attr_value = monitor_item[attr]
+                else:
+                    adv_attr_value = advised_dict['monitor'][0][attr]
+            except KeyError:
+                pass
+            return adv_attr_value
+
+        action_advised_attr_dict = {k:v for k, v in ra_actions_dict.items() if k in constants.ADVISED_ACTION_LIST}
+        operations_node = out.find("operations")
+        configured_action_list = []
+        # no operations configured
+        if operations_node is None:
+            operations_node = xmlutil.child(out, 'operations')
+        # has operations configured
+        else:
+            op_nodes_list = operations_node.findall("op")
+            for op_node in op_nodes_list:
+                action = op_node.get('name')
+                # complete advised value if interval or timeout not configured
+                if action == "monitor":
+                    adv_interval = extract_advised_monitor_value(action_advised_attr_dict, 'interval', op_node.get('role')) or \
+                            constants.DEFAULT_INTERVAL_IN_ACTION
+                    adv_timeout = extract_advised_monitor_value(action_advised_attr_dict, 'timeout', op_node.get('role')) or \
+                            constants.DEFAULT_TIMEOUT_IN_ACTION
+                    if op_node.get('interval') is None:
+                        op_node.set('interval', adv_interval)
+                    if op_node.get('timeout') is None:
+                        op_node.set('timeout', adv_timeout)
+                configured_action_list.append(action)
+
+        for action in action_advised_attr_dict:
+            if action in configured_action_list:
+                continue
+            # complete advised value if the operation not configured
+            value = action_advised_attr_dict[action]
+            # for multi actions, like multi monitor
+            if isinstance(value, list):
+                for v_dict in value:
+                    op_node = xmlutil.new('op', name=action)
+                    for k, v in v_dict.items():
+                        # set normal attributes
+                        if k in constants.ADVISED_KEY_LIST:
+                            op_node.set(k, v)
+                    operations_node.append(op_node)
+            else:
+                op_node = xmlutil.new('op', name=action, **value)
+                operations_node.append(op_node)
+
+        out.append(operations_node)
+
     def match_container(self, out, _type):
         container_node = None
         self.match(_type)
@@ -697,8 +768,8 @@ class BaseParser(object):
         op_type = self.match_identifier()
         all_attrs = self.match_nvpairs(minpairs=0)
         node = xmlutil.new('op', name=op_type)
-        if not any(nvp.get('name') == 'interval' for nvp in all_attrs):
-            all_attrs.append(xmlutil.nvpair('interval', '0'))
+        if not any(nvp.get('name') == 'interval' for nvp in all_attrs) and op_type != "monitor":
+            all_attrs.append(xmlutil.nvpair('interval', '0s'))
         valid_attrs = validator.op_attributes()
         inst_attrs = None
         for nvp in all_attrs:
@@ -1703,7 +1774,7 @@ class ResourceSet(object):
         return ret
 
 
-def parse(s, comments=None, ignore_empty=True):
+def parse(s, comments=None, ignore_empty=True, complete_op_advised=False):
     '''
     Input: a list of tokens (or a CLI format string).
     Return: a cibobject
@@ -1749,7 +1820,7 @@ def parse(s, comments=None, ignore_empty=True):
         return False
 
     try:
-        ret = parser.do_parse(s, ignore_empty)
+        ret = parser.do_parse(s, ignore_empty, complete_op_advised)
         if ret is not None and len(comments) > 0:
             if ret.tag in constants.defaults_tags:
                 xmlutil.stuff_comments(ret[0], comments)
