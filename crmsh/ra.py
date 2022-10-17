@@ -435,6 +435,8 @@ class RAInfo(object):
                 value = elem.get(key)
                 if value:
                     d[key] = value
+            if 'interval' not in d:
+                d['interval'] = '0s'
             if name == "monitor":
                 actions_dict[name].append(d)
             else:
