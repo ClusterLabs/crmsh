@@ -1,13 +1,28 @@
 .TRY configure save sample.txt
 .EXT cat sample.txt
 node node1
-primitive p0 ocf:pacemaker:Dummy
-primitive p1 ocf:pacemaker:Dummy
+primitive p0 ocf:pacemaker:Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p1 ocf:pacemaker:Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive p2 Delay \
-	params startdelay=2 mondelay=2 stopdelay=2
-primitive p3 ocf:pacemaker:Dummy
+	params startdelay=2 mondelay=2 stopdelay=2 \
+        op monitor timeout=30s interval=10s \
+        op start timeout=30s interval=0s \
+        op stop timeout=30s interval=0s
+primitive p3 ocf:pacemaker:Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive st stonith:null \
-	params hostlist=node1
+	params hostlist=node1 \
+        op monitor timeout=20 interval=3600 \
+	op start timeout=20 interval=0s \
+	op stop timeout=15 interval=0s
 clone c1 p1
 clone m1 p2 \
        meta promotable=true
@@ -28,30 +43,34 @@ op_defaults op-options: \
 .INP: delete m1 p1
 .INP: property cluster-recheck-interval="10m"
 .INP: load update sample.txt
-.EXT crm_resource --show-metadata ocf:pacemaker:Dummy
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
-.EXT crm_resource --show-metadata ocf:heartbeat:Delay
+ERROR: 4: syntax: Unknown command near <op> parsing 'op stop timeout=20s interval=0s'
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
 .TRY configure show
 node node1
-primitive p0 ocf:pacemaker:Dummy
-primitive p1 ocf:pacemaker:Dummy
+primitive p0 ocf:pacemaker:Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive p2 Delay \
-	params startdelay=2 mondelay=2 stopdelay=2
-primitive p3 ocf:pacemaker:Dummy
+	params startdelay=2 mondelay=2 stopdelay=2 \
+        op monitor timeout=30s interval=10s \
+        op start timeout=30s interval=0s \
+        op stop timeout=30s interval=0s
+primitive p3 ocf:pacemaker:Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive st stonith:null \
-	params hostlist=node1
-# comment
-clone c1 p1
-clone m1 p2 \
-       meta promotable=true
+	params hostlist=node1 \
+        op monitor timeout=20 interval=3600 \
+	op start timeout=20 interval=0s \
+	op stop timeout=15 interval=0s
 property cib-bootstrap-options: \
 	cluster-recheck-interval=10m
 rsc_defaults build-resource-defaults: \
        resource-stickiness=1
 op_defaults op-options: \
-	timeout=2m
+	timeout=60s
 .EXT rm sample.txt

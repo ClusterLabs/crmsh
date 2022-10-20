@@ -6,27 +6,47 @@
       <node uname="node1" id="node1"/>
     </nodes>
     <resources>
-      <primitive id="d5" class="ocf" provider="heartbeat" type="Dummy"/>
       <primitive id="st" class="stonith" type="ssh">
         <instance_attributes id="st-instance_attributes">
           <nvpair name="hostlist" value="node1" id="st-instance_attributes-hostlist"/>
         </instance_attributes>
         <operations>
-          <op name="start" timeout="60s" interval="0" id="st-start-0"/>
+          <op name="start" timeout="60s" interval="0s" id="st-start-0s"/>
+          <op name="monitor" timeout="20" interval="3600" id="st-monitor-3600"/>
+          <op name="stop" timeout="15" interval="0s" id="st-stop-0s"/>
         </operations>
       </primitive>
-      <primitive id="d3" class="ocf" provider="heartbeat" type="Dummy"/>
-      <primitive id="d1" class="ocf" provider="pacemaker" type="Dummy"/>
+      <primitive id="d1" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="d1-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="d1-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="d1-stop-0s"/>
+        </operations>
+      </primitive>
+      <primitive id="d3" class="ocf" provider="heartbeat" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="d3-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="d3-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="d3-stop-0s"/>
+        </operations>
+      </primitive>
+      <primitive id="d5" class="ocf" provider="heartbeat" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="d5-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="d5-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="d5-stop-0s"/>
+        </operations>
+      </primitive>
     </resources>
     <constraints>
-      <rsc_colocation id="c2" score="INFINITY" rsc="d3" with-rsc="d1"/>
+      <rsc_order id="o1" kind="Serialize" first="d1" then="d3"/>
       <rsc_colocation id="c1" score="INFINITY">
         <resource_set sequential="false" id="c1-1">
           <resource_ref id="d1"/>
           <resource_ref id="d3"/>
         </resource_set>
       </rsc_colocation>
-      <rsc_order id="o1" kind="Serialize" first="d1" then="d3"/>
+      <rsc_colocation id="c2" score="INFINITY" rsc="d3" with-rsc="d1"/>
       <rsc_colocation id="c3" score="INFINITY" rsc="d3" with-rsc="d1"/>
     </constraints>
   </configuration>

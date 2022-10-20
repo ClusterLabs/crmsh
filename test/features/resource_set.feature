@@ -28,8 +28,6 @@ Feature: Use "crm configure set" to update attributes and operations
     Then    Except "ERROR: configure.set: Object xxxx not found"
     When    Try "crm configure set d.name value"
     Then    Except "ERROR: configure.set: Attribute not found: d.name"
-    When    Try "crm configure set d.start.timeout 30"
-    Then    Except "ERROR: configure.set: Operation "start" not found for resource d"
     When    Try "crm configure set d.monitor.100.timeout 10"
     Then    Except "ERROR: configure.set: Operation "monitor" interval "100" not found for resource d"
     When    Try "crm configure set s.monitor.interval 20"

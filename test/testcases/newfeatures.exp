@@ -25,21 +25,37 @@
 location l1 { p0 p1 p2 } inf: node1
 .INP: show tag:ones and p1
 primitive p1 Dummy \
-	params rule $role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01 state=2
+	params rule $role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01 state=2 \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 .INP: show
 node node1
-primitive node1 Dummy
+primitive node1 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive p0 Dummy \
-	params state=1
+	params state=1 \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive p1 Dummy \
-	params rule $role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01 state=2
+	params rule $role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01 state=2 \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive p2 Dummy \
-	params @p0-state
+	params @p0-state \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started requires=nothing \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+	op stop timeout=15 interval=0s
 tag ones l1 p1
 tag tag1 p0 p1 p2
 tag tag2 p0 p1 p2
