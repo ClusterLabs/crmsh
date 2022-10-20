@@ -31,13 +31,33 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m
-primitive p4 Dummy
-primitive p3 Dummy
-primitive p2 Dummy
-primitive p1 Dummy
-primitive p5 Dummy
-primitive p6 Dummy
+	op monitor interval=60m timeout=20 \
+        op start timeout=20 interval=0s \
+        op stop timeout=15 interval=0s
+primitive p4 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p3 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p2 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p1 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p5 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p6 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 clone cl-p5 p5
 colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: commit
@@ -48,13 +68,33 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m
-primitive p4 Dummy
-primitive p3 Dummy
-primitive p2 Dummy
-primitive p1 Dummy
-primitive p6 Dummy
-primitive p5 Dummy
+	op monitor interval=60m timeout=20 \
+        op start timeout=20 interval=0s \
+        op stop timeout=15 interval=0s
+primitive p4 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p3 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p2 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p1 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p6 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p5 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 clone cl-p5 p5
 colocation c2 inf: ( p1 p2 ) p3 p4
 .TRY Unordered load file
@@ -70,12 +110,30 @@ INFO: 2: "sort_elements" is accepted as "sort-elements"
 node node1
 primitive st stonith:null \
 	params hostlist=node1
-primitive p4 Dummy
-primitive p3 Dummy
-primitive p2 Dummy
-primitive p1 Dummy
-primitive p6 Dummy
-primitive p5 Dummy
+primitive p4 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p3 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p2 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p1 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p6 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive p5 Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive gr1 Dummy
 primitive gr2 Dummy
 primitive gr3 Dummy
@@ -109,7 +167,9 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m
+	op monitor interval=60m timeout=20 \
+        op start timeout=20 interval=0s \
+        op stop timeout=15 interval=0s
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
 .INP: commit
@@ -121,7 +181,9 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m
+	op monitor interval=60m timeout=20 \
+        op start timeout=20 interval=0s \
+        op stop timeout=15 interval=0s
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
 property SAPHanaSR_2: \

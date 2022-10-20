@@ -16,14 +16,18 @@
 node node1 \
 	attributes mem=16G
 primitive p1 Dummy \
-	op monitor interval=60m \
-	op monitor interval=120m \
-	op_params OCF_CHECK_LEVEL=10
+	op monitor interval=60m timeout=20s \
+	op monitor interval=120m timeout=20s \
+	op_params OCF_CHECK_LEVEL=10 \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive p2 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m
+	op monitor interval=60m timeout=20 \
+	op start timeout=20 interval=0s \
+	op stop timeout=15 interval=0s
 group g1 p1 p2
 op_defaults op-options: \
 	timeout=2m
@@ -32,15 +36,19 @@ op_defaults op-options: \
 node node1 \
 	attributes mem=16G
 primitive p1 Dummy \
-	op monitor interval=60m \
-	op monitor interval=120m \
-	op_params OCF_CHECK_LEVEL=10
+	op monitor interval=60m timeout=20s \
+	op monitor interval=120m timeout=20s \
+	op_params OCF_CHECK_LEVEL=10 \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive p2 Dummy
 primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m
+	op monitor interval=60m timeout=20 \
+	op start timeout=20 interval=0s \
+	op stop timeout=15 interval=0s
 group g1 p1 p3
 op_defaults op-options: \
 	timeout=2m
@@ -124,28 +132,53 @@ property cib-bootstrap-options:
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1
 .INP: show related:d4
-primitive d4 Dummy
+primitive d4 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 tag t-d45 d4 d5
 order o-d456 d4 d5 d6
 .INP: show
 node node1 \
 	attributes mem=16G
-primitive d1 Dummy
-primitive d2 Dummy
-primitive d3 Dummy
-primitive d4 Dummy
-primitive d5 Dummy
-primitive d6 Dummy
+primitive d1 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d2 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d3 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d4 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d5 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d6 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive p1 Dummy \
-	op monitor interval=60m \
-	op monitor interval=120m \
-	op_params OCF_CHECK_LEVEL=10
+	op monitor interval=60m timeout=20s \
+	op monitor interval=120m timeout=20s \
+	op_params OCF_CHECK_LEVEL=10 \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive p2 Dummy
 primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m
+	op monitor interval=60m timeout=20 \
+	op start timeout=20 interval=0s \
+	op stop timeout=15 interval=0s
 group g1 p1 p2 d3
 group g2 d1 d2
 clone c1 g1
@@ -193,33 +226,88 @@ op_defaults op-options: \
 .INP: show
 node node1 \
 	attributes mem=16G
-primitive a0 Dummy
-primitive a1 Dummy
-primitive a2 Dummy
-primitive a3 Dummy
-primitive a4 Dummy
-primitive a5 Dummy
-primitive a6 Dummy
-primitive a7 Dummy
-primitive a8 Dummy
-primitive a9 Dummy
-primitive aErr Dummy
-primitive d1 Dummy
-primitive d2 Dummy
-primitive d3 Dummy
-primitive d4 Dummy
-primitive d5 Dummy
-primitive d6 Dummy
+primitive a0 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a1 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a2 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a3 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a4 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a5 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a6 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a7 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a8 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a9 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive aErr Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d1 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d2 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d3 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d4 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d5 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d6 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive p1 Dummy \
-	op monitor interval=60m \
-	op monitor interval=120m \
-	op_params OCF_CHECK_LEVEL=10
+	op monitor interval=60m timeout=20s \
+	op monitor interval=120m timeout=20s \
+	op_params OCF_CHECK_LEVEL=10 \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive p2 Dummy
 primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m
+	op monitor interval=60m timeout=20 \
+	op start timeout=20 interval=0s \
+	op stop timeout=15 interval=0s
 group as a0 a1 a9 a2 a3 a4 a5 a6 a7 a8 aErr
 group g1 p1 p2 d3
 group g2 d1 d2
@@ -245,33 +333,88 @@ INFO: 89: try changing something first
 .INP: show
 node node1 \
 	attributes mem=16G
-primitive a0 Dummy
-primitive a1 Dummy
-primitive a2 Dummy
-primitive a3 Dummy
-primitive a4 Dummy
-primitive a5 Dummy
-primitive a6 Dummy
-primitive a7 Dummy
-primitive a8 Dummy
-primitive a9 Dummy
-primitive aErr Dummy
-primitive d1 Dummy
-primitive d2 Dummy
-primitive d3 Dummy
-primitive d4 Dummy
-primitive d5 Dummy
-primitive d6 Dummy
+primitive a0 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a1 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a2 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a3 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a4 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a5 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a6 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a7 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a8 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive a9 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive aErr Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d1 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d2 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d3 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d4 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d5 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d6 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive p1 Dummy \
-	op monitor interval=60m \
-	op monitor interval=120m \
-	op_params OCF_CHECK_LEVEL=10
+	op monitor interval=60m timeout=20s \
+	op monitor interval=120m timeout=20s \
+	op_params OCF_CHECK_LEVEL=10 \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive p2 Dummy
 primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m
+	op monitor interval=60m timeout=20 \
+	op start timeout=20 interval=0s \
+	op stop timeout=15 interval=0s
 group as a0 a1 a9 a2 a3 a4 a5 a6 a7 a8 aErr
 group g1 p1 p2 d3
 group g2 d1 d2
