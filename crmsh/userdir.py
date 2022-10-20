@@ -47,8 +47,8 @@ def mv_user_files():
     def _xdg_file(name, xdg_name, chk_fun, directory):
         if not name:
             return name
-        if not os.path.isdir(directory):
-            os.makedirs(directory, 0o700)
+        os.makedirs(directory, 0o700, exist_ok=True)
+        # FileExistsError will be raised if `directory` exists and it is not a directory
         new = os.path.join(directory, xdg_name)
         if directory == CONFIG_HOME and chk_fun(new) and chk_fun(name):
             logger.warning("both %s and %s exist, please cleanup", name, new)
