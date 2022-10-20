@@ -703,11 +703,11 @@ class TestCliParser(unittest.TestCase):
         b = [
             '<node uname="node1"><instance_attributes><nvpair name="mem" value="16G"/></instance_attributes></node>',
             '<node uname="node2"><utilization><nvpair name="cpu" value="4"/></utilization></node>',
-            '<primitive id="st" class="stonith" type="ssh"><instance_attributes><nvpair name="hostlist" value="node1 node2"/></instance_attributes><meta_attributes><nvpair name="target-role" value="Started"/><nvpair name="requires" value="nothing"/></meta_attributes><operations><op name="start" timeout="60s" interval="0"/><op name="monitor" interval="60m" timeout="60s"/></operations></primitive>',
+            '<primitive id="st" class="stonith" type="ssh"><instance_attributes><nvpair name="hostlist" value="node1 node2"/></instance_attributes><meta_attributes><nvpair name="target-role" value="Started"/><nvpair name="requires" value="nothing"/></meta_attributes><operations><op name="start" timeout="60s" interval="0s"/><op name="monitor" interval="60m" timeout="60s"/></operations></primitive>',
             '<primitive id="st2" class="stonith" type="ssh"><instance_attributes><nvpair name="hostlist" value="node1 node2"/></instance_attributes></primitive>',
             '<primitive id="d1" class="ocf" provider="pacemaker" type="Dummy"><operations id="d1-ops"><op name="monitor" interval="60m"/><op name="monitor" interval="120m"><instance_attributes><nvpair name="OCF_CHECK_LEVEL" value="10"/></instance_attributes></op></operations></primitive>',
             '<op name="monitor" rsc="d1" interval="60s" timeout="30s"/>',
-            '<primitive id="d2" class="ocf" provider="heartbeat" type="Delay"><instance_attributes><nvpair name="mondelay" value="60"/></instance_attributes><operations><op name="start" timeout="60s" interval="0"/><op name="stop" timeout="60s" interval="0"/></operations></primitive>',
+            '<primitive id="d2" class="ocf" provider="heartbeat" type="Delay"><instance_attributes><nvpair name="mondelay" value="60"/></instance_attributes><operations><op name="start" timeout="60s" interval="0s"/><op name="stop" timeout="60s" interval="0s"/></operations></primitive>',
             '<op name="monitor" role="Started" rsc="d2" interval="60s" timeout="30s"/>',
             '<group id="g1"><crmsh-ref id="d1"/><crmsh-ref id="d2"/></group>',
             '<primitive id="d3" class="ocf" provider="pacemaker" type="Dummy"/>',
