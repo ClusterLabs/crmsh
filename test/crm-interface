@@ -67,6 +67,10 @@ EOF
 }
 crm_filesession() {
 	local _file=`mktemp`
+        $CRM_NO_REG -c $CIB<<EOF
+configure
+delete node1
+EOF
 	$CRM -c $CIB configure save xml $_file
 	CIB_file=$_file $CRM <<EOF
 `cat`
