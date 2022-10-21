@@ -1705,13 +1705,13 @@ def print_cluster_nodes():
         print("{}\n".format(out))
 
 
-def list_cluster_nodes():
+def list_cluster_nodes(no_reg=False):
     '''
     Returns a list of nodes in the cluster.
     '''
     from . import xmlutil
     cib = None
-    rc, out, err = get_stdout_stderr(constants.CIB_QUERY)
+    rc, out, err = get_stdout_stderr(constants.CIB_QUERY, no_reg=no_reg)
     # When cluster service running
     if rc == 0:
         cib = etree.fromstring(out)
