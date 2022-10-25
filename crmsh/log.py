@@ -416,14 +416,6 @@ class ProgressBar:
         sys.stdout.flush()
 
 
-def setup_directory_for_logfile():
-    """
-    Create log file's parent directory
-    """
-    _dir = os.path.dirname(CRMSH_LOG_FILE)
-    os.makedirs(_dir, exist_ok=True)
-
-
 def setup_logging(only_help=False):
     """
     Setup log directory and loadding logging config dict
@@ -432,10 +424,17 @@ def setup_logging(only_help=False):
     if only_help:
         LOGGING_CFG["handlers"]["file"] = {'class': 'logging.NullHandler'}
     else:
-        setup_directory_for_logfile()
+        # dirname(CRMSH_LOG_FILE) should be created by package manager during installation
+        with open(CRMSH_LOG_FILE, 'a') as f:
+            try:
+                shutil.chown(CRMSH_LOG_FILE, group=constants.HA_GROUP)
+                os.fchmod(f.fileno(), 0o664)
+                shutil.chown(CRMSH_LOG_FILE, user=constants.HA_USER)
+            except PermissionError:
+                # The file has been open with O_APPEND, oo logging can write to it.
+                # Failing to change owner or mode is not a fatal error.
+                pass
     logging.config.dictConfig(LOGGING_CFG)
-    if os.path.exists(CRMSH_LOG_FILE):
-        shutil.chown(CRMSH_LOG_FILE, constants.HA_USER, constants.HA_GROUP)
 
 
 def setup_logger(name):
