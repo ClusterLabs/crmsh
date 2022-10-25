@@ -108,9 +108,15 @@ class GroupWriteRotatingFileHandler(logging.handlers.RotatingFileHandler):
     Source: https://stackoverflow.com/a/6779307
     """
     def _open(self):
-        prevumask=os.umask(0o002)
-        rtv=logging.handlers.RotatingFileHandler._open(self)
-        os.umask(prevumask)
+        rtv = super()._open()
+        try:
+            shutil.chown(rtv.name, group=constants.HA_GROUP)
+            os.fchmod(rtv.fileno(), 0o664)
+            shutil.chown(rtv.name, user=constants.HA_USER)
+        except PermissionError:
+            # The file has been open, and FileHandler can write to it.
+            # Failing to change owner or mode is not a fatal error.
+            pass
         return rtv
 
 
@@ -435,17 +441,13 @@ def setup_logging(only_help=False):
     # To avoid the potential "permission denied" error under other users (boo#1192754)
     if only_help:
         LOGGING_CFG["handlers"]["file"] = {'class': 'logging.NullHandler'}
-    else:
-        # dirname(CRMSH_LOG_FILE) should be created by package manager during installation
-        with open(CRMSH_LOG_FILE, 'a') as f:
-            try:
-                shutil.chown(CRMSH_LOG_FILE, group=constants.HA_GROUP)
-                os.fchmod(f.fileno(), 0o664)
-                shutil.chown(CRMSH_LOG_FILE, user=constants.HA_USER)
-            except PermissionError:
-                # The file has been open with O_APPEND, oo logging can write to it.
-                # Failing to change owner or mode is not a fatal error.
-                pass
+    # dirname(CRMSH_LOG_FILE) should be created by package manager during installation
+    try:
+        with open(CRMSH_LOG_FILE, 'a'):
+            pass
+    except (PermissionError, FileNotFoundError) as e:
+        print('{}WARNING:{} Failed to open log file: {}'.format(constants.YELLOW, constants.END, e), file=sys.stderr)
+        LOGGING_CFG["handlers"]["file"] = {'class': 'logging.NullHandler'}
     logging.config.dictConfig(LOGGING_CFG)
 
 
