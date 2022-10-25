@@ -14,6 +14,7 @@ RUN zypper -n install make autoconf automake vim which libxslt-tools mailx iprou
 RUN zypper -n install python3 python3-lxml python3-python-dateutil python3-parallax python3-setuptools python3-PyYAML python3-curses python3-behave
 RUN zypper -n install csync2 libglue-devel corosync corosync-qdevice pacemaker booth corosync-qnetd
 
+RUN mkdir -p /var/log/crmsh
 RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
 RUN echo "$ssh_prv_key" > /root/.ssh/id_rsa && chmod 600 /root/.ssh/id_rsa
 RUN echo "$ssh_pub_key" > /root/.ssh/id_rsa.pub && chmod 600 /root/.ssh/id_rsa.pub
