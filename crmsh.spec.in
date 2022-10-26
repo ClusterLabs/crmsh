@@ -40,6 +40,7 @@ Version:        @VERSION@
 Release:        0
 Url:            http://crmsh.github.io
 Source0:        %{name}-%{version}.tar.bz2
+Source1:        %{name}.tmpfiles.d.conf
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version}
@@ -174,9 +175,14 @@ if [ -f %{buildroot}%{_bindir}/crm ]; then
 	install -Dm0755 %{buildroot}%{_bindir}/crm %{buildroot}%{_sbindir}/crm
 	rm %{buildroot}%{_bindir}/crm
 fi
+install -d -m 0755 %{buildroot}%{_tmpfilesdir}
+install -m 0644 %{SOURCE1} %{buildroot}%{_tmpfilesdir}/%{name}.conf
 %if 0%{?suse_version}
 %fdupes %{buildroot}
 %endif
+
+%post
+%tmpfiles_create %{_tmpfilesdir}/%{name}.conf
 
 %if %{with regression_tests}
 # Run regression tests after installing the package
@@ -211,6 +217,8 @@ result2=$?
 %{_datadir}/%{name}
 %exclude %{_datadir}/%{name}/tests
 %exclude %{_datadir}/%{name}/scripts
+
+%{_tmpfilesdir}/%{name}.conf
 
 %doc %{_mandir}/man8/*
 %{crmsh_docdir}/COPYING
