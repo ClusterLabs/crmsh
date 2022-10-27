@@ -18,6 +18,7 @@ RUN zypper ar -f -G https://download.opensuse.org/repositories/network:/ha-clust
 RUN zypper --non-interactive refresh
 RUN zypper --non-interactive up --allow-vendor-change -y python3-parallax
 
+RUN mkdir -p /var/log/crmsh
 RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
 RUN echo "$ssh_prv_key" > /root/.ssh/id_rsa && chmod 600 /root/.ssh/id_rsa
 RUN echo "$ssh_pub_key" > /root/.ssh/id_rsa.pub && chmod 600 /root/.ssh/id_rsa.pub
