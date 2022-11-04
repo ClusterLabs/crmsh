@@ -395,5 +395,7 @@ def step_impl(context):
 
 @when('Run parallax call many times on "{node}"')
 def step_impl(context, node):
-    for i in range(2048):
+    import resource
+    resource.setrlimit(resource.RLIMIT_NOFILE, (50, 50))
+    for i in range(51):
         parallax.parallax_call([node], "true")
