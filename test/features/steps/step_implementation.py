@@ -391,3 +391,11 @@ def step_impl(context):
         time.sleep(1)
         if crmutils.get_dc():
             break
+
+
+@when('Run parallax call many times on "{node}"')
+def step_impl(context, node):
+    import resource
+    resource.setrlimit(resource.RLIMIT_NOFILE, (50, 50))
+    for i in range(51):
+        parallax.parallax_call([node], "true")
