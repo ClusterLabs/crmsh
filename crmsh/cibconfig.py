@@ -830,13 +830,12 @@ def parse_cli_to_xml(cli, oldnode=None):
         for s in lines2cli(cli):
             node = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
-        node = parse.parse(cli, comments=comments, ignore_empty=False)
+        node = parse.parse(cli, comments=comments, ignore_empty=False, complete_op_advised=True)
     if node is False:
         return None, None, None
     elif node is None:
         return None, None, None
     return postprocess_cli(node, oldnode)
-
 
 #
 # cib element classes (CibObject the parent class)

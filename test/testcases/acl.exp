@@ -27,13 +27,20 @@
 .EXT cib metadata
 .INP: show
 node node1
-primitive d0 ocf:pacemaker:Dummy
-primitive d1 ocf:pacemaker:Dummy
+primitive d0 ocf:pacemaker:Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
+primitive d1 ocf:pacemaker:Dummy \
+        op monitor timeout=20s interval=10s \
+        op start timeout=20s interval=0s \
+        op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started requires=nothing \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+	op stop timeout=15 interval=0s
 property cib-bootstrap-options: \
 	enable-acl=true
 role basic-read \
