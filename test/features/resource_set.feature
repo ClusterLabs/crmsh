@@ -95,3 +95,18 @@ Feature: Use "crm configure set" to update attributes and operations
     Then    Except "ERROR: resource.move: Not our node: xxxx"
     When    Try "crm resource move d"
     Then    Except "ERROR: resource.move: No target node: Move requires either a target node or 'force'"
+
+  @clean
+  Scenario: trace ra with specific directory
+    When    Run "crm resource trace d monitor" on "hanode1"
+    Then    Expected "Trace for d:monitor is written to /var/lib/heartbeat/trace_ra/Dummy" in stdout
+    When    Wait "10" seconds
+    Then    Run "ls /var/lib/heartbeat/trace_ra/Dummy/d.monitor.*" OK
+    When    Run "crm resource untrace d" on "hanode1"
+    Then    Expected "Stop tracing d" in stdout
+    When    Run "crm resource trace d monitor /trace_log_d" on "hanode1"
+    Then    Expected "Trace for d:monitor is written to /trace_log_d/Dummy" in stdout
+    When    Wait "10" seconds
+    Then    Run "ls /trace_log_d/Dummy/d.monitor.*" OK
+    When    Run "crm resource untrace d" on "hanode1"
+    Then    Expected "Stop tracing d" in stdout
