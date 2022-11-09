@@ -733,7 +733,8 @@ class RscMgmt(command.UI):
         if not cib_factory.commit():
             return False
         rsc_type = rsc.node.get("type")
-        logger.info("Trace for %s%s is written to %s/trace_ra/%s", rsc_id, ":"+op if op else "", config.path.heartbeat_dir, rsc_type)
+        trace_dir = "{}/{}".format(dir, rsc_type) if dir else "{}/trace_ra/{}".format(config.path.heartbeat_dir, rsc_type)
+        logger.info("Trace for %s%s is written to %s", rsc_id, ":"+op if op else "", trace_dir)
         if op is not None and op != "monitor":
             logger.info("Trace set, restart %s to trace the %s operation", rsc_id, op)
         else:
