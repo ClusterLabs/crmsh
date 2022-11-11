@@ -114,3 +114,18 @@ Feature: Use "crm configure set" to update attributes and operations
     Then    Expected "WARNING: s2: interval in monitor must be unique, advised is 11s" in stdout
     When    Run "crm configure primitive id=d4 Dummy op start timeout=10s" on "hanode1"
     Then    Expected "WARNING: d4: specified timeout 10s for start is smaller than the advised 20s" in stdout
+
+  @clean
+  Scenario: trace ra with specific directory
+    When    Run "crm resource trace d monitor" on "hanode1"
+    Then    Expected "Trace for d:monitor is written to /var/lib/heartbeat/trace_ra/Dummy" in stdout
+    When    Wait "10" seconds
+    Then    Run "ls /var/lib/heartbeat/trace_ra/Dummy/d.monitor.*" OK
+    When    Run "crm resource untrace d" on "hanode1"
+    Then    Expected "Stop tracing d" in stdout
+    When    Run "crm resource trace d monitor /trace_log_d" on "hanode1"
+    Then    Expected "Trace for d:monitor is written to /trace_log_d/Dummy" in stdout
+    When    Wait "10" seconds
+    Then    Run "ls /trace_log_d/Dummy/d.monitor.*" OK
+    When    Run "crm resource untrace d" on "hanode1"
+    Then    Expected "Stop tracing d" in stdout
