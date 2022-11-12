@@ -1,6 +1,7 @@
 #!/bin/bash
-
 DOCKER_IMAGE=${DOCKER_IMAGE:-"liangxin1300/haleap:15.4"}
+PROJECT_PATH=$(dirname $(dirname `realpath $0`))
+PROJECT_INSIDE="/opt/crmsh"
 DOCKER_SERVICE="docker.service"
 COROSYNC_CONF="/etc/corosync/corosync.conf"
 COROSYNC_AUTH="/etc/corosync/authkey"
@@ -14,6 +15,7 @@ HA_NETWORK_V6_ARRAY[0]="2001:db8:10::/64"
 HA_NETWORK_V6_ARRAY[1]="2001:db8:20::/64"
 BEHAVE_CASE_DIR="$(dirname $0)/features/"
 BEHAVE_CASE_EXCLUDE="sbd|ocfs2"
+
 read -r -d '' COROSYNC_CONF_TEMPLATE << EOM
 totem {
         version: 2
@@ -180,10 +182,8 @@ docker_exec() {
 
 deploy_ha_node() {
 	node_name=$1
-	project_path=$(dirname $(dirname `realpath $0`))
-	docker_options="-d --name $node_name -h $node_name --privileged --shm-size 1g -v $project_path:/app"
-	#TODO run autogen and configure locally to save build time inside containers
-	build_cmd="cd /app;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix="
+	docker_options="-d --name $node_name -h $node_name --privileged --shm-size 1g"
+	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix="
 
 	info "Deploying \"$node_name\"..."
 	docker run --restart always $docker_options $DOCKER_IMAGE &> /dev/null
@@ -195,13 +195,15 @@ deploy_ha_node() {
 		docker_exec $node_name "systemctl stop sshd.service"
 	fi
 	if [ "$node_name" != "qnetd-node" ];then
-		docker_exec $node_name "rpm -e corosync-qnetd"
+		rm_qnetd_cmd="rpm -q corosync-qnetd && rpm -e corosync-qnetd"
+		docker_exec $node_name "$rm_qnetd_cmd" &> /dev/null
 	fi
 	docker_exec $node_name "rm -rf /run/nologin"
 	docker_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
-	info "Building crmsh codes on \"$node_name\"..."
-	docker_exec $node_name "$build_cmd" 1> /dev/null || \
-		fatal "Building failed!"
+	docker cp $PROJECT_PATH $node_name:/opt
+	info "Building crmsh on \"$node_name\"..."
+	docker_exec $node_name "$make_cmd" 1> /dev/null || \
+		fatal "Building failed on $node_name!"
 }
 
 
@@ -217,8 +219,9 @@ create_node() {
 
 	info "Setup cluster..."
 	for node in $*;do
-		deploy_ha_node $node
+		deploy_ha_node $node &
 	done
+	wait
 }
 
 
@@ -236,11 +239,17 @@ config_cluster() {
 		corosync_conf_str=$(sed "/corosync_votequorum/a \\\\ttwo_node: 1" <(echo "$corosync_conf_str"))
 	fi
 
+	info "Copy corosync.conf to $*"
 	for node in $*;do
 		if [ $node == $1 ];then
 			docker_exec $1 "echo \"$corosync_conf_str\" >> $COROSYNC_CONF"
 			docker_exec $1 "corosync-keygen -l -k $COROSYNC_AUTH &> /dev/null"
 		else
+			while :
+			do
+				docker_exec $1 "ssh -T -o Batchmode=yes $node true &> /dev/null" && break
+				sleep 1
+			done
 			docker_exec $1 "scp -p $COROSYNC_CONF $COROSYNC_AUTH $node:/etc/corosync &> /dev/null"
 		fi
 	done
@@ -249,7 +258,12 @@ config_cluster() {
 
 start_cluster() {
 	for node in $*;do
-		docker_exec $node "crm cluster enable && crm cluster start"
+		docker_exec $node "crm cluster enable && crm cluster start" 1> /dev/null
+		if [ "$?" -eq 0 ];then
+			info "Cluster service started on \"$node\""
+		else
+			fatal "Failed to start cluster service on \"$node\""
+		fi
 	done
 }
 
@@ -280,6 +294,14 @@ setup_cluster() {
 }
 
 
+cleanup_container() {
+	node=$1
+	info "Cleanup container \"$node\"..."
+	docker container stop $node &> /dev/null
+	docker container rm $node &> /dev/null
+}
+
+
 cleanup_cluster() {
 	exist_network_array=()
 	for network in ${HA_NETWORK_ARRAY[@]};do
@@ -292,10 +314,9 @@ cleanup_cluster() {
 
 	container_array=(`docker network inspect $exist_network_array -f '{{range .Containers}}{{printf "%s " .Name}}{{end}}'`)
 	for node in ${container_array[@]};do
-		info "Cleanup container \"$node\"..."
-		docker container stop $node &> /dev/null
-		docker container rm $node &> /dev/null
+		cleanup_container $node &
 	done
+	wait
 
 	for network in ${exist_network_array[@]};do
 		info "Cleanup ha specific docker network \"$network\"..."
@@ -410,7 +431,7 @@ for case_num in $*;do
 		continue
 	fi
 	case_file=$BEHAVE_CASE_DIR/${test_case_array[$((case_num-1))]}
-	case_file_in_container="/app/test/features/`basename $case_file`"
+	case_file_in_container="$PROJECT_INSIDE/test/features/`basename $case_file`"
 	node_arry=(`awk -F: '/Need nodes/{print $2}' $case_file`)
 	CONFIG_COROSYNC_FLAG=0
 	setup_cluster ${node_arry[@]}
