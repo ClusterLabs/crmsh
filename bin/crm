@@ -37,8 +37,9 @@ except ImportError as msg:
     sys.stderr.write('''Fatal error:
     %s
 
-Failed to start crmsh! This is likely due to a broken
-installation or a missing dependency.
+Failed to start crmsh! This is likely due to:
+- A missing dependency (eg. corresponding python3 version)
+- A broken installation
 
 If you are using a packaged version of crmsh, please try
 reinstalling the package. Also check your PYTHONPATH and
