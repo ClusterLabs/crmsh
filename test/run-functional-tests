@@ -291,6 +291,7 @@ setup_cluster() {
 	[ "$CONFIG_COROSYNC_FLAG" -eq 0 ] && return
 	config_cluster ${hanodes_arry[@]}
 	start_cluster ${hanodes_arry[@]}
+	docker_exec "hanode1" "crm configure property stonith-enabled=false"
 }
 
 
