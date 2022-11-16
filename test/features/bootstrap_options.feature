@@ -100,10 +100,10 @@ Feature: crmsh bootstrap process - options
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -I -i eth1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     IP "2001:db8:10::2" is used by corosync on "hanode1"
+    And     IP "@hanode1.ip6.default" is used by corosync on "hanode1"
     When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    And     IP "2001:db8:10::3" is used by corosync on "hanode2"
+    And     IP "@hanode2.ip6.default" is used by corosync on "hanode2"
     And     Corosync working on "unicast" mode
 
   @clean
@@ -112,10 +112,10 @@ Feature: crmsh bootstrap process - options
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -I -i eth1 -u -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     IP "2001:db8:10::2" is used by corosync on "hanode1"
+    And     IP "@hanode1.ip6.default" is used by corosync on "hanode1"
     When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    And     IP "2001:db8:10::3" is used by corosync on "hanode2"
+    And     IP "@hanode2.ip6.default" is used by corosync on "hanode2"
     And     Show cluster status on "hanode1"
     And     Corosync working on "unicast" mode
 
