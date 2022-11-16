@@ -407,6 +407,17 @@ if [ "$#" -eq 0 ];then
 	usage_and_exit
 fi
 
+# used by github action
+if [ "$1" == "_get_index_of" ];then
+	shift
+	pattern=""
+	for item in $*;do
+		pattern+="${item}|"
+	done
+	echo_test_cases|grep -E "(${pattern%%|})(\.feature|\s+Original regression test)"|awk '{print $1}'|tr -s '\n' ' '
+	exit 0
+fi
+
 for case_num in $*;do
 	echo_test_cases|grep -E "\s+$case_num\s" &> /dev/null
 	if [ "$?" -ne 0 ];then
