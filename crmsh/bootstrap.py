@@ -20,6 +20,7 @@ import time
 import readline
 import shutil
 import yaml
+import socket
 from string import Template
 from lxml import etree
 from pathlib import Path
@@ -185,6 +186,19 @@ class Context(object):
         for node in self.node_list:
             utils.ping_node(node)
 
+    def _validate_cluster_node(self):
+        """
+        Validate cluster_node on join side
+        """
+        if self.cluster_node and self.type == 'join':
+            try:
+                # self.cluster_node might be hostname or IP address
+                ip_addr = socket.gethostbyname(self.cluster_node)
+                if utils.InterfacesInfo.ip_in_local(ip_addr):
+                    utils.fatal("Please specify peer node's hostname or IP address")
+            except socket.gaierror as err:
+                utils.fatal("\"{}\": {}".format(self.cluster_node, err))
+
     def validate_option(self):
         """
         Validate options
@@ -204,6 +218,7 @@ class Context(object):
             logger.warning("-w option is deprecated and will be removed in future versions")
         if self.ocfs2_devices or self.stage == "ocfs2":
             ocfs2.OCFS2Manager.verify_ocfs2(self)
+        self._validate_cluster_node()
         self._validate_nodes_option()
         self._validate_sbd_option()
 
@@ -2108,7 +2123,6 @@ def bootstrap_join(context):
 
     init()
     _context.init_sbd_manager()
-    _context.validate_option()
 
     check_tty()
 
