@@ -175,6 +175,8 @@ class Context(object):
         """
         Validate -N/--nodes option
         """
+        if not self.node_list:
+            return
         self.node_list = utils.parse_append_action_argument(self.node_list)
         me = utils.this_node()
         if me in self.node_list:
