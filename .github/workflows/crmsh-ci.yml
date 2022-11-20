@@ -224,6 +224,7 @@ jobs:
     - name: remove test package when merged or closed
       #if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
+        echo ${{ github.event.action }}
         last_commit=${{ github.sha }}
         echo "github.sha: $last_commit"
         docker pull liangxin1300/continuous_deliver:latest
