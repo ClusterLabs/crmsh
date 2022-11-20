@@ -4,7 +4,13 @@
 
 name: crmsh CI
 
-on: [push, pull_request]
+on:
+  pull_request:
+    types:
+      - opened
+      - closed
+      - synchronize
+      - reopened
 
 env:
   DOCKER_SCRIPT: ./test/run-functional-tests
