@@ -56,7 +56,7 @@ def query_ring_status():
     rc, out, err = utils.get_stdout_stderr("corosync-cfgtool -s")
     if rc != 0 and err:
         raise ValueError(err)
-    if rc == 0 and out:
+    if out:
         print(out)
 
 
