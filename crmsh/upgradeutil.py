@@ -5,6 +5,7 @@ import typing
 import parallax
 import sys
 
+import crmsh.healthcheck
 import crmsh.parallax
 import crmsh.utils
 
@@ -15,6 +16,11 @@ DATA_DIR = os.path.expanduser('~hacluster/crmsh')
 SEQ_FILE_PATH = DATA_DIR + '/upgrade_seq'
 # touch this file to force a upgrade process
 FORCE_UPGRADE_FILE_PATH = DATA_DIR + '/upgrade_forced'
+
+
+VERSION_FEATURES = {
+    1: [crmsh.healthcheck.PasswordlessHaclusterAuthenticationFeature]
+}
 
 
 logger = logging.getLogger(__name__)
@@ -85,9 +91,21 @@ def _get_minimal_seq_in_cluster(nodes):
 
 
 def _upgrade(nodes, seq):
-    logger.info("Upgrading cluster...")
-    if seq <= 0:
-        seq_0_setup_hacluster_passwordless(nodes)
+    def ask(msg: str):
+        if not crmsh.utils.ask('Upgrade of crmsh configuration: ' + msg):
+            raise crmsh.healthcheck.AskDeniedByUser()
+    try:
+        for i in range(seq + 1, CURRENT_UPGRADE_SEQ + 1):
+            for feature_class in VERSION_FEATURES[i]:
+                feature = feature_class()
+                if crmsh.healthcheck.feature_full_check(feature, nodes):
+                    logger.info("Upgrade: feature %s is already functional.")
+                else:
+                    logger.debug("Upgrade: fixing feature %s...")
+                    crmsh.healthcheck.feature_fix(feature, nodes, ask)
+        logger.info("Upgrade of crmsh configuration succeeded.")
+    except crmsh.healthcheck.AskDeniedByUser:
+        raise _SkipUpgrade() from None
 
 
 def upgrade_if_needed():
@@ -102,14 +120,14 @@ def upgrade_if_needed():
             logger.debug("Upgrading crmsh configuration from seq %s to %s.", seq, CURRENT_UPGRADE_SEQ)
             _upgrade(nodes, seq)
         except _SkipUpgrade:
-            logger.warning("Configuration upgrade skipped.")
+            logger.warning("Upgrade of crmsh configuration skipped.")
             return
         crmsh.parallax.parallax_call(
             nodes,
             "mkdir -p '{}' && echo '{}' > '{}'".format(DATA_DIR, CURRENT_UPGRADE_SEQ, SEQ_FILE_PATH),
         )
         crmsh.parallax.parallax_call(nodes, 'rm -f {}'.format(FORCE_UPGRADE_FILE_PATH))
-        logger.debug("Configuration upgrade finished.", seq, CURRENT_UPGRADE_SEQ)
+        logger.debug("Upgrade of crmsh configuration finished.", seq, CURRENT_UPGRADE_SEQ)
 
 
 def force_set_local_upgrade_seq():
@@ -122,53 +140,6 @@ def force_set_local_upgrade_seq():
         pass
     with open(SEQ_FILE_PATH, 'w', encoding='ascii') as f:
         print(CURRENT_UPGRADE_SEQ, file=f)
-
-
-def seq_0_setup_hacluster_passwordless(nodes):
-    """setup passwordless ssh authentication by running crm cluster ssh init/join on appreciated nodes."""
-    # https://bugzilla.suse.com/show_bug.cgi?id=1201785
-    logger.debug("upgradeutil: setup passwordless ssh authentication for user hacluster")
-    try:
-        nodes_without_keys = [
-            node for node, result in
-            _parallax_run(
-                nodes,
-                '[ -f ~hacluster/.ssh/id_rsa ] || [ -f ~hacluster/.ssh/id_ecdsa ] || [ -f ~hacluster/.ssh/id_ed25519 ]'
-            ).items()
-            if result[0] != 0
-        ]
-    except parallax.Error:
-        raise _SkipUpgrade() from None
-    if nodes_without_keys:
-        if not crmsh.utils.ask("Configuration upgrade: setup passwordless ssh authentication for user hacluster?"):
-            raise _SkipUpgrade()
-        if len(nodes_without_keys) == len(nodes):
-            # pick one node to run init ssh on it
-            init_node = nodes_without_keys[0]
-            # and run join ssh on other nodes
-            join_nodes = list()
-            join_nodes.extend(nodes)
-            join_nodes.remove(init_node)
-            join_target_node = init_node
-        else:
-            nodes_with_keys = set(nodes) - set(nodes_without_keys)
-            # no need to init ssh
-            init_node = None
-            join_nodes = nodes_without_keys
-            # pick one node as join target
-            join_target_node = next(iter(nodes_with_keys))
-        if init_node is not None:
-            try:
-                crmsh.parallax.parallax_call([init_node], 'crm cluster init ssh -y')
-            except ValueError as e:
-                logger.error('Failed to initialize passwordless ssh authentication on node %s.', init_node, exc_info=e)
-                raise _SkipUpgrade from None
-        try:
-            for node in join_nodes:
-                crmsh.parallax.parallax_call([node], 'crm cluster join ssh -c {} -y'.format(join_target_node))
-        except ValueError as e:
-            logger.error('Failed to initialize passwordless ssh authentication.', exc_info=e)
-            raise _SkipUpgrade from None
 
 
 def main():
