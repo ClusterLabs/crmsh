@@ -1431,7 +1431,14 @@ def swap_public_ssh_key(remote_node, user="root", add=False):
         if user == "root":
             copy_ssh_key(public_key, user, remote_node)
         else:
-            append_to_remote_file(public_key, remote_node, authorized_file)
+            try:
+                append_to_remote_file(public_key, remote_node, authorized_file)
+            except ValueError:
+                utils.get_stdout_or_raise_error(
+                    '/usr/bin/env python3 -m crmsh.healthcheck fix-cluster PasswordlessHaclusterAuthenticationFeature',
+                    remote_node,
+                )
+                append_to_remote_file(public_key, remote_node, authorized_file)
 
     if add:
         configure_ssh_key(remote=remote_node)
