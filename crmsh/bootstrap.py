@@ -1350,7 +1350,15 @@ def swap_public_ssh_key(remote_node, user="root"):
         # If no passwordless configured, paste /root/.ssh/id_rsa.pub to remote_node's /root/.ssh/authorized_keys
         logger.info("Configuring SSH passwordless with {}@{}".format(user, remote_node))
         # After this, login to remote_node is passwordless
-        append_to_remote_file(public_key, remote_node, authorized_file)
+        try:
+            append_to_remote_file(public_key, remote_node, authorized_file)
+        except ValueError:
+            if user == 'hacluster':
+                utils.get_stdout_or_raise_error(
+                    '/usr/bin/env python3 -m crmsh.healthcheck fix-cluster PasswordlessHaclusterAuthenticationFeature',
+                    remote_node,
+                )
+                append_to_remote_file(public_key, remote_node, authorized_file)
 
     try:
         # Fetch public key file from remote_node
