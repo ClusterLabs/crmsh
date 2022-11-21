@@ -35,7 +35,7 @@ class TestUpgradeCondition(unittest.TestCase):
             mock_current_upgrade_seq: mock.MagicMock,
     ):
         mock_stat.side_effect = FileNotFoundError()
-        mock_get_file_content.return_value = b'0\n'
+        mock_get_file_content.return_value = b'0.1\n'
         mock_current_upgrade_seq.__gt__.return_value = True
         self.assertTrue(upgradeutil._is_upgrade_needed(['node-1', 'node-2']))
 
@@ -49,6 +49,6 @@ class TestUpgradeCondition(unittest.TestCase):
             mock_current_upgrade_seq: mock.MagicMock,
     ):
         mock_stat.side_effect = FileNotFoundError()
-        mock_get_file_content.return_value = b'1\n'
+        mock_get_file_content.return_value = b'1.0\n'
         mock_current_upgrade_seq.__gt__.return_value = False
         self.assertFalse(upgradeutil._is_upgrade_needed(['node-1', 'node-2']))
