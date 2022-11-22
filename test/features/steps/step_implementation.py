@@ -388,3 +388,7 @@ def step_impl(context):
         time.sleep(1)
         if crmutils.get_dc():
             break
+
+@then('File "{path}" exists on "{node}"')
+def step_impl(context, path, node):
+    parallax.parallax_call([node], '[ -f {} ]'.format(path))
