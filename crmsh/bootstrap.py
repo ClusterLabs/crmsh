@@ -25,6 +25,7 @@ from lxml import etree
 from pathlib import Path
 from contextlib import contextmanager
 from . import config
+from . import upgradeutil
 from . import utils
 from . import xmlutil
 from .cibconfig import mkset_obj, cib_factory
@@ -1251,6 +1252,10 @@ def init_sbd():
     _context.sbd_manager.sbd_init()
 
 
+def init_upgradeutil():
+    upgradeutil.force_set_local_upgrade_seq()
+
+
 def init_ocfs2():
     """
     OCFS2 configure process
@@ -1426,7 +1431,14 @@ def swap_public_ssh_key(remote_node, user="root", add=False):
         if user == "root":
             copy_ssh_key(public_key, user, remote_node)
         else:
-            append_to_remote_file(public_key, remote_node, authorized_file)
+            try:
+                append_to_remote_file(public_key, remote_node, authorized_file)
+            except ValueError:
+                utils.get_stdout_or_raise_error(
+                    '/usr/bin/env python3 -m crmsh.healthcheck fix-cluster PasswordlessHaclusterAuthenticationFeature',
+                    remote_node,
+                )
+                append_to_remote_file(public_key, remote_node, authorized_file)
 
     if add:
         configure_ssh_key(remote=remote_node)
@@ -2049,6 +2061,7 @@ def bootstrap_init(context):
         init_corosync()
         init_remote_auth()
         init_sbd()
+        init_upgradeutil()
 
         lock_inst = lock.Lock()
         try:
@@ -2120,6 +2133,7 @@ def bootstrap_join(context):
             cluster_node = prompt_for_string("IP address or hostname of existing node (e.g.: 192.168.1.1)", ".+")
             _context.cluster_node = cluster_node
 
+        init_upgradeutil()
         utils.ping_node(cluster_node)
 
         join_ssh(cluster_node)

@@ -404,3 +404,8 @@ def step_impl(context, node):
     resource.setrlimit(resource.RLIMIT_NOFILE, (50, 50))
     for i in range(51):
         parallax.parallax_call([node], "true")
+
+
+@then('File "{path}" exists on "{node}"')
+def step_impl(context, path, node):
+    parallax.parallax_call([node], '[ -f {} ]'.format(path))

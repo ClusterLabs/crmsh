@@ -1560,7 +1560,18 @@ def test_list_cluster_nodes_none(mock_run, mock_etree):
     mock_etree.return_value = None
     res = utils.list_cluster_nodes()
     assert res is None
-    mock_run.assert_called_once_with(constants.CIB_QUERY)
+    mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=False)
+    mock_etree.assert_called_once_with("data")
+
+
+@mock.patch('crmsh.utils.etree.fromstring')
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_list_cluster_nodes_none_no_reg(mock_run, mock_etree):
+    mock_run.return_value = (0, "data", None)
+    mock_etree.return_value = None
+    res = utils.list_cluster_nodes(no_reg=True)
+    assert res is None
+    mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=True)
     mock_etree.assert_called_once_with("data")
 
 
@@ -1573,7 +1584,7 @@ def test_list_cluster_nodes_cib_not_exist(mock_run, mock_env, mock_isfile):
     mock_isfile.return_value = False
     res = utils.list_cluster_nodes()
     assert res is None
-    mock_run.assert_called_once_with(constants.CIB_QUERY)
+    mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=False)
     mock_env.assert_called_once_with("CIB_file", constants.CIB_RAW_FILE)
     mock_isfile.assert_called_once_with(constants.CIB_RAW_FILE)
 
@@ -1597,7 +1608,7 @@ def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem):
     res = utils.list_cluster_nodes()
     assert res == ["node2"]
 
-    mock_run.assert_called_once_with(constants.CIB_QUERY)
+    mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=False)
     mock_env.assert_called_once_with("CIB_file", constants.CIB_RAW_FILE)
     mock_isfile.assert_called_once_with(constants.CIB_RAW_FILE)
     mock_file2elem.assert_called_once_with(constants.CIB_RAW_FILE)
