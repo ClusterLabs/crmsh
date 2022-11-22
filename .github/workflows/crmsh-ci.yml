@@ -169,6 +169,17 @@ jobs:
         sudo systemctl restart docker.service
         $DOCKER_SCRIPT 7
 
+  functional_test_healthcheck:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for healthcheck
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        $DOCKER_SCRIPT `$GET_INDEX_OF healthcheck`
+
   original_regression_test:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
@@ -192,6 +203,7 @@ jobs:
       functional_test_configure_sublevel,
       functional_test_constraints_bugs,
       functional_test_geo_cluster,
+      functional_test_healthcheck,
       original_regression_test]
     runs-on: ubuntu-20.04
     timeout-minutes: 10
