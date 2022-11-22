@@ -17,9 +17,9 @@ env:
 
 jobs:
   general_check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: check data-manifest
       run: |
         ./update-data-manifest.sh
@@ -32,16 +32,16 @@ jobs:
         }
 
   unit_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         python-version: ['3.6', '3.8', '3.10']
       fail-fast: false
     timeout-minutes: 5
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -53,10 +53,10 @@ jobs:
         tox -v -e${{ matrix.python-version }}
 
   functional_test_crm_report_bugs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for crm_report
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -64,10 +64,10 @@ jobs:
         $DOCKER_SCRIPT 6
 
   functional_test_bootstrap_bugs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for bootstrap bugs
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -75,10 +75,10 @@ jobs:
         $DOCKER_SCRIPT 1
 
   functional_test_bootstrap_common:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for bootstrap common
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -86,10 +86,10 @@ jobs:
         $DOCKER_SCRIPT 2
 
   functional_test_bootstrap_options:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for bootstrap options
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -97,10 +97,10 @@ jobs:
         $DOCKER_SCRIPT 3
 
   functional_test_qdevice_setup_remove:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for qdevice setup and remove
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -108,10 +108,10 @@ jobs:
         $DOCKER_SCRIPT 9
 
   functional_test_qdevice_options:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for qdevice options
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -119,10 +119,10 @@ jobs:
         $DOCKER_SCRIPT 8
 
   functional_test_qdevice_validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for qdevice validate
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -130,10 +130,10 @@ jobs:
         $DOCKER_SCRIPT 11
 
   functional_test_qdevice_user_case:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for qdevice user case
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -141,10 +141,10 @@ jobs:
         $DOCKER_SCRIPT 10
 
   functional_test_resource_subcommand:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for resource subcommand
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -152,10 +152,10 @@ jobs:
         $DOCKER_SCRIPT 12 13
 
   functional_test_configure_sublevel:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for configure sublevel bugs
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -163,10 +163,10 @@ jobs:
         $DOCKER_SCRIPT 4
 
   functional_test_constraints_bugs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for constraints bugs
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -174,10 +174,10 @@ jobs:
         $DOCKER_SCRIPT 5
 
   functional_test_geo_cluster:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for geo cluster
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -185,10 +185,10 @@ jobs:
         $DOCKER_SCRIPT 7
 
   original_regression_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: original regression test
       run:  |
         $DOCKER_SCRIPT 14
@@ -209,10 +209,10 @@ jobs:
       functional_test_constraints_bugs,
       functional_test_geo_cluster,
       original_regression_test]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: delivery process
       if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
@@ -228,10 +228,10 @@ jobs:
 
   submit:
     needs: delivery
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: submit process
       if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
