@@ -550,10 +550,14 @@ def is_group(node):
     return node.tag == "group"
 
 
+def is_attr_set(node, attr):
+    return get_attr_value(get_child_nvset_node(node), attr) is not None
+
+
 def is_ms_or_promotable_clone(node):
-    is_promotable = is_boolean_true(get_attr_value(get_child_nvset_node(node), "promotable"))
-    is_ms = node.tag in ("master", "ms")
-    return is_ms or is_promotable
+    is_promotable_type = is_boolean_true(is_attr_set(node, "promotable"))
+    is_ms_type = node.tag in ("master", "ms")
+    return is_ms_type or is_promotable_type
 
 
 def is_clone(node):

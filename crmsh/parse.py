@@ -170,13 +170,13 @@ class BaseParser(object):
         self.begin(cmd, min_args=min_args)
         return self.match_dispatch(errmsg="Unknown command")
 
-    def do_parse(self, cmd, ignore_empty, complete_op_advised):
+    def do_parse(self, cmd, ignore_empty, complete_advised):
         """
         Called by CliParser. Calls parse()
         Parsers should pass their return value through this method.
         """
         self.ignore_empty = ignore_empty
-        self.complete_op_advised = complete_op_advised
+        self.complete_advised = complete_advised
         out = self.parse(cmd)
         if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
@@ -661,7 +661,7 @@ class BaseParser(object):
         """
         Complete operation actions advised values
         """
-        if not self.complete_op_advised or out.tag != "primitive":
+        if not self.complete_advised or out.tag != "primitive":
             return
         ra_inst = ra.RAInfo(out.get('class'), out.get('type'), out.get('provider'))
         ra_actions_dict = ra_inst.actions()
@@ -1774,7 +1774,7 @@ class ResourceSet(object):
         return ret
 
 
-def parse(s, comments=None, ignore_empty=True, complete_op_advised=False):
+def parse(s, comments=None, ignore_empty=True, complete_advised=False):
     '''
     Input: a list of tokens (or a CLI format string).
     Return: a cibobject
@@ -1820,7 +1820,7 @@ def parse(s, comments=None, ignore_empty=True, complete_op_advised=False):
         return False
 
     try:
-        ret = parser.do_parse(s, ignore_empty, complete_op_advised)
+        ret = parser.do_parse(s, ignore_empty, complete_advised)
         if ret is not None and len(comments) > 0:
             if ret.tag in constants.defaults_tags:
                 xmlutil.stuff_comments(ret[0], comments)
