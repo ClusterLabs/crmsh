@@ -116,3 +116,12 @@ Feature: Use "crm configure set" to update attributes and operations
     Then    Expected "WARNING: s2: interval in monitor must be unique, advised is 11s" in stdout
     When    Run "crm configure primitive id=d4 Dummy op start timeout=10s" on "hanode1"
     Then    Expected "WARNING: d4: specified timeout 10s for start is smaller than the advised 20s" in stdout
+
+  @clean
+  Scenario: Add promotable=true and interleave=true automatically (bsc#1205522)
+    When    Run "crm configure primitive s2 ocf:pacemaker:Stateful" on "hanode1"
+    And     Run "crm configure clone p2 s2" on "hanode1"
+    Then    Run "sleep 2;crm configure show|grep -A1 'clone p2 s2'|grep 'promotable=true interleave=true'" OK
+    When    Run "crm configure primitive s3 ocf:pacemaker:Stateful" on "hanode1"
+    And     Run "crm configure clone p3 s3 meta promotable=false" on "hanode1"
+    Then    Run "sleep 2;crm configure show|grep -A1 'clone p3 s3'|grep 'promotable=false interleave=true'" OK
