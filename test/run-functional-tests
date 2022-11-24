@@ -191,9 +191,6 @@ deploy_ha_node() {
 		docker network connect $network $node_name
 	done
 
-	if [ "$node_name" == "node-without-ssh" ];then
-		docker_exec $node_name "systemctl stop sshd.service"
-	fi
 	if [ "$node_name" != "qnetd-node" ];then
 		docker_exec $node_name "rpm -e corosync-qnetd"
 	fi
