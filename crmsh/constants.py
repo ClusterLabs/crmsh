@@ -528,4 +528,6 @@ ADVISED_ACTION_LIST = ['monitor', 'start', 'stop', 'promote', 'demote']
 ADVISED_KEY_LIST = ['timeout', 'interval', 'role']
 DEFAULT_INTERVAL_IN_ACTION = "20s"
 DEFAULT_TIMEOUT_IN_ACTION = "60s"
+
+WAIT_TIMEOUT_MS_DEFAULT = 120000
 # vim:ts=4:sw=4:et:

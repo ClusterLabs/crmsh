@@ -33,7 +33,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT, REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX
+from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT, REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX, WAIT_TIMEOUT_MS_DEFAULT
 from . import ocfs2
 from . import qdevice
 from . import parallax
@@ -358,24 +358,30 @@ def crm_configure_load(action, configuration):
         utils.fatal("Failed to commit cluster configuration")
 
 
-def wait_for_resource(message, resource):
+def wait_for_resource(message, resource, timeout_ms=WAIT_TIMEOUT_MS_DEFAULT):
     """
     Wait for resource started
     """
     with logger_utils.status_long(message) as progress_bar:
+        start_time = int(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
         while True:
             if xmlutil.CrmMonXmlParser.is_resource_started(resource):
                 break
             status_progress(progress_bar)
+            if 0 < timeout_ms <= (int(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000) - start_time):
+                utils.fatal('Time out waiting for resource.')
             sleep(1)
 
 
-def wait_for_cluster():
+def wait_for_cluster(timeout_ms=WAIT_TIMEOUT_MS_DEFAULT):
     with logger_utils.status_long("Waiting for cluster") as progress_bar:
+        start_time = int(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
         while True:
             if is_online():
                 break
             status_progress(progress_bar)
+            if 0 < timeout_ms <= (int(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000) - start_time):
+                utils.fatal('Time out waiting for cluster.')
             sleep(2)
 
 
