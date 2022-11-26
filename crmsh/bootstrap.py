@@ -1702,6 +1702,22 @@ def configure_qdevice_interactive():
     _context.qdevice_inst.valid_attr()
 
 
+def adjust_sbd_watchdog_timeout():
+    utils.check_all_nodes_reachable()
+    using_diskless_sbd = SBDManager.is_using_diskless_sbd()
+    _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
+    # add qdevice after diskless sbd started
+    if using_diskless_sbd:
+        res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
+        if res:
+            sbd_watchdog_timeout = max(int(res), SBDManager.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
+        else:
+            sbd_watchdog_timeout = SBDManager.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
+        stonith_timeout = SBDManager.calculate_stonith_timeout(sbd_watchdog_timeout)
+        SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout)})
+        invokerc("crm configure property stonith-watchdog-timeout=-1 stonith-timeout={}s".format(stonith_timeout))
+
+
 def init_qdevice():
     """
     Setup qdevice and qnetd service
@@ -1712,20 +1728,7 @@ def init_qdevice():
     if not _context.qdevice_inst:
         utils.disable_service("corosync-qdevice.service")
         return
-    if _context.stage == "qdevice":
-        utils.check_all_nodes_reachable()
-        using_diskless_sbd = SBDManager.is_using_diskless_sbd()
-        _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
-        # add qdevice after diskless sbd started
-        if using_diskless_sbd:
-            res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
-            if res:
-                sbd_watchdog_timeout = max(int(res), SBDManager.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
-            else:
-                sbd_watchdog_timeout = SBDManager.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
-            stonith_timeout = SBDManager.calculate_stonith_timeout(sbd_watchdog_timeout)
-            SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout)})
-            invokerc("crm configure property stonith-watchdog-timeout=-1 stonith-timeout={}s".format(stonith_timeout))
+    adjust_sbd_watchdog_timeout()
 
     status("""
 Configure Qdevice/Qnetd:""")
