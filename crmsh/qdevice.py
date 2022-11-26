@@ -635,18 +635,17 @@ class QDevice(object):
         """
         Adjust SBD_WATCHDOG_TIMEOUT when configuring qdevice and diskless SBD
         """
-        if self.is_stage:
-            from .sbd import SBDManager, SBDTimeout
-            utils.check_all_nodes_reachable()
-            using_diskless_sbd = SBDManager.is_using_diskless_sbd()
-            self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
-            # add qdevice after diskless sbd started
-            if using_diskless_sbd:
-                res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
-                if not res or int(res) < SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
-                    sbd_watchdog_timeout_qdevice = SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
-                    SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
-                    utils.set_property(stonith_timeout=SBDTimeout.get_stonith_timeout())
+        from .sbd import SBDManager, SBDTimeout
+        utils.check_all_nodes_reachable()
+        using_diskless_sbd = SBDManager.is_using_diskless_sbd()
+        self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
+        # add qdevice after diskless sbd started
+        if using_diskless_sbd:
+            res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
+            if not res or int(res) < SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
+                sbd_watchdog_timeout_qdevice = SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
+                SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
+                utils.set_property(stonith_timeout=SBDTimeout.get_stonith_timeout())
 
     @qnetd_lock_for_same_cluster_name
     def config_and_start_qdevice(self):
