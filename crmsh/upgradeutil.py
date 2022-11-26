@@ -12,7 +12,7 @@ import crmsh.utils
 
 # pump this seq when upgrade check need to be run
 CURRENT_UPGRADE_SEQ = (1, 0)
-DATA_DIR = os.path.expanduser('~hacluster/crmsh')
+DATA_DIR = '/var/lib/crmsh'
 SEQ_FILE_PATH = DATA_DIR + '/upgrade_seq'
 # touch this file to force a upgrade process
 FORCE_UPGRADE_FILE_PATH = DATA_DIR + '/upgrade_forced'
