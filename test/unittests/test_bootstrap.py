@@ -13,6 +13,7 @@ Unitary tests for crmsh/bootstrap.py
 import os
 import unittest
 import yaml
+import socket
 
 try:
     from unittest import mock
@@ -130,6 +131,30 @@ class TestContext(unittest.TestCase):
         with self.assertRaises(SystemExit):
             ctx.validate_option()
         mock_error.assert_called_once_with("Duplicated input for -i/--interface option")
+
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('socket.gethostbyname')
+    @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
+    def test_validate_cluster_node_same_name(self, mock_ip_in_local, mock_gethost, mock_fatal):
+        options = mock.Mock(cluster_node="me", type="join")
+        ctx = self.ctx_inst.set_context(options)
+        mock_fatal.side_effect = SystemExit
+        mock_gethost.return_value = ("10.10.10.41", None)
+        mock_ip_in_local.return_value = True
+        with self.assertRaises(SystemExit):
+            ctx._validate_cluster_node()
+        mock_fatal.assert_called_once_with("Please specify peer node's hostname or IP address")
+
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('socket.gethostbyname')
+    def test_validate_cluster_node_unknown_name(self, mock_gethost, mock_fatal):
+        options = mock.Mock(cluster_node="xxxx", type="join")
+        ctx = self.ctx_inst.set_context(options)
+        mock_fatal.side_effect = SystemExit
+        mock_gethost.side_effect = socket.gaierror("gethostbyname error")
+        with self.assertRaises(SystemExit):
+            ctx._validate_cluster_node()
+        mock_fatal.assert_called_once_with('"xxxx": gethostbyname error')
 
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.bootstrap.Validation.valid_admin_ip')

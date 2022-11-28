@@ -478,6 +478,7 @@ Examples:
         join_context.ui_context = context
         join_context.stage = stage
         join_context.type = "join"
+        join_context.validate_option()
 
         bootstrap.bootstrap_join(join_context)
 
