@@ -200,52 +200,82 @@ class QDevice(object):
         """
         return "{}/{}/{}".format(self.qdevice_path, self.cluster_node, self.qdevice_p12_filename)
 
-    def valid_qdevice_options(self):
-        """
-        Validate qdevice related options
-        """
+    @staticmethod
+    def check_qnetd_addr(qnetd_addr):
         qnetd_ip = None
-
-        if not utils.package_is_installed("corosync-qdevice"):
-            raise ValueError("Package \"corosync-qdevice\" not installed on this node")
-
         try:
             # socket.getaddrinfo works for both ipv4 and ipv6 address
             # The function returns a list of 5-tuples with the following structure:
             # (family, type, proto, canonname, sockaddr)
             # sockaddr is a tuple describing a socket address, whose format depends on the returned family
             # (a (address, port) 2-tuple for AF_INET, a (address, port, flow info, scope id) 4-tuple for AF_INET6)
-            res = socket.getaddrinfo(self.qnetd_addr, None)
+            res = socket.getaddrinfo(qnetd_addr, None)
             qnetd_ip = res[0][-1][0]
         except socket.error:
-            raise ValueError("host \"{}\" is unreachable".format(self.qnetd_addr))
+            raise ValueError("host \"{}\" is unreachable".format(qnetd_addr))
 
-        utils.ping_node(self.qnetd_addr)
+        utils.ping_node(qnetd_addr)
 
         if utils.InterfacesInfo.ip_in_local(qnetd_ip):
             raise ValueError("host for qnetd must be a remote one")
 
         if not utils.check_port_open(qnetd_ip, 22):
-            raise ValueError("ssh service on \"{}\" not available".format(self.qnetd_addr))
+            raise ValueError("ssh service on \"{}\" not available".format(qnetd_addr))
 
-        if not utils.valid_port(self.port):
+    @staticmethod
+    def check_qdevice_port(qdevice_port):
+        if not utils.valid_port(qdevice_port):
             raise ValueError("invalid qdevice port range(1024 - 65535)")
 
-        if self.algo not in ("ffsplit", "lms"):
-            raise ValueError("invalid ALGORITHM choice: '{}' (choose from 'ffsplit', 'lms')".format(self.algo))
+    @staticmethod
+    def check_qdevice_algo(qdevice_algo):
+        if qdevice_algo not in ("ffsplit", "lms"):
+            raise ValueError("invalid ALGORITHM choice: '{}' (choose from 'ffsplit', 'lms')".format(qdevice_algo))
 
-        if self.tie_breaker not in ("lowest", "highest") and not utils.valid_nodeid(self.tie_breaker):
+    @staticmethod
+    def check_qdevice_tie_breaker(qdevice_tie_breaker):
+        if qdevice_tie_breaker not in ("lowest", "highest") and not utils.valid_nodeid(qdevice_tie_breaker):
             raise ValueError("invalid qdevice tie_breaker(lowest/highest/valid_node_id)")
 
-        if self.tls not in ("on", "off", "required"):
-            raise ValueError("invalid TLS choice: '{}' (choose from 'on', 'off', 'required')".format(self.tls))
+    @staticmethod
+    def check_qdevice_tls(qdevice_tls):
+        if qdevice_tls not in ("on", "off", "required"):
+            raise ValueError("invalid TLS choice: '{}' (choose from 'on', 'off', 'required')".format(qdevice_tls))
 
-        if self.cmds:
-            for cmd in self.cmds.strip(';').split(';'):
-                if not cmd.startswith('/'):
-                    raise ValueError("commands for heuristics should be absolute path")
-                if not os.path.exists(cmd.split()[0]):
-                    raise ValueError("command {} not exist".format(cmd.split()[0]))
+    @staticmethod
+    def check_qdevice_heuristics_mode(mode):
+        if not mode:
+            return
+        if mode not in ("on", "sync", "off"):
+            raise ValueError("invalid MODE choice: '{}' (choose from 'on', 'sync', 'off')".format(mode))
+
+    @staticmethod
+    def check_qdevice_heuristics(cmds):
+        if not cmds:
+            return
+        for cmd in cmds.strip(';').split(';'):
+            if not cmd.startswith('/'):
+                raise ValueError("commands for heuristics should be absolute path")
+            if not os.path.exists(cmd.split()[0]):
+                raise ValueError("command {} not exist".format(cmd.split()[0]))
+
+    @staticmethod
+    def check_package_installed(pkg, remote=None):
+        if not utils.package_is_installed(pkg, remote_addr=remote):
+            raise ValueError("Package \"{}\" not installed on {}".format(pkg, remote if remote else "this node"))
+
+    def valid_qdevice_options(self):
+        """
+        Validate qdevice related options
+        """
+        self.check_package_installed("corosync-qdevice")
+        self.check_qnetd_addr(self.qnetd_addr)
+        self.check_qdevice_port(self.port)
+        self.check_qdevice_algo(self.algo)
+        self.check_qdevice_tie_breaker(self.tie_breaker)
+        self.check_qdevice_tls(self.tls)
+        self.check_qdevice_heuristics(self.cmds)
+        self.check_qdevice_heuristics_mode(self.mode)
 
     def valid_qnetd(self):
         """
