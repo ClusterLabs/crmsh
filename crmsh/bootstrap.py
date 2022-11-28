@@ -274,7 +274,7 @@ def drop_last_history():
         readline.remove_history_item(hlen - 1)
 
 
-def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[]):
+def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[], allow_empty=False):
     if _context.yes_to_all:
         return default
 
@@ -284,8 +284,10 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[
         enable_completion()
         if val:
             drop_last_history()
-        else:
+        elif allow_empty:
             return None
+        else:
+            continue
         if not match and not valid_func:
             return val
         if match and not re.match(match, val):
@@ -293,7 +295,10 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[
             continue
         if valid_func:
             try:
-                valid_func(val, prev_value)
+                if prev_value:
+                    valid_func(val, prev_value)
+                else:
+                    valid_func(val)
             except ValueError as err:
                 logger.error(err)
                 continue
@@ -1317,8 +1322,6 @@ def init_admin():
             return
 
         adminaddr = prompt_for_string('Virtual IP', valid_func=Validation.valid_admin_ip)
-        if not adminaddr:
-            utils.fatal("Expected an IP address")
 
     crm_configure_load("update", 'primitive admin-ip IPaddr2 ip=%s op monitor interval=10 timeout=20' % (utils.doublequote(adminaddr)))
     wait_for_resource("Configuring virtual IP ({})".format(adminaddr), "admin-ip")
@@ -1333,15 +1336,33 @@ def configure_qdevice_interactive():
     logger.info("Configure Qdevice/Qnetd:\n" + QDEVICE_HELP_INFO + "\n")
     if not confirm("Do you want to configure QDevice?"):
         return
-    qnetd_addr = prompt_for_string("HOST or IP of the QNetd server to be used")
-    if not qnetd_addr:
-        utils.fatal("Address of QNetd is required")
-    qdevice_port = prompt_for_string("TCP PORT of QNetd server", default=5403)
-    qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit")
-    qdevice_tie_breaker = prompt_for_string("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest")
-    qdevice_tls = prompt_for_string("Whether using TLS on QDevice/QNetd (on/off/required)", default="on")
-    qdevice_heuristics = prompt_for_string("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate")
-    qdevice_heuristics_mode = prompt_for_string("MODE of operation of heuristics (on/sync/off)", default="sync") if qdevice_heuristics else None
+    while True:
+        try:
+            qdevice.QDevice.check_package_installed("corosync-qdevice")
+            break
+        except ValueError as err:
+            logger.error(err)
+            if confirm("Please install the package manually and press 'y' to continue"):
+                continue
+            else:
+                return
+
+    qnetd_addr = prompt_for_string("HOST or IP of the QNetd server to be used",
+            valid_func=qdevice.QDevice.check_qnetd_addr)
+    qdevice_port = prompt_for_string("TCP PORT of QNetd server", default=5403,
+            valid_func=qdevice.QDevice.check_qdevice_port)
+    qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
+            valid_func=qdevice.QDevice.check_qdevice_algo)
+    qdevice_tie_breaker = prompt_for_string("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest",
+            valid_func=qdevice.QDevice.check_qdevice_tie_breaker)
+    qdevice_tls = prompt_for_string("Whether using TLS on QDevice/QNetd (on/off/required)", default="on",
+            valid_func=qdevice.QDevice.check_qdevice_tls)
+    qdevice_heuristics = prompt_for_string("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate",
+            valid_func=qdevice.QDevice.check_qdevice_heuristics,
+            allow_empty=True)
+    qdevice_heuristics_mode = prompt_for_string("MODE of operation of heuristics (on/sync/off)", default="sync",
+            valid_func=qdevice.QDevice.check_qdevice_heuristics_mode) if qdevice_heuristics else None
+
     _context.qdevice_inst = qdevice.QDevice(
             qnetd_addr,
             port=qdevice_port,
@@ -1351,7 +1372,6 @@ def configure_qdevice_interactive():
             cmds=qdevice_heuristics,
             mode=qdevice_heuristics_mode,
             is_stage=_context.stage == "qdevice")
-    _context.qdevice_inst.valid_qdevice_options()
 
 
 def init_qdevice():
@@ -1768,16 +1788,16 @@ def join_cluster(seed_host):
     if is_unicast:
         ringXaddr_res = []
         for i in 0, 1:
-            while True:
-                ringXaddr = prompt_for_string(
-                        'Address for ring{}'.format(i),
-                        default=pick_default_value(_context.default_ip_list, ringXaddr_res),
-                        valid_func=Validation.valid_ucast_ip,
-                        prev_value=ringXaddr_res)
-                if not ringXaddr:
-                    utils.fatal("No value for ring{}".format(i))
-                ringXaddr_res.append(ringXaddr)
-                break
+            ringXaddr = prompt_for_string(
+                    'Address for ring{}'.format(i),
+                    default=pick_default_value(_context.default_ip_list, ringXaddr_res),
+                    valid_func=Validation.valid_ucast_ip,
+                    prev_value=ringXaddr_res)
+            # The ringXaddr here still might be empty on non-interactive mode
+            # when don't have default ip addresses(_context.default_ip_list is empty or just one)
+            if not ringXaddr:
+                utils.fatal("No value for ring{}".format(i))
+            ringXaddr_res.append(ringXaddr)
             if not rrp_flag:
                 break
         invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
