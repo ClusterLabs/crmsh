@@ -332,12 +332,11 @@ class LoggerUtils(object):
         """
         Wrap input function with recording prompt string and input result
         """
-        with self.suppress_new_line():
+        with self.only_file():
             self.logger.info(prompt_string)
-        value = input()
+        value = input(prompt_string)
         if not value:
             value = default
-            print()
         with self.only_file():
             self.logger.info("input result: %s", value)
         return value
