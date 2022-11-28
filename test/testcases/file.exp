@@ -23,9 +23,10 @@ primitive st stonith:null \
         op monitor timeout=20 interval=3600 \
 	op start timeout=20 interval=0s \
 	op stop timeout=15 interval=0s
-clone c1 p1
+clone c1 p1 \
+       meta interleave=true
 clone m1 p2 \
-       meta promotable=true
+       meta promotable=true interleave=true
 rsc_defaults build-resource-defaults: \
        resource-stickiness=1
 op_defaults op-options: \
