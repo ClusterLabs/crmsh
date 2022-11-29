@@ -198,175 +198,105 @@ class TestQDevice(unittest.TestCase):
         res = self.qdevice_with_ip_cluster_node.qdevice_p12_on_cluster
         self.assertEqual(res, "/etc/corosync/qdevice/net/node1.com/qdevice-net-node.p12")
 
-    @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_qdevice_options_not_installed(self, mock_installed):
+    @mock.patch('crmsh.utils.check_port_open')
+    @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
+    @mock.patch('crmsh.utils.ping_node')
+    @mock.patch('socket.getaddrinfo')
+    def test_check_qnetd_addr_port_error(self, mock_getaddrinfo, mock_ping, mock_in_local, mock_check):
+        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
+        mock_in_local.return_value = False
+        mock_check.return_value = False
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qnetd_addr("qnetd-node")
+        excepted_err_string = "ssh service on \"qnetd-node\" not available"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
+    @mock.patch('crmsh.utils.ping_node')
+    @mock.patch('socket.getaddrinfo')
+    def test_check_qnetd_addr_local(self, mock_getaddrinfo, mock_ping, mock_in_local):
+        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
+        mock_in_local.return_value = True
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qnetd_addr("qnetd-node")
+        excepted_err_string = "host for qnetd must be a remote one"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    @mock.patch('socket.getaddrinfo')
+    def test_check_qnetd_addr(self, mock_getaddrinfo):
+        mock_getaddrinfo.side_effect = socket.error
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qnetd_addr("qnetd-node")
+        excepted_err_string = "host \"qnetd-node\" is unreachable"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    @mock.patch('crmsh.utils.valid_port')
+    def test_check_qdevice_port(self, mock_port):
+        mock_port.return_value = False
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qdevice_port("1")
+        excepted_err_string = "invalid qdevice port range(1024 - 65535)"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    def test_check_qdevice_algo(self):
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qdevice_algo("1")
+        excepted_err_string = "invalid ALGORITHM choice: '1' (choose from 'ffsplit', 'lms')"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    def test_check_qdevice_tie_breaker(self):
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qdevice_tie_breaker("1")
+        excepted_err_string = "invalid qdevice tie_breaker(lowest/highest/valid_node_id)"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    def test_check_qdevice_tls(self):
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qdevice_tls("1")
+        excepted_err_string = "invalid TLS choice: '1' (choose from 'on', 'off', 'required')"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    def test_check_qdevice_hm(self):
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qdevice_heuristics_mode("1")
+        excepted_err_string = "invalid MODE choice: '1' (choose from 'on', 'sync', 'off')"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    def test_check_qdevice_he_path_error(self):
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qdevice_heuristics("command1")
+        excepted_err_string = "commands for heuristics should be absolute path"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    @mock.patch('os.path.exists')
+    def test_check_qdevice_he_not_exist_erro(self, mock_exists):
+        mock_exists.return_value = False
+        with self.assertRaises(ValueError) as err:
+            qdevice.QDevice.check_qdevice_heuristics("/usr/bin/testst")
+        excepted_err_string = "command /usr/bin/testst not exist"
+        self.assertEqual(excepted_err_string, str(err.exception))
+    
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_check_package_installed(self, mock_installed):
         mock_installed.return_value = False
         with self.assertRaises(ValueError) as err:
-            self.qdevice_with_ip.valid_qdevice_options()
-        self.assertEqual("Package \"corosync-qdevice\" not installed on this node", str(err.exception))
+            qdevice.QDevice.check_package_installed("corosync-qdevice")
+        excepted_err_string = "Package \"corosync-qdevice\" not installed on this node"
+        self.assertEqual(excepted_err_string, str(err.exception))
+
+    @mock.patch('crmsh.qdevice.QDevice.check_qdevice_heuristics_mode')
+    @mock.patch('crmsh.qdevice.QDevice.check_qdevice_heuristics')
+    @mock.patch('crmsh.qdevice.QDevice.check_qdevice_tls')
+    @mock.patch('crmsh.qdevice.QDevice.check_qdevice_tie_breaker')
+    @mock.patch('crmsh.qdevice.QDevice.check_qdevice_algo')
+    @mock.patch('crmsh.qdevice.QDevice.check_qdevice_port')
+    @mock.patch('crmsh.qdevice.QDevice.check_qnetd_addr')
+    @mock.patch('crmsh.qdevice.QDevice.check_package_installed')
+    def test_valid_qdevice_options(self, mock_installed, mock_check_qnetd, mock_check_port,
+            mock_check_algo, mock_check_tie, mock_check_tls, mock_check_h, mock_check_hm):
+        self.qdevice_with_ip.valid_qdevice_options()
         mock_installed.assert_called_once_with("corosync-qdevice")
-
-    @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.ping_node")
-    @mock.patch("socket.getaddrinfo")
-    @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_qdevice_options_remote_exception(self, mock_installed, mock_getaddrinfo, mock_ping, mock_ip_local):
-        mock_installed.return_value = True
-        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_ip_local.return_value = True
-
-        with self.assertRaises(ValueError) as err:
-            self.qdevice_with_ip.valid_qdevice_options()
-        self.assertEqual("host for qnetd must be a remote one", str(err.exception))
-
-        mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_ping.assert_called_once_with("10.10.10.123")
-        mock_ip_local.assert_called_once_with("10.10.10.123")
-
-    @mock.patch("socket.getaddrinfo")
-    @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_qdevice_options_getaddrinfo_exception(self, mock_installed, mock_getaddrinfo):
-        mock_installed.return_value = True
-        mock_getaddrinfo.side_effect = socket.error
-
-        with self.assertRaises(ValueError) as err:
-            self.qdevice_with_hostname.valid_qdevice_options()
-        self.assertEqual("host \"node.qnetd\" is unreachable", str(err.exception))
-
-        mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_getaddrinfo.assert_called_once_with("node.qnetd", None)
-
-    @mock.patch("crmsh.utils.check_port_open")
-    @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.ping_node")
-    @mock.patch("socket.getaddrinfo")
-    @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_qdevice_options_ssh_service_exception(self, mock_installed, mock_getaddrinfo,
-            mock_ping, mock_ip_local, mock_port_open):
-        mock_installed.return_value = True
-        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_ip_local.return_value = False
-        mock_port_open.return_value = False
-
-        with self.assertRaises(ValueError) as err:
-            self.qdevice_with_ip.valid_qdevice_options()
-        self.assertEqual("ssh service on \"10.10.10.123\" not available", str(err.exception))
-
-        mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_ping.assert_called_once_with("10.10.10.123")
-        mock_port_open.assert_called_once_with("10.10.10.123", 22)
-        mock_ip_local.assert_called_once_with("10.10.10.123")
-
-    @mock.patch("crmsh.utils.valid_port")
-    @mock.patch("crmsh.utils.check_port_open")
-    @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.ping_node")
-    @mock.patch("socket.getaddrinfo")
-    @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_qdevice_options_invalid_port_exception(self, mock_installed, mock_getaddrinfo,
-            mock_ping, mock_ip_local, mock_port_open, mock_valid_port):
-        mock_installed.return_value = True
-        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_ip_local.return_value = False
-        mock_port_open.return_value = True
-        mock_valid_port.return_value = False
-
-        with self.assertRaises(ValueError) as err:
-            self.qdevice_with_invalid_port.valid_qdevice_options()
-        self.assertEqual("invalid qdevice port range(1024 - 65535)", str(err.exception))
-
-        mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_ping.assert_called_once_with("10.10.10.123")
-        mock_ip_local.assert_called_once_with("10.10.10.123")
-        mock_port_open.assert_called_once_with("10.10.10.123", 22)
-        mock_valid_port.assert_called_once_with(100)
-
-    @mock.patch("crmsh.utils.valid_nodeid")
-    @mock.patch("crmsh.utils.valid_port")
-    @mock.patch("crmsh.utils.check_port_open")
-    @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.ping_node")
-    @mock.patch("socket.getaddrinfo")
-    @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_qdevice_options_invalid_nodeid_exception(self, mock_installed, mock_getaddrinfo,
-            mock_ping, mock_ip_local, mock_port_open, mock_valid_port, mock_valid_nodeid):
-        mock_installed.return_value = True
-        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_ip_local.return_value = False
-        mock_port_open.return_value = True
-        mock_valid_port.return_value = True
-        mock_valid_nodeid.return_value = False
-
-        with self.assertRaises(ValueError) as err:
-            self.qdevice_with_invalid_tie_breaker.valid_qdevice_options()
-        self.assertEqual("invalid qdevice tie_breaker(lowest/highest/valid_node_id)", str(err.exception))
-
-        mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_ip_local.assert_called_once_with("10.10.10.123")
-        mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_ping.assert_called_once_with("10.10.10.123")
-        mock_port_open.assert_called_once_with("10.10.10.123", 22)
-        mock_valid_port.assert_called_once_with(5403)
-        mock_valid_nodeid.assert_called_once_with("wrong")
-
-    @mock.patch("crmsh.utils.valid_nodeid")
-    @mock.patch("crmsh.utils.valid_port")
-    @mock.patch("crmsh.utils.check_port_open")
-    @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.ping_node")
-    @mock.patch("socket.getaddrinfo")
-    @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_qdevice_options_invalid_cmds_relative_path(self, mock_installed, mock_getaddrinfo,
-            mock_ping, mock_ip_local, mock_port_open, mock_valid_port, mock_valid_nodeid):
-        mock_installed.return_value = True
-        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_ip_local.return_value = False
-        mock_port_open.return_value = True
-        mock_valid_port.return_value = True
-        mock_valid_nodeid.return_value = True
-
-        with self.assertRaises(ValueError) as err:
-            self.qdevice_with_invalid_cmds_relative_path.valid_qdevice_options()
-        self.assertEqual("commands for heuristics should be absolute path", str(err.exception))
-
-        mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_ping.assert_called_once_with("10.10.10.123")
-        mock_ip_local.assert_called_once_with("10.10.10.123")
-        mock_port_open.assert_called_once_with("10.10.10.123", 22)
-        mock_valid_port.assert_called_once_with(5403)
-        mock_valid_nodeid.assert_not_called()
-
-    @mock.patch("crmsh.utils.valid_nodeid")
-    @mock.patch("crmsh.utils.valid_port")
-    @mock.patch("crmsh.utils.check_port_open")
-    @mock.patch("crmsh.utils.InterfacesInfo.ip_in_local")
-    @mock.patch("crmsh.utils.ping_node")
-    @mock.patch("socket.getaddrinfo")
-    @mock.patch("crmsh.utils.package_is_installed")
-    def test_valid_qdevice_options_invalid_cmds_not_exist(self, mock_installed, mock_getaddrinfo,
-            mock_ping, mock_ip_local, mock_port_open, mock_valid_port, mock_valid_nodeid):
-        mock_installed.return_value = True
-        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_ip_local.return_value = False
-        mock_port_open.return_value = True
-        mock_valid_port.return_value = True
-        mock_valid_nodeid.return_value = True
-
-        with self.assertRaises(ValueError) as err:
-            self.qdevice_with_invalid_cmds_not_exist.valid_qdevice_options()
-        self.assertEqual("command /not_exist not exist", str(err.exception))
-
-        mock_installed.assert_called_once_with("corosync-qdevice")
-        mock_getaddrinfo.assert_called_once_with("10.10.10.123", None)
-        mock_ping.assert_called_once_with("10.10.10.123")
-        mock_ip_local.assert_called_once_with("10.10.10.123")
-        mock_port_open.assert_called_once_with("10.10.10.123", 22)
-        mock_valid_port.assert_called_once_with(5403)
-        mock_valid_nodeid.assert_not_called()
+        mock_check_qnetd.assert_called_once_with("10.10.10.123")
 
     @mock.patch("crmsh.utils.package_is_installed")
     def test_valid_qnetd_not_installed(self, mock_installed):

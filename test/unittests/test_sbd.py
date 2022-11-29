@@ -383,7 +383,7 @@ class TestSBDManager(unittest.TestCase):
         mock_confirm.return_value = True
         mock_no_overwrite.return_value = False
         mock_from_config.return_value = []
-        mock_prompt.side_effect = [None, "none"]
+        mock_prompt.return_value = "none"
 
         self.sbd_inst._get_sbd_device_interactive()
 
@@ -391,7 +391,7 @@ class TestSBDManager(unittest.TestCase):
         mock_confirm.assert_called_once_with("Do you wish to use SBD?")
         mock_from_config.assert_called_once_with()
         mock_prompt.assert_has_calls([
-            mock.call('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', 'none|\\/.*') for x in range(2)
+            mock.call('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', 'none|\\/.*')
             ])
 
     @mock.patch('crmsh.utils.re_split_string')
