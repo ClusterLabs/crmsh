@@ -129,3 +129,15 @@ Feature: Use "crm configure set" to update attributes and operations
     Then    Run "ls /trace_log_d/Dummy/d.monitor.*" OK
     When    Run "crm resource untrace d" on "hanode1"
     Then    Expected "Stop tracing d" in stdout
+
+  @clean
+  Scenario: Add promotable=true and interleave=true automatically (bsc#1205522)
+    When    Run "crm configure primitive s2 ocf:pacemaker:Stateful" on "hanode1"
+    And     Run "crm configure clone p2 s2" on "hanode1"
+    Then    Run "sleep 2;crm configure show|grep -A1 'clone p2 s2'|grep 'promotable=true interleave=true'" OK
+    When    Run "crm configure primitive s3 ocf:pacemaker:Stateful" on "hanode1"
+    And     Run "crm configure clone p3 s3 meta promotable=false" on "hanode1"
+    Then    Run "sleep 2;crm configure show|grep -A1 'clone p3 s3'|grep 'promotable=false interleave=true'" OK
+    When    Run "crm configure primitive d2 Dummy" on "hanode1"
+    And     Run "crm configure clone p4 d2" on "hanode1"
+    Then    Run "sleep 2;crm configure show|grep -A1 'clone p4 d2'|grep 'interleave=true'" OK

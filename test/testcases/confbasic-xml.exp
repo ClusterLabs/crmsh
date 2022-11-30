@@ -75,6 +75,7 @@
       <clone id="c">
         <meta_attributes id="c-meta_attributes">
           <nvpair name="clone-max" value="1" id="c-meta_attributes-clone-max"/>
+          <nvpair name="interleave" value="true" id="c-meta_attributes-interleave"/>
         </meta_attributes>
         <primitive id="d3" class="ocf" provider="pacemaker" type="Dummy">
           <operations>

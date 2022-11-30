@@ -58,7 +58,8 @@ primitive p6 Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
         op stop timeout=20s interval=0s
-clone cl-p5 p5
+clone cl-p5 p5 \
+       meta interleave=true
 colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: commit
 .INP: _test
@@ -95,7 +96,8 @@ primitive p5 Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
         op stop timeout=20s interval=0s
-clone cl-p5 p5
+clone cl-p5 p5 \
+       meta interleave=true
 colocation c2 inf: ( p1 p2 ) p3 p4
 .TRY Unordered load file
 .INP: options
@@ -141,7 +143,8 @@ primitive gr4 Dummy
 group g1 gr1 gr2
 group g2 gr3
 group g3 gr4
-clone cl-p5 p5
+clone cl-p5 p5 \
+       meta interleave=true
 colocation c2 inf: ( p1 p2 ) p3 p4
 location loc1 g1 \
 	rule 200: #uname eq node1

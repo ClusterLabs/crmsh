@@ -65,6 +65,7 @@ resource p0 is NOT running
     <resources>
       <clone id="c1">
         <meta_attributes id="c1-meta_attributes">
+          <nvpair id="c1-meta_attributes-interleave" name="interleave" value="true"/>
           <nvpair id="c1-meta_attributes-is-managed" name="is-managed" value="true"/>
         </meta_attributes>
         <primitive id="p1" class="ocf" provider="pacemaker" type="Dummy">
@@ -92,6 +93,7 @@ resource p0 is NOT running
     <resources>
       <clone id="c1">
         <meta_attributes id="c1-meta_attributes">
+          <nvpair id="c1-meta_attributes-interleave" name="interleave" value="true"/>
           <nvpair id="c1-meta_attributes-is-managed" name="is-managed" value="false"/>
         </meta_attributes>
         <primitive id="p1" class="ocf" provider="pacemaker" type="Dummy">
@@ -121,6 +123,7 @@ resource p0 is NOT running
       <clone id="m1">
         <meta_attributes id="m1-meta_attributes">
           <nvpair name="promotable" value="true" id="m1-meta_attributes-promotable"/>
+          <nvpair id="m1-meta_attributes-interleave" name="interleave" value="true"/>
           <nvpair id="m1-meta_attributes-maintenance" name="maintenance" value="true"/>
         </meta_attributes>
         <primitive id="p2" class="ocf" provider="heartbeat" type="Delay">
@@ -154,6 +157,7 @@ resource p0 is NOT running
       <clone id="m1">
         <meta_attributes id="m1-meta_attributes">
           <nvpair name="promotable" value="true" id="m1-meta_attributes-promotable"/>
+          <nvpair id="m1-meta_attributes-interleave" name="interleave" value="true"/>
           <nvpair id="m1-meta_attributes-maintenance" name="maintenance" value="false"/>
         </meta_attributes>
         <primitive id="p2" class="ocf" provider="heartbeat" type="Delay">
