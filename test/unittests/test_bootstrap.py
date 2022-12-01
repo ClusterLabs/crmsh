@@ -1278,11 +1278,12 @@ class TestBootstrap(unittest.TestCase):
         mock_status.assert_not_called()
         mock_disable.assert_called_once_with("corosync-qdevice.service")
 
+    @mock.patch('crmsh.bootstrap.adjust_sbd_watchdog_timeout')
     @mock.patch('crmsh.bootstrap.error')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('crmsh.bootstrap.status')
-    def test_init_qdevice_copy_ssh_key_failed(self, mock_status, mock_ssh, mock_invoke, mock_error):
+    def test_init_qdevice_copy_ssh_key_failed(self, mock_status, mock_ssh, mock_invoke, mock_error, mock_sbd):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
         mock_ssh.return_value = True
         mock_invoke.return_value = (False, None, "error")
@@ -1299,12 +1300,13 @@ class TestBootstrap(unittest.TestCase):
         mock_invoke.assert_called_once_with("ssh-copy-id -i /root/.ssh/id_rsa.pub root@10.10.10.123")
         mock_error.assert_called_once_with("Failed to copy ssh key: error")
 
+    @mock.patch('crmsh.bootstrap.adjust_sbd_watchdog_timeout')
     @mock.patch('crmsh.bootstrap.start_qdevice_service')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('crmsh.bootstrap.status')
-    def test_init_qdevice_already_configured(self, mock_status, mock_ssh, mock_qdevice_configured, mock_confirm, mock_qdevice_start):
+    def test_init_qdevice_already_configured(self, mock_status, mock_ssh, mock_qdevice_configured, mock_confirm, mock_qdevice_start, mock_sbd):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
         mock_ssh.return_value = False
         mock_qdevice_configured.return_value = True
@@ -1318,6 +1320,7 @@ class TestBootstrap(unittest.TestCase):
         mock_confirm.assert_called_once_with("Qdevice is already configured - overwrite?")
         mock_qdevice_start.assert_called_once_with()
 
+    @mock.patch('crmsh.bootstrap.adjust_sbd_watchdog_timeout')
     @mock.patch('crmsh.bootstrap.start_qdevice_service')
     @mock.patch('crmsh.corosync.QDevice.certificate_process_on_init')
     @mock.patch('crmsh.bootstrap.status_long')
@@ -1328,7 +1331,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('crmsh.bootstrap.status')
     def test_init_qdevice(self, mock_status, mock_ssh, mock_qdevice_configured, mock_valid_qnetd, mock_config_qdevice,
-            mock_tls, mock_status_long, mock_certificate, mock_start_qdevice):
+            mock_tls, mock_status_long, mock_certificate, mock_start_qdevice, mock_sbd):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
         mock_ssh.return_value = False
         mock_qdevice_configured.return_value = False
