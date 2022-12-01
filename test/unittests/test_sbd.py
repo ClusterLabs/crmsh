@@ -255,7 +255,7 @@ class TestSBDTimeout(unittest.TestCase):
         mock_mkdirp.assert_not_called()
 
     @mock.patch('crmsh.utils.cluster_run_cmd')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.utils.mkdirp')
     @mock.patch('crmsh.utils.get_systemd_timeout_start_in_sec')
@@ -505,7 +505,7 @@ class TestSBDManager(unittest.TestCase):
             ])
         mock_error.assert_called_once_with("Failed to initialize SBD device /dev/sdc1: error")
 
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.utils.sysconfig_set')
     @mock.patch('shutil.copyfile')
     def test_update_configuration(self, mock_copy, mock_sysconfig, mock_update):
@@ -882,7 +882,7 @@ class TestSBDManager(unittest.TestCase):
         mock_context.assert_called_once_with()
         mock_get_sbd.assert_called_once_with()
 
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.utils.sysconfig_set')
     def test_update_configuration_static(self, mock_config_set, mock_csync2):
         sbd_config_dict = {
