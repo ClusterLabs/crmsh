@@ -409,3 +409,18 @@ def step_impl(context, node):
 @then('File "{path}" exists on "{node}"')
 def step_impl(context, path, node):
     parallax.parallax_call([node], '[ -f {} ]'.format(path))
+
+
+@then('File "{path}" not exist on "{node}"')
+def step_impl(context, path, node):
+    parallax.parallax_call([node], '[ ! -f {} ]'.format(path))
+
+
+@then('Directory "{path}" is empty on "{node}"')
+def step_impl(context, path, node):
+    parallax.parallax_call([node], '[ ! "$(ls -A {})" ]'.format(path))
+
+
+@then('Directory "{path}" not empty on "{node}"')
+def step_impl(context, path, node):
+    parallax.parallax_call([node], '[ "$(ls -A {})" ]'.format(path))

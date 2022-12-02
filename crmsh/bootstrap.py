@@ -132,7 +132,9 @@ class Context(object):
         self.local_ip_list = []
         self.local_network_list = []
         self.rm_list = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
-                COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*"]
+                COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*",
+                "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
+                "/var/lib/csync2/*"]
 
     @classmethod
     def set_context(cls, options):
@@ -1959,6 +1961,18 @@ def stop_services(stop_list, remote_addr=None):
             utils.stop_service(service, disable=True, remote_addr=remote_addr)
 
 
+def rm_configuration_files(remote=None):
+    """
+    Delete configuration files from the node to be removed
+    """
+    utils.get_stdout_or_raise_error("rm -f {}".format(' '.join(_context.rm_list)), remote=remote)
+    # restore original sbd configuration file from /usr/share/fillup-templates/sysconfig.sbd
+    if utils.package_is_installed("sbd", remote_addr=remote):
+        from .sbd import SBDManager
+        cmd = "cp {} {}".format(SBDManager.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
+        utils.get_stdout_or_raise_error(cmd, remote=remote)
+
+
 def remove_node_from_cluster():
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
@@ -1968,11 +1982,7 @@ def remove_node_from_cluster():
 
     stop_services(SERVICES_STOP_LIST, remote_addr=node)
     qdevice.QDevice.remove_qdevice_db([node])
-
-    # delete configuration files from the node to be removed
-    rc, _, err = invoke('ssh {} root@{} "bash -c \\\"rm -f {}\\\""'.format(SSH_OPTION, node, " ".join(_context.rm_list)))
-    if not rc:
-        utils.fatal("Deleting the configuration files failed: {}".format(err))
+    rm_configuration_files(node)
 
     # execute the command : crm node delete $HOSTNAME
     logger.info("Removing the node {}".format(node))
@@ -2305,10 +2315,7 @@ def remove_self():
         stop_services(SERVICES_STOP_LIST)
         qdevice.QDevice.remove_certification_files_on_qnetd()
         qdevice.QDevice.remove_qdevice_db([utils.this_node()])
-        # remove all trace of cluster from this node
-        # delete configuration files from the node to be removed
-        if not invokerc('bash -c "rm -f {}"'.format(" ".join(_context.rm_list))):
-            utils.fatal("Deleting the configuration files failed")
+        rm_configuration_files()
 
 
 def init_common_geo():
