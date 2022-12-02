@@ -53,7 +53,9 @@ optional arguments:
                         +-o+ multiple times.'''
 
 
-CRM_CLUSTER_INIT_H_OUTPUT = '''usage: init [options] [STAGE]
+CRM_CLUSTER_INIT_H_OUTPUT = '''Initializes a new HA cluster
+
+usage: init [options] [STAGE]
 
 Initialize a cluster from scratch. This command configures
 a complete cluster, and can also add additional cluster
@@ -194,7 +196,9 @@ Examples:
   crm cluster init ocfs2 -o <share disk1> -o <share disk2> -C -y'''
 
 
-CRM_CLUSTER_JOIN_H_OUTPUT = '''usage: join [options] [STAGE]
+CRM_CLUSTER_JOIN_H_OUTPUT = '''Join existing cluster
+
+usage: join [options] [STAGE]
 
 Join the current node to an existing cluster. The
 current node cannot be a member of a cluster already.
@@ -234,7 +238,9 @@ Examples:
   crm cluster join -c <node> -i eth1 -i eth2 -y'''
 
 
-CRM_CLUSTER_ADD_H_OUTPUT = '''usage: add [options] [node ...]
+CRM_CLUSTER_ADD_H_OUTPUT = '''Add a new node to the cluster
+
+usage: add [options] [node ...]
 
 Add a new node to the cluster. The new node will be
 configured as a cluster member.
@@ -244,7 +250,9 @@ optional arguments:
   -y, --yes   Answer "yes" to all prompts (use with caution)'''
 
 
-CRM_CLUSTER_REMOVE_H_OUTPUT = '''usage: remove [options] [<node> ...]
+CRM_CLUSTER_REMOVE_H_OUTPUT = '''Remove node(s) from the cluster
+
+usage: remove [options] [<node> ...]
 
 Remove one or more nodes from the cluster.
 
@@ -264,7 +272,9 @@ optional arguments:
   --qdevice             Remove QDevice configuration and service from cluster'''
 
 
-CRM_CLUSTER_GEO_INIT_H_OUTPUT = '''usage: geo-init [options]
+CRM_CLUSTER_GEO_INIT_H_OUTPUT = '''Configure cluster as geo cluster
+
+usage: geo-init [options]
 
 Create a new geo cluster with the current cluster as the
 first member. Pass the complete geo cluster topology as
@@ -298,7 +308,9 @@ Cluster Description
   crm bootstrap init.'''
 
 
-CRM_CLUSTER_GEO_JOIN_H_OUTPUT = '''usage: geo-join [options]
+CRM_CLUSTER_GEO_JOIN_H_OUTPUT = '''Join cluster to existing geo cluster
+
+usage: geo-join [options]
 
 This command should be run from one of the nodes in a cluster
 which is currently not a member of a geo cluster. The geo
@@ -321,7 +333,9 @@ optional arguments:
                         Geo cluster description (see geo-init for details)'''
 
 
-CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT = '''usage: geo-init-arbitrator [options]
+CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT = '''Initialize node as geo cluster arbitrator
+
+usage: geo-init-arbitrator [options]
 
 Configure the current node as a geo arbitrator. The command
 requires an existing geo cluster or geo arbitrator from which
