@@ -7,7 +7,8 @@ from behave import given, when, then
 from crmsh import corosync, parallax, sbd
 from crmsh import utils as crmutils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
-                  run_command_local_or_remote, file_in_archive
+                  run_command_local_or_remote, file_in_archive, \
+                  assert_eq
 import const
 
 @when('Write multi lines to file "{f}"')
@@ -281,7 +282,7 @@ def step_impl(context, cmd):
     cmd_help["crm_cluster_geo-join"] = const.CRM_CLUSTER_GEO_JOIN_H_OUTPUT
     cmd_help["crm_cluster_geo-init-arbitrator"] = const.CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT
     key = '_'.join(cmd.split())
-    assert context.stdout == cmd_help[key]
+    assert_eq(cmd_help[key], context.stdout)
 
 
 @then('Corosync working on "{transport_type}" mode')
@@ -289,12 +290,12 @@ def step_impl(context, transport_type):
     if transport_type == "multicast":
         assert corosync.get_value("totem.transport") is None
     if transport_type == "unicast":
-        assert corosync.get_value("totem.transport") == "udpu"
+        assert_eq("udpu", corosync.get_value("totem.transport"))
 
 
 @then('Expected votes will be "{votes}"')
 def step_impl(context, votes):
-    assert int(corosync.get_value("quorum.expected_votes")) == int(votes)
+    assert_eq(int(votes), int(corosync.get_value("quorum.expected_votes")))
 
 
 @then('Default crm_report tar file created')
@@ -328,7 +329,7 @@ def step_impl(context, f, archive):
 def step_impl(context, f):
     cmd = "crm cluster diff {}".format(f)
     rc, out = run_command(context, cmd)
-    assert out == ""
+    assert_eq("", out)
 
 
 @given('Resource "{res_id}" is started on "{node}"')
@@ -346,25 +347,27 @@ def step_impl(context, res_id, node):
 @then('SBD option "{key}" value is "{value}"')
 def step_impl(context, key, value):
     res = sbd.SBDManager.get_sbd_value_from_config(key)
-    assert res == value
+    assert_eq(value, res)
 
 
 @then('SBD option "{key}" value for "{dev}" is "{value}"')
 def step_impl(context, key, dev, value):
     res = sbd.SBDTimeout.get_sbd_msgwait(dev)
-    assert res == int(value)
+    assert_eq(int(value), res)
 
 
 @then('Cluster property "{key}" is "{value}"')
 def step_impl(context, key, value):
     res = crmutils.get_property(key)
-    assert res is not None and str(res) == value
+    assert res is not None
+    assert_eq(value, str(res))
 
 
 @then('Property "{key}" in "{type}" is "{value}"')
 def step_impl(context, key, type, value):
     res = crmutils.get_property(key, type)
-    assert res is not None and str(res) == value
+    assert res is not None
+    assert_eq(value, str(res))
 
 
 @then('Parameter "{param_name}" not configured in "{res_id}"')
@@ -387,7 +390,7 @@ def step_impl(context, path, value):
     with open(yaml_file) as f:
         data = yaml.load(f, Loader=yaml.SafeLoader)
     sec_name, key = path.split(':')
-    assert str(data[sec_name][key]) == str(value)
+    assert_eq(str(value), str(data[sec_name][key]))
 
 
 @when('Wait for DC')
