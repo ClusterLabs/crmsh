@@ -338,7 +338,7 @@ class RscMgmt(command.UI):
         if not xmlutil.RscState().is_ms_or_promotable_clone(rsc):
             logger.error("%s is not a promotable resource", rsc)
             return False
-        role = "Promoted" if config.core.OCF_1_1_SUPPORT else "Master"
+        role = utils.handle_role_for_ocf_1_1(constants.RSC_ROLE_PROMOTED_LEGACY)
         return utils.ext_cmd(self.rsc_setrole % (rsc, role)) == 0
 
     def do_scores(self, context):
@@ -367,7 +367,7 @@ class RscMgmt(command.UI):
         if not xmlutil.RscState().is_ms_or_promotable_clone(rsc):
             logger.error("%s is not a promotable resource", rsc)
             return False
-        role = "Unpromoted" if config.core.OCF_1_1_SUPPORT else "Slave"
+        role = utils.handle_role_for_ocf_1_1(constants.RSC_ROLE_UNPROMOTED_LEGACY)
         return utils.ext_cmd(self.rsc_setrole % (rsc, role)) == 0
 
     @command.completers(compl.resources)

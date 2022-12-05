@@ -3059,7 +3059,16 @@ def is_ocf_1_1_cib_schema_detected():
     Only turn on ocf_1_1 feature the cib schema version is pacemaker-3.7 or above
     """
     from .cibconfig import cib_factory
+    cib_factory.get_cib()
     return is_larger_than_min_version(cib_factory.get_schema(), constants.SCHEMA_MIN_VER_SUPPORT_OCF_1_1)
+
+
+def compatible_role(role1, role2):
+    master_or_promoted = (constants.RSC_ROLE_PROMOTED_LEGACY, constants.RSC_ROLE_PROMOTED)
+    slave_or_unpromoted = (constants.RSC_ROLE_UNPROMOTED_LEGACY, constants.RSC_ROLE_UNPROMOTED)
+    res1 = role1 in master_or_promoted and role2 in master_or_promoted
+    res2 = role1 in slave_or_unpromoted and role2 in slave_or_unpromoted
+    return res1 or res2
 
 
 def handle_role_for_ocf_1_1(value, name='role'):
@@ -3068,7 +3077,10 @@ def handle_role_for_ocf_1_1(value, name='role'):
     * Convert role from Master/Slave to Promoted/Unpromoted if ocf1.1 cib schema detected and OCF_1_1_SUPPORT is yes
     """
     role_names = ["role", "target-role"]
-    downgrade_dict = {"Promoted": "Master", "Unpromoted": "Slave"}
+    downgrade_dict = {
+            constants.RSC_ROLE_PROMOTED: constants.RSC_ROLE_PROMOTED_LEGACY,
+            constants.RSC_ROLE_UNPROMOTED: constants.RSC_ROLE_UNPROMOTED_LEGACY
+            }
     upgrade_dict = {v: k for k, v in downgrade_dict.items()}
 
     if name not in role_names:
