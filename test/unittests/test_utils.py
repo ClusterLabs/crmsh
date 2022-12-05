@@ -1729,3 +1729,7 @@ def test_handle_role_for_ocf_1_1_return(mock_support):
 
 def test_handle_role_for_ocf_1_1_return_not_role():
     assert utils.handle_role_for_ocf_1_1("test", name='other') == "test"
+
+
+def test_compatible_role():
+    assert utils.compatible_role("Slave", "Unpromoted") is True
