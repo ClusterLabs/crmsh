@@ -12,7 +12,7 @@ from .ra import disambiguate_ra_type, ra_type_validate
 from . import schema
 from .utils import keyword_cmp, verify_boolean, lines2cli
 from .utils import get_boolean, olist, canonical_boolean
-from .utils import handle_role_for_ocf_1_1
+from .utils import handle_role_for_ocf_1_1, compatible_role
 from . import xmlutil
 from . import log
 
@@ -673,7 +673,7 @@ class BaseParser(object):
             try:
                 if role:
                     for monitor_item in advised_dict['monitor']:
-                        if role == monitor_item['role']:
+                        if compatible_role(role, monitor_item['role']):
                             adv_attr_value = monitor_item[attr]
                 else:
                     adv_attr_value = advised_dict['monitor'][0][attr]
@@ -716,7 +716,7 @@ class BaseParser(object):
                     for k, v in v_dict.items():
                         # set normal attributes
                         if k in constants.ADVISED_KEY_LIST:
-                            op_node.set(k, v)
+                            op_node.set(k, handle_role_for_ocf_1_1(v))
                     operations_node.append(op_node)
             else:
                 op_node = xmlutil.new('op', name=action, **value)
