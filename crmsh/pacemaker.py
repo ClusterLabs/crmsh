@@ -224,10 +224,9 @@ class RngSchema(Schema):
         except Exception as msg:
             raise PacemakerError("Failed to parse the Relax-NG schema: " + str(msg) + schema_info)
 
-        start_nodes = grammar.xpath(self.expr, name="start")
-        if len(start_nodes) > 0:
-            start_node = start_nodes[0]
-            return (grammar, start_node)
+        for n in grammar.getchildren():
+            if isinstance(n.tag, str) and "start" in n.tag:
+                return (grammar, n)
         else:
             raise PacemakerError("Cannot find the start in the Relax-NG schema: " + schema_info)
 
