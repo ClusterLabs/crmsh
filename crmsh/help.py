@@ -348,7 +348,7 @@ def _load_help():
             if lvl not in _COMMANDS:
                 _COMMANDS[lvl] = odict()
             if entry['from_cli']:
-                _, help_output, _ = get_stdout_stderr("crm {} {} --help".format(lvl, name))
+                _, help_output, _ = get_stdout_stderr("crm {} {} --help-without-redirect".format(lvl, name))
                 if help_output:
                     helpobj.set_long_help(help_output.rstrip())
             _COMMANDS[lvl][name] = helpobj

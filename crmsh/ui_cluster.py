@@ -316,7 +316,7 @@ Examples:
   # Setup the cluster on the current node, with SBD+OCFS2
   crm cluster init -s <share disk1> -o <share disk2> -y
 
-  # Setup the cluster on the current node, with SBD+OCFS2+Cluster LVM
+  # Setup the cluster on the current node, with SBD++OCFS2++Cluster LVM
   crm cluster init -s <share disk1> -o <share disk2> -o <share disk3> -C -y
 
   # Add SBD on a running cluster
