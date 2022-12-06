@@ -668,15 +668,18 @@ class BaseParser(object):
         if not ra_actions_dict:
             return
 
-        def extract_advised_monitor_value(advised_dict, attr, role=None):
+        def extract_advised_value(advised_dict, action, attr, role=None):
             adv_attr_value = None
             try:
-                if role:
-                    for monitor_item in advised_dict['monitor']:
-                        if compatible_role(role, monitor_item['role']):
-                            adv_attr_value = monitor_item[attr]
+                if action == "monitor":
+                    if role:
+                        for monitor_item in advised_dict[action]:
+                            if compatible_role(role, monitor_item['role']):
+                                adv_attr_value = monitor_item[attr]
+                    else:
+                        adv_attr_value = advised_dict[action][0][attr]
                 else:
-                    adv_attr_value = advised_dict['monitor'][0][attr]
+                    adv_attr_value = advised_dict[action][attr]
             except KeyError:
                 pass
             return adv_attr_value
@@ -693,15 +696,14 @@ class BaseParser(object):
             for op_node in op_nodes_list:
                 action = op_node.get('name')
                 # complete advised value if interval or timeout not configured
-                if action == "monitor":
-                    adv_interval = extract_advised_monitor_value(action_advised_attr_dict, 'interval', op_node.get('role')) or \
-                            constants.DEFAULT_INTERVAL_IN_ACTION
-                    adv_timeout = extract_advised_monitor_value(action_advised_attr_dict, 'timeout', op_node.get('role')) or \
-                            constants.DEFAULT_TIMEOUT_IN_ACTION
-                    if op_node.get('interval') is None:
-                        op_node.set('interval', adv_interval)
-                    if op_node.get('timeout') is None:
-                        op_node.set('timeout', adv_timeout)
+                adv_interval = extract_advised_value(action_advised_attr_dict, action, 'interval', op_node.get('role')) or \
+                        constants.DEFAULT_INTERVAL_IN_ACTION
+                adv_timeout = extract_advised_value(action_advised_attr_dict, action, 'timeout', op_node.get('role')) or \
+                        constants.DEFAULT_TIMEOUT_IN_ACTION
+                if op_node.get('interval') is None:
+                    op_node.set('interval', adv_interval)
+                if op_node.get('timeout') is None:
+                    op_node.set('timeout', adv_timeout)
                 configured_action_list.append(action)
 
         for action in action_advised_attr_dict:
