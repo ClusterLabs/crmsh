@@ -525,7 +525,6 @@ DC_DEADTIME_DEFAULT = 20
 ADVISED_ACTION_LIST = ['monitor', 'start', 'stop', 'promote', 'demote']
 ADVISED_KEY_LIST = ['timeout', 'interval', 'role']
 DEFAULT_INTERVAL_IN_ACTION = "20s"
-DEFAULT_TIMEOUT_IN_ACTION = "60s"
 
 RSC_ROLE_PROMOTED = "Promoted"
 RSC_ROLE_UNPROMOTED = "Unpromoted"

@@ -698,11 +698,10 @@ class BaseParser(object):
                 # complete advised value if interval or timeout not configured
                 adv_interval = extract_advised_value(action_advised_attr_dict, action, 'interval', op_node.get('role')) or \
                         constants.DEFAULT_INTERVAL_IN_ACTION
-                adv_timeout = extract_advised_value(action_advised_attr_dict, action, 'timeout', op_node.get('role')) or \
-                        constants.DEFAULT_TIMEOUT_IN_ACTION
+                adv_timeout = extract_advised_value(action_advised_attr_dict, action, 'timeout', op_node.get('role'))
                 if op_node.get('interval') is None:
                     op_node.set('interval', adv_interval)
-                if op_node.get('timeout') is None:
+                if op_node.get('timeout') is None and adv_timeout:
                     op_node.set('timeout', adv_timeout)
                 configured_action_list.append(action)
 
