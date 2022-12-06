@@ -800,26 +800,34 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.configure_qdevice_interactive()
         mock_prompt.assert_not_called()
 
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.confirm')
-    def test_configure_qdevice_interactive_error(self, mock_confirm, mock_prompt, mock_error):
+    def test_configure_qdevice_interactive_not_confirm(self, mock_confirm, mock_info):
         bootstrap._context = mock.Mock(yes_to_all=False)
-        mock_confirm.return_value = True
-        mock_prompt.return_value = None
-        mock_error.side_effect = SystemExit
-
-        with self.assertRaises(SystemExit):
-            bootstrap.configure_qdevice_interactive()
-
-        mock_error.assert_called_once_with("Address of QNetd is required")
+        mock_confirm.return_value = False
+        bootstrap.configure_qdevice_interactive()
         mock_confirm.assert_called_once_with("Do you want to configure QDevice?")
-        mock_prompt.assert_called_once_with("HOST or IP of the QNetd server to be used")
+
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.qdevice.QDevice.check_package_installed')
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.bootstrap.confirm')
+    def test_configure_qdevice_interactive_not_installed(self, mock_confirm, mock_info, mock_installed, mock_error):
+        bootstrap._context = mock.Mock(yes_to_all=False)
+        mock_confirm.side_effect = [True, False]
+        mock_installed.side_effect = ValueError("corosync-qdevice not installed")
+        bootstrap.configure_qdevice_interactive()
+        mock_confirm.assert_has_calls([
+            mock.call("Do you want to configure QDevice?"),
+            mock.call("Please install the package manually and press 'y' to continue")
+            ])
 
     @mock.patch('crmsh.qdevice.QDevice')
     @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.qdevice.QDevice.check_package_installed')
+    @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.confirm')
-    def test_configure_qdevice_interactive(self, mock_confirm, mock_prompt, mock_qdevice):
+    def test_configure_qdevice_interactive(self, mock_confirm, mock_info, mock_installed, mock_prompt, mock_qdevice):
         bootstrap._context = mock.Mock(yes_to_all=False)
         mock_confirm.return_value = True
         mock_prompt.side_effect = ["qnetd-node", 5403, "ffsplit", "lowest", "on", None]
@@ -829,15 +837,21 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.configure_qdevice_interactive()
         mock_confirm.assert_called_once_with("Do you want to configure QDevice?")
         mock_prompt.assert_has_calls([
-            mock.call("HOST or IP of the QNetd server to be used"),
-            mock.call("TCP PORT of QNetd server", default=5403),
-            mock.call("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit"),
-            mock.call("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest"),
-            mock.call("Whether using TLS on QDevice/QNetd (on/off/required)", default="on"),
-            mock.call("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate")
+            mock.call("HOST or IP of the QNetd server to be used",
+                valid_func=qdevice.QDevice.check_qnetd_addr),
+            mock.call("TCP PORT of QNetd server", default=5403,
+                valid_func=qdevice.QDevice.check_qdevice_port),
+            mock.call("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
+                valid_func=qdevice.QDevice.check_qdevice_algo),
+            mock.call("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest",
+                valid_func=qdevice.QDevice.check_qdevice_tie_breaker),
+            mock.call("Whether using TLS on QDevice/QNetd (on/off/required)", default="on",
+                valid_func=qdevice.QDevice.check_qdevice_tls),
+            mock.call("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate",
+                valid_func=qdevice.QDevice.check_qdevice_heuristics,
+                allow_empty=True)
             ])
         mock_qdevice.assert_called_once_with('qnetd-node', port=5403, algo='ffsplit', tie_breaker='lowest', tls='on', cmds=None, mode=None, is_stage=False)
-        mock_qdevice_inst.valid_qdevice_options.assert_called_once_with()
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.is_qdevice_configured')
