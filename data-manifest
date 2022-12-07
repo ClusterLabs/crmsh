@@ -73,6 +73,7 @@ test/features/constraints_bugs.feature
 test/features/crm_report_bugs.feature
 test/features/environment.py
 test/features/geo_setup.feature
+test/features/healthcheck.feature
 test/features/ocfs2.feature
 test/features/qdevice_options.feature
 test/features/qdevice_setup_remove.feature
@@ -184,6 +185,7 @@ test/unittests/test_crashtest_task.py
 test/unittests/test_crashtest_utils.py
 test/unittests/test_gv.py
 test/unittests/test_handles.py
+test/unittests/test_healthcheck.py
 test/unittests/test_lock.py
 test/unittests/test_objset.py
 test/unittests/test_ocfs2.py
@@ -195,6 +197,7 @@ test/unittests/test_sbd.py
 test/unittests/test_scripts.py
 test/unittests/test_time.py
 test/unittests/test_ui_cluster.py
+test/unittests/test_upgradeuitl.py
 test/unittests/test_utils.py
 test/unittests/test_watchdog.py
 test/unittests/test_xmlutil.py

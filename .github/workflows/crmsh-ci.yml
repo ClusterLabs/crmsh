@@ -8,6 +8,7 @@ on: [push, pull_request]
 
 env:
   DOCKER_SCRIPT: ./test/run-functional-tests
+  GET_INDEX_OF: ./test/run-functional-tests _get_index_of
   FOLDER: /package
   PACKAGE_NAME: crmsh
   OBS_USER: ${{ secrets.OBS_USER }}
@@ -46,7 +47,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 6
+        $DOCKER_SCRIPT `$GET_INDEX_OF crm_report_bugs`
 
   functional_test_bootstrap_bugs:
     runs-on: ubuntu-20.04
@@ -57,7 +58,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 1
+        $DOCKER_SCRIPT `$GET_INDEX_OF bootstrap_bugs`
 
   functional_test_bootstrap_common:
     runs-on: ubuntu-20.04
@@ -68,7 +69,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 2
+        $DOCKER_SCRIPT `$GET_INDEX_OF bootstrap_init_join_remove`
 
   functional_test_bootstrap_options:
     runs-on: ubuntu-20.04
@@ -79,7 +80,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 3
+        $DOCKER_SCRIPT `$GET_INDEX_OF bootstrap_options`
 
   functional_test_qdevice_setup_remove:
     runs-on: ubuntu-20.04
@@ -90,7 +91,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 9
+        $DOCKER_SCRIPT `$GET_INDEX_OF qdevice_setup_remove`
 
   functional_test_qdevice_options:
     runs-on: ubuntu-20.04
@@ -101,7 +102,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 8
+        $DOCKER_SCRIPT `$GET_INDEX_OF qdevice_options`
 
   functional_test_qdevice_validate:
     runs-on: ubuntu-20.04
@@ -112,7 +113,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 11
+        $DOCKER_SCRIPT `$GET_INDEX_OF qdevice_validate`
 
   functional_test_qdevice_user_case:
     runs-on: ubuntu-20.04
@@ -123,7 +124,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 10
+        $DOCKER_SCRIPT `$GET_INDEX_OF qdevice_usercase`
 
   functional_test_resource_subcommand:
     runs-on: ubuntu-20.04
@@ -134,7 +135,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 12 13
+        $DOCKER_SCRIPT `$GET_INDEX_OF resource_failcount resource_set`
 
   functional_test_configure_sublevel:
     runs-on: ubuntu-20.04
@@ -145,7 +146,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 4
+        $DOCKER_SCRIPT `$GET_INDEX_OF configure_bugs`
 
   functional_test_constraints_bugs:
     runs-on: ubuntu-20.04
@@ -156,7 +157,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 5
+        $DOCKER_SCRIPT `$GET_INDEX_OF constraints_bugs`
 
   functional_test_geo_cluster:
     runs-on: ubuntu-20.04
@@ -167,7 +168,18 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT 7
+        $DOCKER_SCRIPT `$GET_INDEX_OF geo_setup`
+
+  functional_test_healthcheck:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for healthcheck
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        $DOCKER_SCRIPT `$GET_INDEX_OF healthcheck`
 
   original_regression_test:
     runs-on: ubuntu-20.04
@@ -176,7 +188,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: original regression test
       run:  |
-        $DOCKER_SCRIPT 14
+        $DOCKER_SCRIPT `$GET_INDEX_OF "regression test"`
 
   delivery:
     needs: [unit_test,
@@ -192,6 +204,7 @@ jobs:
       functional_test_configure_sublevel,
       functional_test_constraints_bugs,
       functional_test_geo_cluster,
+      functional_test_healthcheck,
       original_regression_test]
     runs-on: ubuntu-20.04
     timeout-minutes: 10
