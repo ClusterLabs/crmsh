@@ -241,8 +241,6 @@ date_ops = ('lt', 'gt', 'in_range', 'date_spec')
 date_spec_names = '''hours monthdays weekdays yearsdays months \
 weeks years weekyears moon'''.split()
 in_range_attrs = ('start', 'end')
-roles_names = ('Stopped', 'Started', 'Master', 'Slave')
-actions_names = ('start', 'promote', 'demote', 'stop')
 node_default_type = "normal"
 node_attributes_keyw = ("attributes", "utilization")
 shadow_envvar = "CIB_shadow"
@@ -527,7 +525,11 @@ DC_DEADTIME_DEFAULT = 20
 ADVISED_ACTION_LIST = ['monitor', 'start', 'stop', 'promote', 'demote']
 ADVISED_KEY_LIST = ['timeout', 'interval', 'role']
 DEFAULT_INTERVAL_IN_ACTION = "20s"
-DEFAULT_TIMEOUT_IN_ACTION = "60s"
 
 WAIT_TIMEOUT_MS_DEFAULT = 120000
+
+RSC_ROLE_PROMOTED = "Promoted"
+RSC_ROLE_UNPROMOTED = "Unpromoted"
+RSC_ROLE_PROMOTED_LEGACY = "Master"
+RSC_ROLE_UNPROMOTED_LEGACY = "Slave"
 # vim:ts=4:sw=4:et:
