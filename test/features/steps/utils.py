@@ -51,7 +51,8 @@ def run_command(context, cmd, err_record=False):
 
 def run_command_local_or_remote(context, cmd, addr, err_record=False):
     if addr == me():
-        _, out = run_command(context, cmd, err_record)
+        rc, out = run_command(context, cmd, err_record)
+        context.return_code = rc
         return out
     else:
         try:
@@ -63,6 +64,7 @@ def run_command_local_or_remote(context, cmd, addr, err_record=False):
             context.logger.error("\n{}\n".format(err))
             context.failed = True
         else:
+            context.return_code = 0
             return utils.to_ascii(results[0][1][1])
 
 
@@ -86,6 +88,11 @@ def check_service_state(context, service_name, state, addr):
 
 def check_cluster_state(context, state, addr):
     return check_service_state(context, 'pacemaker.service', state, addr)
+
+
+def is_unclean(node):
+    rc, out, err = utils.get_stdout_stderr("crm_mon -1")
+    return "{}: UNCLEAN".format(node) in out
 
 
 def online(context, nodelist):

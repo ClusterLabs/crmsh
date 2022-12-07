@@ -183,7 +183,7 @@ docker_exec() {
 deploy_ha_node() {
 	node_name=$1
 	docker_options="-d --name $node_name -h $node_name --privileged --shm-size 1g"
-	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix="
+	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
 	docker run --restart always $docker_options $DOCKER_IMAGE &> /dev/null
@@ -445,6 +445,6 @@ for case_num in $*;do
 	CONFIG_COROSYNC_FLAG=0
 	setup_cluster ${node_arry[@]}
 	adjust_test_case ${node_arry[0]} $case_file_in_container
-	docker_exec ${node_arry[0]} "behave $case_file_in_container || exit 1" || exit 1
+	docker_exec ${node_arry[0]} "behave --no-logcapture $case_file_in_container || exit 1" || exit 1
 	echo
 done
