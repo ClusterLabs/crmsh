@@ -241,8 +241,6 @@ date_ops = ('lt', 'gt', 'in_range', 'date_spec')
 date_spec_names = '''hours monthdays weekdays yearsdays months \
 weeks years weekyears moon'''.split()
 in_range_attrs = ('start', 'end')
-roles_names = ('Stopped', 'Started', 'Master', 'Slave')
-actions_names = ('start', 'promote', 'demote', 'stop')
 node_default_type = "normal"
 node_attributes_keyw = ("attributes", "utilization")
 shadow_envvar = "CIB_shadow"
@@ -522,4 +520,14 @@ HA_GROUP = "haclient"
 SCHEMA_MIN_VER_SUPPORT_OCF_1_1 = "pacemaker-3.7"
 REJOIN_COUNT = 60
 REJOIN_INTERVAL = 10
+DC_DEADTIME_DEFAULT = 20
+
+ADVISED_ACTION_LIST = ['monitor', 'start', 'stop', 'promote', 'demote']
+ADVISED_KEY_LIST = ['timeout', 'interval', 'role']
+DEFAULT_INTERVAL_IN_ACTION = "20s"
+
+RSC_ROLE_PROMOTED = "Promoted"
+RSC_ROLE_UNPROMOTED = "Unpromoted"
+RSC_ROLE_PROMOTED_LEGACY = "Master"
+RSC_ROLE_UNPROMOTED_LEGACY = "Slave"
 # vim:ts=4:sw=4:et:

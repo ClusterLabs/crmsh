@@ -14,38 +14,56 @@
 .INP: location d1-pref d1 100: node1
 .INP: show
 node node1
-primitive d1 ocf:pacemaker:Dummy
-primitive d2 ocf:pacemaker:Dummy
+primitive d1 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d2 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+        op stop timeout=15 interval=0s
 location d1-pref d1 100: node1
 .INP: _test
 .INP: rename d1 p1
 INFO: 13: modified location:d1-pref from d1 to p1
 .INP: show
 node node1
-primitive d2 ocf:pacemaker:Dummy
-primitive p1 ocf:pacemaker:Dummy
+primitive d2 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive p1 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+        op stop timeout=15 interval=0s
 location d1-pref p1 100: node1
 .INP: # delete primitive
 .INP: delete d2
 .INP: _test
 .INP: show
 node node1
-primitive p1 ocf:pacemaker:Dummy
+primitive p1 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+	op stop timeout=15 interval=0s
 location d1-pref p1 100: node1
 .INP: # delete primitive with constraint
 .INP: delete p1
@@ -56,8 +74,9 @@ node node1
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+	op stop timeout=15 interval=0s
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: location d1-pref d1 100: node1
 .INP: _test
@@ -69,12 +88,16 @@ INFO: 29: modified location:d1-pref from d1 to g1
 .INP: delete d2
 .INP: show
 node node1
-primitive d1 ocf:pacemaker:Dummy
+primitive d1 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+	op stop timeout=15 interval=0s
 group g1 d1
 location d1-pref g1 100: node1
 .INP: _test
@@ -82,12 +105,16 @@ location d1-pref g1 100: node1
 INFO: 33: modified location:d1-pref from g1 to d1
 .INP: show
 node node1
-primitive d1 ocf:pacemaker:Dummy
+primitive d1 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+	op stop timeout=15 interval=0s
 location d1-pref d1 100: node1
 .INP: verify
 .INP: # delete a group which is in a clone
@@ -101,13 +128,20 @@ INFO: 40: modified location:d1-pref from c1 to g1
 INFO: 40: modified location:d1-pref from g1 to d2
 .INP: show
 node node1
-primitive d1 ocf:pacemaker:Dummy
-primitive d2 ocf:pacemaker:Dummy
+primitive d1 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d2 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+	op stop timeout=15 interval=0s
 location d1-pref d2 100: node1
 .INP: _test
 .INP: group g1 d2 d1
@@ -121,13 +155,20 @@ INFO: 47: modified location:d1-pref from c1 to g1
 INFO: 47: modified location:d1-pref from g1 to d2
 .INP: show
 node node1
-primitive d1 ocf:pacemaker:Dummy
-primitive d2 ocf:pacemaker:Dummy
+primitive d1 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d2 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+	op stop timeout=15 interval=0s
 location d1-pref d2 100: node1
 .INP: _test
 .INP: group g1 d2 d1
@@ -144,8 +185,9 @@ node node1
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	meta target-role=Started \
-	op start timeout=60s interval=0 \
-	op monitor interval=60m timeout=60s
+	op start timeout=60s interval=0s \
+	op monitor interval=60m timeout=60s \
+	op stop timeout=15 interval=0s
 .INP: _test
 .INP: # verify
 .INP: verify

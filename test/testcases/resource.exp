@@ -13,6 +13,11 @@ resource p0 is NOT running
     <nodes/>
     <resources>
       <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+        </operations>
         <meta_attributes id="p3-meta_attributes">
           <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Started"/>
         </meta_attributes>
@@ -33,6 +38,11 @@ resource p0 is NOT running
     <nodes/>
     <resources>
       <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+        </operations>
         <meta_attributes id="p3-meta_attributes">
           <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
         </meta_attributes>
@@ -55,9 +65,16 @@ resource p0 is NOT running
     <resources>
       <clone id="c1">
         <meta_attributes id="c1-meta_attributes">
+          <nvpair id="c1-meta_attributes-interleave" name="interleave" value="true"/>
           <nvpair id="c1-meta_attributes-is-managed" name="is-managed" value="true"/>
         </meta_attributes>
-        <primitive id="p1" class="ocf" provider="pacemaker" type="Dummy"/>
+        <primitive id="p1" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p1-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p1-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p1-stop-0s"/>
+          </operations>
+        </primitive>
       </clone>
     </resources>
     <constraints/>
@@ -76,9 +93,16 @@ resource p0 is NOT running
     <resources>
       <clone id="c1">
         <meta_attributes id="c1-meta_attributes">
+          <nvpair id="c1-meta_attributes-interleave" name="interleave" value="true"/>
           <nvpair id="c1-meta_attributes-is-managed" name="is-managed" value="false"/>
         </meta_attributes>
-        <primitive id="p1" class="ocf" provider="pacemaker" type="Dummy"/>
+        <primitive id="p1" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p1-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p1-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p1-stop-0s"/>
+          </operations>
+        </primitive>
       </clone>
     </resources>
     <constraints/>
@@ -99,6 +123,7 @@ resource p0 is NOT running
       <clone id="m1">
         <meta_attributes id="m1-meta_attributes">
           <nvpair name="promotable" value="true" id="m1-meta_attributes-promotable"/>
+          <nvpair id="m1-meta_attributes-interleave" name="interleave" value="true"/>
           <nvpair id="m1-meta_attributes-maintenance" name="maintenance" value="true"/>
         </meta_attributes>
         <primitive id="p2" class="ocf" provider="heartbeat" type="Delay">
@@ -107,6 +132,11 @@ resource p0 is NOT running
             <nvpair name="mondelay" value="2" id="p2-instance_attributes-mondelay"/>
             <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
           </instance_attributes>
+          <operations>
+            <op name="monitor" timeout="30s" interval="10s" id="p2-monitor-10s"/>
+            <op name="start" timeout="30s" interval="0s" id="p2-start-0s"/>
+            <op name="stop" timeout="30s" interval="0s" id="p2-stop-0s"/>
+          </operations>
         </primitive>
       </clone>
     </resources>
@@ -127,6 +157,7 @@ resource p0 is NOT running
       <clone id="m1">
         <meta_attributes id="m1-meta_attributes">
           <nvpair name="promotable" value="true" id="m1-meta_attributes-promotable"/>
+          <nvpair id="m1-meta_attributes-interleave" name="interleave" value="true"/>
           <nvpair id="m1-meta_attributes-maintenance" name="maintenance" value="false"/>
         </meta_attributes>
         <primitive id="p2" class="ocf" provider="heartbeat" type="Delay">
@@ -135,6 +166,11 @@ resource p0 is NOT running
             <nvpair name="mondelay" value="2" id="p2-instance_attributes-mondelay"/>
             <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
           </instance_attributes>
+          <operations>
+            <op name="monitor" timeout="30s" interval="10s" id="p2-monitor-10s"/>
+            <op name="start" timeout="30s" interval="0s" id="p2-start-0s"/>
+            <op name="stop" timeout="30s" interval="0s" id="p2-stop-0s"/>
+          </operations>
         </primitive>
       </clone>
     </resources>
@@ -212,6 +248,11 @@ Set 'p0' option: id=p0-instance_attributes-a0 set=p0-instance_attributes name=a0
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+        </operations>
         <instance_attributes id="p0-instance_attributes">
           <nvpair id="p0-instance_attributes-a0" name="a0" value="1 2 3"/>
         </instance_attributes>
@@ -234,6 +275,11 @@ Set 'p0' option: id=p0-instance_attributes-a0 set=p0-instance_attributes name=a0
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+        </operations>
         <instance_attributes id="p0-instance_attributes">
           <nvpair id="p0-instance_attributes-a0" name="a0" value="1 2 3"/>
         </instance_attributes>
@@ -256,6 +302,11 @@ Deleted 'p0' option: id=p0-instance_attributes-a0 name=a0
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+        </operations>
         <instance_attributes id="p0-instance_attributes"/>
       </primitive>
     </resources>
@@ -276,6 +327,11 @@ Set 'p0' option: id=p0-meta_attributes-m0 set=p0-meta_attributes name=m0 value=1
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+        </operations>
         <instance_attributes id="p0-instance_attributes"/>
         <meta_attributes id="p0-meta_attributes">
           <nvpair id="p0-meta_attributes-m0" name="m0" value="123"/>
@@ -299,6 +355,11 @@ Set 'p0' option: id=p0-meta_attributes-m0 set=p0-meta_attributes name=m0 value=1
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+        </operations>
         <instance_attributes id="p0-instance_attributes"/>
         <meta_attributes id="p0-meta_attributes">
           <nvpair id="p0-meta_attributes-m0" name="m0" value="123"/>
@@ -322,6 +383,11 @@ Deleted 'p0' option: id=p0-meta_attributes-m0 name=m0
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+        </operations>
         <instance_attributes id="p0-instance_attributes"/>
         <meta_attributes id="p0-meta_attributes"/>
       </primitive>
@@ -343,15 +409,18 @@ INFO: Trace set, restart p0 to trace non-monitor operations
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
-        <instance_attributes id="p0-instance_attributes"/>
-        <meta_attributes id="p0-meta_attributes"/>
         <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
           <op name="monitor" interval="0" id="p0-monitor-0">
             <instance_attributes id="p0-monitor-0-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-monitor-0-instance_attributes-trace_ra"/>
             </instance_attributes>
           </op>
         </operations>
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
       </primitive>
     </resources>
     <constraints/>
@@ -371,20 +440,22 @@ INFO: Trace set, restart p0 to trace the start operation
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
-        <instance_attributes id="p0-instance_attributes"/>
-        <meta_attributes id="p0-meta_attributes"/>
         <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
           <op name="monitor" interval="0" id="p0-monitor-0">
             <instance_attributes id="p0-monitor-0-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-monitor-0-instance_attributes-trace_ra"/>
             </instance_attributes>
           </op>
-          <op name="start" interval="0" id="p0-start-0">
-            <instance_attributes id="p0-start-0-instance_attributes">
-              <nvpair name="trace_ra" value="1" id="p0-start-0-instance_attributes-trace_ra"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s">
+            <instance_attributes id="p0-start-0s-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-start-0s-instance_attributes-trace_ra"/>
             </instance_attributes>
           </op>
         </operations>
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
       </primitive>
     </resources>
     <constraints/>
@@ -404,25 +475,26 @@ INFO: Trace set, restart p0 to trace the stop operation
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
-        <instance_attributes id="p0-instance_attributes"/>
-        <meta_attributes id="p0-meta_attributes"/>
         <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
           <op name="monitor" interval="0" id="p0-monitor-0">
             <instance_attributes id="p0-monitor-0-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-monitor-0-instance_attributes-trace_ra"/>
             </instance_attributes>
           </op>
-          <op name="start" interval="0" id="p0-start-0">
-            <instance_attributes id="p0-start-0-instance_attributes">
-              <nvpair name="trace_ra" value="1" id="p0-start-0-instance_attributes-trace_ra"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s">
+            <instance_attributes id="p0-start-0s-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-start-0s-instance_attributes-trace_ra"/>
             </instance_attributes>
           </op>
-          <op name="stop" interval="0" id="p0-stop-0">
-            <instance_attributes id="p0-stop-0-instance_attributes">
-              <nvpair name="trace_ra" value="1" id="p0-stop-0-instance_attributes-trace_ra"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s">
+            <instance_attributes id="p0-stop-0s-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-stop-0s-instance_attributes-trace_ra"/>
             </instance_attributes>
           </op>
         </operations>
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
       </primitive>
     </resources>
     <constraints/>
@@ -441,20 +513,21 @@ INFO: Stop tracing p0 for operation monitor
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
-        <instance_attributes id="p0-instance_attributes"/>
-        <meta_attributes id="p0-meta_attributes"/>
         <operations>
-          <op name="start" interval="0" id="p0-start-0">
-            <instance_attributes id="p0-start-0-instance_attributes">
-              <nvpair name="trace_ra" value="1" id="p0-start-0-instance_attributes-trace_ra"/>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s">
+            <instance_attributes id="p0-start-0s-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-start-0s-instance_attributes-trace_ra"/>
             </instance_attributes>
           </op>
-          <op name="stop" interval="0" id="p0-stop-0">
-            <instance_attributes id="p0-stop-0-instance_attributes">
-              <nvpair name="trace_ra" value="1" id="p0-stop-0-instance_attributes-trace_ra"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s">
+            <instance_attributes id="p0-stop-0s-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-stop-0s-instance_attributes-trace_ra"/>
             </instance_attributes>
           </op>
         </operations>
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
       </primitive>
     </resources>
     <constraints/>
@@ -473,15 +546,17 @@ INFO: Stop tracing p0 for operation start
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
-        <instance_attributes id="p0-instance_attributes"/>
-        <meta_attributes id="p0-meta_attributes"/>
         <operations>
-          <op name="stop" interval="0" id="p0-stop-0">
-            <instance_attributes id="p0-stop-0-instance_attributes">
-              <nvpair name="trace_ra" value="1" id="p0-stop-0-instance_attributes-trace_ra"/>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s">
+            <instance_attributes id="p0-stop-0s-instance_attributes">
+              <nvpair name="trace_ra" value="1" id="p0-stop-0s-instance_attributes-trace_ra"/>
             </instance_attributes>
           </op>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
         </operations>
+        <instance_attributes id="p0-instance_attributes"/>
+        <meta_attributes id="p0-meta_attributes"/>
       </primitive>
     </resources>
     <constraints/>
@@ -500,6 +575,11 @@ INFO: Stop tracing p0 for operation stop
     <nodes/>
     <resources>
       <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+        <operations>
+          <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+          <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+          <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+        </operations>
         <instance_attributes id="p0-instance_attributes"/>
         <meta_attributes id="p0-meta_attributes"/>
       </primitive>
@@ -520,10 +600,20 @@ INFO: Stop tracing p0 for operation stop
     <resources>
       <group id="g">
         <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+          </operations>
           <instance_attributes id="p0-instance_attributes"/>
           <meta_attributes id="p0-meta_attributes"/>
         </primitive>
         <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+          </operations>
           <meta_attributes id="p3-meta_attributes">
             <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
           </meta_attributes>
@@ -546,10 +636,20 @@ INFO: Stop tracing p0 for operation stop
     <resources>
       <group id="g">
         <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+          </operations>
           <instance_attributes id="p0-instance_attributes"/>
           <meta_attributes id="p0-meta_attributes"/>
         </primitive>
         <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+          </operations>
           <meta_attributes id="p3-meta_attributes">
             <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
           </meta_attributes>
@@ -574,8 +674,19 @@ INFO: Stop tracing p0 for operation stop
         <meta_attributes id="g-meta_attributes">
           <nvpair id="g-meta_attributes-target-role" name="target-role" value="Started"/>
         </meta_attributes>
-        <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
+        <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+          </operations>
+        </primitive>
         <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+          </operations>
           <meta_attributes id="p3-meta_attributes">
             <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
           </meta_attributes>
@@ -601,11 +712,21 @@ INFO: Stop tracing p0 for operation stop
           <nvpair id="g-meta_attributes-target-role" name="target-role" value="Started"/>
         </meta_attributes>
         <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+          </operations>
           <meta_attributes id="p0-meta_attributes">
             <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
           </meta_attributes>
         </primitive>
         <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+          </operations>
           <meta_attributes id="p3-meta_attributes">
             <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
           </meta_attributes>
@@ -631,11 +752,21 @@ INFO: Stop tracing p0 for operation stop
           <nvpair id="g-meta_attributes-target-role" name="target-role" value="Stopped"/>
         </meta_attributes>
         <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+          </operations>
           <meta_attributes id="p0-meta_attributes">
             <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
           </meta_attributes>
         </primitive>
         <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+          </operations>
           <meta_attributes id="p3-meta_attributes">
             <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
           </meta_attributes>
@@ -662,11 +793,21 @@ INFO: Stop tracing p0 for operation stop
             <nvpair id="g-meta_attributes-target-role" name="target-role" value="Stopped"/>
           </meta_attributes>
           <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+            </operations>
             <meta_attributes id="p0-meta_attributes">
               <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
             </meta_attributes>
           </primitive>
           <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+            </operations>
             <meta_attributes id="p3-meta_attributes">
               <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
             </meta_attributes>
@@ -694,11 +835,21 @@ INFO: Stop tracing p0 for operation stop
             <nvpair id="g-meta_attributes-target-role" name="target-role" value="Stopped"/>
           </meta_attributes>
           <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+            </operations>
             <meta_attributes id="p0-meta_attributes">
               <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Started"/>
             </meta_attributes>
           </primitive>
           <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+            </operations>
             <meta_attributes id="p3-meta_attributes">
               <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
             </meta_attributes>
@@ -725,8 +876,20 @@ INFO: Stop tracing p0 for operation stop
           <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Started"/>
         </meta_attributes>
         <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
-          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy"/>
+          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+            </operations>
+          </primitive>
+          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+            </operations>
+          </primitive>
         </group>
       </clone>
     </resources>
@@ -749,8 +912,20 @@ INFO: Stop tracing p0 for operation stop
           <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Stopped"/>
         </meta_attributes>
         <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
-          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy"/>
+          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+            </operations>
+          </primitive>
+          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+            </operations>
+          </primitive>
         </group>
       </clone>
     </resources>
@@ -773,8 +948,20 @@ INFO: Stop tracing p0 for operation stop
           <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Started"/>
         </meta_attributes>
         <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
-          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy"/>
+          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+            </operations>
+          </primitive>
+          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+            </operations>
+          </primitive>
         </group>
       </clone>
     </resources>
@@ -798,11 +985,22 @@ INFO: Stop tracing p0 for operation stop
         </meta_attributes>
         <group id="g">
           <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+            </operations>
             <meta_attributes id="p0-meta_attributes">
               <nvpair id="p0-meta_attributes-target-role" name="target-role" value="Stopped"/>
             </meta_attributes>
           </primitive>
-          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy"/>
+          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+            </operations>
+          </primitive>
         </group>
       </clone>
     </resources>
@@ -825,8 +1023,20 @@ INFO: Stop tracing p0 for operation stop
           <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Started"/>
         </meta_attributes>
         <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
-          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy"/>
+          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+            </operations>
+          </primitive>
+          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+            </operations>
+          </primitive>
         </group>
       </clone>
     </resources>
@@ -849,8 +1059,20 @@ INFO: Stop tracing p0 for operation stop
           <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Stopped"/>
         </meta_attributes>
         <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
-          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy"/>
+          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+            </operations>
+          </primitive>
+          <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+            </operations>
+          </primitive>
         </group>
       </clone>
     </resources>
@@ -873,8 +1095,19 @@ INFO: Stop tracing p0 for operation stop
           <nvpair id="cg-meta_attributes-target-role" name="target-role" value="Stopped"/>
         </meta_attributes>
         <group id="g">
-          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy"/>
+          <primitive id="p0" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p0-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s"/>
+            </operations>
+          </primitive>
           <primitive id="p3" class="ocf" provider="pacemaker" type="Dummy">
+            <operations>
+              <op name="monitor" timeout="20s" interval="10s" id="p3-monitor-10s"/>
+              <op name="start" timeout="20s" interval="0s" id="p3-start-0s"/>
+              <op name="stop" timeout="20s" interval="0s" id="p3-stop-0s"/>
+            </operations>
             <meta_attributes id="p3-meta_attributes">
               <nvpair id="p3-meta_attributes-target-role" name="target-role" value="Stopped"/>
             </meta_attributes>
@@ -987,6 +1220,11 @@ INFO: 'maintenance' conflicts with 'is-managed' attribute. Remove 'is-managed' f
     <resources>
       <group id="g1">
         <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p5-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p5-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p5-stop-0s"/>
+          </operations>
           <meta_attributes id="p5-meta_attributes-0">
             <nvpair id="p5-meta_attributes-0-maintenance" name="maintenance" value="true"/>
           </meta_attributes>
@@ -1011,6 +1249,11 @@ INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' 
     <resources>
       <group id="g1">
         <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p5-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p5-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p5-stop-0s"/>
+          </operations>
           <meta_attributes id="p5-meta_attributes">
             <nvpair id="p5-meta_attributes-is-managed" name="is-managed" value="false"/>
           </meta_attributes>
@@ -1036,7 +1279,13 @@ INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' 
         <meta_attributes id="g1-meta_attributes">
           <nvpair id="g1-meta_attributes-maintenance" name="maintenance" value="true"/>
         </meta_attributes>
-        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy"/>
+        <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p5-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p5-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p5-stop-0s"/>
+          </operations>
+        </primitive>
       </group>
     </resources>
     <constraints/>
@@ -1058,6 +1307,11 @@ INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' 
           <nvpair id="g1-meta_attributes-maintenance" name="maintenance" value="true"/>
         </meta_attributes>
         <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p5-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p5-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p5-stop-0s"/>
+          </operations>
           <meta_attributes id="p5-meta_attributes">
             <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
           </meta_attributes>
@@ -1085,6 +1339,11 @@ INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' 
           <nvpair id="g1-meta_attributes-0-is-managed" name="is-managed" value="true"/>
         </meta_attributes>
         <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p5-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p5-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p5-stop-0s"/>
+          </operations>
           <meta_attributes id="p5-meta_attributes">
             <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
           </meta_attributes>
@@ -1110,6 +1369,11 @@ INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' 
           <nvpair id="g1-meta_attributes-0-is-managed" name="is-managed" value="true"/>
         </meta_attributes>
         <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p5-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p5-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p5-stop-0s"/>
+          </operations>
           <meta_attributes id="p5-meta_attributes">
             <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
           </meta_attributes>
@@ -1136,6 +1400,11 @@ INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' 
           <nvpair id="g1-meta_attributes-0-is-managed" name="is-managed" value="true"/>
         </meta_attributes>
         <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p5-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p5-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p5-stop-0s"/>
+          </operations>
           <meta_attributes id="p5-meta_attributes">
             <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
             <nvpair id="p5-meta_attributes-maintenance" name="maintenance" value="true"/>
@@ -1164,6 +1433,11 @@ INFO: 'maintenance' conflicts with 'is-managed' attribute. Remove 'is-managed' f
           <nvpair id="g1-meta_attributes-maintenance" name="maintenance" value="true"/>
         </meta_attributes>
         <primitive id="p5" class="ocf" provider="heartbeat" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="p5-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="p5-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="p5-stop-0s"/>
+          </operations>
           <meta_attributes id="p5-meta_attributes">
             <nvpair id="p5-meta_attributes-target-role" name="target-role" value="Started"/>
           </meta_attributes>

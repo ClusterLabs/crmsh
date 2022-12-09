@@ -28,8 +28,6 @@ Feature: Use "crm configure set" to update attributes and operations
     Then    Except "ERROR: configure.set: Object xxxx not found"
     When    Try "crm configure set d.name value"
     Then    Except "ERROR: configure.set: Attribute not found: d.name"
-    When    Try "crm configure set d.start.timeout 30"
-    Then    Except "ERROR: configure.set: Operation "start" not found for resource d"
     When    Try "crm configure set d.monitor.100.timeout 10"
     Then    Except "ERROR: configure.set: Operation "monitor" interval "100" not found for resource d"
     When    Try "crm configure set s.monitor.interval 20"
@@ -116,3 +114,15 @@ Feature: Use "crm configure set" to update attributes and operations
     Then    Expected "WARNING: s2: interval in monitor must be unique, advised is 11s" in stdout
     When    Run "crm configure primitive id=d4 Dummy op start timeout=10s" on "hanode1"
     Then    Expected "WARNING: d4: specified timeout 10s for start is smaller than the advised 20s" in stdout
+
+  @clean
+  Scenario: Add promotable=true and interleave=true automatically (bsc#1205522)
+    When    Run "crm configure primitive s2 ocf:pacemaker:Stateful" on "hanode1"
+    And     Run "crm configure clone p2 s2" on "hanode1"
+    Then    Run "sleep 2;crm configure show|grep -A1 'clone p2 s2'|grep 'promotable=true interleave=true'" OK
+    When    Run "crm configure primitive s3 ocf:pacemaker:Stateful" on "hanode1"
+    And     Run "crm configure clone p3 s3 meta promotable=false" on "hanode1"
+    Then    Run "sleep 2;crm configure show|grep -A1 'clone p3 s3'|grep 'promotable=false interleave=true'" OK
+    When    Run "crm configure primitive d2 Dummy" on "hanode1"
+    And     Run "crm configure clone p4 d2" on "hanode1"
+    Then    Run "sleep 2;crm configure show|grep -A1 'clone p4 d2'|grep 'interleave=true'" OK

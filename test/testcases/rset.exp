@@ -42,12 +42,23 @@ order o1 Serialize: d1 d3
 .INP: verify
 .INP: show
 node node1
-primitive d1 ocf:pacemaker:Dummy
-primitive d3 Dummy
-primitive d5 Dummy
+primitive d1 ocf:pacemaker:Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d3 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
+primitive d5 Dummy \
+	op monitor timeout=20s interval=10s \
+	op start timeout=20s interval=0s \
+	op stop timeout=20s interval=0s
 primitive st stonith:ssh \
 	params hostlist=node1 \
-	op start timeout=60s interval=0
+	op start timeout=60s interval=0s \
+	op monitor timeout=20 interval=3600 \
+	op stop timeout=15 interval=0s
 colocation c1 inf: ( d1 d3 )
 colocation c2 inf: d3 d1
 colocation c3 inf: d3 d1

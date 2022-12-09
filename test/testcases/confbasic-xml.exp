@@ -22,15 +22,41 @@
       </node>
     </nodes>
     <resources>
+      <primitive id="st" class="stonith" type="ssh">
+        <instance_attributes id="st-instance_attributes">
+          <nvpair name="hostlist" value="node1 node2" id="st-instance_attributes-hostlist"/>
+        </instance_attributes>
+        <meta_attributes id="st-meta_attributes">
+          <nvpair name="target-role" value="Started" id="st-meta_attributes-target-role"/>
+          <nvpair name="requires" value="nothing" id="st-meta_attributes-requires"/>
+        </meta_attributes>
+        <operations>
+          <op name="start" timeout="60s" interval="0s" id="st-start-0s"/>
+          <op name="monitor" interval="60m" timeout="60s" id="st-monitor-60m"/>
+          <op name="stop" timeout="15" interval="0s" id="st-stop-0s"/>
+        </operations>
+      </primitive>
+      <primitive id="st2" class="stonith" type="ssh">
+        <instance_attributes id="st2-instance_attributes">
+          <nvpair name="hostlist" value="node1 node2" id="st2-instance_attributes-hostlist"/>
+        </instance_attributes>
+        <operations>
+          <op name="monitor" timeout="20" interval="3600" id="st2-monitor-3600"/>
+          <op name="start" timeout="20" interval="0s" id="st2-start-0s"/>
+          <op name="stop" timeout="15" interval="0s" id="st2-stop-0s"/>
+        </operations>
+      </primitive>
       <group id="g1">
         <primitive id="d1" class="ocf" provider="pacemaker" type="Dummy">
           <operations id="d1-ops">
-            <op name="monitor" interval="60m" id="d1-ops-monitor-60m"/>
-            <op name="monitor" interval="120m" id="d1-ops-monitor-120m">
+            <op name="monitor" interval="60m" timeout="20s" id="d1-ops-monitor-60m"/>
+            <op name="monitor" interval="120m" timeout="20s" id="d1-ops-monitor-120m">
               <instance_attributes id="d1-ops-monitor-120m-instance_attributes">
                 <nvpair name="OCF_CHECK_LEVEL" value="10" id="d1-ops-monitor-120m-instance_attributes-OCF_CHECK_LEVEL"/>
               </instance_attributes>
             </op>
+            <op name="start" timeout="20s" interval="0s" id="d1-ops-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="d1-ops-stop-0s"/>
             <op name="monitor" interval="60s" timeout="30s" id="d1-monitor-60s"/>
           </operations>
         </primitive>
@@ -39,8 +65,9 @@
             <nvpair name="mondelay" value="60" id="d2-instance_attributes-mondelay"/>
           </instance_attributes>
           <operations>
-            <op name="start" timeout="60s" interval="0" id="d2-start-0"/>
-            <op name="stop" timeout="60s" interval="0" id="d2-stop-0"/>
+            <op name="start" timeout="60s" interval="0s" id="d2-start-0s"/>
+            <op name="stop" timeout="60s" interval="0s" id="d2-stop-0s"/>
+            <op name="monitor" timeout="30s" interval="10s" id="d2-monitor-10s"/>
             <op name="monitor" role="Started" interval="60s" timeout="30s" id="d2-monitor-60s"/>
           </operations>
         </primitive>
@@ -48,83 +75,77 @@
       <clone id="c">
         <meta_attributes id="c-meta_attributes">
           <nvpair name="clone-max" value="1" id="c-meta_attributes-clone-max"/>
+          <nvpair name="interleave" value="true" id="c-meta_attributes-interleave"/>
         </meta_attributes>
-        <primitive id="d3" class="ocf" provider="pacemaker" type="Dummy"/>
+        <primitive id="d3" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="d3-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="d3-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="d3-stop-0s"/>
+          </operations>
+        </primitive>
       </clone>
       <master id="m">
-        <primitive id="d4" class="ocf" provider="pacemaker" type="Dummy"/>
+        <primitive id="d4" class="ocf" provider="pacemaker" type="Dummy">
+          <operations>
+            <op name="monitor" timeout="20s" interval="10s" id="d4-monitor-10s"/>
+            <op name="start" timeout="20s" interval="0s" id="d4-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="d4-stop-0s"/>
+          </operations>
+        </primitive>
       </master>
       <master id="m5">
         <primitive id="s5" class="ocf" provider="pacemaker" type="Stateful">
-          <operations id-ref="d1-ops"/>
+          <operations id-ref="d1-ops">
+            <op name="monitor" timeout="20s" interval="10s" role="Promoted" id="s5-monitor-10s"/>
+            <op name="monitor" timeout="20s" interval="11s" role="Unpromoted" id="s5-monitor-11s"/>
+            <op name="start" timeout="20s" interval="0s" id="s5-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="s5-stop-0s"/>
+            <op name="promote" timeout="10s" interval="0s" id="s5-promote-0s"/>
+            <op name="demote" timeout="10s" interval="0s" id="s5-demote-0s"/>
+          </operations>
         </primitive>
       </master>
       <master id="m6">
         <primitive id="s6" class="ocf" provider="pacemaker" type="Stateful">
-          <operations id-ref="d1-ops"/>
+          <operations id-ref="d1-ops">
+            <op name="monitor" timeout="20s" interval="10s" role="Promoted" id="s6-monitor-10s"/>
+            <op name="monitor" timeout="20s" interval="11s" role="Unpromoted" id="s6-monitor-11s"/>
+            <op name="start" timeout="20s" interval="0s" id="s6-start-0s"/>
+            <op name="stop" timeout="20s" interval="0s" id="s6-stop-0s"/>
+            <op name="promote" timeout="10s" interval="0s" id="s6-promote-0s"/>
+            <op name="demote" timeout="10s" interval="0s" id="s6-demote-0s"/>
+          </operations>
         </primitive>
       </master>
-      <primitive id="st" class="stonith" type="ssh">
-        <instance_attributes id="st-instance_attributes">
-          <nvpair name="hostlist" value="node1 node2" id="st-instance_attributes-hostlist"/>
-        </instance_attributes>
-          <meta_attributes id="st-meta_attributes">
-          <nvpair name="requires" value="nothing" id="st-meta_attributes-requires"/>
-          <nvpair name="target-role" value="Started" id="st-meta_attributes-target-role"/>
-        </meta_attributes>
-        <operations>
-          <op name="start" timeout="60s" interval="0" id="st-start-0"/>
-          <op name="monitor" interval="60m" timeout="60s" id="st-monitor-60m"/>
-        </operations>
-      </primitive>
-      <primitive id="st2" class="stonith" type="ssh">
-        <instance_attributes id="st2-instance_attributes">
-          <nvpair name="hostlist" value="node1 node2" id="st2-instance_attributes-hostlist"/>
-        </instance_attributes>
-      </primitive>
     </resources>
     <constraints>
-      <rsc_order id="o3" kind="Serialize" first="m5" then="m6"/>
-      <rsc_ticket id="ticket-C_master" ticket="ticket-C" loss-policy="fence">
-        <resource_set id="ticket-C_master-0">
-          <resource_ref id="m6"/>
-        </resource_set>
-        <resource_set role="Master" id="ticket-C_master-1">
-          <resource_ref id="m5"/>
-        </resource_set>
-      </rsc_ticket>
-      <rsc_location id="l3" rsc="m5">
-        <rule score="INFINITY" id="l3-rule">
-          <expression attribute="#uname" operation="eq" value="node1" id="l3-rule-expression"/>
-          <expression attribute="pingd" operation="gt" value="0" id="l3-rule-expression-0"/>
-        </rule>
-      </rsc_location>
       <rsc_location id="l1" rsc="g1" score="100" node="node1"/>
       <rsc_location id="l2" rsc="c">
         <rule id="l2-rule1" score="100">
-          <expression attribute="#uname" operation="eq" value="node1" id="l2-rule1-expression"/>
+          <expression operation="eq" attribute="#uname" value="node1" id="l2-rule1-expression"/>
         </rule>
       </rsc_location>
-      <rsc_ticket id="ticket-B_m6_m5" ticket="ticket-B" loss-policy="fence">
-        <resource_set id="ticket-B_m6_m5-0">
-          <resource_ref id="m6"/>
-          <resource_ref id="m5"/>
-        </resource_set>
-      </rsc_ticket>
+      <rsc_location id="l3" rsc="m5">
+        <rule score="INFINITY" id="l3-rule">
+          <expression operation="eq" attribute="#uname" value="node1" id="l3-rule-expression"/>
+          <expression operation="gt" attribute="pingd" value="0" id="l3-rule-expression-0"/>
+        </rule>
+      </rsc_location>
       <rsc_location id="l4" rsc="m5">
         <rule score="-INFINITY" boolean-op="or" id="l4-rule">
-          <expression attribute="pingd" operation="not_defined" id="l4-rule-expression"/>
-          <expression attribute="pingd" operation="lte" value="0" id="l4-rule-expression-0"/>
+          <expression operation="not_defined" attribute="pingd" id="l4-rule-expression"/>
+          <expression operation="lte" attribute="pingd" value="0" id="l4-rule-expression-0"/>
         </rule>
       </rsc_location>
       <rsc_location id="l5" rsc="m5">
         <rule score="-INFINITY" boolean-op="or" id="l5-rule">
-          <expression attribute="pingd" operation="not_defined" id="l5-rule-expression"/>
-          <expression attribute="pingd" operation="lte" value="0" id="l5-rule-expression-0"/>
+          <expression operation="not_defined" attribute="pingd" id="l5-rule-expression"/>
+          <expression operation="lte" attribute="pingd" value="0" id="l5-rule-expression-0"/>
         </rule>
         <rule score="INFINITY" id="l5-rule-0">
-          <expression attribute="#uname" operation="eq" value="node1" id="l5-rule-0-expression"/>
-          <expression attribute="pingd" operation="gt" value="0" id="l5-rule-0-expression-0"/>
+          <expression operation="eq" attribute="#uname" value="node1" id="l5-rule-0-expression"/>
+          <expression operation="gt" attribute="pingd" value="0" id="l5-rule-0-expression-0"/>
         </rule>
         <rule score="INFINITY" id="l5-rule-1">
           <date_expression operation="lt" end="2009-05-26" id="l5-rule-1-expression"/>
@@ -137,30 +158,45 @@
           </date_expression>
         </rule>
       </rsc_location>
-      <rsc_colocation id="c2" score="INFINITY" rsc="m5" rsc-role="Master" with-rsc="d1" with-rsc-role="Started"/>
-      <rsc_ticket id="ticket-A_m6" ticket="ticket-A" rsc="m6"/>
-      <rsc_order id="o2" kind="Optional" first="d1" first-action="start" then="m5" then-action="promote"/>
       <rsc_location id="l6" rsc="m5">
         <rule id-ref="l2-rule1"/>
       </rsc_location>
-      <rsc_order id="o1" kind="Mandatory" first="m5" then="m6"/>
-      <rsc_colocation id="c1" score="INFINITY" rsc="m6" with-rsc="m5"/>
       <rsc_location id="l7" rsc="m5">
         <rule id-ref="l2-rule1"/>
       </rsc_location>
+      <rsc_colocation id="c1" score="INFINITY" rsc="m6" with-rsc="m5"/>
+      <rsc_colocation id="c2" score="INFINITY" rsc="m5" rsc-role="Master" with-rsc="d1" with-rsc-role="Started"/>
+      <rsc_order id="o1" kind="Mandatory" first="m5" then="m6"/>
+      <rsc_order id="o2" kind="Optional" first="d1" first-action="start" then="m5" then-action="promote"/>
+      <rsc_order id="o3" kind="Serialize" first="m5" then="m6"/>
       <rsc_order id="o4" kind="Mandatory" first="m5" then="m6"/>
+      <rsc_ticket id="ticket-A_m6" ticket="ticket-A" rsc="m6"/>
+      <rsc_ticket id="ticket-B_m6_m5" ticket="ticket-B" loss-policy="fence">
+        <resource_set id="ticket-B_m6_m5-0">
+          <resource_ref id="m6"/>
+          <resource_ref id="m5"/>
+        </resource_set>
+      </rsc_ticket>
+      <rsc_ticket id="ticket-C_master" ticket="ticket-C" loss-policy="fence">
+        <resource_set id="ticket-C_master-0">
+          <resource_ref id="m6"/>
+        </resource_set>
+        <resource_set role="Master" id="ticket-C_master-1">
+          <resource_ref id="m5"/>
+        </resource_set>
+      </rsc_ticket>
     </constraints>
+    <fencing-topology>
+      <fencing-level target="node1" index="1" devices="st" id="fencing"/>
+      <fencing-level target="node1" index="2" devices="st2" id="fencing-0"/>
+      <fencing-level target="node2" index="1" devices="st" id="fencing-1"/>
+      <fencing-level target="node2" index="2" devices="st2" id="fencing-2"/>
+    </fencing-topology>
     <rsc_defaults>
       <meta_attributes id="rsc-options">
         <nvpair name="failure-timeout" value="10m" id="rsc-options-failure-timeout"/>
       </meta_attributes>
     </rsc_defaults>
-    <fencing-topology>
-      <fencing-level devices="st" index="1" target="node1" id="fencing"/>
-      <fencing-level devices="st2" index="2" target="node1" id="fencing-0"/>
-      <fencing-level devices="st" index="1" target="node2" id="fencing-1"/>
-      <fencing-level devices="st2" index="2" target="node2" id="fencing-2"/>
-    </fencing-topology>
     <op_defaults>
       <meta_attributes id="opsdef2">
         <nvpair name="record-pending" value="true" id="opsdef2-record-pending"/>

@@ -25,7 +25,7 @@ from . import cibstatus
 from . import crm_gv
 from . import ui_utils
 from . import userdir
-from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta
+from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta, RAInfo
 from .utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from .utils import ask, lines2cli, olist
 from .utils import page_string, cibadmin_can_patch, str2tmp, ensure_sudo_readable
@@ -42,7 +42,7 @@ from .xmlutil import merge_attributes, is_cib_element, sanity_check_meta
 from .xmlutil import is_simpleconstraint, is_template, rmnode, is_defaults, is_live_cib
 from .xmlutil import get_rsc_operations, delete_rscref, xml_equals, lookup_node, RscState
 from .xmlutil import text2elem, is_related, check_id_ref, xml_tostring
-from .xmlutil import sanitize_cib_for_patching
+from .xmlutil import sanitize_cib_for_patching, is_attr_set, get_set_nodes, set_attr
 from .cliformat import get_score, nvpairs2list, abs_pos_score, cli_acl_roleref, nvpair_format
 from .cliformat import cli_nvpair, cli_acl_rule, rsc_set_constraint, get_kind, head_id_format
 from .cliformat import simple_rsc_constraint, cli_rule, cli_format
@@ -793,7 +793,7 @@ def id_for_node(node, id_hint=None):
     return obj_id
 
 
-def postprocess_cli(node, oldnode=None, id_hint=None):
+def postprocess_cli(node, oldnode=None, id_hint=None, complete_advised=False):
     """
     input: unprocessed but parsed XML
     output: XML, obj_type, obj_id
@@ -816,7 +816,37 @@ def postprocess_cli(node, oldnode=None, id_hint=None):
     resolve_references(node)
     if oldnode is not None:
         remove_id_used_attributes(oldnode)
+    if complete_advised:
+        complete_advised_meta(node)
     return node, obj_type, obj_id
+
+
+def complete_advised_meta(node):
+    """
+    Complete advised meta attributes
+    """
+    if node.tag != "clone":
+        return
+    primitive_list = node.xpath('primitive')
+    if not primitive_list:
+        return
+    set_list = []
+    for meta_item in ["promotable", "interleave"]:
+        if not is_attr_set(node, meta_item):
+            set_list.append(meta_item)
+    if not set_list:
+        return
+
+    meta_node = get_set_nodes(node, "meta_attributes", create=True)[0]
+    p = primitive_list[0]
+    ra_inst = RAInfo(p.get('class'), p.get('type'), p.get('provider'))
+    ra_actions_dict = ra_inst.actions()
+    if ra_actions_dict and "promote" in ra_actions_dict and "demote" in ra_actions_dict:
+        for item in set_list:
+            set_attr(meta_node, item, "true")
+    # Add interleave=true as long as it's not set, no matter if it's promotable clone or not
+    elif "interleave" in set_list:
+        set_attr(meta_node, "interleave", "true")
 
 
 def parse_cli_to_xml(cli, oldnode=None):
@@ -825,18 +855,19 @@ def parse_cli_to_xml(cli, oldnode=None):
     output: XML, obj_type, obj_id
     """
     node = None
+    complete = False
     comments = []
     if isinstance(cli, str):
         for s in lines2cli(cli):
             node = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
-        node = parse.parse(cli, comments=comments, ignore_empty=False)
+        complete = True
+        node = parse.parse(cli, comments=comments, ignore_empty=False, complete_advised=complete)
     if node is False:
         return None, None, None
     elif node is None:
         return None, None, None
-    return postprocess_cli(node, oldnode)
-
+    return postprocess_cli(node, oldnode, complete_advised=complete)
 
 #
 # cib element classes (CibObject the parent class)
