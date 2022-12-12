@@ -3399,6 +3399,9 @@ def compatible_role(role1, role2):
     return res1 or res2
 
 
+auto_convert_role = True
+
+
 def handle_role_for_ocf_1_1(value, name='role'):
     """
     * Convert role from Promoted/Unpromoted to Master/Slave if schema doesn't support OCF 1.1
@@ -3416,7 +3419,7 @@ def handle_role_for_ocf_1_1(value, name='role'):
     if value in downgrade_dict and not is_ocf_1_1_cib_schema_detected():
         logger.warning('Convert "%s" to "%s" since the current schema version is old and not upgraded yet. Please consider "%s"', value, downgrade_dict[value], constants.CIB_UPGRADE)
         return downgrade_dict[value]
-    if value in upgrade_dict and is_ocf_1_1_cib_schema_detected() and config.core.OCF_1_1_SUPPORT:
+    if value in upgrade_dict and is_ocf_1_1_cib_schema_detected() and config.core.OCF_1_1_SUPPORT and auto_convert_role:
         logger.info('Convert deprecated "%s" to "%s"', value, upgrade_dict[value])
         return upgrade_dict[value]
 
