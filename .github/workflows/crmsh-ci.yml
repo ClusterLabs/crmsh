@@ -4,7 +4,7 @@
 
 name: crmsh CI
 
-on: [push, pull_request]
+on: [pull_request_target]
 
 env:
   DOCKER_SCRIPT: ./test/run-functional-tests
