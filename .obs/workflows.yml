@@ -1,0 +1,13 @@
+branch_workflow:
+  steps:
+    - branch_package:
+      source_project: network:ha-clustering:Unstable
+      source_package: crmsh
+      target_project: home:XinLiang:branches:network:ha-clustering:Unstable
+  filters:
+      branches:
+        ignore:
+          - master
+      event: pull_request
+
+
