@@ -13,7 +13,7 @@ import pytest
 import logging
 from unittest import mock
 from itertools import chain
-from crmsh import utils, config, tmpfiles, constants
+from crmsh import utils, config, tmpfiles, constants, parallax
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -1733,3 +1733,26 @@ def test_handle_role_for_ocf_1_1_return_not_role():
 
 def test_compatible_role():
     assert utils.compatible_role("Slave", "Unpromoted") is True
+
+
+@mock.patch('logging.Logger.warning')
+@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+def test_fetch_cluster_node_list_from_node(mock_run, mock_warn):
+    mock_run.return_value = """
+
+    1 node1
+    2 node2 lost
+    3 node3 member
+    """
+    assert utils.fetch_cluster_node_list_from_node("node1") == ["node3"]
+    mock_run.assert_called_once_with("crm_node -l", remote="node1")
+    mock_warn.assert_has_calls([
+        mock.call("The node '%s' has no known name and/or state information", "1"),
+        mock.call("The node '%s'(state '%s') is not a current member", "node2", "lost")
+        ])
+
+
+@mock.patch('crmsh.utils.list_cluster_nodes_except_me')
+def test_cluster_copy_file_return(mock_list_nodes):
+    mock_list_nodes.return_value = []
+    assert utils.cluster_copy_file("/file1") == True

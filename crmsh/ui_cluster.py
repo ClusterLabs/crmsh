@@ -347,6 +347,8 @@ Examples:
                             help="Enable SBD even if no SBD device is configured (diskless mode)")
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
                             help="Use the given watchdog device or driver name")
+        parser.add_argument("-x", "--skip-csync2-sync", dest="skip_csync2", action="store_true",
+                            help="Skip csync2 initialization (an experimental option)")
         parser.add_argument("--no-overwrite-sshkey", action="store_true", dest="no_overwrite_sshkey",
                             help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default; Deprecated)')
 

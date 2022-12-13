@@ -77,6 +77,8 @@ optional arguments:
                         (diskless mode)
   -w WATCHDOG, --watchdog WATCHDOG
                         Use the given watchdog device or driver name
+  -x, --skip-csync2-sync
+                        Skip csync2 initialization (an experimental option)
   --no-overwrite-sshkey
                         Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is
                         used (False by default; Deprecated)

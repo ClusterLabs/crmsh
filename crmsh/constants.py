@@ -525,8 +525,8 @@ DC_DEADTIME_DEFAULT = 20
 ADVISED_ACTION_LIST = ['monitor', 'start', 'stop', 'promote', 'demote']
 ADVISED_KEY_LIST = ['timeout', 'interval', 'role']
 DEFAULT_INTERVAL_IN_ACTION = "20s"
-
 WAIT_TIMEOUT_MS_DEFAULT = 120000
+CSYNC2_SERVICE = "csync2.socket"
 
 RSC_ROLE_PROMOTED = "Promoted"
 RSC_ROLE_UNPROMOTED = "Unpromoted"

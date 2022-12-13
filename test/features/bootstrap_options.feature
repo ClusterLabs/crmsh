@@ -137,3 +137,17 @@ Feature: crmsh bootstrap process - options
     When    Run "crm cluster init -N hanode1 -N hanode2 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
+
+  @clean
+  Scenario: Skip using csync2 by -x option
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y -x" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "csync2.socket" is "stopped" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "csync2.socket" is "stopped" on "hanode2"
+    When    Run "crm cluster init csync2 -y" on "hanode1"
+    Then    Service "csync2.socket" is "started" on "hanode1"
+    And     Service "csync2.socket" is "started" on "hanode2"

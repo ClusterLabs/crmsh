@@ -544,57 +544,14 @@ class TestBootstrap(unittest.TestCase):
             mock.call("Running command on node3: crm cluster join -y -c node1 -i eth1")
             ])
 
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_setup_passwordless_with_other_nodes_failed_fetch_nodelist(self, mock_run, mock_error):
-        mock_run.return_value = (1, None, None)
-        mock_error.side_effect = SystemExit
-
-        with self.assertRaises(SystemExit):
-            bootstrap.setup_passwordless_with_other_nodes("node1")
-
-        mock_run.assert_called_once_with("ssh {} root@node1 crm_node -l".format(constants.SSH_OPTION))
-        mock_error.assert_called_once_with("Can't fetch cluster nodes list from node1: None")
-
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_setup_passwordless_with_other_nodes_failed_fetch_hostname(self, mock_run, mock_error):
-        out_node_list = """1 node1 member
-        2 node2 member"""
-        mock_run.side_effect = [
-                (0, out_node_list, None),
-                (1, None, None)
-                ]
-        mock_error.side_effect = SystemExit
-
-        with self.assertRaises(SystemExit):
-            bootstrap.setup_passwordless_with_other_nodes("node1")
-
-        mock_run.assert_has_calls([
-            mock.call("ssh {} root@node1 crm_node -l".format(constants.SSH_OPTION)),
-            mock.call("ssh {} root@node1 hostname".format(constants.SSH_OPTION))
-            ])
-        mock_error.assert_called_once_with("Can't fetch hostname of node1: None")
-
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     def test_setup_passwordless_with_other_nodes(self, mock_run, mock_swap):
-        out_node_list = """1 node1 member
-        2 node2 member"""
-        mock_run.side_effect = [
-                (0, out_node_list, None),
-                (0, "node1", None)
-                ]
-
+        bootstrap._context = mock.Mock(node_list_in_cluster=["node1", "node2"])
+        mock_run.return_value = "node1"
         bootstrap.setup_passwordless_with_other_nodes("node1")
-
-        mock_run.assert_has_calls([
-            mock.call("ssh {} root@node1 crm_node -l".format(constants.SSH_OPTION)),
-            mock.call("ssh {} root@node1 hostname".format(constants.SSH_OPTION))
-            ])
         mock_swap.assert_has_calls([
-            mock.call("node2", "root"),
-            mock.call("node2", "hacluster")
+            mock.call("node2", u) for u in bootstrap.USER_LIST
             ])
 
     @mock.patch('builtins.open')
@@ -681,7 +638,7 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.stop_service')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
@@ -711,7 +668,7 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.stop_service')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
@@ -990,7 +947,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.get_value')
     @mock.patch('crmsh.utils.is_qdevice_tls_on')
     @mock.patch('crmsh.bootstrap.invoke')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('crmsh.corosync.add_nodelist_from_cmaptool')
     @mock.patch('crmsh.corosync.is_unicast')
@@ -1131,6 +1088,18 @@ class TestBootstrap(unittest.TestCase):
         mock_adj_priority.assert_called_once_with(True)
         mock_adj_fence.assert_called_once_with(True)
 
+    @mock.patch('crmsh.utils.cluster_copy_file')
+    def test_sync_file_skip_csync2(self, mock_copy):
+        bootstrap._context = mock.Mock(skip_csync2=True, node_list_in_cluster=["node1", "node2"])
+        bootstrap.sync_file("/file1")
+        mock_copy.assert_called_once_with("/file1", nodes=["node1", "node2"], output=False)
+
+    @mock.patch('crmsh.bootstrap.csync2_update')
+    def test_sync_file(self, mock_csync2_update):
+        bootstrap._context = mock.Mock(skip_csync2=False)
+        bootstrap.sync_file("/file1")
+        mock_csync2_update.assert_called_once_with("/file1")
+
 
 class TestValidation(unittest.TestCase):
     """
@@ -1247,12 +1216,15 @@ class TestValidation(unittest.TestCase):
             mock_error, mock_qdevice):
         mock_context_inst = mock.Mock(qdevice=True, cluster_node=None)
         mock_context.return_value = mock_context_inst
-        mock_active.return_value = True
+        mock_active.return_value = [True, True]
 
         bootstrap.bootstrap_remove(mock_context_inst)
 
         mock_init.assert_called_once_with()
-        mock_active.assert_called_once_with("corosync.service")
+        mock_active.assert_has_calls([
+            mock.call("corosync.service"),
+            mock.call("csync2.socket")
+            ])
         mock_error.assert_not_called()
         mock_qdevice.assert_called_once_with()
 
@@ -1284,7 +1256,7 @@ class TestValidation(unittest.TestCase):
             mock_error, mock_qdevice, mock_status, mock_prompt):
         mock_context_inst = mock.Mock(yes_to_all=False, cluster_node=None, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
-        mock_active.return_value = True
+        mock_active.return_value = [True, True]
         mock_prompt.return_value = None
         mock_error.side_effect = SystemExit
 
@@ -1292,7 +1264,10 @@ class TestValidation(unittest.TestCase):
             bootstrap.bootstrap_remove(mock_context_inst)
 
         mock_init.assert_called_once_with()
-        mock_active.assert_called_once_with("corosync.service")
+        mock_active.assert_has_calls([
+            mock.call("corosync.service"),
+            mock.call("csync2.socket")
+            ])
         mock_qdevice.assert_not_called()
         mock_status.assert_called_once_with('Remove This Node from Cluster:\n  You will be asked for the IP address or name of an existing node,\n  which will be removed from the cluster. This command must be\n  executed from a different node in the cluster.\n')
         mock_prompt.assert_called_once_with("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
@@ -1309,14 +1284,17 @@ class TestValidation(unittest.TestCase):
             mock_error, mock_qdevice, mock_hostname, mock_confirm):
         mock_context_inst = mock.Mock(cluster_node="node1", force=False, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
-        mock_active.return_value = True
+        mock_active.return_value = [True, True]
         mock_hostname.return_value = "node1"
         mock_confirm.return_value = False
 
         bootstrap.bootstrap_remove(mock_context_inst)
 
         mock_init.assert_called_once_with()
-        mock_active.assert_called_once_with("corosync.service")
+        mock_active.assert_has_calls([
+            mock.call("corosync.service"),
+            mock.call("csync2.socket")
+            ])
         mock_qdevice.assert_not_called()
         mock_error.assert_not_called()
         mock_hostname.assert_called_once_with()
@@ -1334,7 +1312,7 @@ class TestValidation(unittest.TestCase):
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node):
         mock_context_inst = mock.Mock(cluster_node="node1", force=False, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
-        mock_active.return_value = True
+        mock_active.return_value = [True, True]
         mock_hostname.return_value = "node1"
         mock_confirm.return_value = True
         mock_this_node.return_value = "node1"
@@ -1344,7 +1322,10 @@ class TestValidation(unittest.TestCase):
             bootstrap.bootstrap_remove(mock_context_inst)
 
         mock_init.assert_called_once_with()
-        mock_active.assert_called_once_with("corosync.service")
+        mock_active.assert_has_calls([
+            mock.call("corosync.service"),
+            mock.call("csync2.socket")
+            ])
         mock_qdevice.assert_not_called()
         mock_hostname.assert_called_once_with()
         mock_confirm.assert_called_once_with('Removing node "node1" from the cluster: Are you sure?')
@@ -1364,14 +1345,17 @@ class TestValidation(unittest.TestCase):
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_self):
         mock_context_inst = mock.Mock(cluster_node="node1", force=True, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
-        mock_active.return_value = True
+        mock_active.return_value = [True, True]
         mock_hostname.return_value = "node1"
         mock_this_node.return_value = "node1"
 
         bootstrap.bootstrap_remove(mock_context_inst)
 
         mock_init.assert_called_once_with()
-        mock_active.assert_called_once_with("corosync.service")
+        mock_active.assert_has_calls([
+            mock.call("corosync.service"),
+            mock.call("csync2.socket")
+            ])
         mock_qdevice.assert_not_called()
         mock_hostname.assert_called_once_with()
         mock_confirm.assert_not_called()
@@ -1392,7 +1376,7 @@ class TestValidation(unittest.TestCase):
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_list):
         mock_context_inst = mock.Mock(cluster_node="node2", force=True, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
-        mock_active.return_value = True
+        mock_active.return_value = [True, True]
         mock_hostname.return_value = "node2"
         mock_this_node.return_value = "node1"
         mock_list.return_value = ["node1", "node3"]
@@ -1402,13 +1386,17 @@ class TestValidation(unittest.TestCase):
             bootstrap.bootstrap_remove(mock_context_inst)
 
         mock_init.assert_called_once_with()
-        mock_active.assert_called_once_with("corosync.service")
+        mock_active.assert_has_calls([
+            mock.call("corosync.service"),
+            mock.call("csync2.socket")
+            ])
         mock_qdevice.assert_not_called()
         mock_hostname.assert_called_once_with()
         mock_confirm.assert_not_called()
         mock_this_node.assert_called_once_with()
         mock_error.assert_called_once_with("Specified node node2 is not configured in cluster! Unable to remove.")
 
+    @mock.patch('crmsh.utils.fetch_cluster_node_list_from_node')
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
     @mock.patch('crmsh.xmlutil.listnodes')
     @mock.patch('crmsh.utils.this_node')
@@ -1421,22 +1409,25 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node,
-            mock_list, mock_remove):
+            mock_list, mock_remove, mock_fetch):
         mock_context_inst = mock.Mock(cluster_node="node2", qdevice_rm_flag=None, force=True)
         mock_context.return_value = mock_context_inst
-        mock_active.return_value = True
+        mock_active.side_effect = [True, False]
         mock_hostname.return_value = "node2"
         mock_this_node.return_value = "node1"
         mock_list.return_value = ["node1", "node2"]
+        mock_fetch.return_value = ["node1", "node2"]
 
         bootstrap.bootstrap_remove(mock_context_inst)
 
         mock_init.assert_called_once_with()
-        mock_active.assert_called_once_with("corosync.service")
+        mock_active.assert_has_calls([
+            mock.call("corosync.service"),
+            mock.call("csync2.socket")
+            ])
         mock_qdevice.assert_not_called()
         mock_hostname.assert_called_once_with()
         mock_confirm.assert_not_called()
-        mock_this_node.assert_called_once_with()
         mock_error.assert_not_called()
         mock_remove.assert_called_once_with()
 
@@ -1563,7 +1554,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.rm_configuration_files')
     @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
     @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
-    @mock.patch('crmsh.bootstrap.csync2_update')
+    @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.bootstrap.decrease_expected_votes')
     @mock.patch('crmsh.corosync.del_node')
     @mock.patch('crmsh.corosync.get_values')
