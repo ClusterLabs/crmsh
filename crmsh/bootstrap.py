@@ -210,8 +210,8 @@ class Context(object):
         if self.stage == "sbd":
             if not self.sbd_devices and not self.diskless_sbd and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
-            if utils.service_is_active("sbd.service"):
-                utils.fatal("Cannot configure stage sbd: sbd.service already running!")
+            if utils.service_is_active("sbd.service") and not config.core.force:
+                utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
             if self.cluster_is_running:
                 utils.check_all_nodes_reachable()
 
@@ -1492,6 +1492,9 @@ def init_sbd():
     SBD can also run in diskless mode if no device
     is configured.
     """
+    import crmsh.sbd
+    if _context.stage == "sbd":
+        crmsh.sbd.clean_up_existing_sbd_resource()
     _context.sbd_manager.sbd_init()
 
 

@@ -271,6 +271,12 @@ Examples:
   # Add SBD on a running cluster
   crm cluster init sbd -s <share disk> -y
 
+  # Replace SBD device on a running cluster which already configured SBD
+  crm -F cluster init sbd -s <share disk> -y
+
+  # Add diskless SBD on a running cluster
+  crm cluster init sbd -S -y
+
   # Add QDevice on a running cluster
   crm cluster init qdevice --qnetd-hostname <qnetd addr> -y
 
