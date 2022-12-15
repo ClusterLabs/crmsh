@@ -21,11 +21,6 @@ from . import log
 logger = log.setup_logger(__name__)
 
 
-class ArgParser(ArgumentParser):
-    def format_epilog(self, formatter):
-        return self.epilog or ""
-
-
 def parse_options(parser, args):
     try:
         options, args = parser.parse_known_args(list(args))
@@ -223,7 +218,7 @@ class Cluster(command.UI):
         if len(args) > 0:
             if '--dry-run' in args or looks_like_hostnames(args):
                 args = ['--yes', '--nodes'] + [arg for arg in args if arg != '--dry-run']
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Initialize a cluster from scratch. This command configures
 a complete cluster, and can also add additional cluster
 nodes to the initial one-node cluster using the --nodes
@@ -380,7 +375,7 @@ Examples:
         '''
         Join this node to an existing cluster
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Join the current node to an existing cluster. The
 current node cannot be a member of a cluster already.
 Pass any node in the existing cluster as the argument
@@ -438,7 +433,7 @@ Examples:
         '''
         Remove the given node(s) from the cluster.
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Remove one or more nodes from the cluster.
 
 This command can remove the last node in the cluster,
@@ -524,7 +519,7 @@ the config.core.force option.""",
         * arbitrator IP / hostname (optional)
         * list of tickets (can be empty)
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Create a new geo cluster with the current cluster as the
 first member. Pass the complete geo cluster topology as
 arguments to this command, and then use geo-join and
@@ -587,7 +582,7 @@ Cluster Description
         '''
         Join this cluster to a geo configuration.
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 This command should be run from one of the nodes in a cluster
 which is currently not a member of a geo cluster. The geo
 cluster configuration will be fetched from the provided node,
@@ -631,7 +626,7 @@ an existing cluster.""",
         '''
         Make this node a geo arbitrator.
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Configure the current node as a geo arbitrator. The command
 requires an existing geo cluster or geo arbitrator from which
 to get the geo cluster configuration.""",
