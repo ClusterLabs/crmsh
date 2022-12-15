@@ -2,11 +2,11 @@
 Feature: crmsh bootstrap process - init, join and remove
 
   Test crmsh bootstrap init/join/remove process
-  Tag @clean means need to stop cluster service if the service is available
   Need nodes: hanode1 hanode2
 
   Background: Setup a two nodes cluster
-    Given   Cluster service is "stopped" on "hanode1"
+    Given   Nodes ["hanode1", "hanode2"] are cleaned up
+    And     Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
@@ -16,10 +16,8 @@ Feature: crmsh bootstrap process - init, join and remove
     And     Online nodes are "hanode1 hanode2"
     And     Show cluster status on "hanode1"
 
-  @clean
   Scenario: Init cluster service on node "hanode1", and join on node "hanode2"
 
-  @clean
   Scenario: Support --all or specific node to manage cluster and nodes
     When    Run "crm node standby --all" on "hanode1"
     Then    Node "hanode1" is standby
@@ -47,7 +45,6 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
 
-  @clean
   Scenario: Remove peer node "hanode2"
     When    Run "crm configure primitive d1 Dummy" on "hanode1"
     When    Run "crm configure primitive d2 Dummy" on "hanode2"
@@ -75,7 +72,6 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Directory "/var/lib/pacemaker/pengine/" is empty on "hanode2"
     Then    Directory "/var/lib/corosync/" is empty on "hanode2"
 
-  @clean
   Scenario: Remove local node "hanode1"
     When    Run "crm configure primitive d1 Dummy" on "hanode1"
     When    Run "crm configure primitive d2 Dummy" on "hanode1"
@@ -89,6 +85,59 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Directory "/var/lib/pacemaker/pengine/" not empty on "hanode1"
     Then    Directory "/var/lib/corosync/" not empty on "hanode1"
     When    Run "crm cluster remove hanode1 -y --force" on "hanode1"
+    Then    Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "started" on "hanode2"
+    And     Show cluster status on "hanode2"
+    Then    File "/etc/csync2/csync2.cfg" not exist on "hanode1"
+    Then    File "/etc/csync2/key_hagroup" not exist on "hanode1"
+    Then    File "/etc/corosync/authkey" not exist on "hanode1"
+    Then    File "/etc/corosync/corosync.conf" not exist on "hanode1"
+    Then    File "/etc/pacemaker/authkey" not exist on "hanode1"
+    Then    Directory "/var/lib/csync2/" is empty on "hanode1"
+    Then    Directory "/var/lib/pacemaker/cib/" is empty on "hanode1"
+    Then    Directory "/var/lib/pacemaker/pengine/" is empty on "hanode1"
+    Then    Directory "/var/lib/corosync/" is empty on "hanode1"
+
+  Scenario: Remove peer node "hanode2" with `crm -F node delete`
+    When    Run "crm configure primitive d1 Dummy" on "hanode1"
+    When    Run "crm configure primitive d2 Dummy" on "hanode2"
+    Then    File "/etc/csync2/csync2.cfg" exists on "hanode2"
+    Then    File "/etc/csync2/key_hagroup" exists on "hanode2"
+    Then    File "/etc/corosync/authkey" exists on "hanode2"
+    Then    File "/etc/corosync/corosync.conf" exists on "hanode2"
+    Then    File "/etc/pacemaker/authkey" exists on "hanode2"
+    Then    Directory "/var/lib/csync2/" not empty on "hanode2"
+    Then    Directory "/var/lib/pacemaker/cib/" not empty on "hanode2"
+    Then    Directory "/var/lib/pacemaker/pengine/" not empty on "hanode2"
+    Then    Directory "/var/lib/corosync/" not empty on "hanode2"
+    When    Run "crm -F cluster remove hanode2" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    And     Online nodes are "hanode1"
+    And     Show cluster status on "hanode1"
+    Then    File "/etc/csync2/csync2.cfg" not exist on "hanode2"
+    Then    File "/etc/csync2/key_hagroup" not exist on "hanode2"
+    Then    File "/etc/corosync/authkey" not exist on "hanode2"
+    Then    File "/etc/corosync/corosync.conf" not exist on "hanode2"
+    Then    File "/etc/pacemaker/authkey" not exist on "hanode2"
+    Then    Directory "/var/lib/csync2/" is empty on "hanode2"
+    Then    Directory "/var/lib/pacemaker/cib/" is empty on "hanode2"
+    Then    Directory "/var/lib/pacemaker/pengine/" is empty on "hanode2"
+    Then    Directory "/var/lib/corosync/" is empty on "hanode2"
+
+  Scenario: Remove local node "hanode1" with `crm -F node delete`
+    When    Run "crm configure primitive d1 Dummy" on "hanode1"
+    When    Run "crm configure primitive d2 Dummy" on "hanode1"
+    Then    File "/etc/csync2/csync2.cfg" exists on "hanode1"
+    Then    File "/etc/csync2/key_hagroup" exists on "hanode1"
+    Then    File "/etc/corosync/authkey" exists on "hanode1"
+    Then    File "/etc/corosync/corosync.conf" exists on "hanode1"
+    Then    File "/etc/pacemaker/authkey" exists on "hanode1"
+    Then    Directory "/var/lib/csync2/" not empty on "hanode1"
+    Then    Directory "/var/lib/pacemaker/cib/" not empty on "hanode1"
+    Then    Directory "/var/lib/pacemaker/pengine/" not empty on "hanode1"
+    Then    Directory "/var/lib/corosync/" not empty on "hanode1"
+    When    Run "crm -F node delete hanode1" on "hanode1"
     Then    Cluster service is "stopped" on "hanode1"
     And     Cluster service is "started" on "hanode2"
     And     Show cluster status on "hanode2"

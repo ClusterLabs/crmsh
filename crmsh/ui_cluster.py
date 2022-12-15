@@ -13,16 +13,12 @@ from . import bootstrap
 from . import corosync
 from . import qdevice
 from .cibconfig import cib_factory
+from .ui_node import parse_option_for_nodes
 from . import constants
 
 
 from . import log
 logger = log.setup_logger(__name__)
-
-
-class ArgParser(ArgumentParser):
-    def format_epilog(self, formatter):
-        return self.epilog or ""
 
 
 def parse_options(parser, args):
@@ -35,60 +31,6 @@ def parse_options(parser, args):
         return None, None
     utils.check_space_option_value(options)
     return options, args
-
-
-def parse_option_for_nodes(context, *args):
-    """
-    Parse option for nodes
-    Return a node list
-    """
-    action_type = context.get_command_name()
-    action_target = "node" if action_type in ["standby", "online"] else "cluster service"
-    action = "{} {}".format(action_type, action_target)
-    usage_template = """
-Specify node(s) on which to {action}.
-If no nodes are specified, {action} on the local node.
-If --all is specified, {action} on all nodes."""
-    addtion_usage = ""
-    if action_type == "standby":
-        usage_template += """
-\n\nAdditionally, you may specify a lifetime for the standby---if set to
-"reboot", the node will be back online once it reboots. "forever" will
-keep the node in standby after reboot. The life time defaults to
-"forever"."""
-        addtion_usage = " [lifetime]"
-
-    parser = ArgParser(description=usage_template.format(action=action),
-            usage="{} [--all | <node>... ]{}".format(action_type, addtion_usage),
-            add_help=False,
-            formatter_class=RawDescriptionHelpFormatter)
-    parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
-    parser.add_argument("--all", help="To {} on all nodes".format(action), action="store_true", dest="all")
-
-    options, args = parse_options(parser, args)
-    if options is None or args is None:
-        raise utils.TerminateSubCommand
-    if options.all and args:
-        context.fatal_error("Should either use --all or specific node(s)")
-
-    # return local node
-    if not options.all and not args:
-        return [utils.this_node()]
-    member_list = utils.list_cluster_nodes()
-    if not member_list:
-        context.fatal_error("Cannot get the node list from cluster")
-    for node in args:
-        if node not in member_list:
-            context.fatal_error("Node \"{}\" is not a cluster node".format(node))
-
-    node_list = member_list if options.all else args
-    for node in node_list:
-        try:
-            utils.ping_node(node)
-        except ValueError as err:
-            logger.warning(str(err))
-            node_list.remove(node)
-    return node_list
 
 
 def _remove_completer(args):
@@ -276,7 +218,7 @@ class Cluster(command.UI):
         if len(args) > 0:
             if '--dry-run' in args or looks_like_hostnames(args):
                 args = ['--yes', '--nodes'] + [arg for arg in args if arg != '--dry-run']
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Initialize a cluster from scratch. This command configures
 a complete cluster, and can also add additional cluster
 nodes to the initial one-node cluster using the --nodes
@@ -435,7 +377,7 @@ Examples:
         '''
         Join this node to an existing cluster
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Join the current node to an existing cluster. The
 current node cannot be a member of a cluster already.
 Pass any node in the existing cluster as the argument
@@ -493,7 +435,7 @@ Examples:
         '''
         Remove the given node(s) from the cluster.
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Remove one or more nodes from the cluster.
 
 This command can remove the last node in the cluster,
@@ -579,7 +521,7 @@ the config.core.force option.""",
         * arbitrator IP / hostname (optional)
         * list of tickets (can be empty)
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Create a new geo cluster with the current cluster as the
 first member. Pass the complete geo cluster topology as
 arguments to this command, and then use geo-join and
@@ -642,7 +584,7 @@ Cluster Description
         '''
         Join this cluster to a geo configuration.
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 This command should be run from one of the nodes in a cluster
 which is currently not a member of a geo cluster. The geo
 cluster configuration will be fetched from the provided node,
@@ -686,7 +628,7 @@ an existing cluster.""",
         '''
         Make this node a geo arbitrator.
         '''
-        parser = ArgParser(description="""
+        parser = ArgumentParser(description="""
 Configure the current node as a geo arbitrator. The command
 requires an existing geo cluster or geo arbitrator from which
 to get the geo cluster configuration.""",

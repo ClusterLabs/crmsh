@@ -2077,13 +2077,10 @@ Usage:
 clearstate <node>
 ...............
 
-[[cmdhelp_node_delete,delete node]]
+[[cmdhelp_node_delete,delete node (deprecated)]]
 ==== `delete`
 
-Delete a node. This command will remove the node from the CIB
-and, in case the cluster stack is running, use the appropriate
-program (`crm_node` or `hb_delnode`) to remove the node from the
-membership.
+Remove a node from cluster.
 
 If the node is still listed as active and a member of our
 partition we refuse to remove it. With the global force option
@@ -2094,7 +2091,15 @@ Usage:
 delete <node>
 ...............
 
+.Deprecation note
+*****
+This command is deprecated and in favor of `crm cluster remove [-F] -c <node>`,
+which will adjust the related cluster configurations and clean up the leftover
+(eg. stopping the cluster services) on the removed node.
+*****
+
 [[cmdhelp_node_fence,fence node]]
+
 ==== `fence`
 
 Make CRM fence a node. This functionality depends on stonith

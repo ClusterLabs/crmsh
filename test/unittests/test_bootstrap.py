@@ -15,6 +15,8 @@ import unittest
 import yaml
 import socket
 
+from crmsh.ui_node import NodeMgmt
+
 try:
     from unittest import mock
 except ImportError:
@@ -1361,7 +1363,7 @@ class TestValidation(unittest.TestCase):
         mock_confirm.assert_not_called()
         mock_this_node.assert_called_once_with()
         mock_error.assert_not_called()
-        mock_self.assert_called_once_with()
+        mock_self.assert_called_once_with(True)
 
     @mock.patch('crmsh.xmlutil.listnodes')
     @mock.patch('crmsh.utils.this_node')
@@ -1502,14 +1504,15 @@ class TestValidation(unittest.TestCase):
             mock.call("csync2.socket", disable=True, remote_addr=None)
             ])
 
+    @mock.patch.object(NodeMgmt, 'call_delnode')
     @mock.patch('crmsh.bootstrap.rm_configuration_files')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
-    def test_remove_node_from_cluster_rm_node_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error, mock_rm_conf_files):
-        mock_invoke.side_effect = [(False, None, "error data")]
+    def test_remove_node_from_cluster_rm_node_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error, mock_rm_conf_files, mock_call_delnode):
+        mock_call_delnode.return_value = False
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
@@ -1519,11 +1522,11 @@ class TestValidation(unittest.TestCase):
         mock_get_ip.assert_called_once_with()
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
-        mock_invoke.assert_has_calls([
-            mock.call('crm node delete node1')
-            ])
-        mock_error.assert_called_once_with("Failed to remove node1: error data")
+        mock_invoke.assert_not_called()
+        mock_call_delnode.assert_called_once_with("node1")
+        mock_error.assert_called_once_with("Failed to remove node1.")
 
+    @mock.patch.object(NodeMgmt, 'call_delnode')
     @mock.patch('crmsh.bootstrap.rm_configuration_files')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.bootstrap.invokerc')
@@ -1531,8 +1534,8 @@ class TestValidation(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
-    def test_remove_node_from_cluster_rm_csync_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_invokerc, mock_error, mock_rm_conf_files):
-        mock_invoke.side_effect = [(True, None, None)]
+    def test_remove_node_from_cluster_rm_csync_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_invokerc, mock_error, mock_rm_conf_files, mock_call_delnode):
+        mock_call_delnode.return_value = True
         mock_invokerc.return_value = False
         mock_error.side_effect = SystemExit
 
@@ -1543,14 +1546,14 @@ class TestValidation(unittest.TestCase):
         mock_get_ip.assert_called_once_with()
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
-        mock_invoke.assert_has_calls([
-            mock.call('crm node delete node1')
-            ])
+        mock_invoke.assert_not_called()
+        mock_call_delnode.assert_called_once_with("node1")
         mock_invokerc.assert_has_calls([
             mock.call("sed -i /node1/d {}".format(bootstrap.CSYNC2_CFG))
             ])
         mock_error.assert_called_once_with("Removing the node node1 from {} failed".format(bootstrap.CSYNC2_CFG))
 
+    @mock.patch.object(NodeMgmt, 'call_delnode')
     @mock.patch('crmsh.bootstrap.rm_configuration_files')
     @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
     @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
@@ -1565,8 +1568,9 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
     def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
-            mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_decrease, mock_csync2, mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files):
-        mock_invoke.side_effect = [(True, None, None), (True, None, None)]
+            mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_decrease, mock_csync2, mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_cal_delnode):
+        mock_cal_delnode.return_value = True
+        mock_invoke.side_effect = [(True, None, None)]
         mock_invokerc.return_value = True
         mock_get_values.return_value = ["10.10.10.1"]
 
@@ -1579,8 +1583,8 @@ class TestValidation(unittest.TestCase):
             mock.call("Propagating configuration changes across the remaining nodes")
             ])
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
+        mock_cal_delnode.assert_called_once_with("node1")
         mock_invoke.assert_has_calls([
-            mock.call('crm node delete node1'),
             mock.call("corosync-cfgtool -R")
             ])
         mock_invokerc.assert_has_calls([
