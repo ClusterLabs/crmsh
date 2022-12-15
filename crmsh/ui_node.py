@@ -3,6 +3,9 @@
 # See COPYING for license information.
 
 import re
+import subprocess
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
 from . import config
 from . import command
 from . import completers as compl
@@ -14,7 +17,6 @@ from .cliformat import cli_nvpairs, nvpairs2list
 from . import term
 from .cibconfig import cib_factory
 from .ui_resource import rm_meta_attribute
-from .ui_cluster import parse_option_for_nodes
 from . import log
 
 
@@ -201,6 +203,63 @@ def print_node(uname, ident, node_type, other, inst_attr, offline):
         print(term.render("\t%s: %s" % (a, other[a])))
     for s in inst_attr:
         print(term.render("\t%s" % (s)))
+
+
+def parse_option_for_nodes(context, *args):
+    """
+    Parse option for nodes
+    Return a node list
+    """
+    action_type = context.get_command_name()
+    action_target = "node" if action_type in ["standby", "online"] else "cluster service"
+    action = "{} {}".format(action_type, action_target)
+    usage_template = """
+Specify node(s) on which to {action}.
+If no nodes are specified, {action} on the local node.
+If --all is specified, {action} on all nodes."""
+    addtion_usage = ""
+    if action_type == "standby":
+        usage_template += """
+\n\nAdditionally, you may specify a lifetime for the standby---if set to
+"reboot", the node will be back online once it reboots. "forever" will
+keep the node in standby after reboot. The life time defaults to
+"forever"."""
+        addtion_usage = " [lifetime]"
+
+    parser = ArgumentParser(description=usage_template.format(action=action),
+                       usage="{} [--all | <node>... ]{}".format(action_type, addtion_usage),
+                       add_help=False,
+                       formatter_class=RawDescriptionHelpFormatter)
+    parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
+    parser.add_argument("--all", help="To {} on all nodes".format(action), action="store_true", dest="all")
+
+    options, args = parser.parse_known_args(args)
+    if options.help:
+        parser.print_help()
+        raise utils.TerminateSubCommand
+    if options is None or args is None:
+        raise utils.TerminateSubCommand
+    if options.all and args:
+        context.fatal_error("Should either use --all or specific node(s)")
+
+    # return local node
+    if not options.all and not args:
+        return [utils.this_node()]
+    member_list = utils.list_cluster_nodes()
+    if not member_list:
+        context.fatal_error("Cannot get the node list from cluster")
+    for node in args:
+        if node not in member_list:
+            context.fatal_error("Node \"{}\" is not a cluster node".format(node))
+
+    node_list = member_list if options.all else args
+    for node in node_list:
+        try:
+            utils.ping_node(node)
+        except ValueError as err:
+            logger.warning(str(err))
+            node_list.remove(node)
+    return node_list
 
 
 class NodeMgmt(command.UI):
@@ -432,19 +491,20 @@ class NodeMgmt(command.UI):
             return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
                 utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
 
-    def _call_delnode(self, node):
+    @classmethod
+    def call_delnode(cls, node):
         "Remove node (how depends on cluster stack)"
         rc = True
-        ec, s = utils.get_stdout("%s -p" % self.crm_node)
+        ec, s = utils.get_stdout("%s -p" % cls.crm_node)
         if not s:
-            logger.error('%s -p could not list any nodes (rc=%d)', self.crm_node, ec)
+            logger.error('%s -p could not list any nodes (rc=%d)', cls.crm_node, ec)
             rc = False
         else:
             partition_l = s.split()
             if node in partition_l:
-                logger.error("according to %s, node %s is still active", self.crm_node, node)
+                logger.error("according to %s, node %s is still active", cls.crm_node, node)
                 rc = False
-        cmd = "%s --force -R %s" % (self.crm_node, node)
+        cmd = "%s --force -R %s" % (cls.crm_node, node)
         if not rc:
             if config.core.force:
                 logger.info('proceeding with node %s removal', node)
@@ -458,24 +518,21 @@ class NodeMgmt(command.UI):
             if rc != 0:
                 logger.error('"%s" failed, rc=%d, %s', cmd, rc, err)
                 return False
+        if utils.ext_cmd(cls.node_delete % node) != 0 or \
+                utils.ext_cmd(cls.node_delete_status % node) != 0:
+            logger.error("%s removed from membership, but not from CIB!", node)
+            return False
         return True
 
     @command.completers(compl.nodes)
     def do_delete(self, context, node):
         'usage: delete <node>'
-        if not utils.is_name_sane(node):
-            return False
-        if not xmlutil.is_our_node(node):
-            logger.error("node %s not found in the CIB", node)
-            return False
-        if not self._call_delnode(node):
-            return False
-        if utils.ext_cmd(self.node_delete % node) != 0 or \
-                utils.ext_cmd(self.node_delete_status % node) != 0:
-            logger.error("%s removed from membership, but not from CIB!", node)
-            return False
-        logger.info("node %s deleted", node)
-        return True
+        logger.warning('`crm node delete` is deprecated and will very likely be dropped in the near future. It is auto-replaced as `crm cluster remove -c {}`.'.format(node))
+        if config.core.force:
+            rc = subprocess.call(['crm', 'cluster', 'remove', '-F', '-c', node])
+        else:
+            rc = subprocess.call(['crm', 'cluster', 'remove', '-c', node])
+        return rc == 0
 
     @command.wait
     @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), _find_attr)

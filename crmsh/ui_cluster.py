@@ -13,6 +13,7 @@ from . import bootstrap
 from . import corosync
 from . import qdevice
 from .cibconfig import cib_factory
+from .ui_node import parse_option_for_nodes
 from . import constants
 
 
@@ -35,60 +36,6 @@ def parse_options(parser, args):
         return None, None
     utils.check_space_option_value(options)
     return options, args
-
-
-def parse_option_for_nodes(context, *args):
-    """
-    Parse option for nodes
-    Return a node list
-    """
-    action_type = context.get_command_name()
-    action_target = "node" if action_type in ["standby", "online"] else "cluster service"
-    action = "{} {}".format(action_type, action_target)
-    usage_template = """
-Specify node(s) on which to {action}.
-If no nodes are specified, {action} on the local node.
-If --all is specified, {action} on all nodes."""
-    addtion_usage = ""
-    if action_type == "standby":
-        usage_template += """
-\n\nAdditionally, you may specify a lifetime for the standby---if set to
-"reboot", the node will be back online once it reboots. "forever" will
-keep the node in standby after reboot. The life time defaults to
-"forever"."""
-        addtion_usage = " [lifetime]"
-
-    parser = ArgParser(description=usage_template.format(action=action),
-            usage="{} [--all | <node>... ]{}".format(action_type, addtion_usage),
-            add_help=False,
-            formatter_class=RawDescriptionHelpFormatter)
-    parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
-    parser.add_argument("--all", help="To {} on all nodes".format(action), action="store_true", dest="all")
-
-    options, args = parse_options(parser, args)
-    if options is None or args is None:
-        raise utils.TerminateSubCommand
-    if options.all and args:
-        context.fatal_error("Should either use --all or specific node(s)")
-
-    # return local node
-    if not options.all and not args:
-        return [utils.this_node()]
-    member_list = utils.list_cluster_nodes()
-    if not member_list:
-        context.fatal_error("Cannot get the node list from cluster")
-    for node in args:
-        if node not in member_list:
-            context.fatal_error("Node \"{}\" is not a cluster node".format(node))
-
-    node_list = member_list if options.all else args
-    for node in node_list:
-        try:
-            utils.ping_node(node)
-        except ValueError as err:
-            logger.warning(str(err))
-            node_list.remove(node)
-    return node_list
 
 
 def _remove_completer(args):

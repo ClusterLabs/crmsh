@@ -39,7 +39,7 @@ from . import ocfs2
 from . import qdevice
 from . import parallax
 from . import log
-
+from .ui_node import NodeMgmt
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -2006,9 +2006,8 @@ def remove_node_from_cluster():
 
     # execute the command : crm node delete $HOSTNAME
     logger.info("Removing the node {}".format(node))
-    rc, _, err = invoke("crm node delete {}".format(node))
-    if not rc:
-        utils.fatal("Failed to remove {}: {}".format(node, err))
+    if not NodeMgmt.call_delnode(node):
+        utils.fatal("Failed to remove {}.".format(node))
 
     if not invokerc("sed -i /{}/d {}".format(node, CSYNC2_CFG)):
         utils.fatal("Removing the node {} from {} failed".format(node, CSYNC2_CFG))
@@ -2310,7 +2309,7 @@ def bootstrap_remove(context):
     if _context.cluster_node == utils.this_node():
         if not force_flag:
             utils.fatal("Removing self requires --force")
-        remove_self()
+        remove_self(force_flag)
     elif _context.cluster_node in xmlutil.listnodes():
         remove_node_from_cluster()
     else:
@@ -2319,14 +2318,14 @@ def bootstrap_remove(context):
     bootstrap_finished()
 
 
-def remove_self():
+def remove_self(force_flag=False):
     me = _context.cluster_node
     yes_to_all = _context.yes_to_all
     nodes = xmlutil.listnodes(include_remote_nodes=False)
     othernode = next((x for x in nodes if x != me), None)
     if othernode is not None:
         # remove from other node
-        cmd = "crm cluster remove{} -c {}".format(" -y" if yes_to_all else "", me)
+        cmd = "crm{} cluster remove{} -c {}".format(" -F" if force_flag else "", " -y" if yes_to_all else "", me)
         rc = utils.ext_cmd_nosudo("ssh{} {} {} '{}'".format("" if yes_to_all else " -t", SSH_OPTION, othernode, cmd))
         if rc != 0:
             utils.fatal("Failed to remove this node from {}".format(othernode))
