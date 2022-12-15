@@ -158,3 +158,22 @@ Feature: crmsh bootstrap sbd management
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
     And     Resource "stonith-sbd" type "external/sbd" is "Started"
+
+  @clean
+  Scenario: Setup sbd and test fence node
+    Given   Has disk "/dev/sda1" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Has disk "/dev/sda1" on "hanode2"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode1"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "sbd" is "started" on "hanode2"
+    When    Run "stonith_admin -H hanode2 -c" on "hanode1"
+    When    Run "su hacluster -c 'crm -F node fence hanode2'" on "hanode1"
+    Then    Expected return code is "0"
+    Then    Node "hanode2" is UNCLEAN
+    Then    Wait "60" seconds for "hanode2" successfully fenced

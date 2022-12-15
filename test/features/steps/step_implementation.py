@@ -8,7 +8,7 @@ from crmsh import corosync, parallax, sbd
 from crmsh import utils as crmutils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
-                  assert_eq
+                  assert_eq, is_unclean
 import const
 
 @when('Write multi lines to file "{f}"')
@@ -427,3 +427,21 @@ def step_impl(context, path, node):
 @then('Directory "{path}" not empty on "{node}"')
 def step_impl(context, path, node):
     parallax.parallax_call([node], '[ "$(ls -A {})" ]'.format(path))
+
+
+@then('Node "{node}" is UNCLEAN')
+def step_impl(context, node):
+    assert is_unclean(node) is True
+
+
+@then('Wait "{count}" seconds for "{node}" successfully fenced')
+def step_impl(context, count, node):
+    index = 0
+    while index <= int(count):
+        rc, out, _ = crmutils.get_stdout_stderr("stonith_admin -h {}".format(node))
+        if "Node {} last fenced at:".format(node) in out:
+            return True
+        time.sleep(1)
+        index += 1
+    return False
+
