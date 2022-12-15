@@ -3,6 +3,8 @@ import time
 import os
 import datetime
 import yaml
+
+import behave
 from behave import given, when, then
 from crmsh import corosync, parallax, sbd
 from crmsh import utils as crmutils
@@ -10,6 +12,16 @@ from utils import check_cluster_state, check_service_state, online, run_command,
                   run_command_local_or_remote, file_in_archive, \
                   assert_eq
 import const
+
+
+def _parse_str(text):
+    return text[1:-1].encode('utf-8').decode('unicode_escape')
+_parse_str.pattern='".*"'
+
+
+behave.use_step_matcher("cfparse")
+behave.register_type(str=_parse_str)
+
 
 @when('Write multi lines to file "{f}"')
 def step_impl(context, f):
@@ -19,6 +31,20 @@ def step_impl(context, f):
 @given('Cluster service is "{state}" on "{addr}"')
 def step_impl(context, state, addr):
     assert check_cluster_state(context, state, addr) is True
+
+
+@given('Nodes [{nodes:str+}] are cleaned up')
+def step_impl(context, nodes):
+    run_command(context, 'crm resource cleanup || true')
+    for node in nodes:
+        # wait for ssh service
+        for _ in range(10):
+            rc, _, _ = crmutils.get_stdout_stderr('ssh {} true'.format(node))
+            if rc == 0:
+                break
+            time.sleep(1)
+        run_command_local_or_remote(context, "crm cluster stop {} || true".format(node), node)
+        assert check_cluster_state(context, 'stopped', node) is True
 
 
 @given('Service "{name}" is "{state}" on "{addr}"')
