@@ -727,25 +727,29 @@ def start_pacemaker(node_list=[], enable_flag=False):
     Return success node list
     """
     from .sbd import SBDTimeout
-    pacemaker_start_msg = "Starting pacemaker"
     # not _context means not in init or join process
     if not _context and \
             utils.package_is_installed("sbd") and \
             utils.service_is_enabled("sbd.service") and \
             SBDTimeout.is_sbd_delay_start():
-        pacemaker_start_msg += "(delaying start of sbd for {}s)".format(SBDTimeout.get_sbd_delay_start_sec_from_sysconfig())
+        target_dir = "/run/systemd/system/sbd.service.d/"
+        cmd1 = "mkdir -p {}".format(target_dir)
+        target_file = "{}sbd_delay_start_disabled.conf".format(target_dir)
+        cmd2 = "echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {}".format(target_file)
+        cmd3 = "systemctl daemon-reload"
+        for cmd in [cmd1, cmd2, cmd3]:
+            parallax.parallax_call(node_list, cmd)
 
-    with logger_utils.status_long(pacemaker_start_msg):
-        # To avoid possible JOIN flood in corosync
-        if len(node_list) > 5:
-            for node in node_list[:]:
-                time.sleep(0.25)
-                try:
-                    utils.start_service("corosync.service", remote_addr=node)
-                except ValueError as err:
-                    node_list.remove(node)
-                    logger.error(err)
-        return utils.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
+    # To avoid possible JOIN flood in corosync
+    if len(node_list) > 5:
+        for node in node_list[:]:
+            time.sleep(0.25)
+            try:
+                utils.start_service("corosync.service", remote_addr=node)
+            except ValueError as err:
+                node_list.remove(node)
+                logger.error(err)
+    return utils.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
 def install_tmp(tmpfile, to):
