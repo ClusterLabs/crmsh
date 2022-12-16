@@ -197,3 +197,70 @@ Feature: crmsh bootstrap sbd management
     Then    Expected return code is "0"
     Then    Node "hanode2" is UNCLEAN
     Then    Wait "60" seconds for "hanode2" successfully fenced
+
+  @clean
+  Scenario: Change existing diskbased sbd cluster as diskless sbd
+    Given   Has disk "/dev/sda1" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Has disk "/dev/sda1" on "hanode2"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode1"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Run "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '" OK
+
+    When    Run "crm -F cluster init sbd -S -y" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith:external/sbd" not configured
+    When    Try "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '"
+    Then    Expected return code is "1"
+
+  @clean
+  Scenario: Change existing diskless sbd cluster as diskbased sbd
+    Given   Has disk "/dev/sda1" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Has disk "/dev/sda1" on "hanode2"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -S -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith:external/sbd" not configured
+
+    When    Run "crm -F cluster init sbd -s /dev/sda1 -y" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Run "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '" OK
+
+  @clean
+  Scenario: Change sbd device
+    Given   Has disk "/dev/sda1" on "hanode1"
+    Given   Has disk "/dev/sda2" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Has disk "/dev/sda1" on "hanode2"
+    Given   Has disk "/dev/sda2" on "hanode2"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Run "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '" OK
+
+    When    Run "crm -F cluster init sbd -s /dev/sda2 -y" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Run "ps -ef|grep -v grep|grep 'watcher: /dev/sda2 '" OK
+    When    Try "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '"
+    Then    Expected return code is "1"
