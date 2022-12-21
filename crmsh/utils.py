@@ -1,6 +1,7 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+import errno
 import os
 import sys
 from tempfile import mkstemp
@@ -100,6 +101,25 @@ def nogc():
 
 getuser = userdir.getuser
 gethomedir = userdir.gethomedir
+
+def user_of(host):
+    hosts = config.get_option('core', 'hosts')
+    for item in hosts:
+        if item.find('@') != -1:
+            user, node = item.split('@')
+        else:
+            user = userdir.getuser()
+            node = item
+        if host == node:
+            return user
+    if host == 'localhost' or host == this_node() or host is None:
+        return userdir.getuser()
+    # FIXME! If we didn't find the user neither in ~/.config/crm/crm.conf nor in /etc/crm/crm.conf its' fatal
+    # However, writing those users per hand is cumbersome and synchronizing an N-case is worth a separate PR (TODO!)
+    # Besides, maybe we would want to store the users not in the crm.conf, but somewhere else.
+    # logger.info("The user of {} is unknown (see crm.conf->[core]->hosts). Current user '{}' is used instead."
+    #    .format(host, userdir.getuser()))
+    return userdir.getuser()
 
 
 @memoize
@@ -381,7 +401,62 @@ def chown(path, user, group):
     else:
         import grp
         gid = grp.getgrnam(group).gr_gid
-    os.chown(path, uid, gid)
+    try:
+        os.chown(path, uid, gid)
+    except os.error as err:
+        cmd = "sudo chown {}:{} {}".format(user, group, path)
+        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        if rc != 0:
+            fatal("Failed to chown {}: {}".format(path, err))
+
+
+def chmod(path, mod):
+    try:
+        os.chmod(path, mod)
+    except os.error as err:
+        cmd = "sudo chmod {} {}".format(format(mod,'o'), path)
+        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        if rc != 0:
+            fatal("Failed to chmod {}: {}".format(path, err))
+
+
+def touch(file_name):
+    rc, out, err = get_stdout_stderr("touch " + file_name, no_reg=True)
+    if rc != 0:
+        rc, out, err = get_stdout_stderr("sudo touch " + file_name, no_reg=True)
+        if rc != 0:
+            fatal("Failed create file {}: {}".format(file_name, err))
+
+
+def copy_local_file(src, dest):
+    try:
+        shutil.copyfile(src, dest)
+    except os.error as err:
+        if err.errno not in (errno.EPERM, errno.EACCES):
+            raise
+        rc, out, err = get_stdout_stderr("sudo cp {} {}".format(src, dest), no_reg=True)
+        if rc != 0:
+            fatal("Failed to copy file from {} to {}: {}".format(src, dest, err))
+        cmd = "sudo chown {}:{} {}".format(userdir.getuser(), "haclient", dest)
+        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        if rc != 0:
+            fatal("Failed to chown {}: {}".format(dest, err))
+
+
+def rmfile(path, ignore_errors=False):
+    """
+    Try to remove the given file, and
+    report an error on failure
+    """
+    try:
+        os.remove(path)
+    except os.error as err:
+        if err.errno in (errno.EPERM, errno.EACCES):
+            rc, out, err = get_stdout_stderr("sudo rm " + path, no_reg=True)
+            if rc != 0 and not ignore_errors:
+                fatal("Failed to remove {}: {}".format(path, err))
+        elif not ignore_errors:
+            raise
 
 
 def ensure_sudo_readable(f):
@@ -542,10 +617,42 @@ def str2file(s, fname, mod=0o644):
             dst.write(to_ascii(s))
         os.chmod(fname, mod)
     except IOError as msg:
-        logger.error(msg)
-        return False
+        # If we failed under current user, repeat under root
+        escaped = s.translate(str.maketrans({'"':  r'\"'})) # other symbols are already escaped
+        cmd = 'printf "{}" | sudo tee {} >/dev/null'.format(escaped, fname)
+        cmd += ' && sudo chmod {} {}'.format(format(mod,'o'), fname)
+        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        if rc != 0:
+            #raise ValueError("Failed to write to {}: {}".format(s, err)) # fatal?
+            logger.error(err)
+            return False
     return True
 
+def write_remote_file(text, tofile, user, remote):
+    cmd = "echo '{}' | ssh {} {}@{} 'cat >> {}'".format(
+                    text, SSH_OPTION, user, remote, tofile)
+    rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+    if rc != 0:
+        raise ValueError("Failed to write to {}@{}/{}: {}".format(user, remote, tofile, err))
+
+def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path):
+    """
+    scp might lack permissions to copy the file for a non-root user.
+    And the root might be disabled (PermitRootLogin No).
+    So lets do $ ssh alice@node1 sudo cat <file-name>
+    and save it locally.
+    """
+    # First try an easy way
+    cmd = "scp %s@%s:'%s' %s" % (remote_user, remote_node, remote_text_file, local_path)
+    rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+    # If failed, try the hard way
+    if rc != 0:
+        cmd = "ssh %s@%s sudo cat %s" % (remote_user, remote_node, remote_text_file)
+        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        if rc != 0:
+            raise ValueError("Failed to read {}@{}/{}: {}".format(remote_user, remote_node, remote_text_file, err))
+        full_path = os.path.join(local_path, os.path.basename(remote_text_file))
+        str2file(out, full_path)
 
 def file2str(fname, noerr=True):
     '''
@@ -736,6 +843,32 @@ def mkdirp(directory, mode=0o777, parents=True, exist_ok=True):
     """
     Path(directory).mkdir(mode, parents, exist_ok)
 
+def mkdirs_owned(dirs, mode=0o777, uid=-1, gid=-1):
+    """
+    Create directory path, setting the mode and
+    ownership of the leaf directory to mode/uid/gid.
+    It won't fail if the directory already exist (exist_ok===true).
+    """
+    if not os.path.exists(dirs):
+        try:
+            if not os.path.exists(dirs):
+                os.makedirs(dirs, mode)
+        except OSError as err:
+            # If we failed under current user, repeat under root
+            cmd = "sudo mkdir {}".format(dirs)
+            cmd += " && sudo chmod {} {}".format(format(mode,'o'), dirs)
+            if gid == -1:
+                gid = "haclient"
+            if uid == -1:
+                uid = userdir.getuser()
+            cmd += " && sudo chown {} {}".format(uid, dirs)
+            cmd += " && sudo chgrp {} {}".format(gid, dirs)
+            rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+            if rc != 0:
+                fatal("Failed to create {}: {}".format(' '.join(dirs), err))
+            return
+        if uid != -1 or gid != -1:
+            chown(dirs, uid, gid)
 
 def pipe_cmd_nosudo(cmd):
     if options.regression_tests:
@@ -762,7 +895,7 @@ def run_cmd_on_remote(cmd, remote_addr, prompt_msg=None):
     out_data = None
     err_data = None
 
-    need_pw = check_ssh_passwd_need(remote_addr)
+    need_pw = check_ssh_passwd_need(getuser(), user_of(remote_addr), remote_addr)
     if need_pw and prompt_msg:
         print(prompt_msg)
     try:
@@ -1740,7 +1873,12 @@ def cluster_run_cmd(cmd, node_list=[]):
     nodelist = node_list or list_cluster_nodes()
     if not nodelist:
         raise ValueError("Failed to get node list from cluster")
-    return parallax.parallax_call(nodelist, cmd)
+    host_port_user = []
+    for host in nodelist:
+        host_port_user.append([host, None, user_of(host)])
+    import parallax
+    opts = parallax.Options()
+    return parallax.call(host_port_user, cmd, opts)
 
 
 def list_cluster_nodes_except_me():
@@ -1997,9 +2135,9 @@ def detect_aws():
     Detect if in AWS
     """
     # will match on xen instances
-    xen_test = get_stdout_or_raise_error("dmidecode -s system-version").lower()
+    xen_test = get_stdout_or_raise_error("sudo dmidecode -s system-version").lower()
     # will match on nitro/kvm instances
-    kvm_test = get_stdout_or_raise_error("dmidecode -s system-manufacturer").lower()
+    kvm_test = get_stdout_or_raise_error("sudo dmidecode -s system-manufacturer").lower()
     if "amazon" in xen_test or "amazon" in kvm_test:
         return True
     return False
@@ -2014,8 +2152,8 @@ def detect_azure():
     # might return American Megatrends Inc. instead of Microsoft Corporation in Azure.
     # The better way is to check the result of dmidecode -s chassis-asset-tag is
     # 7783-7084-3265-9085-8269-3286-77, aka. the ascii code of MSFT AZURE VM
-    system_manufacturer = get_stdout_or_raise_error("dmidecode -s system-manufacturer")
-    chassis_asset_tag = get_stdout_or_raise_error("dmidecode -s chassis-asset-tag")
+    system_manufacturer = get_stdout_or_raise_error("sudo dmidecode -s system-manufacturer")
+    chassis_asset_tag = get_stdout_or_raise_error("sudo dmidecode -s chassis-asset-tag")
     if "microsoft corporation" in system_manufacturer.lower() or \
             ''.join([chr(int(n)) for n in re.findall("\d\d", chassis_asset_tag)]) == "MSFT AZURE VM":
         # To detect azure we also need to make an API request
@@ -2031,7 +2169,7 @@ def detect_gcp():
     """
     Detect if in GCP
     """
-    bios_vendor = get_stdout_or_raise_error("dmidecode -s bios-vendor")
+    bios_vendor = get_stdout_or_raise_error("sudo dmidecode -s bios-vendor")
     if "Google" in bios_vendor:
         # To detect GCP we also need to make an API request
         result = _cloud_metadata_request(
@@ -2102,14 +2240,17 @@ def get_iplist_corosync_using():
         raise ValueError(err)
     return re.findall(r'id\s*=\s*(.*)', out)
 
-
-def check_ssh_passwd_need(host, user="root"):
+def check_ssh_passwd_need(local_user, remote_user, host):
     """
     Check whether access to host need password
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-    ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
-    ssh_cmd = add_su(ssh_cmd, user)
+    if local_user and local_user != getuser():
+        custom_public_key = "~{}/.ssh/id_rsa.pub".format(local_user)
+        ssh_options += " -i {}".format(custom_public_key)
+    if remote_user is None:
+        remote_user = user_of(host)
+    ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
     rc, _, _ = get_stdout_stderr(ssh_cmd)
     return rc != 0
 
@@ -2488,12 +2629,20 @@ def check_file_content_included(source_file, target_file, remote=None, source_lo
     if not detect_file(target_file, remote=remote):
         return False
 
-    cmd = "cat {}".format(target_file)
+    cmd = "sudo cat {}".format(target_file)
     target_data = get_stdout_or_raise_error(cmd, remote=remote)
-    cmd = "cat {}".format(source_file)
+    cmd = "sudo cat {}".format(source_file)
     source_data = get_stdout_or_raise_error(cmd, remote=None if source_local else remote)
     return source_data in target_data
 
+def check_text_included(text, target_file, remote=None):
+    "Check whether target_file includes the text"
+    if not detect_file(target_file, remote=remote):
+        return False
+
+    cmd = "cat {}".format(target_file)
+    target_data = get_stdout_or_raise_error(cmd, remote=remote)
+    return text in target_data
 
 class ServiceManager(object):
     """
@@ -2534,6 +2683,12 @@ class ServiceManager(object):
             raise ValueError("status_type should be {}".format('/'.join(list(self.ACTION_MAP.values()))))
 
         cmd = "systemctl {} {}".format(action_type, self.service_name)
+        if action_type not in ["is-active", "is-enabled", "list-unit-files"]:
+            cmd = "sudo " + cmd
+
+        if len(self.node_list) == 1 and self.node_list[0] == this_node():
+            self.node_list= [] # the else: case below
+
         if self.node_list:
             self.parallax_res = parallax.parallax_call(self.node_list, cmd, strict=False)
             return
@@ -2655,8 +2810,9 @@ def package_is_installed(pkg, remote_addr=None):
     cmd = "rpm -q --quiet {}".format(pkg)
     if remote_addr:
         # check on remote
-        prompt_msg = "Check whether {} is installed on {}".format(pkg, remote_addr)
-        rc, _, _ = run_cmd_on_remote(cmd, remote_addr, prompt_msg)
+        print("Check whether {} is installed on {}".format(pkg, remote_addr))
+        cmd = "ssh {} {}@{} \"{}\"".format(SSH_OPTION, user_of(remote_addr), remote_addr, cmd)
+        rc, _, _ = get_stdout_stderr(cmd, no_reg=True)
     else:
         # check on local
         rc, _ = get_stdout(cmd)
@@ -2679,12 +2835,19 @@ def calculate_quorate_status(expected_votes, actual_votes):
     return int(actual_votes)/int(expected_votes) > 0.5
 
 
-def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0], no_raise=False):
+def get_stdout_or_raise_error(cmd, user=None, remote=None, success_val_list=[0], no_raise=False):
     """
     Common function to get stdout from cmd or raise exception
     """
     if remote and remote != this_node():
-        cmd = "ssh {} root@{} \"{}\"".format(SSH_OPTION, remote, cmd)
+        if user is None:
+            user = user_of(remote)
+        cmd = "ssh {} {}@{} \"{}\"".format(SSH_OPTION, user, remote, cmd)
+    else:
+        if user is None or user == userdir.getuser():
+            pass
+        else:
+            cmd = 'sudo -H -u {} bash -c "{}"'.format(user, cmd)
     rc, out, err = get_stdout_stderr(cmd, no_reg=True)
     if rc not in success_val_list and not no_raise:
         raise ValueError("Failed to run \"{}\": {}".format(cmd, err))
@@ -2999,9 +3162,9 @@ def get_property(name, property_type="crm_config"):
     """
     if property_type == "crm_config":
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
-        cmd = "CIB_file={} crm configure get_property {}".format(cib_path, name)
+        cmd = "CIB_file={} sudo -E CIB_file crm configure get_property {}".format(cib_path, name)
     else:
-        cmd = "crm_attribute -t {} -n {} -Gq".format(property_type, name)
+        cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
     rc, stdout, _ = get_stdout_stderr(cmd)
     return stdout if rc == 0 else None
 
@@ -3137,11 +3300,11 @@ def detect_file(_file, remote=None):
     """
     rc = False
     if not remote:
-        rc = os.path.exists(_file)
+        cmd = "sudo test -f {}".format(_file)
     else:
-        cmd = "ssh {} root@{} 'test -f {}'".format(SSH_OPTION, remote, _file)
-        code, _, _ = get_stdout_stderr(cmd)
-        rc = code == 0
+        cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user_of(remote), remote, _file)
+    code, _, _ = get_stdout_stderr(cmd)
+    rc = code == 0
     return rc
 
 

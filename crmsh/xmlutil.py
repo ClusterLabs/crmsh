@@ -14,7 +14,8 @@ from . import options
 from . import schema
 from . import constants
 from . import userdir
-from .utils import add_sudo, str2file, str2tmp, get_boolean, handle_role_for_ocf_1_1
+from tempfile import mktemp
+from .utils import add_sudo, str2file, str2tmp, get_boolean, handle_role_for_ocf_1_1, copy_local_file, rmfile
 from .utils import get_stdout, get_stdout_or_raise_error, stdout2list, crm_msec, crm_time_cmp
 from .utils import olist, get_cib_in_use, get_tempdir, to_ascii, is_boolean_true
 from . import log
@@ -34,13 +35,28 @@ def xmlparse(f):
 
 
 def file2cib_elem(s):
+    cib_tmp_copy = ''
     try:
         f = open(s, 'r')
     except IOError as msg:
-        logger.error(msg)
-        return None
+        logger.debug("{} tried to read cib.xml, but : {}".format(userdir.getuser(), msg))
+        cib_tmp_copy = mktemp(suffix=".cib.xml")
+
+    if cib_tmp_copy != '':
+        logger.debug("{} gonna try it with sudo".format(userdir.getuser()))
+        # Actually it's not trying to open the file with sudo,
+        # but copying the file with sudo. We do copy,
+        # because xmlparse function requires the function descriptor not the plain text
+        # and this would be so much work to redo it.
+        # It's not too bad, but it's still a workaround and better be refactored, so FIXME!
+        copy_local_file(s, cib_tmp_copy)
+        f = open(cib_tmp_copy, 'r')
+        logger.debug("{} successfully read the cib.xml".format(userdir.getuser()))
+
     cib_elem = xmlparse(f)
     f.close()
+    if cib_tmp_copy != '':
+        rmfile(cib_tmp_copy)
     if options.regression_tests and cib_elem is None:
         print("Failed to read CIB from file: %s" % (s))
     return cib_elem

@@ -55,7 +55,11 @@ class Parallax(object):
         return results
 
     def call(self):
-        results = parallax.call(self.nodes, self.cmd, self.opts)
+        from crmsh.utils import user_of
+        host_port_user = []
+        for host in self.nodes:
+            host_port_user.append([host, None, user_of(host)])
+        results = parallax.call(host_port_user, self.cmd, self.opts)
         return self.handle(list(results.items()))
 
     def slurp(self):

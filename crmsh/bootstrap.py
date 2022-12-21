@@ -21,6 +21,7 @@ import readline
 import shutil
 import yaml
 import socket
+from tempfile import mktemp
 from string import Template
 from lxml import etree
 from pathlib import Path
@@ -59,7 +60,6 @@ SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service", CSYNC2_SERVICE]
-USER_LIST = ["root", "hacluster"]
 WATCHDOG_CFG = "/etc/modules-load.d/watchdog.conf"
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
@@ -93,6 +93,8 @@ class Context(object):
         self.nic_list = []
         self.node_list = []
         self.node_list_in_cluster = []
+        self.user_list = []
+        self.current_user = None
         self.unicast = None
         self.multicast = None
         self.admin_ip = None
@@ -180,12 +182,54 @@ class Context(object):
         """
         Validate -N/--nodes option
         """
-        if not self.node_list:
+        if self.type == "join":
+            self.current_user = userdir.getuser()
+            if self.cluster_node.find('@') != -1:
+                user, node = self.cluster_node.split('@')
+                self.user_list = [user]
+                self.cluster_node = node
+            else:
+                self.user_list = [self.current_user]
+            self.node_list = [self.cluster_node]
+
+            # TODO! This is too simple.
+            # When another node joins, previous nodes will not know.
+            crm_conf_hosts_option = self.current_user + '@' + utils.this_node() + \
+                    ', ' + self.user_list[0] + '@' + self.cluster_node
+            config.set_option('core', 'hosts', crm_conf_hosts_option)
+            config.save()
             return
+
         self.node_list = utils.parse_append_action_argument(self.node_list)
         me = utils.this_node()
-        if me in self.node_list:
-            self.node_list.remove(me)
+        _node_list = []
+        _user_list = []
+        was_localhost_already = False
+        self.current_user = userdir.getuser()
+        for user_node in self.node_list:
+            if user_node.find('@') != -1:
+                user, node = user_node.split('@')
+            else:
+                node = user_node
+                user = self.current_user
+            if node == me:
+                if was_localhost_already:
+                    utils.fatal("Duplicated input for -N/--nodes option")
+                was_localhost_already = True
+                if user != self.current_user:
+                    utils.fatal("Overriding current user '{}' by '{}'. Ouch, don't do it.".format(
+                        self.current_user, user))
+            else:
+                _node_list.append(node)
+                _user_list.append(user)
+        self.node_list = _node_list
+        self.user_list = _user_list
+        crm_conf_hosts_option = self.current_user + '@' + utils.this_node()
+        for user, node in zip(self.user_list, self.node_list):
+            crm_conf_hosts_option += ', ' + user + '@' + node
+        config.set_option('core', 'hosts', crm_conf_hosts_option)
+        config.save()
+
         if self.node_list and self.stage:
             utils.fatal("Can't use -N/--nodes option and stage({}) together".format(self.stage))
         if utils.has_dup_value(self.node_list):
@@ -229,8 +273,8 @@ class Context(object):
             self.skip_csync2 = utils.get_boolean(os.getenv("SKIP_CSYNC2_SYNC"))
         if self.skip_csync2 and self.stage:
             utils.fatal("-x option or SKIP_CSYNC2_SYNC can't be used with any stage")
-        self._validate_cluster_node()
         self._validate_nodes_option()
+        self._validate_cluster_node()
         self._validate_sbd_option()
 
     def init_sbd_manager(self):
@@ -422,7 +466,8 @@ def get_cluster_node_hostname():
     """
     peer_node = None
     if _context.cluster_node:
-        rc, out, err = utils.get_stdout_stderr("ssh {} {} crm_node --name".format(SSH_OPTION, _context.cluster_node))
+        rc, out, err = utils.get_stdout_stderr("ssh {} {}@{} crm_node --name".format(
+                SSH_OPTION, utils.user_of(_context.cluster_node), _context.cluster_node))
         if rc != 0:
             utils.fatal(err)
         peer_node = out
@@ -620,6 +665,7 @@ def configure_firewall(tcp=None, udp=None):
     def init_firewall_firewalld(tcp, udp):
         has_firewalld = utils.service_is_active("firewalld")
         cmdbase = 'firewall-cmd --zone=public --permanent ' if has_firewalld else 'firewall-offline-cmd --zone=public '
+        cmdbase = 'sudo ' + cmdbase
 
         def cmd(args):
             if not invokerc(cmdbase + args):
@@ -632,7 +678,7 @@ def configure_firewall(tcp=None, udp=None):
             cmd("--add-port={}/udp".format(p))
 
         if has_firewalld:
-            if not invokerc("firewall-cmd --reload"):
+            if not invokerc("sudo firewall-cmd --reload"):
                 utils.fatal("Failed to reload firewall configuration.")
 
     def init_firewall_ufw(tcp, udp):
@@ -689,7 +735,8 @@ def init_cluster_local():
     firewall_open_corosync_ports()
 
     # reset password, but only if it's not already set
-    _rc, outp = utils.get_stdout("passwd -S hacluster")
+    # (We still need the hacluster for the hawk).
+    _rc, outp = utils.get_stdout("sudo passwd -S hacluster")
     ps = outp.strip().split()[1]
     pass_msg = ""
     if ps not in ("P", "PS"):
@@ -701,7 +748,7 @@ def init_cluster_local():
             pass_msg = ", password 'linux'"
 
     # evil, but necessary
-    invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
+    invoke("sudo rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
 
     # only try to start hawk if hawk is installed
     if utils.service_is_available("hawk.service"):
@@ -756,11 +803,10 @@ def install_tmp(tmpfile, to):
 
 
 def append(fromfile, tofile, remote=None):
-    cmd = "cat {} >> {}".format(fromfile, tofile)
+    cmd = "sudo bash -c 'cat {} >> {}'".format(fromfile, tofile)
     utils.get_stdout_or_raise_error(cmd, remote=remote)
 
-
-def append_unique(fromfile, tofile, remote=None, from_local=False):
+def append_unique(fromfile, tofile, user=None, remote=None, from_local=False):
     """
     Append unique content from fromfile to tofile
     
@@ -773,35 +819,9 @@ def append_unique(fromfile, tofile, remote=None, from_local=False):
     """
     if not utils.check_file_content_included(fromfile, tofile, remote=remote, source_local=from_local):
         if from_local and remote:
-            append_to_remote_file(fromfile, remote, tofile)
+            append_to_remote_file(fromfile, user, remote, tofile)
         else:
             append(fromfile, tofile, remote=remote)
-
-
-def rmfile(path, ignore_errors=False):
-    """
-    Try to remove the given file, and
-    report an error on failure
-    """
-    try:
-        os.remove(path)
-    except os.error as err:
-        if not ignore_errors:
-            utils.fatal("Failed to remove {}: {}".format(path, err))
-
-
-def mkdirs_owned(dirs, mode=0o777, uid=-1, gid=-1):
-    """
-    Create directory path, setting the mode and
-    ownership of the leaf directory to mode/uid/gid.
-    """
-    if not os.path.exists(dirs):
-        try:
-            os.makedirs(dirs, mode)
-        except OSError as err:
-            utils.fatal("Failed to create {}: {}".format(dirs, err))
-        if uid != -1 or gid != -1:
-            utils.chown(dirs, uid, gid)
 
 
 def init_ssh():
@@ -809,8 +829,9 @@ def init_ssh():
     Configure passwordless SSH.
     """
     utils.start_service("sshd.service", enable=True)
-    for user in USER_LIST:
-        configure_ssh_key(user)
+    local_user = _context.current_user
+    configure_ssh_key(local_user)
+    configure_ssh_key('hacluster')
 
     # If not use -N/--nodes option
     if not _context.node_list:
@@ -820,18 +841,20 @@ def init_ssh():
     node_list = _context.node_list
     # Swap public ssh key between remote node and local
     for node in node_list:
-        swap_public_ssh_key(node, add=True)
-        if utils.service_is_active("pacemaker.service", node):
+        remote_user = utils.user_of(node)
+        swap_public_ssh_key(local_user, remote_user, remote_user, node, add=True)
+        if utils.service_is_active("pacemaker.service", remote_addr=node):
             utils.fatal("Cluster is currently active on {} - can't run".format(node))
     # Swap public ssh key between one remote node and other remote nodes
     if len(node_list) > 1:
-        _, _, authorized_file = key_files("root").values()
+        _, _, authorized_file = key_files("root").values() # FIXME! Is it correct?
         for node in node_list:
             public_key_file_remote = fetch_public_key_from_remote_node(node)
             for other_node in node_list:
                 if other_node == node:
                     continue
-                append_unique(public_key_file_remote, authorized_file, remote=other_node, from_local=True)
+                append_unique(public_key_file_remote, authorized_file, _context.current_user,
+                        remote=other_node, from_local=True)
     print()
 
 
@@ -855,6 +878,7 @@ def is_nologin(user):
         return re.search("{}:.*:/sbin/nologin".format(user), f.read())
 
 
+# FIXME! What is this all about?
 def change_user_shell(user):
     """
     To change user's login shell
@@ -869,7 +893,7 @@ def change_user_shell(user):
         invoke("usermod -s /bin/bash {}".format(user))
 
 
-def configure_ssh_key(user="root", remote=None):
+def configure_ssh_key(user, remote=None):
     """
     Configure ssh rsa key on local or remote
 
@@ -879,34 +903,43 @@ def configure_ssh_key(user="root", remote=None):
     change_user_shell(user)
 
     cmd = ""
-    private_key, public_key, authorized_file = key_files(user).values()
+    if remote is None:
+        private_key, public_key, authorized_file = key_files(user).values()
+    else:
+        home_dir = utils.get_stdout_or_raise_error("pwd", user=user, remote=remote)
+        private_key = home_dir + "/.ssh/id_rsa"
+        public_key = home_dir + "/.ssh/id_rsa.pub"
+        authorized_file = home_dir + "/.ssh/authorized_keys"
+
     if not utils.detect_file(private_key, remote=remote):
         logger.info("SSH key for {} does not exist, hence generate it now".format(user))
         cmd = "ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(private_key, remote if remote else utils.this_node())
     elif not utils.detect_file(public_key, remote=remote):
         cmd = "ssh-keygen -y -f {} > {}".format(private_key, public_key)
+
     if cmd:
-        cmd = utils.add_su(cmd, user)
-        utils.get_stdout_or_raise_error(cmd, remote=remote)
+        utils.get_stdout_or_raise_error(cmd, user=user, remote=remote)
 
     if not utils.detect_file(authorized_file, remote=remote):
         cmd = "touch {}".format(authorized_file)
-        utils.get_stdout_or_raise_error(cmd, remote=remote)
+        utils.get_stdout_or_raise_error(cmd, user=user, remote=remote)
 
-    append_unique(public_key, authorized_file, remote=remote)
+    append_unique(public_key, authorized_file, user, remote=remote)
 
 
 def init_ssh_remote():
     """
     Called by ha-cluster-join
     """
-    authorized_keys_file = "/root/.ssh/authorized_keys"
+    user = userdir.getuser()
+    _, _, authorized_keys_file = key_files(user).values()
     if not os.path.exists(authorized_keys_file):
         open(authorized_keys_file, 'w').close()
     authkeys = open(authorized_keys_file, "r+")
     authkeys_data = authkeys.read()
+    dirname = os.path.dirname(authorized_keys_file)
     for key in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
-        fn = os.path.join("/root/.ssh", key)
+        fn = os.path.join(dirname, key)
         if not os.path.exists(fn):
             continue
         keydata = open(fn + ".pub").read()
@@ -914,27 +947,29 @@ def init_ssh_remote():
             append(fn + ".pub", authorized_keys_file)
 
 
-def copy_ssh_key(source_key, user, remote_node):
-    """
-    Copy ssh key from local to remote's authorized_keys
-    """
-    err_details_string = """
-    crmsh has no way to help you to setup up passwordless ssh among nodes at this time.
-    As the hint, likely, `PasswordAuthentication` is 'no' in /etc/ssh/sshd_config.
-    Given in this case, users must setup passwordless ssh beforehand, or change it to 'yes' and manage passwords properly
-    """
-    cmd = "ssh-copy-id -i {} {}@{}".format(source_key, user, remote_node)
-    try:
-        utils.get_stdout_or_raise_error(cmd)
-    except ValueError as err:
-        utils.fatal("{}\n{}".format(str(err), err_details_string))
+def export_ssh_key(local_user, remote_privileged_user, remote_user_to_swap, remote_node):
+    "Copy ssh key from local to remote's authorized_keys"
+    # ssh-copy-id will prompt for the password of the destination user
+    # this is unwanted, so we write to the authorised_keys file ourselve
+    # cmd = "ssh-copy-id -i ~{}/.ssh/id_rsa.pub {}@{}".format(local_user, remote_user_to_access, remote_node)
+    cmd = "cat ~{}/.ssh/id_rsa.pub | ssh {} {}@{} 'cat >> ~{}/.ssh/authorized_keys'".format(local_user
+        , SSH_OPTION, remote_privileged_user, remote_node, remote_user_to_swap)
+    utils.get_stdout_or_raise_error(cmd)
 
 
-def append_to_remote_file(fromfile, remote_node, tofile):
+def import_ssh_key(local_user, remote_user, remote_node):
+    "Copy ssh key from remote to local authorized_keys"
+    remote_key_content = remote_public_key_from(remote_user, remote_node)
+    _, _, local_authorized_file = key_files(local_user).values()
+    if not utils.check_text_included(remote_key_content, local_authorized_file, remote=None):
+        cmd = "echo '{}' >> {}".format(remote_key_content, local_authorized_file)
+        utils.get_stdout_or_raise_error(cmd, remote=None)
+
+def append_to_remote_file(fromfile, user, remote_node, tofile):
     """
     Append content of fromfile to tofile on remote_node
     """
-    cmd = "cat {} | ssh {} root@{} 'cat >> {}'".format(fromfile, SSH_OPTION, remote_node, tofile)
+    cmd = "cat {} | ssh {} {}@{} 'cat >> {}'".format(fromfile, SSH_OPTION, user, remote_node, tofile)
     utils.get_stdout_or_raise_error(cmd)
 
 
@@ -946,9 +981,9 @@ def init_csync2():
         if not confirm("csync2 is already configured - overwrite?"):
             return
 
-    invoke("rm", "-f", CSYNC2_KEY)
+    invoke("sudo rm", "-f", CSYNC2_KEY)
     logger.debug("Generating csync2 shared key")
-    if not invokerc("csync2", "-k", CSYNC2_KEY):
+    if not invokerc("sudo csync2", "-k", CSYNC2_KEY):
         utils.fatal("Can't create csync2 key {}".format(CSYNC2_KEY))
 
     csync2_file_list = ""
@@ -980,7 +1015,7 @@ key /etc/csync2/key_hagroup;
         if _context.skip_csync2:
             csync2_update("/")
         else:
-            invoke("csync2", "-cr", "/")
+            invoke("sudo csync2", "-cr", "/")
 
 
 def csync2_update(path):
@@ -989,11 +1024,11 @@ def csync2_update(path):
 
     If there was a conflict, use '-f' to force this side to win
     '''
-    invoke("csync2 -rm {}".format(path))
-    if invokerc("csync2 -rxv {}".format(path)):
+    invoke("sudo csync2 -rm {}".format(path))
+    if invokerc("sudo csync2 -rxv {}".format(path)):
         return
-    invoke("csync2 -rf {}".format(path))
-    if not invokerc("csync2 -rxv {}".format(path)):
+    invoke("sudo csync2 -rf {}".format(path))
+    if not invokerc("sudo csync2 -rxv {}".format(path)):
         logger.warning("{} was not synced".format(path))
 
 
@@ -1035,8 +1070,8 @@ def init_corosync_auth():
     if os.path.exists(COROSYNC_AUTH):
         if not confirm("%s already exists - overwrite?" % (COROSYNC_AUTH)):
             return
-        rmfile(COROSYNC_AUTH)
-    invoke("corosync-keygen -l -k {}".format(COROSYNC_AUTH))
+        utils.rmfile(COROSYNC_AUTH)
+    invoke("sudo corosync-keygen -l -k {}".format(COROSYNC_AUTH))
 
 
 def init_remote_auth():
@@ -1046,14 +1081,14 @@ def init_remote_auth():
     if os.path.exists(PCMK_REMOTE_AUTH):
         if not confirm("%s already exists - overwrite?" % (PCMK_REMOTE_AUTH)):
             return
-        rmfile(PCMK_REMOTE_AUTH)
+        utils.rmfile(PCMK_REMOTE_AUTH)
 
     pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
-    mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
-    if not invokerc("dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH)):
+    utils.mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
+    if not invokerc("sudo dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH)):
         logger.warning("Failed to create pacemaker authkey: {}".format(PCMK_REMOTE_AUTH))
-    utils.chown(PCMK_REMOTE_AUTH, "hacluster", "haclient")
-    os.chmod(PCMK_REMOTE_AUTH, 0o640)
+    utils.chown(PCMK_REMOTE_AUTH, _context.current_user, "haclient")
+    utils.chmod(PCMK_REMOTE_AUTH, 0o640)
 
 
 class Validation(object):
@@ -1434,7 +1469,9 @@ def init_qdevice():
     qdevice_inst = _context.qdevice_inst
     qnetd_addr = qdevice_inst.qnetd_addr
     # Configure ssh passwordless to qnetd if detect password is needed
-    if utils.check_ssh_passwd_need(qnetd_addr):
+    local_user = _context.current_user
+    remote_user = utils.user_of(qnetd_addr)
+    if utils.check_ssh_passwd_need(local_user, remote_user, qnetd_addr):
         logger.info("Copy ssh key to qnetd node({})".format(qnetd_addr))
         rc, _, err = invoke("ssh-copy-id -i /root/.ssh/id_rsa.pub root@{}".format(qnetd_addr))
         if not rc:
@@ -1470,59 +1507,69 @@ def join_ssh(seed_host):
     if not seed_host:
         utils.fatal("No existing IP/hostname specified (use -c option)")
 
+    local_user = _context.current_user
+    remote_user = _context.user_list[0]
     utils.start_service("sshd.service", enable=True)
-    for user in USER_LIST:
-        configure_ssh_key(user)
-        swap_public_ssh_key(seed_host, user)
+    configure_ssh_key(local_user)
+    swap_public_ssh_key(local_user, remote_user, remote_user, seed_host, add=True)
+    configure_ssh_key('hacluster')
+    # Make sure ~hacluster/.ssh exist remotely (idempotent)
+    continue_with_hacluster = True
+    try:
+        utils.get_stdout_or_raise_error(
+                '/usr/bin/env python3 -m crmsh.healthcheck fix-cluster PasswordlessHaclusterAuthenticationFeature',
+                user=remote_user, remote=seed_host,
+            )
+    except ValueError as err:
+        continue_with_hacluster = False # at least we tried
+        logger.info("Failed to create ~hacluster/.ssh")
+
+    if continue_with_hacluster:
+        swap_public_ssh_key(local_user, remote_user, 'hacluster', seed_host)
+        swap_public_ssh_key('hacluster', remote_user, 'hacluster', seed_host)
 
     # This makes sure the seed host has its own SSH keys in its own
     # authorized_keys file (again, to help with the case where the
     # user has done manual initial setup without the assistance of
     # ha-cluster-init).
-    rc, _, err = invoke("ssh {} root@{} crm cluster init -i {} ssh_remote".format(SSH_OPTION, seed_host, _context.default_nic_list[0]))
+    rc, _, err = invoke("ssh {} {}@{} crm cluster init -i {} ssh_remote".format(
+            SSH_OPTION, remote_user, seed_host, _context.default_nic_list[0]))
     if not rc:
-        utils.fatal("Can't invoke crm cluster init -i {} ssh_remote on {}: {}".format(_context.default_nic_list[0], seed_host, err))
+        utils.fatal("Can't invoke crm cluster init -i {} ssh_remote on {}: {}".format(
+                _context.default_nic_list[0], seed_host, err))
 
-
-def swap_public_ssh_key(remote_node, user="root", add=False):
+def swap_public_ssh_key(local_user, remote_privileged_user, remote_user_to_swap, remote_node, add=False):
     """
     Swap public ssh key between remote_node and local
     """
-    if user != "root" and not _context.with_other_user:
+    if local_user != "root" and not _context.with_other_user:
         return
 
-    _, public_key, authorized_file = key_files(user).values()
     # Detect whether need password to login to remote_node
-    if utils.check_ssh_passwd_need(remote_node, user):
-        # If no passwordless configured, paste /root/.ssh/id_rsa.pub to remote_node's /root/.ssh/authorized_keys
-        logger.info("Configuring SSH passwordless with {}@{}".format(user, remote_node))
+    if utils.check_ssh_passwd_need(local_user, remote_user_to_swap, remote_node):
+        # If no passwordless configured, paste /home/bob/.ssh/id_rsa.pub
+        # to remote_node's /home/alice/.ssh/authorized_keys
+        logger.info("Configuring SSH passwordless with {}@{}".format(remote_user_to_swap, remote_node))
         # After this, login to remote_node is passwordless
-        if user == "root":
-            copy_ssh_key(public_key, user, remote_node)
-        else:
-            try:
-                append_to_remote_file(public_key, remote_node, authorized_file)
-            except ValueError:
-                utils.get_stdout_or_raise_error(
-                    '/usr/bin/env python3 -m crmsh.healthcheck fix-cluster PasswordlessHaclusterAuthenticationFeature',
-                    remote_node,
-                )
-                append_to_remote_file(public_key, remote_node, authorized_file)
+        export_ssh_key(local_user, remote_privileged_user, remote_user_to_swap, remote_node)
 
     if add:
-        configure_ssh_key(remote=remote_node)
+        configure_ssh_key(remote_user_to_swap, remote_node)
 
     try:
-        # Fetch public key file from remote_node
-        public_key_file_remote = fetch_public_key_from_remote_node(remote_node, user)
+        import_ssh_key(local_user, remote_user_to_swap, remote_node)
     except ValueError as err:
         logger.warning(err)
         return
-    # Append public key file from remote_node to local's /root/.ssh/authorized_keys
-    # After this, login from remote_node is passwordless
-    # Should do this step even passwordless is True, to make sure we got two-way passwordless
-    append_unique(public_key_file_remote, authorized_file)
 
+
+def remote_public_key_from(remote_user, remote_node):
+    "Get the id_rsa.pub from the remote node"
+    cmd = "ssh {} {}@{} 'cat ~/.ssh/id_rsa.pub'".format(SSH_OPTION, remote_user, remote_node)
+    rc, out, err = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        utils.fatal("Can't get the remote id_rsa.pub from {}: {}".format(remote_node, err))
+    return out
 
 def fetch_public_key_from_remote_node(node, user="root"):
     """
@@ -1536,11 +1583,11 @@ def fetch_public_key_from_remote_node(node, user="root"):
     home_dir = userdir.gethomedir(user)
     for key in ("id_rsa", "id_ecdsa", "id_ed25519", "id_dsa"):
         public_key_file = "{}/.ssh/{}.pub".format(home_dir, key)
-        cmd = "ssh {} root@{} 'test -f {}'".format(SSH_OPTION, node, public_key_file)
+        cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user, node, public_key_file)
         if not invokerc(cmd):
             continue
         _, temp_public_key_file = tmpfiles.create()
-        cmd = "scp {} root@{}:{} {}".format(SSH_OPTION, node, public_key_file, temp_public_key_file)
+        cmd = "scp {} {}@{}:{} {}".format(SSH_OPTION, user, node, public_key_file, temp_public_key_file)
         rc, _, err = invoke(cmd)
         if not rc:
             utils.fatal("Failed to run \"{}\": {}".format(cmd, err))
@@ -1557,17 +1604,18 @@ def join_csync2(seed_host):
 
     logger.info("Configuring csync2")
     # Necessary if re-running join on a node that's been configured before.
-    rmfile("/var/lib/csync2/{}.db3".format(utils.this_node()), ignore_errors=True)
+    utils.rmfile("/var/lib/csync2/{}.db3".format(utils.this_node()), ignore_errors=True)
 
     # Not automatically updating /etc/hosts - risky in the general case.
     # etc_hosts_add_me
     # local hosts_line=$(etc_hosts_get_me)
     # [ -n "$hosts_line" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
 
+    remote_user = _context.user_list[0]
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
     cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
-    rc, _, err = invoke("ssh {} root@{} {}".format(SSH_OPTION, seed_host, cmd))
+    rc, _, err = invoke("ssh {} {}@{} {}".format(SSH_OPTION, remote_user, seed_host, cmd))
     if not rc:
         utils.fatal("Can't invoke \"{}\" on {}: {}".format(cmd, seed_host, err))
 
@@ -1577,9 +1625,8 @@ def join_csync2(seed_host):
     # invoke scp root@seed_host:/etc/hosts $tmp_conf \
     #   || error "Can't retrieve /etc/hosts from seed_host"
     # install_tmp $tmp_conf /etc/hosts
-    rc, _, err = invoke("scp root@%s:'/etc/csync2/{csync2.cfg,key_hagroup}' /etc/csync2" % (seed_host))
-    if not rc:
-        utils.fatal("Can't retrieve csync2 config from {}: {}".format(seed_host, err))
+    utils.copy_remote_textfile(remote_user, seed_host, "/etc/csync2/csync2.cfg", "/etc/csync2")
+    utils.copy_remote_textfile(remote_user, seed_host, "/etc/csync2/key_hagroup", "/etc/csync2")
 
     logger.info("Starting {} service".format(CSYNC2_SERVICE))
     utils.start_service(CSYNC2_SERVICE, enable=True)
@@ -1594,7 +1641,9 @@ def join_csync2(seed_host):
     # subseqent join of another node can fail its sync of corosync.conf
     # when it updates expected_votes.  Grrr...
     with logger_utils.status_long("csync2 syncing files in cluster"):
-        if not invokerc('ssh {} root@{} "csync2 -rm /; csync2 -rxv || csync2 -rf / && csync2 -rxv"'.format(SSH_OPTION, seed_host)):
+        cmd = 'ssh {} {}@{} '.format(SSH_OPTION, remote_user, seed_host)
+        cmd += '"sudo csync2 -rm /;sudo csync2 -rxv || sudo csync2 -rf / && sudo csync2 -rxv"'
+        if not invokerc(cmd):
             print("")
             logger.warning("csync2 run failed - some files may not be sync'd")
 
@@ -1605,29 +1654,26 @@ def join_ssh_merge(_cluster_node):
     """
     logger.info("Merging known_hosts")
 
-    hosts = _context.node_list_in_cluster or [_cluster_node]
+    hosts = ['localhost'] + _context.node_list_in_cluster
+    users = [_context.current_user] + _context.user_list
 
     # To create local entry in known_hosts
     utils.get_stdout_or_raise_error("ssh {} {} true".format(SSH_OPTION, utils.this_node()))
 
     known_hosts_new = set()
-    cat_cmd = "[ -e /root/.ssh/known_hosts ] && cat /root/.ssh/known_hosts || true"
-    logger_utils.log_only_to_file("parallax.call {} : {}".format(hosts, cat_cmd))
-    results = parallax.parallax_call(hosts, cat_cmd, strict=False)
-    for host, result in results:
-        if isinstance(result, parallax.Error):
-            logger.warning("Failed to get known_hosts from {}: {}".format(host, str(result)))
-        else:
-            if result[1]:
-                known_hosts_new.update((utils.to_ascii(result[1]) or "").splitlines())
+
+    cat_cmd = "[ -e ~/.ssh/known_hosts ] && cat ~/.ssh/known_hosts || true"
+    #logger_utils.log_only_to_file("parallax.call {} : {}".format(hosts, cat_cmd))
+    for host in hosts:
+        known_hosts_content = utils.get_stdout_or_raise_error(cat_cmd, remote=host)
+        if known_hosts_content:
+            known_hosts_new.update((utils.to_ascii(known_hosts_content) or "").splitlines())
+
     if known_hosts_new:
         hoststxt = "\n".join(sorted(known_hosts_new))
-        tmpf = utils.str2tmp(hoststxt)
-        logger_utils.log_only_to_file("parallax.copy {} : {}".format(hosts, hoststxt))
-        results = parallax.parallax_copy(hosts, tmpf, "/root/.ssh/known_hosts", strict=False)
-        for host, result in results:
-            if isinstance(result, parallax.Error):
-                logger.warning("scp to {} failed ({}), known_hosts update may be incomplete".format(host, str(result)))
+        #results = parallax.parallax_copy(hosts, tmpf, known_hosts_path, strict=False)
+        for user, host in zip(users, hosts):
+            utils.write_remote_file(hoststxt, "~/.ssh/known_hosts", user, remote=host)
 
 
 def update_expected_votes():
@@ -1715,14 +1761,44 @@ def setup_passwordless_with_other_nodes(init_node):
 
     Should fetch the node list from init node, then swap the key
     """
-    init_hostname = utils.get_stdout_or_raise_error("hostname", remote=init_node)
+    # Fetch cluster nodes list
+    remote_user = _context.user_list[0]
+    local_user = _context.current_user
+    cmd = "ssh {} {}@{} crm_node -l".format(SSH_OPTION, remote_user, init_node)
+    rc, out, err = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        utils.fatal("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
+    cluster_nodes_list = []
+    for line in out.splitlines():
+        # Parse line in format: <id> <nodename> <state>, and collect the
+        # nodename.
+        tokens = line.split()
+        if len(tokens) == 0:
+            pass  # Skip any spurious empty line.
+        elif len(tokens) < 3:
+            logger.warning("Unable to configure passwordless ssh with nodeid {}. The "
+                 "node has no known name and/or state information".format(
+                     tokens[0]))
+        elif tokens[2] != "member":
+            logger.warning("Skipping configuration of passwordless ssh with node {} in "
+                 "state '{}'. The node is not a current member".format(
+                     tokens[1], tokens[2]))
+        else:
+            cluster_nodes_list.append(tokens[1])
+
+    # Filter out init node from cluster_nodes_list
+    cmd = "ssh {} {}@{} hostname".format(SSH_OPTION, remote_user , init_node)
+    rc, out, err = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        utils.fatal("Can't fetch hostname of {}: {}".format(init_node, err))
+    if out in cluster_nodes_list:
+        cluster_nodes_list.remove(out)
+
     # Swap ssh public key between join node and other cluster nodes
-    for node in _context.node_list_in_cluster:
-        # Filter out init node
-        if node == init_hostname:
-            continue
-        for user in USER_LIST:
-            swap_public_ssh_key(node, user)
+    for node in cluster_nodes_list:
+        remote_user_to_swap = utils.user_of(node)
+        remote_privileged_user = remote_user_to_swap
+        swap_public_ssh_key(local_user, remote_privileged_user, remote_user_to_swap, node)
 
 
 def sync_files_to_disk():
@@ -1777,8 +1853,10 @@ def join_cluster(seed_host):
     # mountpoints for clustered filesystems.  Unfortunately we don't have
     # that yet, so the following crawling horror takes a punt on the seed
     # node being up, then asks it for a list of mountpoints...
+    remote_user = _context.user_list[0]
     if _context.cluster_node:
-        _rc, outp, _ = utils.get_stdout_stderr("ssh {} root@{} 'cibadmin -Q --xpath \"//primitive\"'".format(SSH_OPTION, seed_host))
+        _rc, outp, _ = utils.get_stdout_stderr("ssh {} {}@{} 'cibadmin -Q --xpath \"//primitive\"'".format(
+                SSH_OPTION, remote_user, seed_host))
         if outp:
             xml = etree.fromstring(outp)
             mountpoints = xml.xpath(' and '.join(['//primitive[@class="ocf"',
@@ -1820,9 +1898,9 @@ def join_cluster(seed_host):
         except corosync.IPAlreadyConfiguredError as e:
             logger.warning(e)
         sync_file(corosync.conf())
-        invoke("ssh {} root@{} corosync-cfgtool -R".format(SSH_OPTION, seed_host))
+        invoke("ssh {} {}@{} corosync-cfgtool -R".format(SSH_OPTION, remote_user, seed_host))
 
-    _context.sbd_manager.join_sbd(seed_host)
+    _context.sbd_manager.join_sbd(remote_user, seed_host)
 
     if ipv6_flag and not is_unicast:
         # for ipv6 mcast
@@ -2119,7 +2197,7 @@ def bootstrap_init(context):
         init_sbd()
         init_upgradeutil()
 
-        lock_inst = lock.Lock()
+        lock_inst = lock.Lock(mktemp(prefix="crmsh_lock_"))
         try:
             with lock_inst.lock():
                 init_cluster()
@@ -2147,12 +2225,13 @@ def bootstrap_add(context):
         options += '-i {} '.format(nic)
     options = " {}".format(options.strip()) if options else ""
 
-    for node in _context.node_list:
+    for (user, node) in zip(_context.user_list, _context.node_list):
         print()
         logger.info("Adding node {} to cluster".format(node))
-        cmd = "crm cluster join{} -c {}{}".format(" -y" if _context.yes_to_all else "", utils.this_node(), options)
+        cmd = "crm cluster join{} -c {}@{}{}".format(
+            " -y" if _context.yes_to_all else "", _context.current_user, utils.this_node(), options)
         logger.info("Running command on {}: {}".format(node, cmd))
-        utils.ext_cmd_nosudo("ssh{} root@{} {} '{}'".format("" if _context.yes_to_all else " -t", node, SSH_OPTION, cmd))
+        utils.ext_cmd_nosudo("ssh{} {}@{} {} '{}'".format("" if _context.yes_to_all else " -t", user, node, SSH_OPTION, cmd))
 
 
 def bootstrap_join(context):
@@ -2193,6 +2272,7 @@ def bootstrap_join(context):
 
         join_ssh(cluster_node)
 
+        remote_user = utils.user_of(cluster_node)
         n = 0
         while n < REJOIN_COUNT:
             if utils.service_is_active("pacemaker.service", cluster_node):
@@ -2203,7 +2283,7 @@ def bootstrap_join(context):
         else:
             utils.fatal("Cluster is inactive on {}".format(cluster_node))
 
-        lock_inst = lock.RemoteLock(cluster_node)
+        lock_inst = lock.RemoteLock(remote_user, cluster_node)
         try:
             with lock_inst.lock():
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
@@ -2240,10 +2320,10 @@ def join_ocfs2(peer_host):
 
 def join_remote_auth(node):
     if os.path.exists(PCMK_REMOTE_AUTH):
-        rmfile(PCMK_REMOTE_AUTH)
+        utils.rmfile(PCMK_REMOTE_AUTH)
     pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
-    mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
-    invoke("touch {}".format(PCMK_REMOTE_AUTH))
+    utils.mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
+    utils.touch(PCMK_REMOTE_AUTH)
 
 
 def remove_qdevice():
@@ -2372,7 +2452,7 @@ def init_csync2_geo():
 def create_booth_authkey():
     logger.info("Create authentication key for booth")
     if os.path.exists(BOOTH_AUTH):
-        rmfile(BOOTH_AUTH)
+        utils.rmfile(BOOTH_AUTH)
     rc, _, err = invoke("booth-keygen {}".format(BOOTH_AUTH))
     if not rc:
         utils.fatal("Failed to generate booth authkey: {}".format(err))
@@ -2401,7 +2481,7 @@ port="9929"
     cfg = "\n".join(cfg) + "\n"
 
     if os.path.exists(BOOTH_CFG):
-        rmfile(BOOTH_CFG)
+        utils.rmfile(BOOTH_CFG)
     utils.str2file(cfg, BOOTH_CFG)
     utils.chown(BOOTH_CFG, "hacluster", "haclient")
     os.chmod(BOOTH_CFG, 0o644)
@@ -2435,7 +2515,7 @@ def bootstrap_init_geo(context):
 
 
 def geo_fetch_config(node):
-    # TODO: clean this up
+    # TODO: clean this up, make it non-root
     logger.info("Retrieving configuration - This may prompt for root@%s:" % (node))
     tmpdir = tmpfiles.create_dir()
     rc, _, err = invoke("scp -oStrictHostKeyChecking=no root@{}:'{}/*' {}/".format(node, BOOTH_DIR, tmpdir))

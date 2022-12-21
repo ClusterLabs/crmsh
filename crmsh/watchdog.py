@@ -8,14 +8,15 @@ class Watchdog(object):
     """
     Class to find valid watchdog device name
     """
-    QUERY_CMD = "sbd query-watchdog"
+    QUERY_CMD = "sudo sbd query-watchdog"
     DEVICE_FIND_REGREX = "\[[0-9]+\] (/dev/.*)\n.*\nDriver: (.*)"
 
-    def __init__(self, _input=None, peer_host=None):
+    def __init__(self, _input=None, remote_user=None, peer_host=None):
         """
         Init function
         """
         self._input = _input
+        self._remote_user = remote_user
         self._peer_host = peer_host
         self._watchdog_info_dict = {}
         self._watchdog_device_name = None
@@ -29,7 +30,7 @@ class Watchdog(object):
         """
         Use wdctl to verify watchdog device
         """
-        rc, _, err = utils.get_stdout_stderr("wdctl {}".format(dev))
+        rc, _, err = utils.get_stdout_stderr("sudo wdctl {}".format(dev))
         if rc != 0:
             if ignore_error:
                 return False
@@ -87,7 +88,7 @@ class Watchdog(object):
         """
         Given watchdog device name, get driver name on remote node
         """
-        cmd = "ssh {} root@{} {}".format(SSH_OPTION, self._peer_host, self.QUERY_CMD)
+        cmd = "ssh {} {}@{} {}".format(SSH_OPTION, self._remote_user, self._peer_host, self.QUERY_CMD)
         rc, out, err = utils.get_stdout_stderr(cmd)
         if rc == 0 and out:
             # output format might like:

@@ -135,7 +135,7 @@ class Cluster(command.UI):
         if not node_list:
             return
 
-        dc_deadtime = utils.get_property("dc-deadtime") or constants.DC_DEADTIME_DEFAULT
+        dc_deadtime = utils.get_property("dc-deadtime") or str(constants.DC_DEADTIME_DEFAULT)
         dc_timeout = int(dc_deadtime.strip('s')) + 5
         try:
             utils.check_function_with_timeout(utils.get_dc, wait_timeout=dc_timeout)
@@ -719,11 +719,16 @@ to get the geo cluster configuration.""",
         opts = parallax.Options()
         opts.ssh_options = ['StrictHostKeyChecking=no']
         for host in hosts:
-            res = utils.check_ssh_passwd_need(host)
+            res = utils.check_ssh_passwd_need(utils.getuser(), utils.user_of(host), host)
             if res:
                 opts.askpass = True
                 break
-        for host, result in parallax.call(hosts, cmd, opts).items():
+
+        host_port_user = []
+        for host in hosts:
+            host_port_user.append([host, None, utils.user_of(host)])
+
+        for host, result in parallax.call(host_port_user, cmd, opts).items():
             if isinstance(result, parallax.Error):
                 logger.error("[%s]: %s" % (host, result))
             else:
