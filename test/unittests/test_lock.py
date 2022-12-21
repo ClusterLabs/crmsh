@@ -59,28 +59,28 @@ class TestLock(unittest.TestCase):
         mock_run.return_value = (1, None, None)
         rc = self.local_inst._create_lock_dir()
         self.assertEqual(rc, False)
-        mock_run.assert_called_once_with("mkdir {}".format(lock.Lock.LOCK_DIR_DEFAULT))
+        mock_run.assert_called_once_with("mkdir {}".format(lock.Lock.LOCK_DIR_NON_PRIVILEGED))
 
     @mock.patch('crmsh.lock.Lock._run')
     def test_create_lock_dir(self, mock_run):
         mock_run.return_value = (0, None, None)
         rc = self.local_inst._create_lock_dir()
         self.assertEqual(rc, True)
-        mock_run.assert_called_once_with("mkdir {}".format(lock.Lock.LOCK_DIR_DEFAULT))
+        mock_run.assert_called_once_with("mkdir {}".format(lock.Lock.LOCK_DIR_NON_PRIVILEGED))
 
     @mock.patch('crmsh.lock.Lock._create_lock_dir')
     def test_lock_or_fail(self, mock_create):
         mock_create.return_value = False
         with self.assertRaises(lock.ClaimLockError) as err:
             self.local_inst._lock_or_fail()
-        self.assertEqual("Failed to claim lock (the lock directory exists at {})".format(lock.Lock.LOCK_DIR_DEFAULT), str(err.exception))
+        self.assertEqual("Failed to claim lock (the lock directory exists at {})".format(lock.Lock.LOCK_DIR_NON_PRIVILEGED), str(err.exception))
         mock_create.assert_called_once_with()
 
     @mock.patch('crmsh.lock.Lock._run')
     def test_unlock(self, mock_run):
         self.local_inst.lock_owner = True
         self.local_inst._unlock()
-        mock_run.assert_called_once_with("rm -rf {}".format(lock.Lock.LOCK_DIR_DEFAULT))
+        mock_run.assert_called_once_with("rm -rf {}".format(lock.Lock.LOCK_DIR_NON_PRIVILEGED))
 
     @mock.patch('crmsh.lock.Lock._unlock')
     @mock.patch('crmsh.lock.Lock._lock_or_fail')
@@ -118,8 +118,8 @@ class TestRemoteLock(unittest.TestCase):
         """
         Test setUp.
         """
-        self.lock_inst = lock.RemoteLock("node1")
-        self.lock_inst_no_wait = lock.RemoteLock("node1", wait=False)
+        self.lock_inst = lock.RemoteLock("alice", "node1")
+        self.lock_inst_no_wait = lock.RemoteLock("alice", "node1", wait=False)
 
     def tearDown(self):
         """
@@ -138,14 +138,14 @@ class TestRemoteLock(unittest.TestCase):
         with self.assertRaises(lock.SSHError) as err:
             self.lock_inst._run("cmd")
         self.assertEqual("ssh error", str(err.exception))
-        mock_run.assert_called_once_with("ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@node1 \"cmd\"")
+        mock_run.assert_called_once_with("ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no alice@node1 \"cmd\"")
 
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_run(self, mock_run):
         mock_run.return_value = (0, None, None)
         res = self.lock_inst._run("cmd")
         self.assertEqual(res, mock_run.return_value)
-        mock_run.assert_called_once_with("ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@node1 \"cmd\"")
+        mock_run.assert_called_once_with("ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no alice@node1 \"cmd\"")
 
     def test_lock_timeout_error_format(self):
         config.core.lock_timeout = "pwd"
@@ -211,7 +211,7 @@ class TestRemoteLock(unittest.TestCase):
 
         with self.assertRaises(lock.ClaimLockError) as err:
             self.lock_inst._lock_or_wait()
-        self.assertEqual("Timed out after 120 seconds. Cannot continue since the lock directory exists at the node (node1:{})".format(lock.Lock.LOCK_DIR_DEFAULT), str(err.exception))
+        self.assertEqual("Timed out after 120 seconds. Cannot continue since the lock directory exists at the node (node1:{})".format(lock.Lock.LOCK_DIR_NON_PRIVILEGED), str(err.exception))
 
         mock_time.assert_has_calls([ mock.call(), mock.call()])
         mock_time_out.assert_has_calls([mock.call(), mock.call(), mock.call()])

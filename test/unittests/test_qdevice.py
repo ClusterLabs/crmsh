@@ -56,55 +56,66 @@ def test_evaluate_qdevice_quorum_effect(mock_get_dict, mock_quorate, mock_ra_run
 
 
 @mock.patch('crmsh.lock.RemoteLock')
-def test_qnetd_lock_for_same_cluster_name(mock_remote_lock):
+@mock.patch('crmsh.utils.user_of')
+def test_qnetd_lock_for_same_cluster_name(mock_userof, mock_remote_lock):
     _context = mock.Mock(qnetd_addr="qnetd-node", cluster_name="cluster1")
     remote_lock_inst = mock.Mock()
     mock_remote_lock.return_value = remote_lock_inst
+    mock_userof.return_value = "alice"
     remote_lock_inst.lock.return_value.__enter__ = mock.Mock()
     remote_lock_inst.lock.return_value.__exit__ = mock.Mock()
     @qdevice.qnetd_lock_for_same_cluster_name
     def decorated(ctx):
         return
     decorated(_context)
-    mock_remote_lock.assert_called_once_with("qnetd-node", for_join=False, 
+    mock_userof.assert_called_once_with("qnetd-node")
+    mock_remote_lock.assert_called_once_with("alice", "qnetd-node", for_join=False, 
             lock_dir="/run/.crmsh_qdevice_lock_for_cluster1", wait=False)
 
 
 @mock.patch('crmsh.utils.fatal')
 @mock.patch('crmsh.lock.RemoteLock')
-def test_qnetd_lock_for_same_cluster_name_claim_error(mock_remote_lock, mock_fatal):
+@mock.patch('crmsh.utils.user_of')
+def test_qnetd_lock_for_same_cluster_name_claim_error(mock_userof, mock_remote_lock, mock_fatal):
     _context = mock.Mock(qnetd_addr="qnetd-node", cluster_name="cluster1")
     remote_lock_inst = mock.Mock()
     mock_remote_lock.return_value = remote_lock_inst
+    mock_userof.return_value = "alice"
     remote_lock_inst.lock.side_effect = lock.ClaimLockError
     @qdevice.qnetd_lock_for_same_cluster_name
     def decorated(ctx):
         return
     decorated(_context)
+    mock_userof.assert_called_once_with("qnetd-node")
     mock_fatal.assert_called_once_with("Duplicated cluster name \"cluster1\"!")
-    mock_remote_lock.assert_called_once_with("qnetd-node", for_join=False, 
+    mock_remote_lock.assert_called_once_with("alice", "qnetd-node", for_join=False, 
             lock_dir="/run/.crmsh_qdevice_lock_for_cluster1", wait=False)
 
 
 @mock.patch('crmsh.utils.fatal')
 @mock.patch('crmsh.lock.RemoteLock')
-def test_qnetd_lock_for_same_cluster_name_ssh_error(mock_remote_lock, mock_fatal):
+@mock.patch('crmsh.utils.user_of')
+def test_qnetd_lock_for_same_cluster_name_ssh_error(mock_userof, mock_remote_lock, mock_fatal):
     _context = mock.Mock(qnetd_addr="qnetd-node", cluster_name="cluster1")
     remote_lock_inst = mock.Mock()
     mock_remote_lock.return_value = remote_lock_inst
+    mock_userof.return_value = "alice"
     remote_lock_inst.lock.side_effect = lock.SSHError("ssh error!")
     @qdevice.qnetd_lock_for_same_cluster_name
     def decorated(ctx):
         return
     decorated(_context)
-    mock_remote_lock.assert_called_once_with("qnetd-node", for_join=False, 
+    mock_userof.assert_called_once_with("qnetd-node")
+    mock_remote_lock.assert_called_once_with("alice", "qnetd-node", for_join=False, 
             lock_dir="/run/.crmsh_qdevice_lock_for_cluster1", wait=False) 
 
 
 @mock.patch('crmsh.lock.RemoteLock')
-def test_qnetd_lock_for_multi_cluster(mock_remote_lock):
+@mock.patch('crmsh.utils.user_of')
+def test_qnetd_lock_for_multi_cluster(mock_userof, mock_remote_lock):
     _context = mock.Mock(qnetd_addr="qnetd-node")
     remote_lock_inst = mock.Mock()
+    mock_userof.return_value = "alice"
     mock_remote_lock.return_value = remote_lock_inst
     remote_lock_inst.lock.return_value.__enter__ = mock.Mock()
     remote_lock_inst.lock.return_value.__exit__ = mock.Mock()
@@ -112,21 +123,24 @@ def test_qnetd_lock_for_multi_cluster(mock_remote_lock):
     def decorated(ctx):
         return
     decorated(_context)
-    mock_remote_lock.assert_called_once_with("qnetd-node", for_join=False, no_warn=True)
+    mock_remote_lock.assert_called_once_with("alice", "qnetd-node", for_join=False, no_warn=True)
 
 
 @mock.patch('crmsh.utils.fatal')
 @mock.patch('crmsh.lock.RemoteLock')
-def test_qnetd_lock_for_multi_cluster_error(mock_remote_lock, mock_fatal):
+@mock.patch('crmsh.utils.user_of')
+def test_qnetd_lock_for_multi_cluster_error(mock_userof, mock_remote_lock, mock_fatal):
     _context = mock.Mock(qnetd_addr="qnetd-node")
     remote_lock_inst = mock.Mock()
+    mock_userof.return_value = "alice"
     mock_remote_lock.return_value = remote_lock_inst
     remote_lock_inst.lock.side_effect = lock.SSHError("ssh error!")
     @qdevice.qnetd_lock_for_multi_cluster
     def decorated(ctx):
         return
     decorated(_context)
-    mock_remote_lock.assert_called_once_with("qnetd-node", for_join=False, no_warn=True)
+    mock_userof.assert_called_once_with("qnetd-node")
+    mock_remote_lock.assert_called_once_with("alice", "qnetd-node", for_join=False, no_warn=True)
 
 
 class TestQDevice(unittest.TestCase):
@@ -309,7 +323,7 @@ class TestQDevice(unittest.TestCase):
             self.qdevice_with_ip.valid_qnetd()
         self.assertEqual(excepted_err_string, str(err.exception))
 
-        mock_installed.assert_called_once_with("corosync-qnetd", "10.10.10.123")
+        mock_installed.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
 
     @mock.patch("crmsh.utils.get_stdout_or_raise_error")
     @mock.patch("crmsh.utils.service_is_active")
@@ -325,8 +339,8 @@ class TestQDevice(unittest.TestCase):
             self.qdevice_with_stage_cluster_name.valid_qnetd()
         self.assertEqual(excepted_err_string, str(err.exception))
 
-        mock_installed.assert_called_once_with("corosync-qnetd", "10.10.10.123")
-        mock_is_active.assert_called_once_with("corosync-qnetd", "10.10.10.123")
+        mock_installed.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
+        mock_is_active.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
         mock_run.assert_called_once_with("corosync-qnetd-tool -l -c cluster1", remote="10.10.10.123")
 
     @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -342,8 +356,8 @@ class TestQDevice(unittest.TestCase):
             self.qdevice_with_cluster_name.valid_qnetd()
         self.assertEqual(excepted_err_string, str(err.exception))
 
-        mock_installed.assert_called_once_with("corosync-qnetd", "10.10.10.123")
-        mock_is_active.assert_called_once_with("corosync-qnetd", "10.10.10.123")
+        mock_installed.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
+        mock_is_active.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
         mock_run.assert_called_once_with("test -f /etc/corosync/qnetd/nssdb/cluster-hacluster1.crt", remote="10.10.10.123")
 
     @mock.patch("crmsh.utils.enable_service")
