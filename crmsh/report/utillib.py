@@ -1541,7 +1541,11 @@ def read_from_file(infile):
     data = None
     _open = get_open_method(infile)
     with _open(infile, 'rt', encoding='utf-8', errors='replace') as f:
-        data = f.read()
+        try:
+            data = f.read()
+        except Exception as err:
+            logger.error("When reading file \"%s\": %s", infile, str(err))
+            return None
     return crmutils.to_ascii(data)
 
 
