@@ -115,6 +115,7 @@ Feature: corosync qdevice/qnetd options validate
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "stopped" on "hanode1"
     When    Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
+    When    Wait "3" seconds
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
     Then    Expected "To use qdevice service, need to restart cluster service manually on each node" in stdout
     And     Service "corosync-qdevice" is "stopped" on "hanode1"
