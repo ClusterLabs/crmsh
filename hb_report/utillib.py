@@ -1233,6 +1233,10 @@ def log_info(msg):
     crmmsg.log_info("%s# %s" % (constants.WE, msg))
 
 
+def log_error(msg):
+    crmmsg.common_err("%s# %s" % (constants.WE, msg))
+
+
 def log_fatal(msg):
     crmmsg.common_err("%s# %s" % (constants.WE, msg))
     sys.exit(1)
@@ -1786,7 +1790,11 @@ def read_from_file(infile):
     data = None
     _open = get_open_method(infile)
     with _open(infile, 'rt', encoding='utf-8', errors='replace') as f:
-        data = f.read()
+        try:
+            data = f.read()
+        except Exception as err:
+            log_error("When reading file \"{}\": {}".format(infile, str(err)))
+            return None
     return crmutils.to_ascii(data)
 
 
