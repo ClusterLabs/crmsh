@@ -15,12 +15,12 @@ env:
 
 jobs:
   unit_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 5
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.6
     - name: Install dependencies
@@ -32,80 +32,80 @@ jobs:
         tox -v
 
   functional_test_hb_report_bugs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for hb_report
       run:  |
         $DOCKER_SCRIPT hb_report before_install
         $DOCKER_SCRIPT hb_report run bugs
 
   functional_test_bootstrap_bugs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for bootstrap bugs
       run:  |
         $DOCKER_SCRIPT bootstrap before_install
         $DOCKER_SCRIPT bootstrap run bugs
 
   functional_test_bootstrap_common:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for bootstrap common
       run:  |
         $DOCKER_SCRIPT bootstrap before_install
         $DOCKER_SCRIPT bootstrap run init_join_remove
 
   functional_test_bootstrap_options:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for bootstrap options
       run:  |
         $DOCKER_SCRIPT bootstrap before_install
         $DOCKER_SCRIPT bootstrap run options
 
   functional_test_resource_subcommand:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for resource subcommand
       run:  |
         $DOCKER_SCRIPT resource before_install
         $DOCKER_SCRIPT resource run
 
   functional_test_configure_sublevel:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for configure sublevel bugs
       run:  |
         $DOCKER_SCRIPT configure before_install
         $DOCKER_SCRIPT configure run bugs
 
   functional_test_geo_cluster:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: functional test for geo cluster
       run:  |
         $DOCKER_SCRIPT geo before_install
         $DOCKER_SCRIPT geo run setup
 
   original_regression_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: original regression test
       run:  |
         $DOCKER_SCRIPT original before_install
