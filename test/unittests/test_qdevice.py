@@ -18,6 +18,17 @@ F4 = open(os.path.join(os.path.dirname(__file__), 'corosync.conf.3')).read()
 
 @mock.patch('crmsh.utils.calculate_quorate_status')
 @mock.patch('crmsh.utils.get_quorum_votes_dict')
+def test_evaluate_qdevice_quorum_effect_restart(mock_get_dict, mock_quorate):
+    mock_get_dict.return_value = {'Expected': '1', 'Total': '1'}
+    mock_quorate.return_value = False
+    res = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_ADD, False, False)
+    assert res == qdevice.QdevicePolicy.QDEVICE_RESTART
+    mock_get_dict.assert_called_once_with()
+    mock_quorate.assert_called_once_with(2, 1)
+
+
+@mock.patch('crmsh.utils.calculate_quorate_status')
+@mock.patch('crmsh.utils.get_quorum_votes_dict')
 def test_evaluate_qdevice_quorum_effect_reload(mock_get_dict, mock_quorate):
     mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
     mock_quorate.return_value = True
@@ -871,9 +882,10 @@ Membership information
         mock_get_value.assert_called_once_with("quorum.device.net.host")
         mock_warning.assert_called_once_with("Qdevice's vote is 0, which simply means Qdevice can't talk to Qnetd(qnetd-node) for various reasons.")
 
+    @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     @mock.patch('crmsh.qdevice.QDevice.remove_qdevice_db')
-    def test_config_and_start_qdevice(self, mock_rm_db, mock_status_long):
+    def test_config_and_start_qdevice(self, mock_rm_db, mock_status_long, mock_evaluate):
         mock_status_long.return_value.__enter__ = mock.Mock()
         mock_status_long.return_value.__exit__ = mock.Mock()
         self.qdevice_with_ip.certificate_process_on_init = mock.Mock()
@@ -894,13 +906,10 @@ Membership information
     @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_timeout')
     @mock.patch('crmsh.sbd.SBDManager.update_configuration')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
-    @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
     @mock.patch('crmsh.sbd.SBDManager.is_using_diskless_sbd')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    def test_adjust_sbd_watchdog_timeout_with_qdevice(self, mock_check_reachable, mock_using_diskless_sbd, mock_evaluate,
-            mock_get_sbd_value, mock_update_config, mock_get_timeout, mock_set_property):
+    def test_adjust_sbd_watchdog_timeout_with_qdevice(self, mock_check_reachable, mock_using_diskless_sbd, mock_get_sbd_value, mock_update_config, mock_get_timeout, mock_set_property):
         mock_using_diskless_sbd.return_value = True
-        mock_evaluate.return_value = qdevice.QdevicePolicy.QDEVICE_RELOAD
         mock_get_sbd_value.return_value = ""
         mock_get_timeout.return_value = 100
 
@@ -908,7 +917,6 @@ Membership information
 
         mock_check_reachable.assert_called_once_with()
         mock_using_diskless_sbd.assert_called_once_with()
-        mock_evaluate.assert_called_once_with(qdevice.QDEVICE_ADD, True)
         mock_get_sbd_value.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
         mock_update_config.assert_called_once_with({"SBD_WATCHDOG_TIMEOUT": str(sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)})
         mock_set_property.assert_called_once_with(stonith_timeout=100)
