@@ -211,16 +211,24 @@ def can_ask():
     return (not options.ask_no) and sys.stdin.isatty()
 
 
-def ask(msg):
-    """
-    Ask for user confirmation.
-    If core.force is true, always return true.
-    If not interactive and core.force is false, always return false.
+def ask(msg, background_wait=True):
+    """Ask for user confirmation.
+
+    Parameters:
+    * background_wait: When set to False, return False without asking if current process is in background. Otherwise,
+    block until the process is brought to foreground.
+
+    Global Options:
+    * core.force: always return true without asking
+    * options.ask_no: do not ask and return false
     """
     if config.core.force:
         logger.info("%s [YES]", msg)
         return True
     if not can_ask():
+        return False
+    if sys.stdin.isatty() and os.tcgetpgrp(sys.stdin.fileno()) != os.getpgrp() and not background_wait:
+        logger.info("%s [NO]", msg)
         return False
 
     msg += ' '

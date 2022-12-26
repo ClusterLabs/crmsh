@@ -105,7 +105,7 @@ def _get_minimal_seq_in_cluster(nodes) -> typing.Tuple[int, int]:
 
 def _upgrade(nodes, seq):
     def ask(msg: str):
-        if not crmsh.utils.ask('Upgrade of crmsh configuration: ' + msg):
+        if not crmsh.utils.ask('Upgrade of crmsh configuration: ' + msg, background_wait=False):
             raise crmsh.healthcheck.AskDeniedByUser()
     try:
         for key in VERSION_FEATURES.keys():

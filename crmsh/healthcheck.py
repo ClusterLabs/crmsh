@@ -216,7 +216,7 @@ def main_fix_local(args) -> int:
             if args.yes:
                 def ask(msg): return True
             else:
-                def ask(msg): return crmsh.utils.ask('Healthcheck: fix: ' + msg)
+                def ask(msg): return crmsh.utils.ask('Healthcheck: fix: ' + msg, background_wait=False)
             if args.without_check or not feature_local_check(feature, nodes):
                 feature.fix_local(nodes, ask)
             return 0
@@ -233,7 +233,7 @@ def main_fix_cluster(args) -> int:
             if args.yes:
                 def ask(msg): return True
             else:
-                def ask(msg): return crmsh.utils.ask('Healthcheck: fix: ' + msg)
+                def ask(msg): return crmsh.utils.ask('Healthcheck: fix: ' + msg, background_wait=False)
             if args.without_check or not feature_full_check(feature, nodes):
                 feature_fix(feature, nodes, ask)
             return 0
