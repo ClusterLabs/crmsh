@@ -1645,7 +1645,7 @@ Configure Administration IP Address:
     wait_for_resource("Configuring virtual IP ({})".format(adminaddr), "admin-ip")
 
 
-def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
+def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False, is_stage=False):
     """
     While adding/removing qdevice, get current expected votes and actual total votes,
     to calculate after adding/removing qdevice, whether cluster has quorum
@@ -1662,6 +1662,9 @@ def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
     if utils.is_quorate(expected_votes, actual_votes) and not diskless_sbd:
         # safe to use reload
         return QdevicePolicy.QDEVICE_RELOAD
+    elif mode == QDEVICE_ADD and not is_stage:
+        # Add qdevice from init process, safe to restart
+        return QdevicePolicy.QDEVICE_RESTART
     elif utils.has_resource_running():
         # will lose quorum, and with RA running
         # no reload, no restart cluster service
@@ -1705,7 +1708,8 @@ def configure_qdevice_interactive():
 def adjust_sbd_watchdog_timeout():
     utils.check_all_nodes_reachable()
     using_diskless_sbd = SBDManager.is_using_diskless_sbd()
-    _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
+    is_stage = _context.stage == "qdevice" if _context.stage else False
+    _context.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd, is_stage)
     # add qdevice after diskless sbd started
     if using_diskless_sbd:
         res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
