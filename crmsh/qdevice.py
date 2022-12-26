@@ -26,7 +26,7 @@ class QdevicePolicy(Enum):
     QDEVICE_RESTART_LATER = 2
 
 
-def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
+def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False, is_stage=False):
     """
     While adding/removing qdevice, get current expected votes and actual total votes,
     to calculate after adding/removing qdevice, whether cluster has quorum
@@ -43,6 +43,9 @@ def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
     if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
         # safe to use reload
         return QdevicePolicy.QDEVICE_RELOAD
+    elif mode == QDEVICE_ADD and not is_stage:
+        # Add qdevice from init process, safe to restart
+        return QdevicePolicy.QDEVICE_RESTART
     elif xmlutil.CrmMonXmlParser.is_any_resource_running():
         # will lose quorum, and with RA running
         # no reload, no restart cluster service
@@ -136,6 +139,7 @@ class QDevice(object):
         self.cluster_name = cluster_name
         self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
         self.is_stage = is_stage
+        self.using_diskless_sbd = False
 
     @property
     def qnetd_cacert_on_qnetd(self):
@@ -667,10 +671,9 @@ class QDevice(object):
         """
         from .sbd import SBDManager, SBDTimeout
         utils.check_all_nodes_reachable()
-        using_diskless_sbd = SBDManager.is_using_diskless_sbd()
-        self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
+        self.using_diskless_sbd = SBDManager.is_using_diskless_sbd()
         # add qdevice after diskless sbd started
-        if using_diskless_sbd:
+        if self.using_diskless_sbd:
             res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
             if not res or int(res) < SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
                 sbd_watchdog_timeout_qdevice = SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
@@ -687,6 +690,7 @@ class QDevice(object):
             with logger_utils.status_long("Qdevice certification process"):
                 self.certificate_process_on_init()
         self.adjust_sbd_watchdog_timeout_with_qdevice()
+        self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, self.using_diskless_sbd, self.is_stage)
         self.config_qdevice()
         self.start_qdevice_service()
 
