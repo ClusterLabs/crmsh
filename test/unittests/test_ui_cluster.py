@@ -52,8 +52,8 @@ class TestCluster(unittest.TestCase):
             mock.call("pacemaker.service", remote_addr="node2")
             ])
         mock_info.assert_has_calls([
-            mock.call("Cluster services already started on node1"),
-            mock.call("Cluster services already started on node2")
+            mock.call("The cluster stack already started on node1"),
+            mock.call("The cluster stack already started on node2")
             ])
 
     @mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
@@ -78,7 +78,7 @@ class TestCluster(unittest.TestCase):
             ])
         mock_start.assert_called_once_with("corosync-qdevice", node_list=["node1"])
         mock_qdevice_configured.assert_called_once_with()
-        mock_info.assert_called_once_with("Cluster services started on node1")
+        mock_info.assert_called_once_with("The cluster stack started on node1")
 
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.service_is_active')
@@ -92,7 +92,7 @@ class TestCluster(unittest.TestCase):
             mock.call("corosync.service", remote_addr="node1"),
             mock.call("sbd.service", remote_addr="node1")
             ])
-        mock_info.assert_called_once_with("Cluster services already stopped on node1")
+        mock_info.assert_called_once_with("The cluster stack already stopped on node1")
 
     @mock.patch('logging.Logger.debug')
     @mock.patch('logging.Logger.info')
@@ -126,6 +126,6 @@ class TestCluster(unittest.TestCase):
             mock.call("corosync-qdevice.service", node_list=["node1"]),
             mock.call("corosync", node_list=["node1"])
             ])
-        mock_info.assert_called_once_with("Cluster services stopped on node1")
+        mock_info.assert_called_once_with("The cluster stack stopped on node1")
         mock_debug.assert_called_once_with("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
         mock_check.assert_called_once_with(mock_get_dc, wait_timeout=25)
