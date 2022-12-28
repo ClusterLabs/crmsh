@@ -2904,6 +2904,12 @@ renamed. Please use the `rename` command instead.
 [[cmdhelp_configure_erase,erase the CIB]]
 ==== `erase`
 
+.Deprecation note
+****************************
+`crm configure erase` is deprecated.
+The replacement could be `crm cluster remove [node]`
+****************************
+
 The `erase` clears all configuration. Apart from nodes. To remove
 nodes, you have to specify an additional keyword `nodes`.
 
