@@ -342,7 +342,7 @@ def collect_journal(from_t, to_t, outf):
 
     logger.debug("journalctl from: '%d' until: '%d' from_time: '%s' to_time: '%s' > %s",
               from_t, to_t, from_time, to_time, outf)
-    cmd = 'journalctl -o short-iso --since "%s" --until "%s" --no-pager | tail -n +2' % \
+    cmd = 'journalctl -o short-iso-precise --since "%s" --until "%s" --no-pager | tail -n +2' % \
           (from_time, to_time)
     crmutils.str2file(get_command_info(cmd)[1], outf)
 
