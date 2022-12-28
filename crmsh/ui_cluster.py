@@ -90,7 +90,7 @@ class Cluster(command.UI):
     @command.skill_level('administrator')
     def do_start(self, context, *args):
         '''
-        Starts the cluster services on all nodes or specific node(s)
+        Starts the cluster stack on all nodes or specific node(s)
         '''
         service_check_list = ["pacemaker.service"]
         start_qdevice = False
@@ -101,7 +101,7 @@ class Cluster(command.UI):
         node_list = parse_option_for_nodes(context, *args)
         for node in node_list[:]:
             if all([utils.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
-                logger.info("Cluster services already started on {}".format(node))
+                logger.info("The cluster stack already started on {}".format(node))
                 node_list.remove(node)
         if not node_list:
             return
@@ -112,25 +112,25 @@ class Cluster(command.UI):
         if start_qdevice:
             qdevice.QDevice.check_qdevice_vote()
         for node in node_list:
-            logger.info("Cluster services started on {}".format(node))
+            logger.info("The cluster stack started on {}".format(node))
 
     @command.skill_level('administrator')
     def do_stop(self, context, *args):
         '''
-        Stops the cluster services on all nodes or specific node(s)
+        Stops the cluster stack on all nodes or specific node(s)
         '''
         node_list = parse_option_for_nodes(context, *args)
         for node in node_list[:]:
             if not utils.service_is_active("corosync.service", remote_addr=node):
                 if utils.service_is_active("sbd.service", remote_addr=node):
                     utils.stop_service("corosync", remote_addr=node)
-                    logger.info("Cluster services stopped on {}".format(node))
+                    logger.info("The cluster stack stopped on {}".format(node))
                 else:
-                    logger.info("Cluster services already stopped on {}".format(node))
+                    logger.info("The cluster stack already stopped on {}".format(node))
                 node_list.remove(node)
             elif not utils.service_is_active("pacemaker.service", remote_addr=node):
                 utils.stop_service("corosync", remote_addr=node)
-                logger.info("Cluster services stopped on {}".format(node))
+                logger.info("The cluster stack stopped on {}".format(node))
                 node_list.remove(node)
         if not node_list:
             return
@@ -158,12 +158,12 @@ class Cluster(command.UI):
         node_list = utils.stop_service("corosync", node_list=node_list)
 
         for node in node_list:
-            logger.info("Cluster services stopped on {}".format(node))
+            logger.info("The cluster stack stopped on {}".format(node))
 
     @command.skill_level('administrator')
     def do_restart(self, context, *args):
         '''
-        Restarts the cluster services on all nodes or specific node(s)
+        Restarts the cluster stack on all nodes or specific node(s)
         '''
         parse_option_for_nodes(context, *args)
         self.do_stop(context, *args)
