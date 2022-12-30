@@ -103,3 +103,22 @@ Feature: crm report functional test for verifying bugs
     # found password
     Then    Expected return code is "0"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"
+
+  @clean
+  Scenario: crm report collect trace ra log
+    When    Run "crm configure primitive d Dummy op monitor interval=10s" on "hanode1"
+    And     Run "crm configure primitive d2 Dummy op monitor interval=10s" on "hanode1"
+    Then    Resource "d" is started on "hanode1"
+    And     Resource "d2" is started on "hanode2"
+    When    Run "crm resource trace d monitor" on "hanode1"
+    Then    Expected "Trace for d:monitor is written to /var/lib/heartbeat/trace_ra/Dummy" in stdout
+    When    Wait "10" seconds
+    And     Run "crm resource untrace d" on "hanode1"
+    And     Run "crm resource trace d2 monitor /trace_d" on "hanode1"
+    Then    Expected "Trace for d2:monitor is written to /trace_d/Dummy" in stdout
+    When    Wait "10" seconds
+    And     Run "crm resource untrace d2" on "hanode1"
+    And     Run "crm report report" on "hanode1"
+    Then    Directory "trace_ra" in "report.tar.bz2"
+    And     Directory "trace_d" in "report.tar.bz2"
+    When    Run "rm -rf report.tar.bz2 report" on "hanode1"

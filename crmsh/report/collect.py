@@ -50,12 +50,21 @@ def collect_ocfs2_info():
 
 
 def collect_ratraces():
-    trace_dir = os.path.join(constants.HA_VARLIB, "trace_ra")
-    if not os.path.isdir(trace_dir):
+    """
+    Collect ra trace file from default /var/lib/heartbeat/trace_ra and custom one
+    """
+    # since the "trace_dir" attribute been removed from cib after untrace
+    # need to parse crmsh log file to extract custom trace ra log directory on each node
+    log_contents = ""
+    cmd = "grep 'INFO: Trace for .* is written to ' {}*|grep -v 'collect'".format(log.CRMSH_LOG_FILE)
+    for node in crmutils.list_cluster_nodes():
+        log_contents += crmutils.get_stdout_or_raise_error(cmd, remote=node, no_raise=True) + "\n"
+    trace_dir_str = ' '.join(list(set(re.findall("written to (.*)/.*", log_contents))))
+    if not trace_dir_str:
         return
-    logger.debug("looking for RA trace files in %s", trace_dir)
-    flist = []
-    for f in utillib.find_files(trace_dir, constants.FROM_TIME, constants.TO_TIME):
+
+    logger.debug("Looking for RA trace files in \"%s\"", trace_dir_str)
+    for f in utillib.find_files(trace_dir_str, constants.FROM_TIME, constants.TO_TIME):
         dest_dir = os.path.join(constants.WORKDIR, '/'.join(f.split('/')[-3:-1]))
         crmutils.mkdirp(dest_dir)
         shutil.copy2(f, dest_dir)

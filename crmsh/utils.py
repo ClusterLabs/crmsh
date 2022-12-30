@@ -2684,7 +2684,7 @@ def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0], no_raise=F
     """
     Common function to get stdout from cmd or raise exception
     """
-    if remote:
+    if remote and remote != this_node():
         cmd = "ssh {} root@{} \"{}\"".format(SSH_OPTION, remote, cmd)
     rc, out, err = get_stdout_stderr(cmd, no_reg=True)
     if rc not in success_val_list and not no_raise:

@@ -316,6 +316,11 @@ def step_impl(context, f, archive):
     assert file_in_archive(f, archive) is True
 
 
+@then('Directory "{f}" in "{archive}"')
+def step_impl(context, f, archive):
+    assert file_in_archive(f, archive) is True
+
+
 @then('File "{f}" not in "{archive}"')
 def step_impl(context, f, archive):
     assert file_in_archive(f, archive) is False
