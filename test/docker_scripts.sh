@@ -25,9 +25,10 @@ deploy_node() {
   # https://unix.stackexchange.com/questions/335189/system-refuses-ssh-and-stuck-on-booting-up-after-systemd-installation
   #docker exec -t $node_name /bin/sh -c "systemctl start sshd.service; systemctl start systemd-user-sessions.service"
 
-  if [ "$node_name" == "qnetd-node" ];then
-    docker exec -t $node_name /bin/sh -c "zypper ref;zypper -n in corosync-qnetd"
-  elif [ "$node_name" == "node-without-ssh" ];then
+  if [ "$node_name" != "qnetd-node" ];then
+    docker exec -t $node_name /bin/sh -c "zypper -n rm corosync-qnetd"
+  fi
+  if [ "$node_name" == "node-without-ssh" ];then
     docker exec -t $node_name /bin/sh -c "systemctl stop sshd.service"
   else
     docker exec -t $node_name /bin/sh -c "cd /app; ./test/run-in-travis.sh build"

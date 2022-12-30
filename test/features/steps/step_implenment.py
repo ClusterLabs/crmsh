@@ -35,6 +35,12 @@ def step_impl(context, nodelist):
     assert online(context, nodelist) is True
 
 
+@then('Run "{cmd}" OK')
+def step_impl(context, cmd):
+    rc, _, = run_command(context, cmd)
+    assert rc == 0
+
+
 @given('IP "{addr}" is belong to "{iface}"')
 def step_impl(context, addr, iface):
     cmd = 'ip address show dev {}'.format(iface)
@@ -249,9 +255,9 @@ def step_impl(context, cmd):
     cmd_help["crm_cluster_join"] = const.CRM_CLUSTER_JOIN_H_OUTPUT
     cmd_help["crm_cluster_add"] = const.CRM_CLUSTER_ADD_H_OUTPUT
     cmd_help["crm_cluster_remove"] = const.CRM_CLUSTER_REMOVE_H_OUTPUT
-    cmd_help["crm_cluster_geo-init"] = const.CRM_CLUSTER_GEO_INIT_H_OUTPUT
-    cmd_help["crm_cluster_geo-join"] = const.CRM_CLUSTER_GEO_JOIN_H_OUTPUT
-    cmd_help["crm_cluster_geo-init-arbitrator"] = const.CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT
+    cmd_help["crm_cluster_geo_init"] = const.CRM_CLUSTER_GEO_INIT_H_OUTPUT
+    cmd_help["crm_cluster_geo_join"] = const.CRM_CLUSTER_GEO_JOIN_H_OUTPUT
+    cmd_help["crm_cluster_geo_init_arbitrator"] = const.CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT
     key = '_'.join(cmd.split())
     assert context.stdout == cmd_help[key]
 

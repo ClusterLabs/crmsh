@@ -44,6 +44,8 @@ def run_command(context, cmd, err_record=False):
             context.logger.info("\n{}\n".format(out))
         context.logger.error("\n{}\n".format(err))
         context.failed = True
+    if rc == 0 and err:
+        out = err # since crmsh msg mix stdout and stderr
     return rc, out
 
 
