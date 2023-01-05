@@ -39,31 +39,37 @@ class TestParallax(unittest.TestCase):
         Global tearDown.
         """
 
+    @mock.patch("crmsh.utils.user_of")
     @mock.patch("parallax.call")
     @mock.patch("crmsh.parallax.Parallax.handle")
-    def test_call(self, mock_handle, mock_call):
+    def test_call(self, mock_handle, mock_call, mock_userof):
         mock_call.return_value = {"node1": (0, None, None)}
+        mock_userof.return_value = "alice"
         mock_handle.return_value = [("node1", (0, None, None))]
 
         result = self.parallax_call_instance.call()
         self.assertEqual(result, mock_handle.return_value)
 
-        mock_call.assert_called_once_with(["node1"], "ls", self.parallax_call_instance.opts)
+        mock_userof.assert_called_once_with("node1")
+        mock_call.assert_called_once_with([["node1", None, "alice"]], "ls", self.parallax_call_instance.opts)
         mock_handle.assert_called_once_with(list(mock_call.return_value.items()))
 
     @mock.patch("parallax.Error")
+    @mock.patch("crmsh.utils.user_of")
     @mock.patch("parallax.call")
     @mock.patch("crmsh.parallax.Parallax.handle")
-    def test_call_exception(self, mock_handle, mock_call, mock_error):
+    def test_call_exception(self, mock_handle, mock_call, mock_userof, mock_error):
         mock_error = mock.Mock()
         mock_call.return_value = {"node1": mock_error}
+        mock_userof.return_value = "alice"
         mock_handle.side_effect = ValueError("error happen")
 
         with self.assertRaises(ValueError) as err:
             self.parallax_call_instance.call()
         self.assertEqual("error happen", str(err.exception))
 
-        mock_call.assert_called_once_with(["node1"], "ls", self.parallax_call_instance.opts)
+        mock_userof.assert_called_once_with("node1")
+        mock_call.assert_called_once_with([["node1", None, "alice"]], "ls", self.parallax_call_instance.opts)
         mock_handle.assert_called_once_with(list(mock_call.return_value.items()))
 
     @mock.patch("crmsh.parallax.Parallax.handle")

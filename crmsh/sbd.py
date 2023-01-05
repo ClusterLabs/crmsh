@@ -90,7 +90,7 @@ class SBDTimeout(object):
         """
         Get msgwait for sbd device
         """
-        out = utils.get_stdout_or_raise_error("sbd -d {} dump".format(dev))
+        out = utils.get_stdout_or_raise_error("sudo sbd -d {} dump".format(dev))
         # Format like "Timeout (msgwait)  : 30"
         res = re.search("\(msgwait\)\s+:\s+(\d+)", out)
         if not res:
@@ -292,7 +292,7 @@ class SBDManager(object):
         """
         Get UUID for specific device and node
         """
-        out = utils.get_stdout_or_raise_error("sbd -d {} dump".format(dev), remote=node)
+        out = utils.get_stdout_or_raise_error("sudo sbd -d {} dump".format(dev), remote=node)
         res = re.search("UUID\s*:\s*(.*)\n", out)
         if not res:
             raise ValueError("Cannot find sbd device UUID for {}".format(dev))
@@ -419,7 +419,7 @@ class SBDManager(object):
         for dev in self._sbd_devices:
             if dev in self.no_overwrite_map and self.no_overwrite_map[dev]:
                 continue
-            rc, _, err = bootstrap.invoke("sbd {} -d {} create".format(opt, dev))
+            rc, _, err = bootstrap.invoke("sudo sbd {} -d {} create".format(opt, dev))
             if not rc:
                 utils.fatal("Failed to initialize SBD device {}: {}".format(dev, err))
 
@@ -431,7 +431,7 @@ class SBDManager(object):
             bootstrap.sync_file(SYSCONFIG_SBD)
             return
 
-        shutil.copyfile(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
+        utils.copy_local_file(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
         sbd_config_dict = {
                 "SBD_WATCHDOG_DEV": self._watchdog_inst.watchdog_device_name,
                 "SBD_WATCHDOG_TIMEOUT": str(self.timeout_inst.sbd_watchdog_timeout)
@@ -478,7 +478,7 @@ class SBDManager(object):
             self._restart_cluster_and_configure_sbd_ra()
         else:
             # in init process
-            bootstrap.invoke("systemctl enable sbd.service")
+            bootstrap.invoke("sudo systemctl enable sbd.service")
 
     def _warn_diskless_sbd(self, peer=None):
         """
@@ -509,7 +509,7 @@ class SBDManager(object):
         self._watchdog_inst.init_watchdog()
         self._get_sbd_device()
         if not self._sbd_devices and not self.diskless_sbd:
-            bootstrap.invoke("systemctl disable sbd.service")
+            bootstrap.invoke("sudo systemctl disable sbd.service")
             return
         self._warn_diskless_sbd()
         self._initialize_sbd()
@@ -541,7 +541,7 @@ class SBDManager(object):
         if self._context.cluster_is_running:
             bootstrap.adjust_properties()
 
-    def join_sbd(self, peer_host):
+    def join_sbd(self, remote_user, peer_host):
         """
         Function join_sbd running on join process only
         On joining process, check whether peer node has enabled sbd.service
@@ -552,9 +552,9 @@ class SBDManager(object):
         if not utils.package_is_installed("sbd"):
             return
         if not os.path.exists(SYSCONFIG_SBD) or not utils.service_is_enabled("sbd.service", peer_host):
-            bootstrap.invoke("systemctl disable sbd.service")
+            bootstrap.invoke("sudo systemctl disable sbd.service")
             return
-        self._watchdog_inst = Watchdog(peer_host=peer_host)
+        self._watchdog_inst = Watchdog(remote_user=remote_user, peer_host=peer_host)
         self._watchdog_inst.join_watchdog()
         dev_list = self._get_sbd_device_from_config()
         if dev_list:
@@ -562,7 +562,7 @@ class SBDManager(object):
         else:
             self._warn_diskless_sbd(peer_host)
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
-        bootstrap.invoke("systemctl enable sbd.service")
+        bootstrap.invoke("sudo systemctl enable sbd.service")
 
     @classmethod
     def verify_sbd_device(cls):
@@ -617,6 +617,6 @@ class SBDManager(object):
         """
         Check if sbd device already initialized
         """
-        cmd = "sbd -d {} dump".format(dev)
+        cmd = "sudo sbd -d {} dump".format(dev)
         rc, _, _ = utils.get_stdout_stderr(cmd)
         return rc == 0

@@ -8,6 +8,7 @@ import os
 import re
 import configparser
 from contextlib import contextmanager
+from typing import List
 from . import userdir
 
 
@@ -237,6 +238,7 @@ DEFAULTS = {
         'editor': opt_program('EDITOR', ('vim', 'vi', 'emacs', 'nano')),
         'pager': opt_program('PAGER', ('less', 'more', 'pg')),
         'user': opt_string(''),
+        'hosts': opt_list([]), # 'alice@host1, bob@host2'
         'skill_level': opt_choice('expert', ('operator', 'administrator', 'expert')),
         'sort_elements': opt_boolean('yes'),
         'check_frequency': opt_choice('always', ('always', 'on-verify', 'never')),
@@ -432,7 +434,18 @@ def save():
 
 
 def set_option(section, option, value):
-    _configuration.set(section, option, value)
+    if not isinstance(value, List):
+        _configuration.set(section, option, value)
+        return
+    string = ""
+    first = True
+    for item in value:
+        if first:
+            first = False
+        else:
+            string += ", "
+        string += str(item)
+    _configuration.set(section, option, string)
 
 
 def get_option(section, option, raw=False):

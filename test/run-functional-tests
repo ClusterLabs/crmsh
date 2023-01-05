@@ -179,6 +179,31 @@ docker_exec() {
 	docker exec -t $name /bin/sh -c "$cmd"
 }
 
+create_custom_user() {
+	user_name=$1
+	user_id=$2
+	docker_exec $node_name "useradd -m -s /bin/bash -N -u ${user_id} -g 90 ${user_name} 2>/dev/null"
+	docker_exec $node_name "chmod u+w /etc/sudoers"
+	docker_exec $node_name "echo \"${user_name} ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
+	docker_exec $node_name "chmod u-w /etc/sudoers"
+	docker_exec $node_name "echo 'export PATH=\$PATH:/usr/sbin/' >> ~${user_name}/.bashrc"
+	docker_exec $node_name "echo -e \"linux\\nlinux\" | passwd ${user_name} 2>/dev/null"
+	docker_exec $node_name "cp -r /root/.ssh ~${user_name}/ && chown ${user_name}:haclient -R ~${user_name}/.ssh"
+}
+
+create_alice_bob_carol() {
+	# Custom users are alice, bob and carol and they are as important as the root
+	# and eventually they should be already in the docker image
+	# However now, let's create them here
+	create_custom_user "alice" "1000"
+	create_custom_user "bob" "1001"
+	create_custom_user "carol" "1002"
+
+	# I think /var/log/crmsh used to be hacluster:haclient
+	# Let's make it here again anyway. (This is a workarout, please FIXME!)
+	docker_exec $node_name "chown hacluster:haclient -R /var/log/crmsh"
+	docker_exec $node_name "chmod g+w -R /var/log/crmsh"
+}
 
 deploy_ha_node() {
 	node_name=$1
@@ -201,6 +226,8 @@ deploy_ha_node() {
 	info "Building crmsh on \"$node_name\"..."
 	docker_exec $node_name "$make_cmd" 1> /dev/null || \
 		fatal "Building failed on $node_name!"
+
+	create_alice_bob_carol
 }
 
 

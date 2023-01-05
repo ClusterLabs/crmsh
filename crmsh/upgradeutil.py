@@ -155,12 +155,10 @@ def force_set_local_upgrade_seq():
     """Create the upgrade sequence file and set it to CURRENT_UPGRADE_SEQ.
 
     It should only be used when initializing new cluster nodes."""
-    try:
-        os.mkdir(DATA_DIR)
-    except FileExistsError:
-        pass
-    with open(SEQ_FILE_PATH, 'w', encoding='ascii') as f:
-        print(_format_upgrade_seq(CURRENT_UPGRADE_SEQ), file=f)
+    if not os.path.exists(DATA_DIR):
+        crmsh.utils.mkdirs_owned(DATA_DIR, mode=0o755)
+    up_seq = _format_upgrade_seq(CURRENT_UPGRADE_SEQ)
+    crmsh.utils.str2file(up_seq, SEQ_FILE_PATH)
 
 
 def main():

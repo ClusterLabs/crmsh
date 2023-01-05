@@ -26,7 +26,7 @@ class TestWatchdog(unittest.TestCase):
         Test setUp.
         """
         self.watchdog_inst = watchdog.Watchdog()
-        self.watchdog_join_inst = watchdog.Watchdog(peer_host="node1")
+        self.watchdog_join_inst = watchdog.Watchdog(remote_user="alice", peer_host="node1")
 
     def tearDown(self):
         """
@@ -48,7 +48,7 @@ class TestWatchdog(unittest.TestCase):
         mock_run.return_value = (1, None, "error")
         res = self.watchdog_inst._verify_watchdog_device("/dev/watchdog", True)
         self.assertEqual(res, False)
-        mock_run.assert_called_once_with("wdctl /dev/watchdog")
+        mock_run.assert_called_once_with("sudo wdctl /dev/watchdog")
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.get_stdout_stderr')
@@ -58,7 +58,7 @@ class TestWatchdog(unittest.TestCase):
         with self.assertRaises(ValueError) as err:
             self.watchdog_inst._verify_watchdog_device("/dev/watchdog")
         mock_error.assert_called_once_with("Invalid watchdog device /dev/watchdog: error")
-        mock_run.assert_called_once_with("wdctl /dev/watchdog")
+        mock_run.assert_called_once_with("sudo wdctl /dev/watchdog")
 
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_verify_watchdog_device(self, mock_run):
@@ -149,15 +149,15 @@ Driver: iTCO_wdt
     def test_get_driver_through_device_remotely_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
         self.watchdog_join_inst._get_driver_through_device_remotely("test")
-        mock_run.assert_called_once_with("ssh {} root@node1 sbd query-watchdog".format(constants.SSH_OPTION))
-        mock_error.assert_called_once_with("Failed to run sbd query-watchdog remotely: error")
+        mock_run.assert_called_once_with("ssh {} alice@node1 sudo sbd query-watchdog".format(constants.SSH_OPTION))
+        mock_error.assert_called_once_with("Failed to run sudo sbd query-watchdog remotely: error")
 
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_driver_through_device_remotely_none(self, mock_run):
         mock_run.return_value = (0, "data", None)
         res = self.watchdog_join_inst._get_driver_through_device_remotely("/dev/watchdog")
         self.assertEqual(res, None)
-        mock_run.assert_called_once_with("ssh {} root@node1 sbd query-watchdog".format(constants.SSH_OPTION))
+        mock_run.assert_called_once_with("ssh {} alice@node1 sudo sbd query-watchdog".format(constants.SSH_OPTION))
 
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_get_driver_through_device_remotely(self, mock_run):
@@ -181,7 +181,7 @@ Driver: iTCO_wdt
         mock_run.return_value = (0, output, None)
         res = self.watchdog_join_inst._get_driver_through_device_remotely("/dev/watchdog")
         self.assertEqual(res, "softdog")
-        mock_run.assert_called_once_with("ssh {} root@node1 sbd query-watchdog".format(constants.SSH_OPTION))
+        mock_run.assert_called_once_with("ssh {} alice@node1 sudo sbd query-watchdog".format(constants.SSH_OPTION))
 
     def test_get_first_unused_device_none(self):
         res = self.watchdog_inst._get_first_unused_device()

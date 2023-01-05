@@ -31,41 +31,12 @@ def test_print_cluster_nodes(mock_run):
     mock_run.assert_called_once_with("crm_node -l")
 
 
-@mock.patch("crmsh.utils.to_ascii")
-@mock.patch("crmsh.parallax.parallax_call")
-@mock.patch("crmsh.utils.check_ssh_passwd_need")
-def test_run_cmd_on_remote(mock_check_ssh_pw, mock_parallax_call, mock_to_ascii):
-    mock_check_ssh_pw.return_value = False
-    mock_parallax_call.side_effect = ValueError("Exited with error code 2, Error output: cmd error message")
-    mock_to_ascii.return_value = None
-
-    rc, out, err = utils.run_cmd_on_remote("cmd", "other_node")
-    assert rc == 2
-    assert out is None
-    assert err == "cmd error message"
-
-    mock_check_ssh_pw.assert_called_once_with("other_node")
-    mock_parallax_call.assert_called_once_with(["other_node"], "cmd", False)
-    mock_to_ascii.assert_called_once_with(None)
-
-
 @mock.patch("crmsh.utils.get_stdout")
 def test_package_is_installed_local(mock_run):
     mock_run.return_value = (0, None)
     res = utils.package_is_installed("crmsh")
     assert res is True
     mock_run.assert_called_once_with("rpm -q --quiet crmsh")
-
-
-@mock.patch("crmsh.utils.run_cmd_on_remote")
-def test_package_is_installed_remote(mock_run_remote):
-    mock_run_remote.return_value = (0, None, None)
-    res = utils.package_is_installed("crmsh", "other_node")
-    assert res is True
-    mock_run_remote.assert_called_once_with(
-            "rpm -q --quiet crmsh",
-            "other_node",
-            "Check whether crmsh is installed on other_node")
 
 
 @mock.patch('crmsh.utils.detect_file')
@@ -93,8 +64,8 @@ def test_check_file_content_included(mock_detect, mock_run):
         mock.call("file2", remote=None)
         ])
     mock_run.assert_has_calls([
-        mock.call("cat file2", remote=None),
-        mock.call("cat file1", remote=None)
+        mock.call("sudo cat file2", remote=None),
+        mock.call("sudo cat file1", remote=None)
         ])
 
 
@@ -163,9 +134,9 @@ def test_get_nodeid_from_name(mock_get_stdout, mock_re_search):
 @mock.patch('crmsh.utils.get_stdout_stderr')
 def test_check_ssh_passwd_need(mock_run):
     mock_run.return_value = (1, None, None)
-    res = utils.check_ssh_passwd_need("node1")
+    res = utils.check_ssh_passwd_need("bob", "alice", "node1")
     assert res is True
-    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes node1 true")
+    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -i ~bob/.ssh/id_rsa.pub -T -o Batchmode=yes alice@node1 true")
 
 
 @mock.patch('logging.Logger.debug')
@@ -203,13 +174,19 @@ def test_cluster_run_cmd_exception(mock_list_nodes):
     mock_list_nodes.assert_called_once_with()
 
 
-@mock.patch('crmsh.parallax.parallax_call')
+@mock.patch('parallax.call')
 @mock.patch('crmsh.utils.list_cluster_nodes')
-def test_cluster_run_cmd(mock_list_nodes, mock_parallax_call):
+@mock.patch('crmsh.utils.user_of')
+def test_cluster_run_cmd(mock_userof, mock_list_nodes, mock_parallax_call):
+    mock_userof.side_effect = ["alice", "bob"]
     mock_list_nodes.return_value = ["node1", "node2"]
     utils.cluster_run_cmd("test")
     mock_list_nodes.assert_called_once_with()
-    mock_parallax_call.assert_called_once_with(["node1", "node2"], "test")
+    mock_userof.assert_has_calls([
+        mock.call("node1"),
+        mock.call("node2"),
+    ])
+    mock_parallax_call.assert_called_once_with([["node1", None, "alice"], ["node2", None, "bob"]], "test", mock.ANY)
 
 
 @mock.patch('crmsh.utils.list_cluster_nodes')
@@ -523,8 +500,8 @@ def test_detect_aws_false(mock_run):
     mock_run.side_effect = ["test", "test"]
     assert utils.detect_aws() is False
     mock_run.assert_has_calls([
-        mock.call("dmidecode -s system-version"),
-        mock.call("dmidecode -s system-manufacturer")
+        mock.call("sudo dmidecode -s system-version"),
+        mock.call("sudo dmidecode -s system-manufacturer")
         ])
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -532,8 +509,8 @@ def test_detect_aws_xen(mock_run):
     mock_run.side_effect = ["4.2.amazon", "Xen"]
     assert utils.detect_aws() is True
     mock_run.assert_has_calls([
-        mock.call("dmidecode -s system-version"),
-        mock.call("dmidecode -s system-manufacturer")
+        mock.call("sudo dmidecode -s system-version"),
+        mock.call("sudo dmidecode -s system-manufacturer")
         ])
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -541,8 +518,8 @@ def test_detect_aws_kvm(mock_run):
     mock_run.side_effect = ["Not Specified", "Amazon EC2"]
     assert utils.detect_aws() is True
     mock_run.assert_has_calls([
-        mock.call("dmidecode -s system-version"),
-        mock.call("dmidecode -s system-manufacturer")
+        mock.call("sudo dmidecode -s system-version"),
+        mock.call("sudo dmidecode -s system-manufacturer")
         ])
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -550,8 +527,8 @@ def test_detect_azure_false(mock_run):
     mock_run.side_effect = ["test", "test"]
     assert utils.detect_azure() is False
     mock_run.assert_has_calls([
-        mock.call("dmidecode -s system-manufacturer"),
-        mock.call("dmidecode -s chassis-asset-tag")
+        mock.call("sudo dmidecode -s system-manufacturer"),
+        mock.call("sudo dmidecode -s chassis-asset-tag")
         ])
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
@@ -561,8 +538,8 @@ def test_detect_azure_microsoft_corporation(mock_run, mock_request):
     mock_request.return_value = "data"
     assert utils.detect_azure() is True
     mock_run.assert_has_calls([
-        mock.call("dmidecode -s system-manufacturer"),
-        mock.call("dmidecode -s chassis-asset-tag")
+        mock.call("sudo dmidecode -s system-manufacturer"),
+        mock.call("sudo dmidecode -s chassis-asset-tag")
         ])
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
@@ -572,15 +549,15 @@ def test_detect_azure_chassis(mock_run, mock_request):
     mock_request.return_value = "data"
     assert utils.detect_azure() is True
     mock_run.assert_has_calls([
-        mock.call("dmidecode -s system-manufacturer"),
-        mock.call("dmidecode -s chassis-asset-tag")
+        mock.call("sudo dmidecode -s system-manufacturer"),
+        mock.call("sudo dmidecode -s chassis-asset-tag")
         ])
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
 def test_detect_gcp_false(mock_run):
     mock_run.return_value = "test"
     assert utils.detect_gcp() is False
-    mock_run.assert_called_once_with("dmidecode -s bios-vendor")
+    mock_run.assert_called_once_with("sudo dmidecode -s bios-vendor")
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -588,7 +565,7 @@ def test_detect_gcp(mock_run, mock_request):
     mock_run.return_value = "Google instance"
     mock_request.return_value = "data"
     assert utils.detect_gcp() is True
-    mock_run.assert_called_once_with("dmidecode -s bios-vendor")
+    mock_run.assert_called_once_with("sudo dmidecode -s bios-vendor")
 
 @mock.patch("crmsh.utils.is_program")
 def test_detect_cloud_no_cmd(mock_is_program):
@@ -1065,13 +1042,13 @@ class TestServiceManager(unittest.TestCase):
         mock_run.return_value = (1, None, "this command failed")
         with self.assertRaises(ValueError) as err:
             self.service_local._do_action("start")
-        self.assertEqual("Run \"systemctl start service1\" error: this command failed", str(err.exception))
-        mock_run.assert_called_once_with("systemctl start service1")
+        self.assertEqual("Run \"sudo systemctl start service1\" error: this command failed", str(err.exception))
+        mock_run.assert_called_once_with("sudo systemctl start service1")
 
     @mock.patch('crmsh.parallax.parallax_call')
     def test_do_action_node_list(self, mock_call):
         self.service_node_list._do_action("start")
-        mock_call.assert_called_once_with(["node1", "node2"], "systemctl start service1", strict=False)
+        mock_call.assert_called_once_with(["node1", "node2"], "sudo systemctl start service1", strict=False)
 
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.utils.run_cmd_on_remote')
@@ -1079,7 +1056,7 @@ class TestServiceManager(unittest.TestCase):
         mock_this_node.return_value = "node2"
         mock_remote.return_value = (0, None, None)
         self.service_remote._do_action("start")
-        mock_remote.assert_called_once_with("systemctl start service1", "node1", 'Run "systemctl start service1" on node1')
+        mock_remote.assert_called_once_with("sudo systemctl start service1", "node1", 'Run "sudo systemctl start service1" on node1')
   
     @mock.patch('crmsh.utils.ServiceManager._handle_action_result')
     @mock.patch('crmsh.utils.ServiceManager._do_action')
@@ -1221,13 +1198,15 @@ def test_get_stdout_or_raise_error_failed(mock_run):
     assert str(err.value) == 'Failed to run "cmd": error data'
     mock_run.assert_called_once_with("cmd", no_reg=True)
 
-
 @mock.patch("crmsh.utils.get_stdout_stderr")
-def test_get_stdout_or_raise_error(mock_run):
+@mock.patch("crmsh.utils.user_of")
+def test_get_stdout_or_raise_error(mock_userof, mock_run):
+    mock_userof.return_value = "alice"
     mock_run.return_value = (0, "output data", None)
     res = utils.get_stdout_or_raise_error("cmd", remote="node1")
     assert res == "output data"
-    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no root@node1 \"cmd\"", no_reg=True)
+    mock_userof.assert_called_once_with("node1")
+    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no alice@node1 \"cmd\"", no_reg=True)
 
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -1624,7 +1603,7 @@ def test_get_property(mock_run, mock_env):
     mock_run.return_value = (0, "data", None)
     mock_env.return_value = "cib.xml"
     assert utils.get_property("no-quorum-policy") == "data"
-    mock_run.assert_called_once_with("CIB_file=cib.xml crm configure get_property no-quorum-policy")
+    mock_run.assert_called_once_with("CIB_file=cib.xml sudo -E CIB_file crm configure get_property no-quorum-policy")
 
 
 @mock.patch('logging.Logger.warning')
