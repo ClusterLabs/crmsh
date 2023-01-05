@@ -1603,7 +1603,7 @@ def test_get_property(mock_run, mock_env):
     mock_run.return_value = (0, "data", None)
     mock_env.return_value = "cib.xml"
     assert utils.get_property("no-quorum-policy") == "data"
-    mock_run.assert_called_once_with("CIB_file=cib.xml sudo -E CIB_file crm configure get_property no-quorum-policy")
+    mock_run.assert_called_once_with("CIB_file=cib.xml sudo --preserve-env=CIB_file crm configure get_property no-quorum-policy")
 
 
 @mock.patch('logging.Logger.warning')
