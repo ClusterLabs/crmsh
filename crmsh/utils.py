@@ -3170,7 +3170,7 @@ def get_property(name, property_type="crm_config"):
     """
     if property_type == "crm_config":
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
-        cmd = "CIB_file={} sudo -E CIB_file crm configure get_property {}".format(cib_path, name)
+        cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
     else:
         cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
     rc, stdout, _ = get_stdout_stderr(cmd)
