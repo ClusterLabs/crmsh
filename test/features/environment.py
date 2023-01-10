@@ -5,7 +5,7 @@ import time
 
 
 def get_online_nodes():
-    _, out, _ = utils.get_stdout_stderr('crm_node -l')
+    _, out, _ = utils.get_stdout_stderr('sudo crm_node -l')
     if out:
         return re.findall(r'[0-9]+ (.*) member', out)
     else:
@@ -13,7 +13,7 @@ def get_online_nodes():
 
 
 def resource_cleanup():
-    utils.get_stdout_stderr('crm resource cleanup')
+    utils.get_stdout_stderr('sudo crm resource cleanup')
 
 
 def before_step(context, step):
@@ -31,4 +31,4 @@ def before_tag(context, tag):
                 time.sleep(1)
                 if utils.get_dc():
                     break
-            utils.get_stdout_or_raise_error("crm cluster stop --all")
+            utils.get_stdout_or_raise_error("sudo crm cluster stop --all")
