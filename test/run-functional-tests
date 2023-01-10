@@ -391,9 +391,10 @@ run_origin_regression_test() {
 }
 
 
+NORMAL_USER_FLAG=0
 CONFIG_COROSYNC_FLAG=1
 SETUP_N_NODES_CLUSTER=0
-options=$(getopt -l "help" -o "hldxn:" -- "$@")
+options=$(getopt -l "help" -o "hldxun:" -- "$@")
 eval set -- "$options"
 while true;do
 case $1 in
@@ -409,6 +410,10 @@ case $1 in
 	;;
 -x)
 	CONFIG_COROSYNC_FLAG=0
+	shift
+	;;
+-u)
+	NORMAL_USER_FLAG=1
 	shift
 	;;
 -n)
@@ -472,6 +477,13 @@ for case_num in $*;do
 	CONFIG_COROSYNC_FLAG=0
 	setup_cluster ${node_arry[@]}
 	adjust_test_case ${node_arry[0]} $case_file_in_container
-	docker_exec ${node_arry[0]} "behave --no-logcapture $case_file_in_container || exit 1" || exit 1
+	echo
+	if [ "$NORMAL_USER_FLAG" -eq 0 ];then
+		info "Running \"$case_file_in_container\" under 'root'..."
+		docker_exec ${node_arry[0]} "behave --no-logcapture $case_file_in_container || exit 1" || exit 1
+	else
+		info "Running \"$case_file_in_container\" under normal user 'alice'..."
+		docker_exec ${node_arry[0]} "su alice -c 'behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
+	fi
 	echo
 done

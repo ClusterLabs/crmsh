@@ -107,8 +107,8 @@ Feature: Regression test for bootstrap bugs
   Scenario: Change host name in /etc/hosts as alias(bsc#1183654)
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
-    When    Run "echo '@hanode1.ip.0 HANODE1' >> /etc/hosts" on "hanode1"
-    When    Run "echo '@hanode2.ip.0 HANODE2' >> /etc/hosts" on "hanode2"
+    When    Run "echo '@hanode1.ip.0 HANODE1'|sudo tee -a /etc/hosts" on "hanode1"
+    When    Run "echo '@hanode2.ip.0 HANODE2'|sudo tee -a /etc/hosts" on "hanode2"
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Run "crm cluster join -c HANODE1 -y" on "hanode2"

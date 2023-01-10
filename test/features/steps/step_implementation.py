@@ -25,8 +25,12 @@ behave.register_type(str=_parse_str)
 
 @when('Write multi lines to file "{f}"')
 def step_impl(context, f):
-    with open(f, 'w') as fd:
-        fd.write(context.text)
+    data_list = context.text.split('\n')
+    for line in data_list:
+        echo_option = " -n" if line == data_list[-1] else ""
+        cmd = "echo{} {}|sudo tee -a {}".format(echo_option, line, f)
+        run_command(context, cmd)
+
 
 @given('Cluster service is "{state}" on "{addr}"')
 def step_impl(context, state, addr):
@@ -437,7 +441,7 @@ def step_impl(context, node):
 
 @then('File "{path}" exists on "{node}"')
 def step_impl(context, path, node):
-    parallax.parallax_call([node], '[ -f {} ]'.format(path))
+    parallax.parallax_call([node], 'sudo test -f {}'.format(path))
 
 
 @then('File "{path}" not exist on "{node}"')
