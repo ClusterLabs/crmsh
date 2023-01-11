@@ -1,3 +1,4 @@
+import getpass
 import difflib
 import tarfile
 import glob
@@ -35,8 +36,15 @@ def me():
     return socket.gethostname()
 
 
+def add_sudo(cmd):
+    user = getpass.getuser()
+    if user != 'root':
+        cmd = "sudo {}".format(cmd)
+    return cmd
+
+
 def run_command(context, cmd, err_record=False):
-    rc, out, err = utils.get_stdout_stderr(cmd)
+    rc, out, err = utils.get_stdout_stderr(add_sudo(cmd))
     if rc != 0 and err:
         if err_record:
             res = re.sub(r'\x1b\[[0-9]+m', '', err)
@@ -50,6 +58,7 @@ def run_command(context, cmd, err_record=False):
 
 
 def run_command_local_or_remote(context, cmd, addr, err_record=False):
+    cmd = add_sudo(cmd)
     if addr == me():
         rc, out = run_command(context, cmd, err_record)
         context.return_code = rc

@@ -66,7 +66,7 @@ Feature: crm report functional test for verifying bugs
     When    Run "crm node utilization hanode1 set password qwertyui" on "hanode1"
     When    Run "crm report report" on "hanode1"
     When    Run "tar jxf report.tar.bz2" on "hanode1"
-    And     Try "grep -R "qwertyui" report"
+    And     Try "grep -R 'qwertyui' report"
     # crm report mask passw.* by default
     # No password here
     Then    Expected return code is "1"
@@ -78,7 +78,7 @@ Feature: crm report functional test for verifying bugs
     And     Run "sed -i 's/; sanitize_rule = .*$/sanitize_rule = passw.*|ip.*:raw/g' /etc/crm/crm.conf" on "hanode1"
     And     Run "crm report report" on "hanode1"
     And     Run "tar jxf report.tar.bz2" on "hanode1"
-    And     Try "grep -R -E "@vip.0|qwertyui" report"
+    And     Try "grep -R -E '@vip.0|qwertyui' report"
     # No password here
     Then    Expected return code is "1"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"
@@ -86,10 +86,10 @@ Feature: crm report functional test for verifying bugs
     # Do sanitize job, also for TEL
     When    Run "crm report -s -p TEL report" on "hanode1"
     When    Run "tar jxf report.tar.bz2" on "hanode1"
-    And     Try "grep -R "qwertyui" report"
+    And     Try "grep -R 'qwertyui' report"
     # No password here
     Then    Expected return code is "1"
-    When    Try "grep -R "13356789876" report"
+    When    Try "grep -R '13356789876' report"
     # No TEL number here
     Then    Expected return code is "1"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"
@@ -99,7 +99,7 @@ Feature: crm report functional test for verifying bugs
     And     Run "sed -i 's/sanitize_rule = .*$/sanitize_rule = /g' /etc/crm/crm.conf" on "hanode1"
     When    Run "crm report report" on "hanode1"
     When    Run "tar jxf report.tar.bz2" on "hanode1"
-    And     Try "grep -R "qwertyui" report"
+    And     Try "grep -R 'qwertyui' report"
     # found password
     Then    Expected return code is "0"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"

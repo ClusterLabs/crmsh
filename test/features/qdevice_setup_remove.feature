@@ -35,7 +35,7 @@ Feature: corosync qdevice/qnetd setup/remove process
     Then    Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
     And     Service "corosync-qdevice" is "stopped" on "hanode2"
-    When    Run "echo "# This is a test for bsc#1166684" >> /etc/corosync/corosync.conf" on "hanode1"
+    When    Run "echo "# This is a test for bsc#1166684"|sudo tee -a /etc/corosync/corosync.conf" on "hanode1"
     When    Run "scp /etc/corosync/corosync.conf root@hanode2:/etc/corosync" on "hanode1"
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
     # for bsc#1181415
