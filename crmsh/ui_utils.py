@@ -113,7 +113,7 @@ def pretty_arguments(f, nskip=0):
     Returns a prettified representation
     of the command arguments
     '''
-    specs = inspect.getargspec(f)
+    specs = inspect.getfullargspec(f)
     named_args = []
     if specs.defaults is None:
         named_args += specs.args
@@ -140,7 +140,7 @@ def validate_arguments(f, args, nskip=0):
 
     Note: Does not support keyword arguments.
     '''
-    specs = inspect.getargspec(f)
+    specs = inspect.getfullargspec(f)
     min_args = len(specs.args)
     if specs.defaults is not None:
         min_args -= len(specs.defaults)
