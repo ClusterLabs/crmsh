@@ -1735,3 +1735,74 @@ def test_fetch_cluster_node_list_from_node(mock_run, mock_warn):
 def test_cluster_copy_file_return(mock_list_nodes):
     mock_list_nodes.return_value = []
     assert utils.cluster_copy_file("/file1") == True
+
+
+@mock.patch('crmsh.utils.get_stdout_stderr')
+def test_has_sudo_access(mock_run):
+    mock_run.return_value = (0, None, None)
+    assert utils.has_sudo_access() is True
+    mock_run.assert_called_once_with("sudo -S -k -n id -u")
+
+
+@mock.patch('os.getgroups')
+def test_in_haclient(mock_group):
+    mock_group.return_value = [90, 100]
+    assert utils.in_haclient() is True
+    mock_group.assert_called_once_with()
+
+
+@mock.patch('crmsh.utils.in_haclient')
+@mock.patch('crmsh.userdir.getuser')
+def test_check_user_access_root(mock_user, mock_in):
+    mock_user.return_value = 'root'
+    utils.check_user_access('cluster')
+    mock_in.assert_not_called()
+
+
+@mock.patch('crmsh.utils.has_sudo_access')
+@mock.patch('crmsh.utils.in_haclient')
+@mock.patch('crmsh.userdir.getuser')
+def test_check_user_access_haclient(mock_user, mock_in, mock_sudo):
+    mock_user.return_value = 'user'
+    mock_in.return_value = True
+    utils.check_user_access('ra')
+    mock_sudo.assert_not_called()
+
+
+@mock.patch('logging.Logger.error')
+@mock.patch('crmsh.utils.has_sudo_access')
+@mock.patch('crmsh.utils.in_haclient')
+@mock.patch('crmsh.userdir.getuser')
+def test_check_user_access_need_sudo(mock_user, mock_in, mock_sudo, mock_error):
+    mock_user.return_value = 'user'
+    mock_in.return_value = False
+    mock_sudo.return_value = True
+    with pytest.raises(utils.TerminateSubCommand) as err:
+        utils.check_user_access('ra')
+    mock_error.assert_called_once_with('Please run this command starting with "sudo"')
+
+
+@mock.patch('logging.Logger.error')
+@mock.patch('crmsh.utils.has_sudo_access')
+@mock.patch('crmsh.utils.in_haclient')
+@mock.patch('crmsh.userdir.getuser')
+def test_check_user_access_acl(mock_user, mock_in, mock_sudo, mock_error):
+    mock_user.return_value = 'user'
+    mock_in.return_value = False
+    mock_sudo.return_value = False
+    with pytest.raises(utils.TerminateSubCommand) as err:
+        utils.check_user_access('ra')
+    mock_error.assert_called_once_with('This command needs higher privilege.\nOption 1) Please consider to add "user" as sudoer. For example:\n  echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user\nOption 2) Add "user" to the haclient group. For example:\n  usermod -g haclient user')
+
+
+@mock.patch('logging.Logger.error')
+@mock.patch('crmsh.utils.has_sudo_access')
+@mock.patch('crmsh.utils.in_haclient')
+@mock.patch('crmsh.userdir.getuser')
+def test_check_user_access_cluster(mock_user, mock_in, mock_sudo, mock_error):
+    mock_user.return_value = 'user'
+    mock_in.return_value = False
+    mock_sudo.return_value = False
+    with pytest.raises(utils.TerminateSubCommand) as err:
+        utils.check_user_access('cluster')
+    mock_error.assert_called_once_with('Please run this command starting with "sudo".\nCurrently, this command needs to use sudo to escalate itself as root.\nPlease consider to add "user" as sudoer. For example:\n  echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user')
