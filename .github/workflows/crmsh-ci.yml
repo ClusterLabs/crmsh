@@ -62,8 +62,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        index=`$GET_INDEX_OF crm_report_bugs`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $DOCKER_SCRIPT `$GET_INDEX_OF crm_report_bugs`
 
   functional_test_bootstrap_bugs:
     runs-on: ubuntu-20.04
@@ -220,6 +219,17 @@ jobs:
         sudo systemctl restart docker.service
         $DOCKER_SCRIPT `$GET_INDEX_OF cluster_api`
 
+  functional_test_user_access:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for user access
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        $DOCKER_SCRIPT `$GET_INDEX_OF user_access`
+
   original_regression_test:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
@@ -246,6 +256,7 @@ jobs:
       functional_test_geo_cluster,
       functional_test_healthcheck,
       functional_test_cluster_api,
+      functional_test_user_access,
       original_regression_test]
     runs-on: ubuntu-20.04
     timeout-minutes: 10

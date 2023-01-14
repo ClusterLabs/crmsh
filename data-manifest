@@ -88,6 +88,7 @@ test/features/steps/const.py
 test/features/steps/__init__.py
 test/features/steps/step_implementation.py
 test/features/steps/utils.py
+test/features/user_access.feature
 test/history-test.tar.bz2
 test/list-undocumented-commands.py
 test/profile-history.sh
