@@ -254,7 +254,7 @@ For example, instead of typing `crm status`, you can type `crm st` or
 `crm cf`. `crm resource` can be shorted as `crm rsc`, and so on.
 
 The exact list of accepted aliases is too long to print in full, but
-experimentation and typoes should help in discovering more of them.
+experimentation and typos should help in discovering more of them.
 
 [[topics_Features,Features]]
 == Features
