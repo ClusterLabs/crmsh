@@ -1919,7 +1919,7 @@ def join_cluster(seed_host):
         except corosync.IPAlreadyConfiguredError as e:
             logger.warning(e)
         sync_file(corosync.conf())
-        invoke("ssh {} {}@{} corosync-cfgtool -R".format(SSH_OPTION, remote_user, seed_host))
+        invoke("ssh {} {}@{} sudo corosync-cfgtool -R".format(SSH_OPTION, remote_user, seed_host))
 
     _context.sbd_manager.join_sbd(remote_user, seed_host)
 
