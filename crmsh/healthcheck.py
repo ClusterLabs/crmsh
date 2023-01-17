@@ -88,7 +88,7 @@ def feature_full_check(feature: Feature, nodes: typing.Iterable[str]) -> bool:
     try:
         return feature.check_cluster(nodes)
     except NotImplementedError:
-        results = _parallax_run(
+        results = crmsh.parallax.parallax_run(
             nodes,
             '/usr/bin/env python3 -m crmsh.healthcheck check-local {}'.format(
                 feature.__class__.__name__.rsplit('.', 1)[-1],
@@ -101,7 +101,7 @@ def feature_fix(feature: Feature, nodes: typing.Iterable[str], ask: typing.Calla
     try:
         return feature.fix_cluster(nodes, ask)
     except NotImplementedError:
-        results = _parallax_run(
+        results = crmsh.parallax.parallax_run(
             nodes,
             '/usr/bin/env python3 -m crmsh.healthcheck fix-local {}'.format(
                 feature.__class__.__name__.rsplit('.', 1)[-1],
@@ -143,9 +143,9 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
         try:
             nodes_without_keys = [
                 node for node, result in
-                _parallax_run(
+                crmsh.parallax.parallax_run(
                     nodes,
-                    '[ -f ~hacluster/.ssh/id_rsa ] || [ -f ~hacluster/.ssh/id_ecdsa ] || [ -f ~hacluster/.ssh/id_ed25519 ]'
+                    'sudo test [ -f ~hacluster/.ssh/id_rsa ] || [ -f ~hacluster/.ssh/id_ecdsa ] || [ -f ~hacluster/.ssh/id_ed25519 ]'
                 ).items()
                 if result[0] != 0
             ]
@@ -180,18 +180,6 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
             except ValueError as e:
                 logger.error('Failed to initialize passwordless ssh authentication.', exc_info=e)
                 raise FixFailure from None
-
-
-def _parallax_run(nodes: str, cmd: str) -> typing.Dict[str, typing.Tuple[int, bytes, bytes]]:
-    parallax_options = parallax.Options()
-    parallax_options.ssh_options = ['StrictHostKeyChecking=no', 'ConnectTimeout=10']
-    ret = dict()
-    for node, result in parallax.run(nodes, cmd, parallax_options).items():
-        if isinstance(result, parallax.Error):
-            logger.warning("SSH connection to remote node %s failed.", node, exc_info=result)
-            raise result
-        ret[node] = result
-    return ret
 
 
 def main_check_local(args) -> int:

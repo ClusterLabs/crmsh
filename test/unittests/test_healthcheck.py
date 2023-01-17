@@ -35,7 +35,7 @@ class _Py37MockCallShim:
 class TestPasswordlessHaclusterAuthenticationFeature(unittest.TestCase):
     @mock.patch('crmsh.parallax.parallax_call')
     @mock.patch('crmsh.utils.ask')
-    @mock.patch('crmsh.healthcheck._parallax_run')
+    @mock.patch('crmsh.parallax.parallax_run')
     def test_upgrade_partially_initialized(self, mock_parallax_run, mock_ask, mock_parallax_call: mock.MagicMock):
         nodes = ['node-{}'.format(i) for i in range(1, 6)]
         return_value = {'node-{}'.format(i): (0, b'', b'') for i in range(1, 4)}
@@ -54,7 +54,7 @@ class TestPasswordlessHaclusterAuthenticationFeature(unittest.TestCase):
 
     @mock.patch('crmsh.parallax.parallax_call')
     @mock.patch('crmsh.utils.ask')
-    @mock.patch('crmsh.healthcheck._parallax_run')
+    @mock.patch('crmsh.parallax.parallax_run')
     def test_upgrade_clean(self, mock_parallax_run, mock_ask, mock_parallax_call: mock.MagicMock):
         nodes = ['node-{}'.format(i) for i in range(1, 6)]
         mock_parallax_run.return_value = {node: (1, b'', b'') for node in nodes}
