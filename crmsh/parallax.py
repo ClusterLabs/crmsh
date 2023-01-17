@@ -4,7 +4,7 @@
 
 import os
 import parallax
-
+import crmsh.utils
 
 Error = parallax.Error
 
@@ -55,10 +55,9 @@ class Parallax(object):
         return results
 
     def call(self):
-        from crmsh.utils import user_of
         host_port_user = []
         for host in self.nodes:
-            host_port_user.append([host, None, user_of(host)])
+            host_port_user.append([host, None, crmsh.utils.user_of(host)])
         results = parallax.call(host_port_user, self.cmd, self.opts)
         return self.handle(list(results.items()))
 
@@ -70,11 +69,17 @@ class Parallax(object):
     def copy(self):
         results = parallax.copy(self.nodes, self.src, self.dst, self.opts)
         return self.handle(list(results.items()))
+    def run(self):
+        return parallax.run(
+            [[node, None, crmsh.utils.user_of(node)] for node in self.nodes],
+            self.cmd,
+            self.opts,
+        )
 
 
 def parallax_call(nodes, cmd, askpass=False, ssh_options=None, strict=True):
     """
-    Executes the given command on a set of hosts, collecting the output
+    Executes the given command on a set of hosts, collecting the output, and raise exception when error occurs
     nodes:       a set of hosts
     cmd:         command
     askpass:     Ask for a password if passwordless not configured
@@ -112,3 +117,15 @@ def parallax_copy(nodes, src, dst, askpass=False, ssh_options=None, strict=True)
     """
     p = Parallax(nodes, src=src, dst=dst, askpass=askpass, ssh_options=ssh_options, strict=strict)
     return p.copy()
+
+def parallax_run(nodes, cmd, askpass=False, ssh_options=None, strict=True):
+    """
+    Executes the given command on a set of hosts, collecting the output and any error
+    nodes:       a set of hosts
+    cmd:         command
+    askpass:     Ask for a password if passwordless not configured
+    ssh_options: Extra options to pass to SSH
+    Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
+    """
+    p = Parallax(nodes, cmd=cmd, askpass=askpass, ssh_options=ssh_options, strict=strict)
+    return p.run()

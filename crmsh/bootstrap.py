@@ -969,6 +969,7 @@ def export_ssh_key(local_user, remote_privileged_user, remote_user_to_swap, remo
     # cmd = "ssh-copy-id -i ~{}/.ssh/id_rsa.pub {}@{}".format(local_user, remote_user_to_access, remote_node)
     with open(os.path.expanduser('~{}/.ssh/id_rsa.pub'.format(local_user)), 'r', encoding='utf-8') as f:
         public_key = f.read()
+    cmd = '''cat >> ~{user}/.ssh/authorized_keys << "EOF"'''
     cmd = '''mkdir -p ~{user}/.ssh && chown {user} ~{user}/.ssh && chmod 0700 ~{user}/.ssh && cat >> ~{user}/.ssh/authorized_keys << "EOF"
 {key}
 EOF
@@ -1557,9 +1558,6 @@ def swap_public_ssh_key(local_user, remote_privileged_user, remote_user_to_swap,
     """
     Swap public ssh key between remote_node and local
     """
-    if local_user != "root" and not _context.with_other_user:
-        return
-
     # Detect whether need password to login to remote_node
     if utils.check_ssh_passwd_need(local_user, remote_user_to_swap, remote_node):
         # If no passwordless configured, paste /home/bob/.ssh/id_rsa.pub
@@ -1585,6 +1583,7 @@ def remote_public_key_from(remote_user, remote_node, remote_sudoer):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         )
+    print(result)
     if result.returncode != 0:
         utils.fatal("Can't get the remote id_rsa.pub from {}: {}".format(
             remote_node,
