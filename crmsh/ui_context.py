@@ -82,6 +82,7 @@ class Context(object):
                     cmd = True
                     break
             if cmd:
+                utils.check_user_access(self.current_level().name)
                 rv = self.execute_command() is not False
         except (ValueError, IOError) as msg:
             if config.core.debug or options.regression_tests:

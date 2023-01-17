@@ -3350,4 +3350,47 @@ def fetch_cluster_node_list_from_node(init_node):
         else:
             cluster_nodes_list.append(tokens[1])
     return cluster_nodes_list
+
+
+def has_sudo_access():
+    """
+    Check if current user has sudo access
+    """
+    rc, _, _ = get_stdout_stderr("sudo -S -k -n id -u")
+    return rc == 0
+
+
+def in_haclient():
+    """
+    Check if current user is in haclient group
+    """
+    return 90 in os.getgroups()
+
+
+def check_user_access(level_name):
+    """
+    Check current user's privilege and give hints to user
+    """
+    current_user = userdir.getuser()
+    if current_user == "root":
+        return
+    if level_name != "cluster" and in_haclient():
+        return
+
+    if not has_sudo_access():
+        if level_name == "cluster":
+            hints = f"""Please run this command starting with "sudo".
+Currently, this command needs to use sudo to escalate itself as root.
+Please consider to add "{current_user}" as sudoer. For example:
+  echo "{current_user} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/{current_user}"""
+        else:
+            hints = f"""This command needs higher privilege.
+Option 1) Please consider to add "{current_user}" as sudoer. For example:
+  echo "{current_user} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/{current_user}
+Option 2) Add "{current_user}" to the haclient group. For example:
+  usermod -g haclient {current_user}"""
+        logger.error(hints)
+    else:
+        logger.error("Please run this command starting with \"sudo\"")
+    raise TerminateSubCommand
 # vim:ts=4:sw=4:et:

@@ -241,7 +241,6 @@ create_node() {
 		docker network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network &> /dev/null
 	done
 
-	info "Setup cluster..."
 	for node in $*;do
 		deploy_ha_node $node &
 	done

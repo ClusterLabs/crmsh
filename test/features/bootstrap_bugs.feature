@@ -129,7 +129,7 @@ Feature: Regression test for bootstrap bugs
     When    Run "crm cluster stop --all" on "hanode1"
     Then    Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster start --all;crm cluster stop --all" on "hanode1"
+    When    Run "crm cluster start --all;sudo crm cluster stop --all" on "hanode1"
     Then    Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
     When    Run "systemctl start corosync" on "hanode1"
