@@ -11,8 +11,9 @@
 #
 # TODO: Make csync2 usage optional
 # TODO: Configuration file for bootstrap?
-
+import codecs
 import os
+import subprocess
 import sys
 import random
 import re
@@ -26,7 +27,7 @@ from string import Template
 from lxml import etree
 from pathlib import Path
 from contextlib import contextmanager
-from . import config
+from . import config, constants
 from . import upgradeutil
 from . import utils
 from . import xmlutil
@@ -897,7 +898,7 @@ def change_user_shell(user):
         invoke("usermod -s /bin/bash {}".format(user))
 
 
-def configure_ssh_key(user, remote=None):
+def configure_ssh_key(user):
     """
     Configure ssh rsa key on local or remote
 
@@ -907,28 +908,38 @@ def configure_ssh_key(user, remote=None):
     change_user_shell(user)
 
     cmd = ""
-    if remote is None:
-        private_key, public_key, authorized_file = key_files(user).values()
-    else:
-        home_dir = utils.get_stdout_or_raise_error("pwd", user=user, remote=remote)
-        private_key = home_dir + "/.ssh/id_rsa"
-        public_key = home_dir + "/.ssh/id_rsa.pub"
-        authorized_file = home_dir + "/.ssh/authorized_keys"
+    private_key, public_key, authorized_file = key_files(user).values()
 
-    if not utils.detect_file(private_key, remote=remote):
+    if not utils.detect_file(private_key):
         logger.info("SSH key for {} does not exist, hence generate it now".format(user))
-        cmd = "ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(private_key, remote if remote else utils.this_node())
-    elif not utils.detect_file(public_key, remote=remote):
+        cmd = "ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(private_key, utils.this_node())
+    elif not utils.detect_file(public_key):
         cmd = "ssh-keygen -y -f {} > {}".format(private_key, public_key)
 
     if cmd:
-        utils.get_stdout_or_raise_error(cmd, user=user, remote=remote)
+        utils.get_stdout_or_raise_error(cmd, user=user)
 
-    if not utils.detect_file(authorized_file, remote=remote):
+    if not utils.detect_file(authorized_file):
         cmd = "touch {}".format(authorized_file)
-        utils.get_stdout_or_raise_error(cmd, user=user, remote=remote)
+        utils.get_stdout_or_raise_error(cmd, user=user)
 
-    append_unique(public_key, authorized_file, user, remote=remote)
+    append_unique(public_key, authorized_file, user)
+
+
+def configure_ssh_key_on_remote(host: str, sudoer: str, user: str) -> None:
+    # pass cmd through stdin rather than as arguments. It seems sudo has its own argument parsing mechanics,
+    # which breaks shell expansion used in cmd
+    cmd = '''
+    [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
+    '''
+    result = subprocess.run(
+        ['ssh'] + constants.SSH_OPTION_ARGS + ['{}@{}'.format(sudoer, host), 'sudo', '-H', '-u', user, '/bin/sh'],
+        input=cmd.encode('utf-8'),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if result.returncode != 0:
+        raise ValueError(codecs.decode(result.stdout, 'utf-8', 'replace'))
 
 
 def init_ssh_remote():
@@ -956,14 +967,27 @@ def export_ssh_key(local_user, remote_privileged_user, remote_user_to_swap, remo
     # ssh-copy-id will prompt for the password of the destination user
     # this is unwanted, so we write to the authorised_keys file ourselve
     # cmd = "ssh-copy-id -i ~{}/.ssh/id_rsa.pub {}@{}".format(local_user, remote_user_to_access, remote_node)
-    cmd = "cat ~{}/.ssh/id_rsa.pub | ssh {} {}@{} 'cat >> ~{}/.ssh/authorized_keys'".format(local_user
-        , SSH_OPTION, remote_privileged_user, remote_node, remote_user_to_swap)
-    utils.get_stdout_or_raise_error(cmd)
+    with open(os.path.expanduser('~{}/.ssh/id_rsa.pub'.format(local_user)), 'r', encoding='utf-8') as f:
+        public_key = f.read()
+    cmd = '''mkdir -p ~{user}/.ssh && chown {user} ~{user}/.ssh && chmod 0700 ~{user}/.ssh && cat >> ~{user}/.ssh/authorized_keys << "EOF"
+{key}
+EOF
+'''.format(user=remote_user_to_swap, key=public_key)
+    result = subprocess.run(
+        ['ssh'] + constants.SSH_OPTION_ARGS + ['{}@{}'.format(remote_privileged_user, remote_node), 'sudo', '-u', local_user, '/bin/sh'],
+        input=cmd.encode('utf-8'),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if result.returncode != 0:
+        raise ValueError('Failed to export ssh public key of local user {} to {}@{}: {}'.format(
+            local_user, remote_user_to_swap, remote_node, result.stdout,
+        ))
 
 
-def import_ssh_key(local_user, remote_user, remote_node):
+def import_ssh_key(local_user, remote_user, remote_node, remote_sudoer):
     "Copy ssh key from remote to local authorized_keys"
-    remote_key_content = remote_public_key_from(remote_user, remote_node)
+    remote_key_content = remote_public_key_from(remote_user, remote_node, remote_sudoer)
     _, _, local_authorized_file = key_files(local_user).values()
     if not utils.check_text_included(remote_key_content, local_authorized_file, remote=None):
         cmd = "echo '{}' >> {}".format(remote_key_content, local_authorized_file)
@@ -1517,20 +1541,7 @@ def join_ssh(seed_host):
     configure_ssh_key(local_user)
     swap_public_ssh_key(local_user, remote_user, remote_user, seed_host, add=True)
     configure_ssh_key('hacluster')
-    # Make sure ~hacluster/.ssh exist remotely (idempotent)
-    continue_with_hacluster = True
-    try:
-        utils.get_stdout_or_raise_error(
-                '/usr/bin/env python3 -m crmsh.healthcheck fix-cluster PasswordlessHaclusterAuthenticationFeature',
-                user=remote_user, remote=seed_host,
-            )
-    except ValueError as err:
-        continue_with_hacluster = False # at least we tried
-        logger.info("Failed to create ~hacluster/.ssh")
-
-    if continue_with_hacluster:
-        swap_public_ssh_key(local_user, remote_user, 'hacluster', seed_host)
-        swap_public_ssh_key('hacluster', remote_user, 'hacluster', seed_host)
+    swap_public_ssh_key('hacluster', remote_user, 'hacluster', seed_host, add=True)
 
     # This makes sure the seed host has its own SSH keys in its own
     # authorized_keys file (again, to help with the case where the
@@ -1558,22 +1569,28 @@ def swap_public_ssh_key(local_user, remote_privileged_user, remote_user_to_swap,
         export_ssh_key(local_user, remote_privileged_user, remote_user_to_swap, remote_node)
 
     if add:
-        configure_ssh_key(remote_user_to_swap, remote_node)
-
+        configure_ssh_key_on_remote(remote_node, remote_privileged_user, remote_user_to_swap)
     try:
-        import_ssh_key(local_user, remote_user_to_swap, remote_node)
-    except ValueError as err:
-        logger.warning(err)
-        return
+        import_ssh_key(local_user, remote_user_to_swap, remote_node, remote_privileged_user)
+    except ValueError as e:
+        logger.warning(e)
 
 
-def remote_public_key_from(remote_user, remote_node):
+def remote_public_key_from(remote_user, remote_node, remote_sudoer):
     "Get the id_rsa.pub from the remote node"
-    cmd = "ssh {} {}@{} 'cat ~/.ssh/id_rsa.pub'".format(SSH_OPTION, remote_user, remote_node)
-    rc, out, err = utils.get_stdout_stderr(cmd)
-    if rc != 0:
-        utils.fatal("Can't get the remote id_rsa.pub from {}: {}".format(remote_node, err))
-    return out
+    cmd = 'cat ~/.ssh/id_rsa.pub'
+    result = subprocess.run(
+        ['ssh'] + constants.SSH_OPTION_ARGS + ['{}@{}'.format(remote_sudoer, remote_node), 'sudo', '-H', '-u', remote_user, '/bin/sh'],
+        input=cmd.encode('utf-8'),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        )
+    if result.returncode != 0:
+        utils.fatal("Can't get the remote id_rsa.pub from {}: {}".format(
+            remote_node,
+            codecs.decode(result.stderr, 'utf-8', 'replace'),
+        ))
+    return result.stdout.decode('utf-8')
 
 def fetch_public_key_from_remote_node(node, user="root"):
     """

@@ -488,7 +488,8 @@ QDEVICE_HELP_INFO = """  QDevice participates in quorum decisions. With the assi
   and highly recommended for 2 node clusters."""
 
 
-SSH_OPTION = "-o StrictHostKeyChecking=no"
+SSH_OPTION_ARGS = ["-o", "StrictHostKeyChecking=no"]
+SSH_OPTION = ' '.join(SSH_OPTION_ARGS)
 
 
 CLOUD_AWS = "amazon-web-services"
