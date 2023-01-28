@@ -1583,7 +1583,6 @@ def remote_public_key_from(remote_user, remote_node, remote_sudoer):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         )
-    print(result)
     if result.returncode != 0:
         utils.fatal("Can't get the remote id_rsa.pub from {}: {}".format(
             remote_node,
