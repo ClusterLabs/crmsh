@@ -63,7 +63,7 @@ libvirt          STONITH for libvirt (kvm / Xen)
 sbd              SBD, Shared storage based fencing
 vmware           Fencing using vCenter / ESX Server
 
-System/management:
+System management:
 
 cryptctl         A utility for setting up LUKS-based disk encryption
 
@@ -128,7 +128,7 @@ libvirt          STONITH for libvirt (kvm / Xen)
 sbd              SBD, Shared storage based fencing
 vmware           Fencing using vCenter / ESX Server
 
-System/management:
+System management:
 
 cryptctl         A utility for setting up LUKS-based disk encryption
 

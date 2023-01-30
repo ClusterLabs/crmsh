@@ -1,7 +1,7 @@
 # Copyright (C) 2022 Peter Varkoly
 # License: GNU General Public License (GPL)
 version: 2.2
-category: System/Management
+category: System Management
 shortdesc:  A utility for setting up LUKS-based disk encryption
 longdesc: |
   Configure a resource group containing a virtual IP address,
