@@ -1,0 +1,23 @@
+---
+
+- name: "{{ name }}.check"
+  shell: |
+   timeout=$(crm_attribute -t crm_config -G -n stonith-timeout --quiet)
+   if [[cibadmin -Q --xpath "//primitive[@type='fence_azure_arm']/@type" > /dev/null 2>&1 ]]; then
+     exit $([[ "${timeout}" =~ {{ expected[name + '.fence_azure_arm'] }}s?$ ]])
+   else
+     exit $([[ "${timeout}" =~ {{ expected[name + '.sbd'] }}s?$ ]])
+   fi
+  check_mode: false
+  register: config_updated
+  changed_when: config_updated.rc != 0
+  failed_when: config_updated.rc > 1
+
+- block:
+    - name: Post results
+      import_role:
+        name: post-results
+  when:
+    - ansible_check_mode
+  vars:
+    status: "{{ config_updated is not changed }}"

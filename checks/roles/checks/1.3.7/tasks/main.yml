@@ -1,0 +1,34 @@
+---
+
+- name: "{{ name }}.check"
+  shell: |
+    if [[ $(crm_node -l | wc -l) != "2" ]]; then
+      exit 0
+    fi
+    sbdarray=$(grep -E '^SBD_DEVICE=' /etc/sysconfig/sbd  | grep -oP 'SBD_DEVICE=\K[^.]+' | sed 's/\"//g')
+    IFS=';' sbdarray=( $sbdarray )
+    # convoluted, but normal count method does not work with jinja2
+    # issue https://github.com/ansible/ansible/issues/16968
+    temp_ar=(${!sbdarray[@]});  device_count=`expr ${temp_ar[-1]} + 1`
+    # If there is at least 1 device and there is an sbd device used by pacemaker
+    if [[ $device_count != "0" ]] && crm conf show | grep -q "stonith:external/sbd"; then
+      exit 0
+    fi
+    # If the qdevice is configured it\'s also good
+    if corosync-quorumtool | tail -n1 | grep -i qdevice; then
+      exit 0
+    fi
+    exit 1
+  register: config_updated
+  check_mode: false
+  changed_when: config_updated.rc != 0
+  failed_when: config_updated.rc > 1
+
+- block:
+    - name: Post results
+      import_role:
+        name: post-results
+  when:
+    - ansible_check_mode
+  vars:
+    status: "{{ config_updated is not changed }}"

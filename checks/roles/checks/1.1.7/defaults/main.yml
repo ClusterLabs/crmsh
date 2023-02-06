@@ -1,0 +1,20 @@
+---
+
+name: 1.1.7
+group: Corosync
+labels: generic
+description: |
+  Corosync `expected_votes` is set to `{{ expected[name] }}`
+remediation: |
+  ## Remediation
+  Adjust the corosync `expected_votes` parameter to `{{ expected[name] }}` to make sure pacemaker calculates the actions properly for a two-node cluster.
+
+  ## References
+  - https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/high-availability-guide-suse-pacemaker
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# Test data
+key_name: expected_votes
+
+# check id. This value must not be changed over the life of this check
+id: C620DC

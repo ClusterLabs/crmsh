@@ -1,0 +1,21 @@
+---
+
+name: 1.1.8.runtime
+group: Corosync
+labels: generic
+description: |
+  Corosync is running with `two_node` set to `{{ expected['1.1.8'] }}`
+remediation: |
+  ## Abstract
+  The runtime value of the corosync `two_node` parameter is not set as recommended.
+
+  ## Remediation
+  Adjust the corosync `two_node` parameter to `1` to make sure Pacemaker calculates the actions properly for a two-node cluster,
+  and reload the Corosync service.
+
+  ## References
+  - https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/high-availability-guide-suse-pacemaker
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: D78671

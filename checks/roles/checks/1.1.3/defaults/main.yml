@@ -1,0 +1,20 @@
+---
+
+name: 1.1.3
+group: Corosync
+labels: generic
+description: |
+  Corosync `max_messages` is set to `{{ expected[name] }}`
+remediation: |
+  ## Remediation
+  Adjust the Corosync `max_messages` parameter as recommended by the Azure best practices.
+
+  ## References
+  - https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/high-availability-guide-suse-pacemaker
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# Test data
+key_name: max_messages
+
+# check id. This value must not be changed over the life of this check
+id: 845CC9

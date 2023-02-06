@@ -1,0 +1,36 @@
+---
+
+name: 1.3.2
+group: SBD
+labels: generic
+description: |
+  `SBD_STARTMODE` is set to `always`
+remediation: |
+  ## Abstract
+  If not set to always, SBD will not automatically start if the node was previously fenced as it will expect the cluster in a clean state.
+  **IMPORTANT**: Always verify these steps in a testing environment before doing so in production ones!
+
+  ## Remediation
+  Run the following commands in order:
+
+  1. Put cluster into maintenance mode:
+     ```crm configure property maintenance-mode=true```
+  2. Stop the cluster:
+     ```crm cluster stop```
+  2. Set the SBD_STARTMODE parameter to `always` on `/etc/sysconfig/sbd`:
+     ```
+     [...]
+     SBD_STARTMODE="always"
+     [...]
+     ```
+  3. Restart the cluster:
+     ```crm cluster start```
+  4. Put cluster out of maintenance mode:
+     ```crm configure property maintenance-mode=false```
+
+  ## References
+  - https://documentation.suse.com/sle-ha/15-SP3/html/SLE-HA-all/cha-ha-storage-protect.html
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: 49591F

@@ -1,0 +1,18 @@
+---
+
+name: 1.1.9.runtime
+group: Corosync
+labels: generic
+description: |
+  Corosync is running with at least 2 rings
+remediation: |
+  ## Abstract
+  It is strongly recommended to add a second ring to the corosync communication.
+
+  ## References
+  - section 9.1.3 in https://documentation.suse.com/sbp/all/single-html/SLES4SAP-hana-sr-guide-PerfOpt-15/#id-adapting-the-corosync-and-sbd-configuration
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+on_failure: warning
+
+# check id. This value must not be changed over the life of this check
+id: 32CFC6

@@ -2,12 +2,15 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import os
 import sys
 import re
+import yaml
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
 from . import command
+from . import config
 from . import utils
 from . import scripts
 from . import completers as compl
@@ -17,11 +20,8 @@ from . import qdevice
 from .cibconfig import cib_factory
 from .ui_node import parse_option_for_nodes
 from . import constants
-
-
 from . import log
 logger = log.setup_logger(__name__)
-
 
 def parse_options(parser, args):
     try:
@@ -65,7 +65,6 @@ def get_cluster_name():
     else:
         cluster_name = cib_factory.get_property('cluster-name')
     return cluster_name
-
 
 class Cluster(command.UI):
     '''

@@ -1,0 +1,16 @@
+---
+
+- name: "{{ name }}.check"
+  shell: 'corosync-cmapctl | grep "runtime.config.totem.join (u32) = " | sed "s/^.*= //"'
+  check_mode: false
+  register: config_updated
+  changed_when: config_updated.stdout != expected['1.1.4']
+
+- block:
+    - name: Post results
+      import_role:
+        name: post-results
+  when:
+    - ansible_check_mode
+  vars:
+    status: "{{ config_updated is not changed }}"

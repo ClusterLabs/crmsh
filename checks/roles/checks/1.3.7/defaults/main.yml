@@ -1,0 +1,17 @@
+---
+
+name: 1.3.7
+group: SBD
+labels: generic
+description: |
+  The 2 nodes cluster has either disk-based SBD or Qdevice
+remediation: |
+  ## Remediation
+  HA cluster with 2 nodes must either have a disk-based SBD or a Qdevice.
+
+  ## References
+  - section 2 in https://documentation.suse.com/sbp/all/single-html/SLES4SAP-hana-sr-guide-PerfOpt-15/
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: A2EF8C

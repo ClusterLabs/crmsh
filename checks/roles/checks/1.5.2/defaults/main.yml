@@ -1,0 +1,21 @@
+---
+
+name: 1.5.2
+group: Miscellaneous
+labels: generic
+description: |
+  The `hacluster` user password has been changed from the default value `linux`
+remediation: |
+  ## Abstract
+  The password of the `hacluster` user should be changed after setting up the cluster
+
+  ## Remediation
+  ```sudo passwd hacluster```
+
+  ## References
+  - section 9.1.2 https://documentation.suse.com/sbp/all/single-html/SLES4SAP-hana-sr-guide-PerfOpt-15/
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+on_failure: warning
+
+# check id. This value must not be changed over the life of this check
+id: 790926

@@ -1,0 +1,8 @@
+---
+
+- block:
+    - name: "{{ name }} Post results"
+      import_role:
+        name: post-results
+  vars:
+    status: "{{ ansible_distribution_version is version(expected[name], '>=') }}"

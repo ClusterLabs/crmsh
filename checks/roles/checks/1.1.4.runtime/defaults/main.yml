@@ -1,0 +1,20 @@
+---
+
+name: 1.1.4.runtime
+group: Corosync
+labels: generic
+description: |
+  Corosync is running with `join` set to `{{ expected['1.1.4'] }}`
+remediation: |
+  ## Abstract
+  The runtime value of the Corosync `join` parameter is not set as recommended.
+
+  ## Remediation
+  Adjust the corosync `join` parameter as recommended by the Azure best practices, and reload the corosync service.
+
+  ## References
+  - https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/high-availability-guide-suse-pacemaker
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: 822E47

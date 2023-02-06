@@ -1,0 +1,20 @@
+---
+
+name: 2.2.2
+group: OS and package versions
+labels: hana
+description: |
+  Operative system version is supported
+remediation: |
+  ## Abstract
+  You need at least SUSE Linux Enterprise Server for SAP Applications 15 SP1 or newer
+
+  ## Remediation
+  Please install or upgrade to a supported OS version
+
+  ## Reference
+  - https://documentation.suse.com/en-us/sbp/all/single-html/SLES4SAP-hana-sr-guide-PerfOpt-15/
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: D028B9

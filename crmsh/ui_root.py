@@ -22,6 +22,7 @@ from . import completers as compl
 from . import cmd_status
 from . import ui_cib
 from . import ui_cibstatus
+from . import ui_check
 from . import ui_cluster
 from . import ui_configure
 from . import ui_corosync
@@ -66,6 +67,13 @@ Commands at this level enable low-level cluster configuration
 management with HA awareness.
 ''')
     def do_cluster(self):
+        pass
+
+    @command.level(ui_check.Check)
+    @command.help('''All about ansible checks:
+List, execute, show details.
+''')
+    def do_check(self):
         pass
 
     @command.level(ui_configure.CibConfig)

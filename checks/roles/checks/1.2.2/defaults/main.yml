@@ -1,0 +1,24 @@
+---
+
+name: 1.2.2
+group: Pacemaker
+labels: generic
+description: |
+  Cluster fencing timeout is configured correctly
+remediation: |
+  ## Abstract
+  The fencing timeout (`stonith-timeout`) determines the time Pacemaker will wait for fencing to succeed.
+  The recommended values on Azure are `144` seconds for SBD only or `900` seconds when using SBD combined with the Azure Fence agent.
+
+  ## Remediation
+  Execute the following command to adjust the timeout for your usecase:
+  ```crm configure property stonith-timeout=144```
+  or
+  ```crm configure property stonith-timeout=900```
+
+  ## References
+  - https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/high-availability-guide-suse-pacemaker
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: 373DB8

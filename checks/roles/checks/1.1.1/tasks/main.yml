@@ -1,0 +1,20 @@
+---
+
+- name: "{{ name }}.check"
+  lineinfile:
+    path: /etc/corosync/corosync.conf
+    regexp: '^(\s+){{ key_name }}:'
+    line: "\t{{ key_name }}: {{ expected[name] }}"
+    insertafter: 'totem {'
+  register: config_updated
+  when:
+    - ansible_check_mode
+
+- block:
+    - name: Post results
+      import_role:
+        name: post-results
+  when:
+    - ansible_check_mode
+  vars:
+    status: "{{ config_updated is not changed }}"

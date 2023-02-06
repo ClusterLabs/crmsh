@@ -1,0 +1,19 @@
+---
+
+- name: "{{ name }}.check"
+  lineinfile:
+    path: /etc/sysconfig/sbd
+    regexp: '^SBD_PACEMAKER='
+    line: 'SBD_PACEMAKER={{ expected[name] }}'
+  register: config_updated
+  when:
+    - ansible_check_mode
+
+- block:
+    - name: Post results
+      import_role:
+        name: post-results
+  when:
+    - ansible_check_mode
+  vars:
+    status: "{{ config_updated is not changed }}"

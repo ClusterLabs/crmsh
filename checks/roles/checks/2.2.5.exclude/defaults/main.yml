@@ -1,0 +1,20 @@
+---
+
+name: 2.2.5.exclude
+group: OS and package versions
+labels: hana
+description: |
+  SBD version is not {{ expected['2.2.5.exclude'] }}
+remediation: |
+  ## Abstract
+  Installed SBD version must not be equal than {{ expected['2.2.5.exclude'] }}
+
+  ## Remediation
+  Install or upgrade to a supported SBD version
+
+  ## Reference
+  - https://documentation.suse.com/en-us/sbp/all/single-html/SLES4SAP-hana-sr-guide-PerfOpt-15/
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: C3166E

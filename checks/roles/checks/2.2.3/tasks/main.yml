@@ -1,0 +1,8 @@
+---
+
+- block:
+    - name: "{{ name }} Post results"
+      import_role:
+        name: post-results
+  vars:
+    status: "{{ 'pacemaker' in ansible_facts.packages and ansible_facts.packages['pacemaker'][0].version is version(expected[name], '>=') }}"

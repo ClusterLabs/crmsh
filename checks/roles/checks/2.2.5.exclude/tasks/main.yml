@@ -1,0 +1,20 @@
+---
+
+- name: "{{ name }}.check"
+  shell: |
+    # Check the sbd version IS NOT
+    # If not installed, exit with error
+    rpm -q --qf "%{VERSION}\n" sbd || exit 2
+  check_mode: false
+  register: config_updated
+  changed_when: config_updated.stdout is version(expected[name], '=')
+  failed_when: config_updated.rc > 1
+
+- block:
+    - name: Post results
+      import_role:
+        name: post-results
+  when:
+    - ansible_check_mode
+  vars:
+    status: "{{ config_updated is not changed }}"

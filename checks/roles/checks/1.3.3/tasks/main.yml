@@ -1,0 +1,18 @@
+---
+
+- name: "{{ name }}.check"
+  systemd:
+    name: sbd
+    enabled: true
+  register: config_updated
+  when:
+    - ansible_check_mode
+
+- block:
+    - name: Post results
+      import_role:
+        name: post-results
+  when:
+    - ansible_check_mode
+  vars:
+    status: "{{ config_updated is not changed }}"

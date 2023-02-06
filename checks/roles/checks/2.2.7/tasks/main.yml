@@ -1,0 +1,8 @@
+---
+
+- block:
+    - name: "{{ name }} Post results"
+      import_role:
+        name: post-results
+  vars:
+    status: "{{ 'python3' in ansible_facts.packages and ansible_facts.packages['python3'][0].version is version(expected[name], '>=') }}"

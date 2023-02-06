@@ -1,0 +1,8 @@
+---
+
+- block:
+    - name: "{{ name }} Post results"
+      import_role:
+        name: post-results
+  vars:
+    status: "{{ 'sbd' in ansible_facts.packages and ansible_facts.packages['sbd'][0].version is version(expected[name], '>=') }}"

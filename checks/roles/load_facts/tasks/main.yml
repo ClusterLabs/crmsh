@@ -1,0 +1,65 @@
+---
+
+- name: gather facts
+  ansible.builtin.setup:
+  register: facts_result
+
+- name: load environment variables
+  include_vars:
+    dir: "{{ playbook_dir }}/vars/{{ env | default('azure') }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Gather the package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: set default value to cluster_selected_checks_list
+  set_fact:
+    cluster_selected_checks_list: [
+# Corosync
+"53D035",
+"156F64",
+"FB0E0D",
+"A1244C",
+"00081D",
+"845CC9",
+"822E47",
+"24ABCB",
+"15F7A8",
+"21FCA6",
+"7E0221",
+"33403D",
+"C620DC",
+"D78671",
+"6E9B82",
+"32CFC6",
+"DA114A",
+# OS and package verrsions
+"CAEFF1",
+"D028B9",
+"9FAAD0",
+"9FEFB0",
+"DC5429",
+"C3166E",
+"222A57",
+"F50AF5",
+# Pacemaker
+"205AF7",
+"373DB8",
+# SBD
+"0B6DB2",
+"49591F",
+"816815",
+"61451E",
+"B089BE",
+"68626E",
+"A2EF8C",
+# Miscellaneous
+"790926",
+    ]
+
+- name: debug loaded vars
+  debug:
+    var: expected
+    verbosity: 1

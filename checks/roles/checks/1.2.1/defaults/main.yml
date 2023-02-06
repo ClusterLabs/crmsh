@@ -1,0 +1,24 @@
+---
+
+name: 1.2.1
+group: Pacemaker
+labels: generic
+description: |
+  Fencing is enabled in the cluster attributes
+remediation: |
+  ## Abstract
+  Fencing is mandatory to guarantee data integrity for your SAP Applications.
+  Running a HA Cluster without fencing is not supported and might cause data loss.
+
+  ## Remediation
+  Execute the following command to enable it:
+  ```
+  crm configure property stonith-enabled=true
+  ```
+
+  ## References
+  - https://documentation.suse.com/sle-ha/15-SP3/html/SLE-HA-all/cha-ha-fencing.html#sec-ha-fencing-recommend
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: 205AF7

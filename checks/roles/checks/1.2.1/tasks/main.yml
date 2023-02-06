@@ -1,0 +1,16 @@
+---
+
+- name: "{{ name }}.check"
+  command: 'crm_attribute -t crm_config -G -n stonith-enabled --quiet'
+  check_mode: false
+  register: config_updated
+  changed_when: config_updated.stdout != expected[name]
+
+- block:
+    - name: Post results
+      import_role:
+        name: post-results
+  when:
+    - ansible_check_mode
+  vars:
+    status: "{{ config_updated is not changed }}"

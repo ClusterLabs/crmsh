@@ -1,0 +1,49 @@
+---
+
+name: 1.1.6.runtime
+group: Corosync
+labels: generic
+description: |
+  Corosync is running with `transport` set to `{{ expected['1.1.6'] }}`
+remediation: |
+  ## Remediation
+  To change the corosync MCAST transport to UCAST edit the /etc/corosync/corosync.conf
+  as in the example
+  ```
+      max_messages: 20
+      interface {
+          ringnumber: 0
+  -       bindnetaddr: 10.162.32.167
+  -       mcastaddr: 239.11.100.41
+          mcastport: 5405
+          ttl: 1
+      }
+  +   transport: udpu
+  ...
+  +nodelist {
+  +       node {
+  +               ring0_addr: 10.162.32.167
+  +               nodeid: 1
+  +       }
+  +
+  +       node {
+  +               ring0_addr: 10.162.32.89
+  +               nodeid: 2
+  +       }
+  +
+  +}
+  ```
+  1. stop the already running cluster by using **systemctl stop pacemaker**
+  2. In the totem section, in the interface subsection remove the
+  keys-value pairs **bindnetaddr** and **mcastaddr**
+  3. In the totem section add key-value pair **transport: udpu**
+  4. Add section nodelist and subsections node for each nodes of the
+  cluster, where the **ring0_addr** is the IP address of the node
+
+  ## References
+  - section 9.1.3 in https://documentation.suse.com/sbp/all/single-html/SLES4SAP-hana-sr-guide-PerfOpt-15/#id-adapting-the-corosync-and-sbd-configuration
+  - https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/high-availability-guide-suse-pacemaker
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: 7E0221

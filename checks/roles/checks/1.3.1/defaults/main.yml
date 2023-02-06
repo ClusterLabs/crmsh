@@ -1,0 +1,36 @@
+---
+
+name: 1.3.1
+group: SBD
+labels: generic
+description: |
+  `SBD_PACEMAKER` value is correctly set in SBD configuration
+remediation: |
+  ## Abstract
+  For proper SBD fencing, make sure that the integration with Pacemaker is enabled.
+  **IMPORTANT**: Always verify these steps in a testing environment before doing so in production ones!
+
+  ## Remediation
+  Run the following commands in order:
+
+  1. Put cluster into maintenance mode:
+     ```crm configure property maintenance-mode=true```
+  2. Stop the cluster:
+     ```crm cluster stop```
+  3. Set the SBD_PACEMAKER parameter to `yes` on `/etc/sysconfig/sbd`:
+     ```
+     [...]
+     SBD_PACEMAKER="yes"
+     [...]
+     ```
+  4. Restart the cluster:
+     ```crm cluster start```
+  5. Put cluster out of maintenance mode
+     ```crm configure property maintenance-mode=false```
+
+  ## References
+  - https://documentation.suse.com/sle-ha/15-SP3/html/SLE-HA-all/cha-ha-storage-protect.html
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: 0B6DB2

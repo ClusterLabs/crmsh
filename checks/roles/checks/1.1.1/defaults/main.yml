@@ -1,0 +1,35 @@
+---
+
+name: 1.1.1
+group: Corosync
+labels: generic
+description: |
+  Corosync `token` timeout is set to `{{ expected[name] }}`
+remediation: |
+  ## Abstract
+  The value of the Corosync `token` timeout is not set as recommended.
+
+  ## Remediation
+
+  Adjust the corosync `token` timeout as recommended on the best practices, and reload the corosync configuration
+
+  1. Set the correct `token` timeout in the totem session in the corosync config file `/etc/corosync/corosync.conf`. This action must be repeated in all nodes of the cluster.
+     ```
+     [...]
+     totem { 
+            token: <timeout value> 
+           }
+     [...]
+     ```   
+  2. Reload the corosync configuration:
+     `crm corosync reload`
+
+  ## References
+  - https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/high-availability-guide-suse-pacemaker
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# Test data
+key_name: token
+
+# check id. This value must not be changed over the life of this check
+id: 156F64

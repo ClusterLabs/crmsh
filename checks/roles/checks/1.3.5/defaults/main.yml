@@ -1,0 +1,17 @@
+---
+
+name: 1.3.5
+group: SBD
+labels: generic
+description: |
+  SBD watchdog timeout is set to `{{ expected[name] }}`
+remediation: |
+  ## Remediation
+  Make sure you configure your SBD Watchdog Timeout to `{{ expected[name] }}` seconds as recommended on the best practices.
+
+  ## References
+  -  https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/high-availability-guide-suse-pacemaker#set-up-sbd-device
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: B089BE

@@ -1,0 +1,23 @@
+---
+
+name: 1.3.3
+group: SBD
+labels: generic
+description: |
+  SBD service is enabled
+remediation: |
+  ## Abstract
+  If not enabled, SBD service will not start automatically after reboots, affecting the correct cluster startup.
+
+  ## Remediation
+  To enable the service, run:
+  ```
+  systemctl enable sbd
+  ```
+
+  ## References
+  - https://documentation.suse.com/sle-ha/15-SP3/html/SLE-HA-all/cha-ha-storage-protect.html#pro-ha-storage-protect-sbd-services
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: 816815

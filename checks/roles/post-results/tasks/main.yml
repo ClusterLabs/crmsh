@@ -1,0 +1,7 @@
+---
+
+# Do not change the name. It is use in the crmsh_callback call
+- name: set_test_result
+  set_fact:
+    test_result: "{{ (status == true) | ternary('passing', on_failure | default('critical')) }}"
+  delegate_to: localhost

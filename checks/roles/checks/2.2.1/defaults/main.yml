@@ -1,0 +1,20 @@
+---
+
+name: 2.2.1
+group: OS and package versions
+labels: hana
+description: |
+  Operative system vendor is supported
+remediation: |
+  ## Abstract
+  SAPHanaSR is only supported on SUSE Linux Enterprise Server for SAP Applications.
+
+  ## Remediation
+  Please use SUSE Linux Enterprise Server for SAP Applications.
+
+  ## Reference
+  - https://documentation.suse.com/en-us/sbp/all/single-html/SLES4SAP-hana-sr-guide-PerfOpt-15/
+implementation: "{{ lookup('file', 'roles/checks/'+name+'/tasks/main.yml') }}"
+
+# check id. This value must not be changed over the life of this check
+id: CAEFF1
