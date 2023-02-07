@@ -695,7 +695,6 @@ def configure_firewall(tcp=None, udp=None):
     def init_firewall_firewalld(tcp, udp):
         has_firewalld = utils.service_is_active("firewalld")
         cmdbase = 'firewall-cmd --zone=public --permanent ' if has_firewalld else 'firewall-offline-cmd --zone=public '
-        cmdbase = 'sudo ' + cmdbase
 
         def cmd(args):
             if not invokerc(cmdbase + args):
@@ -708,7 +707,7 @@ def configure_firewall(tcp=None, udp=None):
             cmd("--add-port={}/udp".format(p))
 
         if has_firewalld:
-            if not invokerc("sudo firewall-cmd --reload"):
+            if not invokerc("firewall-cmd --reload"):
                 utils.fatal("Failed to reload firewall configuration.")
 
     def init_firewall_ufw(tcp, udp):
@@ -766,7 +765,7 @@ def init_cluster_local():
 
     # reset password, but only if it's not already set
     # (We still need the hacluster for the hawk).
-    _rc, outp = utils.get_stdout("sudo passwd -S hacluster")
+    _rc, outp = utils.get_stdout("passwd -S hacluster")
     ps = outp.strip().split()[1]
     pass_msg = ""
     if ps not in ("P", "PS"):
@@ -778,7 +777,7 @@ def init_cluster_local():
             pass_msg = ", password 'linux'"
 
     # evil, but necessary
-    invoke("sudo rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
+    invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
 
     # only try to start hawk if hawk is installed
     if utils.service_is_available("hawk.service"):
@@ -837,8 +836,9 @@ def install_tmp(tmpfile, to):
 
 
 def append(fromfile, tofile, remote=None):
-    cmd = "sudo bash -c 'cat {} >> {}'".format(fromfile, tofile)
+    cmd = "cat {} >> {}".format(fromfile, tofile)
     utils.get_stdout_or_raise_error(cmd, remote=remote)
+
 
 def append_unique(fromfile, tofile, user=None, remote=None, from_local=False):
     """
@@ -1133,9 +1133,9 @@ def init_csync2():
         if not confirm("csync2 is already configured - overwrite?"):
             return
 
-    invoke("sudo rm", "-f", CSYNC2_KEY)
+    invoke("rm", "-f", CSYNC2_KEY)
     logger.debug("Generating csync2 shared key")
-    if not invokerc("sudo csync2", "-k", CSYNC2_KEY):
+    if not invokerc("csync2", "-k", CSYNC2_KEY):
         utils.fatal("Can't create csync2 key {}".format(CSYNC2_KEY))
 
     csync2_file_list = ""
@@ -1167,7 +1167,7 @@ key /etc/csync2/key_hagroup;
         if _context.skip_csync2:
             csync2_update("/")
         else:
-            invoke("sudo csync2", "-cr", "/")
+            invoke("csync2", "-cr", "/")
 
 
 def csync2_update(path):
@@ -1176,11 +1176,11 @@ def csync2_update(path):
 
     If there was a conflict, use '-f' to force this side to win
     '''
-    invoke("sudo csync2 -rm {}".format(path))
-    if invokerc("sudo csync2 -rxv {}".format(path)):
+    invoke("csync2 -rm {}".format(path))
+    if invokerc("csync2 -rxv {}".format(path)):
         return
-    invoke("sudo csync2 -rf {}".format(path))
-    if not invokerc("sudo csync2 -rxv {}".format(path)):
+    invoke("csync2 -rf {}".format(path))
+    if not invokerc("csync2 -rxv {}".format(path)):
         logger.warning("{} was not synced".format(path))
 
 
@@ -1223,7 +1223,7 @@ def init_corosync_auth():
         if not confirm("%s already exists - overwrite?" % (COROSYNC_AUTH)):
             return
         utils.rmfile(COROSYNC_AUTH)
-    invoke("sudo corosync-keygen -l -k {}".format(COROSYNC_AUTH))
+    invoke("corosync-keygen -l -k {}".format(COROSYNC_AUTH))
 
 
 def init_remote_auth():
@@ -1237,7 +1237,7 @@ def init_remote_auth():
 
     pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
     utils.mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
-    if not invokerc("sudo dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH)):
+    if not invokerc("dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH)):
         logger.warning("Failed to create pacemaker authkey: {}".format(PCMK_REMOTE_AUTH))
     utils.chown(PCMK_REMOTE_AUTH, _context.current_user, "haclient")
     utils.chmod(PCMK_REMOTE_AUTH, 0o640)
