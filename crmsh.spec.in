@@ -52,7 +52,7 @@ Requires:       %{name}-scripts >= %{version}-%{release}
 Requires:       /usr/bin/which
 Requires:       python3 >= 3.4
 Requires:       python3-lxml
-Requires:       python3-parallax
+Requires:       python3-parallax >= 1.0.8
 Requires:       python3-python-dateutil
 BuildRequires:  python3-lxml
 BuildRequires:  python3-setuptools
