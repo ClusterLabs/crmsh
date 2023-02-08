@@ -67,8 +67,8 @@ def test_check_file_content_included(mock_detect, mock_run):
         mock.call("file2", remote=None)
         ])
     mock_run.assert_has_calls([
-        mock.call("sudo cat file2", remote=None),
-        mock.call("sudo cat file1", remote=None)
+        mock.call("cat file2", remote=None),
+        mock.call("cat file1", remote=None)
         ])
 
 
@@ -491,8 +491,8 @@ def test_detect_aws_false(mock_run):
     mock_run.side_effect = ["test", "test"]
     assert utils.detect_aws() is False
     mock_run.assert_has_calls([
-        mock.call("sudo dmidecode -s system-version"),
-        mock.call("sudo dmidecode -s system-manufacturer")
+        mock.call("dmidecode -s system-version"),
+        mock.call("dmidecode -s system-manufacturer")
         ])
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -500,8 +500,8 @@ def test_detect_aws_xen(mock_run):
     mock_run.side_effect = ["4.2.amazon", "Xen"]
     assert utils.detect_aws() is True
     mock_run.assert_has_calls([
-        mock.call("sudo dmidecode -s system-version"),
-        mock.call("sudo dmidecode -s system-manufacturer")
+        mock.call("dmidecode -s system-version"),
+        mock.call("dmidecode -s system-manufacturer")
         ])
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -509,8 +509,8 @@ def test_detect_aws_kvm(mock_run):
     mock_run.side_effect = ["Not Specified", "Amazon EC2"]
     assert utils.detect_aws() is True
     mock_run.assert_has_calls([
-        mock.call("sudo dmidecode -s system-version"),
-        mock.call("sudo dmidecode -s system-manufacturer")
+        mock.call("dmidecode -s system-version"),
+        mock.call("dmidecode -s system-manufacturer")
         ])
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -518,8 +518,8 @@ def test_detect_azure_false(mock_run):
     mock_run.side_effect = ["test", "test"]
     assert utils.detect_azure() is False
     mock_run.assert_has_calls([
-        mock.call("sudo dmidecode -s system-manufacturer"),
-        mock.call("sudo dmidecode -s chassis-asset-tag")
+        mock.call("dmidecode -s system-manufacturer"),
+        mock.call("dmidecode -s chassis-asset-tag")
         ])
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
@@ -529,8 +529,8 @@ def test_detect_azure_microsoft_corporation(mock_run, mock_request):
     mock_request.return_value = "data"
     assert utils.detect_azure() is True
     mock_run.assert_has_calls([
-        mock.call("sudo dmidecode -s system-manufacturer"),
-        mock.call("sudo dmidecode -s chassis-asset-tag")
+        mock.call("dmidecode -s system-manufacturer"),
+        mock.call("dmidecode -s chassis-asset-tag")
         ])
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
@@ -540,15 +540,15 @@ def test_detect_azure_chassis(mock_run, mock_request):
     mock_request.return_value = "data"
     assert utils.detect_azure() is True
     mock_run.assert_has_calls([
-        mock.call("sudo dmidecode -s system-manufacturer"),
-        mock.call("sudo dmidecode -s chassis-asset-tag")
+        mock.call("dmidecode -s system-manufacturer"),
+        mock.call("dmidecode -s chassis-asset-tag")
         ])
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
 def test_detect_gcp_false(mock_run):
     mock_run.return_value = "test"
     assert utils.detect_gcp() is False
-    mock_run.assert_called_once_with("sudo dmidecode -s bios-vendor")
+    mock_run.assert_called_once_with("dmidecode -s bios-vendor")
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -556,7 +556,7 @@ def test_detect_gcp(mock_run, mock_request):
     mock_run.return_value = "Google instance"
     mock_request.return_value = "data"
     assert utils.detect_gcp() is True
-    mock_run.assert_called_once_with("sudo dmidecode -s bios-vendor")
+    mock_run.assert_called_once_with("dmidecode -s bios-vendor")
 
 @mock.patch("crmsh.utils.is_program")
 def test_detect_cloud_no_cmd(mock_is_program):

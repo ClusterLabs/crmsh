@@ -756,8 +756,8 @@ class TestBootstrap(unittest.TestCase):
     def test_csync2_update_no_conflicts(self, mock_invoke, mock_invokerc):
         mock_invokerc.return_value = True
         bootstrap.csync2_update("/etc/corosync.conf")
-        mock_invoke.assert_called_once_with("sudo csync2 -rm /etc/corosync.conf")
-        mock_invokerc.assert_called_once_with("sudo csync2 -rxv /etc/corosync.conf")
+        mock_invoke.assert_called_once_with("csync2 -rm /etc/corosync.conf")
+        mock_invokerc.assert_called_once_with("csync2 -rxv /etc/corosync.conf")
 
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.bootstrap.invokerc')
@@ -766,12 +766,12 @@ class TestBootstrap(unittest.TestCase):
         mock_invokerc.side_effect = [False, False]
         bootstrap.csync2_update("/etc/corosync.conf")
         mock_invoke.assert_has_calls([
-            mock.call("sudo csync2 -rm /etc/corosync.conf"),
-            mock.call("sudo csync2 -rf /etc/corosync.conf")
+            mock.call("csync2 -rm /etc/corosync.conf"),
+            mock.call("csync2 -rf /etc/corosync.conf")
             ])
         mock_invokerc.assert_has_calls([
-            mock.call("sudo csync2 -rxv /etc/corosync.conf"),
-            mock.call("sudo csync2 -rxv /etc/corosync.conf")
+            mock.call("csync2 -rxv /etc/corosync.conf"),
+            mock.call("csync2 -rxv /etc/corosync.conf")
             ])
         mock_warn.assert_called_once_with("/etc/corosync.conf was not synced")
 

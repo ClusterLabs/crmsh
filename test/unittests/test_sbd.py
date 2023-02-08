@@ -87,7 +87,7 @@ class TestSBDTimeout(unittest.TestCase):
         with self.assertRaises(ValueError) as err:
             sbd.SBDTimeout.get_sbd_msgwait("/dev/sda1")
         self.assertEqual("Cannot get sbd msgwait for /dev/sda1", str(err.exception))
-        mock_run.assert_called_once_with("sudo sbd -d /dev/sda1 dump")
+        mock_run.assert_called_once_with("sbd -d /dev/sda1 dump")
 
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     def test_get_sbd_msgwait(self, mock_run):
@@ -98,7 +98,7 @@ class TestSBDTimeout(unittest.TestCase):
         """
         res = sbd.SBDTimeout.get_sbd_msgwait("/dev/sda1")
         assert res == 10
-        mock_run.assert_called_once_with("sudo sbd -d /dev/sda1 dump")
+        mock_run.assert_called_once_with("sbd -d /dev/sda1 dump")
 
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
     def test_get_sbd_watchdog_timeout_exception(self, mock_get):
@@ -500,8 +500,8 @@ class TestSBDManager(unittest.TestCase):
             self.sbd_inst._initialize_sbd()
 
         mock_invoke.assert_has_calls([
-            mock.call("sudo sbd -4 10 -1 5 -d /dev/sdb1 create"),
-            mock.call("sudo sbd -4 10 -1 5 -d /dev/sdc1 create")
+            mock.call("sbd -4 10 -1 5 -d /dev/sdb1 create"),
+            mock.call("sbd -4 10 -1 5 -d /dev/sdc1 create")
             ])
         mock_error.assert_called_once_with("Failed to initialize SBD device /dev/sdc1: error")
 
@@ -591,7 +591,7 @@ class TestSBDManager(unittest.TestCase):
         mock_update.assert_not_called()
         mock_watchdog.assert_called_once_with(_input=None)
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
-        mock_invoke.assert_called_once_with("sudo systemctl disable sbd.service")
+        mock_invoke.assert_called_once_with("systemctl disable sbd.service")
  
     @mock.patch('crmsh.sbd.SBDManager._enable_sbd_service')
     @mock.patch('crmsh.sbd.SBDManager._warn_diskless_sbd')
@@ -658,7 +658,7 @@ class TestSBDManager(unittest.TestCase):
     def test_enable_sbd_service_init(self, mock_invoke):
         self.sbd_inst._context = mock.Mock(cluster_is_running=False)
         self.sbd_inst._enable_sbd_service()
-        mock_invoke.assert_called_once_with("sudo systemctl enable sbd.service")
+        mock_invoke.assert_called_once_with("systemctl enable sbd.service")
 
     @mock.patch('crmsh.sbd.SBDManager._restart_cluster_and_configure_sbd_ra')
     @mock.patch('crmsh.utils.cluster_run_cmd')
@@ -713,7 +713,7 @@ class TestSBDManager(unittest.TestCase):
         self.sbd_inst.join_sbd("alice", "node1")
         mock_package.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_called_once_with("sudo systemctl disable sbd.service")
+        mock_invoke.assert_called_once_with("systemctl disable sbd.service")
 
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.utils.service_is_enabled')
@@ -728,7 +728,7 @@ class TestSBDManager(unittest.TestCase):
 
         mock_package.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_called_once_with("sudo systemctl disable sbd.service")
+        mock_invoke.assert_called_once_with("systemctl disable sbd.service")
         mock_enabled.assert_called_once_with("sbd.service", "node1")
 
     @mock.patch('logging.Logger.info')
@@ -752,7 +752,7 @@ class TestSBDManager(unittest.TestCase):
 
         mock_package.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_called_once_with("sudo systemctl enable sbd.service")
+        mock_invoke.assert_called_once_with("systemctl enable sbd.service")
         mock_get_device.assert_called_once_with()
         mock_verify.assert_called_once_with(["/dev/sdb1"], ["node1"])
         mock_enabled.assert_called_once_with("sbd.service", "node1")
@@ -782,7 +782,7 @@ class TestSBDManager(unittest.TestCase):
 
         mock_package.assert_called_once_with("sbd")
         mock_exists.assert_called_once_with("/etc/sysconfig/sbd")
-        mock_invoke.assert_called_once_with("sudo systemctl enable sbd.service")
+        mock_invoke.assert_called_once_with("systemctl enable sbd.service")
         mock_get_device.assert_called_once_with()
         mock_warn.assert_called_once_with("node1")
         mock_enabled.assert_called_once_with("sbd.service", "node1")
@@ -827,7 +827,7 @@ class TestSBDManager(unittest.TestCase):
         with self.assertRaises(ValueError) as err:
             self.sbd_inst._get_device_uuid("/dev/sdb1")
         self.assertEqual("Cannot find sbd device UUID for /dev/sdb1", str(err.exception))
-        mock_run.assert_called_once_with("sudo sbd -d /dev/sdb1 dump", remote=None)
+        mock_run.assert_called_once_with("sbd -d /dev/sdb1 dump", remote=None)
 
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     def test_get_device_uuid(self, mock_run):
@@ -846,7 +846,7 @@ class TestSBDManager(unittest.TestCase):
         mock_run.return_value = output
         res = self.sbd_inst._get_device_uuid("/dev/sda1", node="node1")
         self.assertEqual(res, "a2e9a92c-cc72-4ef9-ac55-ccc342f3546b")
-        mock_run.assert_called_once_with("sudo sbd -d /dev/sda1 dump", remote="node1")
+        mock_run.assert_called_once_with("sbd -d /dev/sda1 dump", remote="node1")
 
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_from_config')
     @mock.patch('crmsh.utils.service_is_active')
