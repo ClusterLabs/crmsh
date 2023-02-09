@@ -1744,9 +1744,13 @@ def test_has_sudo_access(mock_run):
     mock_run.assert_called_once_with("sudo -S -k -n id -u")
 
 
+@mock.patch('grp.getgrgid')
 @mock.patch('os.getgroups')
-def test_in_haclient(mock_group):
+def test_in_haclient(mock_group, mock_getgrgid):
     mock_group.return_value = [90, 100]
+    mock_getgrgid_inst1 = mock.Mock(gr_name=constants.HA_GROUP)
+    mock_getgrgid_inst2 = mock.Mock(gr_name="other")
+    mock_getgrgid.side_effect = [mock_getgrgid_inst1, mock_getgrgid_inst2]
     assert utils.in_haclient() is True
     mock_group.assert_called_once_with()
 
