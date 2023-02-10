@@ -218,11 +218,6 @@ create_alice_bob_carol() {
 	create_custom_user "alice" "1000"
 	create_custom_user "bob" "1001"
 	create_custom_user "carol" "1002"
-
-	# I think /var/log/crmsh used to be hacluster:haclient
-	# Let's make it here again anyway. (This is a workarout, please FIXME!)
-	docker_exec $node_name "chown hacluster:haclient -R /var/log/crmsh"
-	docker_exec $node_name "chmod g+w -R /var/log/crmsh"
 }
 
 deploy_ha_node() {
@@ -248,6 +243,8 @@ deploy_ha_node() {
 	  info "Building crmsh on \"$node_name\"..."
 	  docker_exec $node_name "$make_cmd" 1> /dev/null || \
 		fatal "Building failed on $node_name!"
+	  docker_exec $node_name "chown hacluster:haclient -R /var/log/crmsh"
+	  docker_exec $node_name "chmod g+w -R /var/log/crmsh"
 	  if [ "$NORMAL_USER_FLAG" -eq 1 ];then
 		create_alice_bob_carol
 		set_sshd_config_like_in_azure $node_name
@@ -512,7 +509,7 @@ for case_num in $*;do
 		docker_exec ${node_arry[0]} "behave --no-logcapture $case_file_in_container || exit 1" || exit 1
 	else
 		info "Running \"$case_file_in_container\" under normal user 'alice'..."
-		docker_exec ${node_arry[0]} "su - alice -c 'behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
+		docker_exec ${node_arry[0]} "su - alice -c 'sudo behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
 	fi
 	echo
 done

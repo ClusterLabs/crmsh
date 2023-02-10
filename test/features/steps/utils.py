@@ -1,4 +1,3 @@
-import getpass
 import difflib
 import tarfile
 import glob
@@ -39,13 +38,6 @@ def me():
     return socket.gethostname()
 
 
-def add_sudo(cmd):
-    user = getpass.getuser()
-    if user != 'root':
-        cmd = "sudo {}".format(cmd)
-    return cmd
-
-
 def _wrap_cmd_non_root(cmd):
     """
     When running command under sudoer, or the current user is not root,
@@ -68,7 +60,7 @@ def _wrap_cmd_non_root(cmd):
 
 def run_command(context, cmd, exit_on_fail=True):
     cmd = _wrap_cmd_non_root(cmd)
-    rc, out, err = utils.get_stdout_stderr(add_sudo(cmd))
+    rc, out, err = utils.get_stdout_stderr(cmd)
     context.return_code = rc
     if out:
         out = re.sub(COLOR_MODE, '', out)
@@ -85,7 +77,6 @@ def run_command(context, cmd, exit_on_fail=True):
 
 
 def run_command_local_or_remote(context, cmd, addr, exit_on_fail=True):
-    cmd = add_sudo(cmd)
     if addr == me():
         return run_command(context, cmd, exit_on_fail)
     else:
@@ -136,7 +127,7 @@ def is_unclean(node):
 
 def online(context, nodelist):
     rc = True
-    _, out = utils.get_stdout("crm_node -l")
+    _, out = utils.get_stdout("sudo crm_node -l")
     for node in nodelist.split():
         node_info = "{} member".format(node)
         if not node_info in out:
