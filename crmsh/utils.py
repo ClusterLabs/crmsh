@@ -3382,13 +3382,13 @@ def check_user_access(level_name):
             hints = f"""Please run this command starting with "sudo".
 Currently, this command needs to use sudo to escalate itself as root.
 Please consider to add "{current_user}" as sudoer. For example:
-  echo "{current_user} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/{current_user}"""
+  sudo bash -c 'echo "{current_user} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/{current_user}'"""
         else:
             hints = f"""This command needs higher privilege.
 Option 1) Please consider to add "{current_user}" as sudoer. For example:
-  echo "{current_user} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/{current_user}
+  sudo bash -c 'echo "{current_user} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/{current_user}'
 Option 2) Add "{current_user}" to the haclient group. For example:
-  usermod -g haclient {current_user}"""
+  sudo usermod -g haclient {current_user}"""
         logger.error(hints)
     else:
         logger.error("Please run this command starting with \"sudo\"")
