@@ -11,7 +11,7 @@ import datetime
 import shutil
 
 from crmsh import utils as crmutils
-from crmsh import config, log
+from crmsh import config, log, userdir
 from crmsh.report import constants, utillib
 
 
@@ -271,9 +271,10 @@ def run():
                 constants.SSH_OPTS += " -o User=%s" % constants.SSH_USER
         # assume that only root can collect data
         if ((not constants.SSH_USER) and (os.getuid() not in [0, 90])) or \
-           constants.SSH_USER and constants.SSH_USER not in ["root", "hacluster"]:
+           constants.SSH_USER and constants.SSH_USER not in ["root", "hacluster"] or \
+           userdir.get_sudoer():
             logger.debug("ssh user other than root, use sudo")
-            constants.SUDO = "sudo -u root"
+            constants.SUDO = "sudo"
         if os.getuid() != 0:
             logger.debug("local user other than root, use sudo")
             constants.LOCAL_SUDO = "sudo -u root"

@@ -23,7 +23,7 @@ from inspect import getmembers, isfunction
 
 import crmsh.config
 from crmsh import utils as crmutils
-from crmsh import corosync, log
+from crmsh import corosync, log, userdir
 from crmsh.report import constants, collect
 
 
@@ -625,15 +625,19 @@ def find_log():
 def find_ssh_user():
     ssh_user = "__undef"
     if not constants.SSH_USER:
-        try_user_list = "__default " + constants.TRY_SSH
+        try_user_str = "__default " + constants.TRY_SSH
     else:
-        try_user_list = constants.SSH_USER
+        try_user_str = constants.SSH_USER
+
+    sudoer = userdir.get_sudoer()
+    if sudoer:
+        try_user_str = f"{sudoer} {try_user_str}"
 
     for n in constants.NODES.split():
         rc = 1
         if n == constants.WE:
             continue
-        for u in try_user_list.split():
+        for u in try_user_str.split():
             if u != '__default':
                 ssh_s = '@'.join((u, n))
             else:
@@ -642,7 +646,7 @@ def find_ssh_user():
             if test_ssh_conn(ssh_s):
                 logger.debug("ssh %s OK", ssh_s)
                 ssh_user = u
-                try_user_list = u
+                try_user_str = u
                 rc = 0
                 break
             else:
@@ -1367,6 +1371,8 @@ def start_slave_collector(node, arg_str):
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
     else:
+        sudoer = userdir.get_sudoer()
+        node = f"{sudoer}@{node}" if sudoer else node
         cmd = r'ssh {} {} "{} {}"'.format(constants.SSH_OPTS, node, constants.SUDO, cmd)
         for item in arg_str.split():
             cmd += " {}".format(str(item))
