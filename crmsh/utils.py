@@ -3,6 +3,7 @@
 
 import errno
 import os
+import socket
 import sys
 import typing
 from tempfile import mkstemp
@@ -105,19 +106,48 @@ def nogc():
 getuser = userdir.getuser
 gethomedir = userdir.gethomedir
 
-def user_of(host):
-    hosts = config.get_option('core', 'hosts')
-    if hosts == ['']:
-        return userdir.getuser()
-    for item in hosts:
-        if item.find('@') != -1:
-            user, node = item.split('@')
+
+class UserOfHost:
+    def __init__(self):
+        self._cache = dict()
+
+    def user_of(self, host):
+        cached = self._cache.get(host)
+        if cached is None:
+            ret = self._user_of_impl(host)
+            if ret is None:
+                return userdir.getuser()
+            else:
+                self._cache[host] = ret
+                return ret
         else:
-            user = userdir.getuser()
-            node = item
-        if host == node:
-            return user
-    raise ValueError('Failed to get user of host {}: {}'.format(host, hosts))
+            return cached
+
+    @staticmethod
+    def _user_of_impl(host):
+        canonical, aliases, _ = socket.gethostbyaddr(host)
+        aliases = set(aliases)
+        aliases.add(canonical)
+        aliases.add(host)
+        hosts = config.get_option('core', 'hosts')
+        if hosts == ['']:
+            return None
+        for item in hosts:
+            if item.find('@') != -1:
+                user, node = item.split('@')
+            else:
+                user = userdir.getuser()
+                node = item
+            if node in aliases:
+                return user
+        raise ValueError('Failed to get user of host {}({}): known hosts: {}'.format(host, aliases, hosts))
+
+
+_user_of_host_instance = UserOfHost()
+
+
+def user_of(host):
+    return _user_of_host_instance.user_of(host)
 
 
 @memoize
