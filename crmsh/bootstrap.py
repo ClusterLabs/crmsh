@@ -937,7 +937,7 @@ def _load_core_hosts() -> typing.Optional[typing.Tuple[typing.List[str], typing.
     return users, hosts
 
 
-def _fetch_core_host(local_user, remote_user, remote_host) -> typing.Tuple[typing.List[str], typing.List[str]]:
+def _fetch_core_hosts(local_user, remote_user, remote_host) -> typing.Tuple[typing.List[str], typing.List[str]]:
     # FIXME: when the remote_host is initialized with -d, this cmd will print extra debug log to stdout
     cmd = 'crm options show core.hosts'
     result = utils.su_subprocess_run(
@@ -1036,8 +1036,8 @@ def generate_ssh_key_pair_on_remote(
     # pass cmd through stdin rather than as arguments. It seems sudo has its own argument parsing mechanics,
     # which breaks shell expansion used in cmd
     cmd = '''
-    [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
-    '''
+[ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
+'''
     result = utils.su_subprocess_run(
         local_sudoer,
         'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote_host, remote_user),
@@ -1945,7 +1945,7 @@ def setup_passwordless_with_other_nodes(init_node):
                      tokens[1], tokens[2]))
         else:
             cluster_nodes_list.append(tokens[1])
-    user_list, host_list = _fetch_core_host(local_user, remote_user, init_node)
+    user_list, host_list = _fetch_core_hosts(local_user, remote_user, init_node)
     user_list.append(local_user)
     host_list.append(utils.this_node())
     _save_core_hosts(user_list, host_list, sync_to_remote=False)

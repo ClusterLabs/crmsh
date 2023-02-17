@@ -51,7 +51,7 @@ class TestParallax(unittest.TestCase):
         self.assertEqual(result, mock_handle.return_value)
 
         mock_userof.assert_called_once_with("node1")
-        mock_call.assert_called_once_with([["node1", None, "alice"]], "ls", self.parallax_call_instance.opts)
+        mock_call.assert_called_once_with([["node1", None, "alice"]], "sudo ls", self.parallax_call_instance.opts)
         mock_handle.assert_called_once_with(list(mock_call.return_value.items()))
 
     @mock.patch("parallax.Error")
@@ -69,7 +69,7 @@ class TestParallax(unittest.TestCase):
         self.assertEqual("error happen", str(err.exception))
 
         mock_userof.assert_called_once_with("node1")
-        mock_call.assert_called_once_with([["node1", None, "alice"]], "ls", self.parallax_call_instance.opts)
+        mock_call.assert_called_once_with([["node1", None, "alice"]], "sudo ls", self.parallax_call_instance.opts)
         mock_handle.assert_called_once_with(list(mock_call.return_value.items()))
 
     @mock.patch("crmsh.parallax.Parallax.handle")

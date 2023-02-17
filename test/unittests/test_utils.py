@@ -8,6 +8,7 @@ import os
 import socket
 import re
 import imp
+import subprocess
 import unittest
 import pytest
 import logging
@@ -133,12 +134,15 @@ def test_get_nodeid_from_name(mock_get_stdout, mock_re_search):
     mock_re_search_inst.group.assert_called_once_with(1)
 
 
-@mock.patch('crmsh.utils.get_stdout_stderr')
-def test_check_ssh_passwd_need(mock_run):
-    mock_run.return_value = (1, None, None)
+@mock.patch('crmsh.utils.su_get_stdout_stderr')
+def test_check_ssh_passwd_need(mock_su_get_stdout_stderr):
+    mock_su_get_stdout_stderr.return_value = (1, None, None)
     res = utils.check_ssh_passwd_need("bob", "alice", "node1")
     assert res is True
-    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -i ~bob/.ssh/id_rsa.pub -T -o Batchmode=yes alice@node1 true")
+    mock_su_get_stdout_stderr.assert_called_once_with(
+        "bob",
+        "ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes alice@node1 true",
+    )
 
 
 @mock.patch('logging.Logger.debug')
@@ -174,21 +178,6 @@ def test_cluster_run_cmd_exception(mock_list_nodes):
         utils.cluster_run_cmd("test")
     assert str(err.value) == "Failed to get node list from cluster"
     mock_list_nodes.assert_called_once_with()
-
-
-@mock.patch('parallax.call')
-@mock.patch('crmsh.utils.list_cluster_nodes')
-@mock.patch('crmsh.utils.user_of')
-def test_cluster_run_cmd(mock_userof, mock_list_nodes, mock_parallax_call):
-    mock_userof.side_effect = ["alice", "bob"]
-    mock_list_nodes.return_value = ["node1", "node2"]
-    utils.cluster_run_cmd("test")
-    mock_list_nodes.assert_called_once_with()
-    mock_userof.assert_has_calls([
-        mock.call("node1"),
-        mock.call("node2"),
-    ])
-    mock_parallax_call.assert_called_once_with([["node1", None, "alice"], ["node2", None, "bob"]], "test", mock.ANY)
 
 
 @mock.patch('crmsh.utils.list_cluster_nodes')
@@ -1138,23 +1127,185 @@ def test_calculate_quorate_status():
     assert utils.calculate_quorate_status(3, 1) is False
 
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
-def test_get_stdout_or_raise_error_failed(mock_run):
-    mock_run.return_value = (1, None, "error data")
-    with pytest.raises(ValueError) as err:
-        utils.get_stdout_or_raise_error("cmd")
-    assert str(err.value) == 'Failed to run "cmd": error data'
-    mock_run.assert_called_once_with("cmd", no_reg=True)
+@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("subprocess.run")
+def test_get_stdout_or_raise_error_local(
+        mock_subprocess_run: mock.MagicMock,
+        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
+):
+    mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+    out = utils.get_stdout_or_raise_error("foo")
+    mock_subprocess_run.assert_called_once_with(
+        ['/bin/sh'],
+        input=b'foo',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    mock_subprocess_run_auto_ssh_no_input.assert_not_called()
+    assert "bar" == out
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
-@mock.patch("crmsh.utils.user_of")
-def test_get_stdout_or_raise_error(mock_userof, mock_run):
-    mock_userof.return_value = "alice"
-    mock_run.return_value = (0, "output data", None)
-    res = utils.get_stdout_or_raise_error("cmd", remote="node1")
-    assert res == "output data"
-    mock_userof.assert_called_once_with("node1")
-    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no alice@node1 \"cmd\"", no_reg=True)
+
+@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("subprocess.run")
+def test_get_stdout_or_raise_error_local_failure(
+        mock_subprocess_run: mock.MagicMock,
+        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
+):
+    mock_subprocess_run.return_value = mock.Mock(returncode=1, stdout=b'bar', stderr=b'err')
+    exception = None
+    try:
+        out = utils.get_stdout_or_raise_error("foo")
+    except ValueError as e:
+        exception = e
+
+    mock_subprocess_run.assert_called_once_with(
+        ['/bin/sh'],
+        input=b'foo',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    mock_subprocess_run_auto_ssh_no_input.assert_not_called()
+    assert isinstance(exception, ValueError)
+
+
+@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("subprocess.run")
+def test_get_stdout_or_raise_error_local_failure_no_raise(
+        mock_subprocess_run: mock.MagicMock,
+        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
+):
+    mock_subprocess_run.return_value = mock.Mock(returncode=1, stdout=b'bar', stderr=b'err')
+    out = utils.get_stdout_or_raise_error("foo", no_raise=True)
+
+    mock_subprocess_run.assert_called_once_with(
+        ['/bin/sh'],
+        input=b'foo',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    mock_subprocess_run_auto_ssh_no_input.assert_not_called()
+    assert "bar" == out
+
+
+@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("subprocess.run")
+def test_get_stdout_or_raise_error_remote(
+        mock_subprocess_run: mock.MagicMock,
+        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
+):
+    mock_subprocess_run_auto_ssh_no_input.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+    out = utils.get_stdout_or_raise_error("foo", 'node1')
+    mock_subprocess_run.assert_not_called()
+    mock_subprocess_run_auto_ssh_no_input.assert_called_once_with(
+        "foo",
+        'node1',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert "bar" == out
+
+
+class TestSubprocessRunUtils(unittest.TestCase):
+    @mock.patch("subprocess.run")
+    def test_subprocess_run_auto_ssh_no_input_local_no_su(self, mock_subprocess_run):
+        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.subprocess_run_auto_ssh_no_input("foo", stderr=subprocess.DEVNULL)
+        mock_subprocess_run.assert_called_once_with(['/bin/sh'], input=b'foo', stderr=subprocess.DEVNULL)
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
+
+    @mock.patch("subprocess.run")
+    def test_subprocess_run_auto_ssh_no_input_local_su(self, mock_subprocess_run):
+        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.subprocess_run_auto_ssh_no_input("foo", user="alice", stderr=subprocess.DEVNULL)
+        mock_subprocess_run.assert_called_once_with(
+            ['sudo', '-H', '-u', 'alice', '/bin/sh'],
+            input=b'foo',
+            stderr=subprocess.DEVNULL,
+        )
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
+
+    @mock.patch("crmsh.utils.this_node")
+    @mock.patch("crmsh.utils.user_of")
+    @mock.patch("crmsh.utils.su_subprocess_run")
+    @mock.patch("subprocess.run")
+    def test_subprocess_run_auto_ssh_no_input_remote_no_user(
+            self,
+            mock_subprocess_run: mock.MagicMock,
+            mock_su_subprocess_run: mock.MagicMock,
+            mock_user_of: mock.MagicMock,
+            mock_this_node: mock.MagicMock,
+    ):
+        mock_this_node.return_value = 'node1'
+        mock_user_of.return_value = 'alice'
+        mock_su_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.subprocess_run_auto_ssh_no_input("foo", "node2", stderr=subprocess.DEVNULL)
+        mock_user_of.assert_has_calls([
+            mock.call('node1'),
+            mock.call('node2'),
+        ], any_order=True)
+        mock_subprocess_run.assert_not_called()
+        mock_su_subprocess_run.assert_called_once_with(
+            'alice',
+            'ssh -o StrictHostKeyChecking=no alice@node2 sudo -H -u root /bin/sh',
+            input=b'foo',
+            stderr=subprocess.DEVNULL,
+        )
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
+
+    @mock.patch("os.geteuid")
+    @mock.patch("crmsh.userdir.getuser")
+    @mock.patch("subprocess.run")
+    def test_su_subprocess_run(
+            self,
+            mock_subprocess_run: mock.MagicMock,
+            mock_get_user: mock.MagicMock,
+            mock_geteuid: mock.MagicMock,
+    ):
+        mock_geteuid.return_value = 0
+        mock_get_user.return_value = 'root'
+        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.su_subprocess_run('alice', 'foo')
+        mock_subprocess_run.assert_called_once_with(
+            ['su', 'alice', '--login', '-c', 'foo']
+        )
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
+
+    @mock.patch("os.geteuid")
+    @mock.patch("crmsh.userdir.getuser")
+    @mock.patch("subprocess.run")
+    def test_su_subprocess_run_with_non_root_user(
+            self,
+            mock_subprocess_run: mock.MagicMock,
+            mock_get_user: mock.MagicMock,
+            mock_geteuid: mock.MagicMock,
+    ):
+        mock_geteuid.return_value = 1000
+        mock_get_user.return_value = 'bob'
+        with self.assertRaises(AssertionError):
+            result = utils.su_subprocess_run('alice', 'foo')
+
+    @mock.patch("os.geteuid")
+    @mock.patch("crmsh.userdir.getuser")
+    @mock.patch("subprocess.run")
+    def test_su_subprocess_run_to_self(
+            self,
+            mock_subprocess_run: mock.MagicMock,
+            mock_get_user: mock.MagicMock,
+            mock_geteuid: mock.MagicMock,
+    ):
+        mock_geteuid.return_value = 1000
+        mock_get_user.return_value = 'alice'
+        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.su_subprocess_run('alice', 'foo')
+        mock_subprocess_run.assert_called_once_with(
+            ['/bin/sh', '-c', 'foo'],
+        )
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
 
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")
