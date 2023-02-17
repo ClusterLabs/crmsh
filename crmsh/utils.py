@@ -140,7 +140,8 @@ class UserOfHost:
                 node = item
             if node in aliases:
                 return user
-        raise ValueError('Failed to get user of host {}({}): known hosts: {}'.format(host, aliases, hosts))
+        logger.warning('Failed to get the user of host %s (aliases: %s). Known hosts are %s', host, aliases, hosts)
+        return None
 
 
 _user_of_host_instance = UserOfHost()
