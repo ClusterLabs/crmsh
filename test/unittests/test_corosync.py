@@ -178,48 +178,50 @@ def test_query_qnetd_status_no_host(mock_qdevice_configured, mock_get_value):
 
 
 @mock.patch('crmsh.utils.user_of')
-@mock.patch('crmsh.utils.getuser')
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.parallax.parallax_call")
+@mock.patch("crmsh.utils.ssh_copy_id")
 @mock.patch("crmsh.utils.check_ssh_passwd_need")
 @mock.patch("crmsh.corosync.get_value")
 @mock.patch("crmsh.utils.is_qdevice_configured")
 def test_query_qnetd_status_copy_id_failed(mock_qdevice_configured,
-        mock_get_value, mock_check_passwd, mock_run, mock_getuser, mock_userof):
-    mock_getuser.return_value = "bob"
-    mock_userof.return_value = "alice"
+        mock_get_value, mock_check_passwd, mock_ssh_copy_id, mock_parallax_call, mock_userof):
+    mock_userof.side_effect = [
+        "alice",
+        "root",
+    ]
+    mock_parallax_call.side_effect = ValueError("Failed on 10.10.10.123: foo")
     mock_qdevice_configured.return_value = True
     mock_get_value.side_effect = ["hacluster", "10.10.10.123"]
     mock_check_passwd.return_value = True
-    mock_run.return_value = [1, None, "error"]
     with pytest.raises(ValueError) as err:
         corosync.query_qnetd_status()
-    assert str(err.value) == "error"
+    assert err.value.args[0] == "Failed on 10.10.10.123: foo"
     mock_qdevice_configured.assert_called_once_with()
     mock_get_value.assert_has_calls([
         mock.call("totem.cluster_name"),
         mock.call("quorum.device.net.host")
         ])
-    mock_check_passwd.assert_called_once_with("bob", "alice", "10.10.10.123")
-    mock_run.assert_called_once_with("ssh-copy-id -i ~bob/.ssh/id_rsa.pub root@10.10.10.123")
+    mock_check_passwd.assert_called_once_with("alice", "root", "10.10.10.123")
+    mock_ssh_copy_id.assert_called_once_with('alice', 'root', '10.10.10.123')
 
 
 @mock.patch('crmsh.utils.user_of')
-@mock.patch('crmsh.utils.getuser')
 @mock.patch("crmsh.utils.print_cluster_nodes")
 @mock.patch("crmsh.parallax.parallax_call")
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.utils.ssh_copy_id")
 @mock.patch("crmsh.utils.check_ssh_passwd_need")
 @mock.patch("crmsh.corosync.get_value")
 @mock.patch("crmsh.utils.is_qdevice_configured")
 def test_query_qnetd_status_copy(mock_qdevice_configured, mock_get_value,
-        mock_check_passwd, mock_run, mock_parallax_call, mock_print_nodes,
-        mock_getuser, mock_userof):
-    mock_getuser.return_value = "bob"
-    mock_userof.return_value = "alice"
+        mock_check_passwd, mock_ssh_copy_id, mock_parallax_call, mock_print_nodes,
+        mock_userof):
+    mock_userof.side_effect = [
+        "alice",
+        "root",
+    ]
     mock_qdevice_configured.return_value = True
     mock_get_value.side_effect = ["hacluster", "10.10.10.123"]
     mock_check_passwd.return_value = True
-    mock_run.return_value = [0, "data", None]
     mock_parallax_call.return_value = [("node1", (0, "data", None)), ]
 
     corosync.query_qnetd_status()
@@ -229,8 +231,8 @@ def test_query_qnetd_status_copy(mock_qdevice_configured, mock_get_value,
         mock.call("totem.cluster_name"),
         mock.call("quorum.device.net.host")
         ])
-    mock_check_passwd.assert_called_once_with("bob", "alice", "10.10.10.123")
-    mock_run.assert_called_once_with("ssh-copy-id -i ~bob/.ssh/id_rsa.pub root@10.10.10.123")
+    mock_check_passwd.assert_called_once_with("alice", "root", "10.10.10.123")
+    mock_ssh_copy_id.assert_called_once_with('alice', 'root', '10.10.10.123')
     mock_parallax_call.assert_called_once_with(["10.10.10.123"], "corosync-qnetd-tool -lv -c hacluster")
     mock_print_nodes.assert_called_once_with()
 

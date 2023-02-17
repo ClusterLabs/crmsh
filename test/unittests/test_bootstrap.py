@@ -165,6 +165,7 @@ class TestContext(unittest.TestCase):
         options = mock.Mock(admin_ip="10.10.10.123", qdevice_inst=mock.Mock())
         ctx = self.ctx_inst.set_context(options)
         ctx._validate_sbd_option = mock.Mock()
+        ctx._validate_nodes_option = mock.Mock()
         ctx.validate_option()
         mock_admin_ip.assert_called_once_with("10.10.10.123")
         ctx.qdevice_inst.valid_qdevice_options.assert_called_once_with()
@@ -366,25 +367,35 @@ class TestBootstrap(unittest.TestCase):
         mock_nologin.assert_called_once_with("hacluster")
         mock_invoke.assert_called_once_with("usermod -s /bin/bash hacluster")
 
-    @mock.patch('subprocess.run')
-    def test_configure_ssh_key_on_remote(self, mock_run: mock.MagicMock):
-        mock_run.return_value = mock.Mock(returncode=0, stdout=b'')
-        bootstrap.configure_ssh_key_on_remote("node1", "alice", "hacluster")
-        mock_run.assert_called_once_with(
-            ['ssh', '-o', 'StrictHostKeyChecking=no', 'alice@node1', 'sudo', '-H', '-u', 'hacluster', '/bin/sh'],
-            input='''
-    [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
-    '''.encode('utf-8'),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
+    @mock.patch('crmsh.utils.su_subprocess_run')
+    def test_generate_ssh_key_pair_on_remote(self, mock_su: mock.MagicMock):
+        mock_su.return_value = mock.Mock(returncode=0, stdout=b'')
+        bootstrap.generate_ssh_key_pair_on_remote('local_sudoer', 'remote_host', 'remote_sudoer', 'remote_user')
+        mock_su.assert_has_calls([
+            mock.call(
+                'local_sudoer',
+                'ssh -o StrictHostKeyChecking=no remote_sudoer@remote_host sudo -H -u remote_user /bin/sh',
+                input='''
+[ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
+'''.encode('utf-8'),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            ),
+            mock.call(
+                'local_sudoer',
+                'ssh -o StrictHostKeyChecking=no remote_sudoer@remote_host sudo -H -u remote_user /bin/sh',
+                input='cat ~/.ssh/id_rsa.pub'.encode('utf-8'),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ),
+        ])
 
     @mock.patch('crmsh.bootstrap.append_unique')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.utils.su_get_stdout_or_raise_error')
     @mock.patch('crmsh.utils.detect_file')
     @mock.patch('crmsh.bootstrap.key_files')
     @mock.patch('crmsh.bootstrap.change_user_shell')
-    def test_configure_ssh_key(self, mock_change_shell, mock_key_files, mock_detect, mock_run, mock_append_unique):
+    def test_configure_ssh_key(self, mock_change_shell, mock_key_files, mock_detect, mock_su, mock_append_unique):
         mock_key_files.return_value = {"private": "/test/.ssh/id_rsa", "public": "/test/.ssh/id_rsa.pub", "authorized": "/test/.ssh/authorized_keys"}
         mock_detect.side_effect = [True, True, False]
 
@@ -398,7 +409,7 @@ class TestBootstrap(unittest.TestCase):
             mock.call("/test/.ssh/authorized_keys")
             ])
         mock_append_unique.assert_called_once_with("/test/.ssh/id_rsa.pub", "/test/.ssh/authorized_keys", "test")
-        mock_run.assert_called_once_with('touch /test/.ssh/authorized_keys', user="test")
+        mock_su.assert_called_once_with('touch /test/.ssh/authorized_keys', user="test")
 
     @mock.patch('crmsh.bootstrap.append_to_remote_file')
     @mock.patch('crmsh.utils.check_file_content_included')
@@ -456,60 +467,61 @@ class TestBootstrap(unittest.TestCase):
     def test_join_ssh_no_seed_host(self, mock_error):
         mock_error.side_effect = ValueError
         with self.assertRaises(ValueError):
-            bootstrap.join_ssh(None)
+            bootstrap.join_ssh(None, None)
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.utils.su_get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
+    @mock.patch('crmsh.utils.ssh_copy_id')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.start_service')
-    def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_swap, mock_invoke, mock_error):
-        bootstrap._context = mock.Mock(current_user="bob", user_list=["alice"], default_nic_list=["eth1"])
-        mock_invoke.return_value = (False, None, "error")
+    def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_invoke):
+        bootstrap._context = mock.Mock(current_user="bob", user_list=["alice"], node_list=['node1'], default_nic_list=["eth1"])
+        mock_invoke.return_value = ''
         mock_swap.return_value = None
 
-        bootstrap.join_ssh("node1")
+        bootstrap.join_ssh("node1", "alice")
 
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
         mock_config_ssh.assert_has_calls([
                 mock.call("bob"),
                 mock.call("hacluster"),
             ])
+        mock_ssh_copy_id.assert_called_once_with("bob", "alice", "node1")
         mock_swap.assert_has_calls([
-                mock.call("bob", "alice", "alice", "node1", add=True),
-                mock.call("hacluster", "alice", "hacluster", "node1", add=True)
-            ])
-        mock_invoke.assert_called_once_with("ssh {} alice@node1 crm cluster init -i eth1 ssh_remote".format(constants.SSH_OPTION))
-        mock_error.assert_called_once_with("Can't invoke crm cluster init -i eth1 ssh_remote on node1: error")
+                mock.call("node1", "bob", "alice", "bob", "alice", add=True),
+                mock.call("node1", "hacluster", "hacluster", "bob", "alice", add=True),
+        ])
+        mock_invoke.assert_called_once_with(
+            "ssh {} alice@node1 sudo crm cluster init -i eth1 ssh_remote".format(constants.SSH_OPTION),
+            "bob",
+        )
 
     @mock.patch('crmsh.bootstrap.import_ssh_key')
-    @mock.patch('crmsh.bootstrap.export_ssh_key')
+    @mock.patch('crmsh.bootstrap.export_ssh_key_non_interactive')
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     def test_swap_public_ssh_key_exception(self, mock_check_passwd, mock_warn, mock_export_ssh_key, mock_import_ssh):
         mock_check_passwd.return_value = False
         mock_import_ssh.side_effect = ValueError("Can't get the remote id_rsa.pub from {}: {}")
 
-        bootstrap.swap_public_ssh_key("bob", "alice", "alice", "node1")
+        bootstrap.swap_public_ssh_key("node1", "bob", "bob", "alice", "alice")
 
+        mock_check_passwd.assert_called_once_with("bob", "bob", "node1")
+        mock_import_ssh.assert_called_once_with("bob", "bob", "alice", "node1", "alice")
         mock_warn.assert_called_once_with(mock_import_ssh.side_effect)
-        mock_check_passwd.assert_called_once_with("bob", "alice", "node1")
-        mock_import_ssh.assert_called_once_with("bob", "alice", "node1", "alice")
 
     @mock.patch('crmsh.bootstrap.import_ssh_key')
-    @mock.patch('crmsh.bootstrap.export_ssh_key')
-    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.bootstrap.export_ssh_key_non_interactive')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
-    def test_swap_public_ssh_key(self, mock_check_passwd, mock_status, mock_export_ssh, mock_import_ssh):
+    def test_swap_public_ssh_key(self, mock_check_passwd, mock_export_ssh, mock_import_ssh):
         mock_check_passwd.return_value = True
 
-        bootstrap.swap_public_ssh_key("bob", "alice", "alice", "node1")
+        bootstrap.swap_public_ssh_key("node1", "bob", "bob", "alice", "alice")
 
-        mock_check_passwd.assert_called_once_with("bob", "alice", "node1")
-        mock_status.assert_called_once_with("Configuring SSH passwordless with alice@node1")
-        mock_export_ssh.assert_called_once_with("bob", "alice", "alice", "node1")
-        mock_import_ssh.assert_called_once_with("bob", "alice", "node1", "alice")
+        mock_check_passwd.assert_called_once_with("bob", "bob", "node1")
+        mock_export_ssh.assert_called_once_with("bob", "bob", "node1", "alice", "alice")
+        mock_import_ssh.assert_called_once_with("bob", "bob", "alice", "node1", "alice")
 
     @mock.patch('crmsh.utils.this_node')
     def test_bootstrap_add_return(self, mock_this_node):
@@ -517,59 +529,81 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.bootstrap_add(ctx)
         mock_this_node.assert_not_called()
 
-    @mock.patch('crmsh.utils.ext_cmd_nosudo')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.this_node')
-    def test_bootstrap_add(self, mock_this_node, mock_info, mock_ext):
+    def test_bootstrap_add(self, mock_this_node, mock_info, mock_run):
         ctx = mock.Mock(current_user="alice", user_list=["bob", "carol"], node_list=["node2", "node3"], nic_list=["eth1"])
         mock_this_node.return_value = "node1"
         bootstrap.bootstrap_add(ctx)
         mock_info.assert_has_calls([
             mock.call("Adding node node2 to cluster"),
-            mock.call("Running command on node2: crm cluster join -y -c alice@node1 -i eth1"),
+            mock.call("Running command on node2: crm cluster join -y  -i eth1 -c alice@node1"),
             mock.call("Adding node node3 to cluster"),
-            mock.call("Running command on node3: crm cluster join -y -c alice@node1 -i eth1")
+            mock.call("Running command on node3: crm cluster join -y  -i eth1 -c alice@node1")
             ])
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.su_get_stdout_stderr')
     def test_setup_passwordless_with_other_nodes_failed_fetch_nodelist(self, mock_run, mock_error):
-        bootstrap._context = mock.Mock(user_list=["alice"])
+        bootstrap._context = mock.Mock(user_list=["alice"], current_user="carol")
         mock_run.return_value = (1, None, None)
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
             bootstrap.setup_passwordless_with_other_nodes("node1")
 
-        mock_run.assert_called_once_with("ssh {} alice@node1 crm_node -l".format(constants.SSH_OPTION))
+        mock_run.assert_called_once_with('carol', 'ssh {} alice@node1 PATH=\\"\\$PATH\\":/usr/sbin:/sbin crm_node -l'.format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("Can't fetch cluster nodes list from node1: None")
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_setup_passwordless_with_other_nodes_failed_fetch_hostname(self, mock_run, mock_error):
-        bootstrap._context = mock.Mock(user_list=["alice"])
+    @mock.patch('crmsh.bootstrap._save_core_hosts')
+    @mock.patch('crmsh.bootstrap._fetch_core_hosts')
+    @mock.patch('crmsh.utils.su_get_stdout_stderr')
+    def test_setup_passwordless_with_other_nodes_failed_fetch_hostname(
+            self,
+            mock_run,
+            mock_fetch_core_hosts,
+            mock_save_core_hosts,
+            mock_error,
+    ):
+        bootstrap._context = mock.Mock(user_list=["alice"], current_user="carol")
         out_node_list = """1 node1 member
         2 node2 member"""
         mock_run.side_effect = [
                 (0, out_node_list, None),
                 (1, None, None)
                 ]
+        mock_fetch_core_hosts.return_value = (["alice", "bob"], ["node1", "node2"])
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
             bootstrap.setup_passwordless_with_other_nodes("node1")
 
         mock_run.assert_has_calls([
-            mock.call("ssh {} alice@node1 crm_node -l".format(constants.SSH_OPTION)),
-            mock.call("ssh {} alice@node1 hostname".format(constants.SSH_OPTION))
+            mock.call('carol', 'ssh {} alice@node1 PATH=\\"\\$PATH\\":/usr/sbin:/sbin crm_node -l'.format(constants.SSH_OPTION)),
+            mock.call('carol', 'ssh {} alice@node1 hostname'.format(constants.SSH_OPTION))
         ])
         mock_error.assert_called_once_with("Can't fetch hostname of node1: None")
 
+    @mock.patch('crmsh.bootstrap._save_core_hosts')
+    @mock.patch('crmsh.bootstrap._fetch_core_hosts')
+    @mock.patch('crmsh.utils.ssh_copy_id')
     @mock.patch('crmsh.utils.user_of')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_setup_passwordless_with_other_nodes(self, mock_run, mock_swap, mock_userof):
+    @mock.patch('crmsh.utils.su_get_stdout_stderr')
+    def test_setup_passwordless_with_other_nodes(
+            self,
+            mock_run,
+            mock_swap,
+            mock_userof,
+            mock_ssh_copy_id: mock.MagicMock,
+            mock_fetch_core_hosts,
+            mock_save_core_hosts,
+
+    ):
         bootstrap._context = mock.Mock(current_user="carol", user_list=["alice", "bob"])
+        mock_fetch_core_hosts.return_value = (["alice", "bob"], ["node1", "node2"])
         mock_userof.return_value = "bob"
         out_node_list = """1 node1 member
         2 node2 member"""
@@ -581,11 +615,14 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.setup_passwordless_with_other_nodes("node1")
 
         mock_run.assert_has_calls([
-            mock.call("ssh {} alice@node1 crm_node -l".format(constants.SSH_OPTION)),
-            mock.call("ssh {} alice@node1 hostname".format(constants.SSH_OPTION))
+            mock.call('carol', 'ssh {} alice@node1 PATH=\\"\\$PATH\\":/usr/sbin:/sbin crm_node -l'.format(constants.SSH_OPTION)),
+            mock.call('carol', 'ssh {} alice@node1 hostname'.format(constants.SSH_OPTION))
             ])
         mock_userof.assert_called_once_with("node2")
-        mock_swap.assert_called_once_with("carol", "bob", "bob", "node2")
+        mock_ssh_copy_id.assert_has_calls([
+            mock.call('carol', 'bob', 'node2')
+        ])
+        mock_swap.assert_called_once_with('node2', "carol", "bob", "carol", "bob")
 
     @mock.patch('crmsh.userdir.getuser')
     @mock.patch('crmsh.bootstrap.key_files')
@@ -626,33 +663,26 @@ class TestBootstrap(unittest.TestCase):
         ])
         mock_append.assert_called_once_with("/home/alice/.ssh/id_rsa.pub", "/home/alice/.ssh/authorized_keys")
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    @mock.patch('crmsh.utils.user_of')
-    def test_get_cluster_node_hostname(self, mock_userof, mock_stdout_stderr):
+    @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
+    def test_get_cluster_node_hostname(self, mock_run):
         bootstrap._context = mock.Mock(cluster_node="node1")
-        mock_stdout_stderr.return_value = (0, "Node1", None)
-        mock_userof.return_value = "alice"
+        mock_run.return_value = (0, "Node1", None)
 
         peer_node = bootstrap.get_cluster_node_hostname()
-        assert peer_node == "Node1"
-
-        mock_userof.assert_called_once_with("node1")
-        mock_stdout_stderr.assert_called_once_with("ssh {} alice@node1 crm_node --name".format(constants.SSH_OPTION))
+        self.assertEqual('Node1', peer_node)
+        mock_run.assert_called_once_with('node1', 'crm_node --name')
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    @mock.patch('crmsh.utils.user_of')
-    def test_get_cluster_node_hostname_error(self, mock_userof, mock_stdout_stderr, mock_error):
+    @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
+    def test_get_cluster_node_hostname_error(self, mock_run, mock_error):
         bootstrap._context = mock.Mock(cluster_node="node1")
-        mock_stdout_stderr.return_value = (1, None, "error")
-        mock_userof.return_value = "alice"
+        mock_run.return_value = (1, None, "error")
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
             bootstrap.get_cluster_node_hostname()
 
-        mock_userof.assert_called_once_with("node1")
-        mock_stdout_stderr.assert_called_once_with("ssh {} alice@node1 crm_node --name".format(constants.SSH_OPTION))
+        mock_run.assert_called_once_with("node1", "crm_node --name")
         mock_error.assert_called_once_with("error")
 
     @mock.patch('crmsh.utils.this_node')
@@ -782,44 +812,55 @@ class TestBootstrap(unittest.TestCase):
         mock_status.assert_not_called()
         mock_disable.assert_called_once_with("corosync-qdevice.service")
 
+    @mock.patch('crmsh.bootstrap._save_core_hosts')
+    @mock.patch('crmsh.bootstrap._load_core_hosts')
     @mock.patch('crmsh.utils.user_of')
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.utils.ssh_copy_id')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice_copy_ssh_key_failed(self, mock_status, mock_ssh,
-            mock_invoke, mock_error, mock_list_nodes, mock_userof):
+    def test_init_qdevice_copy_ssh_key_failed(
+            self,
+            mock_status, mock_check_ssh_passwd_need,
+            mock_ssh_copy_id, mock_list_nodes, mock_userof,
+            mock_load_core_hosts, mock_save_core_hosts,
+    ):
         mock_list_nodes.return_value = []
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob", user_list=["alice"])
-        mock_ssh.return_value = True
-        mock_userof.return_value = "alice"
-        mock_invoke.return_value = (False, None, "error")
-        mock_error.side_effect = SystemExit
+        mock_load_core_hosts.return_value = ([], [])
+        mock_check_ssh_passwd_need.return_value = True
+        mock_ssh_copy_id.side_effect = ValueError('foo')
+        mock_userof.return_value = "bob"
 
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(ValueError):
             bootstrap.init_qdevice()
 
         mock_status.assert_has_calls([
             mock.call("Configure Qdevice/Qnetd:"),
-            mock.call("Copy ssh key to qnetd node(10.10.10.123)")
+            mock.call("Copy ssh key to qnetd node(root@10.10.10.123)")
             ])
-        mock_ssh.assert_called_once_with("bob", "alice", "10.10.10.123")
-        mock_invoke.assert_called_once_with("ssh-copy-id -i /root/.ssh/id_rsa.pub root@10.10.10.123")
-        mock_error.assert_called_once_with("Failed to copy ssh key: error")
+        mock_check_ssh_passwd_need.assert_called_once_with("bob", "root", "10.10.10.123")
+        mock_ssh_copy_id.assert_called_once_with('bob', 'root', '10.10.10.123')
 
+    @mock.patch('crmsh.bootstrap._save_core_hosts')
+    @mock.patch('crmsh.bootstrap._load_core_hosts')
     @mock.patch('crmsh.utils.user_of')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice_already_configured(self, mock_status, mock_ssh,
-            mock_qdevice_configured, mock_confirm, mock_list_nodes, mock_userof):
+    def test_init_qdevice_already_configured(
+            self,
+            mock_status, mock_ssh,
+            mock_qdevice_configured, mock_confirm, mock_list_nodes, mock_userof,
+            mock_load_core_hosts, mock_save_core_hosts,
+    ):
         mock_list_nodes.return_value = []
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob", user_list=["alice"])
+        mock_load_core_hosts.return_value = ([], [])
         mock_ssh.return_value = False
-        mock_userof.return_value = "alice"
+        mock_userof.return_value = "bob"
         mock_qdevice_configured.return_value = True
         mock_confirm.return_value = False
         self.qdevice_with_ip.start_qdevice_service = mock.Mock()
@@ -827,11 +868,14 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.init_qdevice()
 
         mock_status.assert_called_once_with("Configure Qdevice/Qnetd:")
-        mock_ssh.assert_called_once_with("bob", "alice", "10.10.10.123")
+        mock_ssh.assert_called_once_with("bob", "root", "10.10.10.123")
+        mock_save_core_hosts.assert_called_once_with(['root'], ['10.10.10.123'], sync_to_remote=True)
         mock_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Qdevice is already configured - overwrite?")
         self.qdevice_with_ip.start_qdevice_service.assert_called_once_with()
 
+    @mock.patch('crmsh.bootstrap._save_core_hosts')
+    @mock.patch('crmsh.bootstrap._load_core_hosts')
     @mock.patch('crmsh.utils.user_of')
     @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
     @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
@@ -840,11 +884,12 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('logging.Logger.info')
     def test_init_qdevice(self, mock_info, mock_ssh, mock_qdevice_configured, mock_list_nodes,
-            mock_adjust_priority, mock_adjust_fence_delay, mock_userof):
+            mock_adjust_priority, mock_adjust_fence_delay, mock_userof, mock_load_core_hosts, mock_save_core_hosts):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob", user_list=["alice"])
+        mock_load_core_hosts.return_value = ([], [])
         mock_list_nodes.return_value = []
         mock_ssh.return_value = False
-        mock_userof.return_value = "alice"
+        mock_userof.return_value = "bob"
         mock_qdevice_configured.return_value = False
         self.qdevice_with_ip.set_cluster_name = mock.Mock()
         self.qdevice_with_ip.valid_qnetd = mock.Mock()
@@ -853,18 +898,27 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.init_qdevice()
 
         mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
-        mock_ssh.assert_called_once_with("bob", "alice", "10.10.10.123")
+        mock_ssh.assert_called_once_with("bob", "root", "10.10.10.123")
+        mock_save_core_hosts.assert_called_once_with(['root'], ['10.10.10.123'], sync_to_remote=True)
         mock_qdevice_configured.assert_called_once_with()
         self.qdevice_with_ip.set_cluster_name.assert_called_once_with()
         self.qdevice_with_ip.valid_qnetd.assert_called_once_with()
         self.qdevice_with_ip.config_and_start_qdevice.assert_called_once_with()
 
     @mock.patch('crmsh.utils.fatal')
+    @mock.patch('crmsh.bootstrap._save_core_hosts')
+    @mock.patch('crmsh.bootstrap._load_core_hosts')
     @mock.patch('crmsh.utils.service_is_available')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice_service_not_available(self, mock_info, mock_list_nodes, mock_available, mock_fatal):
+    def test_init_qdevice_service_not_available(
+            self,
+            mock_info, mock_list_nodes, mock_available,
+            mock_load_core_hosts, mock_save_core_hosts,
+            mock_fatal,
+    ):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
+        mock_load_core_hosts.return_value = ([], [])
         mock_list_nodes.return_value = ["node1"]
         mock_available.return_value = False
         mock_fatal.side_effect = SystemExit
@@ -872,6 +926,7 @@ class TestBootstrap(unittest.TestCase):
         with self.assertRaises(SystemExit):
             bootstrap.init_qdevice()
 
+        mock_save_core_hosts.assert_not_called()
         mock_fatal.assert_called_once_with("corosync-qdevice.service is not available on node1")
         mock_available.assert_called_once_with("corosync-qdevice.service", "node1")
         mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
@@ -1487,11 +1542,11 @@ class TestValidation(unittest.TestCase):
         mock_remove.assert_called_once_with()
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.ext_cmd_nosudo')
+    @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
     @mock.patch('crmsh.xmlutil.listnodes')
-    def test_remove_self_other_nodes(self, mock_list, mock_ext, mock_error):
+    def test_remove_self_other_nodes(self, mock_list, mock_run, mock_error):
         mock_list.return_value = ["node1", "node2"]
-        mock_ext.return_value = 1
+        mock_run.return_value = (1, '', 'err')
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
@@ -1499,7 +1554,7 @@ class TestValidation(unittest.TestCase):
             bootstrap.remove_self()
 
         mock_list.assert_called_once_with(include_remote_nodes=False)
-        mock_ext.assert_called_once_with("ssh {} node2 'crm cluster remove -y -c node1'".format(constants.SSH_OPTION))
+        mock_run.assert_called_once_with("node2", "crm cluster remove -y -c node1")
         mock_error.assert_called_once_with("Failed to remove this node from node2")
 
     @mock.patch('crmsh.utils.package_is_installed')

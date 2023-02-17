@@ -3,8 +3,10 @@
 
 
 import os
+
 import parallax
 import crmsh.utils
+from crmsh import userdir
 
 Error = parallax.Error
 
@@ -21,6 +23,7 @@ class Parallax(object):
         self.nodes = nodes
         self.askpass = askpass
         self.ssh_options = ssh_options
+        self._sudoer = None
         self.strict = strict
 
         # used for call
@@ -40,6 +43,11 @@ class Parallax(object):
             self.ssh_options = ['StrictHostKeyChecking=no',
                     'ConnectTimeout=10',
                     'LogLevel=error']
+        sudoer = crmsh.utils.user_of(crmsh.utils.this_node())
+        if sudoer is not None:
+            # FIXME: this is really unreliable
+            self.ssh_options.append('IdentityFile={}/.ssh/id_rsa'.format(userdir.gethomedir(sudoer)))
+            self._sudoer = sudoer
         opts.ssh_options = self.ssh_options
         opts.askpass = self.askpass
         # warn_message will available from parallax-1.0.5
@@ -58,7 +66,8 @@ class Parallax(object):
         host_port_user = []
         for host in self.nodes:
             host_port_user.append([host, None, crmsh.utils.user_of(host)])
-        results = parallax.call(host_port_user, self.cmd, self.opts)
+        # FIXME: this is really unreliable
+        results = parallax.call(host_port_user, 'sudo {}'.format(self.cmd), self.opts)
         return self.handle(list(results.items()))
 
     def slurp(self):
@@ -72,7 +81,7 @@ class Parallax(object):
     def run(self):
         return parallax.run(
             [[node, None, crmsh.utils.user_of(node)] for node in self.nodes],
-            self.cmd,
+            'sudo {}'.format(self.cmd),
             self.opts,
         )
 

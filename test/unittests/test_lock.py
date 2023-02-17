@@ -132,20 +132,20 @@ class TestRemoteLock(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.run_cmd_on_remote')
     def test_run_ssh_error(self, mock_run):
         mock_run.return_value = (255, None, "ssh error")
         with self.assertRaises(lock.SSHError) as err:
             self.lock_inst._run("cmd")
         self.assertEqual("ssh error", str(err.exception))
-        mock_run.assert_called_once_with("ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no alice@node1 \"cmd\"")
+        mock_run.assert_called_once_with("cmd", "node1")
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.run_cmd_on_remote')
     def test_run(self, mock_run):
         mock_run.return_value = (0, None, None)
         res = self.lock_inst._run("cmd")
         self.assertEqual(res, mock_run.return_value)
-        mock_run.assert_called_once_with("ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no alice@node1 \"cmd\"")
+        mock_run.assert_called_once_with("cmd", "node1")
 
     def test_lock_timeout_error_format(self):
         config.core.lock_timeout = "pwd"

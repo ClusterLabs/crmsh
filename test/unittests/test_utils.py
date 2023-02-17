@@ -8,11 +8,14 @@ import os
 import socket
 import re
 import imp
+import subprocess
 import unittest
 import pytest
 import logging
 from unittest import mock
 from itertools import chain
+
+import crmsh.utils
 from crmsh import utils, config, tmpfiles, constants, parallax
 
 logging.basicConfig(level=logging.DEBUG)
@@ -131,12 +134,15 @@ def test_get_nodeid_from_name(mock_get_stdout, mock_re_search):
     mock_re_search_inst.group.assert_called_once_with(1)
 
 
-@mock.patch('crmsh.utils.get_stdout_stderr')
-def test_check_ssh_passwd_need(mock_run):
-    mock_run.return_value = (1, None, None)
+@mock.patch('crmsh.utils.su_get_stdout_stderr')
+def test_check_ssh_passwd_need(mock_su_get_stdout_stderr):
+    mock_su_get_stdout_stderr.return_value = (1, None, None)
     res = utils.check_ssh_passwd_need("bob", "alice", "node1")
     assert res is True
-    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -i ~bob/.ssh/id_rsa.pub -T -o Batchmode=yes alice@node1 true")
+    mock_su_get_stdout_stderr.assert_called_once_with(
+        "bob",
+        "ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes alice@node1 true",
+    )
 
 
 @mock.patch('logging.Logger.debug')
@@ -172,21 +178,6 @@ def test_cluster_run_cmd_exception(mock_list_nodes):
         utils.cluster_run_cmd("test")
     assert str(err.value) == "Failed to get node list from cluster"
     mock_list_nodes.assert_called_once_with()
-
-
-@mock.patch('parallax.call')
-@mock.patch('crmsh.utils.list_cluster_nodes')
-@mock.patch('crmsh.utils.user_of')
-def test_cluster_run_cmd(mock_userof, mock_list_nodes, mock_parallax_call):
-    mock_userof.side_effect = ["alice", "bob"]
-    mock_list_nodes.return_value = ["node1", "node2"]
-    utils.cluster_run_cmd("test")
-    mock_list_nodes.assert_called_once_with()
-    mock_userof.assert_has_calls([
-        mock.call("node1"),
-        mock.call("node2"),
-    ])
-    mock_parallax_call.assert_called_once_with([["node1", None, "alice"], ["node2", None, "bob"]], "test", mock.ANY)
 
 
 @mock.patch('crmsh.utils.list_cluster_nodes')
@@ -1006,144 +997,90 @@ class TestServiceManager(unittest.TestCase):
     """
     Unitary tests for class utils.ServiceManager
     """
+    @mock.patch('crmsh.utils.ServiceManager._call_with_parallax')
+    @mock.patch('crmsh.utils.ServiceManager._run_on_single_host')
+    def test_call_single_node(
+            self,
+            mock_run_on_single_host:mock.MagicMock,
+            mock_call_with_parallax: mock.MagicMock,
+    ):
+        mock_run_on_single_host.return_value = 0
+        self.assertEqual(['node1'], utils.ServiceManager._call('node1', list(), 'foo'))
+        mock_run_on_single_host.assert_called_once_with('foo', 'node1')
+        mock_call_with_parallax.assert_not_called()
 
-    @classmethod
-    def setUpClass(cls):
-        """
-        Global setUp.
-        """
+    @mock.patch('crmsh.utils.ServiceManager._call_with_parallax')
+    @mock.patch('crmsh.utils.ServiceManager._run_on_single_host')
+    def test_call_single_node_failure(
+            self,
+            mock_run_on_single_host:mock.MagicMock,
+            mock_call_with_parallax: mock.MagicMock,
+    ):
+        mock_run_on_single_host.return_value = 1
+        self.assertEqual(list(), utils.ServiceManager._call('node1', list(), 'foo'))
+        mock_run_on_single_host.assert_called_once_with('foo', 'node1')
+        mock_call_with_parallax.assert_not_called()
 
-    def setUp(self):
-        """
-        Test setUp.
-        """
-        self.service_local = utils.ServiceManager("service1")
-        self.service_remote = utils.ServiceManager("service1", "node1")
-        self.service_node_list = utils.ServiceManager("service1", node_list=["node1", "node2"])
+    @mock.patch('crmsh.utils.ServiceManager._call_with_parallax')
+    @mock.patch('crmsh.utils.ServiceManager._run_on_single_host')
+    def test_call_multiple_node(
+            self,
+            mock_run_on_single_host: mock.MagicMock,
+            mock_call_with_parallax: mock.MagicMock,
+    ):
+        mock_call_with_parallax.return_value = {'node1': (0, '', ''), 'node2': (1, 'out', 'err')}
+        self.assertEqual(['node1'], utils.ServiceManager._call(None, ['node1', 'node2'], 'foo'))
+        mock_run_on_single_host.assert_not_called()
+        mock_call_with_parallax.assert_called_once_with('foo', ['node1', 'node2'])
 
-    def tearDown(self):
-        """
-        Test tearDown.
-        """
+    @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
+    def test_run_on_single_host_return_1(self, mock_run: mock.MagicMock):
+        mock_run.return_value = (1, 'bar', 'err')
+        self.assertEqual(1, crmsh.utils.ServiceManager._run_on_single_host('foo', 'node1'))
+        mock_run.assert_called_once_with('node1', 'foo')
 
-    @classmethod
-    def tearDownClass(cls):
-        """
-        Global tearDown.
-        """
+    @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
+    def test_run_on_single_host_return_255(self, mock_run: mock.MagicMock):
+        mock_run.return_value = (255, 'bar', 'err')
+        with self.assertRaises(ValueError):
+            crmsh.utils.ServiceManager._run_on_single_host('foo', 'node1')
+        mock_run.assert_called_once_with('node1', 'foo')
 
-    def test_do_action_wrong_type(self):
-        with self.assertRaises(ValueError) as err:
-            self.service_local._do_action("test")
-        self.assertEqual("status_type should be enable/disable/start/stop/is-enabled/is-active/list-unit-files", str(err.exception))
+    @mock.patch('crmsh.utils.ServiceManager._call')
+    def test_start_service(self, mock_call: mock.MagicMock):
+        mock_call.return_value = ['node1']
+        self.assertEqual(['node1'], utils.ServiceManager.start_service('service1', remote_addr='node1'))
+        mock_call.assert_called_once_with('node1', [], "systemctl start 'service1'")
 
-    @mock.patch("crmsh.utils.get_stdout_stderr")
-    def test_do_action_except_run_error(self, mock_run):
-        mock_run.return_value = (1, None, "this command failed")
-        with self.assertRaises(ValueError) as err:
-            self.service_local._do_action("start")
-        self.assertEqual("Run \"sudo systemctl start service1\" error: this command failed", str(err.exception))
-        mock_run.assert_called_once_with("sudo systemctl start service1")
+    @mock.patch('crmsh.utils.ServiceManager._call')
+    def test_start_service_on_multiple_host(self, mock_call: mock.MagicMock):
+        mock_call.return_value = ['node1', 'node2']
+        self.assertEqual(['node1', 'node2'], utils.ServiceManager.start_service('service1', node_list=['node1', 'node2']))
+        mock_call.assert_called_once_with(None, ['node1', 'node2'], "systemctl start 'service1'")
 
-    @mock.patch('crmsh.parallax.parallax_call')
-    def test_do_action_node_list(self, mock_call):
-        self.service_node_list._do_action("start")
-        mock_call.assert_called_once_with(["node1", "node2"], "sudo systemctl start service1", strict=False)
+    @mock.patch('crmsh.utils.ServiceManager._call')
+    def test_start_and_enable_service(self, mock_call: mock.MagicMock):
+        mock_call.return_value = ['node1']
+        self.assertEqual(['node1'], utils.ServiceManager.start_service('service1', enable=True, remote_addr='node1'))
+        mock_call.assert_called_once_with('node1', [], "systemctl enable --now 'service1'")
 
-    @mock.patch('crmsh.utils.this_node')
-    @mock.patch('crmsh.utils.run_cmd_on_remote')
-    def test_do_action_remote(self, mock_remote, mock_this_node):
-        mock_this_node.return_value = "node2"
-        mock_remote.return_value = (0, None, None)
-        self.service_remote._do_action("start")
-        mock_remote.assert_called_once_with("sudo systemctl start service1", "node1", 'Run "sudo systemctl start service1" on node1')
-  
-    @mock.patch('crmsh.utils.ServiceManager._handle_action_result')
-    @mock.patch('crmsh.utils.ServiceManager._do_action')
-    def test_action_and_handle_result(self, mock_action, mock_handle):
-        self.service_local.action_and_handle_result("start")
-        mock_action.assert_called_once_with("start")
-        mock_handle.assert_called_once_with("start")
+    @mock.patch('crmsh.utils.ServiceManager._call')
+    def test_stop_service(self, mock_call: mock.MagicMock):
+        mock_call.return_value = ['node1']
+        self.assertEqual(['node1'], utils.ServiceManager.stop_service('service1', remote_addr='node1'))
+        mock_call.assert_called_once_with('node1', [], "systemctl stop 'service1'")
 
-    def test_service_is_available(self):
-        def _helper(self, val):
-            self.target_node = "node1"
-            self.nodes_dict = {"node1": True}
+    @mock.patch('crmsh.utils.ServiceManager._call')
+    def test_enable_service(self, mock_call: mock.MagicMock):
+        mock_call.return_value = ['node1']
+        self.assertEqual(['node1'], utils.ServiceManager.enable_service('service1', remote_addr='node1'))
+        mock_call.assert_called_once_with('node1', [], "systemctl enable 'service1'")
 
-        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
-            mock_action.side_effect = _helper
-            assert utils.ServiceManager.service_is_available("service1")
-            assert mock_action.call_count == 1
-
-    def test_service_is_enabled(self):
-        def _helper(self, val):
-            self.target_node = "node1"
-            self.nodes_dict = {"node1": True}
-
-        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
-            mock_action.side_effect = _helper
-            assert utils.ServiceManager.service_is_enabled("service1")
-            assert mock_action.call_count == 1
-
-    def test_service_is_active(self):
-        def _helper(self, val):
-            self.target_node = "node1"
-            self.nodes_dict = {"node1": True}
-
-        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
-            mock_action.side_effect = _helper
-            assert utils.ServiceManager.service_is_active("service1")
-            assert mock_action.call_count == 1
-
-    def test_start_service(self):
-        def _helper(self, val):
-            self.success_nodes = expected_values
-        expected_values = ["node1", "node2"]
-
-        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
-            mock_action.side_effect = _helper
-            assert utils.ServiceManager.start_service("service1", enable=True) == ["node1", "node2"]
-            assert mock_action.call_count == 2
-
-    def test_stop_service(self):
-        def _helper(self, val):
-            self.success_nodes = expected_values
-        expected_values = ["node1"]
-
-        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
-            mock_action.side_effect = _helper
-            assert utils.ServiceManager.stop_service("service1", disable=True) == ["node1"]
-            assert mock_action.call_count == 2
-
-    def test_enable_service(self):
-        def _helper(self, val):
-            self.success_nodes = expected_values
-        expected_values = ["node1"]
-
-        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
-            mock_action.side_effect = _helper
-            assert utils.ServiceManager.enable_service("service1") == ["node1"]
-            assert mock_action.called
-
-    def test_disable_service_none(self):
-        def _helper(self, val):
-            self.success_nodes = expected_values
-        expected_values = []
-
-        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
-            mock_action.side_effect = _helper
-            assert utils.ServiceManager.disable_service("service1") == []
-            assert mock_action.call_count == 1
-
-    def test_disable_service(self):
-        def _helper(self, val):
-            self.success_nodes = expected_values
-        expected_values = ["node1", "node2"]
-
-        with mock.patch.object(utils.ServiceManager, "action_and_handle_result", autospec=True) as mock_action:
-            mock_action.side_effect = _helper
-            assert utils.ServiceManager.disable_service("service1") == ["node1", "node2"]
-            assert mock_action.call_count == 2
+    @mock.patch('crmsh.utils.ServiceManager._call')
+    def test_disable_service(self, mock_call: mock.MagicMock):
+        mock_call.return_value = ['node1']
+        self.assertEqual(['node1'], utils.ServiceManager.disable_service('service1', remote_addr='node1'))
+        mock_call.assert_called_once_with('node1', [], "systemctl disable 'service1'")
 
 
 @mock.patch("crmsh.utils.get_nodeid_from_name")
@@ -1190,23 +1127,185 @@ def test_calculate_quorate_status():
     assert utils.calculate_quorate_status(3, 1) is False
 
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
-def test_get_stdout_or_raise_error_failed(mock_run):
-    mock_run.return_value = (1, None, "error data")
-    with pytest.raises(ValueError) as err:
-        utils.get_stdout_or_raise_error("cmd")
-    assert str(err.value) == 'Failed to run "cmd": error data'
-    mock_run.assert_called_once_with("cmd", no_reg=True)
+@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("subprocess.run")
+def test_get_stdout_or_raise_error_local(
+        mock_subprocess_run: mock.MagicMock,
+        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
+):
+    mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+    out = utils.get_stdout_or_raise_error("foo")
+    mock_subprocess_run.assert_called_once_with(
+        ['/bin/sh'],
+        input=b'foo',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    mock_subprocess_run_auto_ssh_no_input.assert_not_called()
+    assert "bar" == out
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
-@mock.patch("crmsh.utils.user_of")
-def test_get_stdout_or_raise_error(mock_userof, mock_run):
-    mock_userof.return_value = "alice"
-    mock_run.return_value = (0, "output data", None)
-    res = utils.get_stdout_or_raise_error("cmd", remote="node1")
-    assert res == "output data"
-    mock_userof.assert_called_once_with("node1")
-    mock_run.assert_called_once_with("ssh -o StrictHostKeyChecking=no alice@node1 \"cmd\"", no_reg=True)
+
+@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("subprocess.run")
+def test_get_stdout_or_raise_error_local_failure(
+        mock_subprocess_run: mock.MagicMock,
+        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
+):
+    mock_subprocess_run.return_value = mock.Mock(returncode=1, stdout=b'bar', stderr=b'err')
+    exception = None
+    try:
+        out = utils.get_stdout_or_raise_error("foo")
+    except ValueError as e:
+        exception = e
+
+    mock_subprocess_run.assert_called_once_with(
+        ['/bin/sh'],
+        input=b'foo',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    mock_subprocess_run_auto_ssh_no_input.assert_not_called()
+    assert isinstance(exception, ValueError)
+
+
+@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("subprocess.run")
+def test_get_stdout_or_raise_error_local_failure_no_raise(
+        mock_subprocess_run: mock.MagicMock,
+        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
+):
+    mock_subprocess_run.return_value = mock.Mock(returncode=1, stdout=b'bar', stderr=b'err')
+    out = utils.get_stdout_or_raise_error("foo", no_raise=True)
+
+    mock_subprocess_run.assert_called_once_with(
+        ['/bin/sh'],
+        input=b'foo',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    mock_subprocess_run_auto_ssh_no_input.assert_not_called()
+    assert "bar" == out
+
+
+@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("subprocess.run")
+def test_get_stdout_or_raise_error_remote(
+        mock_subprocess_run: mock.MagicMock,
+        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
+):
+    mock_subprocess_run_auto_ssh_no_input.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+    out = utils.get_stdout_or_raise_error("foo", 'node1')
+    mock_subprocess_run.assert_not_called()
+    mock_subprocess_run_auto_ssh_no_input.assert_called_once_with(
+        "foo",
+        'node1',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert "bar" == out
+
+
+class TestSubprocessRunUtils(unittest.TestCase):
+    @mock.patch("subprocess.run")
+    def test_subprocess_run_auto_ssh_no_input_local_no_su(self, mock_subprocess_run):
+        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.subprocess_run_auto_ssh_no_input("foo", stderr=subprocess.DEVNULL)
+        mock_subprocess_run.assert_called_once_with(['/bin/sh'], input=b'foo', stderr=subprocess.DEVNULL)
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
+
+    @mock.patch("subprocess.run")
+    def test_subprocess_run_auto_ssh_no_input_local_su(self, mock_subprocess_run):
+        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.subprocess_run_auto_ssh_no_input("foo", user="alice", stderr=subprocess.DEVNULL)
+        mock_subprocess_run.assert_called_once_with(
+            ['sudo', '-H', '-u', 'alice', '/bin/sh'],
+            input=b'foo',
+            stderr=subprocess.DEVNULL,
+        )
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
+
+    @mock.patch("crmsh.utils.this_node")
+    @mock.patch("crmsh.utils.user_of")
+    @mock.patch("crmsh.utils.su_subprocess_run")
+    @mock.patch("subprocess.run")
+    def test_subprocess_run_auto_ssh_no_input_remote_no_user(
+            self,
+            mock_subprocess_run: mock.MagicMock,
+            mock_su_subprocess_run: mock.MagicMock,
+            mock_user_of: mock.MagicMock,
+            mock_this_node: mock.MagicMock,
+    ):
+        mock_this_node.return_value = 'node1'
+        mock_user_of.return_value = 'alice'
+        mock_su_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.subprocess_run_auto_ssh_no_input("foo", "node2", stderr=subprocess.DEVNULL)
+        mock_user_of.assert_has_calls([
+            mock.call('node1'),
+            mock.call('node2'),
+        ], any_order=True)
+        mock_subprocess_run.assert_not_called()
+        mock_su_subprocess_run.assert_called_once_with(
+            'alice',
+            'ssh -o StrictHostKeyChecking=no alice@node2 sudo -H -u root /bin/sh',
+            input=b'foo',
+            stderr=subprocess.DEVNULL,
+        )
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
+
+    @mock.patch("os.geteuid")
+    @mock.patch("crmsh.userdir.getuser")
+    @mock.patch("subprocess.run")
+    def test_su_subprocess_run(
+            self,
+            mock_subprocess_run: mock.MagicMock,
+            mock_get_user: mock.MagicMock,
+            mock_geteuid: mock.MagicMock,
+    ):
+        mock_geteuid.return_value = 0
+        mock_get_user.return_value = 'root'
+        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.su_subprocess_run('alice', 'foo')
+        mock_subprocess_run.assert_called_once_with(
+            ['su', 'alice', '--login', '-c', 'foo']
+        )
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
+
+    @mock.patch("os.geteuid")
+    @mock.patch("crmsh.userdir.getuser")
+    @mock.patch("subprocess.run")
+    def test_su_subprocess_run_with_non_root_user(
+            self,
+            mock_subprocess_run: mock.MagicMock,
+            mock_get_user: mock.MagicMock,
+            mock_geteuid: mock.MagicMock,
+    ):
+        mock_geteuid.return_value = 1000
+        mock_get_user.return_value = 'bob'
+        with self.assertRaises(AssertionError):
+            result = utils.su_subprocess_run('alice', 'foo')
+
+    @mock.patch("os.geteuid")
+    @mock.patch("crmsh.userdir.getuser")
+    @mock.patch("subprocess.run")
+    def test_su_subprocess_run_to_self(
+            self,
+            mock_subprocess_run: mock.MagicMock,
+            mock_get_user: mock.MagicMock,
+            mock_geteuid: mock.MagicMock,
+    ):
+        mock_geteuid.return_value = 1000
+        mock_get_user.return_value = 'alice'
+        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
+        result = utils.su_subprocess_run('alice', 'foo')
+        mock_subprocess_run.assert_called_once_with(
+            ['/bin/sh', '-c', 'foo'],
+        )
+        self.assertEqual(0, result.returncode)
+        self.assertEqual(b'bar', result.stdout)
 
 
 @mock.patch("crmsh.utils.get_stdout_or_raise_error")

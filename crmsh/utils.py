@@ -3,7 +3,9 @@
 
 import errno
 import os
+import socket
 import sys
+import typing
 from tempfile import mkstemp
 import subprocess
 import re
@@ -23,12 +25,14 @@ from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from lxml import etree
+
+import parallax
+import crmsh.parallax
 from . import config
 from . import userdir
 from . import constants
 from . import options
 from . import term
-from . import parallax
 from distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
@@ -102,24 +106,58 @@ def nogc():
 getuser = userdir.getuser
 gethomedir = userdir.gethomedir
 
-def user_of(host):
-    hosts = config.get_option('core', 'hosts')
-    for item in hosts:
-        if item.find('@') != -1:
-            user, node = item.split('@')
+
+class UserOfHost:
+    def __init__(self):
+        self._cache = dict()
+
+    def user_of(self, host):
+        cached = self._cache.get(host)
+        if cached is None:
+            ret = self._user_of_impl(host)
+            if ret is None:
+                return userdir.getuser()
+            else:
+                self._cache[host] = ret
+                return ret
         else:
-            user = userdir.getuser()
-            node = item
-        if host == node:
-            return user
-    if host == 'localhost' or host == this_node() or host is None:
-        return userdir.getuser()
-    # FIXME! If we didn't find the user neither in ~/.config/crm/crm.conf nor in /etc/crm/crm.conf its' fatal
-    # However, writing those users per hand is cumbersome and synchronizing an N-case is worth a separate PR (TODO!)
-    # Besides, maybe we would want to store the users not in the crm.conf, but somewhere else.
-    # logger.info("The user of {} is unknown (see crm.conf->[core]->hosts). Current user '{}' is used instead."
-    #    .format(host, userdir.getuser()))
-    return userdir.getuser()
+            return cached
+
+    @staticmethod
+    def _user_of_impl(host):
+        canonical, aliases, _ = socket.gethostbyaddr(host)
+        aliases = set(aliases)
+        aliases.add(canonical)
+        aliases.add(host)
+        hosts = config.get_option('core', 'hosts')
+        if hosts == ['']:
+            return None
+        for item in hosts:
+            if item.find('@') != -1:
+                user, node = item.split('@')
+            else:
+                user = userdir.getuser()
+                node = item
+            if node in aliases:
+                return user
+        logger.warning('Failed to get the user of host %s (aliases: %s). Known hosts are %s', host, aliases, hosts)
+        return None
+
+
+_user_of_host_instance = UserOfHost()
+
+
+def user_of(host):
+    return _user_of_host_instance.user_of(host)
+
+
+def ssh_copy_id(local_user, remote_user, remote_node):
+    if check_ssh_passwd_need(local_user, remote_user, remote_node):
+        logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
+        cmd = "ssh-copy-id -i ~/.ssh/id_rsa.pub '{}@{}'".format(remote_user, remote_node)
+        result = su_subprocess_run(local_user, cmd, tty=True)
+        if result.returncode != 0:
+            fatal("Failed to login to remote host {}@{}".format(remote_user, remote_node))
 
 
 @memoize
@@ -223,12 +261,15 @@ def pacemaker_daemon(name):
     raise ValueError("Not a Pacemaker daemon name: {}".format(name))
 
 
-def can_ask():
+def can_ask(background_wait=True):
     """
     Is user-interactivity possible?
     Checks if connected to a TTY.
     """
-    return (not options.ask_no) and sys.stdin.isatty()
+    can_ask =  (not options.ask_no) and sys.stdin.isatty()
+    if not background_wait:
+        can_ask = can_ask and os.tcgetpgrp(sys.stdin.fileno()) == os.getpgrp()
+    return can_ask
 
 
 def ask(msg, background_wait=True):
@@ -245,10 +286,7 @@ def ask(msg, background_wait=True):
     if config.core.force:
         logger.info("%s [YES]", msg)
         return True
-    if not can_ask():
-        return False
-    if sys.stdin.isatty() and os.tcgetpgrp(sys.stdin.fileno()) != os.getpgrp() and not background_wait:
-        logger.info("%s [NO]", msg)
+    if not can_ask(background_wait):
         return False
 
     msg += ' '
@@ -264,6 +302,31 @@ def ask(msg, background_wait=True):
             ans = ans[0].lower()
             if ans in 'yn':
                 return ans == 'y'
+
+
+def ask_for_choice(question: str, choices: typing.List[str], default: int = None, background_wait=True, yes_to_all=False) -> int:
+    msg = '{} ({})? '.format(question, '/'.join((choice if i != default else '[{}]'.format(choice) for i, choice in enumerate(choices))))
+    if yes_to_all and default is not None:
+        logger.info('%s %s', msg, choices[default])
+        return default
+    if not can_ask(background_wait):
+        if default is None:
+            fatal("User input is impossible in a non-interactive session.")
+        else:
+            logger.info('%s %s', msg, choices[default])
+            return default
+    while True:
+        try:
+            choice = input(msg)
+        except EOFError:
+            choice = ''
+        if choice == '':
+            if default is not None:
+                return default
+        else:
+            for i, x in enumerate(choices):
+                if choice == x:
+                    return i
 
 
 # holds part of line before \ split
@@ -387,15 +450,6 @@ def add_sudo(cmd):
     if config.core.user:
         return "sudo -E -u %s %s" % (config.core.user, cmd)
     return cmd
-
-
-def add_su(cmd, user):
-    """
-    Wrapped cmd with su -c "<cmd>" <user>
-    """
-    if user == "root":
-        return cmd
-    return "su -c \"{}\" {}".format(cmd, user)
 
 
 def chown(path, user, group):
@@ -637,11 +691,19 @@ def str2file(s, fname, mod=0o644):
     return True
 
 def write_remote_file(text, tofile, user, remote):
-    cmd = "echo '{}' | ssh {} {}@{} 'cat >> {}'".format(
-                    text, SSH_OPTION, user, remote, tofile)
-    rc, out, err = get_stdout_stderr(cmd, no_reg=True)
-    if rc != 0:
-        raise ValueError("Failed to write to {}@{}/{}: {}".format(user, remote, tofile, err))
+    shell_script = f'''cat >> {tofile} << EOF
+{text}
+EOF
+'''
+    result = subprocess_run_auto_ssh_no_input(
+        shell_script,
+        remote,
+        user,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    if result.returncode != 0:
+        raise ValueError("Failed to write to {}@{}/{}: {}".format(user, remote, tofile, result.stdout.decode('utf-8')))
 
 def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path):
     """
@@ -652,11 +714,10 @@ def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path)
     """
     # First try an easy way
     cmd = "scp %s@%s:'%s' %s" % (remote_user, remote_node, remote_text_file, local_path)
-    rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+    rc, out, err = get_stdout_stderr_as_local_sudoer(cmd)
     # If failed, try the hard way
     if rc != 0:
-        cmd = "ssh %s@%s sudo cat %s" % (remote_user, remote_node, remote_text_file)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = get_stdout_stderr_auto_ssh_no_input(remote_node, 'cat {}'.format(remote_text_file))
         if rc != 0:
             raise ValueError("Failed to read {}@{}/{}: {}".format(remote_user, remote_node, remote_text_file, err))
         full_path = os.path.join(local_path, os.path.basename(remote_text_file))
@@ -899,22 +960,12 @@ def run_cmd_on_remote(cmd, remote_addr, prompt_msg=None):
     Run a cmd on remote node
     return (rc, stdout, err_msg)
     """
-    rc = 1
-    out_data = None
-    err_data = None
-
-    need_pw = check_ssh_passwd_need(getuser(), user_of(remote_addr), remote_addr)
-    if need_pw and prompt_msg:
-        print(prompt_msg)
-    try:
-        result = parallax.parallax_call([remote_addr], cmd, need_pw)
-        rc, out_data, _ = result[0][1]
-    except ValueError as err:
-        err_match = re.search("Exited with error code ([0-9]+), Error output: (.*)", str(err))
-        if err_match:
-            rc, err_data = err_match.groups()
-    finally:
-        return int(rc), to_ascii(out_data), err_data
+    result = subprocess_run_auto_ssh_no_input(
+        cmd, remote_addr,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return result.returncode, result.stdout.decode('utf-8'), result.stderr.decode('utf-8')
 
 
 def get_stdout(cmd, input_s=None, stderr_on=True, shell=True, raw=False):
@@ -955,6 +1006,40 @@ def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False, no_reg=False):
     if raw:
         return proc.returncode, stdout_data, stderr_data
     return proc.returncode, to_ascii(stdout_data).strip(), to_ascii(stderr_data).strip()
+
+
+def su_get_stdout_stderr(user, cmd, input_s=None, raw=False):
+    if user == userdir.getuser():
+        args = ['/bin/sh', '-c', cmd]
+    elif 0 == os.geteuid():
+        args = ['su', user, '--login', '-c', cmd]
+    else:
+        raise AssertionError('trying to run su as a non-root user')
+    result = subprocess.run(
+        args,
+        input=input_s.encode('utf-8') if (input_s is not None and not raw) else input_s,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if raw:
+        return result.returncode, result.stdout, result.stderr
+    return result.returncode, to_ascii(result.stdout).strip(), to_ascii(result.stderr).strip()
+
+
+def get_stdout_stderr_as_local_sudoer(cmd, input_s=None, raw=False):
+    return su_get_stdout_stderr(user_of(this_node()), cmd, input_s, raw)
+
+
+def get_stdout_stderr_auto_ssh_no_input(host, cmd, raw=False):
+    result = subprocess_run_auto_ssh_no_input(
+        cmd,
+        host,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if raw:
+        return result.returncode, result.stdout, result.stderr
+    return result.returncode, to_ascii(result.stdout).strip(), to_ascii(result.stderr).strip()
 
 
 def stdout2list(cmd, stderr_on=True, shell=True):
@@ -1881,12 +1966,7 @@ def cluster_run_cmd(cmd, node_list=[]):
     nodelist = node_list or list_cluster_nodes()
     if not nodelist:
         raise ValueError("Failed to get node list from cluster")
-    host_port_user = []
-    for host in nodelist:
-        host_port_user.append([host, None, user_of(host)])
-    import parallax
-    opts = parallax.Options()
-    return parallax.call(host_port_user, cmd, opts)
+    return crmsh.parallax.parallax_call(nodelist, cmd)
 
 
 def list_cluster_nodes_except_me():
@@ -2005,10 +2085,6 @@ def sysconfig_set(sysconfig_file, **values):
 
 
 def remote_diff_slurp(nodes, filename):
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("Parallax is required to diff")
     from . import tmpfiles
 
     tmpdir = tmpfiles.create_dir()
@@ -2019,11 +2095,6 @@ def remote_diff_slurp(nodes, filename):
 
 
 def remote_diff_this(local_path, nodes, this_node):
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("Parallax is required to diff")
-
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
         if isinstance(result, parallax.Error):
@@ -2035,11 +2106,6 @@ def remote_diff_this(local_path, nodes, this_node):
 
 
 def remote_diff(local_path, nodes):
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("parallax is required to diff")
-
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
         if isinstance(result, parallax.Error):
@@ -2052,10 +2118,6 @@ def remote_diff(local_path, nodes):
 
 
 def remote_checksum(local_path, nodes, this_node):
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("Parallax is required to diff")
     import hashlib
 
     by_host = remote_diff_slurp(nodes, local_path)
@@ -2080,7 +2142,7 @@ def cluster_copy_file(local_path, nodes=None, output=True):
     rc = True
     if not nodes:
         return rc
-    results = parallax.parallax_copy(nodes, local_path, local_path, strict=False)
+    results = crmsh.parallax.parallax_copy(nodes, local_path, local_path, strict=False)
     for host, result in results:
         if isinstance(result, parallax.Error):
             logger.error("Failed to copy %s to %s: %s", local_path, host, result)
@@ -2253,13 +2315,10 @@ def check_ssh_passwd_need(local_user, remote_user, host):
     Check whether access to host need password
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-    if local_user and local_user != getuser():
-        custom_public_key = "~{}/.ssh/id_rsa.pub".format(local_user)
-        ssh_options += " -i {}".format(custom_public_key)
     if remote_user is None:
         remote_user = user_of(host)
     ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
-    rc, _, _ = get_stdout_stderr(ssh_cmd)
+    rc, _, _ = su_get_stdout_stderr(local_user, ssh_cmd)
     return rc != 0
 
 
@@ -2652,106 +2711,31 @@ def check_text_included(text, target_file, remote=None):
     target_data = get_stdout_or_raise_error(cmd, remote=remote)
     return text in target_data
 
+
 class ServiceManager(object):
     """
     Class to manage systemctl services
     """
-    ACTION_MAP = {
-            "enable": "enable",
-            "disable": "disable",
-            "start": "start",
-            "stop": "stop",
-            "is_enabled": "is-enabled",
-            "is_active": "is-active",
-            "is_available": "list-unit-files"
-            }
-    IGNORE_ERRORS_IN_PARALLAX = ["is_enabled", "is_active", "is_available"]
-
-    def __init__(self, service_name, remote_addr=None, node_list=[]):
-        """
-        Init function
-        When node_list set, execute action between nodes in parallel
-        """
-        self.service_name = service_name
-        if remote_addr and node_list:
-            raise ValueError("Cannot assign remote_addr and node_list at the same time")
-        self.remote_addr = remote_addr
-        self.target_node = remote_addr or this_node()
-        self.node_list = node_list
-        self.rc = False
-        self.parallax_res = None
-        self.nodes_dict = {}
-        self.success_nodes = []
-
-    def _do_action(self, action_type):
-        """
-        Actual do actions to manage service
-        """
-        if action_type not in self.ACTION_MAP.values():
-            raise ValueError("status_type should be {}".format('/'.join(list(self.ACTION_MAP.values()))))
-
-        cmd = "systemctl {} {}".format(action_type, self.service_name)
-        if action_type not in ["is-active", "is-enabled", "list-unit-files"]:
-            cmd = "sudo " + cmd
-
-        if len(self.node_list) == 1 and self.node_list[0] == this_node():
-            self.node_list= [] # the else: case below
-
-        if self.node_list:
-            self.parallax_res = parallax.parallax_call(self.node_list, cmd, strict=False)
-            return
-        elif self.remote_addr and self.remote_addr != this_node():
-            prompt_msg = "Run \"{}\" on {}".format(cmd, self.remote_addr)
-            rc, _, err = run_cmd_on_remote(cmd, self.remote_addr, prompt_msg)
-        else:
-            rc, _, err = get_stdout_stderr(cmd)
-        if rc != 0 and err:
-            raise ValueError("Run \"{}\" error: {}".format(cmd, err))
-        self.rc = rc == 0
-
-    def _handle_action_result(self, action):
-        if self.parallax_res:
-            for host, result in self.parallax_res:
-                if isinstance(result, parallax.Error):
-                    if action not in self.IGNORE_ERRORS_IN_PARALLAX:
-                        logger.error("Failed to %s %s on %s: %s", action, self.service_name, host, str(result))
-                    self.nodes_dict[host] = False
-                else:
-                    self.nodes_dict[host] = True
-        else:
-            self.nodes_dict[self.target_node] = self.rc
-        self.success_nodes = [node for node in self.nodes_dict if self.nodes_dict[node]]
-
-    def action_and_handle_result(self, action):
-        self._do_action(self.ACTION_MAP[action])
-        self._handle_action_result(action)
-
     @classmethod
     def service_is_available(cls, name, remote_addr=None):
         """
         Check whether service is available
         """
-        inst = cls(name, remote_addr)
-        inst.action_and_handle_result("is_available")
-        return inst.nodes_dict[inst.target_node]
+        return 0 == cls._run_on_single_host("systemctl list-unit-files '{}'".format(name), remote_addr)
 
     @classmethod
     def service_is_enabled(cls, name, remote_addr=None):
         """
         Check whether service is enabled
         """
-        inst = cls(name, remote_addr)
-        inst.action_and_handle_result("is_enabled")
-        return inst.nodes_dict[inst.target_node]
+        return 0 == cls._run_on_single_host("systemctl is-enabled '{}'".format(name), remote_addr)
 
     @classmethod
     def service_is_active(cls, name, remote_addr=None):
         """
         Check whether service is active
         """
-        inst = cls(name, remote_addr)
-        inst.action_and_handle_result("is_active")
-        return inst.nodes_dict[inst.target_node]
+        return 0 == cls._run_on_single_host("systemctl is-active '{}'".format(name), remote_addr)
 
     @classmethod
     def start_service(cls, name, enable=False, remote_addr=None, node_list=[]):
@@ -2759,11 +2743,41 @@ class ServiceManager(object):
         Start service
         Return success node list
         """
-        inst = cls(name, remote_addr, node_list)
         if enable:
-            inst.action_and_handle_result("enable")
-        inst.action_and_handle_result("start")
-        return inst.success_nodes
+            cmd = "systemctl enable --now '{}'".format(name)
+        else:
+            cmd = "systemctl start '{}'".format(name)
+        return cls._call(remote_addr, node_list, cmd)
+
+    @staticmethod
+    def _call(remote_addr: str, node_list: typing.List[str], cmd: str) -> typing.List[str]:
+        assert not (bool(remote_addr) and bool(node_list))
+        if len(node_list) == 1:
+            remote_addr = node_list[0]
+            node_list = list()
+        if node_list:
+            results = ServiceManager._call_with_parallax(cmd, node_list)
+            return [host for host, result in results.items() if isinstance(result, tuple) and result[0] == 0]
+        else:
+            rc = ServiceManager._run_on_single_host(cmd, remote_addr)
+            if rc == 0:
+                return [remote_addr]
+            else:
+                return list()
+
+    @staticmethod
+    def _run_on_single_host(cmd, host):
+        rc, _, _ = get_stdout_stderr_auto_ssh_no_input(host, cmd)
+        if rc == 255:
+            raise ValueError("Failed to run command on host {}: {}".format(host, cmd))
+        return rc
+
+    @staticmethod
+    def _call_with_parallax(cmd, host_list):
+        ret = crmsh.parallax.parallax_run(host_list, cmd)
+        if ret is parallax.Error:
+            raise ret
+        return ret
 
     @classmethod
     def stop_service(cls, name, disable=False, remote_addr=None, node_list=[]):
@@ -2771,11 +2785,11 @@ class ServiceManager(object):
         Stop service
         Return success node list
         """
-        inst = cls(name, remote_addr, node_list)
         if disable:
-            inst.action_and_handle_result("disable")
-        inst.action_and_handle_result("stop")
-        return inst.success_nodes
+            cmd = "systemctl disable --now '{}'".format(name)
+        else:
+            cmd = "systemctl stop '{}'".format(name)
+        return cls._call(remote_addr, node_list, cmd)
 
     @classmethod
     def enable_service(cls, name, remote_addr=None, node_list=[]):
@@ -2783,9 +2797,8 @@ class ServiceManager(object):
         Enable service
         Return success node list
         """
-        inst = cls(name, remote_addr, node_list)
-        inst.action_and_handle_result("enable")
-        return inst.success_nodes
+        cmd = "systemctl enable '{}'".format(name)
+        return cls._call(remote_addr, node_list, cmd)
 
     @classmethod
     def disable_service(cls, name, remote_addr=None, node_list=[]):
@@ -2793,13 +2806,8 @@ class ServiceManager(object):
         Disable service
         Return success node list
         """
-        inst = cls(name, remote_addr, node_list)
-        inst.action_and_handle_result("is_available")
-        if not inst.success_nodes:
-            return []
-        inst.node_list = inst.success_nodes
-        inst.action_and_handle_result("disable")
-        return inst.success_nodes
+        cmd = "systemctl disable '{}'".format(name)
+        return cls._call(remote_addr, node_list, cmd)
 
 
 service_is_available = ServiceManager.service_is_available
@@ -2819,6 +2827,7 @@ def package_is_installed(pkg, remote_addr=None):
     if remote_addr:
         # check on remote
         print("Check whether {} is installed on {}".format(pkg, remote_addr))
+        # FIXME
         cmd = "ssh {} {}@{} \"{}\"".format(SSH_OPTION, user_of(remote_addr), remote_addr, cmd)
         rc, _, _ = get_stdout_stderr(cmd, no_reg=True)
     else:
@@ -2843,23 +2852,87 @@ def calculate_quorate_status(expected_votes, actual_votes):
     return int(actual_votes)/int(expected_votes) > 0.5
 
 
-def get_stdout_or_raise_error(cmd, user=None, remote=None, success_val_list=[0], no_raise=False):
+def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0], no_raise=False):
     """
     Common function to get stdout from cmd or raise exception
     """
-    if remote and remote != this_node():
-        if user is None:
-            user = user_of(remote)
-        cmd = "ssh {} {}@{} \"{}\"".format(SSH_OPTION, user, remote, cmd)
+    if remote is None:
+        result = subprocess.run(
+            ['/bin/sh'],
+            input=cmd.encode('utf-8'),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE,
+        )
     else:
-        if user is None or user == userdir.getuser():
-            pass
+        result = subprocess_run_auto_ssh_no_input(
+            cmd, remote,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE,
+        )
+    if no_raise or result.returncode in success_val_list:
+        return result.stdout.decode('utf-8')
+    else:
+        if remote is None:
+            raise ValueError("Failed to run '{}': {}".format(cmd, result.stderr.decode('utf-8')))
         else:
-            cmd = 'sudo -H -u {} bash -c "{}"'.format(user, cmd)
-    rc, out, err = get_stdout_stderr(cmd, no_reg=True)
-    if rc not in success_val_list and not no_raise:
-        raise ValueError("Failed to run \"{}\": {}".format(cmd, err))
-    return out
+            raise ValueError("Failed to run command on remote host {}: '{}': {}".format(remote, cmd, result.stderr.decode('utf-8')))
+
+
+def subprocess_run_auto_ssh_no_input(cmd, remote=None, user=None, **kwargs):
+    assert 'input' not in kwargs and 'stdin' not in kwargs
+    if remote is None or remote == this_node():
+        if user is None:
+            args = ['/bin/sh']
+        else:
+            args = ['sudo', '-H', '-u', user, '/bin/sh']
+        return subprocess.run(
+            args,
+            input=cmd.encode('utf-8'),
+            **kwargs,
+        )
+    else:
+        remote_sudoer = user_of(remote)
+        local_user = user_of(this_node())
+        if user is None:
+            user = 'root'
+        return su_subprocess_run(
+            local_user,
+            'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote, user),
+            input=cmd.encode('utf-8'),
+            **kwargs,
+        )
+
+
+def su_get_stdout_or_raise_error(cmd, user, success_values={0}, no_raise=False):
+    """run a command as a non-root user on local host"""
+    if user == userdir.getuser():
+        args = ['/bin/sh', '-c', cmd]
+    elif 0 == os.geteuid():
+        args = ['su', user, '-c', cmd]
+    else:
+        raise AssertionError('trying to run su as a non-root user')
+    result = subprocess.run(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE
+    )
+    if no_raise or result.returncode in success_values:
+        return result.stdout
+    else:
+        raise ValueError("Failed to run su {} -c '{}': {}".format(user, cmd, result.stderr))
+
+
+def su_subprocess_run(user: str, cmd: str, tty=False, **kwargs):
+    if user == userdir.getuser():
+        args = ['/bin/sh', '-c', cmd]
+    elif 0 == os.geteuid():
+        if tty:
+            args = ['su', user, '--pty', '--login', '-c', cmd]
+        else:
+            args = ['su', user, '--login', '-c', cmd]
+    else:
+        raise AssertionError('trying to run su as a non-root user')
+    return subprocess.run(args, **kwargs)
 
 
 def get_quorum_votes_dict(remote=None):
@@ -3310,6 +3383,7 @@ def detect_file(_file, remote=None):
     if not remote:
         cmd = "sudo test -f {}".format(_file)
     else:
+        # FIXME
         cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user_of(remote), remote, _file)
     code, _, _ = get_stdout_stderr(cmd)
     rc = code == 0

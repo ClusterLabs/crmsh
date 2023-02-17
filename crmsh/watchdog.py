@@ -88,6 +88,7 @@ class Watchdog(object):
         """
         Given watchdog device name, get driver name on remote node
         """
+        # FIXME
         cmd = "ssh {} {}@{} {}".format(SSH_OPTION, self._remote_user, self._peer_host, self.QUERY_CMD)
         rc, out, err = utils.get_stdout_stderr(cmd)
         if rc == 0 and out:

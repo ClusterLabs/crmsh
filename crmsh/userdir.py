@@ -2,6 +2,8 @@
 # See COPYING for license information.
 
 import os
+import typing
+
 from . import log
 
 
@@ -12,6 +14,10 @@ def getuser():
     "Returns the name of the current user"
     import getpass
     return getpass.getuser()
+
+
+def get_sudoer() -> typing.Optional[str]:
+    return os.environ.get('SUDO_USER')
 
 
 def gethomedir(user=''):

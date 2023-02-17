@@ -375,8 +375,11 @@ def run():
             upgradeutil.upgrade_if_needed()
             return main_input_loop(context, user_args)
     except KeyboardInterrupt:
-        print("Ctrl-C, leaving")
-        sys.exit(1)
+        if config.core.debug:
+            raise
+        else:
+            print("Ctrl-C, leaving")
+            sys.exit(1)
     except ValueError as e:
         if config.core.debug:
             import traceback

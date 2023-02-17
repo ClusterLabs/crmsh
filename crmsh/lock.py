@@ -115,8 +115,8 @@ class RemoteLock(Lock):
         """
         Run command on remote node
         """
-        cmd = "ssh {} {}@{} \"{}\"".format(self.SSH_OPTION, self.remote_user, self.remote_node, cmd)
-        rc, out, err = utils.get_stdout_stderr(cmd)
+        # TODO: pass SSH_OPTION
+        rc, out, err = utils.run_cmd_on_remote(cmd, self.remote_node)
         if rc == self.SSH_EXIT_ERR:
             raise SSHError(err)
         return rc, out, err
