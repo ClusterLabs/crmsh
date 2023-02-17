@@ -25,13 +25,13 @@ from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from lxml import etree
 
+import parallax
 import crmsh.parallax
 from . import config
 from . import userdir
 from . import constants
 from . import options
 from . import term
-from . import parallax
 from distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
@@ -2045,10 +2045,6 @@ def sysconfig_set(sysconfig_file, **values):
 
 
 def remote_diff_slurp(nodes, filename):
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("Parallax is required to diff")
     from . import tmpfiles
 
     tmpdir = tmpfiles.create_dir()
@@ -2059,11 +2055,6 @@ def remote_diff_slurp(nodes, filename):
 
 
 def remote_diff_this(local_path, nodes, this_node):
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("Parallax is required to diff")
-
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
         if isinstance(result, parallax.Error):
@@ -2075,11 +2066,6 @@ def remote_diff_this(local_path, nodes, this_node):
 
 
 def remote_diff(local_path, nodes):
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("parallax is required to diff")
-
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
         if isinstance(result, parallax.Error):
@@ -2092,10 +2078,6 @@ def remote_diff(local_path, nodes):
 
 
 def remote_checksum(local_path, nodes, this_node):
-    try:
-        import parallax
-    except ImportError:
-        raise ValueError("Parallax is required to diff")
     import hashlib
 
     by_host = remote_diff_slurp(nodes, local_path)
@@ -2120,7 +2102,7 @@ def cluster_copy_file(local_path, nodes=None, output=True):
     rc = True
     if not nodes:
         return rc
-    results = parallax.parallax_copy(nodes, local_path, local_path, strict=False)
+    results = crmsh.parallax.parallax_copy(nodes, local_path, local_path, strict=False)
     for host, result in results:
         if isinstance(result, parallax.Error):
             logger.error("Failed to copy %s to %s: %s", local_path, host, result)
@@ -2689,106 +2671,31 @@ def check_text_included(text, target_file, remote=None):
     target_data = get_stdout_or_raise_error(cmd, remote=remote)
     return text in target_data
 
+
 class ServiceManager(object):
     """
     Class to manage systemctl services
     """
-    ACTION_MAP = {
-            "enable": "enable",
-            "disable": "disable",
-            "start": "start",
-            "stop": "stop",
-            "is_enabled": "is-enabled",
-            "is_active": "is-active",
-            "is_available": "list-unit-files"
-            }
-    IGNORE_ERRORS_IN_PARALLAX = ["is_enabled", "is_active", "is_available"]
-
-    def __init__(self, service_name, remote_addr=None, node_list=[]):
-        """
-        Init function
-        When node_list set, execute action between nodes in parallel
-        """
-        self.service_name = service_name
-        if remote_addr and node_list:
-            raise ValueError("Cannot assign remote_addr and node_list at the same time")
-        self.remote_addr = remote_addr
-        self.target_node = remote_addr or this_node()
-        self.node_list = node_list
-        self.rc = False
-        self.parallax_res = None
-        self.nodes_dict = {}
-        self.success_nodes = []
-
-    def _do_action(self, action_type):
-        """
-        Actual do actions to manage service
-        """
-        if action_type not in self.ACTION_MAP.values():
-            raise ValueError("status_type should be {}".format('/'.join(list(self.ACTION_MAP.values()))))
-
-        cmd = "systemctl {} {}".format(action_type, self.service_name)
-        if action_type not in ["is-active", "is-enabled", "list-unit-files"]:
-            cmd = "sudo " + cmd
-
-        if len(self.node_list) == 1 and self.node_list[0] == this_node():
-            self.node_list= [] # the else: case below
-
-        if self.node_list:
-            self.parallax_res = parallax.parallax_call(self.node_list, cmd, strict=False)
-            return
-        elif self.remote_addr and self.remote_addr != this_node():
-            prompt_msg = "Run \"{}\" on {}".format(cmd, self.remote_addr)
-            rc, _, err = run_cmd_on_remote(cmd, self.remote_addr, prompt_msg)
-        else:
-            rc, _, err = get_stdout_stderr(cmd)
-        if rc != 0 and err:
-            raise ValueError("Run \"{}\" error: {}".format(cmd, err))
-        self.rc = rc == 0
-
-    def _handle_action_result(self, action):
-        if self.parallax_res:
-            for host, result in self.parallax_res:
-                if isinstance(result, parallax.Error):
-                    if action not in self.IGNORE_ERRORS_IN_PARALLAX:
-                        logger.error("Failed to %s %s on %s: %s", action, self.service_name, host, str(result))
-                    self.nodes_dict[host] = False
-                else:
-                    self.nodes_dict[host] = True
-        else:
-            self.nodes_dict[self.target_node] = self.rc
-        self.success_nodes = [node for node in self.nodes_dict if self.nodes_dict[node]]
-
-    def action_and_handle_result(self, action):
-        self._do_action(self.ACTION_MAP[action])
-        self._handle_action_result(action)
-
     @classmethod
     def service_is_available(cls, name, remote_addr=None):
         """
         Check whether service is available
         """
-        inst = cls(name, remote_addr)
-        inst.action_and_handle_result("is_available")
-        return inst.nodes_dict[inst.target_node]
+        return 0 == cls._run_on_single_host("systemctl list-unit-files '{}'".format(name), remote_addr)
 
     @classmethod
     def service_is_enabled(cls, name, remote_addr=None):
         """
         Check whether service is enabled
         """
-        inst = cls(name, remote_addr)
-        inst.action_and_handle_result("is_enabled")
-        return inst.nodes_dict[inst.target_node]
+        return 0 == cls._run_on_single_host("systemctl is-enabled '{}'".format(name), remote_addr)
 
     @classmethod
     def service_is_active(cls, name, remote_addr=None):
         """
         Check whether service is active
         """
-        inst = cls(name, remote_addr)
-        inst.action_and_handle_result("is_active")
-        return inst.nodes_dict[inst.target_node]
+        return 0 == cls._run_on_single_host("systemctl is-active '{}'".format(name), remote_addr)
 
     @classmethod
     def start_service(cls, name, enable=False, remote_addr=None, node_list=[]):
@@ -2796,11 +2703,38 @@ class ServiceManager(object):
         Start service
         Return success node list
         """
-        inst = cls(name, remote_addr, node_list)
         if enable:
-            inst.action_and_handle_result("enable")
-        inst.action_and_handle_result("start")
-        return inst.success_nodes
+            cmd = "systemctl enable --now '{}'".format(name)
+        else:
+            cmd = "systemctl start '{}'".format(name)
+        return cls._call(remote_addr, node_list, cmd)
+
+    @staticmethod
+    def _call(remote_addr: str, node_list: typing.List[str], cmd: str) -> typing.List[str]:
+        assert not (bool(remote_addr) and bool(node_list))
+        if len(node_list) == 1:
+            remote_addr = node_list[0]
+            node_list = list()
+        if node_list:
+            results = ServiceManager._call_with_parallax(cmd, node_list)
+            return [host for host, result in results.items() if not isinstance(result, parallax.Error)]
+        else:
+            rc = ServiceManager._run_on_single_host(cmd, remote_addr)
+            if rc == 0:
+                return [remote_addr]
+            else:
+                return list()
+
+    @staticmethod
+    def _run_on_single_host(cmd, host):
+        rc, _, _ = get_stdout_stderr_auto_ssh_no_input(host, cmd)
+        if rc == 255:
+            raise ValueError("Failed to run command on host {}: {}".format(host, cmd))
+        return rc
+
+    @staticmethod
+    def _call_with_parallax(cmd, host_list):
+        return parallax.call(host_list, cmd)
 
     @classmethod
     def stop_service(cls, name, disable=False, remote_addr=None, node_list=[]):
@@ -2808,11 +2742,11 @@ class ServiceManager(object):
         Stop service
         Return success node list
         """
-        inst = cls(name, remote_addr, node_list)
         if disable:
-            inst.action_and_handle_result("disable")
-        inst.action_and_handle_result("stop")
-        return inst.success_nodes
+            cmd = "systemctl disable --now '{}'".format(name)
+        else:
+            cmd = "systemctl stop '{}'".format(name)
+        return cls._call(remote_addr, node_list, cmd)
 
     @classmethod
     def enable_service(cls, name, remote_addr=None, node_list=[]):
@@ -2820,9 +2754,8 @@ class ServiceManager(object):
         Enable service
         Return success node list
         """
-        inst = cls(name, remote_addr, node_list)
-        inst.action_and_handle_result("enable")
-        return inst.success_nodes
+        cmd = "systemctl enable '{}'".format(name)
+        return cls._call(remote_addr, node_list, cmd)
 
     @classmethod
     def disable_service(cls, name, remote_addr=None, node_list=[]):
@@ -2830,13 +2763,8 @@ class ServiceManager(object):
         Disable service
         Return success node list
         """
-        inst = cls(name, remote_addr, node_list)
-        inst.action_and_handle_result("is_available")
-        if not inst.success_nodes:
-            return []
-        inst.node_list = inst.success_nodes
-        inst.action_and_handle_result("disable")
-        return inst.success_nodes
+        cmd = "systemctl disable '{}'".format(name)
+        return cls._call(remote_addr, node_list, cmd)
 
 
 service_is_available = ServiceManager.service_is_available
