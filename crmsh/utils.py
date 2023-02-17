@@ -4,6 +4,7 @@
 import errno
 import os
 import sys
+import typing
 from tempfile import mkstemp
 import subprocess
 import re
@@ -220,12 +221,15 @@ def pacemaker_daemon(name):
     raise ValueError("Not a Pacemaker daemon name: {}".format(name))
 
 
-def can_ask():
+def can_ask(background_wait=True):
     """
     Is user-interactivity possible?
     Checks if connected to a TTY.
     """
-    return (not options.ask_no) and sys.stdin.isatty()
+    can_ask =  (not options.ask_no) and sys.stdin.isatty()
+    if not background_wait:
+        can_ask = can_ask and os.tcgetpgrp(sys.stdin.fileno()) == os.getpgrp()
+    return can_ask
 
 
 def ask(msg, background_wait=True):
@@ -242,10 +246,7 @@ def ask(msg, background_wait=True):
     if config.core.force:
         logger.info("%s [YES]", msg)
         return True
-    if not can_ask():
-        return False
-    if sys.stdin.isatty() and os.tcgetpgrp(sys.stdin.fileno()) != os.getpgrp() and not background_wait:
-        logger.info("%s [NO]", msg)
+    if not can_ask(background_wait):
         return False
 
     msg += ' '
@@ -261,6 +262,31 @@ def ask(msg, background_wait=True):
             ans = ans[0].lower()
             if ans in 'yn':
                 return ans == 'y'
+
+
+def ask_for_choice(question: str, choices: typing.List[str], default: int = None, background_wait=True, yes_to_all=False) -> int:
+    msg = '{} ({})? '.format(question, '/'.join((choice if i != default else '[{}]'.format(choice) for i, choice in enumerate(choices))))
+    if yes_to_all and default is not None:
+        logger.info('%s %s', msg, choices[default])
+        return default
+    if not can_ask(background_wait):
+        if default is None:
+            fatal("User input is impossible in a non-interactive session.")
+        else:
+            logger.info('%s %s', msg, choices[default])
+            return default
+    while True:
+        try:
+            choice = input(msg)
+        except EOFError:
+            choice = ''
+        if choice == '':
+            if default is not None:
+                return default
+        else:
+            for i, x in enumerate(choices):
+                if choice == x:
+                    return i
 
 
 # holds part of line before \ split

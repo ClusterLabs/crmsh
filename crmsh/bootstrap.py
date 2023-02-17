@@ -167,13 +167,31 @@ class Context(object):
                 mode=self.qdevice_heuristics_mode,
                 is_stage=self.stage == "qdevice")
 
-    def initialize_user(self):
+    def initialize_user(self, users_of_specified_hosts: str):
+        """
+        users_of_specified_hosts: 'not_specified', 'specified', 'no_hosts'
+        """
         sudoer = userdir.get_sudoer()
-        if sudoer is not None:
-            # TODO: guess whether we should operate in non-root mode
-            self.current_user = sudoer
+        has_sudoer = sudoer is not None
+        if users_of_specified_hosts == 'specified':
+            if has_sudoer:
+                self.current_user = sudoer
+            else:
+                utils.fatal("Unsupported config: local node is using root and remote nodes is using non-root users.")
+        elif users_of_specified_hosts == 'not_specified':
+            if has_sudoer:
+                self.current_user = sudoer
+            else:
+                assert userdir.getuser() == 'root'
+                self.current_user = 'root'
+        elif users_of_specified_hosts == 'no_hosts':
+            if has_sudoer:
+                self.current_user = sudoer
+            else:
+                assert userdir.getuser() == 'root'
+                self.current_user = 'root'
         else:
-            self.current_user = userdir.getuser()
+            raise AssertionError('Bad parameter user_of_specified_hosts: {}'.format(users_of_specified_hosts))
 
     def _validate_sbd_option(self):
         """
@@ -198,12 +216,20 @@ class Context(object):
                 user, node = self.cluster_node.split('@')
                 self.user_list = [user]
                 self.cluster_node = node
+                self.initialize_user(users_of_specified_hosts='specified')
             else:
+                self.initialize_user(users_of_specified_hosts='not_specified')
                 self.user_list = [self.current_user]
             self.node_list = [self.cluster_node]
             return
 
         self.node_list = utils.parse_append_action_argument(self.node_list)
+        if any('@' in user_node for user_node in self.node_list):
+            self.initialize_user(users_of_specified_hosts='specified')
+        elif len(self.node_list) == 0:
+            self.initialize_user(users_of_specified_hosts='no_hosts')
+        else:
+            self.initialize_user(users_of_specified_hosts='not_specified')
         me = utils.this_node()
         _node_list = []
         _user_list = []
@@ -2373,8 +2399,7 @@ def bootstrap_add(context):
     for (user, node) in zip(_context.user_list, _context.node_list):
         print()
         logger.info("Adding node {} to cluster".format(node))
-        cmd = "crm cluster join{} -c {}@{}{}".format(
-            " -y" if _context.yes_to_all else "", _context.current_user, utils.this_node(), options)
+        cmd = 'crm cluster join -y {} -c {}@{}'.format(options, _context.current_user, utils.this_node())
         logger.info("Running command on {}: {}".format(node, cmd))
         utils.get_stdout_or_raise_error(cmd, node)
 

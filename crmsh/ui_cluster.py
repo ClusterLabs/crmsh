@@ -366,7 +366,6 @@ Examples:
         boot_context.args = args
         boot_context.cluster_is_running = utils.service_is_active("pacemaker.service")
         boot_context.type = "init"
-        boot_context.initialize_user()
         boot_context.initialize_qdevice()
         boot_context.validate_option()
 
@@ -425,7 +424,6 @@ Examples:
         join_context.ui_context = context
         join_context.stage = stage
         join_context.type = "join"
-        join_context.initialize_user()
         join_context.validate_option()
 
         bootstrap.bootstrap_join(join_context)

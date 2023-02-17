@@ -43,8 +43,9 @@ class Parallax(object):
             self.ssh_options = ['StrictHostKeyChecking=no',
                     'ConnectTimeout=10',
                     'LogLevel=error']
-        sudoer = userdir.get_sudoer()
+        sudoer = crmsh.utils.user_of(crmsh.utils.this_node())
         if sudoer is not None:
+            # FIXME: this is really unreliable
             self.ssh_options.append('IdentityFile={}/.ssh/id_rsa'.format(userdir.gethomedir(sudoer)))
             self._sudoer = sudoer
         opts.ssh_options = self.ssh_options
