@@ -1676,32 +1676,15 @@ def load_graphviz_file(ini_f):
     return True, _graph_d
 
 
-def get_pcmk_version(dflt):
-    version = dflt
-
-    crmd = pacemaker_controld()
-    if crmd:
-        cmd = crmd
-    else:
-        return version
-
-    try:
-        rc, s, err = get_stdout_stderr("%s version" % (cmd))
-        if rc != 0:
-            logger.error("%s exited with %d [err: %s][out: %s]", cmd, rc, err, s)
-        else:
-            if err.startswith("CRM Version:"):
-                version = s.split()[0]
-            else:
-                version = s.split()[2]
-            logger.debug("found pacemaker version: %s", version)
-    except Exception as msg:
-        logger.warning("could not get the pacemaker version, bad installation?")
-        logger.warning(msg)
+def get_pcmk_version():
+    cmd = "/usr/sbin/pacemakerd --version"
+    out = get_stdout_or_raise_error(cmd)
+    version = out.split()[1]
+    logger.debug("Found pacemaker version: %s", version)
     return version
 
 
-def get_cib_property(cib_f, attr, dflt):
+def get_cib_property(cib_f, attr, dflt=None):
     """A poor man's get attribute procedure.
     We don't want heavy parsing, this needs to be relatively
     fast.
@@ -1769,14 +1752,17 @@ def is_larger_than_min_version(version, min_version):
 def is_min_pcmk_ver(min_ver, cib_f=None):
     if not constants.pcmk_version:
         if cib_f:
-            constants.pcmk_version = get_cib_property(cib_f, "dc-version", "1.1.11")
-            logger.debug("found pacemaker version: %s in cib: %s", constants.pcmk_version, cib_f)
+            constants.pcmk_version = get_cib_property(cib_f, "dc-version")
+            if constants.pcmk_version:
+                logger.debug("Found pacemaker version: %s in cib: %s", constants.pcmk_version, cib_f)
+            else:
+                fatal(f"Failed to get 'dc-version' from {cib_f}")
         else:
-            constants.pcmk_version = get_pcmk_version("1.1.11")
+            constants.pcmk_version = get_pcmk_version()
     return is_larger_than_min_version(constants.pcmk_version, min_ver)
 
 
-def is_pcmk_118(cib_f=None):
+def is_larger_than_pcmk_118(cib_f=None):
     return is_min_pcmk_ver("1.1.8", cib_f=cib_f)
 
 
@@ -1792,12 +1778,6 @@ def cibadmin_features():
         if m and len(m.groups()) > 2:
             return m.group(3).split()
     return []
-
-
-@memoize
-def cibadmin_can_patch():
-    # cibadmin -P doesn't handle comments in <1.1.11 (unless patched)
-    return is_min_pcmk_ver("1.1.11")
 
 
 # quote function from python module shlex.py in python 3.3

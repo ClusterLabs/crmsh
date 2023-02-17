@@ -142,7 +142,7 @@ _patterns_118 = {
 
 
 def patterns(cib_f=None):
-    is118 = utils.is_pcmk_118(cib_f=cib_f)
+    is118 = utils.is_larger_than_pcmk_118(cib_f=cib_f)
     if is118:
         return _patterns_118
     else:
