@@ -1028,7 +1028,7 @@ class TestServiceManager(unittest.TestCase):
             mock_run_on_single_host: mock.MagicMock,
             mock_call_with_parallax: mock.MagicMock,
     ):
-        mock_call_with_parallax.return_value = {'node1': (0, '', ''), 'node2': mock.Mock(parallax.Error)}
+        mock_call_with_parallax.return_value = {'node1': (0, '', ''), 'node2': (1, 'out', 'err')}
         self.assertEqual(['node1'], utils.ServiceManager._call(None, ['node1', 'node2'], 'foo'))
         mock_run_on_single_host.assert_not_called()
         mock_call_with_parallax.assert_called_once_with('foo', ['node1', 'node2'])

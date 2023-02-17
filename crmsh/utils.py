@@ -2757,7 +2757,7 @@ class ServiceManager(object):
             node_list = list()
         if node_list:
             results = ServiceManager._call_with_parallax(cmd, node_list)
-            return [host for host, result in results.items() if not isinstance(result, parallax.Error)]
+            return [host for host, result in results.items() if isinstance(result, tuple) and result[0] == 0]
         else:
             rc = ServiceManager._run_on_single_host(cmd, remote_addr)
             if rc == 0:
@@ -2774,7 +2774,10 @@ class ServiceManager(object):
 
     @staticmethod
     def _call_with_parallax(cmd, host_list):
-        return parallax.call(host_list, cmd)
+        ret = crmsh.parallax.parallax_run(host_list, cmd)
+        if ret is parallax.Error:
+            raise ret
+        return ret
 
     @classmethod
     def stop_service(cls, name, disable=False, remote_addr=None, node_list=[]):
