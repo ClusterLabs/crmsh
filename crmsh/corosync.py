@@ -110,6 +110,7 @@ def query_qnetd_status():
     local_user = utils.getuser()
     if utils.check_ssh_passwd_need(utils.getuser(), utils.user_of(qnetd_addr), qnetd_addr):
         print("Copy ssh key to qnetd node({})".format(qnetd_addr))
+        # FIXME
         rc, _, err = utils.get_stdout_stderr("ssh-copy-id -i ~{}/.ssh/id_rsa.pub root@{}".format(local_user, qnetd_addr))
         if rc != 0:
             raise ValueError(err)

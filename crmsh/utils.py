@@ -23,6 +23,8 @@ from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from lxml import etree
+
+import crmsh.parallax
 from . import config
 from . import userdir
 from . import constants
@@ -104,6 +106,8 @@ gethomedir = userdir.gethomedir
 
 def user_of(host):
     hosts = config.get_option('core', 'hosts')
+    if hosts == ['']:
+        return userdir.getuser()
     for item in hosts:
         if item.find('@') != -1:
             user, node = item.split('@')
@@ -112,14 +116,7 @@ def user_of(host):
             node = item
         if host == node:
             return user
-    if host == 'localhost' or host == this_node() or host is None:
-        return userdir.getuser()
-    # FIXME! If we didn't find the user neither in ~/.config/crm/crm.conf nor in /etc/crm/crm.conf its' fatal
-    # However, writing those users per hand is cumbersome and synchronizing an N-case is worth a separate PR (TODO!)
-    # Besides, maybe we would want to store the users not in the crm.conf, but somewhere else.
-    # logger.info("The user of {} is unknown (see crm.conf->[core]->hosts). Current user '{}' is used instead."
-    #    .format(host, userdir.getuser()))
-    return userdir.getuser()
+    raise ValueError('Failed to get user of host {}: {}'.format(host, hosts))
 
 
 @memoize
@@ -389,15 +386,6 @@ def add_sudo(cmd):
     return cmd
 
 
-def add_su(cmd, user):
-    """
-    Wrapped cmd with su -c "<cmd>" <user>
-    """
-    if user == "root":
-        return cmd
-    return "su -c \"{}\" {}".format(cmd, user)
-
-
 def chown(path, user, group):
     if isinstance(user, int):
         uid = user
@@ -637,11 +625,19 @@ def str2file(s, fname, mod=0o644):
     return True
 
 def write_remote_file(text, tofile, user, remote):
-    cmd = "echo '{}' | ssh {} {}@{} 'cat >> {}'".format(
-                    text, SSH_OPTION, user, remote, tofile)
-    rc, out, err = get_stdout_stderr(cmd, no_reg=True)
-    if rc != 0:
-        raise ValueError("Failed to write to {}@{}/{}: {}".format(user, remote, tofile, err))
+    shell_script = f'''cat >> {tofile} << EOF
+{text}
+EOF
+'''
+    result = subprocess_run_auto_ssh_no_input(
+        shell_script,
+        remote,
+        user,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    if result.returncode != 0:
+        raise ValueError("Failed to write to {}@{}/{}: {}".format(user, remote, tofile, result.stdout.decode('utf-8')))
 
 def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path):
     """
@@ -652,11 +648,10 @@ def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path)
     """
     # First try an easy way
     cmd = "scp %s@%s:'%s' %s" % (remote_user, remote_node, remote_text_file, local_path)
-    rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+    rc, out, err = get_stdout_stderr_as_local_sudoer(cmd)
     # If failed, try the hard way
     if rc != 0:
-        cmd = "ssh %s@%s sudo cat %s" % (remote_user, remote_node, remote_text_file)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = get_stdout_stderr_auto_ssh_no_input(remote_node, 'cat {}'.format(remote_text_file))
         if rc != 0:
             raise ValueError("Failed to read {}@{}/{}: {}".format(remote_user, remote_node, remote_text_file, err))
         full_path = os.path.join(local_path, os.path.basename(remote_text_file))
@@ -899,22 +894,12 @@ def run_cmd_on_remote(cmd, remote_addr, prompt_msg=None):
     Run a cmd on remote node
     return (rc, stdout, err_msg)
     """
-    rc = 1
-    out_data = None
-    err_data = None
-
-    need_pw = check_ssh_passwd_need(getuser(), user_of(remote_addr), remote_addr)
-    if need_pw and prompt_msg:
-        print(prompt_msg)
-    try:
-        result = parallax.parallax_call([remote_addr], cmd, need_pw)
-        rc, out_data, _ = result[0][1]
-    except ValueError as err:
-        err_match = re.search("Exited with error code ([0-9]+), Error output: (.*)", str(err))
-        if err_match:
-            rc, err_data = err_match.groups()
-    finally:
-        return int(rc), to_ascii(out_data), err_data
+    result = subprocess_run_auto_ssh_no_input(
+        cmd, remote_addr,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return result.returncode, result.stdout.decode('utf-8'), result.stderr.decode('utf-8')
 
 
 def get_stdout(cmd, input_s=None, stderr_on=True, shell=True, raw=False):
@@ -955,6 +940,40 @@ def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False, no_reg=False):
     if raw:
         return proc.returncode, stdout_data, stderr_data
     return proc.returncode, to_ascii(stdout_data).strip(), to_ascii(stderr_data).strip()
+
+
+def su_get_stdout_stderr(user, cmd, input_s=None, raw=False):
+    if user == userdir.getuser():
+        args = ['/bin/sh', '-c', cmd]
+    elif 0 == os.geteuid():
+        args = ['su', user, '--login', '-c', cmd]
+    else:
+        raise AssertionError('trying to run su as a non-root user')
+    result = subprocess.run(
+        args,
+        input=input_s.encode('utf-8') if (input_s is not None and not raw) else input_s,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if raw:
+        return result.returncode, result.stdout, result.stderr
+    return result.returncode, to_ascii(result.stdout).strip(), to_ascii(result.stderr).strip()
+
+
+def get_stdout_stderr_as_local_sudoer(cmd, input_s=None, raw=False):
+    return su_get_stdout_stderr(user_of(this_node()), cmd, input_s, raw)
+
+
+def get_stdout_stderr_auto_ssh_no_input(host, cmd, raw=False):
+    result = subprocess_run_auto_ssh_no_input(
+        cmd,
+        host,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if raw:
+        return result.returncode, result.stdout, result.stderr
+    return result.returncode, to_ascii(result.stdout).strip(), to_ascii(result.stderr).strip()
 
 
 def stdout2list(cmd, stderr_on=True, shell=True):
@@ -1881,12 +1900,7 @@ def cluster_run_cmd(cmd, node_list=[]):
     nodelist = node_list or list_cluster_nodes()
     if not nodelist:
         raise ValueError("Failed to get node list from cluster")
-    host_port_user = []
-    for host in nodelist:
-        host_port_user.append([host, None, user_of(host)])
-    import parallax
-    opts = parallax.Options()
-    return parallax.call(host_port_user, cmd, opts)
+    return crmsh.parallax.parallax_call(nodelist, cmd)
 
 
 def list_cluster_nodes_except_me():
@@ -2253,13 +2267,10 @@ def check_ssh_passwd_need(local_user, remote_user, host):
     Check whether access to host need password
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-    if local_user and local_user != getuser():
-        custom_public_key = "~{}/.ssh/id_rsa.pub".format(local_user)
-        ssh_options += " -i {}".format(custom_public_key)
     if remote_user is None:
         remote_user = user_of(host)
     ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
-    rc, _, _ = get_stdout_stderr(ssh_cmd)
+    rc, _, _ = su_get_stdout_stderr(local_user, ssh_cmd)
     return rc != 0
 
 
@@ -2819,6 +2830,7 @@ def package_is_installed(pkg, remote_addr=None):
     if remote_addr:
         # check on remote
         print("Check whether {} is installed on {}".format(pkg, remote_addr))
+        # FIXME
         cmd = "ssh {} {}@{} \"{}\"".format(SSH_OPTION, user_of(remote_addr), remote_addr, cmd)
         rc, _, _ = get_stdout_stderr(cmd, no_reg=True)
     else:
@@ -2843,23 +2855,87 @@ def calculate_quorate_status(expected_votes, actual_votes):
     return int(actual_votes)/int(expected_votes) > 0.5
 
 
-def get_stdout_or_raise_error(cmd, user=None, remote=None, success_val_list=[0], no_raise=False):
+def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0], no_raise=False):
     """
     Common function to get stdout from cmd or raise exception
     """
-    if remote and remote != this_node():
-        if user is None:
-            user = user_of(remote)
-        cmd = "ssh {} {}@{} \"{}\"".format(SSH_OPTION, user, remote, cmd)
+    if remote is None:
+        result = subprocess.run(
+            ['/bin/sh'],
+            input=cmd.encode('utf-8'),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE,
+        )
     else:
-        if user is None or user == userdir.getuser():
-            pass
+        result = subprocess_run_auto_ssh_no_input(
+            cmd, remote,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE,
+        )
+    if no_raise or result.returncode in success_val_list:
+        return result.stdout.decode('utf-8')
+    else:
+        if remote is None:
+            raise ValueError("Failed to run '{}': {}".format(cmd, result.stderr.decode('utf-8')))
         else:
-            cmd = 'sudo -H -u {} bash -c "{}"'.format(user, cmd)
-    rc, out, err = get_stdout_stderr(cmd, no_reg=True)
-    if rc not in success_val_list and not no_raise:
-        raise ValueError("Failed to run \"{}\": {}".format(cmd, err))
-    return out
+            raise ValueError("Failed to run command on remote host {}: '{}': {}".format(remote, cmd, result.stderr.decode('utf-8')))
+
+
+def subprocess_run_auto_ssh_no_input(cmd, remote=None, user=None, **kwargs):
+    assert 'input' not in kwargs and 'stdin' not in kwargs
+    if remote is None or remote == this_node():
+        if user is None:
+            args = ['/bin/sh']
+        else:
+            args = ['sudo', '-H', '-u', user, '/bin/sh']
+        return subprocess.run(
+            args,
+            input=cmd.encode('utf-8'),
+            **kwargs,
+        )
+    else:
+        remote_sudoer = user_of(remote)
+        local_user = user_of(this_node())
+        if user is None:
+            user = 'root'
+        return su_subprocess_run(
+            local_user,
+            'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote, user),
+            input=cmd.encode('utf-8'),
+            **kwargs,
+        )
+
+
+def su_get_stdout_or_raise_error(cmd, user, success_values={0}, no_raise=False):
+    """run a command as a non-root user on local host"""
+    if user == userdir.getuser():
+        args = ['/bin/sh', '-c', cmd]
+    elif 0 == os.geteuid():
+        args = ['su', user, '-c', cmd]
+    else:
+        raise AssertionError('trying to run su as a non-root user')
+    result = subprocess.run(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE
+    )
+    if no_raise or result.returncode in success_values:
+        return result.stdout
+    else:
+        raise ValueError("Failed to run su {} -c '{}': {}".format(user, cmd, result.stderr))
+
+
+def su_subprocess_run(user: str, cmd: str, tty=False, **kwargs):
+    if user == userdir.getuser():
+        args = ['/bin/sh', '-c', cmd]
+    elif 0 == os.geteuid():
+        if tty:
+            args = ['su', user, '--pty', '--login', '-c', cmd]
+        else:
+            args = ['su', user, '--login', '-c', cmd]
+    else:
+        raise AssertionError('trying to run su as a non-root user')
+    return subprocess.run(args, **kwargs)
 
 
 def get_quorum_votes_dict(remote=None):
@@ -3310,6 +3386,7 @@ def detect_file(_file, remote=None):
     if not remote:
         cmd = "sudo test -f {}".format(_file)
     else:
+        # FIXME
         cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user_of(remote), remote, _file)
     code, _, _ = get_stdout_stderr(cmd)
     rc = code == 0
