@@ -121,7 +121,7 @@ def cibdump2elem(section=None):
     rc, outp, errp = sudocall(cmd)
     if rc == 0:
         return text2elem(outp)
-    elif rc != constants.cib_no_section_rc:
+    else:
         logger.error("running %s: %s", cmd, errp)
     return None
 

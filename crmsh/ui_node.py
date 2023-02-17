@@ -417,7 +417,7 @@ class NodeMgmt(command.UI):
         if not config.core.force and \
                 not utils.ask("Do you really want to drop state for node %s?" % node):
             return False
-        if utils.is_pcmk_118():
+        if utils.is_larger_than_pcmk_118():
             cib_elem = xmlutil.cibdump2elem()
             if cib_elem is None:
                 return False
