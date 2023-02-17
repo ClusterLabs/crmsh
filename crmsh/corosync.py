@@ -107,13 +107,14 @@ def query_qnetd_status():
         raise ValueError("host for qnetd not configured!")
 
     # Configure ssh passwordless to qnetd if detect password is needed
-    local_user = utils.getuser()
-    if utils.check_ssh_passwd_need(utils.getuser(), utils.user_of(qnetd_addr), qnetd_addr):
+    local_user = utils.user_of(utils.this_node())
+    try:
+        remote_user = utils.user_of(qnetd_addr)
+    except ValueError:
+        remote_user = 'root'
+    if utils.check_ssh_passwd_need(local_user, remote_user, qnetd_addr):
         print("Copy ssh key to qnetd node({})".format(qnetd_addr))
-        # FIXME
-        rc, _, err = utils.get_stdout_stderr("ssh-copy-id -i ~{}/.ssh/id_rsa.pub root@{}".format(local_user, qnetd_addr))
-        if rc != 0:
-            raise ValueError(err)
+        utils.ssh_copy_id(local_user, remote_user, qnetd_addr)
 
     cmd = "corosync-qnetd-tool -lv -c {}".format(cluster_name)
     result = parallax.parallax_call([qnetd_addr], cmd)

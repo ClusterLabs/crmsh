@@ -870,7 +870,7 @@ def init_ssh():
     public_key_list = list()
     for i, node in enumerate(node_list):
         remote_user = _context.user_list[i]
-        ssh_copy_id(local_user, remote_user, node)
+        utils.ssh_copy_id(local_user, remote_user, node)
         # After this, login to remote_node is passwordless
         public_key = swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True)
         public_key_list.append(public_key)
@@ -923,18 +923,17 @@ def _save_core_hosts(user_list: typing.List[str], host_list: typing.List[str], s
 
 
 def _load_core_hosts() -> typing.Optional[typing.Tuple[typing.List[str], typing.List[str]]]:
-    try:
-        li = config.get_option('core', 'hosts')
-    except ValueError:
-        return None
     users = list()
     hosts = list()
+    li = config.get_option('core', 'hosts')
+    if li == ['']:
+        return users, hosts
     for s in li:
-        s.split('@', 2)
-        if len(s) != 2:
+        parts = s.split('@', 2)
+        if len(parts) != 2:
             utils.fatal('Malformed config core.hosts: {}'.format(s))
-        users.append(s[0])
-        users.append(s[1])
+        users.append(parts[0])
+        hosts.append(parts[1])
     return users, hosts
 
 
@@ -1081,15 +1080,6 @@ def init_ssh_remote():
         keydata = open(fn + ".pub").read()
         if keydata not in authkeys_data:
             append(fn + ".pub", authorized_keys_file)
-
-
-def ssh_copy_id(local_user, remote_user, remote_node):
-    if utils.check_ssh_passwd_need(local_user, remote_user, remote_node):
-        logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
-        cmd = "ssh-copy-id -i ~/.ssh/id_rsa.pub '{}@{}'".format(remote_user, remote_node)
-        result = utils.su_subprocess_run(local_user, cmd, tty=True)
-        if result.returncode != 0:
-            utils.fatal("Failed to login to remote host {}@{}".format(remote_user, remote_node))
 
 
 def export_ssh_key_non_interactive(local_user_to_export, remote_user_to_swap, remote_node, local_sudoer, remote_sudoer):
@@ -1629,14 +1619,18 @@ def init_qdevice():
     qdevice_inst = _context.qdevice_inst
     qnetd_addr = qdevice_inst.qnetd_addr
     # Configure ssh passwordless to qnetd if detect password is needed
-    local_user = _context.current_user
-    remote_user = utils.user_of(qnetd_addr)
-    if utils.check_ssh_passwd_need(local_user, remote_user, qnetd_addr):
-        logger.info("Copy ssh key to qnetd node({})".format(qnetd_addr))
-        # FIXME
-        rc, _, err = invoke("ssh-copy-id -i /root/.ssh/id_rsa.pub root@{}".format(qnetd_addr))
-        if not rc:
-            utils.fatal("Failed to copy ssh key: {}".format(err))
+    local_user = utils.user_of(utils.this_node())
+    # TODO: ssh to qnetd with a non-root user
+    assert '@' not in qnetd_addr
+    remote_user = 'root'
+    remote_host = qnetd_addr
+    if utils.check_ssh_passwd_need(local_user, remote_user, remote_host):
+        logger.info("Copy ssh key to qnetd node({}@{})".format(remote_user, remote_host))
+        utils.ssh_copy_id(local_user, remote_user, remote_host)
+    user_list, host_list = _load_core_hosts()
+    user_list.append(remote_user)
+    host_list.append(remote_host)
+    _save_core_hosts(user_list, host_list, sync_to_remote=True)
     # Start qdevice service if qdevice already configured
     if utils.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
         qdevice_inst.start_qdevice_service()
@@ -1671,7 +1665,7 @@ def join_ssh(seed_host, seed_user):
     local_user = _context.current_user
     utils.start_service("sshd.service", enable=True)
     configure_ssh_key(local_user)
-    ssh_copy_id(local_user, seed_user, seed_host)
+    utils.ssh_copy_id(local_user, seed_user, seed_host)
     # After this, login to remote_node is passwordless
     swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
     configure_ssh_key('hacluster')
@@ -1968,7 +1962,7 @@ def setup_passwordless_with_other_nodes(init_node):
     for node in cluster_nodes_list:
         remote_user_to_swap = utils.user_of(node)
         remote_privileged_user = remote_user_to_swap
-        ssh_copy_id(local_user, remote_privileged_user, node)
+        utils.ssh_copy_id(local_user, remote_privileged_user, node)
         swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
     _save_core_hosts(user_list, host_list, sync_to_remote=True)
 
