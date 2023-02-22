@@ -991,7 +991,7 @@ def change_user_shell(user):
     """
     message = "The user '{}' will have the login shell configuration changed to /bin/bash"
     if user != "root" and is_nologin(user):
-        if not _context.yes_to_all:
+        if _context is not None and not _context.yes_to_all:
             logger.info(message.format(user))
             if not confirm("Continue?"):
                 _context.with_other_user = False
