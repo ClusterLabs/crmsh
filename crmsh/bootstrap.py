@@ -1962,7 +1962,12 @@ def setup_passwordless_with_other_nodes(init_node):
                      tokens[1], tokens[2]))
         else:
             cluster_nodes_list.append(tokens[1])
-    user_list, host_list = _fetch_core_hosts(local_user, remote_user, init_node)
+    try:
+        user_list, host_list = _fetch_core_hosts(local_user, remote_user, init_node)
+    except ValueError:
+        # No core.hosts on the seed host, may be a cluster upgraded from previous version
+        user_list = list()
+        host_list = list()
     user_list.append(local_user)
     host_list.append(utils.this_node())
     _save_core_hosts(user_list, host_list, sync_to_remote=False)
