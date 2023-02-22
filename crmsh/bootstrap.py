@@ -1655,7 +1655,11 @@ def init():
     init_network()
 
 
-def join_ssh(seed_host, seed_user):
+def join_ssh(seed_host):
+    join_ssh_impl(seed_host, _context.user_list[0])
+
+
+def join_ssh_impl(seed_host, seed_user):
     """
     SSH configuration for joining node.
     """
@@ -2435,7 +2439,7 @@ def bootstrap_join(context):
         init_upgradeutil()
         utils.ping_node(cluster_node)
 
-        join_ssh(cluster_node, _context.user_list[0])
+        join_ssh_impl(cluster_node, _context.user_list[0])
 
         remote_user = utils.user_of(cluster_node)
         n = 0
