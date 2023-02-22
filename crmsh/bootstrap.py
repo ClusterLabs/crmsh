@@ -851,33 +851,40 @@ def append_unique(fromfile, tofile, user=None, remote=None, from_local=False):
 
 
 def init_ssh():
-    """
-    Configure passwordless SSH.
-    """
+    init_ssh_impl(_context.current_user, _context.node_list, _context.user_list)
+    if _context.node_list:
+        for node in _context.node_list:
+            if utils.service_is_active("pacemaker.service", remote_addr=node):
+                utils.fatal("Cluster is currently active on {} - can't run".format(node))
+    print()
+
+
+def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typing.List[str]):
+    """ Configure passwordless SSH."""
     utils.start_service("sshd.service", enable=True)
-    local_user = _context.current_user
     configure_ssh_key(local_user)
     configure_ssh_key('hacluster')
 
     # If not use -N/--nodes option
-    if not _context.node_list:
-        _save_core_hosts([_context.current_user], [utils.this_node()], sync_to_remote=False)
+    if not node_list:
+        _save_core_hosts([local_user], [utils.this_node()], sync_to_remote=False)
         return
 
     print()
-    node_list = _context.node_list
     # Swap public ssh key between remote node and local
     public_key_list = list()
+    hacluster_public_key_list = list()
     for i, node in enumerate(node_list):
-        remote_user = _context.user_list[i]
+        remote_user = user_list[i]
         utils.ssh_copy_id(local_user, remote_user, node)
         # After this, login to remote_node is passwordless
-        public_key = swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True)
-        public_key_list.append(public_key)
+        public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True))
+        hacluster_public_key_list.append(swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_user, add=True))
     if len(node_list) > 1:
         shell_script = _merge_authorized_keys(public_key_list)
+        hacluster_shell_script = _merge_authorized_keys(hacluster_public_key_list)
         for i, node in enumerate(node_list):
-            remote_user = _context.user_list[i]
+            remote_user = user_list[i]
             result = utils.su_subprocess_run(
                 local_user,
                 'ssh {} {}@{} /bin/sh'.format(constants.SSH_OPTION, remote_user, node),
@@ -887,17 +894,23 @@ def init_ssh():
             )
             if result.returncode != 0:
                 utils.fatal('Failed to add public keys to {}@{}: {}'.format(remote_user, node, result.stdout))
-    if utils.this_node() not in _context.node_list:
-        user_list = [_context.current_user]
-        user_list.extend(_context.user_list)
-        node_list = [utils.this_node()]
-        node_list.extend(_context.node_list)
-        _save_core_hosts(user_list, node_list, sync_to_remote=True)
+            result = utils.su_subprocess_run(
+                local_user,
+                'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_user, node, 'hacluster'),
+                input=hacluster_shell_script,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            if result.returncode != 0:
+                utils.fatal('Failed to add public keys to {}@{}: {}'.format(remote_user, node, result.stdout))
+    if utils.this_node() not in node_list:
+        _user_list = [local_user]
+        _user_list.extend(user_list)
+        _node_list = [utils.this_node()]
+        _node_list.extend(node_list)
+        _save_core_hosts(_user_list, _node_list, sync_to_remote=True)
     else:
-        _save_core_hosts(_context.user_list, _context.node_list, sync_to_remote=True)
-    if utils.service_is_active("pacemaker.service", remote_addr=node):
-        utils.fatal("Cluster is currently active on {} - can't run".format(node))
-    print()
+        _save_core_hosts(user_list, node_list, sync_to_remote=True)
 
 
 def _merge_authorized_keys(keys: typing.List[str]) -> bytes:
