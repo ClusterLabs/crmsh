@@ -107,13 +107,13 @@ Feature: Use "crm configure set" to update attributes and operations
   @clean
   Scenario: operation warning
     When    Run "crm configure primitive id=d2 Dummy op start interval=5s" on "hanode1"
-    Then    Expected "WARNING: d2: Specified interval for start is 5s, it must be 0" in stdout
+    Then    Expected "WARNING: d2: Specified interval for start is 5s, it must be 0" in stderr
     When    Run "crm configure primitive id=d3 Dummy op monitor interval=0" on "hanode1"
-    Then    Expected "WARNING: d3: interval in monitor should be larger than 0, advised is 10s" in stdout
+    Then    Expected "WARNING: d3: interval in monitor should be larger than 0, advised is 10s" in stderr
     When    Run "crm configure primitive s2 ocf:pacemaker:Stateful op monitor role=Promoted interval=3s op monitor role=Unpromoted interval=3s" on "hanode1"
-    Then    Expected "WARNING: s2: interval in monitor must be unique, advised is 11s" in stdout
+    Then    Expected "WARNING: s2: interval in monitor must be unique, advised is 11s" in stderr
     When    Run "crm configure primitive id=d4 Dummy op start timeout=10s" on "hanode1"
-    Then    Expected "WARNING: d4: specified timeout 10s for start is smaller than the advised 20s" in stdout
+    Then    Expected "WARNING: d4: specified timeout 10s for start is smaller than the advised 20s" in stderr
 
   @clean
   Scenario: Add promotable=true and interleave=true automatically (bsc#1205522)

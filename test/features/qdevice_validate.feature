@@ -131,7 +131,7 @@ Feature: corosync qdevice/qnetd options validate
     And     Service "corosync-qdevice" is "stopped" on "hanode1"
     When    Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
-    Then    Expected "WARNING: To use qdevice service, need to restart cluster service manually on each node" in stdout
+    Then    Expected "WARNING: To use qdevice service, need to restart cluster service manually on each node" in stderr
     And     Service "corosync-qdevice" is "stopped" on "hanode1"
     When    Run "crm cluster restart" on "hanode1"
     Then    Service "corosync-qdevice" is "started" on "hanode1"
@@ -153,7 +153,7 @@ Feature: corosync qdevice/qnetd options validate
     And     Service "corosync-qdevice" is "started" on "hanode1"
     When    Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
     When    Run "crm cluster remove --qdevice -y" on "hanode1"
-    Then    Expected "WARNING: To remove qdevice service, need to restart cluster service manually on each node" in stdout
+    Then    Expected "WARNING: To remove qdevice service, need to restart cluster service manually on each node" in stderr
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode1"
     When    Run "crm cluster restart" on "hanode1"
