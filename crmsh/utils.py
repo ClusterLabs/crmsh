@@ -155,7 +155,12 @@ def ssh_copy_id(local_user, remote_user, remote_node):
     if check_ssh_passwd_need(local_user, remote_user, remote_node):
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
         cmd = "ssh-copy-id -i ~/.ssh/id_rsa.pub '{}@{}'".format(remote_user, remote_node)
-        result = su_subprocess_run(local_user, cmd, tty=True)
+        result = su_subprocess_run(
+                local_user, 
+                cmd, 
+                tty=True, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE)
         if result.returncode != 0:
             fatal("Failed to login to remote host {}@{}".format(remote_user, remote_node))
 
