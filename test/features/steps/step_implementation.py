@@ -6,7 +6,7 @@ import yaml
 
 import behave
 from behave import given, when, then
-from crmsh import corosync, parallax, sbd
+from crmsh import corosync, parallax, sbd, userdir
 from crmsh import utils as crmutils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
@@ -479,3 +479,18 @@ def step_impl(context, count, node):
         index += 1
     return False
 
+@then('Check passwordless for hacluster between "{nodelist}"')
+def step_impl(context, nodelist):
+    if userdir.getuser() != 'root':
+        return True
+    ssh_option = "-o StrictHostKeyChecking=no -T -o Batchmode=yes"
+    node_list = nodelist.split()
+    for node in node_list:
+        for n in node_list:
+            if node == n:
+                continue
+            cmd = f"su - hacluster -c 'ssh {ssh_option} hacluster@{n} true'"
+            if node != me():
+                cmd = f"ssh {node} \"{cmd}\""
+            context.logger.info(f"\nRun cmd: {cmd}")
+            run_command(context, cmd)
