@@ -344,18 +344,13 @@ class QDevice(object):
         Initialize database on QNetd server by running corosync-qnetd-certutil -i
         """
         cmd = "test -f {}".format(self.qnetd_cacert_on_qnetd)
-        try:
-            parallax.parallax_call([self.qnetd_addr], cmd)
-        except ValueError:
-            # target file not exist
-            pass
-        else:
+        rc, _, _ = utils.run_cmd_on_remote(cmd, self.qnetd_addr)
+        if rc == 0:
             return
-
         cmd = "corosync-qnetd-certutil -i"
         desc = "Step 1: Initialize database on {}".format(self.qnetd_addr)
         logger_utils.log_only_to_file(desc)
-        parallax.parallax_call([self.qnetd_addr], cmd)
+        utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)
 
     def fetch_qnetd_crt_from_qnetd(self):
         """
@@ -368,7 +363,7 @@ class QDevice(object):
 
         desc = "Step 2: Fetch {} from {}".format(self.qnetd_cacert_filename, self.qnetd_addr)
         logger_utils.log_only_to_file(desc)
-        parallax.parallax_slurp([self.qnetd_addr], self.qdevice_path, self.qnetd_cacert_on_qnetd)
+        utils.copy_remote_textfile("root", self.qnetd_addr, self.qnetd_cacert_on_qnetd, self.qdevice_path)
 
     def copy_qnetd_crt_to_cluster(self):
         """
@@ -436,7 +431,7 @@ class QDevice(object):
         logger_utils.log_only_to_file(desc)
         cmd = "corosync-qnetd-certutil -s -c {} -n {}".\
                 format(self.qdevice_crq_on_qnetd, self.cluster_name)
-        parallax.parallax_call([self.qnetd_addr], cmd)
+        utils.get_stdout_or_raise_error(cmd, remote=self.qnetd_addr)
 
     def fetch_cluster_crt_from_qnetd(self):
         """
@@ -446,10 +441,7 @@ class QDevice(object):
         """
         desc = "Step 8: Fetch {} from {}".format(os.path.basename(self.qnetd_cluster_crt_on_qnetd), self.qnetd_addr)
         logger_utils.log_only_to_file(desc)
-        parallax.parallax_slurp(
-                [self.qnetd_addr],
-                self.qdevice_path,
-                self.qnetd_cluster_crt_on_qnetd)
+        utils.copy_remote_textfile("root", self.qnetd_addr, self.qnetd_cluster_crt_on_qnetd, self.qdevice_path)
 
     def import_cluster_crt(self):
         """
@@ -522,10 +514,7 @@ class QDevice(object):
 
         desc = "Step 1: Fetch {} from {}".format(self.qnetd_cacert_filename, self.cluster_node)
         logger_utils.log_only_to_file(desc)
-        parallax.parallax_slurp(
-                [self.cluster_node],
-                self.qdevice_path,
-                self.qnetd_cacert_on_local)
+        utils.copy_remote_textfile("root", self.cluster_node, self.qnetd_cacert_on_local, self.qdevice_path)
 
     def init_db_on_local(self):
         """
@@ -552,10 +541,7 @@ class QDevice(object):
 
         desc = "Step 3: Fetch {} from {}".format(self.qdevice_p12_filename, self.cluster_node)
         logger_utils.log_only_to_file(desc)
-        parallax.parallax_slurp(
-                [self.cluster_node],
-                self.qdevice_path,
-                self.qdevice_p12_on_local)
+        utils.copy_remote_textfile("root", self.cluster_node, self.qdevice_p12_on_local, self.qdevice_path)
 
     def import_p12_on_local(self):
         """
