@@ -361,19 +361,19 @@ class TestBootstrap(unittest.TestCase):
 
         bootstrap.change_user_shell("hacluster")
 
-        mock_nologin.assert_called_once_with("hacluster")
+        mock_nologin.assert_called_once_with("hacluster", None)
         mock_confirm.assert_called_once_with("Continue?")
 
-    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.is_nologin')
-    def test_change_user_shell_return(self, mock_nologin, mock_invoke):
+    def test_change_user_shell(self, mock_nologin, mock_invoke):
         bootstrap._context = mock.Mock(yes_to_all=True)
         mock_nologin.return_value = True
 
         bootstrap.change_user_shell("hacluster")
 
-        mock_nologin.assert_called_once_with("hacluster")
-        mock_invoke.assert_called_once_with("usermod -s /bin/bash hacluster")
+        mock_nologin.assert_called_once_with("hacluster", None)
+        mock_invoke.assert_called_once_with("usermod -s /bin/bash hacluster", None)
 
     @mock.patch('crmsh.utils.su_subprocess_run')
     def test_generate_ssh_key_pair_on_remote(self, mock_su: mock.MagicMock):
@@ -441,36 +441,6 @@ class TestBootstrap(unittest.TestCase):
         cmd = "cat fromfile | ssh {} root@node1 'cat >> tofile'".format(constants.SSH_OPTION)
         mock_run.assert_called_once_with(cmd)
 
-    @mock.patch('crmsh.bootstrap.invokerc')
-    def test_fetch_public_key_from_remote_node_exception(self, mock_invoke):
-        mock_invoke.side_effect = [False, False, False, False]
-
-        with self.assertRaises(ValueError) as err:
-            bootstrap.fetch_public_key_from_remote_node("node1")
-        self.assertEqual("No ssh key exist on node1", str(err.exception))
-
-        mock_invoke.assert_has_calls([
-            mock.call("ssh {} root@node1 'test -f /root/.ssh/id_rsa.pub'".format(constants.SSH_OPTION)),
-            mock.call("ssh {} root@node1 'test -f /root/.ssh/id_ecdsa.pub'".format(constants.SSH_OPTION)),
-            mock.call("ssh {} root@node1 'test -f /root/.ssh/id_ed25519.pub'".format(constants.SSH_OPTION)),
-            mock.call("ssh {} root@node1 'test -f /root/.ssh/id_dsa.pub'".format(constants.SSH_OPTION))
-            ])
-
-    @mock.patch('crmsh.tmpfiles.create')
-    @mock.patch('crmsh.bootstrap.invokerc')
-    @mock.patch('crmsh.bootstrap.invoke')
-    def test_fetch_public_key_from_remote_node(self, mock_invoke, mock_invokerc, mock_tmpfile):
-        mock_invokerc.return_value = True
-        mock_invoke.return_value = (True, None, None)
-        mock_tmpfile.return_value = (0, "temp_file_name")
-
-        res = bootstrap.fetch_public_key_from_remote_node("node1")
-        self.assertEqual(res, "temp_file_name")
-
-        mock_invokerc.assert_called_once_with("ssh {} root@node1 'test -f /root/.ssh/id_rsa.pub'".format(constants.SSH_OPTION))
-        mock_invoke.assert_called_once_with("scp -o StrictHostKeyChecking=no root@node1:/root/.ssh/id_rsa.pub temp_file_name")
-        mock_tmpfile.assert_called_once_with()
-
     @mock.patch('crmsh.utils.fatal')
     def test_join_ssh_no_seed_host(self, mock_error):
         mock_error.side_effect = ValueError
@@ -478,12 +448,13 @@ class TestBootstrap(unittest.TestCase):
             bootstrap.join_ssh_impl(None, None)
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
+    @mock.patch('crmsh.bootstrap.change_user_shell')
     @mock.patch('crmsh.utils.su_get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
     @mock.patch('crmsh.utils.ssh_copy_id')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.start_service')
-    def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_invoke):
+    def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_invoke, mock_change):
         bootstrap._context = mock.Mock(current_user="bob", user_list=["alice"], node_list=['node1'], default_nic_list=["eth1"])
         mock_invoke.return_value = ''
         mock_swap.return_value = None
@@ -594,6 +565,8 @@ class TestBootstrap(unittest.TestCase):
         ])
         mock_error.assert_called_once_with("Can't fetch hostname of node1: None")
 
+    @mock.patch('crmsh.bootstrap.swap_key_for_hacluster')
+    @mock.patch('crmsh.bootstrap.change_user_shell')
     @mock.patch('crmsh.utils.HostUserConfig')
     @mock.patch('crmsh.bootstrap._fetch_core_hosts')
     @mock.patch('crmsh.utils.ssh_copy_id')
@@ -608,7 +581,8 @@ class TestBootstrap(unittest.TestCase):
             mock_ssh_copy_id: mock.MagicMock,
             mock_fetch_core_hosts,
             mock_host_user_config_class,
-
+            mock_change_shell,
+            mock_swap_hacluster
     ):
         bootstrap._context = mock.Mock(current_user="carol", user_list=["alice", "bob"])
         mock_fetch_core_hosts.return_value = (["alice", "bob"], ["node1", "node2"])
@@ -630,7 +604,10 @@ class TestBootstrap(unittest.TestCase):
         mock_ssh_copy_id.assert_has_calls([
             mock.call('carol', 'bob', 'node2')
         ])
-        mock_swap.assert_called_once_with('node2', "carol", "bob", "carol", "bob")
+        mock_swap.assert_has_calls([
+            mock.call('node2', "carol", "bob", "carol", "bob"),
+            mock.call('node2', 'hacluster', 'hacluster', 'carol', 'bob', add=True)
+            ])
 
     @mock.patch('crmsh.userdir.getuser')
     @mock.patch('crmsh.bootstrap.key_files')
