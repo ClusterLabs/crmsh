@@ -139,47 +139,15 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
             return False
 
     def fix_cluster(self, nodes: typing.Iterable[str], ask: typing.Callable[[str], None]) -> None:
+        import crmsh.bootstrap  # import bootstrap lazily here to avoid circular dependency
         logger.debug("setup passwordless ssh authentication for user hacluster")
-        try:
-            nodes_without_keys = [
-                node for node, result in
-                crmsh.parallax.parallax_run(
-                    nodes,
-                    'sudo test [ -f ~hacluster/.ssh/id_rsa ] || [ -f ~hacluster/.ssh/id_ecdsa ] || [ -f ~hacluster/.ssh/id_ed25519 ]'
-                ).items()
-                if result[0] != 0
-            ]
-        except parallax.Error:
-            raise FixFailure()
-        if nodes_without_keys:
-            ask("Setup passwordless ssh authentication for user hacluster?")
-            if len(nodes_without_keys) == len(nodes):
-                # pick one node to run init ssh on it
-                init_node = nodes_without_keys[0]
-                # and run join ssh on other nodes
-                join_nodes = list()
-                join_nodes.extend(nodes)
-                join_nodes.remove(init_node)
-                join_target_node = init_node
-            else:
-                nodes_with_keys = set(nodes) - set(nodes_without_keys)
-                # no need to init ssh
-                init_node = None
-                join_nodes = nodes_without_keys
-                # pick one node as join target
-                join_target_node = next(iter(nodes_with_keys))
-            if init_node is not None:
-                try:
-                    crmsh.parallax.parallax_call([init_node], 'crm cluster init ssh -y')
-                except ValueError as e:
-                    logger.error('Failed to initialize passwordless ssh authentication on node %s.', init_node, exc_info=e)
-                    raise FixFailure from None
-            try:
-                for node in join_nodes:
-                    crmsh.parallax.parallax_call([node], 'crm cluster join ssh -c {} -y'.format(join_target_node))
-            except ValueError as e:
-                logger.error('Failed to initialize passwordless ssh authentication.', exc_info=e)
-                raise FixFailure from None
+        local_node = crmsh.utils.this_node()
+        remote_nodes = set(nodes)
+        remote_nodes.remove(local_node)
+        remote_nodes = list(remote_nodes)
+        local_user = crmsh.utils.user_of(local_node)
+        remote_users = [crmsh.utils.user_of(node) for node in remote_nodes]
+        crmsh.bootstrap.init_ssh_impl(local_user, remote_nodes, remote_users)
 
 
 def main_check_local(args) -> int:

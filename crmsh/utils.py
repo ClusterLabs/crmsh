@@ -268,7 +268,11 @@ def can_ask(background_wait=True):
     """
     can_ask =  (not options.ask_no) and sys.stdin.isatty()
     if not background_wait:
-        can_ask = can_ask and os.tcgetpgrp(sys.stdin.fileno()) == os.getpgrp()
+        try:
+            can_ask = can_ask and os.tcgetpgrp(sys.stdin.fileno()) == os.getpgrp()
+        except OSError as e:
+            if e.errno == errno.ENOTTY:
+                can_ask = False
     return can_ask
 
 

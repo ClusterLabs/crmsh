@@ -467,7 +467,7 @@ class TestBootstrap(unittest.TestCase):
     def test_join_ssh_no_seed_host(self, mock_error):
         mock_error.side_effect = ValueError
         with self.assertRaises(ValueError):
-            bootstrap.join_ssh(None, None)
+            bootstrap.join_ssh_impl(None, None)
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
     @mock.patch('crmsh.utils.su_get_stdout_or_raise_error')
@@ -480,7 +480,7 @@ class TestBootstrap(unittest.TestCase):
         mock_invoke.return_value = ''
         mock_swap.return_value = None
 
-        bootstrap.join_ssh("node1", "alice")
+        bootstrap.join_ssh_impl("node1", "alice")
 
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
         mock_config_ssh.assert_has_calls([

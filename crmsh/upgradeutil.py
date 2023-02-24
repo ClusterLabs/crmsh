@@ -51,6 +51,15 @@ def _get_file_content(path, default=None):
         return default
 
 
+def _parallax_run(nodes: str, cmd: str) -> typing.Dict[str, typing.Tuple[int, bytes, bytes]]:
+    ret = crmsh.parallax.parallax_run(nodes, cmd)
+    for node, value in ret.items():
+        if isinstance(value, parallax.Error):
+            logger.warning("SSH connection to remote node %s failed.", node, exc_info=value)
+            raise value
+    return ret
+
+
 def _is_upgrade_needed(nodes):
     """decide whether upgrading is needed by checking local sequence file"""
     needed = False
@@ -71,7 +80,7 @@ def _is_upgrade_needed(nodes):
 def _is_cluster_target_seq_consistent(nodes):
     cmd = '/usr/bin/env python3 -m crmsh.upgradeutil get-seq'
     try:
-        results = list(crmsh.parallax.parallax_run(nodes, cmd).values())
+        results = list(_parallax_run(nodes, cmd).values())
     except parallax.Error as e:
         raise _SkipUpgrade() from None
     try:
@@ -85,7 +94,7 @@ def _get_minimal_seq_in_cluster(nodes) -> typing.Tuple[int, int]:
     try:
         return min(
             _parse_upgrade_seq(stdout.strip()) if rc == 0 else (0, 0)
-            for rc, stdout, stderr in crmsh.parallax.parallax_run(nodes, 'cat {}'.format(SEQ_FILE_PATH)).values()
+            for rc, stdout, stderr in _parallax_run(nodes, 'cat {}'.format(SEQ_FILE_PATH)).values()
         )
     except ValueError:
         return 0, 0
@@ -93,19 +102,18 @@ def _get_minimal_seq_in_cluster(nodes) -> typing.Tuple[int, int]:
 
 def _upgrade(nodes, seq):
     def ask(msg: str):
-        if not crmsh.utils.ask('Upgrade of crmsh configuration: ' + msg, background_wait=False):
-            raise crmsh.healthcheck.AskDeniedByUser()
+        pass
     try:
         for key in VERSION_FEATURES.keys():
             if seq < key <= CURRENT_UPGRADE_SEQ:
                 for feature_class in VERSION_FEATURES[key]:
                     feature = feature_class()
                     if crmsh.healthcheck.feature_full_check(feature, nodes):
-                        logger.info("Upgrade: feature %s is already functional.")
+                        logger.debug("upgradeutil: feature %s is already functional.")
                     else:
-                        logger.debug("Upgrade: fixing feature %s...")
+                        logger.debug("upgradeutil: fixing feature %s...")
                         crmsh.healthcheck.feature_fix(feature, nodes, ask)
-        logger.info("Upgrade of crmsh configuration succeeded.")
+        logger.debug("upgradeutil: upgrade succeeded.")
     except crmsh.healthcheck.AskDeniedByUser:
         raise _SkipUpgrade() from None
 
@@ -113,32 +121,36 @@ def _upgrade(nodes, seq):
 def upgrade_if_needed():
     if os.geteuid() != 0:
         return
+    if not crmsh.utils.can_ask(background_wait=False):
+        return
     nodes = crmsh.utils.list_cluster_nodes(no_reg=True)
     if nodes and _is_upgrade_needed(nodes):
-        logger.info("crmsh version is newer than its configuration. Configuration upgrade is needed.")
+        logger.debug("upgradeutil: configuration upgrade needed")
         try:
             if not _is_cluster_target_seq_consistent(nodes):
                 logger.warning("crmsh version is inconsistent in cluster.")
                 raise _SkipUpgrade()
             seq = _get_minimal_seq_in_cluster(nodes)
             logger.debug(
-                "Upgrading crmsh configuration from seq %s to %s.",
+                "Upgrading crmsh from seq %s to %s.",
                 seq, _format_upgrade_seq(CURRENT_UPGRADE_SEQ),
             )
             _upgrade(nodes, seq)
         except _SkipUpgrade:
-            logger.warning("Upgrade of crmsh configuration skipped.")
+            logger.debug("upgradeutil: upgrade skipped")
             return
-        crmsh.parallax.parallax_call(
-            nodes,
-            "mkdir -p '{}' && echo '{}' > '{}'".format(
-                DATA_DIR,
-                _format_upgrade_seq(CURRENT_UPGRADE_SEQ),
-                SEQ_FILE_PATH,
-            ),
-        )
+        # TODO: replace with parallax_copy when it is ready
+        for node in nodes:
+            crmsh.utils.get_stdout_or_raise_error(
+                "mkdir -p '{}' && echo '{}' > '{}'".format(
+                    DATA_DIR,
+                    _format_upgrade_seq(CURRENT_UPGRADE_SEQ),
+                    SEQ_FILE_PATH,
+                ),
+                node,
+            )
         crmsh.parallax.parallax_call(nodes, 'rm -f {}'.format(FORCE_UPGRADE_FILE_PATH))
-        logger.debug("Upgrade of crmsh configuration finished.", seq)
+        logger.debug("upgrade finished")
 
 
 def force_set_local_upgrade_seq():
