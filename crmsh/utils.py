@@ -21,6 +21,7 @@ import ipaddress
 import argparse
 import random
 import string
+import grp
 from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
@@ -3427,7 +3428,7 @@ def in_haclient():
     """
     Check if current user is in haclient group
     """
-    return 90 in os.getgroups()
+    return constants.HA_GROUP in [grp.getgrgid(g).gr_name for g in os.getgroups()]
 
 
 def check_user_access(level_name):
