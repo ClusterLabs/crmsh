@@ -117,7 +117,11 @@ class UserOfHost:
         if cached is None:
             ret = self._user_of_impl(host)
             if ret is None:
-                return userdir.getuser()
+                user = userdir.get_sudoer()
+                if user:
+                    return user
+                else:
+                    return userdir.getuser()
             else:
                 self._cache[host] = ret
                 return ret
@@ -126,10 +130,13 @@ class UserOfHost:
 
     @staticmethod
     def _user_of_impl(host):
-        canonical, aliases, _ = socket.gethostbyaddr(host)
-        aliases = set(aliases)
-        aliases.add(canonical)
-        aliases.add(host)
+        try:
+            canonical, aliases, _ = socket.gethostbyaddr(host)
+            aliases = set(aliases)
+            aliases.add(canonical)
+            aliases.add(host)
+        except socket.herror:
+            aliases = {host}
         hosts = config.get_option('core', 'hosts')
         if hosts == ['']:
             return None
@@ -141,7 +148,7 @@ class UserOfHost:
                 node = item
             if node in aliases:
                 return user
-        logger.warning('Failed to get the user of host %s (aliases: %s). Known hosts are %s', host, aliases, hosts)
+        logger.debug('Failed to get the user of host %s (aliases: %s). Known hosts are %s', host, aliases, hosts)
         return None
 
 
@@ -2811,10 +2818,7 @@ def package_is_installed(pkg, remote_addr=None):
     cmd = "rpm -q --quiet {}".format(pkg)
     if remote_addr:
         # check on remote
-        print("Check whether {} is installed on {}".format(pkg, remote_addr))
-        # FIXME
-        cmd = "ssh {} {}@{} \"{}\"".format(SSH_OPTION, user_of(remote_addr), remote_addr, cmd)
-        rc, _, _ = get_stdout_stderr(cmd, no_reg=True)
+        rc, _, _ = get_stdout_stderr_auto_ssh_no_input(remote_addr, cmd)
     else:
         # check on local
         rc, _ = get_stdout(cmd)
@@ -3452,4 +3456,47 @@ Option 2) Add "{current_user}" to the haclient group. For example:
     else:
         logger.error("Please run this command starting with \"sudo\"")
     raise TerminateSubCommand
+
+
+class HostUserConfig:
+    """Keep the username used for ssh connection corresponding to each host.
+
+    The data is saved in configuration option `core.hosts`.
+    """
+    def __init__(self):
+        self._hosts_users = dict()
+        self.load()
+
+    def load(self):
+        users = list()
+        hosts = list()
+        li = config.get_option('core', 'hosts')
+        if li == ['']:
+            self._hosts_users = dict()
+            return
+        for s in li:
+            parts = s.split('@', 2)
+            if len(parts) != 2:
+                raise ValueError('Malformed config core.hosts: {}'.format(s))
+            users.append(parts[0])
+            hosts.append(parts[1])
+        self._hosts_users = {host: user for user, host in zip(users, hosts)}
+
+    def save_local(self):
+        value = [f'{user}@{host}' for host, user in sorted(self._hosts_users.items(), key=lambda x: x[0])]
+        config.set_option('core', 'hosts', value)
+        # TODO: it is saved in ~root/.config/crm/crm.conf, is it as suitable path?
+        config.save()
+
+    def save_remote(self, remote_hosts: typing.Iterable[str]):
+        self.save_local()
+        value = [f'{user}@{host}' for host, user in sorted(self._hosts_users.items(), key=lambda x: x[0])]
+        crmsh.parallax.parallax_call(remote_hosts, "crm options set core.hosts '{}'".format(', '.join(value)))
+
+    def get(self, host):
+        return self._hosts_users[host]
+
+    def add(self, user, host):
+        self._hosts_users[host] = user
+
 # vim:ts=4:sw=4:et:
