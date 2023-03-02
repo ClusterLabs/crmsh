@@ -113,7 +113,6 @@ def query_qnetd_status():
     except ValueError:
         remote_user = 'root'
     if utils.check_ssh_passwd_need(local_user, remote_user, qnetd_addr):
-        print("Copy ssh key to qnetd node({})".format(qnetd_addr))
         utils.ssh_copy_id(local_user, remote_user, qnetd_addr)
 
     cmd = "corosync-qnetd-tool -lv -c {}".format(cluster_name)

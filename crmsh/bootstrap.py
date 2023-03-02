@@ -157,12 +157,20 @@ class Context(object):
         """
         if not self.qnetd_addr:
             return
+        parts = self.qnetd_addr.split('@', 2)
+        if len(parts) == 2:
+            ssh_user = parts[0]
+            qnetd_host = parts[1]
+        else:
+            ssh_user = None
+            qnetd_host = self.qnetd_addr
         self.qdevice_inst = qdevice.QDevice(
-                self.qnetd_addr,
+                qnetd_host,
                 port=self.qdevice_port,
                 algo=self.qdevice_algo,
                 tie_breaker=self.qdevice_tie_breaker,
                 tls=self.qdevice_tls,
+                ssh_user=ssh_user,
                 cmds=self.qdevice_heuristics,
                 mode=self.qdevice_heuristics_mode,
                 is_stage=self.stage == "qdevice")
@@ -867,7 +875,9 @@ def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typin
 
     # If not use -N/--nodes option
     if not node_list:
-        _save_core_hosts([local_user], [utils.this_node()], sync_to_remote=False)
+        user_by_host = utils.HostUserConfig()
+        user_by_host.add(local_user, utils.this_node())
+        user_by_host.save_local()
         return
 
     print()
@@ -903,14 +913,11 @@ def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typin
             )
             if result.returncode != 0:
                 utils.fatal('Failed to add public keys to {}@{}: {}'.format(remote_user, node, result.stdout))
-    if utils.this_node() not in node_list:
-        _user_list = [local_user]
-        _user_list.extend(user_list)
-        _node_list = [utils.this_node()]
-        _node_list.extend(node_list)
-        _save_core_hosts(_user_list, _node_list, sync_to_remote=True)
-    else:
-        _save_core_hosts(user_list, node_list, sync_to_remote=True)
+    user_by_host = utils.HostUserConfig()
+    for user, node in zip(user_list, node_list):
+        user_by_host.add(user, node)
+    user_by_host.add(local_user, utils.this_node())
+    user_by_host.save_remote(node_list)
 
 
 def _merge_authorized_keys(keys: typing.List[str]) -> bytes:
@@ -925,33 +932,7 @@ def _merge_authorized_keys(keys: typing.List[str]) -> bytes:
     return buf
 
 
-def _save_core_hosts(user_list: typing.List[str], host_list: typing.List[str], sync_to_remote: bool):
-    value = [f'{user}@{host}' for user, host in zip(user_list, host_list)]
-    config.set_option('core', 'hosts', value)
-    # TODO: it is saved in ~root/.config/crm/crm.conf, is it as suitable path?
-    config.save()
-    if sync_to_remote:
-        assert "'" not in value
-        crmsh.parallax.parallax_call(host_list, "crm options set core.hosts '{}'".format(', '.join(value)))
-
-
-def _load_core_hosts() -> typing.Optional[typing.Tuple[typing.List[str], typing.List[str]]]:
-    users = list()
-    hosts = list()
-    li = config.get_option('core', 'hosts')
-    if li == ['']:
-        return users, hosts
-    for s in li:
-        parts = s.split('@', 2)
-        if len(parts) != 2:
-            utils.fatal('Malformed config core.hosts: {}'.format(s))
-        users.append(parts[0])
-        hosts.append(parts[1])
-    return users, hosts
-
-
 def _fetch_core_hosts(local_user, remote_user, remote_host) -> typing.Tuple[typing.List[str], typing.List[str]]:
-    # FIXME: when the remote_host is initialized with -d, this cmd will print extra debug log to stdout
     cmd = 'crm options show core.hosts'
     result = utils.su_subprocess_run(
         local_user,
@@ -1604,12 +1585,21 @@ def configure_qdevice_interactive():
     qdevice_heuristics_mode = prompt_for_string("MODE of operation of heuristics (on/sync/off)", default="sync",
             valid_func=qdevice.QDevice.check_qdevice_heuristics_mode) if qdevice_heuristics else None
 
+    parts = qnetd_addr.split('@', 2)
+    if len(parts) == 2:
+        ssh_user = parts[0]
+        qnetd_host = parts[1]
+    else:
+        ssh_user = None
+        qnetd_host = qnetd_addr
+
     _context.qdevice_inst = qdevice.QDevice(
-            qnetd_addr,
+            qnetd_host,
             port=qdevice_port,
             algo=qdevice_algo,
             tie_breaker=qdevice_tie_breaker,
             tls=qdevice_tls,
+            ssh_user=ssh_user,
             cmds=qdevice_heuristics,
             mode=qdevice_heuristics_mode,
             is_stage=_context.stage == "qdevice")
@@ -1626,24 +1616,20 @@ def init_qdevice():
         utils.disable_service("corosync-qdevice.service")
         return
     logger.info("""Configure Qdevice/Qnetd:""")
-    for node in utils.list_cluster_nodes():
+    cluster_node_list = utils.list_cluster_nodes()
+    for node in cluster_node_list:
         if not utils.service_is_available("corosync-qdevice.service", node):
             utils.fatal("corosync-qdevice.service is not available on {}".format(node))
     qdevice_inst = _context.qdevice_inst
     qnetd_addr = qdevice_inst.qnetd_addr
+    ssh_user = qdevice_inst.ssh_user if qdevice_inst.ssh_user is not None else _context.current_user
     # Configure ssh passwordless to qnetd if detect password is needed
     local_user = utils.user_of(utils.this_node())
-    # TODO: ssh to qnetd with a non-root user
-    assert '@' not in qnetd_addr
-    remote_user = 'root'
-    remote_host = qnetd_addr
-    if utils.check_ssh_passwd_need(local_user, remote_user, remote_host):
-        logger.info("Copy ssh key to qnetd node({}@{})".format(remote_user, remote_host))
-        utils.ssh_copy_id(local_user, remote_user, remote_host)
-    user_list, host_list = _load_core_hosts()
-    user_list.append(remote_user)
-    host_list.append(remote_host)
-    _save_core_hosts(user_list, host_list, sync_to_remote=True)
+    if utils.check_ssh_passwd_need(local_user, ssh_user, qnetd_addr):
+        utils.ssh_copy_id(local_user, ssh_user, qnetd_addr)
+    user_by_host = utils.HostUserConfig()
+    user_by_host.add(ssh_user, qnetd_addr)
+    user_by_host.save_remote(cluster_node_list)
     # Start qdevice service if qdevice already configured
     if utils.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
         qdevice_inst.start_qdevice_service()
@@ -1698,11 +1684,11 @@ def join_ssh_impl(seed_host, seed_user):
         ),
         local_user,
     )
-    user_list = [_context.current_user]
-    user_list.extend(_context.user_list)
-    node_list = [utils.this_node()]
-    node_list.extend(_context.node_list)
-    _save_core_hosts(user_list, node_list, sync_to_remote=False)
+    user_by_host = utils.HostUserConfig()
+    for user, node in zip(_context.user_list, _context.node_list):
+        user_by_host.add(user, node)
+    user_by_host.add(local_user, utils.this_node())
+    user_by_host.save_local()
 
 
 def swap_public_ssh_key(
@@ -1962,31 +1948,29 @@ def setup_passwordless_with_other_nodes(init_node):
                      tokens[1], tokens[2]))
         else:
             cluster_nodes_list.append(tokens[1])
+    user_by_host = utils.HostUserConfig()
+    user_by_host.add(local_user, utils.this_node())
     try:
         user_list, host_list = _fetch_core_hosts(local_user, remote_user, init_node)
+        for user, host in zip(user_list, host_list):
+            user_by_host.add(user, host)
     except ValueError:
         # No core.hosts on the seed host, may be a cluster upgraded from previous version
-        user_list = list()
-        host_list = list()
-    user_list.append(local_user)
-    host_list.append(utils.this_node())
-    _save_core_hosts(user_list, host_list, sync_to_remote=False)
+        pass
+    user_by_host.save_local()
 
     # Filter out init node from cluster_nodes_list
     cmd = "ssh {} {}@{} hostname".format(SSH_OPTION, remote_user , init_node)
     rc, out, err = utils.su_get_stdout_stderr(local_user, cmd)
     if rc != 0:
         utils.fatal("Can't fetch hostname of {}: {}".format(init_node, err))
-    if out in cluster_nodes_list:
-        cluster_nodes_list.remove(out)
-
     # Swap ssh public key between join node and other cluster nodes
-    for node in cluster_nodes_list:
+    for node in (node for node in cluster_nodes_list if node != out):
         remote_user_to_swap = utils.user_of(node)
         remote_privileged_user = remote_user_to_swap
         utils.ssh_copy_id(local_user, remote_privileged_user, node)
         swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
-    _save_core_hosts(user_list, host_list, sync_to_remote=True)
+    user_by_host.save_remote(cluster_nodes_list)
 
 
 def sync_files_to_disk():
