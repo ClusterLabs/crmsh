@@ -202,7 +202,7 @@ set_sshd_config_like_in_azure() {
 create_custom_user() {
 	user_name=$1
 	user_id=$2
-	docker_exec $node_name "useradd -m -s /bin/bash -N -u ${user_id} -g 90 ${user_name} 2>/dev/null"
+	docker_exec $node_name "useradd -m -s /bin/bash ${user_name} 2>/dev/null"
 	docker_exec $node_name "chmod u+w /etc/sudoers"
 	docker_exec $node_name "echo \"${user_name} ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
 	docker_exec $node_name "chmod u-w /etc/sudoers"
