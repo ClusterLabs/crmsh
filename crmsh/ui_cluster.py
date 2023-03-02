@@ -689,7 +689,7 @@ to get the geo cluster configuration.""",
         import time
         t0 = time.time()
         timeout = float(timeout)
-        cmd = 'crm_mon -bD1 2&>1 >/dev/null'
+        cmd = 'crm_mon -bD1 >/dev/null 2>&1'
         ret = utils.ext_cmd(cmd)
         while ret in (107, 64) and time.time() < t0 + timeout:
             time.sleep(1)
