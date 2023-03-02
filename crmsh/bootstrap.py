@@ -1927,7 +1927,7 @@ def setup_passwordless_with_other_nodes(init_node):
     # Fetch cluster nodes list
     remote_user = _context.user_list[0]
     local_user = _context.current_user
-    cmd = 'ssh {} {}@{} PATH=\\"\\$PATH\\":/usr/sbin:/sbin crm_node -l'.format(SSH_OPTION, remote_user, init_node)
+    cmd = f'ssh {SSH_OPTION} {remote_user}@{init_node} sudo crm_node -l'
     rc, out, err = utils.su_get_stdout_stderr(local_user, cmd)
     if rc != 0:
         utils.fatal("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
