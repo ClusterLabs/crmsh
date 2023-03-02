@@ -561,7 +561,7 @@ class TestBootstrap(unittest.TestCase):
         with self.assertRaises(SystemExit):
             bootstrap.setup_passwordless_with_other_nodes("node1")
 
-        mock_run.assert_called_once_with('carol', 'ssh {} alice@node1 PATH=\\"\\$PATH\\":/usr/sbin:/sbin crm_node -l'.format(constants.SSH_OPTION))
+        mock_run.assert_called_once_with('carol', 'ssh {} alice@node1 sudo crm_node -l'.format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("Can't fetch cluster nodes list from node1: None")
 
     @mock.patch('crmsh.utils.fatal')
@@ -589,7 +589,7 @@ class TestBootstrap(unittest.TestCase):
             bootstrap.setup_passwordless_with_other_nodes("node1")
 
         mock_run.assert_has_calls([
-            mock.call('carol', 'ssh {} alice@node1 PATH=\\"\\$PATH\\":/usr/sbin:/sbin crm_node -l'.format(constants.SSH_OPTION)),
+            mock.call('carol', 'ssh {} alice@node1 sudo crm_node -l'.format(constants.SSH_OPTION)),
             mock.call('carol', 'ssh {} alice@node1 hostname'.format(constants.SSH_OPTION))
         ])
         mock_error.assert_called_once_with("Can't fetch hostname of node1: None")
@@ -623,7 +623,7 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.setup_passwordless_with_other_nodes("node1")
 
         mock_run.assert_has_calls([
-            mock.call('carol', 'ssh {} alice@node1 PATH=\\"\\$PATH\\":/usr/sbin:/sbin crm_node -l'.format(constants.SSH_OPTION)),
+            mock.call('carol', 'ssh {} alice@node1 sudo crm_node -l'.format(constants.SSH_OPTION)),
             mock.call('carol', 'ssh {} alice@node1 hostname'.format(constants.SSH_OPTION))
             ])
         mock_userof.assert_called_once_with("node2")
