@@ -222,12 +222,19 @@ deploy_ha_node() {
 	fi
 	docker_exec $node_name "rm -rf /run/nologin"
 	docker_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
-	docker cp $PROJECT_PATH $node_name:/opt/crmsh
-	info "Building crmsh on \"$node_name\"..."
-	docker_exec $node_name "$make_cmd" 1> /dev/null || \
+
+	if [ "$node_name" != "qnetd-node" ];then
+	  docker cp $PROJECT_PATH $node_name:/opt/crmsh
+	  info "Building crmsh on \"$node_name\"..."
+	  docker_exec $node_name "$make_cmd" 1> /dev/null || \
 		fatal "Building failed on $node_name!"
 
-	create_alice_bob_carol
+	  create_alice_bob_carol
+	else
+	  docker_exec $node_name "useradd -m -s /bin/bash alice 2>/dev/null"
+	  docker_exec $node_name "echo \"alice ALL=(ALL) NOPASSWD:ALL\" > /etc/sudoers.d/alice"
+	  docker_exec $node_name "cp -r /root/.ssh ~alice/ && chown alice:users -R ~alice/.ssh"
+	fi
 }
 
 
