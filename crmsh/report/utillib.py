@@ -321,7 +321,7 @@ def collect_info():
             if dump_logset(l, constants.FROM_TIME, constants.TO_TIME, outf):
                 log_size(l, outf+'.info')
         else:
-            logger.warning("could not figure out the log format of %s", l)
+            logger.debug("could not figure out the log format of %s", l)
 
 
 def collect_journal(from_t, to_t, outf):
@@ -623,43 +623,37 @@ def find_log():
 
 
 def find_ssh_user():
-    ssh_user = "__undef"
-    if not constants.SSH_USER:
-        try_user_str = "__default " + constants.TRY_SSH
-    else:
-        try_user_str = constants.SSH_USER
-
+    ssh_user = ""
+    ssh_user_try_list = []
+    if constants.SSH_USER:
+        ssh_user_try_list.append(constants.SSH_USER)
     sudoer = userdir.get_sudoer()
     if sudoer:
-        try_user_str = f"{sudoer} {try_user_str}"
+        ssh_user_try_list.append(sudoer)
+    current_user = userdir.getuser()
+    ssh_user_try_list.append(current_user)
 
     for n in constants.NODES.split():
-        rc = 1
         if n == constants.WE:
             continue
-        for u in try_user_str.split():
-            if u != '__default':
-                ssh_s = '@'.join((u, n))
-            else:
-                ssh_s = n
-
-            if test_ssh_conn(ssh_s):
+        rc = False
+        for u in ssh_user_try_list:
+            ssh_s = f"{u}@{n}"
+            if not crmutils.check_ssh_passwd_need(u, u, n):
                 logger.debug("ssh %s OK", ssh_s)
                 ssh_user = u
-                try_user_str = u
-                rc = 0
+                rc = True
                 break
             else:
                 logger.debug("ssh %s failed", ssh_s)
-        if rc == 1:
-            constants.SSH_PASSWORD_NODES += " %s" % n
+        if not rc:
+            constants.SSH_PASSWORD_NODES.append(n)
 
     if constants.SSH_PASSWORD_NODES:
         logger.warning("passwordless ssh to node(s) %s does not work", constants.SSH_PASSWORD_NODES)
-    if ssh_user == "__undef":
-        return
-    if ssh_user != "__default":
-        constants.SSH_USER = ssh_user
+    if ssh_user:
+        constants.SUDO = "" if ssh_user in ["root", "hacluster"] else "sudo"
+    constants.SSH_USER = ssh_user if ssh_user else ""
 
 
 def findln_by_time(data, ts):
@@ -1123,13 +1117,6 @@ def mktemplate(argv):
     crmutils.str2file(out_string, os.path.join(workdir, constants.DESCRIPTION_F))
 
 
-def node_needs_pwd(node):
-    for n in constants.SSH_PASSWORD_NODES.split():
-        if n == node:
-            return True
-    return False
-
-
 def pe_to_dot(pe_file):
     dotf = '.'.join(pe_file.split('.')[:-1]) + '.dot'
     cmd = "%s -D %s -x %s" % (constants.PTEST, dotf, pe_file)
@@ -1371,12 +1358,11 @@ def start_slave_collector(node, arg_str):
             cmd += " {}".format(str(item))
         _, out = crmutils.get_stdout(cmd)
     else:
-        sudoer = userdir.get_sudoer()
-        node = f"{sudoer}@{node}" if sudoer else node
+        node = f"{constants.SSH_USER}@{node}" if constants.SSH_USER else node
         cmd = r'ssh {} {} "{} {}"'.format(constants.SSH_OPTS, node, constants.SUDO, cmd)
         for item in arg_str.split():
             cmd += " {}".format(str(item))
-        code, out, err = crmutils.get_stdout_stderr(cmd)
+        code, out, err = crmutils.su_get_stdout_stderr(constants.SSH_USER, cmd)
         if code != 0:
             logger.warning(err)
             for ip in get_peer_ip():
@@ -1408,15 +1394,6 @@ def str_to_bool(v):
 
 def tail(n, indata):
     return indata.split('\n')[-n:]
-
-
-def test_ssh_conn(addr):
-    cmd = r"ssh %s -T -o Batchmode=yes %s true" % (constants.SSH_OPTS, addr)
-    code, _ = get_command_info(cmd)
-    if code == 0:
-        return True
-    else:
-        return False
 
 
 def dump_D_process():

@@ -50,7 +50,7 @@ SKIP_LVL = config.report.speed_up
 SLAVE = 0
 SLAVEPIDS = None
 SSH_OPTS = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-SSH_PASSWORD_NODES = ""
+SSH_PASSWORD_NODES = []
 SSH_USER = ""
 SUDO = ""
 THIS_IS_NODE = 0
