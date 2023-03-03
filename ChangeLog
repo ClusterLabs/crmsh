@@ -1,3 +1,56 @@
+* Fri Mar 3 2023 Xin Liang <XLiang@suse.com>
+- Release 4.5.0 rc1
+- Fix: qdevice: Unable to setup qdevice under non-root user (bsc#1208770)
+- Dev: upgradeutil: do upgrade silently (bsc#1208327)
+- Fix: bootstrap: `crm cluster join ssh` raises TypeError (bsc#1208327)
+- Dev: utils: Change the way to get pacemaker's version (bsc#1208216)
+- Dev: bootstrap: guess and ask whether to operate in non-root mode (jsc#PED-290)
+- Dev: bootstrap: allow the cluster to operate with ssh session under non-root sudoer (jsc#PED-290)
+- Fix: hawk fails to parse the slash (bsc#1206217)
+- Fix: extra logs while configuring passwordless (bsc#1207720)
+- Dev: utils: Check current user's privilege and give hints to user
+- Dev: ui_configure: Deprecate configure erase sub-command
+- Fix: report: Catch read exception (bsc#1206606)
+- Feature: replace root by a custom user with root privileges
+- Fix: bootstrap: Unset SBD_DELAY_START when running 'crm cluster start' (bsc#1202177)
+- Dev: ui_node: redirect `node delete` to `cluster remove`
+- Feature: bootstrap: Add option -x to skip csync2 initialization stage during the whole cluster bootstrap
+- Dev: parse: complete advised operation values for other actions beside monitor
+- Dev: ui_context: redirect `foo -h`/`foo --help` to `help foo` (bsc#1205735)
+- Fix: qdevice: Adjust SBD_WATCHDOG_TIMEOUT when configuring qdevice not using stage (bsc#1205727)
+- Fix: cibconfig: Complete promotable=true and interlave=true for Promoted/Unpromoted resource (bsc#1205522)
+- Fix: corosync: show corosync ring status if has fault (bsc#1205615)
+- Dev: bootstrap: fix passwordless ssh authentication for hacluster automatically when a new node is joining the cluster (bsc#1201785)
+- Dev: upgradeutil: automated init ssh passwordless auth for hacluster after upgrading (bsc#1201785)
+- Dev: parse: cli_to_xml: populate advised monitor/start/stop operations values
+- fix: log: fail to open log file even if user is in haclient group (bsc#1204670)
+- Fix: sbd: Ask if overwrite when given sbd device on interactive mode(bsc#1201428)
+- Dev: bootstrap: Adjust cluster properties including priority-fencing-delay
+- Fix: ui_cluster: 'crm cluster stop' failed to stop services (bsc#1203601)
+- Dev: bootstrap: Adjust pcmk_delay_max and stonith-timeout for all configured fence agents
+- Dev: cibconfig: "crm config show related:xxx" provides partial search among class, provider, type fields
+- Fix: crash_test: do not use firewalld to isolate a cluster node (bsc#1192467)
+- Dev: bootstrap: Add delay to start corosync when node list larger than 5
+- Dev: log: print begin and end marker in different lines in status_long
+- Dev: parallax: Add LogLevel=error ssh option to filter out warnings (bsc#1196726)
+- Revert "Fix: utils: Only raise exception when return code of systemctl command over ssh larger than 4 (bsc#1196726)" (bsc#1202655)
+- fix: configure: refresh cib before showing or modifying if no pending changes has been made (bsc#1202465)
+- Fix: bootstrap: Use crmsh.parallax instead of parallax module directly (bsc#1202006)
+
+* Wed Aug 10 2022 Xin Liang <XLiang@suse.com>
+- tag: 4.4.1 for bug fix
+- Fix: utils: use -o and -n to compare files instead of strings for crm_diff (bsc#1201312)
+- Dev: bootstrap: remove cluster add sub-command
+- Fix: bootstrap: -N option setup the current node and peers all together (bsc#1175863)
+- Dev: doc: add help info for related: prefix for 'configure show' command
+- Dev: cinconfig: enable "related:" prefix to show the objects by given ra type
+- Fix: crm report: use sudo when under non root and hacluster user (bsc#1199634)
+- Fix: utils: wait4dc: Make change since output of 'crmadmin -S' changed(bsc#1199412)
+- Fix: bootstrap: stop and disable csync2.socket on removed node (bsc#1199325)
+- Fix: crm report: Read data in a save way, to avoid UnicodeDecodeError(bsc#1198180)
+- Fix: qdevice: Add lock to protect init_db_on_qnetd function (bsc#1197323)
+- Fix: utils: Only raise exception when return code of systemctl command over ssh larger than 4 (bsc#1196726)
+
 * Thu Feb 17 2022 Xin Liang <XLiang@suse.com>
 - Release 4.4.0
 - Dev: README: update with unit tests steps
