@@ -111,6 +111,7 @@ test/testcases/confbasic
 test/testcases/confbasic.exp
 test/testcases/confbasic-xml
 test/testcases/confbasic-xml.exp
+test/testcases/confbasic-xml.filter
 test/testcases/delete
 test/testcases/delete.exp
 test/testcases/edit

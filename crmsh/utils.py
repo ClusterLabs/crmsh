@@ -3485,8 +3485,13 @@ class HostUserConfig:
     def save_local(self):
         value = [f'{user}@{host}' for host, user in sorted(self._hosts_users.items(), key=lambda x: x[0])]
         config.set_option('core', 'hosts', value)
+        debug_on = config.get_option('core', 'debug')
+        if debug_on:
+            config.set_option('core', 'debug', 'false')
         # TODO: it is saved in ~root/.config/crm/crm.conf, is it as suitable path?
         config.save()
+        if debug_on:
+            config.set_option('core', 'debug', 'true')
 
     def save_remote(self, remote_hosts: typing.Iterable[str]):
         self.save_local()

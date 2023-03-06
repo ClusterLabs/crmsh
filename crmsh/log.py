@@ -19,12 +19,12 @@ class ConsoleCustomHandler(logging.StreamHandler):
     """
     A custom handler for console
 
-    Redirect ERROR message to sys.stderr
-    Redirect INFO/WARNING/DEBUG message to sys.stdout
+    Redirect ERROR/WARNING/DEBUG message to sys.stderr
+    Redirect INFO message to sys.stdout
     """
 
     def emit(self, record):
-        if record.levelno < logging.ERROR:
+        if record.levelno == logging.INFO:
             stream = sys.stdout
         else:
             stream = sys.stderr
