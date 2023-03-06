@@ -123,6 +123,8 @@ def _upgrade(nodes, seq):
 
 
 def upgrade_if_needed():
+    if os.geteuid() != 0:
+        return
     nodes = crmsh.utils.list_cluster_nodes(no_reg=True)
     if nodes and _is_upgrade_needed(nodes):
         logger.info("crmsh version is newer than its configuration. Configuration upgrade is needed.")
