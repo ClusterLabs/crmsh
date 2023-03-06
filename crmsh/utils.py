@@ -1,6 +1,7 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
 
+import errno
 import os
 import sys
 from tempfile import mkstemp
@@ -203,12 +204,19 @@ def pacemaker_daemon(name):
     raise ValueError("Not a Pacemaker daemon name: {}".format(name))
 
 
-def can_ask():
+def can_ask(background_wait=True):
     """
     Is user-interactivity possible?
     Checks if connected to a TTY.
     """
-    return (not options.ask_no) and sys.stdin.isatty()
+    can_ask =  (not options.ask_no) and sys.stdin.isatty()
+    if not background_wait:
+        try:
+            can_ask = can_ask and os.tcgetpgrp(sys.stdin.fileno()) == os.getpgrp()
+        except OSError as e:
+            if e.errno == errno.ENOTTY:
+                can_ask = False
+    return can_ask
 
 
 def ask(msg, background_wait=True):
