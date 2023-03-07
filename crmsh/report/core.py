@@ -24,7 +24,7 @@ def collect_for_nodes(nodes, arg_str):
     """
     process_list = []
     for node in nodes.split():
-        if utillib.node_needs_pwd(node):
+        if node in constants.SSH_PASSWORD_NODES:
             logger.info("Please provide password for %s at %s", utillib.say_ssh_user(), node)
             logger.info("Note that collecting data will take a while.")
             utillib.start_slave_collector(node, arg_str)
@@ -267,17 +267,6 @@ def run():
             # if the ssh user was supplied, consider that it
             # works; helps reduce the number of ssh invocations
             utillib.find_ssh_user()
-            if constants.SSH_USER:
-                constants.SSH_OPTS += " -o User=%s" % constants.SSH_USER
-        # assume that only root can collect data
-        if ((not constants.SSH_USER) and (os.getuid() not in [0, 90])) or \
-           constants.SSH_USER and constants.SSH_USER not in ["root", "hacluster"] or \
-           userdir.get_sudoer():
-            logger.debug("ssh user other than root, use sudo")
-            constants.SUDO = "sudo"
-        if os.getuid() != 0:
-            logger.debug("local user other than root, use sudo")
-            constants.LOCAL_SUDO = "sudo -u root"
 
     #
     # find the logs and cut out the segment for the period
