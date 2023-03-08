@@ -1743,29 +1743,6 @@ def remote_public_key_from(remote_user, local_sudoer, remote_node, remote_sudoer
         ))
     return result.stdout.decode('utf-8')
 
-def fetch_public_key_from_remote_node(node, user="root"):
-    """
-    Fetch public key file from remote node
-    Return a temp file contains public key
-    Return None if no key exist
-    """
-
-    # For dsa, might need to add PubkeyAcceptedKeyTypes=+ssh-dss to config file, see
-    # https://superuser.com/questions/1016989/ssh-dsa-keys-no-longer-work-for-password-less-authentication
-    home_dir = userdir.gethomedir(user)
-    for key in ("id_rsa", "id_ecdsa", "id_ed25519", "id_dsa"):
-        public_key_file = "{}/.ssh/{}.pub".format(home_dir, key)
-        cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user, node, public_key_file)
-        if not invokerc(cmd):
-            continue
-        _, temp_public_key_file = tmpfiles.create()
-        cmd = "scp {} {}@{}:{} {}".format(SSH_OPTION, user, node, public_key_file, temp_public_key_file)
-        rc, _, err = invoke(cmd)
-        if not rc:
-            utils.fatal("Failed to run \"{}\": {}".format(cmd, err))
-        return temp_public_key_file
-    raise ValueError("No ssh key exist on {}".format(node))
-
 
 def join_csync2(seed_host):
     """
