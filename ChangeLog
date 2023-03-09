@@ -1,3 +1,11 @@
+* Thu Mar 9 2023 Xin Liang <XLiang@suse.com>
+- Release 4.5.0 rc2
+- Dev: version: Bump crmsh version to 4.5.0
+- Fix: bootstrap: Swap hacluster ssh key with other nodes
+- Fix: report: Fix crm report issue under non-root user
+- Fix: bootstrap: Don't save core.debug when saving core.hosts (bsc#1208991)
+- Dev: log: Redirect debug messages into stderr
+
 * Fri Mar 3 2023 Xin Liang <XLiang@suse.com>
 - Release 4.5.0 rc1
 - Fix: qdevice: Unable to setup qdevice under non-root user (bsc#1208770)
