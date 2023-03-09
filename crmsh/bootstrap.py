@@ -864,7 +864,6 @@ def init_ssh():
         for node in _context.node_list:
             if utils.service_is_active("pacemaker.service", remote_addr=node):
                 utils.fatal("Cluster is currently active on {} - can't run".format(node))
-    print()
 
 
 def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typing.List[str]):
@@ -970,27 +969,35 @@ def key_files(user):
     return keyfile_dict
 
 
-def is_nologin(user):
+def is_nologin(user, remote=None):
     """
-    Check if user's shell is /sbin/nologin
+    Check if user's shell is nologin
     """
-    with open("/etc/passwd") as f:
-        return re.search("{}:.*:/sbin/nologin".format(user), f.read())
+    passwd_file = "/etc/passwd"
+    pattern = f"{user}:.*:/.*/nologin"
+    if remote:
+        cmd = f"cat {passwd_file}|grep {pattern}"
+        rc, _, _ = utils.run_cmd_on_remote(cmd, remote)
+        return rc == 0
+    else:
+        with open(passwd_file) as f:
+            return re.search(pattern, f.read())
 
 
-# FIXME! What is this all about?
-def change_user_shell(user):
+def change_user_shell(user, remote=None):
     """
     To change user's login shell
     """
-    message = "The user '{}' will have the login shell configuration changed to /bin/bash"
-    if user != "root" and is_nologin(user):
+    user_msg = f"'{user}' on {remote}" if remote else f"'{user}'"
+    message = f"The user {user_msg} will have the login shell configuration changed to /bin/bash"
+    if user != "root" and is_nologin(user, remote):
         if _context is not None and not _context.yes_to_all:
-            logger.info(message.format(user))
+            logger.info(message)
             if not confirm("Continue?"):
                 _context.with_other_user = False
                 return
-        invoke("usermod -s /bin/bash {}".format(user))
+        cmd = f"usermod -s /bin/bash {user}"
+        utils.get_stdout_or_raise_error(cmd, remote)
 
 
 def configure_ssh_key(user):
@@ -1672,6 +1679,7 @@ def join_ssh_impl(seed_host, seed_user):
     # After this, login to remote_node is passwordless
     swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
     configure_ssh_key('hacluster')
+    change_user_shell('hacluster', seed_host)
     swap_public_ssh_key(seed_host, 'hacluster', 'hacluster', local_user, seed_user, add=True)
 
     # This makes sure the seed host has its own SSH keys in its own
@@ -1734,29 +1742,6 @@ def remote_public_key_from(remote_user, local_sudoer, remote_node, remote_sudoer
             codecs.decode(result.stderr, 'utf-8', 'replace'),
         ))
     return result.stdout.decode('utf-8')
-
-def fetch_public_key_from_remote_node(node, user="root"):
-    """
-    Fetch public key file from remote node
-    Return a temp file contains public key
-    Return None if no key exist
-    """
-
-    # For dsa, might need to add PubkeyAcceptedKeyTypes=+ssh-dss to config file, see
-    # https://superuser.com/questions/1016989/ssh-dsa-keys-no-longer-work-for-password-less-authentication
-    home_dir = userdir.gethomedir(user)
-    for key in ("id_rsa", "id_ecdsa", "id_ed25519", "id_dsa"):
-        public_key_file = "{}/.ssh/{}.pub".format(home_dir, key)
-        cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user, node, public_key_file)
-        if not invokerc(cmd):
-            continue
-        _, temp_public_key_file = tmpfiles.create()
-        cmd = "scp {} {}@{}:{} {}".format(SSH_OPTION, user, node, public_key_file, temp_public_key_file)
-        rc, _, err = invoke(cmd)
-        if not rc:
-            utils.fatal("Failed to run \"{}\": {}".format(cmd, err))
-        return temp_public_key_file
-    raise ValueError("No ssh key exist on {}".format(node))
 
 
 def join_csync2(seed_host):
@@ -1970,7 +1955,30 @@ def setup_passwordless_with_other_nodes(init_node):
         remote_privileged_user = remote_user_to_swap
         utils.ssh_copy_id(local_user, remote_privileged_user, node)
         swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
+        if local_user != 'hacluster':
+            change_user_shell('hacluster', node)
+            swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user, add=True)
+    if local_user != 'hacluster':
+        swap_key_for_hacluster(cluster_nodes_list)
+
     user_by_host.save_remote(cluster_nodes_list)
+
+
+def swap_key_for_hacluster(other_node_list):
+    """
+    In some cases, old cluster may not be configured passwordless for hacluster.
+    The new join node should check and swap the public key between the old cluster nodes.
+    """
+    for node in other_node_list:
+        for n in other_node_list:
+            if node == n:
+                continue
+            logger.info("Checking passwordless for hacluster between %s and %s", node, n)
+            _, public_key, authorized_file = key_files('hacluster').values()
+            public_key_content = utils.get_stdout_or_raise_error(f'cat {public_key}', remote=n)
+            if not utils.check_text_included(public_key_content, authorized_file, remote=node):
+                cmd = "echo '{}' >> {}".format(public_key_content, authorized_file)
+                utils.get_stdout_or_raise_error(cmd, remote=node)
 
 
 def sync_files_to_disk():
