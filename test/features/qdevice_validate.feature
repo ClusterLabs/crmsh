@@ -2,7 +2,7 @@
 Feature: corosync qdevice/qnetd options validate
 
   Tag @clean means need to stop cluster service if the service is available
-  Need nodes: hanode1 hanode2 qnetd-node node-without-ssh
+  Need nodes: hanode1 hanode2 hanode3 qnetd-node node-without-ssh
 
   @clean
   Scenario: Option "--qnetd-hostname" use the same node
@@ -77,16 +77,16 @@ Feature: corosync qdevice/qnetd options validate
 
   @clean
   Scenario: Raise error when adding qdevice stage with the same cluster name
-    Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -n cluster1 -y" on "hanode1"
-    Then    Cluster service is "started" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode3"
     When    Run "crm cluster init -n cluster1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    When    Try "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1,hanode2"
+    When    Run "crm cluster init -n cluster1 -y" on "hanode3"
+    Then    Cluster service is "started" on "hanode3"
+    When    Try "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode2,hanode3"
     Then    Except "ERROR: cluster.init: Duplicated cluster name "cluster1"!"
-    When    Run "crm cluster stop" on "hanode1"
     When    Run "crm cluster stop" on "hanode2"
+    When    Run "crm cluster stop" on "hanode3"
 
   @clean
   Scenario: Raise error when the same cluster name already exists on qnetd

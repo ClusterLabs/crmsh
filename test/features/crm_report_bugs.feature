@@ -17,14 +17,14 @@ Feature: crm report functional test for verifying bugs
 
   @clean
   Scenario: Include archived logs(bsc#1148873)
-    When    Write multi lines to file "/var/log/log1"
+    When    Write multi lines to file "/var/log/log1" on "hanode1"
       """
       Sep 08 08:36:34 node1 log message line1
       Sep 08 08:37:01 node1 log message line2
       Sep 08 08:37:02 node1 log message line3
       """
     And     Run "xz /var/log/log1" on "hanode1"
-    When    Write multi lines to file "/var/log/log1"
+    When    Write multi lines to file "/var/log/log1" on "hanode1"
       """
       Sep 08 09:37:02 node1 log message line4
       Sep 08 09:37:12 node1 log message line5

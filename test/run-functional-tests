@@ -245,8 +245,8 @@ deploy_ha_node() {
 		fatal "Building failed on $node_name!"
 	  docker_exec $node_name "chown hacluster:haclient -R /var/log/crmsh"
 	  docker_exec $node_name "chmod g+w -R /var/log/crmsh"
+	  create_alice_bob_carol
 	  if [ "$NORMAL_USER_FLAG" -eq 1 ];then
-		create_alice_bob_carol
 		set_sshd_config_like_in_azure $node_name
           fi
 	else

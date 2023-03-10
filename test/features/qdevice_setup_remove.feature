@@ -35,8 +35,16 @@ Feature: corosync qdevice/qnetd setup/remove process
     Then    Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
     And     Service "corosync-qdevice" is "stopped" on "hanode2"
-    When    Run "echo "# This is a test for bsc#1166684"|sudo tee -a /etc/corosync/corosync.conf" on "hanode1"
-    When    Run "scp /etc/corosync/corosync.conf root@hanode2:/etc/corosync" on "hanode1"
+    When    Write multi lines to file "/etc/corosync/corosync.conf" on "hanode1"
+      """
+      # This is a test for bsc#1166684
+
+      """
+    When    Write multi lines to file "/etc/corosync/corosync.conf" on "hanode2"
+      """
+      # This is a test for bsc#1166684
+
+      """
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
     # for bsc#1181415
     Then    Expected "Starting corosync-qdevice.service in cluster" in stdout
@@ -154,11 +162,11 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @clean
   Scenario: One qnetd for multi cluster, add in parallel
-    When    Run "crm cluster init -n cluster1 -y" on "hanode1"
-    Then    Cluster service is "started" on "hanode1"
-    When    Run "crm cluster init -n cluster2 -y" on "hanode2"
+    When    Run "crm cluster init -n cluster1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    When    Run "crm cluster init qdevice --qnetd-hostname qnetd-node -y" on "hanode1,hanode2"
-    Then    Service "corosync-qdevice" is "started" on "hanode1"
-    And     Service "corosync-qdevice" is "started" on "hanode2"
+    When    Run "crm cluster init -n cluster2 -y" on "hanode3"
+    Then    Cluster service is "started" on "hanode3"
+    When    Run "crm cluster init qdevice --qnetd-hostname qnetd-node -y" on "hanode2,hanode3"
+    Then    Service "corosync-qdevice" is "started" on "hanode2"
+    And     Service "corosync-qdevice" is "started" on "hanode3"
     And     Service "corosync-qnetd" is "started" on "qnetd-node"
