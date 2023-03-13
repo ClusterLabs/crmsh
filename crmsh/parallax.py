@@ -67,7 +67,9 @@ class Parallax(object):
         for host in self.nodes:
             host_port_user.append([host, None, crmsh.utils.user_of(host)])
         # FIXME: this is really unreliable
-        results = parallax.call(host_port_user, 'sudo {}'.format(self.cmd), self.opts)
+        sudoer = userdir.get_sudoer()
+        cmd = f'sudo bash -c "{self.cmd}"' if sudoer else self.cmd
+        results = parallax.call(host_port_user, cmd, self.opts)
         return self.handle(list(results.items()))
 
     def slurp(self):
@@ -79,9 +81,11 @@ class Parallax(object):
         results = parallax.copy(self.nodes, self.src, self.dst, self.opts)
         return self.handle(list(results.items()))
     def run(self):
+        sudoer = userdir.get_sudoer()
+        cmd = f'sudo bash -c "{self.cmd}"' if sudoer else self.cmd
         return parallax.run(
             [[node, None, crmsh.utils.user_of(node)] for node in self.nodes],
-            'sudo {}'.format(self.cmd),
+            cmd,
             self.opts,
         )
 
