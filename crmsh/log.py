@@ -273,8 +273,12 @@ class LoggerUtils(object):
             self.logger.addHandler(console_handler)
 
     def log_only_to_file(self, msg, level=logging.INFO):
-        with self.only_file():
-            self.logger.log(level, msg)
+        from .config import core
+        if core.debug:
+            self.logger.log(logging.DEBUG, msg)
+        else:
+            with self.only_file():
+                self.logger.log(level, msg)
 
     @contextmanager
     def buffer(self):
