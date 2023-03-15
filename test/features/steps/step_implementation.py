@@ -6,7 +6,7 @@ import yaml
 
 import behave
 from behave import given, when, then
-from crmsh import corosync, parallax, sbd, userdir
+from crmsh import corosync, parallax, sbd, userdir, bootstrap
 from crmsh import utils as crmutils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
@@ -494,3 +494,13 @@ def step_impl(context, nodelist):
                 cmd = f"ssh {node} \"{cmd}\""
             context.logger.info(f"\nRun cmd: {cmd}")
             run_command(context, cmd)
+
+@then('Check user shell for hacluster between "{nodelist}"')
+def step_impl(context, nodelist):
+    if userdir.getuser() != 'root' or userdir.get_sudoer():
+        return True
+    for node in nodelist.split():
+        if node == me():
+            assert bootstrap.is_nologin('hacluster') is False
+        else:
+            assert bootstrap.is_nologin('hacluster', node) is False
