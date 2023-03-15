@@ -152,6 +152,7 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Directory "/var/lib/corosync/" is empty on "hanode1"
 
   Scenario: Check hacluster's passwordless configuration on 2 nodes
+    Then    Check user shell for hacluster between "hanode1 hanode2"
     Then    Check passwordless for hacluster between "hanode1 hanode2"
 
   Scenario: Check hacluster's passwordless configuration in old cluster, 2 nodes
@@ -171,6 +172,7 @@ Feature: crmsh bootstrap process - init, join and remove
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     And     Online nodes are "hanode1 hanode2 hanode3"
+    And     Check user shell for hacluster between "hanode1 hanode2 hanode3"
     And     Check passwordless for hacluster between "hanode1 hanode2 hanode3"
 
   Scenario: Check hacluster's passwordless configuration in old cluster, 3 nodes
