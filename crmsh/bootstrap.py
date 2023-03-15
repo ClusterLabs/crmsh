@@ -889,6 +889,7 @@ def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typin
         # After this, login to remote_node is passwordless
         public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True))
         hacluster_public_key_list.append(swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_user, add=True))
+        change_user_shell('hacluster', node)
     if len(node_list) > 1:
         shell_script = _merge_authorized_keys(public_key_list)
         hacluster_shell_script = _merge_authorized_keys(hacluster_public_key_list)
@@ -981,7 +982,7 @@ def is_nologin(user, remote=None):
         return rc == 0
     else:
         with open(passwd_file) as f:
-            return re.search(pattern, f.read())
+            return re.search(pattern, f.read()) is not None
 
 
 def change_user_shell(user, remote=None):
