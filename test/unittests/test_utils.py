@@ -1906,3 +1906,20 @@ def test_check_user_access_cluster(mock_user, mock_in, mock_sudo, mock_error):
     with pytest.raises(utils.TerminateSubCommand) as err:
         utils.check_user_access('cluster')
     mock_error.assert_called_once_with('Please run this command starting with "sudo".\nCurrently, this command needs to use sudo to escalate itself as root.\nPlease consider to add "user" as sudoer. For example:\n  sudo bash -c \'echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user\'')
+
+
+@mock.patch('logging.Logger.debug')
+@mock.patch('crmsh.utils.get_stdout_stderr')
+@mock.patch('crmsh.utils.check_ssh_passwd_need')
+@mock.patch('crmsh.utils.this_node')
+def test_check_passwordless_between_nodes(mock_this_node, mock_check_ssh, mock_run, mock_debug):
+    mock_this_node.return_value = "node1"
+    mock_check_ssh.return_value = False
+    mock_run.return_value = (1, None, None)
+
+    res_list = utils.check_passwordless_between_nodes(["node1", "node2"])
+    assert res_list == [("node2", "node1")]
+
+    mock_run.assert_called_once_with('ssh node2 "ssh -o StrictHostKeyChecking=no -T -o Batchmode=yes root@node1 true"')
+    mock_debug.assert_called_once_with("There is no passwordless configured from %s to %s under '%s'", 'node2', 'node1', 'root')
+
