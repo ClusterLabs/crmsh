@@ -7,6 +7,7 @@ import os
 import parallax
 import crmsh.utils
 from crmsh import userdir
+from crmsh.prun import prun
 
 Error = parallax.Error
 
@@ -91,17 +92,20 @@ class Parallax(object):
         return parallax.run(host_port_user, cmd, self.opts)
 
 
-def parallax_call(nodes, cmd, askpass=False, ssh_options=None, strict=True):
+def parallax_call(nodes, cmd):
     """
     Executes the given command on a set of hosts, collecting the output, and raise exception when error occurs
     nodes:       a set of hosts
     cmd:         command
-    askpass:     Ask for a password if passwordless not configured
-    ssh_options: Extra options to pass to SSH
     Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
     """
-    p = Parallax(nodes, cmd=cmd, askpass=askpass, ssh_options=ssh_options, strict=strict)
-    return p.call()
+    results = prun.prun({node: cmd for node in nodes})
+    for node, result in results.items():
+        if isinstance(result, prun.SSHError):
+            raise ValueError("Failed on {}@{}: {}".format(result.user, node, result))
+        elif result.returncode != 0:
+            raise ValueError("Failed on {}: {}".format(node, crmsh.utils.to_ascii(result.stderr)))
+    return [(node, (result.returncode, result.stdout, result.stderr)) for node, result in results.items()]
 
 
 def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None, strict=True):
@@ -132,7 +136,7 @@ def parallax_copy(nodes, src, dst, askpass=False, ssh_options=None, strict=True)
     p = Parallax(nodes, src=src, dst=dst, askpass=askpass, ssh_options=ssh_options, strict=strict)
     return p.copy()
 
-def parallax_run(nodes, cmd, askpass=False, ssh_options=None, strict=True):
+def parallax_run(nodes, cmd):
     """
     Executes the given command on a set of hosts, collecting the output and any error
     nodes:       a set of hosts
@@ -141,5 +145,5 @@ def parallax_run(nodes, cmd, askpass=False, ssh_options=None, strict=True):
     ssh_options: Extra options to pass to SSH
     Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
     """
-    p = Parallax(nodes, cmd=cmd, askpass=askpass, ssh_options=ssh_options, strict=strict)
-    return p.run()
+    results = prun.prun({node: cmd for node in nodes})
+    return {node: (result.returncode, result.stdout, result.stderr) for node, result in results.items()}
