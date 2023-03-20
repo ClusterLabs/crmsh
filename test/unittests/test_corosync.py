@@ -177,18 +177,15 @@ def test_query_qnetd_status_no_host(mock_qdevice_configured, mock_get_value):
         ])
 
 
-@mock.patch('crmsh.utils.user_of')
+@mock.patch('crmsh.utils.user_pair_for_ssh')
 @mock.patch("crmsh.parallax.parallax_call")
 @mock.patch("crmsh.utils.ssh_copy_id")
 @mock.patch("crmsh.utils.check_ssh_passwd_need")
 @mock.patch("crmsh.corosync.get_value")
 @mock.patch("crmsh.utils.is_qdevice_configured")
 def test_query_qnetd_status_copy_id_failed(mock_qdevice_configured,
-        mock_get_value, mock_check_passwd, mock_ssh_copy_id, mock_parallax_call, mock_userof):
-    mock_userof.side_effect = [
-        "alice",
-        "root",
-    ]
+        mock_get_value, mock_check_passwd, mock_ssh_copy_id, mock_parallax_call, mock_user_pair_for_ssh):
+    mock_user_pair_for_ssh.return_value = "alice", "root"
     mock_parallax_call.side_effect = ValueError("Failed on 10.10.10.123: foo")
     mock_qdevice_configured.return_value = True
     mock_get_value.side_effect = ["hacluster", "10.10.10.123"]
@@ -205,7 +202,7 @@ def test_query_qnetd_status_copy_id_failed(mock_qdevice_configured,
     mock_ssh_copy_id.assert_called_once_with('alice', 'root', '10.10.10.123')
 
 
-@mock.patch('crmsh.utils.user_of')
+@mock.patch('crmsh.utils.user_pair_for_ssh')
 @mock.patch("crmsh.utils.print_cluster_nodes")
 @mock.patch("crmsh.parallax.parallax_call")
 @mock.patch("crmsh.utils.ssh_copy_id")
@@ -214,11 +211,8 @@ def test_query_qnetd_status_copy_id_failed(mock_qdevice_configured,
 @mock.patch("crmsh.utils.is_qdevice_configured")
 def test_query_qnetd_status_copy(mock_qdevice_configured, mock_get_value,
         mock_check_passwd, mock_ssh_copy_id, mock_parallax_call, mock_print_nodes,
-        mock_userof):
-    mock_userof.side_effect = [
-        "alice",
-        "root",
-    ]
+        mock_user_pair_for_ssh):
+    mock_user_pair_for_ssh.return_value = "alice", "root"
     mock_qdevice_configured.return_value = True
     mock_get_value.side_effect = ["hacluster", "10.10.10.123"]
     mock_check_passwd.return_value = True

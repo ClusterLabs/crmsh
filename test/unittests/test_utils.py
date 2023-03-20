@@ -1227,28 +1227,25 @@ class TestSubprocessRunUtils(unittest.TestCase):
         self.assertEqual(b'bar', result.stdout)
 
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.utils.user_of")
+    @mock.patch('crmsh.utils.user_pair_for_ssh')
     @mock.patch("crmsh.utils.su_subprocess_run")
     @mock.patch("subprocess.run")
     def test_subprocess_run_auto_ssh_no_input_remote_no_user(
             self,
             mock_subprocess_run: mock.MagicMock,
             mock_su_subprocess_run: mock.MagicMock,
-            mock_user_of: mock.MagicMock,
+            mock_user_pair_for_ssh: mock.MagicMock,
             mock_this_node: mock.MagicMock,
     ):
         mock_this_node.return_value = 'node1'
-        mock_user_of.return_value = 'alice'
+        mock_user_pair_for_ssh.return_value = "alice", "bob"
         mock_su_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
         result = utils.subprocess_run_auto_ssh_no_input("foo", "node2", stderr=subprocess.DEVNULL)
-        mock_user_of.assert_has_calls([
-            mock.call('node1'),
-            mock.call('node2'),
-        ], any_order=True)
+        mock_user_pair_for_ssh.assert_called_once_with('node2')
         mock_subprocess_run.assert_not_called()
         mock_su_subprocess_run.assert_called_once_with(
             'alice',
-            'ssh -o StrictHostKeyChecking=no alice@node2 sudo -H -u root /bin/sh',
+            'ssh -o StrictHostKeyChecking=no bob@node2 sudo -H -u root /bin/sh',
             input=b'foo',
             stderr=subprocess.DEVNULL,
         )

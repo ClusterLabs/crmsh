@@ -390,14 +390,14 @@ class QDevice(object):
 
     @classmethod
     def _copy_file_to_remote_host(cls, local_file, remote_host: str, remote_path):
-        remote_user = utils.user_of(remote_host)
+        local_user, remote_user = utils.user_pair_for_ssh(remote_host)
         with tempfile.NamedTemporaryFile('w', encoding='utf-8') as tmp:
             tmp.write("put -pr '{}' '{}'\n".format(local_file, remote_path))
             tmp.flush()
             # we can not su to a non-root user, since reading the source file may need privilege.
             cmd = "sftp {} -o IdentityFile=~{}/.ssh/id_rsa -o BatchMode=yes -s 'sudo PATH=/usr/lib/ssh:/usr/libexec/ssh /bin/sh -c \"exec sftp-server\"' -b {} {}@{}".format(
                 constants.SSH_OPTION,
-                utils.user_of(utils.this_node()),
+                local_user,
                 # FIXME: sftp-server is not always in /usr/lib/ssh
                 tmp.name,
                 remote_user, cls._enclose_inet6_addr(remote_host),

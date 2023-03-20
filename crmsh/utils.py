@@ -109,27 +109,46 @@ gethomedir = userdir.gethomedir
 
 
 class UserOfHost:
+    class UserNotFoundError(Exception):
+        pass
+
     def __init__(self):
-        self._cache = dict()
+        self._user_cache = dict()
+        self._user_pair_cache = dict()
 
     def user_of(self, host):
-        cached = self._cache.get(host)
+        cached = self._user_cache.get(host)
         if cached is None:
-            ret = self._user_of_impl(host)
+            ret = self._get_user_of_host_from_config(host)
             if ret is None:
-                user = userdir.get_sudoer()
-                if user:
-                    return user
-                else:
-                    return userdir.getuser()
+                raise self.UserNotFoundError
             else:
-                self._cache[host] = ret
+                self._user_cache[host] = ret
                 return ret
         else:
             return cached
 
+    def user_pair_for_ssh(self, host: str) -> typing.Tuple[str, str]:
+        """Return (local_user, remote_user) pair for ssh connection"""
+        try:
+            local_user = self.user_of(this_node())
+            remote_user = self.user_of(host)
+            return local_user, remote_user
+        except self.UserNotFoundError:
+            cached = self._user_pair_cache.get(host)
+            if cached is None:
+                ret = self._guess_user_for_ssh(host)
+                if ret is None:
+                    raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
+                else:
+                    self._user_pair_cache[host] = ret
+                    return ret
+            else:
+                return cached
+
+
     @staticmethod
-    def _user_of_impl(host):
+    def _get_user_of_host_from_config(host):
         try:
             canonical, aliases, _ = socket.gethostbyaddr(host)
             aliases = set(aliases)
@@ -151,12 +170,45 @@ class UserOfHost:
         logger.debug('Failed to get the user of host %s (aliases: %s). Known hosts are %s', host, aliases, hosts)
         return None
 
+    @staticmethod
+    def _guess_user_for_ssh(host: str) -> typing.Tuple[str, str]:
+        args = ['ssh']
+        args.extend(constants.SSH_OPTION_ARGS)
+        args.extend(['-o', 'BatchMode=yes', host, 'true'])
+        rc = subprocess.call(
+            args,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if rc == 0:
+            user = userdir.getuser()
+            return user, user
+        sudoer = userdir.get_sudoer()
+        if sudoer is None:
+            return None
+        result = su_subprocess_run(
+            sudoer,
+            'ssh {} -o BatchMode=yes {}@{} sudo -u {} true'.format(constants.SSH_OPTION, sudoer, host, sudoer),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if result.returncode == 0:
+            return sudoer, sudoer
+        return None
+
+
 
 _user_of_host_instance = UserOfHost()
 
 
 def user_of(host):
     return _user_of_host_instance.user_of(host)
+
+
+def user_pair_for_ssh(host):
+    return _user_of_host_instance.user_pair_for_ssh(host)
 
 
 def ssh_copy_id(local_user, remote_user, remote_node):
@@ -1039,7 +1091,11 @@ def su_get_stdout_stderr(user, cmd, input_s=None, raw=False):
 
 
 def get_stdout_stderr_as_local_sudoer(cmd, input_s=None, raw=False):
-    return su_get_stdout_stderr(user_of(this_node()), cmd, input_s, raw)
+    try:
+        user = user_of(this_node())
+    except UserOfHost.UserNotFoundError:
+        user = 'root'
+    return su_get_stdout_stderr(user, cmd, input_s, raw)
 
 
 def get_stdout_stderr_auto_ssh_no_input(host, cmd, raw=False):
@@ -2307,8 +2363,6 @@ def check_ssh_passwd_need(local_user, remote_user, host):
     Check whether access to host need password
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-    if remote_user is None:
-        remote_user = user_of(host)
     ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
     rc, _, _ = su_get_stdout_stderr(local_user, ssh_cmd)
     return rc != 0
@@ -2880,13 +2934,12 @@ def subprocess_run_auto_ssh_no_input(cmd, remote=None, user=None, **kwargs):
             **kwargs,
         )
     else:
-        remote_sudoer = user_of(remote)
-        local_user = user_of(this_node())
+        local_user, remote_user = user_pair_for_ssh(remote)
         if user is None:
             user = 'root'
         return su_subprocess_run(
             local_user,
-            'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote, user),
+            'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_user, remote, user),
             input=cmd.encode('utf-8'),
             **kwargs,
         )
