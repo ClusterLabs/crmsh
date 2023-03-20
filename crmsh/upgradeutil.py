@@ -8,6 +8,7 @@ import sys
 import crmsh.healthcheck
 import crmsh.parallax
 import crmsh.utils
+from crmsh.prun import prun
 
 
 # pump this seq when upgrade check need to be run
@@ -52,12 +53,11 @@ def _get_file_content(path, default=None):
 
 
 def _parallax_run(nodes: str, cmd: str) -> typing.Dict[str, typing.Tuple[int, bytes, bytes]]:
-    ret = crmsh.parallax.parallax_run(nodes, cmd)
-    for node, value in ret.items():
-        if isinstance(value, parallax.Error):
-            logger.warning("SSH connection to remote node %s failed.", node, exc_info=value)
-            raise value
-    return ret
+    results = prun.prun({node: cmd for node in nodes})
+    for node, result in results.items():
+        if isinstance(result, prun.SSHError):
+            raise ValueError("Failed on {}: {}".format(node, result))
+    return {node: (result.returncode, result.stdout, result.stderr) for node, result in results.items()}
 
 
 def _is_upgrade_needed(nodes):
