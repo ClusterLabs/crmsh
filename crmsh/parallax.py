@@ -43,7 +43,7 @@ class Parallax(object):
             self.ssh_options = ['StrictHostKeyChecking=no',
                     'ConnectTimeout=10',
                     'LogLevel=error']
-        sudoer = crmsh.utils.user_of(crmsh.utils.this_node())
+        sudoer, _ = crmsh.utils.user_pair_for_ssh(self.nodes[0])
         if sudoer is not None:
             # FIXME: this is really unreliable
             self.ssh_options.append('IdentityFile={}/.ssh/id_rsa'.format(userdir.gethomedir(sudoer)))
@@ -65,7 +65,8 @@ class Parallax(object):
     def call(self):
         host_port_user = []
         for host in self.nodes:
-            host_port_user.append([host, None, crmsh.utils.user_of(host)])
+            _, remote_user = crmsh.utils.user_pair_for_ssh(host)
+            host_port_user.append([host, None, remote_user])
         # FIXME: this is really unreliable
         sudoer = userdir.get_sudoer()
         cmd = f'sudo bash -c "{self.cmd}"' if sudoer else self.cmd
@@ -83,11 +84,11 @@ class Parallax(object):
     def run(self):
         sudoer = userdir.get_sudoer()
         cmd = f'sudo bash -c "{self.cmd}"' if sudoer else self.cmd
-        return parallax.run(
-            [[node, None, crmsh.utils.user_of(node)] for node in self.nodes],
-            cmd,
-            self.opts,
-        )
+        host_port_user = []
+        for host in self.nodes:
+            _, remote_user = crmsh.utils.user_pair_for_ssh(host)
+            host_port_user.append([host, None, remote_user])
+        return parallax.run(host_port_user, cmd, self.opts)
 
 
 def parallax_call(nodes, cmd, askpass=False, ssh_options=None, strict=True):

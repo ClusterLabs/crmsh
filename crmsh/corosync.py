@@ -107,11 +107,7 @@ def query_qnetd_status():
         raise ValueError("host for qnetd not configured!")
 
     # Configure ssh passwordless to qnetd if detect password is needed
-    local_user = utils.user_of(utils.this_node())
-    try:
-        remote_user = utils.user_of(qnetd_addr)
-    except ValueError:
-        remote_user = 'root'
+    local_user, remote_user = utils.user_pair_for_ssh(qnetd_addr)
     if utils.check_ssh_passwd_need(local_user, remote_user, qnetd_addr):
         utils.ssh_copy_id(local_user, remote_user, qnetd_addr)
 
