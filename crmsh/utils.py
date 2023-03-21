@@ -2253,9 +2253,9 @@ def detect_aws():
     Detect if in AWS
     """
     # will match on xen instances
-    xen_test = get_stdout_or_raise_error("sudo dmidecode -s system-version").lower()
+    xen_test = get_stdout_or_raise_error("dmidecode -s system-version").lower()
     # will match on nitro/kvm instances
-    kvm_test = get_stdout_or_raise_error("sudo dmidecode -s system-manufacturer").lower()
+    kvm_test = get_stdout_or_raise_error("dmidecode -s system-manufacturer").lower()
     if "amazon" in xen_test or "amazon" in kvm_test:
         return True
     return False
@@ -2270,8 +2270,8 @@ def detect_azure():
     # might return American Megatrends Inc. instead of Microsoft Corporation in Azure.
     # The better way is to check the result of dmidecode -s chassis-asset-tag is
     # 7783-7084-3265-9085-8269-3286-77, aka. the ascii code of MSFT AZURE VM
-    system_manufacturer = get_stdout_or_raise_error("sudo dmidecode -s system-manufacturer")
-    chassis_asset_tag = get_stdout_or_raise_error("sudo dmidecode -s chassis-asset-tag")
+    system_manufacturer = get_stdout_or_raise_error("dmidecode -s system-manufacturer")
+    chassis_asset_tag = get_stdout_or_raise_error("dmidecode -s chassis-asset-tag")
     if "microsoft corporation" in system_manufacturer.lower() or \
             ''.join([chr(int(n)) for n in re.findall("\d\d", chassis_asset_tag)]) == "MSFT AZURE VM":
         # To detect azure we also need to make an API request
@@ -2287,7 +2287,7 @@ def detect_gcp():
     """
     Detect if in GCP
     """
-    bios_vendor = get_stdout_or_raise_error("sudo dmidecode -s bios-vendor")
+    bios_vendor = get_stdout_or_raise_error("dmidecode -s bios-vendor")
     if "Google" in bios_vendor:
         # To detect GCP we also need to make an API request
         result = _cloud_metadata_request(
@@ -2742,9 +2742,9 @@ def check_file_content_included(source_file, target_file, remote=None, source_lo
     if not detect_file(target_file, remote=remote):
         return False
 
-    cmd = "sudo cat {}".format(target_file)
+    cmd = "cat {}".format(target_file)
     target_data = get_stdout_or_raise_error(cmd, remote=remote)
-    cmd = "sudo cat {}".format(source_file)
+    cmd = "cat {}".format(source_file)
     source_data = get_stdout_or_raise_error(cmd, remote=None if source_local else remote)
     return source_data in target_data
 
@@ -3423,7 +3423,7 @@ def detect_file(_file, remote=None):
     """
     rc = False
     if not remote:
-        cmd = "sudo test -f {}".format(_file)
+        cmd = "test -f {}".format(_file)
     else:
         # FIXME
         cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user_of(remote), remote, _file)

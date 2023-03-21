@@ -48,7 +48,7 @@ class TestWatchdog(unittest.TestCase):
         mock_run.return_value = (1, None, "error")
         res = self.watchdog_inst._verify_watchdog_device("/dev/watchdog", True)
         self.assertEqual(res, False)
-        mock_run.assert_called_once_with("sudo wdctl /dev/watchdog")
+        mock_run.assert_called_once_with("wdctl /dev/watchdog")
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.get_stdout_stderr')
@@ -58,7 +58,7 @@ class TestWatchdog(unittest.TestCase):
         with self.assertRaises(ValueError) as err:
             self.watchdog_inst._verify_watchdog_device("/dev/watchdog")
         mock_error.assert_called_once_with("Invalid watchdog device /dev/watchdog: error")
-        mock_run.assert_called_once_with("sudo wdctl /dev/watchdog")
+        mock_run.assert_called_once_with("wdctl /dev/watchdog")
 
     @mock.patch('crmsh.utils.get_stdout_stderr')
     def test_verify_watchdog_device(self, mock_run):

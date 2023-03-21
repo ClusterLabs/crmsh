@@ -30,7 +30,7 @@ class Watchdog(object):
         """
         Use wdctl to verify watchdog device
         """
-        rc, _, err = utils.get_stdout_stderr("sudo wdctl {}".format(dev))
+        rc, _, err = utils.get_stdout_stderr("wdctl {}".format(dev))
         if rc != 0:
             if ignore_error:
                 return False
