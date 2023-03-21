@@ -136,3 +136,22 @@ Feature: Regression test for bootstrap bugs
     Then    Service "corosync" is "started" on "hanode1"
     When    Run "crm cluster stop" on "hanode1"
     Then    Service "corosync" is "stopped" on "hanode1"
+
+  @clean
+  @skip_non_root
+  Scenario: Passwordless for root, not for sudoer(bsc#1209193)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "useradd -m -s /bin/bash xin" on "hanode1"
+    When    Run "echo "xin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/xin" on "hanode1"
+    When    Run "rm -f /root/.config/crm/crm.conf" on "hanode1"
+    When    Run "useradd -m -s /bin/bash xin" on "hanode2"
+    When    Run "echo "xin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/xin" on "hanode2"
+    When    Run "rm -f /root/.config/crm/crm.conf" on "hanode2"
+    When    Run "su xin -c "sudo crm cluster run 'touch /tmp/1209193'"" on "hanode1"
+    And     Run "test -f /tmp/1209193" on "hanode1"
+    And     Run "test -f /tmp/1209193" on "hanode2"

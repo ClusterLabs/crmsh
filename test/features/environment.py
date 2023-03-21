@@ -1,6 +1,6 @@
 import logging
 import re
-from crmsh import utils, parallax
+from crmsh import utils, parallax, userdir
 import time
 
 
@@ -32,3 +32,7 @@ def before_tag(context, tag):
                 if utils.get_dc():
                     break
             utils.get_stdout_or_raise_error("sudo crm cluster stop --all")
+    if tag == "skip_non_root":
+        sudoer = userdir.get_sudoer()
+        if sudoer or userdir.getuser() != 'root':
+            context.scenario.skip()
