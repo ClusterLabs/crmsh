@@ -152,6 +152,7 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Directory "/var/lib/corosync/" is empty on "hanode1"
 
   Scenario: Check hacluster's passwordless configuration on 2 nodes
+    Then    Check user shell for hacluster between "hanode1 hanode2"
     Then    Check passwordless for hacluster between "hanode1 hanode2"
 
   Scenario: Check hacluster's passwordless configuration in old cluster, 2 nodes
@@ -171,6 +172,7 @@ Feature: crmsh bootstrap process - init, join and remove
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     And     Online nodes are "hanode1 hanode2 hanode3"
+    And     Check user shell for hacluster between "hanode1 hanode2 hanode3"
     And     Check passwordless for hacluster between "hanode1 hanode2 hanode3"
 
   Scenario: Check hacluster's passwordless configuration in old cluster, 3 nodes
@@ -181,3 +183,21 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Cluster service is "started" on "hanode3"
     And     Online nodes are "hanode1 hanode2 hanode3"
     And     Check passwordless for hacluster between "hanode1 hanode2 hanode3"
+
+  Scenario: Check hacluster's user shell
+    Given   Cluster service is "stopped" on "hanode3"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode3"
+    Then    Cluster service is "started" on "hanode3"
+    And     Online nodes are "hanode1 hanode2 hanode3"
+    When    Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode1"
+    And     Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode2"
+    And     Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode3"
+    And     Run "usermod -s /usr/sbin/nologin hacluster" on "hanode1"
+    And     Run "usermod -s /usr/sbin/nologin hacluster" on "hanode2"
+    And     Run "usermod -s /usr/sbin/nologin hacluster" on "hanode3"
+    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode1"
+    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode2"
+    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode3"
+    And     Run "crm status" on "hanode1"
+    Then    Check user shell for hacluster between "hanode1 hanode2 hanode3"
+    Then    Check passwordless for hacluster between "hanode1 hanode2 hanode3"
