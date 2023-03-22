@@ -122,7 +122,19 @@ jobs:
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
         index=`$GET_INDEX_OF bootstrap_options`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $DOCKER_SCRIPT $index
+
+  functional_test_bootstrap_options_non_root:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for bootstrap options, under non root user
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        index=`$GET_INDEX_OF bootstrap_options`
+        $DOCKER_SCRIPT $index -u
 
   functional_test_qdevice_setup_remove:
     runs-on: ubuntu-20.04
@@ -170,7 +182,19 @@ jobs:
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
         index=`$GET_INDEX_OF qdevice_validate`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $DOCKER_SCRIPT $index
+
+  functional_test_qdevice_validate_non_root:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for qdevice validate, under non root user
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        index=`$GET_INDEX_OF qdevice_validate`
+        $DOCKER_SCRIPT $index -u
 
   functional_test_qdevice_user_case:
     runs-on: ubuntu-20.04
@@ -184,17 +208,41 @@ jobs:
         index=`$GET_INDEX_OF qdevice_usercase`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
 
-  functional_test_resource_subcommand:
+  functional_test_resource_failcount:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v3
-    - name: functional test for resource subcommand
+    - name: functional test for resource failcount
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        index=`$GET_INDEX_OF resource_failcount resource_set`
+        index=`$GET_INDEX_OF resource_failcount`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+
+  functional_test_resource_set:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for resource set
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        index=`$GET_INDEX_OF resource_set`
+        $DOCKER_SCRIPT $index
+
+  functional_test_resource_set_non_root:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for resource set, under non root user
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        index=`$GET_INDEX_OF resource_set`
+        $DOCKER_SCRIPT $index -u
 
   functional_test_configure_sublevel:
     runs-on: ubuntu-20.04
@@ -284,12 +332,16 @@ jobs:
       functional_test_bootstrap_common,
       functional_test_bootstrap_common_non_root,
       functional_test_bootstrap_options,
+      functional_test_bootstrap_options_non_root,
       functional_test_qdevice_setup_remove,
       functional_test_qdevice_setup_remove_non_root,
       functional_test_qdevice_options,
       functional_test_qdevice_validate,
+      functional_test_qdevice_validate_non_root,
       functional_test_qdevice_user_case,
-      functional_test_resource_subcommand,
+      functional_test_resource_failcount,
+      functional_test_resource_set,
+      functional_test_resource_set_non_root,
       functional_test_configure_sublevel,
       functional_test_constraints_bugs,
       functional_test_geo_cluster,
