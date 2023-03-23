@@ -1383,6 +1383,9 @@ def start_slave_collector(node, arg_str):
         if err:
             print(err)
 
+    if out == '': # if we couldn't get anything
+        return
+
     compress_data = ""
     for data in out.split('\n'):
         if data.startswith(constants.COMPRESS_DATA_FLAG):
