@@ -1039,6 +1039,7 @@ def generate_ssh_key_pair_on_remote(
     # which breaks shell expansion used in cmd
     cmd = '''
 [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
+[ -f ~/.ssh/id_rsa.pub ] || ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
 '''
     result = utils.su_subprocess_run(
         local_sudoer,
@@ -1049,6 +1050,7 @@ def generate_ssh_key_pair_on_remote(
     )
     if result.returncode != 0:
         raise ValueError(codecs.decode(result.stdout, 'utf-8', 'replace'))
+
     cmd = 'cat ~/.ssh/id_rsa.pub'
     result = utils.su_subprocess_run(
         local_sudoer,
