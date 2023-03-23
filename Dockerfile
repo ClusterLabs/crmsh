@@ -16,7 +16,7 @@ RUN zypper -n install csync2 libglue-devel corosync corosync-qdevice pacemaker b
 RUN zypper --non-interactive up zypper
 RUN zypper ar -f -G https://download.opensuse.org/repositories/network:/ha-clustering:/Factory/SLE_15_SP4 repo_nhf
 RUN zypper --non-interactive refresh
-RUN zypper --non-interactive up --allow-vendor-change -y python3-parallax resource-agents
+RUN zypper --non-interactive up --allow-vendor-change -y python3-parallax resource-agents libqb100 pacemaker
 
 RUN mkdir -p /var/log/crmsh
 RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh

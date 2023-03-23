@@ -1176,24 +1176,24 @@ Node node1: UNCLEAN (offline)
      Stopped: [ node1 ]
 
 Original: node1 capacity:
-pcmk__native_allocate: st allocation score on node1: 0
+pcmk__primitive_assign: st allocation score on node1: 0
 pcmk__clone_allocate: c1 allocation score on node1: 0
 pcmk__clone_allocate: p1:0 allocation score on node1: 0
-pcmk__native_allocate: p1:0 allocation score on node1: -INFINITY
+pcmk__primitive_assign: p1:0 allocation score on node1: -INFINITY
 pcmk__clone_allocate: m1 allocation score on node1: 0
 pcmk__clone_allocate: p2:0 allocation score on node1: 0
-pcmk__native_allocate: p2:0 allocation score on node1: -INFINITY
+pcmk__primitive_assign: p2:0 allocation score on node1: -INFINITY
 p2:0 promotion score on none: 0
-pcmk__native_allocate: p3 allocation score on node1: -INFINITY
+pcmk__primitive_assign: p3 allocation score on node1: -INFINITY
 pcmk__clone_allocate: msg allocation score on node1: 0
 pcmk__clone_allocate: g:0 allocation score on node1: 0
 pcmk__clone_allocate: p0:0 allocation score on node1: 0
 pcmk__clone_allocate: p4:0 allocation score on node1: 0
-pcmk__group_allocate: g:0 allocation score on node1: -INFINITY
-pcmk__group_allocate: p0:0 allocation score on node1: -INFINITY
-pcmk__group_allocate: p4:0 allocation score on node1: -INFINITY
-pcmk__native_allocate: p0:0 allocation score on node1: -INFINITY
-pcmk__native_allocate: p4:0 allocation score on node1: -INFINITY
+pcmk__group_assign: g:0 allocation score on node1: -INFINITY
+pcmk__group_assign: p0:0 allocation score on node1: -INFINITY
+pcmk__group_assign: p4:0 allocation score on node1: -INFINITY
+pcmk__primitive_assign: p0:0 allocation score on node1: -INFINITY
+pcmk__primitive_assign: p4:0 allocation score on node1: -INFINITY
 g:0 promotion score on none: 0
 Remaining: node1 capacity:
 

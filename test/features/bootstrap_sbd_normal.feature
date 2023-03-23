@@ -41,15 +41,15 @@ Feature: crmsh bootstrap sbd management
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -S -y" on "hanode1"
-    Then    Expected "Diskless SBD requires cluster with three or more nodes." in stdout
+    Then    Expected "Diskless SBD requires cluster with three or more nodes." in stderr
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
-    Then    Expected "Diskless SBD requires cluster with three or more nodes." in stdout
+    Then    Expected "Diskless SBD requires cluster with three or more nodes." in stderr
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
-    Then    Expected "Diskless SBD requires cluster with three or more nodes." not in stdout
+    Then    Expected "Diskless SBD requires cluster with three or more nodes." not in stderr
     Then    Cluster service is "started" on "hanode3"
     And     Service "sbd" is "started" on "hanode3"
     And     Resource "stonith:external/sbd" not configured
@@ -133,7 +133,7 @@ Feature: crmsh bootstrap sbd management
     And     Online nodes are "hanode1 hanode2"
     When    Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
     When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
-    Then    Expected "WARNING: To start sbd.service, need to restart cluster service manually on each node" in stdout
+    Then    Expected "WARNING: To start sbd.service, need to restart cluster service manually on each node" in stderr
     Then    Service "sbd" is "stopped" on "hanode1"
     And     Service "sbd" is "stopped" on "hanode2"
     When    Run "crm cluster restart" on "hanode1"
@@ -173,7 +173,27 @@ Feature: crmsh bootstrap sbd management
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
     When    Run "stonith_admin -H hanode2 -c" on "hanode1"
-    When    Run "su hacluster -c 'crm -F node fence hanode2'" on "hanode1"
+    When    Run "crm -F node fence hanode2" on "hanode1"
+    Then    Expected return code is "0"
+    Then    Node "hanode2" is UNCLEAN
+    Then    Wait "60" seconds for "hanode2" successfully fenced
+
+  @clean
+  @skip_non_root
+  Scenario: Setup sbd and test fence node, use hacluster to fence
+    Given   Has disk "/dev/sda1" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Has disk "/dev/sda1" on "hanode2"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode1"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "sbd" is "started" on "hanode2"
+    When    Run "stonith_admin -H hanode2 -c" on "hanode1"
+    When    Run "su hacluster -c '/usr/sbin/crm -F node fence hanode2'" on "hanode1"
     Then    Expected return code is "0"
     Then    Node "hanode2" is UNCLEAN
     Then    Wait "60" seconds for "hanode2" successfully fenced

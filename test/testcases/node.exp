@@ -163,7 +163,6 @@ scope=nodes  name=a1 value=1 2 3
 .TRY node attribute node1 delete a1
 .EXT crm_attribute -D -t nodes -N 'node1' -n 'a1'
 Deleted nodes attribute: id=nodes-node1-a1 name=a1
-
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
