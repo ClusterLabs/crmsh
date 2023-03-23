@@ -385,6 +385,7 @@ class TestBootstrap(unittest.TestCase):
                 'ssh -o StrictHostKeyChecking=no remote_sudoer@remote_host sudo -H -u remote_user /bin/sh',
                 input='''
 [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
+[ -f ~/.ssh/id_rsa.pub ] || ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
 '''.encode('utf-8'),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
