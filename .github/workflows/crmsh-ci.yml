@@ -135,7 +135,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT `$GET_INDEX_OF resource_failcount resource_set`
+        $DOCKER_SCRIPT `$GET_INDEX_OF resource_set`
 
   functional_test_configure_sublevel:
     runs-on: ubuntu-20.04
