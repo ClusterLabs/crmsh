@@ -483,17 +483,11 @@ def step_impl(context, count, node):
 def step_impl(context, nodelist):
     if userdir.getuser() != 'root':
         return True
-    ssh_option = "-o StrictHostKeyChecking=no -T -o Batchmode=yes"
-    node_list = nodelist.split()
-    for node in node_list:
-        for n in node_list:
-            if node == n:
-                continue
-            cmd = f"su - hacluster -c 'ssh {ssh_option} hacluster@{n} true'"
-            if node != me():
-                cmd = f"ssh {node} \"{cmd}\""
-            context.logger.info(f"\nRun cmd: {cmd}")
-            run_command(context, cmd)
+    need_pw_list = crmutils.check_passwordless_between_nodes(nodelist.split(), 'hacluster')
+    for m, n in need_pw_list:
+        context.logger.error(f"There is no passwordless configured from {m} to {n} under 'hacluster'")
+    assert need_pw_list == []
+
 
 @then('Check user shell for hacluster between "{nodelist}"')
 def step_impl(context, nodelist):

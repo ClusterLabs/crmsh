@@ -155,3 +155,17 @@ Feature: Regression test for bootstrap bugs
     When    Run "su xin -c "sudo crm cluster run 'touch /tmp/1209193'"" on "hanode1"
     And     Run "test -f /tmp/1209193" on "hanode1"
     And     Run "test -f /tmp/1209193" on "hanode2"
+
+  @clean
+  @skip_non_root
+  Scenario: Do upgrade job without root passwordless
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode1"
+    And     Run "rm -f /root/.config/crm/crm.conf" on "hanode1"
+    And     Run "rm -rf /root/.ssh" on "hanode1"
+    And     Run "crm status" on "hanode1"

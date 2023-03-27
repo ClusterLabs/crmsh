@@ -115,6 +115,9 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
     SSH_DIR = os.path.expanduser('~hacluster/.ssh')
     KEY_TYPES = ['ed25519', 'ecdsa', 'rsa']
 
+    def __str__(self):
+        return "Configure Passwordless for hacluster"
+
     def check_quick(self) -> bool:
         for key_type in self.KEY_TYPES:
             try:
