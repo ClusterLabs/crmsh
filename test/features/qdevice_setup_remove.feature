@@ -122,6 +122,36 @@ Feature: corosync qdevice/qnetd setup/remove process
     And     Service "corosync-qdevice" is "started" on "hanode1"
     And     Show status from qnetd
 
+  @skip_non_root
+  @clean
+  Scenario: Passwordless for root, not for sudoer (bsc#1209193)
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "useradd -m -s /bin/bash xin" on "hanode1"
+    When    Run "echo "xin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/xin" on "hanode1"
+    When    Run "rm -f /root/.config/crm/crm.conf" on "hanode1"
+    When    Run "useradd -m -s /bin/bash xin" on "hanode2"
+    When    Run "echo "xin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/xin" on "hanode2"
+    When    Run "rm -f /root/.config/crm/crm.conf" on "hanode2"
+    When    Run "su xin -c "sudo crm cluster init qdevice --qnetd-hostname=qnetd-node -y"" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode2"
+
+  @skip_non_root
+  @clean
+  Scenario: Missing crm/crm.conf (bsc#1209193)
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "rm -f /root/.config/crm/crm.conf" on "hanode1"
+    When    Run "rm -f /root/.config/crm/crm.conf" on "hanode2"
+    When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode2"
+
   @clean
   Scenario: One qnetd for multi cluster, add in parallel
     When    Run "crm cluster init -n cluster1 -y" on "hanode1"
