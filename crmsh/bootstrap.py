@@ -1630,10 +1630,26 @@ def init_qdevice():
             utils.fatal("corosync-qdevice.service is not available on {}".format(node))
     qdevice_inst = _context.qdevice_inst
     qnetd_addr = qdevice_inst.qnetd_addr
-    ssh_user = qdevice_inst.ssh_user if qdevice_inst.ssh_user is not None else _context.current_user
+    local_user = None
+    ssh_user = None
+    if qdevice_inst.ssh_user is not None:
+        # if the remote user is specified explicitly, use it
+        ssh_user = qdevice_inst.ssh_user
+    else:
+        try:
+            # if ssh session has ready been available, use that
+            local_user, ssh_user = utils.UserOfHost.instance().user_pair_for_ssh(qnetd_addr)
+        except utils.UserOfHost.UserNotFoundError:
+            pass
+    if local_user is None:
+        local_user = userdir.get_sudoer()
+        if local_user is None:
+            local_user = userdir.getuser()
+    if ssh_user is None:
+        ssh_user = local_user
     # Configure ssh passwordless to qnetd if detect password is needed
-    local_user = utils.user_of(utils.this_node())
     if utils.check_ssh_passwd_need(local_user, ssh_user, qnetd_addr):
+        configure_ssh_key(local_user)
         utils.ssh_copy_id(local_user, ssh_user, qnetd_addr)
     user_by_host = utils.HostUserConfig()
     user_by_host.add(ssh_user, qnetd_addr)
@@ -2463,7 +2479,7 @@ def bootstrap_join(context):
         else:
             utils.fatal("Cluster is inactive on {}".format(cluster_node))
 
-        lock_inst = lock.RemoteLock(remote_user, cluster_node)
+        lock_inst = lock.RemoteLock(cluster_node)
         try:
             with lock_inst.lock():
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)

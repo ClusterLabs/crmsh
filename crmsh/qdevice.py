@@ -69,8 +69,7 @@ def qnetd_lock_for_same_cluster_name(func):
     def wrapper(*args, **kwargs):
         cluster_name = args[0].cluster_name
         lock_dir = "/run/.crmsh_qdevice_lock_for_{}".format(cluster_name)
-        lock_inst = lock.RemoteLock(utils.user_of(args[0].qnetd_addr), args[0].qnetd_addr
-            , for_join=False, lock_dir=lock_dir, wait=False)
+        lock_inst = lock.RemoteLock(args[0].qnetd_addr, for_join=False, lock_dir=lock_dir, wait=False)
         try:
             with lock_inst.lock():
                 func(*args, **kwargs)
@@ -87,8 +86,7 @@ def qnetd_lock_for_multi_cluster(func):
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        lock_inst = lock.RemoteLock(utils.user_of(args[0].qnetd_addr)
-            , args[0].qnetd_addr, for_join=False, no_warn=True)
+        lock_inst = lock.RemoteLock(args[0].qnetd_addr, for_join=False, no_warn=True)
         try:
             with lock_inst.lock():
                 func(*args, **kwargs)

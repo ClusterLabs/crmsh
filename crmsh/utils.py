@@ -112,6 +112,10 @@ class UserOfHost:
     class UserNotFoundError(Exception):
         pass
 
+    @staticmethod
+    def instance():
+        return _user_of_host_instance
+
     def __init__(self):
         self._user_cache = dict()
         self._user_pair_cache = dict()
@@ -130,6 +134,8 @@ class UserOfHost:
 
     def user_pair_for_ssh(self, host: str) -> typing.Tuple[str, str]:
         """Return (local_user, remote_user) pair for ssh connection"""
+        local_user = None
+        remote_user = None
         try:
             local_user = self.user_of(this_node())
             remote_user = self.user_of(host)
@@ -137,12 +143,17 @@ class UserOfHost:
         except self.UserNotFoundError:
             cached = self._user_pair_cache.get(host)
             if cached is None:
-                ret = self._guess_user_for_ssh(host)
-                if ret is None:
-                    raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
-                else:
+                if local_user is not None:
+                    ret = local_user, local_user
                     self._user_pair_cache[host] = ret
                     return ret
+                else:
+                    ret = self._guess_user_for_ssh(host)
+                    if ret is None:
+                        raise self.UserNotFoundError
+                    else:
+                        self._user_pair_cache[host] = ret
+                        return ret
             else:
                 return cached
 
@@ -174,7 +185,7 @@ class UserOfHost:
     def _guess_user_for_ssh(host: str) -> typing.Tuple[str, str]:
         args = ['ssh']
         args.extend(constants.SSH_OPTION_ARGS)
-        args.extend(['-o', 'BatchMode=yes', host, 'true'])
+        args.extend(['-o', 'BatchMode=yes', host, 'sudo', 'true'])
         rc = subprocess.call(
             args,
             stdin=subprocess.DEVNULL,
@@ -189,7 +200,7 @@ class UserOfHost:
             return None
         result = su_subprocess_run(
             sudoer,
-            'ssh {} -o BatchMode=yes {}@{} sudo -u {} true'.format(constants.SSH_OPTION, sudoer, host, sudoer),
+            'ssh {} -o BatchMode=yes {}@{} sudo true'.format(constants.SSH_OPTION, sudoer, host),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -208,7 +219,10 @@ def user_of(host):
 
 
 def user_pair_for_ssh(host):
-    return _user_of_host_instance.user_pair_for_ssh(host)
+    try:
+        return _user_of_host_instance.user_pair_for_ssh(host)
+    except UserOfHost.UserNotFoundError:
+        raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
 
 
 def ssh_copy_id(local_user, remote_user, remote_node):

@@ -100,11 +100,10 @@ class RemoteLock(Lock):
     MIN_LOCK_TIMEOUT = 120
     WAIT_INTERVAL = 10
 
-    def __init__(self, remote_user, remote_node, for_join=True, lock_dir=None, wait=True, no_warn=False):
+    def __init__(self, remote_node, for_join=True, lock_dir=None, wait=True, no_warn=False):
         """
         Init function
         """
-        self.remote_user = remote_user
         self.remote_node = remote_node
         self.for_join = for_join
         self.wait = wait
