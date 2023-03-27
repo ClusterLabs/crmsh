@@ -5,8 +5,8 @@ ARG ssh_prv_key
 ARG ssh_pub_key
 # docker build -t haleap --build-arg ssh_prv_key="$(cat /root/.ssh/id_rsa)" --build-arg ssh_pub_key="$(cat /root/.ssh/id_rsa.pub)" .
 # docker login
-# docker tag haleap liangxin1300/haleap:15.4
-# docker push liangxin1300/haleap:15.4
+# docker tag haleap liangxin1300/haleap:15.5
+# docker push liangxin1300/haleap:15.5
 
 RUN zypper ref
 RUN zypper -n install systemd
