@@ -8,6 +8,7 @@ configuration file, and also the corosync-* utilities.
 import os
 import re
 import socket
+
 from . import utils
 from . import tmpfiles
 from . import parallax
@@ -97,6 +98,7 @@ def query_qnetd_status():
     """
     Query qnetd status
     """
+    import crmsh.bootstrap  # workaround for circular dependencies
     if not utils.is_qdevice_configured():
         raise ValueError("QDevice/QNetd not configured!")
     cluster_name = get_value('totem.cluster_name')
@@ -109,6 +111,7 @@ def query_qnetd_status():
     # Configure ssh passwordless to qnetd if detect password is needed
     local_user, remote_user = utils.user_pair_for_ssh(qnetd_addr)
     if utils.check_ssh_passwd_need(local_user, remote_user, qnetd_addr):
+        crmsh.bootstrap.configure_ssh_key(local_user)
         utils.ssh_copy_id(local_user, remote_user, qnetd_addr)
 
     cmd = "corosync-qnetd-tool -lv -c {}".format(cluster_name)

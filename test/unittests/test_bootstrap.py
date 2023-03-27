@@ -798,22 +798,24 @@ class TestBootstrap(unittest.TestCase):
         mock_disable.assert_called_once_with("corosync-qdevice.service")
 
     @mock.patch('crmsh.utils.HostUserConfig')
-    @mock.patch('crmsh.utils.user_of')
+    @mock.patch('crmsh.utils.UserOfHost.instance')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.ssh_copy_id')
+    @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('logging.Logger.info')
     def test_init_qdevice_copy_ssh_key_failed(
             self,
             mock_status, mock_check_ssh_passwd_need,
-            mock_ssh_copy_id, mock_list_nodes, mock_userof,
+            mock_configure_ssh_key, mock_ssh_copy_id, mock_list_nodes, mock_user_of_host,
             mock_host_user_config_class,
     ):
         mock_list_nodes.return_value = []
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob", user_list=["alice"])
         mock_check_ssh_passwd_need.return_value = True
         mock_ssh_copy_id.side_effect = ValueError('foo')
-        mock_userof.return_value = "bob"
+        mock_user_of_host.return_value = mock.MagicMock(crmsh.utils.UserOfHost)
+        mock_user_of_host.return_value.user_pair_for_ssh.return_value = "bob", "bob"
 
         with self.assertRaises(ValueError):
             bootstrap.init_qdevice()
@@ -822,25 +824,28 @@ class TestBootstrap(unittest.TestCase):
             mock.call("Configure Qdevice/Qnetd:"),
         ])
         mock_check_ssh_passwd_need.assert_called_once_with("bob", "bob", "10.10.10.123")
+        mock_configure_ssh_key.assert_called_once_with('bob')
         mock_ssh_copy_id.assert_called_once_with('bob', 'bob', '10.10.10.123')
 
     @mock.patch('crmsh.utils.HostUserConfig')
-    @mock.patch('crmsh.utils.user_of')
+    @mock.patch('crmsh.utils.UserOfHost.instance')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.utils.is_qdevice_configured')
+    @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('logging.Logger.info')
     def test_init_qdevice_already_configured(
             self,
-            mock_status, mock_ssh,
-            mock_qdevice_configured, mock_confirm, mock_list_nodes, mock_userof,
+            mock_status, mock_ssh, mock_configure_ssh_key,
+            mock_qdevice_configured, mock_confirm, mock_list_nodes, mock_user_of_host,
             mock_host_user_config_class,
     ):
         mock_list_nodes.return_value = []
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob", user_list=["alice"])
         mock_ssh.return_value = False
-        mock_userof.return_value = "bob"
+        mock_user_of_host.return_value = mock.MagicMock(crmsh.utils.UserOfHost)
+        mock_user_of_host.return_value.user_pair_for_ssh.return_value = "bob", "bob"
         mock_qdevice_configured.return_value = True
         mock_confirm.return_value = False
         self.qdevice_with_ip.start_qdevice_service = mock.Mock()
@@ -849,25 +854,28 @@ class TestBootstrap(unittest.TestCase):
 
         mock_status.assert_called_once_with("Configure Qdevice/Qnetd:")
         mock_ssh.assert_called_once_with("bob", "bob", "10.10.10.123")
+        mock_configure_ssh_key.assert_not_called()
         mock_host_user_config_class.return_value.save_remote.assert_called_once_with(mock_list_nodes.return_value)
         mock_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Qdevice is already configured - overwrite?")
         self.qdevice_with_ip.start_qdevice_service.assert_called_once_with()
 
     @mock.patch('crmsh.utils.HostUserConfig')
-    @mock.patch('crmsh.utils.user_of')
+    @mock.patch('crmsh.utils.UserOfHost.instance')
     @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
     @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.is_qdevice_configured')
+    @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice(self, mock_info, mock_ssh, mock_qdevice_configured, mock_list_nodes,
-            mock_adjust_priority, mock_adjust_fence_delay, mock_userof, mock_host_user_config_class):
+    def test_init_qdevice(self, mock_info, mock_ssh, mock_configure_ssh_key, mock_qdevice_configured, mock_list_nodes,
+            mock_adjust_priority, mock_adjust_fence_delay, mock_user_of_host, mock_host_user_config_class):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob", user_list=["alice"])
         mock_list_nodes.return_value = []
         mock_ssh.return_value = False
-        mock_userof.return_value = "bob"
+        mock_user_of_host.return_value = mock.MagicMock(crmsh.utils.UserOfHost)
+        mock_user_of_host.return_value.user_pair_for_ssh.return_value = "bob", "bob"
         mock_qdevice_configured.return_value = False
         self.qdevice_with_ip.set_cluster_name = mock.Mock()
         self.qdevice_with_ip.valid_qnetd = mock.Mock()

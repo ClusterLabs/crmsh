@@ -180,11 +180,12 @@ def test_query_qnetd_status_no_host(mock_qdevice_configured, mock_get_value):
 @mock.patch('crmsh.utils.user_pair_for_ssh')
 @mock.patch("crmsh.parallax.parallax_call")
 @mock.patch("crmsh.utils.ssh_copy_id")
+@mock.patch('crmsh.bootstrap.configure_ssh_key')
 @mock.patch("crmsh.utils.check_ssh_passwd_need")
 @mock.patch("crmsh.corosync.get_value")
 @mock.patch("crmsh.utils.is_qdevice_configured")
 def test_query_qnetd_status_copy_id_failed(mock_qdevice_configured,
-        mock_get_value, mock_check_passwd, mock_ssh_copy_id, mock_parallax_call, mock_user_pair_for_ssh):
+        mock_get_value, mock_check_passwd, mock_config_ssh_key, mock_ssh_copy_id, mock_parallax_call, mock_user_pair_for_ssh):
     mock_user_pair_for_ssh.return_value = "alice", "root"
     mock_parallax_call.side_effect = ValueError("Failed on 10.10.10.123: foo")
     mock_qdevice_configured.return_value = True
@@ -199,6 +200,7 @@ def test_query_qnetd_status_copy_id_failed(mock_qdevice_configured,
         mock.call("quorum.device.net.host")
         ])
     mock_check_passwd.assert_called_once_with("alice", "root", "10.10.10.123")
+    mock_config_ssh_key.assert_called_once_with('alice')
     mock_ssh_copy_id.assert_called_once_with('alice', 'root', '10.10.10.123')
 
 
@@ -206,11 +208,12 @@ def test_query_qnetd_status_copy_id_failed(mock_qdevice_configured,
 @mock.patch("crmsh.utils.print_cluster_nodes")
 @mock.patch("crmsh.parallax.parallax_call")
 @mock.patch("crmsh.utils.ssh_copy_id")
+@mock.patch('crmsh.bootstrap.configure_ssh_key')
 @mock.patch("crmsh.utils.check_ssh_passwd_need")
 @mock.patch("crmsh.corosync.get_value")
 @mock.patch("crmsh.utils.is_qdevice_configured")
 def test_query_qnetd_status_copy(mock_qdevice_configured, mock_get_value,
-        mock_check_passwd, mock_ssh_copy_id, mock_parallax_call, mock_print_nodes,
+        mock_check_passwd, mock_config_ssh_key, mock_ssh_copy_id, mock_parallax_call, mock_print_nodes,
         mock_user_pair_for_ssh):
     mock_user_pair_for_ssh.return_value = "alice", "root"
     mock_qdevice_configured.return_value = True
@@ -226,6 +229,7 @@ def test_query_qnetd_status_copy(mock_qdevice_configured, mock_get_value,
         mock.call("quorum.device.net.host")
         ])
     mock_check_passwd.assert_called_once_with("alice", "root", "10.10.10.123")
+    mock_config_ssh_key.assert_called_once_with('alice')
     mock_ssh_copy_id.assert_called_once_with('alice', 'root', '10.10.10.123')
     mock_parallax_call.assert_called_once_with(["10.10.10.123"], "corosync-qnetd-tool -lv -c hacluster")
     mock_print_nodes.assert_called_once_with()

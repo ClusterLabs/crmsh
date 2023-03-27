@@ -118,8 +118,8 @@ class TestRemoteLock(unittest.TestCase):
         """
         Test setUp.
         """
-        self.lock_inst = lock.RemoteLock("alice", "node1")
-        self.lock_inst_no_wait = lock.RemoteLock("alice", "node1", wait=False)
+        self.lock_inst = lock.RemoteLock("node1")
+        self.lock_inst_no_wait = lock.RemoteLock("node1", wait=False)
 
     def tearDown(self):
         """
