@@ -112,11 +112,11 @@ def _upgrade(nodes, seq):
                 for feature_class in VERSION_FEATURES[key]:
                     feature = feature_class()
                     if crmsh.healthcheck.feature_full_check(feature, nodes):
-                        logger.debug("upgradeutil: feature %s is already functional.")
+                        logger.debug("upgradeutil: feature '%s' is already functional.", str(feature))
                     else:
-                        logger.debug("upgradeutil: fixing feature %s...")
+                        logger.debug("upgradeutil: fixing feature '%s'...", str(feature))
                         crmsh.healthcheck.feature_fix(feature, nodes, ask)
-        logger.debug("upgradeutil: upgrade succeeded.")
+        logger.debug("upgradeutil: configuration fix succeeded.")
     except crmsh.healthcheck.AskDeniedByUser:
         raise _SkipUpgrade() from None
 
@@ -127,11 +127,11 @@ def upgrade_if_needed():
     if not crmsh.utils.can_ask(background_wait=False):
         return
     nodes = crmsh.utils.list_cluster_nodes(no_reg=True)
-    if nodes and _is_upgrade_needed(nodes):
-        logger.debug("upgradeutil: configuration upgrade needed")
+    if nodes and _is_upgrade_needed(nodes) and not crmsh.utils.check_passwordless_between_nodes(nodes):
+        logger.debug("upgradeutil: configuration fix needed")
         try:
             if not _is_cluster_target_seq_consistent(nodes):
-                logger.warning("crmsh version is inconsistent in cluster.")
+                logger.warning("crmsh configuration is inconsistent in cluster.")
                 raise _SkipUpgrade()
             seq = _get_minimal_seq_in_cluster(nodes)
             logger.debug(
@@ -140,7 +140,7 @@ def upgrade_if_needed():
             )
             _upgrade(nodes, seq)
         except _SkipUpgrade:
-            logger.debug("upgradeutil: upgrade skipped")
+            logger.debug("upgradeutil: configuration fix skipped")
             return
         # TODO: replace with parallax_copy when it is ready
         for node in nodes:
@@ -153,7 +153,7 @@ def upgrade_if_needed():
                 node,
             )
         crmsh.parallax.parallax_call(nodes, 'rm -f {}'.format(FORCE_UPGRADE_FILE_PATH))
-        logger.debug("upgrade finished")
+        logger.debug("configuration fix finished")
 
 
 def force_set_local_upgrade_seq():
