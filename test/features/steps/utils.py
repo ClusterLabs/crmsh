@@ -78,9 +78,11 @@ def run_command_local_or_remote(context, cmd, addr, exit_on_fail=True):
                 context.failed = True
         else:
             out = utils.to_ascii(results[0][1][1])
+            err = utils.to_ascii(results[0][1][2])
             context.stdout = out
+            context.stderr = err
             context.return_code = 0
-            return 0, out, None
+            return 0, out, err
 
 
 def check_service_state(context, service_name, state, addr):
