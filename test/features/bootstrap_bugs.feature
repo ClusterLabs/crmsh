@@ -137,8 +137,8 @@ Feature: Regression test for bootstrap bugs
     When    Run "crm cluster stop" on "hanode1"
     Then    Service "corosync" is "stopped" on "hanode1"
 
-  @clean
   @skip_non_root
+  @clean
   Scenario: Passwordless for root, not for sudoer(bsc#1209193)
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
@@ -156,8 +156,29 @@ Feature: Regression test for bootstrap bugs
     And     Run "test -f /tmp/1209193" on "hanode1"
     And     Run "test -f /tmp/1209193" on "hanode2"
 
-  @clean
   @skip_non_root
+  @clean
+  Scenario: Missing public key
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "rm -f /root/.ssh/id_rsa.pub" on "hanode1"
+    When    Run "rm -f /root/.ssh/id_rsa.pub" on "hanode2"
+    When    Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode1"
+    When    Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode2"
+    When    Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode1"
+    And     Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode2"
+    And     Run "usermod -s /usr/sbin/nologin hacluster" on "hanode1"
+    And     Run "usermod -s /usr/sbin/nologin hacluster" on "hanode2"
+    And     Run "crm status" on "hanode1"
+    Then    Check user shell for hacluster between "hanode1 hanode2"
+    Then    Check passwordless for hacluster between "hanode1 hanode2"
+
+  @skip_non_root
+  @clean
   Scenario: Do upgrade job without root passwordless
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"

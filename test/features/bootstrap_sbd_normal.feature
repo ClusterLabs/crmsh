@@ -178,8 +178,8 @@ Feature: crmsh bootstrap sbd management
     Then    Node "hanode2" is UNCLEAN
     Then    Wait "60" seconds for "hanode2" successfully fenced
 
-  @clean
   @skip_non_root
+  @clean
   Scenario: Setup sbd and test fence node, use hacluster to fence
     Given   Has disk "/dev/sda1" on "hanode1"
     Given   Cluster service is "stopped" on "hanode1"
