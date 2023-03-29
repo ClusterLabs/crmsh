@@ -142,7 +142,7 @@ class Context(object):
         self.rm_list = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
                 COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
-                "/var/lib/csync2/*"]
+                "/var/lib/csync2/*", "~/.config/crm/*"]
 
     @classmethod
     def set_context(cls, options):
@@ -2606,6 +2606,8 @@ def bootstrap_remove(context):
     else:
         utils.fatal("Specified node {} is not configured in cluster! Unable to remove.".format(_context.cluster_node))
 
+    # In case any crm command can re-generate upgrade_seq again
+    utils.get_stdout_or_raise_error("rm -rf /var/lib/crmsh", _context.cluster_node)
     bootstrap_finished()
 
 
