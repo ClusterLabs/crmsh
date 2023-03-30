@@ -620,3 +620,12 @@ class SBDManager(object):
         cmd = "sbd -d {} dump".format(dev)
         rc, _, _ = utils.get_stdout_stderr(cmd)
         return rc == 0
+
+
+def clean_up_existing_sbd_resource():
+    if xmlutil.CrmMonXmlParser.is_resource_configured(SBDManager.SBD_RA):
+        sbd_id_list = xmlutil.CrmMonXmlParser.get_resource_id_list_via_type(SBDManager.SBD_RA)
+        if xmlutil.CrmMonXmlParser.is_resource_started(SBDManager.SBD_RA):
+            for sbd_id in sbd_id_list:
+                utils.ext_cmd("crm resource stop {}".format(sbd_id))
+        utils.ext_cmd("crm configure delete {}".format(' '.join(sbd_id_list)))

@@ -84,3 +84,9 @@ class TestCrmMonXmlParser(unittest.TestCase):
         assert xmlutil.CrmMonXmlParser.is_resource_started("test") is False
         assert xmlutil.CrmMonXmlParser.is_resource_started("ocfs2-clusterfs") is True
         assert xmlutil.CrmMonXmlParser.is_resource_started("ocf::pacemaker:controld") is True
+
+    @mock.patch('crmsh.xmlutil.get_stdout_or_raise_error')
+    def test_get_resource_id_list_via_type(self, mock_run):
+        mock_run.return_value = self.resources_xml
+        assert xmlutil.CrmMonXmlParser.get_resource_id_list_via_type("test") == []
+        assert xmlutil.CrmMonXmlParser.get_resource_id_list_via_type("ocf::pacemaker:controld")[0] == "ocfs2-dlm"

@@ -110,7 +110,7 @@ class TestContext(unittest.TestCase):
         mock_active.return_value = True
         with self.assertRaises(SystemExit):
             ctx._validate_sbd_option()
-        mock_error.assert_called_once_with("Cannot configure stage sbd: sbd.service already running!")
+        mock_error.assert_called_once_with("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
         mock_active.assert_called_once_with("sbd.service")
 
     @mock.patch('crmsh.utils.check_all_nodes_reachable')

@@ -1579,4 +1579,17 @@ class CrmMonXmlParser(object):
             return False
         # Starting will return False
         return all([True if elem.get('role') == 'Started' else False for elem in elem_list])
+
+    @classmethod
+    def get_resource_id_list_via_type(cls, ra_type, peer=None):
+        """
+        Given configured ra type, get the ra id list
+        """
+        id_list = []
+        cls_inst = cls(peer=peer)
+        cls_inst._load()
+        elem_list = cls_inst.xml_elem.xpath('//resource[@resource_agent="{ra_type}"]'.format(ra_type=ra_type))
+        if not elem_list:
+            return id_list
+        return [elem.get('id') for elem in elem_list]
 # vim:ts=4:sw=4:et:
