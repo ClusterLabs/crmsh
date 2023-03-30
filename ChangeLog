@@ -1,3 +1,19 @@
+* Thu Mar 30 2023 Xin Liang <XLiang@suse.com>
+- Release 4.5.0
+- Dev: bootstrap: Remove /var/lib/crm and ~/.config/crm/crm.conf when removing node
+- Dev: bootstrap: Generate the public key on the remote if it does not exist
+- Fix: utils: qdevice initialization should user_pair_for_ssh() to get appreciated users (crmsh#1157)
+- Fix: crm report: sustain if there are offline nodes (bsc#1209480)
+- Dev: upgradeutil: Change 'upgrade' terminology to 'configuration fix'
+- Dev: utils: Check passwordless between cluster nodes
+- Dev: Dockerfile: Update pacemaker and libqb version
+- Dev: remove 'sudo' prefix internally
+- Fix: validate ssh session when the users is determined by guessing (bsc#1209193)
+- Dev: bootstrap: Change user shell for hacluster on remote node, in init_ssh_impl function
+- Fix: parallax: Use 'sudo bash -c' when executing commands via sudoer (bsc#1209192)
+- Dev: qdevice: Add more debug messages for running commands
+- Dev: log: For the log_only_to_file method, show debug log in debug mode
+
 * Thu Mar 9 2023 Xin Liang <XLiang@suse.com>
 - Release 4.5.0 rc2
 - Dev: version: Bump crmsh version to 4.5.0
