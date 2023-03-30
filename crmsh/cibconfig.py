@@ -858,9 +858,11 @@ def parse_cli_to_xml(cli, oldnode=None):
     complete = False
     comments = []
     if isinstance(cli, str):
+        utils.auto_convert_role = False
         for s in lines2cli(cli):
             node = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
+        utils.auto_convert_role = True
         complete = True
         node = parse.parse(cli, comments=comments, ignore_empty=False, complete_advised=complete)
     if node is False:
