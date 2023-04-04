@@ -79,6 +79,9 @@ class HelpEntry(object):
         self.long = long_help
         self.alias_for = alias_for
         self.generated = generated
+        self.from_cli = False
+        self.level = False
+        self.name = False
 
     def is_alias(self):
         return self.alias_for is not None
@@ -91,6 +94,10 @@ class HelpEntry(object):
         helpfilter = HelpFilter()
 
         short_help = clidisplay.help_header(self.short)
+        if self.from_cli and self.level and self.name:
+            _, output, _ = get_stdout_stderr(f"crm {self.level} {self.name} --help-without-redirect")
+            page_string(short_help + '\n\n'+ output)
+            return
 
         long_help = self.long
         if long_help:
@@ -106,6 +113,11 @@ class HelpEntry(object):
 
     def set_long_help(self, long_help):
         self.long = long_help
+
+    def set_long_lazy_load_source(self, level, name, from_cli):
+        self.level = level
+        self.name = name
+        self.from_cli = from_cli
 
     def __str__(self):
         if self.long:
@@ -347,10 +359,7 @@ def _load_help():
             lvl = entry['level']
             if lvl not in _COMMANDS:
                 _COMMANDS[lvl] = odict()
-            if entry['from_cli']:
-                _, help_output, _ = get_stdout_stderr("crm {} {} --help-without-redirect".format(lvl, name))
-                if help_output:
-                    helpobj.set_long_help(help_output.rstrip())
+            helpobj.set_long_lazy_load_source(entry['level'], entry['name'], entry['from_cli'])
             _COMMANDS[lvl][name] = helpobj
 
     def filter_line(line):
