@@ -37,7 +37,7 @@ from . import term
 from distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
-
+from .prun import prun
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -2210,13 +2210,12 @@ def cluster_copy_file(local_path, nodes=None, output=True):
     rc = True
     if not nodes:
         return rc
-    results = crmsh.parallax.parallax_copy(nodes, local_path, local_path, strict=False)
-    for host, result in results:
-        if isinstance(result, parallax.Error):
-            logger.error("Failed to copy %s to %s: %s", local_path, host, result)
+    results = prun.pcopy_to_remote(local_path, nodes, local_path)
+    for host, exc in results.items():
+        exc: prun.PRunError
+        if exc is not None:
+            logger.error("Failed to copy %s to %s@%s:%s", local_path, exc.user, host, exc)
             rc = False
-        elif output:
-            logger.info(host)
         else:
             logger.debug("Sync file %s to %s", local_path, host)
     return rc

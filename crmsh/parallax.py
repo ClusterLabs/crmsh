@@ -123,7 +123,7 @@ def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None, s
     return p.slurp()
 
 
-def parallax_copy(nodes, src, dst, askpass=False, ssh_options=None, strict=True):
+def parallax_copy(nodes, src, dst, recursive=False):
     """
     Copies from the local node to a set of remote hosts
     nodes:       a set of hosts
@@ -133,8 +133,10 @@ def parallax_copy(nodes, src, dst, askpass=False, ssh_options=None, strict=True)
     ssh_options: Extra options to pass to SSH
     Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
     """
-    p = Parallax(nodes, src=src, dst=dst, askpass=askpass, ssh_options=ssh_options, strict=strict)
-    return p.copy()
+    results = prun.pcopy_to_remote(src, nodes, dst, recursive)
+    for node, exc in results.items():
+        if exc is not None:
+            raise ValueError("Failed on {}@{}: {}".format(exc.user, node, exc))
 
 def parallax_run(nodes, cmd):
     """
