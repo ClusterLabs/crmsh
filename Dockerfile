@@ -3,10 +3,10 @@ MAINTAINER Xin Liang <XLiang@suse.com>
 
 ARG ssh_prv_key
 ARG ssh_pub_key
-# docker build -t haleap --build-arg ssh_prv_key="$(cat /root/.ssh/id_rsa)" --build-arg ssh_pub_key="$(cat /root/.ssh/id_rsa.pub)" .
+# docker build -t alpha --build-arg ssh_prv_key="$(cat /root/.ssh/id_rsa)" --build-arg ssh_pub_key="$(cat /root/.ssh/id_rsa.pub)" .
 # docker login
-# docker tag haleap liangxin1300/haleap:15.5
-# docker push liangxin1300/haleap:15.5
+# docker tag alpha liangxin1300/alpha
+# docker push liangxin1300/alpha
 
 RUN zypper ref
 RUN zypper -n install systemd
@@ -17,6 +17,10 @@ RUN zypper --non-interactive up zypper
 RUN zypper ar -f -G https://download.opensuse.org/repositories/network:/ha-clustering:/Factory/SLE_15_SP4 repo_nhf
 RUN zypper --non-interactive refresh
 RUN zypper --non-interactive up --allow-vendor-change -y python3-parallax resource-agents libqb100 pacemaker
+RUN zypper ar -f -G https://download.opensuse.org/repositories/home:/XinLiang:/corosync/15.4/ repo_corosync3
+RUN zypper --non-interactive refresh
+RUN zypper --non-interactive up --allow-vendor-change -y corosync corosync-qdevice corosync-qnetd
+RUN zypper --non-interactive in libknet1-*
 
 RUN mkdir -p /var/log/crmsh
 RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
