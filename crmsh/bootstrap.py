@@ -1829,85 +1829,6 @@ def join_ssh_merge(cluster_node, remote_user):
             utils.write_remote_file(hoststxt, "~/.ssh/known_hosts", utils.user_of(host), remote=host)
 
 
-def update_expected_votes():
-    # get a list of nodes, excluding remote nodes
-    nodelist = None
-    loop_count = 0
-    device_votes = 0
-    nodecount = 0
-    expected_votes = 0
-    while True:
-        rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
-        if rc == 0:
-            try:
-                nodelist_xml = etree.fromstring(nodelist_text)
-                nodelist = [n.get('uname') for n in nodelist_xml.xpath('//node_state') if n.get('remote_node') != 'true']
-                if len(nodelist) >= 2:
-                    break
-            except Exception:
-                break
-        # timeout: 10 seconds
-        if loop_count == 10:
-            break
-        loop_count += 1
-        sleep(1)
-
-    # Increase expected_votes
-    # TODO: wait to adjust expected_votes until after cluster join,
-    # so that we can ask the cluster for the current membership list
-    # Have to check if a qnetd device is configured and increase
-    # expected_votes in that case
-    is_qdevice_configured = utils.is_qdevice_configured()
-    if nodelist is None:
-        for v in corosync.get_values("quorum.expected_votes"):
-            expected_votes = v
-
-            # For node >= 2, expected_votes = nodecount + device_votes
-            # Assume nodecount is N, for ffsplit, qdevice only has one vote
-            # which means that device_votes is 1, ie:expected_votes = N + 1;
-            # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
-            # and update quorum.device.net.algorithm based on device_votes
-
-            if corosync.get_value("quorum.device.net.algorithm") == "lms":
-                device_votes = int((expected_votes - 1) / 2)
-                nodecount = expected_votes - device_votes
-                # as nodecount will increase 1, and device_votes is nodecount - 1
-                # device_votes also increase 1
-                device_votes += 1
-            elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-                device_votes = 1
-                nodecount = expected_votes - device_votes
-            elif is_qdevice_configured:
-                device_votes = 0
-                nodecount = v
-
-            nodecount += 1
-            expected_votes = nodecount + device_votes
-            corosync.set_value("quorum.expected_votes", str(expected_votes))
-    else:
-        nodecount = len(nodelist)
-        expected_votes = 0
-        # For node >= 2, expected_votes = nodecount + device_votes
-        # Assume nodecount is N, for ffsplit, qdevice only has one vote
-        # which means that device_votes is 1, ie:expected_votes = N + 1;
-        # while for lms, qdevice has N - 1 votes, ie: expected_votes = N + (N - 1)
-        if corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-            device_votes = 1
-        if corosync.get_value("quorum.device.net.algorithm") == "lms":
-            device_votes = nodecount - 1
-
-        if nodecount > 1:
-            expected_votes = nodecount + device_votes
-
-        if corosync.get_value("quorum.expected_votes"):
-            corosync.set_value("quorum.expected_votes", str(expected_votes))
-    if is_qdevice_configured:
-        corosync.set_value("quorum.device.votes", device_votes)
-    corosync.set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
-
-    sync_file(corosync.conf())
-
-
 def setup_passwordless_with_other_nodes(init_node, remote_user):
     """
     Setup passwordless with other cluster nodes
@@ -2124,7 +2045,6 @@ def join_cluster(seed_host, remote_user):
         if is_unicast or is_qdevice_configured:
             invoke("crm cluster run 'crm corosync reload'")
 
-        update_expected_votes()
         # Trigger corosync config reload to ensure expected_votes is propagated
         invoke("corosync-cfgtool -R")
 
@@ -2267,8 +2187,6 @@ def remove_node_from_cluster(node):
     if corosync.get_values("nodelist.node.ring0_addr"):
         corosync.del_node(node_ip if node_ip is not None else node)
 
-    decrease_expected_votes()
-
     adjust_properties()
 
     logger.info("Propagating configuration changes across the remaining nodes")
@@ -2277,41 +2195,6 @@ def remove_node_from_cluster(node):
 
     # Trigger corosync config reload to ensure expected_votes is propagated
     invoke("corosync-cfgtool -R")
-
-
-def decrease_expected_votes():
-    '''
-    Decrement expected_votes in corosync.conf
-    '''
-    vote = corosync.get_value("quorum.expected_votes")
-    if not vote:
-        return
-    quorum = int(vote)
-    new_quorum = quorum - 1
-    if utils.is_qdevice_configured():
-        new_nodecount = 0
-        device_votes = 0
-        nodecount = 0
-
-        if corosync.get_value("quorum.device.net.algorithm") == "lms":
-            nodecount = int((quorum + 1)/2)
-            new_nodecount = nodecount - 1
-            device_votes = new_nodecount - 1
-
-        elif corosync.get_value("quorum.device.net.algorithm") == "ffsplit":
-            device_votes = 1
-            nodecount = quorum - device_votes
-            new_nodecount = nodecount - 1
-
-        if new_nodecount > 1:
-            new_quorum = new_nodecount + device_votes
-        else:
-            new_quorum = 0
-
-        corosync.set_value("quorum.device.votes", device_votes)
-    else:
-        corosync.set_value("quorum.two_node", 1 if new_quorum == 2 else 0)
-    corosync.set_value("quorum.expected_votes", str(new_quorum))
 
 
 def bootstrap_init(context):
@@ -2528,7 +2411,6 @@ def remove_qdevice():
         qdevice.QDevice.remove_certification_files_on_qnetd()
         qdevice.QDevice.remove_qdevice_config()
         qdevice.QDevice.remove_qdevice_db()
-        update_expected_votes()
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
         invoke("crm cluster run 'crm corosync reload'")
     elif qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART:

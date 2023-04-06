@@ -647,7 +647,6 @@ class QDevice(object):
         if not corosync.is_unicast():
             corosync.add_nodelist_from_cmaptool()
         with logger_utils.status_long("Update configuration"):
-            bootstrap.update_expected_votes()
             if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
                 utils.cluster_run_cmd("crm corosync reload")
 
