@@ -44,7 +44,7 @@ Feature: Regression test for bootstrap bugs
   Scenario: Setup cluster with crossed network(udpu only)
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -u -i eth0 -y" on "hanode1"
+    When    Run "crm cluster init -i eth0 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Try "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "stopped" on "hanode2"
@@ -56,7 +56,7 @@ Feature: Regression test for bootstrap bugs
   Scenario: Remove correspond nodelist in corosync.conf while remove(bsc#1165644)
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -u -i eth1 -y" on "hanode1"
+    When    Run "crm cluster init -i eth1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
