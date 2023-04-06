@@ -92,7 +92,6 @@ class Context(object):
         self.yes_to_all = None
         self.cluster_name = None
         self.watchdog = None
-        self.no_overwrite_sshkey = None
         self.nic_list = []
         self.node_list = []
         self.node_list_in_cluster = []
@@ -294,10 +293,6 @@ class Context(object):
                 utils.fatal("Maximum number of interface is 2")
             if utils.has_dup_value(self.nic_list):
                 utils.fatal("Duplicated input for -i/--interface option")
-        if self.no_overwrite_sshkey:
-            logger.warning("--no-overwrite-sshkey option is deprecated since crmsh does not overwrite ssh keys by default anymore and will be removed in future versions")
-        if self.type == "join" and self.watchdog:
-            logger.warning("-w option is deprecated and will be removed in future versions")
         if self.ocfs2_devices or self.stage == "ocfs2":
             ocfs2.OCFS2Manager.verify_ocfs2(self)
         if not self.skip_csync2 and self.type == "init":
