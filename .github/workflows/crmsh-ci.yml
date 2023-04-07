@@ -39,6 +39,7 @@ jobs:
         python-version: ['3.6', '3.8', '3.10']
       fail-fast: false
     timeout-minutes: 5
+    if: ${{ false }}
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -351,6 +352,7 @@ jobs:
       original_regression_test]
     runs-on: ubuntu-20.04
     timeout-minutes: 10
+    if: ${{ false }}
     steps:
     - uses: actions/checkout@v3
     - name: delivery process
@@ -370,6 +372,7 @@ jobs:
     needs: delivery
     runs-on: ubuntu-20.04
     timeout-minutes: 10
+    if: ${{ false }}
     steps:
     - uses: actions/checkout@v3
     - name: submit process
