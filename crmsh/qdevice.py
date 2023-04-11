@@ -372,7 +372,7 @@ class QDevice(object):
 
         desc = "Step 2: Fetch {} from {}".format(self.qnetd_cacert_filename, self.qnetd_addr)
         QDevice.log_only_to_file(desc)
-        self._fetch_file_to_local(self.qnetd_addr, self.qnetd_cacert_on_qnetd, '{}/{}'.format(self.qdevice_path, self.qnetd_addr))
+        crmsh.parallax.parallax_slurp([self.qnetd_addr], self.qdevice_path, self.qnetd_cacert_on_qnetd)
 
     def copy_qnetd_crt_to_cluster(self):
         """
@@ -414,7 +414,7 @@ class QDevice(object):
         cmd = "corosync-qdevice-net-certutil -i -c {}".format(self.qnetd_cacert_on_local)
         desc = "Step 4: Initialize database on {}".format(node_list)
         QDevice.log_only_to_file(desc, cmd)
-        parallax.parallax_call(node_list, cmd)
+        crmsh.parallax.parallax_call(node_list, cmd)
 
     def create_ca_request(self):
         """
@@ -459,21 +459,7 @@ class QDevice(object):
         """
         desc = "Step 8: Fetch {} from {}".format(os.path.basename(self.qnetd_cluster_crt_on_qnetd), self.qnetd_addr)
         QDevice.log_only_to_file(desc)
-        self._fetch_file_to_local(self.qnetd_addr, self.qnetd_cluster_crt_on_qnetd, '{}/{}'.format(self.qdevice_path, self.qnetd_addr))
-
-    @classmethod
-    def _fetch_file_to_local(cls, remote_host: str, remote_path: str, local_dir: str):
-        basename = os.path.basename(remote_path)
-        rc, stdout, stderr = utils.get_stdout_stderr_auto_ssh_no_input(
-            remote_host,
-            "cat '{}'".format(remote_path),
-            raw=True,
-        )
-        if rc != 0:
-            utils.fatal("Failed to fetch file {} from {}: {}".format(remote_path, remote_host, stderr))
-        os.makedirs(local_dir, exist_ok=True)
-        with open('{}/{}'.format(local_dir, basename), 'wb') as f:
-            f.write(stdout)
+        crmsh.parallax.parallax_slurp([self.qnetd_addr], self.qdevice_path, self.qnetd_cluster_crt_on_qnetd)
 
     def import_cluster_crt(self):
         """
@@ -545,7 +531,7 @@ class QDevice(object):
 
         desc = "Step 1: Fetch {} from {}".format(self.qnetd_cacert_filename, self.cluster_node)
         QDevice.log_only_to_file(desc)
-        self._fetch_file_to_local(self.cluster_node, self.qnetd_cacert_on_local, '{}/{}'.format(self.qdevice_path, self.cluster_node))
+        crmsh.parallax.parallax_slurp([self.cluster_node], self.qdevice_path, self.qnetd_cacert_on_local)
 
     def init_db_on_local(self):
         """
@@ -572,7 +558,7 @@ class QDevice(object):
 
         desc = "Step 3: Fetch {} from {}".format(self.qdevice_p12_filename, self.cluster_node)
         QDevice.log_only_to_file(desc)
-        self._fetch_file_to_local(self.cluster_node, self.qdevice_p12_on_local, '{}/{}'.format(self.qdevice_path, self.cluster_node))
+        crmsh.parallax.parallax_slurp([self.cluster_node], self.qdevice_path, self.qdevice_p12_on_local)
 
     def import_p12_on_local(self):
         """

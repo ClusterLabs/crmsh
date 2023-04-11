@@ -110,6 +110,54 @@ def _parse_copy_result(task: Task) -> typing.Optional[PRunError]:
         return PRunError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stdout))
 
 
+def pfetch_from_remote(hosts: typing.Sequence[str], src: str, dst: str, recursive=False) -> typing.Dict[str, typing.Union[str, PRunError]]:
+    """Copy files from remote hosts to local concurrently.
+
+    Files are copied to directory <dst>/<host>/ corresponding to each source host."""
+    flags = '-pR' if recursive else '-p'
+    local_sudoer, _ = crmsh.utils.user_pair_for_ssh(hosts[0])
+    ssh = None
+    try:
+        ssh = tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False)
+        os.fchmod(ssh.fileno(), 0o700)
+        ssh.write(f'''#!/bin/sh
+exec sudo -u {local_sudoer} ssh "$@"''')
+        # It is necessary to close the file before executing
+        ssh.close()
+        tasks = [_build_fetch_task("-S '{}'".format(ssh.name), host, src, dst, flags) for host in hosts]
+        runner = Runner()
+        for task in tasks:
+            runner.add_task(task)
+        runner.run()
+    finally:
+        if ssh is not None:
+            os.unlink(ssh.name)
+            ssh.close()
+    basename = os.path.basename(src)
+    return {
+        host: v if v is not None else f"{dst}/{host}/{basename}"
+        for host, v in ((task.context['host'], _parse_copy_result(task)) for task in tasks)
+    }
+
+
+def _build_fetch_task( ssh: str, host: str, src: str, dst: str, flags: str) -> Task:
+    _, remote_sudoer = crmsh.utils.user_pair_for_ssh(host)
+    cmd = "sftp {} {} -o BatchMode=yes -s 'sudo PATH=/usr/lib/ssh:/usr/libexec/ssh /bin/sh -c \"exec sftp-server\"' -b - {}@{}".format(
+        ssh,
+        crmsh.constants.SSH_OPTION,
+        remote_sudoer, _enclose_inet6_addr(host),
+    )
+    os.makedirs(f"{dst}/{host}", exist_ok=True)
+    return Task(
+        ['/bin/sh', '-c', cmd],
+        input='get {} "{}" "{}/{}/"\n'.format(flags, src, dst, host).encode('utf-8'),
+        capture_stdout=True,
+        capture_stderr=True,
+        inline_stderr=True,
+        context={"host": host, "ssh_user": remote_sudoer},
+    )
+
+
 def _enclose_inet6_addr(addr: str):
     if ':' in addr:
         return f'[{addr}]'

@@ -1,6 +1,6 @@
 # Copyright (C) 2019 Xin Liang <XLiang@suse.com>
 # See COPYING for license information.
-
+import typing
 
 import os
 
@@ -108,7 +108,7 @@ def parallax_call(nodes, cmd):
     return [(node, (result.returncode, result.stdout, result.stderr)) for node, result in results.items()]
 
 
-def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None, strict=True):
+def parallax_slurp(nodes: typing.Sequence[str], localdir, filename, askpass=False, ssh_options=None, strict=True) -> typing.List[typing.Tuple[str, typing.Union[str, Error]]]:
     """
     Copies from the remote node to the local node
     nodes:       a set of hosts
@@ -118,9 +118,11 @@ def parallax_slurp(nodes, localdir, filename, askpass=False, ssh_options=None, s
     ssh_options: Extra options to pass to SSH
     Returns [(host, (rc, stdout, stdin, localpath)), ...] or ValueError exception
     """
-    p = Parallax(nodes, localdir=localdir, filename=filename,
-            askpass=askpass, ssh_options=ssh_options, strict=strict)
-    return p.slurp()
+    results = prun.pfetch_from_remote(nodes, filename, localdir)
+    for node, result in results.items():
+        if isinstance(result, prun.PRunError):
+            raise ValueError("Failed on {}@{}: {}".format(result.user, node, result))
+    return [(k, v) for k, v in results.items()]
 
 
 def parallax_copy(nodes, src, dst, recursive=False):

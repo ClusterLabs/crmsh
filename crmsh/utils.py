@@ -165,7 +165,7 @@ class UserOfHost:
             aliases = set(aliases)
             aliases.add(canonical)
             aliases.add(host)
-        except socket.herror:
+        except (socket.herror, socket.gaierror):
             aliases = {host}
         hosts = config.get_option('core', 'hosts')
         if hosts == ['']:
