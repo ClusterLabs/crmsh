@@ -1,4 +1,5 @@
 import os
+import socket
 import tempfile
 import typing
 
@@ -44,13 +45,21 @@ def prun(host_cmdline: typing.Mapping[str, str]) -> typing.Dict[str, typing.Unio
 
 def _build_run_task(remote: str, cmdline: str) -> Task:
     local_sudoer, remote_sudoer = crmsh.utils.user_pair_for_ssh(remote)
-    shell = 'ssh {} {}@{} sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION, remote_sudoer, remote)
-    if local_sudoer == crmsh.userdir.getuser():
-        args = ['/bin/sh', '-c', shell]
-    elif os.geteuid() == 0:
-        args = ['su', local_sudoer, '--login', '-c', shell]
+    if _is_local_host(remote):
+        if 0 == os.geteuid():
+            args = ['/bin/sh']
+        elif local_sudoer == crmsh.userdir.getuser():
+            args = ['sudo', '/bin/sh']
+        else:
+            raise AssertionError('trying to run sudo as a non-root user')
     else:
-        raise AssertionError('trying to run su as a non-root user')
+        shell = 'ssh {} {}@{} sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION, remote_sudoer, remote)
+        if local_sudoer == crmsh.userdir.getuser():
+            args = ['/bin/sh', '-c', shell]
+        elif os.geteuid() == 0:
+            args = ['su', local_sudoer, '--login', '-c', shell]
+        else:
+            raise AssertionError('trying to run su as a non-root user')
     return Task(
         args,
         cmdline.encode('utf-8'),
@@ -61,6 +70,12 @@ def _build_run_task(remote: str, cmdline: str) -> Task:
 
 def pcopy_to_remote(src: str, hosts: typing.Sequence[str], dst: str, recursive: bool = False) -> typing.Dict[str, typing.Optional[PRunError]]:
     """Copy file or directory from local to remote hosts concurrently."""
+    if src == dst:
+        hosts_filtered = [x for x in hosts if not _is_local_host(x)]
+        if hosts_filtered:
+            hosts = hosts_filtered
+        else:
+            return {x: None for x in hosts}
     flags = '-pr' if recursive else '-p'
     local_sudoer, _ = crmsh.utils.user_pair_for_ssh(hosts[0])
     script = "put {} '{}' '{}'\n".format(flags, src, dst)
@@ -163,3 +178,15 @@ def _enclose_inet6_addr(addr: str):
         return f'[{addr}]'
     else:
         return addr
+
+
+def _is_local_host(host):
+    """
+    Check if the host is local
+    """
+    try:
+        socket.inet_aton(host)
+        hostname = socket.gethostbyaddr(host)[0]
+    except OSError:
+        hostname = host
+    return hostname == socket.gethostname()
