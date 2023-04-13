@@ -81,6 +81,7 @@ class Context(object):
     Context object used to avoid having to pass these variables
     to every bootstrap method.
     """
+    MAX_LINK_NUM = 8
     DEFAULT_PROFILE_NAME = "default"
     S390_PROFILE_NAME = "s390"
 
@@ -205,6 +206,39 @@ class Context(object):
         else:
             raise AssertionError('Bad parameter user_of_specified_hosts: {}'.format(users_of_specified_hosts))
 
+    def _validate_nic_addr_list(self):
+        """
+        Validate -i option
+        """
+        if self.type == "init" and self.transport != "knet" and len(self.nic_addr_list) > 1:
+            utils.fatal(f"Only one link is allowed for the '{self.transport}' transport type")
+        if len(self.nic_addr_list) > self.MAX_LINK_NUM:
+            utils.fatal(f"Maximum number of interfaces is {self.MAX_LINK_NUM}")
+        if len(self.nic_addr_list) != len(set(self.nic_addr_list)):
+            utils.fatal("Duplicated input for the -i option")
+        if utils.IP.is_valid_ip(self.nic_addr_list[0]):
+            self.nic_addr_type = "IP"
+            choice_list = utils.InterfacesInfo.get_local_ip_list(_context.ipv6)
+        else:
+            self.nic_addr_type = "NIC"
+            choice_list = utils.interface_choice()
+        for item in self.nic_addr_list:
+            if item not in choice_list:
+                utils.fatal(f"'{item}' is not in the local {self.nic_addr_type} list {choice_list}")
+
+    def _validate_net_work_options(self):
+        """
+        Validate network related options -A/-i/-t
+        """
+        if self.admin_ip:
+            Validation.valid_admin_ip(self.admin_ip)
+        if self.nic_addr_list:
+            self._validate_nic_addr_list()
+        if self.transport == "udp":
+            cloud_type = utils.detect_cloud()
+            if cloud_type:
+                utils.fatal(f"Transport udp(multicast) cannot be used in {cloud_type} platform")
+
     def _validate_sbd_option(self):
         """
         Validate sbd options
@@ -254,21 +288,15 @@ class Context(object):
         """
         Validate options
         """
-        if self.admin_ip:
-            Validation.valid_admin_ip(self.admin_ip)
         if self.qdevice_inst:
             self.qdevice_inst.valid_qdevice_options()
-        if self.nic_list:
-            if len(self.nic_list) > 2:
-                utils.fatal("Maximum number of interface is 2")
-            if utils.has_dup_value(self.nic_list):
-                utils.fatal("Duplicated input for -i/--interface option")
         if self.ocfs2_devices or self.stage == "ocfs2":
             ocfs2.OCFS2Manager.verify_ocfs2(self)
         if not self.skip_csync2 and self.type == "init":
             self.skip_csync2 = utils.get_boolean(os.getenv("SKIP_CSYNC2_SYNC"))
         if self.skip_csync2 and self.stage:
             utils.fatal("-x option or SKIP_CSYNC2_SYNC can't be used with any stage")
+        self._validate_net_work_options()
         self._validate_cluster_node()
         self._validate_nodes_option()
         self._validate_sbd_option()
