@@ -273,7 +273,7 @@ class ConfParser(object):
         inst._verify_config_file()
 
     @classmethod
-    def get_value(cls, path, index=0):
+    def get_value(cls, path: str, index: int = 0):
         """
         Class method to get value
         Return None if not found
@@ -283,7 +283,7 @@ class ConfParser(object):
         return inst.get(path, index)
 
     @classmethod
-    def get_values(cls, path):
+    def get_values(cls, path: str):
         """
         Class method to get value list matched by path
         Return [] if not matched

@@ -170,7 +170,7 @@ class Cluster(command.UI):
         '''
         service_check_list = ["pacemaker.service"]
         start_qdevice = False
-        if utils.is_qdevice_configured():
+        if corosync.is_qdevice_configured():
             start_qdevice = True
             service_check_list.append("corosync-qdevice.service")
 
@@ -252,7 +252,7 @@ class Cluster(command.UI):
         '''
         node_list = parse_option_for_nodes(context, *args)
         node_list = utils.enable_service("pacemaker.service", node_list=node_list)
-        if utils.service_is_available("corosync-qdevice.service") and utils.is_qdevice_configured():
+        if utils.service_is_available("corosync-qdevice.service") and corosync.is_qdevice_configured():
             utils.enable_service("corosync-qdevice.service", node_list=node_list)
         for node in node_list:
             logger.info("Cluster services enabled on %s", node)

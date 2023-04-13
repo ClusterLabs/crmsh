@@ -9,8 +9,6 @@
 # Implemented as a straight-forward set of python functions for
 # simplicity and flexibility.
 #
-# TODO: Make csync2 usage optional
-# TODO: Configuration file for bootstrap?
 import codecs
 import os
 import subprocess
@@ -46,6 +44,7 @@ from . import qdevice
 from . import parallax
 from . import log
 from .ui_node import NodeMgmt
+from . import conf_parser
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -83,6 +82,7 @@ class Context(object):
     """
     MAX_LINK_NUM = 8
     DEFAULT_PROFILE_NAME = "default"
+    KNET_DEFAULT_PROFILE_NAME = "knet-default"
     S390_PROFILE_NAME = "s390"
 
     def __init__(self):
@@ -94,8 +94,7 @@ class Context(object):
         self.yes_to_all = None
         self.cluster_name = None
         self.watchdog = None
-        self.nic_addr_list = None
-        self.nic_addr_type = None
+        self.nic_addr_list = []
         self.transport = None
         self.nic_list = []
         self.user_at_node_list = []
@@ -104,7 +103,6 @@ class Context(object):
         self.unicast = None
         self.multicast = None
         self.admin_ip = None
-        self.second_heartbeat = None
         self.ipv6 = None
         self.qdevice_inst = None
         self.qnetd_addr = None
@@ -137,10 +135,8 @@ class Context(object):
         self.profiles_data = None
         self.skip_csync2 = None
         self.profiles_dict = {}
-        self.default_nic_list = []
+        self.default_nic = None
         self.default_ip_list = []
-        self.local_ip_list = []
-        self.local_network_list = []
         self.rm_list = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
                 COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
@@ -206,34 +202,16 @@ class Context(object):
         else:
             raise AssertionError('Bad parameter user_of_specified_hosts: {}'.format(users_of_specified_hosts))
 
-    def _validate_nic_addr_list(self):
-        """
-        Validate -i option
-        """
-        if self.type == "init" and self.transport != "knet" and len(self.nic_addr_list) > 1:
-            utils.fatal(f"Only one link is allowed for the '{self.transport}' transport type")
-        if len(self.nic_addr_list) > self.MAX_LINK_NUM:
-            utils.fatal(f"Maximum number of interfaces is {self.MAX_LINK_NUM}")
-        if len(self.nic_addr_list) != len(set(self.nic_addr_list)):
-            utils.fatal("Duplicated input for the -i option")
-        if utils.IP.is_valid_ip(self.nic_addr_list[0]):
-            self.nic_addr_type = "IP"
-            choice_list = utils.InterfacesInfo.get_local_ip_list(_context.ipv6)
-        else:
-            self.nic_addr_type = "NIC"
-            choice_list = utils.interface_choice()
-        for item in self.nic_addr_list:
-            if item not in choice_list:
-                utils.fatal(f"'{item}' is not in the local {self.nic_addr_type} list {choice_list}")
-
-    def _validate_net_work_options(self):
+    def _validate_network_options(self):
         """
         Validate network related options -A/-i/-t
         """
         if self.admin_ip:
             Validation.valid_admin_ip(self.admin_ip)
-        if self.nic_addr_list:
-            self._validate_nic_addr_list()
+        if self.type == "init" and self.transport != "knet" and len(self.nic_addr_list) > 1:
+            utils.fatal(f"Only one link is allowed for the '{self.transport}' transport type")
+        if len(self.nic_addr_list) > self.MAX_LINK_NUM:
+            utils.fatal(f"Maximum number of interfaces is {self.MAX_LINK_NUM}")
         if self.transport == "udp":
             cloud_type = utils.detect_cloud()
             if cloud_type:
@@ -296,7 +274,7 @@ class Context(object):
             self.skip_csync2 = utils.get_boolean(os.getenv("SKIP_CSYNC2_SYNC"))
         if self.skip_csync2 and self.stage:
             utils.fatal("-x option or SKIP_CSYNC2_SYNC can't be used with any stage")
-        self._validate_net_work_options()
+        self._validate_network_options()
         self._validate_cluster_node()
         self._validate_nodes_option()
         self._validate_sbd_option()
@@ -354,6 +332,10 @@ class Context(object):
             return
 
         default_profile_dict = self.load_specific_profile(self.DEFAULT_PROFILE_NAME)
+        if self.transport == "knet":
+            knet_profile_dict = self.load_specific_profile(self.KNET_DEFAULT_PROFILE_NAME)
+            # merge two dictionaries
+            default_profile_dict = {**default_profile_dict, **knet_profile_dict}
         specific_profile_dict = self.load_specific_profile(profile_type)
         # merge two dictionaries
         self.profiles_dict = {**default_profile_dict, **specific_profile_dict}
@@ -511,6 +493,7 @@ def is_online():
     if not xmlutil.CrmMonXmlParser.is_node_online(cluster_node):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
         sync_file(corosync.conf())
+        utils.get_stdout_or_raise_error('sudo corosync-cfgtool -R', cluster_node)
         utils.stop_service("corosync")
         print()
         utils.fatal("Cannot see peer node \"{}\", please check the communication IP".format(cluster_node))
@@ -632,18 +615,16 @@ def init_network():
     """
     Get all needed network information through utils.InterfacesInfo
     """
-    interfaces_inst = utils.InterfacesInfo(_context.ipv6, _context.second_heartbeat, _context.nic_list)
-    interfaces_inst.get_interfaces_info()
-    _context.default_nic_list = interfaces_inst.get_default_nic_list_from_route()
-    _context.default_ip_list = interfaces_inst.get_default_ip_list()
+    _context.interfaces_inst = utils.InterfacesInfo(_context.ipv6, _context.nic_addr_list)
+    _context.interfaces_inst.get_interfaces_info()
+    _context.interfaces_inst.flatten_custom_nic_addr_list()
 
-    # local_ip_list and local_network_list are for validation
-    _context.local_ip_list = interfaces_inst.ip_list
-    _context.local_network_list = interfaces_inst.network_list
-    _context.interfaces_inst = interfaces_inst
-    # use two "-i" options equal to use "-M" option
-    if len(_context.default_nic_list) == 2 and not _context.second_heartbeat:
-        _context.second_heartbeat = True
+    if _context.interfaces_inst.input_nic_list:
+        _context.default_nic = _context.interfaces_inst.input_nic_list[0]
+        _context.default_ip_list = _context.interfaces_inst.input_addr_list
+    else:
+        _context.default_nic = _context.interfaces_inst.get_default_nic_from_route()
+        _context.default_ip_list = [_context.interfaces_inst.nic_first_ip(_context.default_nic)]
 
 
 def configure_firewall(tcp=None, udp=None):
@@ -750,7 +731,8 @@ def init_cluster_local():
     if utils.service_is_active("corosync.service"):
         utils.fatal("corosync service is running!")
 
-    firewall_open_corosync_ports()
+    # FIXME This is temporarily commentted out since issue from new corosync parser
+    #firewall_open_corosync_ports()
 
     # reset password, but only if it's not already set
     # (We still need the hacluster for the hawk).
@@ -1289,7 +1271,7 @@ class Validation(object):
         Check whether the address is already in use and whether the address exists on local
         """
         cls_inst = cls(addr, prev_value_list)
-        cls_inst._is_local_addr(_context.local_ip_list)
+        cls_inst._is_local_addr(_context.interfaces_inst.ip_list)
 
     @classmethod
     def valid_mcast_ip(cls, addr, prev_value_list=[]):
@@ -1297,7 +1279,7 @@ class Validation(object):
         Check whether the address is already in use and whether the address exists on local address and network
         """
         cls_inst = cls(addr, prev_value_list)
-        cls_inst._is_local_addr(_context.local_ip_list + _context.local_network_list)
+        cls_inst._is_local_addr(_context.interfaces_inst.ip_list + _context.interfaces_inst.network_list)
 
     @classmethod
     def valid_port(cls, port, prev_value_list=[]):
@@ -1320,136 +1302,6 @@ class Validation(object):
             raise ValueError("Address already in use: {}".format(addr))
 
 
-def init_corosync_unicast():
-
-    if _context.yes_to_all:
-        logger.info("Configuring corosync (unicast)")
-    else:
-        logger.info("""Configure Corosync (unicast):
-  This will configure the cluster messaging layer.  You will need
-  to specify a network address over which to communicate (default
-  is {}'s network, but you can use the network address of any
-  active interface).
-""".format(_context.default_nic_list[0]))
-
-    ringXaddr_res = []
-    mcastport_res = []
-    default_ports = ["5405", "5407"]
-    two_rings = False
-
-    for i in range(2):
-        ringXaddr = prompt_for_string(
-                'Address for ring{}'.format(i),
-                default=pick_default_value(_context.default_ip_list, ringXaddr_res),
-                valid_func=Validation.valid_ucast_ip,
-                prev_value=ringXaddr_res)
-        if not ringXaddr:
-            utils.fatal("No value for ring{}".format(i))
-        ringXaddr_res.append(ringXaddr)
-
-        mcastport = prompt_for_string(
-                'Port for ring{}'.format(i),
-                match='[0-9]+',
-                default=pick_default_value(default_ports, mcastport_res),
-                valid_func=Validation.valid_port,
-                prev_value=mcastport_res)
-        if not mcastport:
-            utils.fatal("Expected a multicast port for ring{}".format(i))
-        mcastport_res.append(mcastport)
-
-        if i == 1 or \
-           not _context.second_heartbeat or \
-           not confirm("\nAdd another heartbeat line?"):
-            break
-        two_rings = True
-
-    corosync.create_configuration(
-            clustername=_context.cluster_name,
-            ringXaddr=ringXaddr_res,
-            mcastport=mcastport_res,
-            transport="udpu",
-            ipv6=_context.ipv6,
-            two_rings=two_rings)
-    sync_file(corosync.conf())
-
-
-def init_corosync_multicast():
-    def gen_mcastaddr():
-        if _context.ipv6:
-            return "ff3e::%s:%d" % (
-                ''.join([random.choice('0123456789abcdef') for _ in range(4)]),
-                random.randint(0, 9))
-        return "239.%d.%d.%d" % (
-            random.randint(0, 255),
-            random.randint(0, 255),
-            random.randint(1, 255))
-
-    if _context.yes_to_all:
-        logger.info("Configuring corosync")
-    else:
-        logger.info("""Configure Corosync:
-  This will configure the cluster messaging layer.  You will need
-  to specify a network address over which to communicate (default
-  is {}'s network, but you can use the network address of any
-  active interface).
-""".format(_context.default_nic_list[0]))
-
-    bindnetaddr_res = []
-    mcastaddr_res = []
-    mcastport_res = []
-    default_ports = ["5405", "5407"]
-    two_rings = False
-
-    for i in range(2):
-        bindnetaddr = prompt_for_string(
-                'IP or network address to bind to',
-                default=pick_default_value(_context.default_ip_list, bindnetaddr_res),
-                valid_func=Validation.valid_mcast_ip,
-                prev_value=bindnetaddr_res)
-        if not bindnetaddr:
-            utils.fatal("No value for bindnetaddr")
-        bindnetaddr_res.append(bindnetaddr)
-
-        mcastaddr = prompt_for_string(
-                'Multicast address',
-                default=gen_mcastaddr(),
-                valid_func=Validation.valid_mcast_address,
-                prev_value=mcastaddr_res)
-        if not mcastaddr:
-            utils.fatal("No value for mcastaddr")
-        mcastaddr_res.append(mcastaddr)
-
-        mcastport = prompt_for_string(
-                'Multicast port',
-                match='[0-9]+',
-                default=pick_default_value(default_ports, mcastport_res),
-                valid_func=Validation.valid_port,
-                prev_value=mcastport_res)
-        if not mcastport:
-            utils.fatal("No value for mcastport")
-        mcastport_res.append(mcastport)
-
-        if i == 1 or \
-           not _context.second_heartbeat or \
-           not confirm("\nConfigure a second multicast ring?"):
-            break
-        two_rings = True
-
-    nodeid = None
-    if _context.ipv6:
-        nodeid = utils.gen_nodeid_from_ipv6(_context.default_ip_list[0])
-
-    corosync.create_configuration(
-        clustername=_context.cluster_name,
-        bindnetaddr=bindnetaddr_res,
-        mcastaddr=mcastaddr_res,
-        mcastport=mcastport_res,
-        ipv6=_context.ipv6,
-        nodeid=nodeid,
-        two_rings=two_rings)
-    sync_file(corosync.conf())
-
-
 def adjust_corosync_parameters_according_to_profiles():
     """
     Adjust corosync's parameters according profiles
@@ -1457,11 +1309,57 @@ def adjust_corosync_parameters_according_to_profiles():
     if not _context.profiles_dict:
         return
     for k, v in _context.profiles_dict.items():
+        # Format like: corosync.totem.token: 5000
         if k.startswith("corosync."):
             corosync.set_value('.'.join(k.split('.')[1:]), v)
 
 
-def init_corosync():
+def get_address_list() -> typing.List[str]:
+    """
+    Get address list, for both interactive and non-interactive ways
+    """
+    if _context.transport == "udp":
+        valid_func = Validation.valid_mcast_ip
+    else:
+        valid_func = Validation.valid_ucast_ip
+
+    ringXaddr_list = []
+    loop_count = min(Context.MAX_LINK_NUM, len(_context.default_ip_list))
+    for i in range(loop_count):
+        addr = prompt_for_string("Address for ring{}".format(i),
+                default=pick_default_value(_context.default_ip_list, ringXaddr_list),
+                valid_func=valid_func,
+                prev_value=ringXaddr_list)
+        ringXaddr_list.append(addr)
+        if i < (loop_count - 1) and not confirm("\nAdd another ring?"):
+            break
+
+    return ringXaddr_list
+
+
+def config_corosync_conf() -> None:
+    """
+    Configure corosync.conf
+    """
+    if _context.yes_to_all:
+        logger.info(f"Configuring corosync({_context.transport})")
+    inst = conf_parser.ConfParser(config_data=conf_parser.COROSYNC_CONF_TEMPLATE)
+    inst.convert2dict()
+
+    if _context.ipv6:
+        inst.set("totem.ip_version", "ipv6")
+    inst.set("totem.cluster_name", _context.cluster_name)
+    inst.set("totem.transport", _context.transport)
+    ringXaddr_list = get_address_list()
+    for i, ip in enumerate(ringXaddr_list):
+        inst.set("nodelist.node.ring{}_addr".format(i), ip)
+    inst.set("nodelist.node.name", utils.this_node())
+    inst.set("nodelist.node.nodeid", "1")
+
+    utils.str2file(inst.convert2string(), corosync.conf())
+
+
+def init_corosync() -> None:
     """
     Configure corosync (unicast or multicast, encrypted?)
     """
@@ -1471,10 +1369,7 @@ def init_corosync():
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    if _context.unicast or _context.cloud_type or not _context.multicast:
-        init_corosync_unicast()
-    else:
-        init_corosync_multicast()
+    config_corosync_conf()
     adjust_corosync_parameters_according_to_profiles()
 
 
@@ -1666,7 +1561,7 @@ def init_qdevice():
     user_by_host.add(ssh_user, qnetd_addr)
     user_by_host.save_remote(cluster_node_list)
     # Start qdevice service if qdevice already configured
-    if utils.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
+    if corosync.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
         qdevice_inst.start_qdevice_service()
         return
     qdevice_inst.set_cluster_name()
@@ -1722,7 +1617,7 @@ def join_ssh(seed_host, seed_user):
     # ha-cluster-init).
     utils.su_get_stdout_or_raise_error(
         "ssh {} {}@{} sudo crm cluster init -i {} ssh_remote".format(
-            SSH_OPTION, seed_user, seed_host, _context.default_nic_list[0],
+            SSH_OPTION, seed_user, seed_host, _context.default_nic,
         ),
         local_user,
     )
@@ -1797,7 +1692,7 @@ def join_csync2(seed_host, remote_user):
 
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-    cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
+    cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic, utils.this_node())
     utils.get_stdout_or_raise_error(cmd, seed_host)
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
@@ -1950,38 +1845,18 @@ def join_cluster(seed_host, remote_user):
     """
     Cluster configuration for joining node.
     """
-    def get_local_nodeid():
-        # for IPv6
-        return utils.gen_nodeid_from_ipv6(_context.local_ip_list[0])
-
-    def update_nodeid(nodeid, node=None):
-        # for IPv6
-        if node and node != utils.this_node():
-            cmd = "crm corosync set totem.nodeid %d" % nodeid
-            invoke("crm cluster run '{}' {}".format(cmd, node))
-        else:
-            corosync.set_value("totem.nodeid", nodeid)
-
-    is_qdevice_configured = utils.is_qdevice_configured()
+    is_qdevice_configured = corosync.is_qdevice_configured()
     if is_qdevice_configured and not utils.service_is_available("corosync-qdevice.service"):
         utils.fatal("corosync-qdevice.service is not available")
 
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
     # check if use IPv6
-    ipv6_flag = False
-    ipv6 = corosync.get_value("totem.ip_version")
-    if ipv6 and ipv6 == "ipv6":
-        ipv6_flag = True
-    _context.ipv6 = ipv6_flag
+    _context.ipv6 = corosync.is_using_ipv6()
 
     init_network()
 
-    # check whether have two rings
-    rrp_flag = False
-    rrp = corosync.get_value("totem.rrp_mode")
-    if rrp in ('active', 'passive'):
-        rrp_flag = True
+    link_number = corosync.get_link_number()
 
     # It would be massively useful at this point if new nodes could come
     # up in standby mode, so we could query the CIB locally to see if
@@ -2002,49 +1877,32 @@ def join_cluster(seed_host, remote_user):
     else:
         logger.info("No existing IP/hostname specified - skipping mountpoint detection/creation")
 
-    # Bump expected_votes in corosync.conf
-    # TODO(must): this is rather fragile (see related code in ha-cluster-remove)
-
     # If corosync.conf() doesn't exist or is empty, we will fail here. (bsc#943227)
     if not os.path.exists(corosync.conf()):
         utils.fatal("{} is not readable. Please ensure that hostnames are resolvable.".format(corosync.conf()))
 
-    # if unicast, we need to add our node to $corosync.conf()
-    is_unicast = corosync.is_unicast()
-    if is_unicast:
-        ringXaddr_res = []
-        for i in 0, 1:
+    ringXaddr_res = []
+    for i in range(link_number):
+        while True:
             ringXaddr = prompt_for_string(
                     'Address for ring{}'.format(i),
                     default=pick_default_value(_context.default_ip_list, ringXaddr_res),
                     valid_func=Validation.valid_ucast_ip,
                     prev_value=ringXaddr_res)
-            # The ringXaddr here still might be empty on non-interactive mode
-            # when don't have default ip addresses(_context.default_ip_list is empty or just one)
             if not ringXaddr:
-                utils.fatal("No value for ring{}".format(i))
+                error("No value for ring{}".format(i))
             ringXaddr_res.append(ringXaddr)
-            if not rrp_flag:
-                break
-        invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
-        try:
-            corosync.add_node_ucast(ringXaddr_res)
-        except corosync.IPAlreadyConfiguredError as e:
-            logger.warning(e)
-        sync_file(corosync.conf())
-        utils.get_stdout_or_raise_error('sudo corosync-cfgtool -R', seed_host)
+            break
+    print("")
+    invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
+    try:
+        corosync.add_node_config(ringXaddr_res)
+    except corosync.IPAlreadyConfiguredError as e:
+        logger.warning(e)
+    sync_file(corosync.conf())
+    utils.get_stdout_or_raise_error('sudo corosync-cfgtool -R', seed_host)
 
     _context.sbd_manager.join_sbd(remote_user, seed_host)
-
-    if ipv6_flag and not is_unicast:
-        # for ipv6 mcast
-        # using ipv6 need nodeid configured
-        local_nodeid = get_local_nodeid()
-        update_nodeid(local_nodeid)
-
-    if is_qdevice_configured and not is_unicast:
-        # expected_votes here maybe is "0", set to "3" to make sure cluster can start
-        corosync.set_value("quorum.expected_votes", "3")
 
     # Initialize the cluster before adjusting quorum. This is so
     # that we can query the cluster to find out how many nodes
@@ -2056,55 +1914,21 @@ def join_cluster(seed_host, remote_user):
 
     with logger_utils.status_long("Reloading cluster configuration"):
 
-        if ipv6_flag and not is_unicast:
-            # for ipv6 mcast
-            nodeid_dict = {}
-            _rc, outp, _ = utils.get_stdout_stderr("crm_node -l")
-            if _rc == 0:
-                for line in outp.splitlines():
-                    tokens = line.split()
-                    if len(tokens) == 0:
-                        pass  # Skip any spurious empty line.
-                    elif len(tokens) < 3:
-                        logger.warning("Unable to update configuration for nodeid {}. "
-                             "The node has no known name and/or state "
-                             "information".format(tokens[0]))
-                    else:
-                        nodeid_dict[tokens[1]] = tokens[0]
-
-        # apply nodelist in cluster
-        if is_unicast or is_qdevice_configured:
-            invoke("crm cluster run 'crm corosync reload'")
-
-        # Trigger corosync config reload to ensure expected_votes is propagated
-        invoke("corosync-cfgtool -R")
-
         # Ditch no-quorum-policy=ignore
         _rc, outp = utils.get_stdout("crm configure show")
         if re.search('no-quorum-policy=.*ignore', outp):
             invoke("crm_attribute --attr-name no-quorum-policy --delete-attr")
-
-        # if unicast, we need to reload the corosync configuration
-        # on the other nodes
-        if is_unicast:
-            invoke("crm cluster run 'crm corosync reload'")
-
-        if ipv6_flag and not is_unicast:
-            # for ipv6 mcast
-            # after csync2_update, all config files are same
-            # but nodeid must be uniqe
-            for node in list(nodeid_dict.keys()):
-                if node == utils.this_node():
-                    continue
-                update_nodeid(int(nodeid_dict[node]), node)
-            update_nodeid(local_nodeid)
-
-        sync_files_to_disk()
+        invoke("crm cluster run 'crm corosync reload'")
 
     if is_qdevice_configured:
         start_qdevice_on_join_node(seed_host)
     else:
         utils.disable_service("corosync-qdevice.service")
+
+    if not is_qdevice_configured:
+        corosync.configure_two_node()
+    sync_file(corosync.conf())
+    sync_files_to_disk()
 
 
 def adjust_priority_in_rsc_defaults(is_2node_wo_qdevice):
@@ -2145,11 +1969,7 @@ def start_qdevice_on_join_node(seed_host):
     Doing qdevice certificate process and start qdevice service on join node
     """
     with logger_utils.status_long("Starting corosync-qdevice.service"):
-        if not corosync.is_unicast():
-            corosync.add_nodelist_from_cmaptool()
-            sync_file(corosync.conf())
-            invoke("crm corosync reload")
-        if utils.is_qdevice_tls_on():
+        if corosync.is_qdevice_tls_on():
             qnetd_addr = corosync.get_value("quorum.device.net.host")
             qdevice_inst = qdevice.QDevice(qnetd_addr, cluster_node=seed_host)
             qdevice_inst.certificate_process_on_join()
@@ -2218,6 +2038,7 @@ def remove_node_from_cluster(node):
     if corosync.get_values("nodelist.node.ring0_addr"):
         corosync.del_node(node_ip if node_ip is not None else node)
 
+    corosync.configure_two_node(removing=True)
     adjust_properties()
 
     logger.info("Propagating configuration changes across the remaining nodes")
@@ -2312,7 +2133,7 @@ def bootstrap_add(context):
     _context = context
 
     options = ""
-    for nic in _context.nic_list:
+    for nic in _context.interfaces_inst.input_nic_list:
         options += '-i {} '.format(nic)
     options = " {}".format(options.strip()) if options else ""
 
@@ -2420,11 +2241,11 @@ def join_remote_auth(node, user):
     utils.touch(PCMK_REMOTE_AUTH)
 
 
-def remove_qdevice():
+def remove_qdevice() -> None:
     """
     Remove qdevice service and configuration from cluster
     """
-    if not utils.is_qdevice_configured():
+    if not corosync.is_qdevice_configured():
         utils.fatal("No QDevice configuration in this cluster")
     if not confirm("Removing QDevice service and configuration from cluster: Are you sure?"):
         return
@@ -2442,6 +2263,8 @@ def remove_qdevice():
         qdevice.QDevice.remove_certification_files_on_qnetd()
         qdevice.QDevice.remove_qdevice_config()
         qdevice.QDevice.remove_qdevice_db()
+        corosync.configure_two_node(removing=True)
+        sync_file(corosync.conf())
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
         invoke("crm cluster run 'crm corosync reload'")
     elif qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART:

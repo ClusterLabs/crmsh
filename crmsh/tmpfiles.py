@@ -47,21 +47,25 @@ def add(filename):
     _FILES.append(filename)
 
 
-def create(directory=utils.get_tempdir(), prefix='crmsh_'):
+def create(directory=None, prefix='crmsh_'):
     '''
     Create a temporary file and remove it at program exit.
     Returns (fd, filename)
     '''
+    if not directory:
+        directory = utils.get_tempdir()
     _mkdir(directory)
     fd, fname = mkstemp(dir=directory, prefix=prefix)
     add(fname)
     return fd, fname
 
 
-def create_dir(directory=utils.get_tempdir(), prefix='crmsh_'):
+def create_dir(directory=None, prefix='crmsh_'):
     '''
     Create a temporary directory and remove it at program exit.
     '''
+    if not directory:
+        directory = utils.get_tempdir()
     _mkdir(directory)
     ret = mkdtemp(dir=directory, prefix=prefix)
     if len(_FILES) + len(_DIRS) == 0:

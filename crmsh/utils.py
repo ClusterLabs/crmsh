@@ -28,6 +28,7 @@ from stat import S_ISBLK
 from lxml import etree
 
 import crmsh.parallax
+from . import corosync
 from . import config
 from . import userdir
 from . import constants
@@ -2192,10 +2193,6 @@ def obscure(obscure_list):
         _obscured_nvpairs = prev
 
 
-def gen_nodeid_from_ipv6(addr):
-    return int(ipaddress.ip_address(addr)) % 1000000000
-
-
 def _cloud_metadata_request(uri, headers={}):
     try:
         import urllib2 as urllib
@@ -2349,19 +2346,9 @@ def valid_port(port):
     return int(port) >= 1024 and int(port) <= 65535
 
 
-def is_qdevice_configured():
-    from . import corosync
-    return corosync.get_value("quorum.device.model") == "net"
-
-
-def is_qdevice_tls_on():
-    from . import corosync
-    return corosync.get_value("quorum.device.net.tls") == "on"
-
-
 def get_nodeinfo_from_cmaptool():
     nodeid_ip_dict = {}
-    rc, out = get_stdout("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    rc, out = get_stdout("corosync-cmapctl -b runtime.members")
     if rc != 0:
         return nodeid_ip_dict
 
@@ -2419,13 +2406,6 @@ def check_space_option_value(options):
         value = getattr(options, opt)
         if isinstance(value, str) and len(value.strip()) == 0:
             raise ValueError("Space value not allowed for dest \"{}\"".format(opt))
-
-
-def interface_choice():
-    _, out = get_stdout("ip a")
-    # should consider interface format like "ethx@xxx"
-    interface_list = re.findall(r'(?:[0-9]+:) (.*?)(?=: |@.*?: )', out)
-    return [nic for nic in interface_list if nic != "lo"]
 
 
 class IP(object):
@@ -2541,19 +2521,20 @@ class InterfacesInfo(object):
     Class to collect interfaces information on local node
     """
 
-    def __init__(self, ipv6=False, second_heartbeat=False, custom_nic_list=[]):
+    def __init__(self, ipv6: bool = False, custom_nic_addr_list: typing.List[str] = []) -> None:
         """
         Init function
 
         On init process,
         "ipv6" is provided by -I option
-        "second_heartbeat" is provided by -M option
-        "custom_nic_list" is provided by -i option
+        "custom_nic_addr_list" is provided by -i option
         """
         self.ip_version = 6 if ipv6 else 4
-        self.second_heartbeat = second_heartbeat
-        self._default_nic_list = custom_nic_list
+        self._custom_nic_addr_list = custom_nic_addr_list
         self._nic_info_dict = {}
+        self._ip_nic_dict = {}
+        self._input_nic_list = []
+        self._input_addr_list = []
 
     def get_interfaces_info(self):
         """
@@ -2583,8 +2564,31 @@ class InterfacesInfo(object):
 
         if not self._nic_info_dict:
             raise ValueError("No address configured")
-        if self.second_heartbeat and len(self._nic_info_dict) == 1:
-            raise ValueError("Cannot configure second heartbeat, since only one address is available")
+
+        for nic, inst_list in self._nic_info_dict.items():
+            for inst in inst_list:
+                self._ip_nic_dict[inst.ip] = nic
+
+    def flatten_custom_nic_addr_list(self) -> None:
+        """
+        If NIC or IP is provided by the -i option, convert them to 
+        nic list and address list, and do some validations
+        """
+        for item in self._custom_nic_addr_list:
+            if item in self.nic_list:
+                ip = self.nic_first_ip(item)
+                if ip in self._input_addr_list:
+                    raise ValueError(f"Invalid input '{item}': The same NIC already used")
+                self._input_nic_list.append(item)
+                self._input_addr_list.append(ip)
+            elif IP.is_valid_ip(item):
+                nic = self.get_nic_name_by_addr(item)
+                if nic in self._input_nic_list:
+                    raise ValueError(f"Invalid input '{item}': the IP in the same NIC already used")
+                self._input_nic_list.append(nic)
+                self._input_addr_list.append(item)
+            else:
+                raise ValueError(f"Invalid value '{item}' for -i/--interface option")
 
     @property
     def nic_list(self):
@@ -2610,6 +2614,14 @@ class InterfacesInfo(object):
         """
         return [interface.ip for interface in self.interface_list]
 
+    @property
+    def input_nic_list(self) -> typing.List[str]:
+        return self._input_nic_list
+
+    @property
+    def input_addr_list(self) -> typing.List[str]:
+        return self._input_addr_list
+
     @classmethod
     def get_local_ip_list(cls, is_ipv6):
         """
@@ -2628,6 +2640,15 @@ class InterfacesInfo(object):
         cls_inst.get_interfaces_info()
         return addr in cls_inst.ip_list
 
+    def get_nic_name_by_addr(self, addr: str) -> str:
+        """
+        Return NIC name by given local IP address
+        Raise error if this IP is not the local address
+        """
+        if addr not in self.ip_list:
+            raise ValueError(f"'{addr}' is not in the local address: {self.ip_list}")
+        return self._ip_nic_dict[addr]
+
     @property
     def network_list(self):
         """
@@ -2635,56 +2656,21 @@ class InterfacesInfo(object):
         """
         return list(set([interface.network for interface in self.interface_list]))
 
-    def _nic_first_ip(self, nic):
+    def nic_first_ip(self, nic) -> str:
         """
         Get the first IP of specific nic
         """
         return self._nic_info_dict[nic][0].ip
 
-    def get_default_nic_list_from_route(self):
+    def get_default_nic_from_route(self) -> str:
         """
-        Get default nic list from route
+        Get default nic from route
         """
-        if self._default_nic_list:
-            return self._default_nic_list
-
         #TODO what if user only has ipv6 route?
         cmd = "ip -o route show"
-        rc, out, err = get_stdout_stderr(cmd)
-        if rc != 0:
-            raise ValueError(err)
+        out = get_stdout_or_raise_error(cmd)
         res = re.search(r'^default via .* dev (.*?) ', out)
-        if res:
-            self._default_nic_list = [res.group(1)]
-        else:
-            if not self.nic_list:
-                self.get_interfaces_info()
-            logger.warning("No default route configured. Using the first found nic")
-            self._default_nic_list = [self.nic_list[0]]
-        return self._default_nic_list
-
-    def get_default_ip_list(self):
-        """
-        Get default IP list will be used by corosync
-        """
-        if not self._default_nic_list:
-            self.get_default_nic_list_from_route()
-        if not self.nic_list:
-            self.get_interfaces_info()
-
-        _ip_list = []
-        for nic in self._default_nic_list:
-            # in case given interface not exist
-            if nic not in self.nic_list:
-                raise ValueError("Failed to detect IP address for {}".format(nic))
-            _ip_list.append(self._nic_first_ip(nic))
-        # in case -M specified but given one interface via -i
-        if self.second_heartbeat and len(self._default_nic_list) == 1:
-            for nic in self.nic_list:
-                if nic not in self._default_nic_list:
-                    _ip_list.append(self._nic_first_ip(nic))
-                    break
-        return _ip_list
+        return res.group(1) if res else self.nic_list[0]
 
     @classmethod
     def ip_in_network(cls, addr):
@@ -3216,7 +3202,7 @@ def is_2node_cluster_without_qdevice():
     Check if current cluster has two nodes without qdevice
     """
     current_num = len(list_cluster_nodes())
-    qdevice_num = 1 if is_qdevice_configured() else 0
+    qdevice_num = 1 if corosync.is_qdevice_configured() else 0
     return (current_num + qdevice_num) == 2
 
 
@@ -3512,11 +3498,11 @@ class HostUserConfig:
     def add(self, user, host):
         self._hosts_users[host] = user
 
+
 def parse_user_at_host(s: str):
     i = s.find('@')
     if i == -1:
         return None, s
     else:
         return s[:i], s[i+1:]
-
 # vim:ts=4:sw=4:et:
