@@ -93,6 +93,9 @@ class Context(object):
         self.yes_to_all = None
         self.cluster_name = None
         self.watchdog = None
+        self.nic_addr_list = None
+        self.nic_addr_type = None
+        self.transport = None
         self.nic_list = []
         self.user_at_node_list = []
         self.node_list_in_cluster = []

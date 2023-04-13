@@ -375,8 +375,9 @@ Examples:
                             help="Skip csync2 initialization (an experimental option)")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
-        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action=CustomAppendAction, choices=utils.interface_choice(), default=[],
-                                   help="Bind to IP address on interface IF. Use -i second time for second interface")
+        network_group.add_argument("-i", "--interface", dest="nic_addr_list", metavar="IF", action=CustomAppendAction, default=[], help=constants.INTERFACE_HELP)
+        network_group.add_argument("-t", "--transport", dest="transport", metavar="TRANSPORT", default="knet", choices=['knet', 'udpu', 'udp'],
+                help="The transport mechanism. Allowed value is knet(kronosnet)/udpu(unicast)/udp(multicast). Default is knet")
         network_group.add_argument("-A", "--admin-ip", dest="admin_ip", metavar="IP",
                                    help="Configure IP address as an administration virtual IP")
         network_group.add_argument("-I", "--ipv6", action="store_true", dest="ipv6",
@@ -482,8 +483,7 @@ Examples:
             "-c", "--cluster-node", metavar="[USER@]HOST", dest="cluster_node",
             help="User and host to login to an existing cluster node. The host can be specified with either a hostname or an IP.",
         )
-        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action=CustomAppendAction, choices=utils.interface_choice(), default=[],
-                help="Bind to IP address on interface IF. Use -i second time for second interface")
+        network_group.add_argument("-i", "--interface", dest="nic_addr_list", metavar="IF", action=CustomAppendAction, default=[], help=constants.INTERFACE_HELP)
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
