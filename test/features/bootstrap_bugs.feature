@@ -36,7 +36,7 @@ Feature: Regression test for bootstrap bugs
     Then    Except "ERROR: cluster.geo_init_arbitrator: Space value not allowed for dest "cluster_node""
 
   @clean
-  Scenario: Setup cluster with crossed network(udpu only)
+  Scenario: Setup cluster with crossed network
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -i eth0 -y" on "hanode1"
@@ -80,6 +80,7 @@ Feature: Regression test for bootstrap bugs
     And     Online nodes are "hanode1 hanode2 hanode3"
     And     Show cluster status on "hanode1"
     And     File "/etc/corosync/corosync.conf" was synced in cluster
+    And     two_node in corosync.conf is "0"
 
   @clean
   Scenario: Multi nodes join in parallel timed out(bsc#1175976)

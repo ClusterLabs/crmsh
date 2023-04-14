@@ -50,6 +50,16 @@ Feature: crmsh bootstrap process - options
     Then    Cluster service is "started" on "hanode1"
     And     IP "@hanode1.ip.0" is used by corosync on "hanode1"
     And     Show corosync ring status
+ 
+  @clean
+  Scenario: Validate "-i" option
+    Given   Cluster service is "stopped" on "hanode1"
+    When    Try "crm cluster init -t udpu -i eth0 -i eth1"
+    Then    Except "ERROR: cluster.init: Only one link is allowed for the 'udpu' transport type"
+    When    Try "crm cluster init -i eth0 -i eth1 -i eth2 -i eth3 -i eth4 -i eth5 -i eth6 -i eth7 -i eth8"
+    Then    Except "ERROR: cluster.init: Maximum number of interfaces is 8"
+    When    Try "crm cluster init -i eth11 -y"
+    Then    Except "ERROR: cluster.init: Invalid value 'eth11' for -i/--interface option"
 
   @clean
   Scenario: Using multiple network interface using "-i" option
@@ -63,6 +73,32 @@ Feature: crmsh bootstrap process - options
     And     Show corosync ring status
 
   @clean
+  Scenario: Using "-i" option, mixing with IP and NIC name
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -i eth0 -i @hanode1.ip.0 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     IP "@hanode1.ip.default" is used by corosync on "hanode1"
+    And     IP "@hanode1.ip.0" is used by corosync on "hanode1"
+    When    Run "crm cluster join -c hanode1 -i eth0 -i @hanode2.ip.0 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     IP "@hanode2.ip.default" is used by corosync on "hanode2"
+    And     IP "@hanode2.ip.0" is used by corosync on "hanode2"
+
+  @clean
+  Scenario: Using "-i" option with IP address
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -i @hanode1.ip.0 -i @hanode1.ip.1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     IP "@hanode1.ip.0" is used by corosync on "hanode1"
+    And     IP "@hanode1.ip.1" is used by corosync on "hanode1"
+    When    Run "crm cluster join -c hanode1 -i @hanode2.ip.0 -i @hanode2.ip.1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     IP "@hanode2.ip.0" is used by corosync on "hanode2"
+    And     IP "@hanode2.ip.1" is used by corosync on "hanode2"
+
+  @clean
   Scenario: Setup cluster name and virtual IP using "-A" option
     Given   Cluster service is "stopped" on "hanode1"
     When    Try "crm cluster init -A xxx -y"
@@ -74,6 +110,14 @@ Feature: crmsh bootstrap process - options
     And     Cluster name is "hatest"
     And     Cluster virtual IP is "@vip.0"
     And     Show cluster status on "hanode1"
+ 
+  @clean
+  Scenario: Detect multi IP in the same NIC
+    Given   Cluster service is "stopped" on "hanode1"
+    When    Try "crm cluster init -i eth1 -i @hanode1.ip.0 -y"
+    Then    Except "ERROR: cluster.init: Invalid input '@hanode1.ip.0': the IP in the same NIC already used"
+    When    Try "crm cluster init -i @hanode1.ip.0 -i eth1 -y"
+    Then    Except "ERROR: cluster.init: Invalid input 'eth1': The same NIC already used"
 
   @clean
   Scenario: Init cluster service with ipv6 using "-I" option
@@ -85,7 +129,6 @@ Feature: crmsh bootstrap process - options
     When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     IP "@hanode2.ip6.default" is used by corosync on "hanode2"
-    And     Corosync working on "unicast" mode
 
   @clean
   Scenario: Init cluster with -N option (bsc#1175863)
@@ -108,3 +151,35 @@ Feature: crmsh bootstrap process - options
     When    Run "crm cluster init csync2 -y" on "hanode1"
     Then    Service "csync2.socket" is "started" on "hanode1"
     And     Service "csync2.socket" is "started" on "hanode2"
+
+  @clean
+  Scenario: Setup cluster with udpu transport
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y -t udpu" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    Then    Cluster is using "udpu" transport mode
+
+  @clean
+  Scenario: Setup cluster with udp transport
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y -t udp" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    Then    Cluster is using "udp" transport mode
+
+  @clean
+  Scenario: Check if the join side provides the corresponding network interface
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -i eth0 -i eth1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Try "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
+    Then    Cluster service is "stopped" on "hanode2"
+    And     Except "knet transport of all cluster nodes need 2 links via '-i' options, but provided 1" in stderr
+    When    Run "crm cluster join -c hanode1 -i eth0 -i eth1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
