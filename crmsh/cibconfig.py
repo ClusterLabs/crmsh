@@ -3411,6 +3411,11 @@ class CibFactory(object):
     def set_property_cli(self, obj_type, node):
         pset_id = node.get('id') or default_id_for_obj(obj_type)
         obj = self.find_object(pset_id)
+        # If id is the default, use any existing set rather create another one.
+        if not obj and pset_id == default_id_for_obj(obj_type):
+            objs = self.get_elems_on_type("type:%s" %obj_type)
+            if objs and len(objs) > 0:
+                obj = objs[-1]
         if not obj:
             if not is_id_valid(pset_id):
                 logger_utils.invalid_id_err(pset_id)
