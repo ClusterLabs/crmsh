@@ -451,17 +451,15 @@ def invokerc(*args):
 
 
 def crm_configure_load(action, configuration):
+    action_types = ("update", "replace", "push")
+    if action not in action_types:
+        utils.fatal(f"Action type should be: {action_types}")
     logger_utils.log_only_to_file("Loading crm config (%s), content is:" % (action))
     logger_utils.log_only_to_file(configuration)
-    if not cib_factory.initialize():
-        utils.fatal("Failed to load cluster configuration")
-    set_obj = mkset_obj()
-    if action == 'replace':
-        cib_factory.erase()
-    if not set_obj.save(configuration, remove=False, method=action):
-        utils.fatal("Failed to load cluster configuration")
-    if not cib_factory.commit():
-        utils.fatal("Failed to commit cluster configuration")
+
+    configuration_tmpfile = utils.str2tmp(configuration)
+    tmpfiles.add(configuration_tmpfile)
+    utils.get_stdout_or_raise_error(f"crm -F configure load {action} {configuration_tmpfile}")
 
 
 def wait_for_resource(message, resource, timeout_ms=WAIT_TIMEOUT_MS_DEFAULT):
