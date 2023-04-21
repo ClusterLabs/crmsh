@@ -27,7 +27,6 @@ from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from lxml import etree
 
-import parallax
 import crmsh.parallax
 from . import config
 from . import userdir
@@ -2154,12 +2153,8 @@ def sysconfig_set(sysconfig_file, **values):
 
 def remote_diff_slurp(nodes, filename):
     from . import tmpfiles
-
     tmpdir = tmpfiles.create_dir()
-    opts = parallax.Options()
-    opts.localdir = tmpdir
-    dst = os.path.basename(filename)
-    return list(parallax.slurp(nodes, filename, dst, opts).items())
+    return crmsh.parallax.parallax_slurp(nodes, tmpdir, filename)
 
 
 def remote_diff_this(local_path, nodes, this_node):
