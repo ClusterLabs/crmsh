@@ -711,15 +711,6 @@ to get the geo cluster configuration.""",
         '''
         Execute the given command on all nodes/specific node(s), report outcome
         '''
-        try:
-            import parallax
-            _has_parallax = True
-        except ImportError:
-            _has_parallax = False
-
-        if not _has_parallax:
-            context.fatal_error("python package parallax is needed for this command")
-
         if nodes:
             hosts = list(nodes)
         else:
@@ -728,7 +719,7 @@ to get the geo cluster configuration.""",
                 context.fatal_error("failed to get node list from cluster")
 
         for host, result in crmsh.parallax.parallax_run(hosts, cmd).items():
-            if isinstance(result, parallax.Error):
+            if isinstance(result, crmsh.parallax.Error):
                 logger.error("[%s]: %s", host, result)
             else:
                 rc, stdout, stderr = result

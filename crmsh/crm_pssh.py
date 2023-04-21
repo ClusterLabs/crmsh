@@ -13,12 +13,7 @@ corresponding remote node's hostname or IP address.
 
 import os
 import glob
-import tempfile
 import typing
-
-from parallax.manager import Manager, FatalError
-from parallax.task import Task
-from parallax import Options
 
 from . import config
 from . import log
@@ -29,19 +24,6 @@ logger = log.setup_logger(__name__)
 
 _DEFAULT_TIMEOUT = 60
 _EC_LOGROT = 120
-
-
-def parse_args(outdir, errdir, t=_DEFAULT_TIMEOUT):
-    '''
-    Parse the given commandline arguments.
-    '''
-    opts = Options()
-    opts.timeout = int(t)
-    opts.quiet = True
-    opts.inline = False
-    opts.outdir = outdir
-    opts.errdir = errdir
-    return opts
 
 
 def get_output(odir, host):
@@ -162,7 +144,6 @@ def next_peinputs(node_pe_l, outdir, errdir):
         red_pe_l = [os.path.join("pengine", os.path.basename(x)) for x in pe_l]
         cmdline = "tar -C %s -chf - %s" % (vardir, ' '.join(red_pe_l))
         logger.debug("getting new PE inputs %s from %s", red_pe_l, node)
-        opts = parse_args(outdir, errdir)
         l.append([node, cmdline])
     if not l:
         # is this a failure?

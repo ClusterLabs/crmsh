@@ -2160,9 +2160,9 @@ def remote_diff_slurp(nodes, filename):
 def remote_diff_this(local_path, nodes, this_node):
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
-        if isinstance(result, parallax.Error):
+        if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
-        _, _, _, path = result
+        path = result
         _, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
                           (host, this_node, path, local_path))
         page_string(s)
@@ -2171,7 +2171,7 @@ def remote_diff_this(local_path, nodes, this_node):
 def remote_diff(local_path, nodes):
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
-        if isinstance(result, parallax.Error):
+        if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
     h1, r1 = by_host[0]
     h2, r2 = by_host[1]
@@ -2185,7 +2185,7 @@ def remote_checksum(local_path, nodes, this_node):
 
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
-        if isinstance(result, parallax.Error):
+        if isinstance(result, crmsh.parallax.Error):
             raise ValueError(str(result))
 
     print("%-16s  SHA1 checksum of %s" % ('Host', local_path))
@@ -2868,7 +2868,7 @@ class ServiceManager(object):
     @staticmethod
     def _call_with_parallax(cmd, host_list):
         ret = crmsh.parallax.parallax_run(host_list, cmd)
-        if ret is parallax.Error:
+        if ret is crmsh.parallax.Error:
             raise ret
         return ret
 

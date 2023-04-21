@@ -2,7 +2,6 @@ import logging
 import os.path
 import typing
 
-import parallax
 import sys
 
 import crmsh.healthcheck
@@ -81,7 +80,7 @@ def _is_cluster_target_seq_consistent(nodes):
     cmd = '/usr/bin/env python3 -m crmsh.upgradeutil get-seq'
     try:
         results = list(_parallax_run(nodes, cmd).values())
-    except parallax.Error as e:
+    except crmsh.parallax.Error as e:
         raise _SkipUpgrade() from None
     try:
         return all(CURRENT_UPGRADE_SEQ == _parse_upgrade_seq(stdout.strip()) if rc == 0 else False for rc, stdout, stderr in results)
