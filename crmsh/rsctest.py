@@ -143,8 +143,8 @@ class RADriver(object):
 
         sys.stderr.write("host %s (%s)\n" %
                          (host, self.explain_op_status(host)))
-        show_output(self.errdir, (host,), "stderr")
-        show_output(self.outdir, (host,), "stdout")
+        show_output(self.errdir, [host], "stderr")
+        show_output(self.outdir, [host], "stdout")
 
     def run_on_all(self, op):
         '''
@@ -183,12 +183,15 @@ class RADriver(object):
                 logger.error("Parallax SSH not installed, rsctest can not be executed")
                 return
 
-            statuses = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
+            results = do_pssh_cmd(cmd, nodes, self.outdir, self.errdir, self.timeout)
             for i, node in enumerate(nodes):
                 try:
-                    self.ec_l[node] = statuses[i]
-                except:
+                    host, result = results[i]
+                except IndexError:
                     self.ec_l[node] = self.undef
+                else:
+                    assert node == host
+                    self.ec_l[node] = result.returncode
         return
 
     def stop(self, node):

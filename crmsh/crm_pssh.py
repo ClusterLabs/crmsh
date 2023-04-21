@@ -13,6 +13,8 @@ corresponding remote node's hostname or IP address.
 
 import os
 import glob
+import tempfile
+import typing
 
 from parallax.manager import Manager, FatalError
 from parallax.task import Task
@@ -20,7 +22,7 @@ from parallax import Options
 
 from . import config
 from . import log
-
+from .prun import prun
 
 logger = log.setup_logger(__name__)
 
@@ -53,7 +55,8 @@ def get_output(odir, host):
     for fname in ["%s/%s" % (odir, host)] + glob.glob("%s/%s.[0-9]*" % (odir, host)):
         try:
             if os.path.isfile(fname):
-                l += open(fname).readlines()
+                with open(fname) as f:
+                    l += f.readlines()
         except IOError:
             continue
     return l
@@ -70,77 +73,61 @@ def show_output(odir, hosts, desc):
             print(''.join(out_l))
 
 
-def do_pssh(l, opts):
-    '''
-    Adapted from psshlib. Perform command across list of hosts.
-    l = [(host, command), ...]
-    '''
-    if opts.outdir and not os.path.exists(opts.outdir):
-        os.makedirs(opts.outdir)
-    if opts.errdir and not os.path.exists(opts.errdir):
-        os.makedirs(opts.errdir)
-    manager = Manager(opts)
-    user = ""
-    port = ""
-    hosts = []
-    for host, cmdline in l:
-        cmd = ['ssh', host,
-               '-o', 'PasswordAuthentication=no',
-               '-o', 'SendEnv=PARALLAX_NODENUM',
-               '-o', 'StrictHostKeyChecking=no']
-        if hasattr(opts, 'options'):
-            for opt in opts.options:
-                cmd += ['-o', opt]
-        if user:
-            cmd += ['-l', user]
-        if port:
-            cmd += ['-p', port]
-        if hasattr(opts, 'extra'):
-            cmd.extend(opts.extra)
-        if cmdline:
-            cmd.append(cmdline)
-        hosts.append(host)
-        t = Task(host, port, user, cmd,
-                 stdin=opts.input_stream,
-                 verbose=opts.verbose,
-                 quiet=opts.quiet,
-                 print_out=opts.print_out,
-                 inline=opts.inline,
-                 inline_stdout=opts.inline_stdout,
-                 default_user=opts.default_user)
-        manager.add_task(t)
-    try:
-        return manager.run()  # returns a list of exit codes
-    except FatalError:
-        logger.error("SSH to nodes failed")
-        show_output(opts.errdir, hosts, "stderr")
-        return False
+def do_pssh(host_cmdline: typing.Sequence[typing.Tuple[str, str]], outdir, errdir):
+    if outdir:
+        os.makedirs(outdir, exist_ok=True)
+    if errdir:
+        os.makedirs(errdir, exist_ok=True)
+
+    class StdoutStderrInterceptor(prun.PRunInterceptor):
+        def __init__(self):
+            self._task_count = -1
+            self._stdout_path = None
+            self._stderr_path = None
+
+        def task(self, task: prun.Task) -> prun.Task:
+            self._task_count += 1
+            if outdir:
+                path = f'{outdir}/{task.context["host"]}.{self._task_count}'
+                task.stdout = prun.Task.RedirectToFile(path)
+                self._stdout_path = path
+            if errdir:
+                path = f'{errdir}/{task.context["host"]}.{self._task_count}'
+                task.stderr = prun.Task.RedirectToFile(path)
+                self._stderr_path = path
+            return task
+
+        def result(self, result: prun.ProcessResult) -> prun.ProcessResult:
+            result.stdout_path = self._stdout_path
+            result.stderr_path = self._stderr_path
+            return result
+
+    # TODO: implement timeout
+    return prun.prun_multimap(host_cmdline, StdoutStderrInterceptor())
 
 
-def examine_outcome(l, opts, statuses):
+def examine_outcome(
+        results: typing.Sequence[typing.Tuple[str, typing.Union[prun.ProcessResult, prun.SSHError]]],
+        errdir: str,
+):
     '''
     A custom function to show stderr in case there were issues.
     Not suited for callers who want better control of output or
     per-host processing.
     '''
-    hosts = [x[0] for x in l]
-    if min(statuses) < 0:
+    if any(isinstance(result, prun.SSHError) for host, result in results):
+        logger.warning("ssh processes failed")
+        show_output(errdir, [host for host, result in results], "stderr")
+        return False
+    elif any((0 > result.returncode for host, result in results)):
         # At least one process was killed.
         logger.error("ssh process was killed")
-        show_output(opts.errdir, hosts, "stderr")
+        show_output(errdir, [host for host, result in results], "stderr")
         return False
-    # The any builtin was introduced in Python 2.5 (so we can't use it yet):
-    # elif any(x==255 for x in statuses):
-    for status in statuses:
-        if status == 255:
-            logger.warning("ssh processes failed")
-            show_output(opts.errdir, hosts, "stderr")
-            return False
-    for status in statuses:
-        if status not in (0, _EC_LOGROT):
-            logger.warning("some ssh processes failed")
-            show_output(opts.errdir, hosts, "stderr")
-            return False
+    elif any(0 != result.returncode and _EC_LOGROT != result.returncode for host, result in results):
+        logger.warning("some ssh processes failed")
+        show_output(errdir, [host for host, result in results], "stderr")
+        return False
     return True
 
 
@@ -156,11 +143,10 @@ def next_loglines(a, outdir, errdir, from_time):
         else:
             cmdline = "perl -e 'exit(%d) if (stat(\"%s\"))[7]<%d' && tail -c +%d %s" % (
                 _EC_LOGROT, logfile, nextpos-1, nextpos, logfile)
-        opts = parse_args(outdir, errdir)
         l.append([node, cmdline])
-    statuses = do_pssh(l, opts)
-    if statuses:
-        return examine_outcome(l, opts, statuses)
+    results = do_pssh(l, outdir, errdir)
+    if results:
+        return examine_outcome(results, errdir)
     else:
         return False
 
@@ -181,11 +167,8 @@ def next_peinputs(node_pe_l, outdir, errdir):
     if not l:
         # is this a failure?
         return True
-    statuses = do_pssh(l, opts)
-    if statuses:
-        return examine_outcome(l, opts, statuses)
-    else:
-        return False
+    results = do_pssh(l, outdir, errdir)
+    return examine_outcome(results, errdir)
 
 
 def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
@@ -197,7 +180,6 @@ def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
         l.append([node, cmd])
     if not l:
         return True
-    opts = parse_args(outdir, errdir, t=int(timeout // 1000))
-    return do_pssh(l, opts)
+    return do_pssh(l, outdir, errdir)
 
 # vim:ts=4:sw=4:et:

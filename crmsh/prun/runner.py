@@ -1,25 +1,34 @@
 import asyncio
+import fcntl
+import os
+import select
 import typing
 
 
 class Task:
+    DevNull = 0
+    Stdout = 1
+    Capture = 2
+
+    class RedirectToFile:
+        def __init__(self, path):
+            self.path = path
+
     def __init__(
             self,
             args: typing.Sequence[str],
             input: typing.Optional[bytes] = None,
-            capture_stdout: bool = False,
-            capture_stderr: bool = False,
-            inline_stderr: bool = False,
+            stdout: typing.Union[int, RedirectToFile] = DevNull,
+            stderr: typing.Union[int, RedirectToFile] = DevNull,
             context=None,
     ):
         self.args = args
         self.input = input
-        self.capture_stdout = capture_stdout
-        self.capture_stderr = capture_stderr
-        self.inline_stderr = inline_stderr
+        self.stdout_config = stdout
+        self.stderr_config = stderr
         self.returncode: typing.Optional[int] = None
-        self.stdout: typing.Optional[bytes] = None
-        self.stderr: typing.Optional[bytes] = None
+        self.stdout: typing.Union[typing.Optional[bytes], Task.RedirectToFile] = None
+        self.stderr: typing.Union[typing.Optional[bytes], Task.RedirectToFile] = None
         self.context = context
 
 
@@ -37,22 +46,83 @@ class Runner:
 
     @staticmethod
     async def _run(task: Task):
-        if task.inline_stderr:
-            stderr = asyncio.subprocess.STDOUT
-        elif task.capture_stderr:
-            stderr = asyncio.subprocess.PIPE
-        else:
-            stderr = asyncio.subprocess.DEVNULL
-        if task.capture_stdout or task.inline_stderr:
-            stdout = asyncio.subprocess.PIPE
-        else:
+        wait_stdout_writer = None
+        if task.stdout_config == Task.DevNull:
             stdout = asyncio.subprocess.DEVNULL
-        child = await asyncio.create_subprocess_exec(
-            *task.args,
-            stdin=asyncio.subprocess.PIPE if task.input else asyncio.subprocess.DEVNULL,
-            stdout=stdout,
-            stderr=stderr,
-        )
+        elif task.stdout_config == Task.Capture:
+            stdout = asyncio.subprocess.PIPE
+        elif isinstance(task.stdout_config, Task.RedirectToFile):
+            stdout_writer = FileIOWriter(task.stdout_config.path)
+            stdout, wait_stdout_writer = stdout_writer.create()
+        else:
+            assert False
+
+        wait_stderr_writer = None
+        if task.stderr_config == Task.DevNull:
+            stderr = asyncio.subprocess.DEVNULL
+        elif task.stderr_config == Task.Stdout:
+            stderr = asyncio.subprocess.STDOUT
+        elif task.stderr_config == Task.Capture:
+            stderr = asyncio.subprocess.PIPE
+        elif isinstance(task.stderr, Task.RedirectToFile):
+            stderr_writer = FileIOWriter(task.stderr.path)
+            stderr, wait_stderr_writer = stderr_writer.create()
+        else:
+            assert False
+
+        try:
+            child = await asyncio.create_subprocess_exec(
+                *task.args,
+                stdin=asyncio.subprocess.PIPE if task.input else asyncio.subprocess.DEVNULL,
+                stdout=stdout,
+                stderr=stderr,
+            )
+        finally:
+            if isinstance(stdout, typing.BinaryIO):
+                stdout.close()
+            if isinstance(stderr, typing.BinaryIO):
+                stderr.close()
+        if wait_stdout_writer is not None:
+            await wait_stdout_writer
+        if wait_stderr_writer is not None:
+            await wait_stderr_writer
         task.stdout, task.stderr = await child.communicate(task.input)
         task.returncode = child.returncode
         return task
+
+
+class FileIOWriter:
+    def __init__(self, path: str):
+        self._path = path
+        self._pipe_inlet = -1
+        self._pipe_outlet = -1
+
+    def _run(self):
+        fd = self._pipe_outlet
+        try:
+            fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK | fcntl.fcntl(fd, fcntl.F_GETFL))
+            polling = True
+            poll = select.poll()
+            poll.register(fd, select.POLLIN)
+            with open(self._path, 'wb') as f:
+                while polling:
+                    for fd, events in poll.poll():
+                        if events & select.POLLIN:
+                            while True:
+                                try:
+                                    data = os.read(fd, 4096)
+                                    if data:
+                                        f.write(data)
+                                    else:
+                                        polling = False
+                                        break
+                                except BlockingIOError:
+                                    break
+        finally:
+            os.close(fd)
+            self._pipe_outlet = -1
+
+    def create(self) -> typing.Tuple[typing.BinaryIO, typing.Coroutine]:
+        self._pipe_outlet, self._pipe_inlet = os.pipe2(os.O_CLOEXEC)
+        wait_thread = asyncio.to_thread(FileIOWriter._run, self)
+        return open(self._pipe_inlet, 'wb'), wait_thread

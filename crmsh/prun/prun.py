@@ -28,19 +28,49 @@ class SSHError(PRunError):
         super().__init__(user, host, f"Cannot create SSH connection to {user}@{host}: {msg}")
 
 
-def prun(host_cmdline: typing.Mapping[str, str]) -> typing.Dict[str, typing.Union[ProcessResult, SSHError]]:
+class PRunInterceptor:
+    def task(self, task: Task) -> Task:
+        return task
+    def result(self, result: ProcessResult) -> ProcessResult:
+        return result
+    def exception(self, exc: PRunError) -> PRunError:
+        return exc
+
+
+def prun(
+        host_cmdline: typing.Mapping[str, str],
+        interceptor: PRunInterceptor = PRunInterceptor(),
+) -> typing.Dict[str, typing.Union[ProcessResult, SSHError]]:
     tasks = [_build_run_task(host, cmdline) for host, cmdline in host_cmdline.items()]
     runner = Runner()
     for task in tasks:
+        task = interceptor.task(task)
         runner.add_task(task)
     runner.run()
     return {
         task.context['host']: (
-            ProcessResult(task.returncode, task.stdout, task.stderr) if task.returncode != 255
-            else SSHError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stderr))
+            interceptor.result(ProcessResult(task.returncode, task.stdout, task.stderr)) if task.returncode != 255
+            else interceptor.exception(SSHError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stderr)))
         )
         for task in tasks
     }
+
+
+def prun_multimap(
+        host_cmdline: typing.Sequence[typing.Tuple[str, str]],
+        interceptor: PRunInterceptor = PRunInterceptor(),
+) -> typing.Sequence[typing.Tuple[str, typing.Union[ProcessResult, SSHError]]]:
+    tasks = [_build_run_task(host, cmdline) for host, cmdline in host_cmdline]
+    runner = Runner()
+    for task in tasks:
+        task = interceptor.task(task)
+        runner.add_task(task)
+    runner.run()
+    return [(
+        task.context['host'],
+        interceptor.result(ProcessResult(task.returncode, task.stdout, task.stderr)) if task.returncode != 255
+        else interceptor.exception(SSHError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stderr))),
+    ) for task in tasks]
 
 
 def _build_run_task(remote: str, cmdline: str) -> Task:
@@ -63,7 +93,8 @@ def _build_run_task(remote: str, cmdline: str) -> Task:
     return Task(
         args,
         cmdline.encode('utf-8'),
-        capture_stdout=True, capture_stderr=True,
+        stdout=Task.Capture,
+        stderr=Task.Capture,
         context={"host": remote, "ssh_user": remote_sudoer},
     )
 
@@ -109,9 +140,8 @@ def _build_copy_task(ssh: str, script: str, host: str):
     return Task(
         ['/bin/sh', '-c', cmd],
         input=script.encode('utf-8'),
-        capture_stdout=True,
-        capture_stderr=True,
-        inline_stderr=True,
+        stdout=Task.Capture,
+        stderr=Task.Stdout,
         context={"host": host, "ssh_user": remote_sudoer},
     )
 
@@ -166,9 +196,8 @@ def _build_fetch_task( ssh: str, host: str, src: str, dst: str, flags: str) -> T
     return Task(
         ['/bin/sh', '-c', cmd],
         input='get {} "{}" "{}/{}/"\n'.format(flags, src, dst, host).encode('utf-8'),
-        capture_stdout=True,
-        capture_stderr=True,
-        inline_stderr=True,
+        stdout=Task.Capture,
+        stderr=Task.Stdout,
         context={"host": host, "ssh_user": remote_sudoer},
     )
 
