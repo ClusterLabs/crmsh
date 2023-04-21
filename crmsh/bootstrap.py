@@ -2426,7 +2426,8 @@ def bootstrap_add(context):
         logger.info("Adding node {} to cluster".format(node))
         cmd = 'crm cluster join -y {} -c {}@{}'.format(options, _context.current_user, utils.this_node())
         logger.info("Running command on {}: {}".format(node, cmd))
-        utils.get_stdout_or_raise_error(cmd, node)
+        out = utils.get_stdout_or_raise_error(cmd, node)
+        print(out)
 
 
 def bootstrap_join(context):
