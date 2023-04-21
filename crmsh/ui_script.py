@@ -303,8 +303,6 @@ class Script(command.UI):
         '''
         Run the given script.
         '''
-        if not scripts.has_parallax:
-            raise ValueError("The parallax python package is missing")
         script = scripts.load_script(name)
         if script is not None:
             return scripts.run(script, _nvpairs2parameters(args), ConsolePrinter())
@@ -473,8 +471,6 @@ class Script(command.UI):
             return False
         name = cmd[1]
         params = cmd[2]
-        if not scripts.has_parallax:
-            raise ValueError("The parallax python package is missing")
         script = scripts.load_script(name)
         if script is None:
             return False
