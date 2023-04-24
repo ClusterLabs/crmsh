@@ -9,6 +9,9 @@ import crmsh.utils
 from crmsh.prun.runner import Task, Runner
 
 
+_DEFAULT_CONCURRENCY = 32
+
+
 class ProcessResult:
     def __init__(self, returncode: int, stdout: bytes, stderr: bytes):
         self.returncode = returncode
@@ -39,10 +42,12 @@ class PRunInterceptor:
 
 def prun(
         host_cmdline: typing.Mapping[str, str],
+        *,
+        concurrency: int = _DEFAULT_CONCURRENCY,
         interceptor: PRunInterceptor = PRunInterceptor(),
 ) -> typing.Dict[str, typing.Union[ProcessResult, SSHError]]:
     tasks = [_build_run_task(host, cmdline) for host, cmdline in host_cmdline.items()]
-    runner = Runner()
+    runner = Runner(concurrency)
     for task in tasks:
         task = interceptor.task(task)
         runner.add_task(task)
@@ -58,10 +63,12 @@ def prun(
 
 def prun_multimap(
         host_cmdline: typing.Sequence[typing.Tuple[str, str]],
+        *,
+        concurrency: int = _DEFAULT_CONCURRENCY,
         interceptor: PRunInterceptor = PRunInterceptor(),
 ) -> typing.Sequence[typing.Tuple[str, typing.Union[ProcessResult, SSHError]]]:
     tasks = [_build_run_task(host, cmdline) for host, cmdline in host_cmdline]
-    runner = Runner()
+    runner = Runner(concurrency)
     for task in tasks:
         task = interceptor.task(task)
         runner.add_task(task)
@@ -99,7 +106,13 @@ def _build_run_task(remote: str, cmdline: str) -> Task:
     )
 
 
-def pcopy_to_remote(src: str, hosts: typing.Sequence[str], dst: str, recursive: bool = False) -> typing.Dict[str, typing.Optional[PRunError]]:
+def pcopy_to_remote(
+        src: str,
+        hosts: typing.Sequence[str], dst: str,
+        recursive: bool = False,
+        *,
+        concurrency: int = _DEFAULT_CONCURRENCY,
+) -> typing.Dict[str, typing.Optional[PRunError]]:
     """Copy file or directory from local to remote hosts concurrently."""
     if src == dst:
         hosts_filtered = [x for x in hosts if not _is_local_host(x)]
@@ -119,7 +132,7 @@ exec sudo -u {local_sudoer} ssh "$@"''')
         # It is necessary to close the file before executing
         ssh.close()
         tasks = [_build_copy_task("-S '{}'".format(ssh.name), script, host) for host in hosts]
-        runner = Runner()
+        runner = Runner(concurrency)
         for task in tasks:
             runner.add_task(task)
         runner.run()
@@ -155,7 +168,13 @@ def _parse_copy_result(task: Task) -> typing.Optional[PRunError]:
         return PRunError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stdout))
 
 
-def pfetch_from_remote(hosts: typing.Sequence[str], src: str, dst: str, recursive=False) -> typing.Dict[str, typing.Union[str, PRunError]]:
+def pfetch_from_remote(
+        hosts: typing.Sequence[str], src: str,
+        dst: str,
+        recursive=False,
+        *,
+        concurrency: int = _DEFAULT_CONCURRENCY,
+) -> typing.Dict[str, typing.Union[str, PRunError]]:
     """Copy files from remote hosts to local concurrently.
 
     Files are copied to directory <dst>/<host>/ corresponding to each source host."""
@@ -170,7 +189,7 @@ exec sudo -u {local_sudoer} ssh "$@"''')
         # It is necessary to close the file before executing
         ssh.close()
         tasks = [_build_fetch_task("-S '{}'".format(ssh.name), host, src, dst, flags) for host in hosts]
-        runner = Runner()
+        runner = Runner(concurrency)
         for task in tasks:
             runner.add_task(task)
         runner.run()

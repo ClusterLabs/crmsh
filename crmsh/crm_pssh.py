@@ -85,7 +85,7 @@ def do_pssh(host_cmdline: typing.Sequence[typing.Tuple[str, str]], outdir, errdi
             return result
 
     # TODO: implement timeout
-    return prun.prun_multimap(host_cmdline, StdoutStderrInterceptor())
+    return prun.prun_multimap(host_cmdline, interceptor=StdoutStderrInterceptor())
 
 
 def examine_outcome(

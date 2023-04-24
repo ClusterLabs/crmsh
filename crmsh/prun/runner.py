@@ -33,7 +33,8 @@ class Task:
 
 
 class Runner:
-    def __init__(self):
+    def __init__(self, concurrency):
+        self._concurrency_limiter = asyncio.Semaphore(concurrency)
         self._tasks: typing.List[Task] = []
 
     def add_task(self, task: Task):
@@ -41,8 +42,22 @@ class Runner:
 
     def run(self):
         return asyncio.get_event_loop().run_until_complete(
-            asyncio.gather(*[self._run(task) for task in self._tasks], return_exceptions=True)
+            asyncio.gather(
+                *[
+                    self._concurrency_limit(self._concurrency_limiter, self._run(task))
+                    for task in self._tasks
+                ],
+                return_exceptions=True,
+            )
         )
+
+    @staticmethod
+    async def _concurrency_limit(semaphore: asyncio.Semaphore, coroutine: typing.Coroutine):
+        await semaphore.acquire()
+        try:
+            return await coroutine
+        finally:
+            semaphore.release()
 
     @staticmethod
     async def _run(task: Task):
