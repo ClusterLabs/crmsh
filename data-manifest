@@ -195,6 +195,7 @@ test/unittests/test_objset.py
 test/unittests/test_ocfs2.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
+test/unittests/test_prun.py
 test/unittests/test_qdevice.py
 test/unittests/test_ratrace.py
 test/unittests/test_sbd.py

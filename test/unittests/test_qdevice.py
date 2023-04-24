@@ -437,12 +437,12 @@ class TestQDevice(unittest.TestCase):
         mock_exists.assert_called_once_with(mock_qnetd_cacert_local.return_value)
         mock_qnetd_cacert_local.assert_called_once_with()
         mock_log.assert_called_once_with("Step 2: Fetch qnetd-cacert.crt from 10.10.10.123")
-        mock_parallax_slurp.assert_called_once_with(["10.10.10.123"], "/etc/corosync/qnetd/nssdb/qnetd-cacert.crt", "/etc/corosync/qdevice/net")
+        mock_parallax_slurp.assert_called_once_with(["10.10.10.123"], "/etc/corosync/qdevice/net", "/etc/corosync/qnetd/nssdb/qnetd-cacert.crt")
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
     @mock.patch("crmsh.utils.list_cluster_nodes")
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.qdevice.QDevice._copy_file_to_remote_host")
+    @mock.patch("crmsh.parallax.parallax_copy")
     def test_copy_qnetd_crt_to_cluster_one_node(self, mock_copy, mock_this_node, mock_list_nodes, mock_log):
         mock_this_node.return_value = "node1.com"
         mock_list_nodes.return_value = ["node1.com"]
@@ -457,7 +457,7 @@ class TestQDevice(unittest.TestCase):
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
     @mock.patch("crmsh.utils.list_cluster_nodes")
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.qdevice.QDevice._copy_file_to_remote_host")
+    @mock.patch("crmsh.parallax.parallax_copy")
     @mock.patch("crmsh.qdevice.QDevice.qnetd_cacert_on_local", new_callable=mock.PropertyMock)
     @mock.patch("os.path.dirname")
     def test_copy_qnetd_crt_to_cluster(self, mock_dirname, mock_qnetd_cacert_local,
@@ -472,8 +472,8 @@ class TestQDevice(unittest.TestCase):
         mock_this_node.assert_called_once_with()
         mock_list_nodes.assert_called_once_with()
         mock_log.assert_called_once_with("Step 3: Copy exported qnetd-cacert.crt to ['node2.com']")
-        mock_copy.assert_called_once_with(mock_dirname.return_value, "node2.com",
-                                          "/etc/corosync/qdevice/net")
+        mock_copy.assert_called_once_with(["node2.com"], mock_dirname.return_value,
+                                          "/etc/corosync/qdevice/net", True)
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
     @mock.patch("crmsh.parallax.parallax_call")
@@ -507,7 +507,7 @@ class TestQDevice(unittest.TestCase):
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
     @mock.patch("crmsh.qdevice.QDevice.qdevice_crq_on_qnetd", new_callable=mock.PropertyMock)
     @mock.patch("crmsh.qdevice.QDevice.qdevice_crq_on_local", new_callable=mock.PropertyMock)
-    @mock.patch("crmsh.qdevice.QDevice._copy_file_to_remote_host")
+    @mock.patch("crmsh.parallax.parallax_copy")
     def test_copy_crq_to_qnetd(self, mock_copy, mock_qdevice_crq_local,
                                mock_qdevice_crq_qnetd, mock_log):
         mock_qdevice_crq_local.return_value = "/etc/corosync/qdevice/net/nssdb/qdevice-net-node.crq"
@@ -516,8 +516,8 @@ class TestQDevice(unittest.TestCase):
         self.qdevice_with_ip.copy_crq_to_qnetd()
 
         mock_log.assert_called_once_with("Step 6: Copy qdevice-net-node.crq to 10.10.10.123")
-        mock_copy.assert_called_once_with(mock_qdevice_crq_local.return_value, "10.10.10.123",
-                                          mock_qdevice_crq_qnetd.return_value)
+        mock_copy.assert_called_once_with(["10.10.10.123"], mock_qdevice_crq_local.return_value,
+                                          mock_qdevice_crq_qnetd.return_value, False)
         mock_qdevice_crq_local.assert_called_once_with()
         mock_qdevice_crq_qnetd.assert_called_once_with()
 
@@ -548,7 +548,7 @@ class TestQDevice(unittest.TestCase):
 
         mock_log.assert_called_once_with("Step 8: Fetch cluster-hacluster.crt from 10.10.10.123")
         mock_crt_on_qnetd.assert_has_calls([mock.call(), mock.call()])
-        mock_parallax_slurp.assert_called_once_with(["10.10.10.123"], mock_crt_on_qnetd.return_value, "/etc/corosync/qdevice/net")
+        mock_parallax_slurp.assert_called_once_with(["10.10.10.123"], "/etc/corosync/qdevice/net", mock_crt_on_qnetd.return_value)
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
     @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -566,7 +566,7 @@ class TestQDevice(unittest.TestCase):
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
     @mock.patch("crmsh.utils.list_cluster_nodes")
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.qdevice.QDevice._copy_file_to_remote_host")
+    @mock.patch("crmsh.parallax.parallax_copy")
     def test_copy_p12_to_cluster_one_node(self, mock_copy, mock_this_node, mock_list_nodes, mock_log):
         mock_this_node.return_value = "node1.com"
         mock_list_nodes.return_value = ["node1.com"]
@@ -581,7 +581,7 @@ class TestQDevice(unittest.TestCase):
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
     @mock.patch("crmsh.utils.list_cluster_nodes")
     @mock.patch("crmsh.utils.this_node")
-    @mock.patch("crmsh.qdevice.QDevice._copy_file_to_remote_hosts")
+    @mock.patch("crmsh.parallax.parallax_copy")
     @mock.patch("crmsh.qdevice.QDevice.qdevice_p12_on_local", new_callable=mock.PropertyMock)
     def test_copy_p12_to_cluster(self, mock_p12_on_local,
                                        mock_copy, mock_this_node, mock_list_nodes, mock_log):
@@ -594,8 +594,8 @@ class TestQDevice(unittest.TestCase):
         mock_log.assert_called_once_with("Step 10: Copy qdevice-net-node.p12 to ['node2.com']")
         mock_this_node.assert_called_once_with()
         mock_list_nodes.assert_called_once_with()
-        mock_copy.assert_called_once_with(mock_p12_on_local.return_value, ["node2.com"],
-                                          mock_p12_on_local.return_value)
+        mock_copy.assert_called_once_with(["node2.com"], mock_p12_on_local.return_value,
+                                          mock_p12_on_local.return_value, False)
         mock_p12_on_local.assert_has_calls([mock.call(), mock.call()])
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
@@ -693,7 +693,7 @@ class TestQDevice(unittest.TestCase):
         mock_exists.assert_called_once_with(mock_qnetd_cacert_cluster.return_value)
         mock_qnetd_cacert_cluster.assert_called_once_with()
         mock_qnetd_cacert_local.assert_called_once_with()
-        mock_parallax_slurp.assert_called_once_with(["node1.com"], mock_qnetd_cacert_local.return_value, '/etc/corosync/qdevice/net')
+        mock_parallax_slurp.assert_called_once_with(["node1.com"], "/etc/corosync/qdevice/net", mock_qnetd_cacert_local.return_value)
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
     @mock.patch("crmsh.utils.get_stdout_or_raise_error")
@@ -744,7 +744,7 @@ class TestQDevice(unittest.TestCase):
         mock_exists.assert_called_once_with(mock_p12_on_cluster.return_value)
         mock_p12_on_cluster.assert_called_once_with()
         mock_p12_on_local.assert_called_once_with()
-        mock_parallax_slurp.assert_called_once_with(["node1.com"], mock_p12_on_local.return_value, "/etc/corosync/qdevice/net")
+        mock_parallax_slurp.assert_called_once_with(["node1.com"], '/etc/corosync/qdevice/net', mock_p12_on_local.return_value)
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
     @mock.patch("crmsh.utils.get_stdout_or_raise_error")
