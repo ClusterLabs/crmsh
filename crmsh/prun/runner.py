@@ -40,16 +40,24 @@ class Runner:
     def add_task(self, task: Task):
         self._tasks.append(task)
 
-    def run(self):
-        return asyncio.get_event_loop().run_until_complete(
-            asyncio.gather(
-                *[
-                    self._concurrency_limit(self._concurrency_limiter, self._run(task))
-                    for task in self._tasks
-                ],
-                return_exceptions=True,
-            )
+    def run(self, timeout_seconds: int = -1):
+        awaitable = asyncio.gather(
+            *[
+                self._concurrency_limit(self._concurrency_limiter, self._run(task))
+                for task in self._tasks
+            ],
+            return_exceptions=True,
         )
+        if timeout_seconds > 0:
+            awaitable = self._timeout_limit(timeout_seconds, awaitable)
+        return asyncio.get_event_loop().run_until_complete(awaitable)
+
+    async def _timeout_limit(self, timeout_seconds: int, awaitable: typing.Awaitable):
+        assert timeout_seconds > 0
+        try:
+            return await asyncio.wait_for(awaitable, timeout_seconds)
+        except asyncio.TimeoutError:
+            return self._tasks
 
     @staticmethod
     async def _concurrency_limit(semaphore: asyncio.Semaphore, coroutine: typing.Coroutine):
@@ -86,23 +94,28 @@ class Runner:
             assert False
 
         try:
-            child = await asyncio.create_subprocess_exec(
-                *task.args,
-                stdin=asyncio.subprocess.PIPE if task.input else asyncio.subprocess.DEVNULL,
-                stdout=stdout,
-                stderr=stderr,
-            )
-        finally:
-            if isinstance(stdout, typing.BinaryIO):
-                stdout.close()
-            if isinstance(stderr, typing.BinaryIO):
-                stderr.close()
-        if wait_stdout_writer is not None:
-            await wait_stdout_writer
-        if wait_stderr_writer is not None:
-            await wait_stderr_writer
-        task.stdout, task.stderr = await child.communicate(task.input)
-        task.returncode = child.returncode
+            try:
+                child = await asyncio.create_subprocess_exec(
+                    *task.args,
+                    stdin=asyncio.subprocess.PIPE if task.input else asyncio.subprocess.DEVNULL,
+                    stdout=stdout,
+                    stderr=stderr,
+                )
+            finally:
+                if isinstance(stdout, typing.BinaryIO):
+                    stdout.close()
+                if isinstance(stderr, typing.BinaryIO):
+                    stderr.close()
+            if wait_stdout_writer is not None:
+                await wait_stdout_writer
+            if wait_stderr_writer is not None:
+                await wait_stderr_writer
+            task.stdout, task.stderr = await child.communicate(task.input)
+            task.returncode = child.returncode
+        except asyncio.CancelledError:
+            # Do not try to kill the child here. In a race condition, an unrelated process may be killed.
+            # Whether the task is canceled can be identified with task.returncode. No need to reraise.
+            pass
         return task
 
 

@@ -9,17 +9,17 @@ from crmsh.prun import prun
 Error = prun.PRunError
 
 
-def parallax_call(nodes, cmd):
+def parallax_call(nodes, cmd, *, timeout_seconds: int = -1):
     """
     Executes the given command on a set of hosts, collecting the output, and raise exception when error occurs
     nodes:       a set of hosts
     cmd:         command
     Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
     """
-    results = prun.prun({node: cmd for node in nodes})
+    results = prun.prun({node: cmd for node in nodes}, timeout_seconds=timeout_seconds)
     for node, result in results.items():
-        if isinstance(result, prun.SSHError):
-            raise ValueError("Failed on {}@{}: {}".format(result.user, node, result))
+        if isinstance(result, prun.PRunError):
+            raise ValueError('Failed to run command {} on {}@{}: {}'.format(cmd, result.user, result.host, result))
         elif result.returncode != 0:
             raise ValueError("Failed on {}: {}".format(node, crmsh.utils.to_ascii(result.stderr)))
     return [(node, (result.returncode, result.stdout, result.stderr)) for node, result in results.items()]
@@ -42,7 +42,7 @@ def parallax_slurp(nodes: typing.Sequence[str], localdir, filename, askpass=Fals
     return [(k, v) for k, v in results.items()]
 
 
-def parallax_copy(nodes, src, dst, recursive=False):
+def parallax_copy(nodes, src, dst, recursive=False, *, timeout_seconds: int = -1):
     """
     Copies from the local node to a set of remote hosts
     nodes:       a set of hosts
@@ -52,7 +52,7 @@ def parallax_copy(nodes, src, dst, recursive=False):
     ssh_options: Extra options to pass to SSH
     Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
     """
-    results = prun.pcopy_to_remote(src, nodes, dst, recursive)
+    results = prun.pcopy_to_remote(src, nodes, dst, recursive, timeout_seconds=timeout_seconds)
     for node, exc in results.items():
         if exc is not None:
             raise ValueError("Failed on {}@{}: {}".format(exc.user, node, exc))
@@ -67,4 +67,7 @@ def parallax_run(nodes, cmd):
     Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
     """
     results = prun.prun({node: cmd for node in nodes})
+    for value in results.values():
+        if isinstance(value, prun.PRunError):
+            raise ValueError('Failed to run command {} on {}@{}: {}'.format(cmd, value.user, value.host, value))
     return {node: (result.returncode, result.stdout, result.stderr) for node, result in results.items()}

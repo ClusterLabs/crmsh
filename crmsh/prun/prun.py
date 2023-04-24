@@ -20,8 +20,8 @@ class ProcessResult:
 
 
 class PRunError(Exception):
-    def __init__(self, user, host, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, user, host, *args):
+        super().__init__(*args)
         self.user = user
         self.host = host
 
@@ -29,6 +29,11 @@ class PRunError(Exception):
 class SSHError(PRunError):
     def __init__(self, user, host, msg):
         super().__init__(user, host, f"Cannot create SSH connection to {user}@{host}: {msg}")
+
+
+class TimeOutError(PRunError):
+    def __init__(self, user, host):
+        super().__init__(user, host, f"Timed out on {user}@{host}.")
 
 
 class PRunInterceptor:
@@ -43,6 +48,7 @@ class PRunInterceptor:
 def prun(
         host_cmdline: typing.Mapping[str, str],
         *,
+        timeout_seconds: int = -1,
         concurrency: int = _DEFAULT_CONCURRENCY,
         interceptor: PRunInterceptor = PRunInterceptor(),
 ) -> typing.Dict[str, typing.Union[ProcessResult, SSHError]]:
@@ -51,20 +57,15 @@ def prun(
     for task in tasks:
         task = interceptor.task(task)
         runner.add_task(task)
-    runner.run()
-    return {
-        task.context['host']: (
-            interceptor.result(ProcessResult(task.returncode, task.stdout, task.stderr)) if task.returncode != 255
-            else interceptor.exception(SSHError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stderr)))
-        )
-        for task in tasks
-    }
+    runner.run(timeout_seconds)
+    return {task.context['host']: _handle_run_result(task, interceptor) for task in tasks}
 
 
 def prun_multimap(
         host_cmdline: typing.Sequence[typing.Tuple[str, str]],
         *,
         concurrency: int = _DEFAULT_CONCURRENCY,
+        timeout_seconds: int = -1,
         interceptor: PRunInterceptor = PRunInterceptor(),
 ) -> typing.Sequence[typing.Tuple[str, typing.Union[ProcessResult, SSHError]]]:
     tasks = [_build_run_task(host, cmdline) for host, cmdline in host_cmdline]
@@ -72,12 +73,11 @@ def prun_multimap(
     for task in tasks:
         task = interceptor.task(task)
         runner.add_task(task)
-    runner.run()
-    return [(
-        task.context['host'],
-        interceptor.result(ProcessResult(task.returncode, task.stdout, task.stderr)) if task.returncode != 255
-        else interceptor.exception(SSHError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stderr))),
-    ) for task in tasks]
+    runner.run(timeout_seconds)
+    return [
+        (task.context['host'], _handle_run_result(task, interceptor))
+        for task in tasks
+    ]
 
 
 def _build_run_task(remote: str, cmdline: str) -> Task:
@@ -106,11 +106,21 @@ def _build_run_task(remote: str, cmdline: str) -> Task:
     )
 
 
+def _handle_run_result(task: Task, interceptor: PRunInterceptor = PRunInterceptor()):
+    if task.returncode is None:
+        return interceptor.exception(TimeOutError(task.context['ssh_user'], task.context['host']))
+    elif task.returncode == 255:
+        return interceptor.exception(SSHError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stderr)))
+    else:
+        return interceptor.result(ProcessResult(task.returncode, task.stdout, task.stderr))
+
+
 def pcopy_to_remote(
         src: str,
         hosts: typing.Sequence[str], dst: str,
         recursive: bool = False,
         *,
+        timeout_seconds: int = -1,
         concurrency: int = _DEFAULT_CONCURRENCY,
 ) -> typing.Dict[str, typing.Optional[PRunError]]:
     """Copy file or directory from local to remote hosts concurrently."""
@@ -135,7 +145,7 @@ exec sudo -u {local_sudoer} ssh "$@"''')
         runner = Runner(concurrency)
         for task in tasks:
             runner.add_task(task)
-        runner.run()
+        runner.run(timeout_seconds)
     finally:
         if ssh is not None:
             os.unlink(ssh.name)

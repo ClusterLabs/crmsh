@@ -55,7 +55,7 @@ def show_output(odir, hosts, desc):
             print(''.join(out_l))
 
 
-def do_pssh(host_cmdline: typing.Sequence[typing.Tuple[str, str]], outdir, errdir):
+def do_pssh(host_cmdline: typing.Sequence[typing.Tuple[str, str]], outdir, errdir, timeout_seconds=_DEFAULT_TIMEOUT):
     if outdir:
         os.makedirs(outdir, exist_ok=True)
     if errdir:
@@ -84,8 +84,7 @@ def do_pssh(host_cmdline: typing.Sequence[typing.Tuple[str, str]], outdir, errdi
             result.stderr_path = self._stderr_path
             return result
 
-    # TODO: implement timeout
-    return prun.prun_multimap(host_cmdline, interceptor=StdoutStderrInterceptor())
+    return prun.prun_multimap(host_cmdline, timeout_seconds=timeout_seconds,interceptor=StdoutStderrInterceptor())
 
 
 def examine_outcome(
@@ -161,6 +160,6 @@ def do_pssh_cmd(cmd, node_l, outdir, errdir, timeout=20000):
         l.append([node, cmd])
     if not l:
         return True
-    return do_pssh(l, outdir, errdir)
+    return do_pssh(l, outdir, errdir, timeout // 1000)
 
 # vim:ts=4:sw=4:et:
