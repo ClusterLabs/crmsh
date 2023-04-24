@@ -2393,7 +2393,7 @@ def bootstrap_init(context):
         init_sbd()
         init_upgradeutil()
 
-        lock_inst = lock.Lock(mktemp(prefix="crmsh_lock_"))
+        lock_inst = lock.Lock()
         try:
             with lock_inst.lock():
                 init_cluster()

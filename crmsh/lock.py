@@ -31,7 +31,7 @@ class Lock(object):
     A base class define a lock mechanism used to exclude other nodes
     """
 
-    LOCK_DIR_NON_PRIVILEGED = "/tmp/.crmsh_lock_directory"
+    LOCK_DIR_DEFAULT = "/run/.crmsh_lock_directory"
 
     def __init__(self, lock_dir=None):
         """
@@ -39,7 +39,7 @@ class Lock(object):
         """
         # only the lock owner can unlock
         self.lock_owner = False
-        self.lock_dir = lock_dir or self.LOCK_DIR_NON_PRIVILEGED
+        self.lock_dir = lock_dir or self.LOCK_DIR_DEFAULT
 
     def _run(self, cmd):
         """
