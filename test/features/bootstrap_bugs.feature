@@ -139,6 +139,18 @@ Feature: Regression test for bootstrap bugs
 
   @skip_non_root
   @clean
+  Scenario: crm cluster join default behavior change in ssh key handling (bsc#1210693)
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "rm -rf /home/alice/.ssh" on "hanode1"
+    When    Run "rm -rf /home/alice/.ssh" on "hanode2"
+    When    Run "su - alice -c "sudo crm cluster init -y"" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "su - alice -c "sudo crm cluster join -c hanode1 -y"" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+
+  @skip_non_root
+  @clean
   Scenario: Passwordless for root, not for sudoer(bsc#1209193)
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
