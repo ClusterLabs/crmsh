@@ -107,8 +107,9 @@ QDevice configuration:
   
   Options for configuring QDevice and QNetd.
 
-  --qnetd-hostname HOST
-                        HOST or IP of the QNetd server to be used
+  --qnetd-hostname [USER@]HOST
+                        User and host of the QNetd server. The host can be
+                        specified in either hostname or IP address.
   --qdevice-port PORT   TCP PORT of QNetd server (default:5403)
   --qdevice-algo ALGORITHM
                         QNetd decision ALGORITHM (ffsplit/lms,
@@ -223,8 +224,10 @@ optional arguments:
 Network configuration:
   Options for configuring the network and messaging layer.
 
-  -c HOST, --cluster-node HOST
-                        IP address or hostname of existing cluster node
+  -c [USER@]HOST, --cluster-node [USER@]HOST
+                        User and host to login to an existing cluster node.
+                        The host can be specified with either a hostname or an
+                        IP.
   -i IF, --interface IF
                         Bind to IP address on interface IF. Use -i second time
                         for second interface
