@@ -225,13 +225,19 @@ def user_pair_for_ssh(host):
         raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
 
 
-def ssh_copy_id(local_user, remote_user, remote_node):
+def ssh_copy_id_no_raise(local_user, remote_user, remote_node):
     if check_ssh_passwd_need(local_user, remote_user, remote_node):
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
         cmd = "ssh-copy-id -i ~/.ssh/id_rsa.pub '{}@{}' &> /dev/null".format(remote_user, remote_node)
         result = su_subprocess_run(local_user, cmd, tty=True)
-        if result.returncode != 0:
-            fatal("Failed to login to remote host {}@{}".format(remote_user, remote_node))
+        return result.returncode
+    else:
+        return 0
+
+
+def ssh_copy_id(local_user, remote_user, remote_node):
+    if 0 != ssh_copy_id_no_raise(local_user, remote_user, remote_node):
+        fatal("Failed to login to remote host {}@{}".format(remote_user, remote_node))
 
 
 @memoize

@@ -187,17 +187,11 @@ class Context(object):
             else:
                 utils.fatal("Unsupported config: local node is using root and remote nodes is using non-root users.")
         elif users_of_specified_hosts == 'not_specified':
-            if has_sudoer:
-                self.current_user = sudoer
-            else:
-                assert userdir.getuser() == 'root'
-                self.current_user = 'root'
+            assert userdir.getuser() == 'root'
+            self.current_user = 'root'
         elif users_of_specified_hosts == 'no_hosts':
-            if has_sudoer:
-                self.current_user = sudoer
-            else:
-                assert userdir.getuser() == 'root'
-                self.current_user = 'root'
+            assert userdir.getuser() == 'root'
+            self.current_user = 'root'
         else:
             raise AssertionError('Bad parameter user_of_specified_hosts: {}'.format(users_of_specified_hosts))
 
@@ -872,9 +866,6 @@ def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typin
 
     # If not use -N/--nodes option
     if not node_list:
-        user_by_host = utils.HostUserConfig()
-        user_by_host.add(local_user, utils.this_node())
-        user_by_host.save_local()
         return
 
     print()
@@ -1635,22 +1626,31 @@ def init_qdevice():
     if qdevice_inst.ssh_user is not None:
         # if the remote user is specified explicitly, use it
         ssh_user = qdevice_inst.ssh_user
+        local_user = utils.UserOfHost.instance().user_of(utils.this_node())
     else:
         try:
             # if ssh session has ready been available, use that
             local_user, ssh_user = utils.UserOfHost.instance().user_pair_for_ssh(qnetd_addr)
         except utils.UserOfHost.UserNotFoundError:
             pass
-    if local_user is None:
-        local_user = userdir.get_sudoer()
-        if local_user is None:
-            local_user = userdir.getuser()
     if ssh_user is None:
+        local_user = userdir.get_sudoer()
         ssh_user = local_user
     # Configure ssh passwordless to qnetd if detect password is needed
     if utils.check_ssh_passwd_need(local_user, ssh_user, qnetd_addr):
         configure_ssh_key(local_user)
-        utils.ssh_copy_id(local_user, ssh_user, qnetd_addr)
+        if 0 != utils.ssh_copy_id_no_raise(local_user, ssh_user, qnetd_addr):
+            msg = f"Failed to login to {ssh_user}@{qnetd_addr}. Please check the credentials."
+            sudoer = userdir.get_sudoer()
+            if sudoer and ssh_user != sudoer:
+                args = ['sudo crm']
+                args += [x for x in sys.argv[1:]]
+                for i, arg in enumerate(args):
+                    if arg == '--qnetd-hostname' and i + 1 < len(args):
+                        if '@' not in args[i + 1]:
+                            args[i + 1] = f'{sudoer}@{qnetd_addr}'
+                            msg += '\nOr, run "{}".'.format(' '.join(args))
+            raise ValueError(msg)
     user_by_host = utils.HostUserConfig()
     user_by_host.add(ssh_user, qnetd_addr)
     user_by_host.save_remote(cluster_node_list)
@@ -1692,7 +1692,18 @@ def join_ssh_impl(seed_host, seed_user):
     local_user = _context.current_user
     utils.start_service("sshd.service", enable=True)
     configure_ssh_key(local_user)
-    utils.ssh_copy_id(local_user, seed_user, seed_host)
+    if 0 != utils.ssh_copy_id_no_raise(local_user, seed_user, seed_host):
+        msg = f"Failed to login to {seed_user}@{seed_host}. Please check the credentials."
+        sudoer = userdir.get_sudoer()
+        if sudoer and seed_user != sudoer:
+            args = ['sudo crm']
+            args += [x for x in sys.argv[1:]]
+            for i, arg in enumerate(args):
+                if arg == '-c' or arg == '--cluster-node' and i + 1 < len(args):
+                    if '@' not in args[i+1]:
+                        args[i + 1] = f'{sudoer}@{seed_host}'
+                        msg += '\nOr, run "{}".'.format(' '.join(args))
+        raise ValueError(msg)
     # After this, login to remote_node is passwordless
     swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
     configure_ssh_key('hacluster')

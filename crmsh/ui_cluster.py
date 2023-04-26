@@ -317,8 +317,8 @@ Examples:
                                    help="Configure corosync use IPv6")
 
         qdevice_group = parser.add_argument_group("QDevice configuration", re.sub('  ', '', constants.QDEVICE_HELP_INFO) + "\n\nOptions for configuring QDevice and QNetd.")
-        qdevice_group.add_argument("--qnetd-hostname", dest="qnetd_addr", metavar="HOST",
-                                   help="HOST or IP of the QNetd server to be used")
+        qdevice_group.add_argument("--qnetd-hostname", dest="qnetd_addr", metavar="[USER@]HOST",
+                                   help="User and host of the QNetd server. The host can be specified in either hostname or IP address.")
         qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int, default=5403,
                                    help="TCP PORT of QNetd server (default:5403)")
         qdevice_group.add_argument("--qdevice-algo", dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit", choices=['ffsplit', 'lms'],
@@ -413,7 +413,10 @@ Examples:
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG", help="Use the given watchdog device")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
-        network_group.add_argument("-c", "--cluster-node", dest="cluster_node", help="IP address or hostname of existing cluster node", metavar="HOST")
+        network_group.add_argument(
+            "-c", "--cluster-node", dest="cluster_node", metavar="[USER@]HOST",
+            help="User and host to login to an existing cluster node. The host can be specified with either a hostname or an IP.",
+        )
         network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(), default=[],
                 help="Bind to IP address on interface IF. Use -i second time for second interface")
         options, args = parse_options(parser, args)
