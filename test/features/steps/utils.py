@@ -4,7 +4,7 @@ import tarfile
 import glob
 import re
 import socket
-from crmsh import utils, bootstrap, parallax
+from crmsh import utils, bootstrap, parallax, userdir
 
 
 COLOR_MODE = r'\x1b\[[0-9]+m'
@@ -46,7 +46,28 @@ def add_sudo(cmd):
     return cmd
 
 
+def _wrap_cmd_non_root(cmd):
+    """
+    When running command under sudoer, or the current user is not root,
+    wrap crm cluster join command with '<user>@'
+    """
+    user = ""
+    sudoer = userdir.get_sudoer()
+    current_user = userdir.getuser()
+    if sudoer:
+        user = sudoer
+    elif current_user != 'root':
+        user = current_user
+    else:
+        return cmd
+    if "cluster join" in cmd and "@" not in cmd:
+        return re.sub("-c (\w+) ", f"-c {user}@\\1 ", cmd)
+    else:
+        return cmd
+
+
 def run_command(context, cmd, exit_on_fail=True):
+    cmd = _wrap_cmd_non_root(cmd)
     rc, out, err = utils.get_stdout_stderr(add_sudo(cmd))
     context.return_code = rc
     if out:
@@ -68,6 +89,7 @@ def run_command_local_or_remote(context, cmd, addr, exit_on_fail=True):
     if addr == me():
         return run_command(context, cmd, exit_on_fail)
     else:
+        cmd = _wrap_cmd_non_root(cmd)
         try:
             results = parallax.parallax_call(addr.split(','), cmd)
         except ValueError as err:
