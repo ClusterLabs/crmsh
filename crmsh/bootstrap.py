@@ -2875,17 +2875,27 @@ def retrieve_all_config_files(cluster_node):
     Retrieve config files from cluster_node if exists
     """
     with logger_utils.status_long("Retrieve all config files"):
-        for f in FILES_TO_SYNC:
-            if f in [CSYNC2_KEY, CSYNC2_CFG]:
-                continue
-            rc, _, _ = utils.run_cmd_on_remote("test -f {}".format(f), cluster_node)
-            if rc != 0:
-                continue
-            rc, _, err = utils.get_stdout_stderr("scp {} root@{}:{} {}".format(SSH_OPTION, cluster_node, f, os.path.dirname(f)))
-            if rc != 0:
-                utils.fatal("Can't retrieve {} from {}:{}".format(f, cluster_node, err))
-            if f in [PCMK_REMOTE_AUTH]:
-                utils.chown(f, "hacluster", "haclient")
+        cmd = 'cpio -o << EOF\n{}\nEOF\n'.format(
+            '\n'.join((f for f in FILES_TO_SYNC if f != CSYNC2_KEY and f != CSYNC2_CFG))
+        )
+        pipe_outlet, pipe_inlet = os.pipe()
+        try:
+            child = subprocess.Popen(['cpio', '-iu'], stdin=pipe_outlet, stderr=subprocess.DEVNULL)
+        except Exception:
+            os.close(pipe_inlet)
+            raise
+        finally:
+            os.close(pipe_outlet)
+        try:
+            result = utils.subprocess_run_auto_ssh_no_input(cmd, cluster_node, stdout=pipe_inlet, stderr=subprocess.DEVNULL)
+        finally:
+            os.close(pipe_inlet)
+        rc = child.wait()
+        # Some errors may happen here, since all files in FILES_TO_SYNC may not exist.
+        if result is None or result.returncode == 255:
+            utils.fatal("Failed to create ssh connect to {}".format(cluster_node))
+        if rc != 0:
+            utils.fatal("Failed to retrieve config files from {}".format(cluster_node))
 
 
 def sync_file(path):
