@@ -1,3 +1,4 @@
+# prun.py - run command or copy files on multiple hosts concurrently
 import os
 import socket
 import tempfile
@@ -20,6 +21,7 @@ class ProcessResult:
 
 
 class PRunError(Exception):
+    """Base exception class for all error in prun module."""
     def __init__(self, user, host, *args):
         super().__init__(*args)
         self.user = user
@@ -52,6 +54,18 @@ def prun(
         concurrency: int = _DEFAULT_CONCURRENCY,
         interceptor: PRunInterceptor = PRunInterceptor(),
 ) -> typing.Dict[str, typing.Union[ProcessResult, SSHError]]:
+    """Run a command on multiple hosts concurrently.
+
+    Args:
+        host_cmdline: A mapping from hosts to command lines to be run on that host.
+        timeout_seconds: (optional) The maximum number of seconds to wait for all the commands to complete.
+        concurrency: (optional) The maximum number of commands to be run concurrently.
+        interceptor: (optional) An interceptor that can modify the inputs of tasks before they are run,
+                        and the results after they are finished.
+
+    Returns:
+        A mapping from the host to the results of the command run on that host.
+    """
     tasks = [_build_run_task(host, cmdline) for host, cmdline in host_cmdline.items()]
     runner = Runner(concurrency)
     for task in tasks:
@@ -68,6 +82,7 @@ def prun_multimap(
         timeout_seconds: int = -1,
         interceptor: PRunInterceptor = PRunInterceptor(),
 ) -> typing.Sequence[typing.Tuple[str, typing.Union[ProcessResult, SSHError]]]:
+    """A varient of prun that allow run multiple commands on the same host."""
     tasks = [_build_run_task(host, cmdline) for host, cmdline in host_cmdline]
     runner = Runner(concurrency)
     for task in tasks:
@@ -125,6 +140,7 @@ def pcopy_to_remote(
 ) -> typing.Dict[str, typing.Optional[PRunError]]:
     """Copy file or directory from local to remote hosts concurrently."""
     if src == dst:
+        # copy a file to itself will ruin the data
         hosts_filtered = [x for x in hosts if not _is_local_host(x)]
         if hosts_filtered:
             hosts = hosts_filtered
@@ -137,9 +153,10 @@ def pcopy_to_remote(
     try:
         ssh = tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False)
         os.fchmod(ssh.fileno(), 0o700)
+        # sftp -S does not parse args, it accepts only a single executable. So we create one.
         ssh.write(f'''#!/bin/sh
 exec sudo -u {local_sudoer} ssh "$@"''')
-        # It is necessary to close the file before executing
+        # It is necessary to close the file before executing, or we will get an EBUSY.
         ssh.close()
         tasks = [_build_copy_task("-S '{}'".format(ssh.name), script, host) for host in hosts]
         runner = Runner(concurrency)

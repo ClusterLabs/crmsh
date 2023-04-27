@@ -1,3 +1,4 @@
+# runner.py - fork and exec multiple child processes concurrently
 import asyncio
 import fcntl
 import os
@@ -6,6 +7,7 @@ import typing
 
 
 class Task:
+    """holding the inputs and outputs of a command."""
     DevNull = 0
     Stdout = 1
     Capture = 2
@@ -22,13 +24,16 @@ class Task:
             stderr: typing.Union[int, RedirectToFile] = DevNull,
             context=None,
     ):
+        # Inputs
         self.args = args
         self.input = input
         self.stdout_config = stdout
         self.stderr_config = stderr
+        # Results
         self.returncode: typing.Optional[int] = None
-        self.stdout: typing.Union[typing.Optional[bytes], Task.RedirectToFile] = None
-        self.stderr: typing.Union[typing.Optional[bytes], Task.RedirectToFile] = None
+        self.stdout: typing.Optional[bytes] = None
+        self.stderr: typing.Optional[bytes] = None
+        # Caller can pass arbitrary data to context, it is kept untouched.
         self.context = context
 
 
@@ -75,8 +80,7 @@ class Runner:
         elif task.stdout_config == Task.Capture:
             stdout = asyncio.subprocess.PIPE
         elif isinstance(task.stdout_config, Task.RedirectToFile):
-            stdout_writer = FileIOWriter(task.stdout_config.path)
-            stdout, wait_stdout_writer = stdout_writer.create()
+            stdout, wait_stdout_writer = FileIOWriter.create(task.stdout_config.path)
         else:
             assert False
 
@@ -87,9 +91,8 @@ class Runner:
             stderr = asyncio.subprocess.STDOUT
         elif task.stderr_config == Task.Capture:
             stderr = asyncio.subprocess.PIPE
-        elif isinstance(task.stderr, Task.RedirectToFile):
-            stderr_writer = FileIOWriter(task.stderr.path)
-            stderr, wait_stderr_writer = stderr_writer.create()
+        elif isinstance(task.stderr_config, Task.RedirectToFile):
+            stderr, wait_stderr_writer = FileIOWriter.create(task.stderr_config.path)
         else:
             assert False
 
@@ -102,6 +105,7 @@ class Runner:
                     stderr=stderr,
                 )
             finally:
+                # Closing the pipe inlet make the writer thread to exit.
                 if isinstance(stdout, typing.BinaryIO):
                     stdout.close()
                 if isinstance(stderr, typing.BinaryIO):
@@ -120,19 +124,17 @@ class Runner:
 
 
 class FileIOWriter:
-    def __init__(self, path: str):
-        self._path = path
-        self._pipe_inlet = -1
-        self._pipe_outlet = -1
-
-    def _run(self):
-        fd = self._pipe_outlet
+    # Disk I/O is blocking. To make it to work with non-blocking I/O, a thread is created to write the file.
+    # The event loop thread send data needs to be written over a pipe to the thread.
+    @staticmethod
+    def _run(path: str, pipe_outlet_fd: int):
+        fd = pipe_outlet_fd
         try:
             fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK | fcntl.fcntl(fd, fcntl.F_GETFL))
             polling = True
             poll = select.poll()
             poll.register(fd, select.POLLIN)
-            with open(self._path, 'wb') as f:
+            with open(path, 'wb') as f:
                 while polling:
                     for fd, events in poll.poll():
                         if events & select.POLLIN:
@@ -148,9 +150,11 @@ class FileIOWriter:
                                     break
         finally:
             os.close(fd)
-            self._pipe_outlet = -1
 
-    def create(self) -> typing.Tuple[typing.BinaryIO, typing.Coroutine]:
-        self._pipe_outlet, self._pipe_inlet = os.pipe2(os.O_CLOEXEC)
-        wait_thread = asyncio.to_thread(FileIOWriter._run, self)
-        return open(self._pipe_inlet, 'wb'), wait_thread
+    @staticmethod
+    def create(path: str) -> typing.Tuple[typing.BinaryIO, typing.Coroutine]:
+        """Create the pipe and the thread.
+        Returns the inlet of the pipe and a coroutine can be await for the termination of the thread."""
+        pipe_outlet, pipe_inlet = os.pipe2(os.O_CLOEXEC)
+        wait_thread = asyncio.to_thread(FileIOWriter._run, path, pipe_outlet)
+        return open(pipe_inlet, 'wb'), wait_thread
