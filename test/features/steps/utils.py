@@ -41,7 +41,7 @@ def me():
 def _wrap_cmd_non_root(cmd):
     """
     When running command under sudoer, or the current user is not root,
-    wrap crm cluster join command with '<user>@'
+    wrap crm cluster join command with '<user>@', and for the -N option, too
     """
     user = ""
     sudoer = userdir.get_sudoer()
@@ -53,9 +53,16 @@ def _wrap_cmd_non_root(cmd):
     else:
         return cmd
     if "cluster join" in cmd and "@" not in cmd:
-        return re.sub("-c (\w+) ", f"-c {user}@\\1 ", cmd)
-    else:
-        return cmd
+        return re.sub("-c *[\'\"]?([^\s]\S+)[\'\"]?", f"-c {user}@\\1", cmd)
+    elif "cluster init" in cmd and "-N" in cmd and "@" not in cmd:
+        return re.sub("-N *[\'\"]?([^\s]\S+)[\'\"]?", f"-N {user}@\\1", cmd)
+    elif "cluster init" in cmd and "--node" in cmd and "@" not in cmd:
+        search_patt = r"--node [\'\"](.*)[\'\"]"
+        res = re.search(search_patt, cmd)
+        if res:
+            node_str = ' '.join([f"{user}@{n}" for n in res.group(1).split()])
+            return re.sub(search_patt, f"--node '{node_str}'", cmd)
+    return cmd
 
 
 def run_command(context, cmd, exit_on_fail=True):

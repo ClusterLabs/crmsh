@@ -33,7 +33,7 @@ Feature: crmsh bootstrap process - options
   Scenario: Init whole cluster service on node "hanode1" using "--node" option
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y --node \"hanode1 hanode2\"" on "hanode1"
+    When    Run "crm cluster init -y --node "hanode1 hanode2"" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
