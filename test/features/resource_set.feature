@@ -141,3 +141,14 @@ Feature: Use "crm configure set" to update attributes and operations
     When    Run "crm configure primitive d2 Dummy" on "hanode1"
     And     Run "crm configure clone p4 d2" on "hanode1"
     Then    Run "sleep 2;crm configure show|grep -A1 'clone p4 d2'|grep 'interleave=true'" OK
+
+  @clean
+  Scenario: Run rsctest
+    When    Run "crm resource stop d vip" on "hanode1"
+    When    Run "crm configure rsctest d vip" on "hanode1"
+    Then    Expected multiple lines in output
+      """
+      INFO: Probing resources
+      INFO: Testing on hanode1: d vip
+      INFO: Testing on hanode2: d vip
+      """

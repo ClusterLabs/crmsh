@@ -2,7 +2,7 @@
 Feature: crm report functional test for verifying bugs
 
   Tag @clean means need to stop cluster service if the service is available
-  Need nodes: hanode1 hanode2
+  Need nodes: hanode1 hanode2 hanode3
 
   Background: Setup a two nodes cluster
     Given   Cluster service is "stopped" on "hanode1"
@@ -122,3 +122,28 @@ Feature: crm report functional test for verifying bugs
     Then    Directory "trace_ra" in "report.tar.bz2"
     And     Directory "trace_d" in "report.tar.bz2"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"
+
+  @clean
+  Scenario: Run script
+    When    Run "crm script run health" on "hanode1"
+    When    Run "crm script run virtual-ip id=vip_x ip=@vip.0" on "hanode1"
+    Then    Resource "vip_x" type "IPaddr2" is "Started"
+
+  @clean
+  Scenario: Run history
+    When    Run "crm history info" on "hanode1"
+    When    Run "crm history refresh" on "hanode1"
+    When    Try "crm history peinputs|grep "pengine/pe-input-0""
+    Then    Expected return code is "0"
+    When    Try "crm history info|grep "Nodes: hanode1 hanode2""
+    Then    Expected return code is "0"
+    When    Run "crm configure primitive d100 Dummy" on "hanode1"
+    When    Run "crm history refresh force" on "hanode1"
+    When    Try "crm history info|grep "Resources: d100""
+    Then    Expected return code is "0"
+    Given   Cluster service is "stopped" on "hanode3"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode3"
+    Then    Cluster service is "started" on "hanode3"
+    When    Run "crm history refresh force" on "hanode1"
+    When    Try "crm history info|grep "Nodes: hanode1 hanode2 hanode3""
+    Then    Expected return code is "0"
