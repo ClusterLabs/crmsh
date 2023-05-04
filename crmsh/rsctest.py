@@ -141,7 +141,7 @@ class RADriver(object):
             logger.error("Parallax SSH not installed, rsctest can not be executed")
             return
 
-        sys.stderr.write("host %s (%s)\n" %
+        logger.error("host %s (%s)\n" %
                          (host, self.explain_op_status(host)))
         show_output(self.errdir, [host], "stderr")
         show_output(self.outdir, [host], "stdout")
@@ -404,16 +404,14 @@ def check_test_support(resources):
 
 def are_all_stopped(resources, nodes):
     rc = True
-    sys.stderr.write("Probing resources ")
+    logger.info("Probing resources")
     for r in resources:
         ra_class = r.get("class")
         drv = ra_driver[ra_class](r, nodes)
-        sys.stderr.write(".")
         drv.probe()
         for node in nodes:
             if not drv.verify_stopped(node):
                 rc = False
-    sys.stderr.write("\n")
     return rc
 
 
@@ -427,27 +425,24 @@ def stop_all(started, node):
 def test_resources(resources, nodes, all_nodes):
     def test_node(node):
         started = []
-        sys.stderr.write("testing on %s:" % node)
+        id_list_str = ' '.join([r.get("id") for r in resources])
+        logger.info(f"Testing on {node}: {id_list_str}")
         for r in resources:
-            ident = r.get("id")
             ra_class = r.get("class")
             drv = ra_driver[ra_class](r, (node,))
-            sys.stderr.write(" %s" % ident)
             if drv.test_resource(node):
                 started.append(drv)
             else:
-                sys.stderr.write("\n")
                 drv.show_log(node)
                 stop_all(started, node)
                 return False
-        sys.stderr.write("\n")
         stop_all(started, node)
         return True
 
     if not check_test_support(resources):
         return False
     if not are_all_stopped(resources, all_nodes):
-        sys.stderr.write("Stop all resources before testing!\n")
+        logger.error("Stop all resources before testing!\n")
         return False
     rc = True
     for node in nodes:
