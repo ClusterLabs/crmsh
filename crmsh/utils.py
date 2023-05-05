@@ -3607,4 +3607,11 @@ class HostUserConfig:
     def add(self, user, host):
         self._hosts_users[host] = user
 
+def parse_user_at_host(s: str):
+    i = s.find('@')
+    if i == -1:
+        return None, s
+    else:
+        return s[:i], s[i+1:]
+
 # vim:ts=4:sw=4:et:

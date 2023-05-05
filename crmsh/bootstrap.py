@@ -17,6 +17,7 @@ import subprocess
 import sys
 import random
 import re
+import tempfile
 import time
 import readline
 import shutil
@@ -214,8 +215,8 @@ class Context(object):
         Validate -N/--nodes option
         """
         if self.type == "join":
-            if self.cluster_node.find('@') != -1:
-                user, node = self.cluster_node.split('@')
+            user, node = utils.parse_user_at_host(self.cluster_node)
+            if user is not None:
                 self.user_list = [user]
                 self.cluster_node = node
                 self.initialize_user(users_of_specified_hosts='specified')
@@ -237,10 +238,8 @@ class Context(object):
         _user_list = []
         was_localhost_already = False
         for user_node in self.node_list:
-            if user_node.find('@') != -1:
-                user, node = user_node.split('@')
-            else:
-                node = user_node
+            user, node = utils.parse_user_at_host(user_node)
+            if user is None:
                 user = self.current_user
             if node == me:
                 if was_localhost_already:
@@ -2731,21 +2730,52 @@ def bootstrap_init_geo(context):
 
 
 def geo_fetch_config(node):
-    # TODO: clean this up, make it non-root
-    logger.info("Retrieving configuration - This may prompt for root@%s:" % (node))
-    tmpdir = tmpfiles.create_dir()
-    rc, _, err = invoke("scp -oStrictHostKeyChecking=no root@{}:'{}/*' {}/".format(node, BOOTH_DIR, tmpdir))
-    if not rc:
-        utils.fatal("Failed to retrieve configuration: {}".format(err))
-    try:
-        if os.path.isfile("%s/authkey" % (tmpdir)):
-            invoke("mv %s/authkey %s" % (tmpdir, BOOTH_AUTH))
-            os.chmod(BOOTH_AUTH, 0o600)
-        if os.path.isfile("%s/booth.conf" % (tmpdir)):
-            invoke("mv %s/booth.conf %s" % (tmpdir, BOOTH_CFG))
-            os.chmod(BOOTH_CFG, 0o644)
-    except OSError as err:
-        raise ValueError("Problem encountered with booth configuration from {}: {}".format(node, err))
+    user, node = utils.parse_user_at_host(node)
+    if user is not None:
+        try:
+            local_user = utils.user_of(utils.this_node())
+        except utils.UserOfHost.UserNotFoundError:
+            local_user = userdir.getuser()
+        remote_user = user
+    else:
+        try:
+            local_user, remote_user = utils.UserOfHost.instance().user_pair_for_ssh(node)
+        except utils.UserOfHost.UserNotFoundError:
+            try:
+                local_user = utils.user_of(utils.this_node())
+            except utils.UserOfHost.UserNotFoundError:
+                local_user = userdir.getuser()
+            remote_user = local_user
+    logger.info("Retrieving configuration - This may prompt for %s@%s:", remote_user, node)
+    utils.ssh_copy_id(local_user, remote_user, node)
+    cmd = "tar -c -C '{}' .".format(BOOTH_DIR)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        pipe_outlet, pipe_inlet = os.pipe()
+        try:
+            child = subprocess.Popen(['tar', '-x', '-C', tmpdir], stdin=pipe_outlet, stderr=subprocess.DEVNULL)
+        except Exception:
+            os.close(pipe_inlet)
+            raise
+        finally:
+            os.close(pipe_outlet)
+        try:
+            result = utils.subprocess_run_auto_ssh_no_input(cmd, node, stdout=pipe_inlet, stderr=subprocess.PIPE)
+        finally:
+            os.close(pipe_inlet)
+        rc = child.wait()
+        if result.returncode != 0:
+            utils.fatal("Failed to create ssh connection to {}: {}".format(node, result.stderr))
+        if rc != 0:
+            raise ValueError("Problem encountered with booth configuration from {}.".format(node))
+        try:
+            if os.path.isfile("%s/authkey" % (tmpdir)):
+                invoke("mv %s/authkey %s" % (tmpdir, BOOTH_AUTH))
+                os.chmod(BOOTH_AUTH, 0o600)
+            if os.path.isfile("%s/booth.conf" % (tmpdir)):
+                invoke("mv %s/booth.conf %s" % (tmpdir, BOOTH_CFG))
+                os.chmod(BOOTH_CFG, 0o644)
+        except OSError as err:
+            raise ValueError("Problem encountered with booth configuration from {}: {}".format(node, err))
 
 
 def geo_cib_config(clusters):
