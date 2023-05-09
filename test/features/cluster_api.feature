@@ -21,12 +21,14 @@ Feature: Functional test to cover SAP clusterAPI
 
   @clean
   Scenario: Start and stop resource by hacluster
-    When    Run "su hacluster -c 'crm resource stop d'" on "hanode1"
+    When    Run "echo 'export PATH=$PATH:/usr/sbin/' >> ~hacluster/.bashrc" on "hanode1"
+    When    Run "echo 'export PATH=$PATH:/usr/sbin/' >> ~hacluster/.bashrc" on "hanode2"
+    When    Run "su - hacluster -c 'crm resource stop d'" on "hanode1"
     Then    Expected return code is "0"
     When    Wait "3" seconds
     Then    Resource "d" type "Dummy" is "Stopped"
     And     Show cluster status on "hanode1"
-    When    Run "su hacluster -c 'crm resource start d'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource start d'" on "hanode1"
     Then    Expected return code is "0"
     When    Wait "3" seconds
     Then    Resource "d" type "Dummy" is "Started"
@@ -36,51 +38,51 @@ Feature: Functional test to cover SAP clusterAPI
   Scenario: Resource move by hacluster
     Given   Resource "d" is started on "hanode1"
     # move <res> <node>
-    When    Run "su hacluster -c 'crm resource move d hanode2'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource move d hanode2'" on "hanode1"
     Then    Expected return code is "0"
     When    Run "sleep 2" on "hanode1"
     Then    Resource "d" is started on "hanode2"
-    When    Run "su hacluster -c 'crm resource clear d'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource clear d'" on "hanode1"
     Then    Expected return code is "0"
 
     # move <res> <node> force
-    When    Run "su hacluster -c 'crm resource move d hanode1'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource move d hanode1'" on "hanode1"
     Then    Expected return code is "0"
     When    Run "sleep 2" on "hanode1"
     Then    Resource "d" is started on "hanode1"
-    When    Run "su hacluster -c 'crm resource clear d'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource clear d'" on "hanode1"
     Then    Expected return code is "0"
 
     # move <res> force
-    When    Run "su hacluster -c 'crm resource move d force'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource move d force'" on "hanode1"
     Then    Expected return code is "0"
     When    Run "sleep 2" on "hanode1"
     Then    Resource "d" is started on "hanode2"
-    When    Run "su hacluster -c 'crm resource clear d'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource clear d'" on "hanode1"
     Then    Expected return code is "0"
 
     # move <res> <lifetime> force
-    When    Run "su hacluster -c 'crm resource move d PT5M force'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource move d PT5M force'" on "hanode1"
     Then    Expected return code is "0"
     When    Run "sleep 2" on "hanode1"
     Then    Resource "d" is started on "hanode1"
-    When    Run "su hacluster -c 'crm resource clear d'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource clear d'" on "hanode1"
     Then    Expected return code is "0"
 
     # move <res> <node> <lifetime>
-    When    Run "su hacluster -c 'crm resource move d hanode2 PT5M'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource move d hanode2 PT5M'" on "hanode1"
     Then    Expected return code is "0"
     When    Run "sleep 2" on "hanode1"
     Then    Resource "d" is started on "hanode2"
-    When    Run "su hacluster -c 'crm resource clear d'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource clear d'" on "hanode1"
     Then    Expected return code is "0"
 
     # move <res> <node> <lifetime> force
-    When    Run "su hacluster -c 'crm resource move d hanode1 PT5M force'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource move d hanode1 PT5M force'" on "hanode1"
     Then    Expected return code is "0"
     When    Run "sleep 2" on "hanode1"
     Then    Resource "d" is started on "hanode1"
-    When    Run "su hacluster -c 'crm resource clear d'" on "hanode1"
+    When    Run "su - hacluster -c 'crm resource clear d'" on "hanode1"
     Then    Expected return code is "0"
 
     When    Try "crm resource move d hanode2 PT5M force xxx"
@@ -99,7 +101,7 @@ Feature: Functional test to cover SAP clusterAPI
     And     Wait "3" seconds
     Then    Resource "d2" type "Dummy" is "Started"
     And     Show cluster status on "hanode1"
-    When    Run "su hacluster -c 'crm configure show'" on "hanode1"
+    When    Run "su - hacluster -c 'crm configure show'" on "hanode1"
     Then    Expected return code is "0"
     And     Expected multiple lines in output
       """
@@ -115,22 +117,22 @@ Feature: Functional test to cover SAP clusterAPI
 
   @clean
   Scenario: pacemaker ACL related operations by hacluster
-    When    Run "su hacluster -c 'crm configure primitive d2 Dummy'" on "hanode1"
+    When    Run "su - hacluster -c 'crm configure primitive d2 Dummy'" on "hanode1"
     And     Wait "3" seconds
     Then    Resource "d2" type "Dummy" is "Started"
-    When    Run "su hacluster -c 'crm maintenance on'" on "hanode1"
+    When    Run "su - hacluster -c 'crm maintenance on'" on "hanode1"
     When    Run "crm_mon -1" on "hanode1"
     Then    Expected "Resource management is DISABLED" in stdout
-    When    Run "su hacluster -c 'crm maintenance off'" on "hanode1"
+    When    Run "su - hacluster -c 'crm maintenance off'" on "hanode1"
     When    Run "crm_mon -1" on "hanode1"
     Then    Expected "Resource management is DISABLED" not in stdout
-    When    Run "su hacluster -c 'crm node standby hanode2'" on "hanode1"
+    When    Run "su - hacluster -c 'crm node standby hanode2'" on "hanode1"
     Then    Node "hanode2" is standby
-    When    Run "su hacluster -c 'crm node online hanode2'" on "hanode1"
+    When    Run "su - hacluster -c 'crm node online hanode2'" on "hanode1"
     Then    Node "hanode2" is online
-    When    Run "su hacluster -c 'crm ra providers Dummy'" on "hanode1"
+    When    Run "su - hacluster -c 'crm ra providers Dummy'" on "hanode1"
     Then    Expected "heartbeat pacemaker" in stdout
-    When    Run "su hacluster -c 'crm status'" on "hanode1"
+    When    Run "su - hacluster -c 'crm status'" on "hanode1"
     Then    Expected "Online: [ hanode1 hanode2 ]" in stdout
     When    Run "su - hacluster -c '/usr/sbin/crm report /tmp/report'" on "hanode1"
     Then    File "/tmp/report.tar.bz2" exists on "hanode1"

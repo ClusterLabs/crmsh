@@ -489,7 +489,7 @@ for case_num in $*;do
 		docker_exec ${node_arry[0]} "behave --no-logcapture $case_file_in_container || exit 1" || exit 1
 	else
 		info "Running \"$case_file_in_container\" under normal user 'alice'..."
-		docker_exec ${node_arry[0]} "su alice -c 'behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
+		docker_exec ${node_arry[0]} "su - alice -c 'behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
 	fi
 	echo
 done
