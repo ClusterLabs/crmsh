@@ -1626,7 +1626,10 @@ def init_qdevice():
     if qdevice_inst.ssh_user is not None:
         # if the remote user is specified explicitly, use it
         ssh_user = qdevice_inst.ssh_user
-        local_user = utils.UserOfHost.instance().user_of(utils.this_node())
+        try:
+            local_user = utils.UserOfHost.instance().user_of(utils.this_node())
+        except utils.UserOfHost.UserNotFoundError:
+            local_user = ssh_user
     else:
         try:
             # if ssh session has ready been available, use that
@@ -1634,7 +1637,10 @@ def init_qdevice():
         except utils.UserOfHost.UserNotFoundError:
             pass
     if ssh_user is None:
-        local_user = userdir.get_sudoer()
+        try:
+            local_user = utils.UserOfHost.instance().user_of(utils.this_node())
+        except utils.UserOfHost.UserNotFoundError:
+            local_user = userdir.getuser()
         ssh_user = local_user
     # Configure ssh passwordless to qnetd if detect password is needed
     if utils.check_ssh_passwd_need(local_user, ssh_user, qnetd_addr):
