@@ -1,4 +1,4 @@
-FROM opensuse/leap:15.4
+FROM opensuse/leap:15.5
 MAINTAINER Xin Liang <XLiang@suse.com>
 
 ARG ssh_prv_key
