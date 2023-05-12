@@ -2207,11 +2207,11 @@ def cluster_copy_file(local_path, nodes=None, output=True):
         return rc
     results = prun.pcopy_to_remote(local_path, nodes, local_path)
     for host, exc in results.items():
-        exc: prun.PRunError
         if exc is not None:
-            logger.error("Failed to copy %s to %s@%s:%s", local_path, exc.user, host, exc)
+            logger.error("Failed to copy %s to %s@%s: %s", local_path, exc.user, host, exc)
             rc = False
         else:
+            logger.info("%s", host)
             logger.debug("Sync file %s to %s", local_path, host)
     return rc
 
