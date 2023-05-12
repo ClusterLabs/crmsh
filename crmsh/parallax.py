@@ -14,7 +14,8 @@ def parallax_call(nodes, cmd, *, timeout_seconds: int = -1):
     Executes the given command on a set of hosts, collecting the output, and raise exception when error occurs
     nodes:       a set of hosts
     cmd:         command
-    Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
+    timeout_seconds:    the timeout in seconds.
+    Returns [(host, (rc, stdout, stdin)), ...], or raises ValueError when any one of the rc != 0
     """
     results = prun.prun({node: cmd for node in nodes}, timeout_seconds=timeout_seconds)
     for node, result in results.items():
@@ -25,15 +26,13 @@ def parallax_call(nodes, cmd, *, timeout_seconds: int = -1):
     return [(node, (result.returncode, result.stdout, result.stderr)) for node, result in results.items()]
 
 
-def parallax_slurp(nodes: typing.Sequence[str], localdir, filename, askpass=False, ssh_options=None, strict=True) -> typing.List[typing.Tuple[str, typing.Union[str, Error]]]:
+def parallax_slurp(nodes: typing.Sequence[str], localdir, filename) -> typing.List[typing.Tuple[str, typing.Union[str, Error]]]:
     """
     Copies from the remote node to the local node
     nodes:       a set of hosts
     localdir:    localpath
     filename:    remote filename want to slurp
-    askpass:     Ask for a password if passwordless not configured
-    ssh_options: Extra options to pass to SSH
-    Returns [(host, (rc, stdout, stdin, localpath)), ...] or ValueError exception
+    Returns [(host, localpath), ...] or raises ValueError when any one of hosts fails.
     """
     results = prun.pfetch_from_remote(nodes, filename, localdir)
     for node, result in results.items():
@@ -48,23 +47,24 @@ def parallax_copy(nodes, src, dst, recursive=False, *, timeout_seconds: int = -1
     nodes:       a set of hosts
     src:         local path
     dst:         remote path
-    askpass:     Ask for a password if passwordless not configured
-    ssh_options: Extra options to pass to SSH
-    Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
+    recursive:   whether to copy directories recursively
+    timeout_seconds:    the timeout in seconds.
+    Returns None, or raises ValueError when any one of hosts fails.
     """
     results = prun.pcopy_to_remote(src, nodes, dst, recursive, timeout_seconds=timeout_seconds)
     for node, exc in results.items():
         if exc is not None:
             raise ValueError("Failed on {}@{}: {}".format(exc.user, node, exc))
 
+
 def parallax_run(nodes, cmd):
     """
     Executes the given command on a set of hosts, collecting the output and any error
     nodes:       a set of hosts
     cmd:         command
-    askpass:     Ask for a password if passwordless not configured
-    ssh_options: Extra options to pass to SSH
-    Returns [(host, (rc, stdout, stdin)), ...] or ValueError exception
+
+    Returns [(host, (rc, stdout, stdin)), ...], or raises ValueError when any one of the hosts fails to start running
+    the command.
     """
     results = prun.prun({node: cmd for node in nodes})
     for value in results.values():
