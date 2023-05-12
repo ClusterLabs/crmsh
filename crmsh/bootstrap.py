@@ -1658,6 +1658,7 @@ def init_qdevice():
                             msg += '\nOr, run "{}".'.format(' '.join(args))
             raise ValueError(msg)
     user_by_host = utils.HostUserConfig()
+    user_by_host.add(local_user, utils.this_node())
     user_by_host.add(ssh_user, qnetd_addr)
     user_by_host.save_remote(cluster_node_list)
     # Start qdevice service if qdevice already configured
