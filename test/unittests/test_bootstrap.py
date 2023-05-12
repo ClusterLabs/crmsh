@@ -891,13 +891,16 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
     @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
     @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice(self, mock_info, mock_ssh, mock_configure_ssh_key, mock_qdevice_configured, mock_list_nodes,
-            mock_adjust_priority, mock_adjust_fence_delay, mock_user_of_host, mock_host_user_config_class):
+    def test_init_qdevice(self, mock_info, mock_ssh, mock_configure_ssh_key, mock_qdevice_configured,
+                          mock_this_node, mock_list_nodes, mock_adjust_priority, mock_adjust_fence_delay,
+                          mock_user_of_host, mock_host_user_config_class):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob", user_list=["alice"])
+        mock_this_node.return_value = "192.0.2.100"
         mock_list_nodes.return_value = []
         mock_ssh.return_value = False
         mock_user_of_host.return_value = mock.MagicMock(crmsh.utils.UserOfHost)
@@ -911,7 +914,10 @@ class TestBootstrap(unittest.TestCase):
 
         mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
         mock_ssh.assert_called_once_with("bob", "bob", "10.10.10.123")
-        mock_host_user_config_class.return_value.add.assert_called_once_with('bob', '10.10.10.123')
+        mock_host_user_config_class.return_value.add.assert_has_calls([
+            mock.call('bob', '192.0.2.100'),
+            mock.call('bob', '10.10.10.123'),
+        ])
         mock_host_user_config_class.return_value.save_remote.assert_called_once_with(mock_list_nodes.return_value)
         mock_qdevice_configured.assert_called_once_with()
         self.qdevice_with_ip.set_cluster_name.assert_called_once_with()
