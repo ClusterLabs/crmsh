@@ -2190,10 +2190,11 @@ def remote_checksum(local_path, nodes, this_node):
 
     print("%-16s  SHA1 checksum of %s" % ('Host', local_path))
     if this_node not in nodes:
-        print("%-16s: %s" % (this_node, hashlib.sha1(open(local_path).read()).hexdigest()))
-    for host, result in by_host:
-        _, _, _, path = result
-        print("%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest()))
+        with open(local_path, 'rb') as f:
+            print("%-16s: %s" % (this_node, hashlib.sha1(f.read()).hexdigest()))
+    for host, path in by_host:
+        with open(path, 'rb') as f:
+            print("%-16s: %s" % (host, hashlib.sha1(f.read()).hexdigest()))
 
 
 def cluster_copy_file(local_path, nodes=None, output=True):
