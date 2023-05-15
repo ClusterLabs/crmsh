@@ -62,7 +62,8 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT `$GET_INDEX_OF crm_report_bugs`
+        index=`$GET_INDEX_OF crm_report_bugs`
+        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
 
   functional_test_bootstrap_bugs:
     runs-on: ubuntu-20.04

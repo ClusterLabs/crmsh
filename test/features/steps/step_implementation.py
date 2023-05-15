@@ -23,12 +23,16 @@ behave.use_step_matcher("cfparse")
 behave.register_type(str=_parse_str)
 
 
-@when('Write multi lines to file "{f}"')
-def step_impl(context, f):
+@when('Write multi lines to file "{f}" on "{addr}"')
+def step_impl(context, f, addr):
     data_list = context.text.split('\n')
     for line in data_list:
         echo_option = " -n" if line == data_list[-1] else ""
-        cmd = "echo{} {}|sudo tee -a {}".format(echo_option, line, f)
+        cmd = "echo{} \"{}\"|sudo tee -a {}".format(echo_option, line, f)
+        if addr != me():
+            sudoer = userdir.get_sudoer()
+            user = f"{sudoer}@" if sudoer else ""
+            cmd = f"ssh {user}{addr} '{cmd}'"
         run_command(context, cmd)
 
 
@@ -162,6 +166,12 @@ def step_impl(context, num):
 def step_impl(context, msg):
     assert msg not in context.stdout
     context.stdout = None
+
+
+@then('Expected "{msg}" not in stderr')
+def step_impl(context, msg):
+    assert context.stderr is None or msg not in context.stderr
+    context.stderr = None
 
 
 @then('Except "{msg}"')
@@ -481,7 +491,7 @@ def step_impl(context, count, node):
 
 @then('Check passwordless for hacluster between "{nodelist}"')
 def step_impl(context, nodelist):
-    if userdir.getuser() != 'root':
+    if userdir.getuser() != 'root' or userdir.get_sudoer():
         return True
     need_pw_list = crmutils.check_passwordless_between_nodes(nodelist.split(), 'hacluster')
     for m, n in need_pw_list:

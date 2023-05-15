@@ -46,13 +46,18 @@ Feature: Verify usercase master survive when split-brain
     Then    Cluster service is "started" on "hanode2"
 
     # Generate script to check whether this node is master
-    When    Write multi lines to file "/etc/corosync/qdevice/check_master.sh"
+    When    Write multi lines to file "/etc/corosync/qdevice/check_master.sh" on "hanode1"
       """
       #!/usr/bin/sh
       crm_resource --locate -r promotable-1 2>&1 | grep -E "Master|Promoted" | grep `crm_node -n` >/dev/null 2>&1
       """
     And     Run "chmod +x /etc/corosync/qdevice/check_master.sh" on "hanode1"
-    And     Run "scp -p /etc/corosync/qdevice/check_master.sh root@hanode2:/etc/corosync/qdevice" on "hanode1"
+    When    Write multi lines to file "/etc/corosync/qdevice/check_master.sh" on "hanode2"
+      """
+      #!/usr/bin/sh
+      crm_resource --locate -r promotable-1 2>&1 | grep -E "Master|Promoted" | grep `crm_node -n` >/dev/null 2>&1
+      """
+    And     Run "chmod +x /etc/corosync/qdevice/check_master.sh" on "hanode2"
     # Add a promotable clone resource and make sure hanode1 is master
     And     Run "crm configure primitive stateful-1 ocf:pacemaker:Stateful op monitor role=Promoted interval=10s op monitor role=Unpromoted interval=5s" on "hanode1"
     And     Run "crm configure clone promotable-1 stateful-1 meta promotable=true" on "hanode1"
@@ -66,8 +71,6 @@ Feature: Verify usercase master survive when split-brain
     When    Run "sleep 5" on "hanode1"
     Then    Show status from qnetd
     When    Run "corosync-quorumtool -s" on "hanode1"
-    Then    Expected "Quorate:          Yes" in stdout
-    When    Run "ssh root@hanode2 corosync-quorumtool -s" on "hanode1"
     Then    Expected "Quorate:          Yes" in stdout
     # Use iptables command to simulate split-brain
     When    Run "iptables -I INPUT -s @hanode2.ip.default -j DROP; sudo iptables -I OUTPUT -d @hanode2.ip.default -j DROP" on "hanode1"

@@ -16,6 +16,20 @@ HA_NETWORK_V6_ARRAY[1]="2001:db8:20::/64"
 BEHAVE_CASE_DIR="$(dirname $0)/features/"
 BEHAVE_CASE_EXCLUDE="sbd|ocfs2"
 
+read -r -d '' SSHD_CONFIG_AZURE << EOM
+PermitRootLogin no
+AuthorizedKeysFile .ssh/authorized_keys
+ChallengeResponseAuthentication no
+UsePAM yes
+X11Forwarding yes
+ClientAliveInterval 180
+Subsystem sftp	/usr/lib/ssh/sftp-server
+AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES
+AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT
+AcceptEnv LC_IDENTIFICATION LC_ALL
+PasswordAuthentication no
+EOM
+
 read -r -d '' COROSYNC_CONF_TEMPLATE << EOM
 totem {
         version: 2
@@ -150,7 +164,9 @@ OPTIONS:
   -l            	List existing functional test cases and exit
   -n NUM        	Only setup a cluster with NUM nodes(containers)
   -x			Don't config corosync on containers(with -n option)
-  -d            	Cleanup the cluster containers
+  -d			Cleanup the cluster containers
+  -u			Create normal users, and Azure like ssh environment
+  -q			Create a qnetd node(with -n and -x option)
 
 EXAMPLES:
 To launch 2 nodes with the running cluster with the very basic corosync.conf
@@ -158,6 +174,9 @@ To launch 2 nodes with the running cluster with the very basic corosync.conf
 
 To launch 2 nodes without the cluster stack running to play with "crm cluster init/join"
 # crmsh.git/run-functional-tests -n 2 -x
+
+To launch 2 nodes without the cluster stack running, and a qnetd node(named 'qnetd-node')
+# crmsh.git/run-functional-tests -n 2 -x -q
 
 To list the existing test cases. Users could add his own new test cases.
 # crmsh.git/test/run-functional-tests -l
@@ -179,16 +198,23 @@ docker_exec() {
 	docker exec -t $name /bin/sh -c "$cmd"
 }
 
+set_sshd_config_like_in_azure() {
+	node_name=$1
+	docker_exec $node_name "echo \"$SSHD_CONFIG_AZURE\" > /etc/ssh/sshd_config"
+	docker_exec $node_name "systemctl restart sshd.service"
+}
+
 create_custom_user() {
 	user_name=$1
 	user_id=$2
-	docker_exec $node_name "useradd -m -s /bin/bash -N -u ${user_id} -g 90 ${user_name} 2>/dev/null"
+	docker_exec $node_name "useradd -m -s /bin/bash ${user_name} 2>/dev/null"
 	docker_exec $node_name "chmod u+w /etc/sudoers"
 	docker_exec $node_name "echo \"${user_name} ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
 	docker_exec $node_name "chmod u-w /etc/sudoers"
 	docker_exec $node_name "echo 'export PATH=\$PATH:/usr/sbin/' >> ~${user_name}/.bashrc"
 	docker_exec $node_name "echo -e \"linux\\nlinux\" | passwd ${user_name} 2>/dev/null"
 	docker_exec $node_name "cp -r /root/.ssh ~${user_name}/ && chown ${user_name}:haclient -R ~${user_name}/.ssh"
+	info "Create user '$user_name' on $node_name"
 }
 
 create_alice_bob_carol() {
@@ -198,11 +224,6 @@ create_alice_bob_carol() {
 	create_custom_user "alice" "1000"
 	create_custom_user "bob" "1001"
 	create_custom_user "carol" "1002"
-
-	# I think /var/log/crmsh used to be hacluster:haclient
-	# Let's make it here again anyway. (This is a workarout, please FIXME!)
-	docker_exec $node_name "chown hacluster:haclient -R /var/log/crmsh"
-	docker_exec $node_name "chmod g+w -R /var/log/crmsh"
 }
 
 deploy_ha_node() {
@@ -228,12 +249,18 @@ deploy_ha_node() {
 	  info "Building crmsh on \"$node_name\"..."
 	  docker_exec $node_name "$make_cmd" 1> /dev/null || \
 		fatal "Building failed on $node_name!"
-
+	  docker_exec $node_name "chown hacluster:haclient -R /var/log/crmsh"
+	  docker_exec $node_name "chmod g+w -R /var/log/crmsh"
 	  create_alice_bob_carol
+	  if [ "$NORMAL_USER_FLAG" -eq 1 ];then
+		set_sshd_config_like_in_azure $node_name
+          fi
 	else
 	  docker_exec $node_name "useradd -m -s /bin/bash alice 2>/dev/null"
 	  docker_exec $node_name "echo \"alice ALL=(ALL) NOPASSWD:ALL\" > /etc/sudoers.d/alice"
 	  docker_exec $node_name "cp -r /root/.ssh ~alice/ && chown alice:users -R ~alice/.ssh"
+	  info "Create user 'alice' on $node_name"
+	  [ "$NORMAL_USER_FLAG" -eq 1 ] && set_sshd_config_like_in_azure $node_name
 	fi
 }
 
@@ -317,7 +344,12 @@ setup_cluster() {
 		hanodes_arry=($*)
 	fi
 
-	create_node ${hanodes_arry[@]}
+	if [ $WITH_QNETD_NODE -eq 1 ];then
+	  create_node ${hanodes_arry[@]} "qnetd-node"
+	else
+	  create_node ${hanodes_arry[@]}
+	fi
+
 	[ "$CONFIG_COROSYNC_FLAG" -eq 0 ] && return
 	config_cluster ${hanodes_arry[@]}
 	start_cluster ${hanodes_arry[@]}
@@ -397,10 +429,11 @@ run_origin_regression_test() {
 }
 
 
+WITH_QNETD_NODE=0
 NORMAL_USER_FLAG=0
 CONFIG_COROSYNC_FLAG=1
 SETUP_N_NODES_CLUSTER=0
-options=$(getopt -l "help" -o "hldxun:" -- "$@")
+options=$(getopt -l "help" -o "hldxuqn:" -- "$@")
 eval set -- "$options"
 while true;do
 case $1 in
@@ -420,6 +453,10 @@ case $1 in
 	;;
 -u)
 	NORMAL_USER_FLAG=1
+	shift
+	;;
+-q)
+	WITH_QNETD_NODE=1
 	shift
 	;;
 -n)
@@ -489,7 +526,7 @@ for case_num in $*;do
 		docker_exec ${node_arry[0]} "behave --no-logcapture $case_file_in_container || exit 1" || exit 1
 	else
 		info "Running \"$case_file_in_container\" under normal user 'alice'..."
-		docker_exec ${node_arry[0]} "su - alice -c 'behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
+		docker_exec ${node_arry[0]} "su - alice -c 'sudo behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
 	fi
 	echo
 done
