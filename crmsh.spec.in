@@ -52,7 +52,6 @@ Requires:       %{name}-scripts >= %{version}-%{release}
 Requires:       /usr/bin/which
 Requires:       python3 >= 3.4
 Requires:       python3-lxml
-Requires:       python3-parallax >= 1.0.8
 Requires:       python3-python-dateutil
 BuildRequires:  python3-lxml
 BuildRequires:  python3-setuptools
@@ -108,7 +107,6 @@ Requires(post):  mailx
 Requires(post):  procps
 Requires(post):  python3-python-dateutil
 Requires(post):  python3-tox
-Requires(post):  python3-parallax
 Requires(post):  pacemaker
 %if 0%{?suse_version} > 1110
 BuildArch:      noarch
