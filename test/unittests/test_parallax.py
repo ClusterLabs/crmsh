@@ -5,11 +5,11 @@ from __future__ import unicode_literals
 # unit tests for parallax.py
 
 
-import os
 import unittest
 from unittest import mock
-import parallax
-from crmsh import parallax as cparallax
+
+import crmsh.parallax
+import crmsh.prun.prun
 
 
 class TestParallax(unittest.TestCase):
@@ -18,119 +18,87 @@ class TestParallax(unittest.TestCase):
         Test setUp.
         """
         # Use the setup to create a fresh instance for each test
-    @mock.patch("crmsh.utils.user_pair_for_ssh")
-    @mock.patch("parallax.call")
-    @mock.patch("crmsh.parallax.Parallax.handle")
-    def test_call(self, mock_handle, mock_call, mock_user_pair_for_ssh):
-        mock_user_pair_for_ssh.return_value = "alice", "alice"
-        parallax_call_instance = cparallax.Parallax(["node1"], cmd="ls")
-        mock_call.return_value = {"node1": (0, None, None)}
-        mock_handle.return_value = [("node1", (0, None, None))]
 
-        result = parallax_call_instance.call()
-        self.assertEqual(result, mock_handle.return_value)
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_call(self, mock_prun: mock.MagicMock):
+        mock_prun.return_value = {
+            "node1": crmsh.prun.prun.ProcessResult(0, None, None)
+        }
+        result = crmsh.parallax.parallax_call(["node1"], "ls")
+        self.assertEqual(
+            result,
+            [("node1", (0, None, None))],
+        )
 
-        mock_user_pair_for_ssh.assert_has_calls([
-            mock.call("node1"),
-            mock.call("node1"),
-        ])
-        mock_call.assert_called_once_with([["node1", None, "alice"]], "ls", parallax_call_instance.opts)
-        mock_handle.assert_called_once_with(list(mock_call.return_value.items()))
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_call_non_zero_exit_code(self, mock_prun: mock.MagicMock):
+        mock_prun.return_value = {
+            "node1": crmsh.prun.prun.ProcessResult(1, None, None)
+        }
+        with self.assertRaises(ValueError):
+            crmsh.parallax.parallax_call(["node1"], "ls")
 
-    @mock.patch("parallax.Error")
-    @mock.patch("crmsh.utils.user_pair_for_ssh")
-    @mock.patch("parallax.call")
-    @mock.patch("crmsh.parallax.Parallax.handle")
-    def test_call_exception(self, mock_handle, mock_call, mock_user_pair_for_ssh, mock_error):
-        mock_user_pair_for_ssh.return_value = "alice", "alice"
-        parallax_call_instance = cparallax.Parallax(["node1"], cmd="ls")
-        mock_error = mock.Mock()
-        mock_call.return_value = {"node1": mock_error}
-        mock_handle.side_effect = ValueError("error happen")
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_call_255_exit_code(self, mock_prun: mock.MagicMock):
+        mock_prun.return_value = {
+            "node1": crmsh.prun.prun.ProcessResult(255, None, None)
+        }
+        with self.assertRaises(ValueError):
+            crmsh.parallax.parallax_call(["node1"], "ls")
 
-        with self.assertRaises(ValueError) as err:
-            parallax_call_instance.call()
-        self.assertEqual("error happen", str(err.exception))
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_run(self, mock_prun: mock.MagicMock):
+        mock_prun.return_value = {
+            "node1": crmsh.prun.prun.ProcessResult(0, None, None)
+        }
+        result = crmsh.parallax.parallax_run(["node1"], "ls")
+        self.assertEqual(
+            {"node1": (0, None, None)},
+            result,
+        )
 
-        mock_user_pair_for_ssh.assert_has_calls([
-            mock.call("node1"),
-            mock.call("node1"),
-        ])
-        mock_call.assert_called_once_with([["node1", None, "alice"]], "ls", parallax_call_instance.opts)
-        mock_handle.assert_called_once_with(list(mock_call.return_value.items()))
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_run_non_zero_exit_code(self, mock_prun: mock.MagicMock):
+        mock_prun.return_value = {
+            "node1": crmsh.prun.prun.ProcessResult(1, None, None)
+        }
+        result = crmsh.parallax.parallax_run(["node1"], "ls")
+        self.assertEqual(
+            {"node1": (1, None, None)},
+            result,
+        )
 
-    @mock.patch("crmsh.utils.user_pair_for_ssh")
-    @mock.patch("crmsh.parallax.Parallax.handle")
-    @mock.patch("parallax.slurp")
-    @mock.patch("os.path.basename")
-    def test_slurp(self, mock_basename, mock_slurp, mock_handle, mock_user_pair_for_ssh):
-        mock_user_pair_for_ssh.return_value = "alice", "alice"
-        parallax_slurp_instance = cparallax.Parallax(["node1"], localdir="/opt", filename="/opt/file.c")
-        mock_basename.return_value = "file.c"
-        mock_slurp.return_value = {"node1": (0, None, None, "/opt")}
-        mock_handle.return_value = [("node1", (0, None, None, "/opt"))]
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_run_255_exit_code(self, mock_prun: mock.MagicMock):
+        mock_prun.return_value = {
+            "node1": crmsh.prun.prun.SSHError("alice", "node1", "foo")
+        }
+        with self.assertRaises(ValueError):
+            crmsh.parallax.parallax_run(["node1"], "ls")
 
-        result = parallax_slurp_instance.slurp()
-        self.assertEqual(result, mock_handle.return_value)
+    @mock.patch("crmsh.prun.prun.pfetch_from_remote")
+    def test_slurp(self, mock_pfetch: mock.MagicMock):
+        mock_pfetch.return_value = {"node1": "/opt/node1/file.c"}
+        results = crmsh.parallax.parallax_slurp(["node1"], "/opt", "/opt/file.c")
+        self.assertListEqual([("node1", "/opt/node1/file.c")], results)
+        mock_pfetch.assert_called_once_with(["node1"], "/opt/file.c", "/opt")
 
-        mock_basename.assert_called_once_with("/opt/file.c")
-        mock_slurp.assert_called_once_with(["node1"], "/opt/file.c", "file.c", parallax_slurp_instance.opts)
-        mock_handle.assert_called_once_with(list(mock_slurp.return_value.items()))
-        mock_user_pair_for_ssh.assert_called_once_with("node1")
+    @mock.patch("crmsh.prun.prun.pfetch_from_remote")
+    def test_slurp_exception(self, mock_pfetch: mock.MagicMock):
+        mock_pfetch.return_value = {"node1": crmsh.prun.prun.PRunError("alice", "node1", "foo")}
+        with self.assertRaises(ValueError):
+            crmsh.parallax.parallax_slurp(["node1"], "/opt", "/opt/file.c")
+        mock_pfetch.assert_called_once_with(["node1"], "/opt/file.c", "/opt")
 
-    @mock.patch("crmsh.utils.user_pair_for_ssh")
-    @mock.patch("parallax.Error")
-    @mock.patch("crmsh.parallax.Parallax.handle")
-    @mock.patch("parallax.slurp")
-    @mock.patch("os.path.basename")
-    def test_slurp_exception(self, mock_basename, mock_slurp, mock_handle, mock_error, mock_user_pair_for_ssh):
-        mock_user_pair_for_ssh.return_value = "alice", "alice"
-        parallax_slurp_instance = cparallax.Parallax(["node1"], localdir="/opt", filename="/opt/file.c")
-        mock_basename.return_value = "file.c"
-        mock_error = mock.Mock()
-        mock_slurp.return_value = {"node1": mock_error}
-        mock_handle.side_effect = ValueError("error happen")
+    @mock.patch("crmsh.prun.prun.pcopy_to_remote")
+    def test_copy(self, mock_pcopy: mock.MagicMock):
+        mock_pcopy.return_value = {"node1": None, "node2": None}
+        crmsh.parallax.parallax_copy(["node1", "node2"], "/opt/file.c", "/tmp")
+        mock_pcopy.assert_called_once_with("/opt/file.c", ["node1", "node2"], "/tmp", False, timeout_seconds=-1)
 
-        with self.assertRaises(ValueError) as err:
-            parallax_slurp_instance.slurp()
-        self.assertEqual("error happen", str(err.exception))
-
-        mock_basename.assert_called_once_with("/opt/file.c")
-        mock_slurp.assert_called_once_with(["node1"], "/opt/file.c", "file.c", parallax_slurp_instance.opts)
-        mock_handle.assert_called_once_with(list(mock_slurp.return_value.items()))
-        mock_user_pair_for_ssh.assert_called_once_with("node1")
-
-    @mock.patch("crmsh.utils.user_pair_for_ssh")
-    @mock.patch("parallax.copy")
-    @mock.patch("crmsh.parallax.Parallax.handle")
-    def test_copy(self, mock_handle, mock_copy, mock_user_pair_for_ssh):
-        mock_user_pair_for_ssh.return_value = "alice", "alice"
-        parallax_copy_instance = cparallax.Parallax(["node1", "node2"], src="/opt/file.c", dst="/tmp")
-        mock_copy.return_value = {"node1": (0, None, None), "node2": (0, None, None)}
-        mock_handle.return_value = [("node1", (0, None, None)), ("node2", (0, None, None))]
-
-        result = parallax_copy_instance.copy()
-        self.assertEqual(result, mock_handle.return_value)
-
-        mock_copy.assert_called_once_with(["node1", "node2"], "/opt/file.c", "/tmp", parallax_copy_instance.opts)
-        mock_handle.assert_called_once_with(list(mock_copy.return_value.items()))
-        mock_user_pair_for_ssh.assert_called_once_with("node1")
-
-    @mock.patch("crmsh.utils.user_pair_for_ssh")
-    @mock.patch("parallax.Error")
-    @mock.patch("parallax.copy")
-    @mock.patch("crmsh.parallax.Parallax.handle")
-    def test_copy_exception(self, mock_handle, mock_copy, mock_error, mock_user_pair_for_ssh):
-        mock_user_pair_for_ssh.return_value = "alice", "alice"
-        parallax_copy_instance = cparallax.Parallax(["node1", "node2"], src="/opt/file.c", dst="/tmp")
-        mock_error = mock.Mock()
-        mock_copy.return_value = {"node1": mock_error, "node2": (0, None, None)}
-        mock_handle.side_effect = ValueError("error happen")
-
-        with self.assertRaises(ValueError) as err:
-            parallax_copy_instance.copy()
-        self.assertEqual("error happen", str(err.exception))
-
-        mock_copy.assert_called_once_with(["node1", "node2"], "/opt/file.c", "/tmp", parallax_copy_instance.opts)
-        mock_handle.assert_called_once_with(list(mock_copy.return_value.items()))
-        mock_user_pair_for_ssh.assert_called_once_with("node1")
+    @mock.patch("crmsh.prun.prun.pcopy_to_remote")
+    def test_copy_exception(self, mock_pcopy: mock.MagicMock):
+        mock_pcopy.return_value = {"node1": crmsh.prun.prun.PRunError("alice", "node1", "foo"), "node2": None}
+        with self.assertRaises(ValueError):
+            crmsh.parallax.parallax_copy(["node1", "node2"], "/opt/file.c", "/tmp")
+        mock_pcopy.assert_called_once_with("/opt/file.c", ["node1", "node2"], "/tmp", False, timeout_seconds=-1)

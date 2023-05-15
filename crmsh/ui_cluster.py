@@ -15,6 +15,7 @@ from . import bootstrap
 from . import corosync
 from . import qdevice
 from .cibconfig import cib_factory
+from .prun import prun
 from .ui_node import parse_option_for_nodes
 from . import constants
 
@@ -711,15 +712,6 @@ to get the geo cluster configuration.""",
         '''
         Execute the given command on all nodes/specific node(s), report outcome
         '''
-        try:
-            import parallax
-            _has_parallax = True
-        except ImportError:
-            _has_parallax = False
-
-        if not _has_parallax:
-            context.fatal_error("python package parallax is needed for this command")
-
         if nodes:
             hosts = list(nodes)
         else:
@@ -727,18 +719,20 @@ to get the geo cluster configuration.""",
             if hosts is None:
                 context.fatal_error("failed to get node list from cluster")
 
-        for host, result in crmsh.parallax.parallax_run(hosts, cmd).items():
-            if isinstance(result, parallax.Error):
+        for host, result in prun.prun({x: cmd for x in hosts}).items():
+            if isinstance(result, prun.PRunError):
                 logger.error("[%s]: %s", host, result)
             else:
-                rc, stdout, stderr = result
-                if rc != 0:
-                    logger.error("[%s]: rc=%s\n%s\n%s", host, rc, utils.to_ascii(stdout), utils.to_ascii(stderr))
+                if result.returncode != 0:
+                    logger.error(
+                        "[%s]: Exited with error code %s. Error output: %s",
+                        host, result.returncode, utils.to_ascii(result.stderr),
+                    )
                 else:
-                    if not stdout:
-                        logger.info("[%s]" % host)
+                    if not result.stdout:
+                        logger.info("[%s]", host)
                     else:
-                        logger.info("[%s]\n%s" % (host, utils.to_ascii(stdout)))
+                        logger.info("[%s]\n%s", host, utils.to_ascii(result.stdout))
 
     def do_copy(self, context, local_file, *nodes):
         '''

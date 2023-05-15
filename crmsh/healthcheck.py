@@ -2,7 +2,6 @@ import logging
 import argparse
 import os
 import os.path
-import parallax
 import subprocess
 import sys
 import typing

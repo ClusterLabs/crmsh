@@ -18,20 +18,14 @@ try:
 except ImportError:
     import simplejson as json
 
-
-try:
-    import parallax
-    has_parallax = True
-except ImportError:
-    has_parallax = False
-
-
 from . import config
 from . import handles
 from . import options
 from . import userdir
 from . import utils
 from . import log
+from crmsh.prun import prun
+import crmsh.parallax
 
 
 logger = log.setup_logger(__name__)
@@ -407,23 +401,6 @@ def _find_action(action):
         if a in action:
             return a
     return None
-
-
-def _make_options(params):
-    "Setup parallax options."
-    opts = parallax.Options()
-    opts.inline = True
-    opts.timeout = int(params['timeout'])
-    opts.recursive = True
-    opts.ssh_options += [
-        'KbdInteractiveAuthentication=no',
-        'PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey',
-        'PasswordAuthentication=no',
-        'StrictHostKeyChecking=no',
-        'ControlPersist=no']
-    if options.regression_tests:
-        opts.ssh_extra += ['-vvv']
-    return opts
 
 
 def _parse_yaml(scriptname, scriptfile):
@@ -1095,10 +1072,10 @@ def _check_control_persist():
     return "Bad configuration option" not in err
 
 
-def _parallax_call(printer, hosts, cmd, opts):
+def _parallax_call(printer, hosts, cmd, timeout_seconds):
     "parallax.call with debug logging"
     printer.debug("parallax.call(%s, %s)" % (repr(hosts), cmd))
-    return parallax.call(hosts, cmd, opts)
+    return prun.prun({host: cmd for host, _, _ in hosts}, timeout_seconds=timeout_seconds)
 
 
 def _resolve_script(name):
@@ -1112,10 +1089,10 @@ def _resolve_script(name):
     return None
 
 
-def _parallax_copy(printer, hosts, src, dst, opts):
+def _parallax_copy(printer, hosts, src, dst, timeout_seconds):
     "parallax.copy with debug logging"
     printer.debug("parallax.copy(%s, %s, %s)" % (repr(hosts), src, dst))
-    return parallax.copy(hosts, src, dst, opts)
+    return prun.pcopy_to_remote(src, [x[0] for x in hosts], dst, recursive=True, timeout_seconds=timeout_seconds)
 
 
 def _tempname(prefix):
@@ -1137,17 +1114,19 @@ def _generate_workdir_name():
     return basetmp
 
 
-def _print_debug(printer, local_node, hosts, workdir, opts):
+def _print_debug(printer, local_node, hosts, workdir, timeout_seconds):
     "Print debug output (if any)"
     dbglog = os.path.join(workdir, 'crm_script.debug')
     if hosts:
-        for host, result in _parallax_call(printer, hosts,
-                                           "if [ -f '%s' ]; then cat '%s'; fi" % (dbglog, dbglog),
-                                           opts).items():
-            if isinstance(result, parallax.Error):
+        for host, result in _parallax_call(
+                printer, hosts,
+                "if [ -f '%s' ]; then cat '%s'; fi" % (dbglog, dbglog),
+                timeout_seconds
+        ).items():
+            if isinstance(result, crmsh.parallax.Error):
                 printer.error(host, result)
             else:
-                printer.output(host, *result)
+                printer.output(host, result.returncode, result.stdout, result.stderr)
     if os.path.isfile(dbglog):
         f = open(dbglog).read()
         printer.output(local_node, 0, f, '')
@@ -1164,18 +1143,18 @@ def _cleanup_local(workdir):
             shutil.rmtree(workdir)
 
 
-def _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts):
+def _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, timeout_seconds):
     "Clean up after the cluster script"
     if has_remote_actions and hosts and workdir:
         cleanscript = os.path.join(workdir, 'crm_clean.py')
         for host, result in _parallax_call(printer, hosts,
                                            "%s %s" % (cleanscript,
                                                       workdir),
-                                           opts).items():
-            if isinstance(result, parallax.Error):
+                                           timeout_seconds).items():
+            if isinstance(result, crmsh.parallax.Error):
                 printer.error(host, "Clean: %s" % (result))
             else:
-                printer.output(host, *result)
+                printer.output(host, result.returncode, result.stdout, result.stderr)
     _cleanup_local(workdir)
 
 
@@ -1549,20 +1528,6 @@ def _has_remote_actions(actions):
     return False
 
 
-def _set_controlpersist(opts):
-    # _has_controlpersist = _check_control_persist()
-    # if _has_controlpersist:
-    #    opts.ssh_options += ["ControlMaster=auto",
-    #                         "ControlPersist=30s",
-    #                         "ControlPath=/tmp/crm-ssh-%r@%h:%p"]
-    # unfortunately, due to bad interaction between parallax and ssh,
-    # ControlPersist is broken
-    # See: http://code.google.com/p/parallel-ssh/issues/detail?id=67
-    # Supposedly fixed in openssh 6.3, but isn't: This may be an
-    # issue in parallel-ssh, not openssh
-    pass
-
-
 def _flatten_parameters(steps):
     pret = []
     for step in steps:
@@ -1626,13 +1591,13 @@ def _copy_utils(dst):
         raise ValueError(e)
 
 
-def _create_remote_workdirs(printer, hosts, path, opts):
+def _create_remote_workdirs(printer, hosts, path, timeout_seconds):
     "Create workdirs on remote hosts"
     ok = True
     for host, result in _parallax_call(printer, hosts,
                                        "mkdir -p %s" % (os.path.dirname(path)),
-                                       opts).items():
-        if isinstance(result, parallax.Error):
+                                       timeout_seconds).items():
+        if isinstance(result, crmsh.parallax.Error):
             printer.error(host, "Start: %s" % (result))
             ok = False
     if not ok:
@@ -1641,15 +1606,16 @@ def _create_remote_workdirs(printer, hosts, path, opts):
         raise ValueError(msg)
 
 
-def _copy_to_remote_dirs(printer, hosts, path, opts):
+def _copy_to_remote_dirs(printer, hosts, path, timeout_seconds):
     "Copy a local folder to same location on remote hosts"
     ok = True
-    for host, result in _parallax_copy(printer, hosts,
+    for host, exc in _parallax_copy(printer, hosts,
                                        path,
-                                       path, opts).items():
-        if isinstance(result, parallax.Error):
-            printer.debug("_copy_to_remote_dirs failed: %s, %s, %s" % (hosts, path, opts))
-            printer.error(host, result)
+                                       path,
+                                    timeout_seconds).items():
+        if exc is not None:
+            printer.debug("_copy_to_remote_dirs failed: %s, %s" % (hosts, path))
+            printer.error(host, exc)
             ok = False
     if not ok:
         raise ValueError("Failed when copying script data, aborting.")
@@ -1671,21 +1637,16 @@ def _copy_local(printer, workdir, local_node, src, dst):
     return ok
 
 
-def _copy_to_all(printer, workdir, hosts, local_node, src, dst, opts):
+def _copy_to_all(printer, workdir, hosts, local_node, src, dst, timeout_seconds):
     """
     Copy src to dst both locally and remotely
     """
     ok = True
-    ret = _parallax_copy(printer, hosts, src, dst, opts)
-    for host, result in ret.items():
-        if isinstance(result, parallax.Error):
-            printer.error(host, result)
+    ret = _parallax_copy(printer, hosts, src, dst, timeout_seconds)
+    for host, exc in ret.items():
+        if exc is not None:
+            printer.error(host, exc)
             ok = False
-        else:
-            rc, out, err = result
-            if rc != 0:
-                printer.error(host, err)
-                ok = False
     return ok and _copy_local(printer, workdir, local_node, src, dst)
 
 
@@ -1746,17 +1707,17 @@ def _chmodx(path):
 
 
 class RunActions(object):
-    def __init__(self, printer, script, params, actions, local_node, hosts, opts, workdir):
+    def __init__(self, printer, script, params, actions, local_node, hosts, workdir, timeout_seconds):
         self.printer = printer
         self.script = script
         self.data = [clean_run_params(params)]
         self.actions = actions
         self.local_node = local_node
         self.hosts = hosts
-        self.opts = opts
         self.dry_run = params.get('dry_run', False)
         self.sudo = params.get('sudo', False)
         self.workdir = workdir
+        self.timeout_seconds = timeout_seconds
         self.statefile = os.path.join(self.workdir, 'script.input')
         self.dstfile = os.path.join(self.workdir, 'script.input')
         self.sudo_pass = None
@@ -1770,8 +1731,8 @@ class RunActions(object):
             json.dump(self.data, open(self.statefile, 'w'))
             _copy_utils(self.workdir)
             if has_remote_actions:
-                _create_remote_workdirs(self.printer, self.hosts, self.workdir, self.opts)
-                _copy_to_remote_dirs(self.printer, self.hosts, self.workdir, self.opts)
+                _create_remote_workdirs(self.printer, self.hosts, self.workdir, self.timeout_seconds)
+                _copy_to_remote_dirs(self.printer, self.hosts, self.workdir, self.timeout_seconds)
             # make sure all path references are relative to the script directory
             os.chdir(self.workdir)
 
@@ -1819,7 +1780,7 @@ class RunActions(object):
                             self.local_node,
                             self.statefile,
                             self.dstfile,
-                            self.opts)
+                            self.timeout_seconds)
 
     def run_command(self, nodes, command, is_json_output):
         "called by Actions"
@@ -1836,7 +1797,7 @@ class RunActions(object):
                               self.local_node,
                               src,
                               dst,
-                              self.opts)
+                              self.timeout_seconds)
         else:
             ok = _copy_local(self.printer,
                              self.workdir,
@@ -1945,7 +1906,7 @@ class RunActions(object):
             ok = _copy_to_remote_dirs(self.printer,
                                       self.hosts,
                                       tmpf,
-                                      self.opts)
+                                      self.timeout_seconds)
             if not ok:
                 self.result = False
             else:
@@ -1984,11 +1945,6 @@ class RunActions(object):
         ok = True
         action_result = {}
 
-        if self.sudo_pass:
-            self.opts.input_stream = u'sudo: %s\n' % (self.sudo_pass)
-        else:
-            self.opts.input_stream = None
-
         if self.dry_run:
             self.printer.print_command(self.hosts, cmdline)
             return {}
@@ -1998,15 +1954,14 @@ class RunActions(object):
         for host, result in _parallax_call(self.printer,
                                            self.hosts,
                                            cmdline,
-                                           self.opts).items():
-            if isinstance(result, parallax.Error):
+                                           self.timeout_seconds).items():
+            if isinstance(result, crmsh.parallax.Error):
                 self.printer.error(host, "Remote error: %s" % (result))
                 ok = False
             else:
-                rc, out, err = result
-                out = utils.to_ascii(out)
-                if rc != 0:
-                    self.printer.error(host, "Remote error (rc=%s) %s%s" % (rc, out, err))
+                out = utils.to_ascii(result.stdout)
+                if result.returncode != 0:
+                    self.printer.error(host, "Remote error (rc=%s) %s%s" % (result.returncode, out, result.stderr))
                     ok = False
                 elif is_json_output:
                     action_result[host] = json.loads(out)
@@ -2079,15 +2034,13 @@ def run(script, params, printer):
     hosts = params['nodes']
     printer.print_header(script, params, hosts)
     local_node, hosts = _extract_localnode(hosts)
-    opts = _make_options(params)
-    _set_controlpersist(opts)
 
     dry_run = params.get('dry_run', False)
 
     has_remote_actions = _has_remote_actions(actions)
 
     try:
-        runner = RunActions(printer, script, params, actions, local_node, hosts, opts, workdir)
+        runner = RunActions(printer, script, params, actions, local_node, hosts, workdir, int(params['timeout']))
         runner.prepare(has_remote_actions)
         action = params['action']
         statefile = params['statefile']
@@ -2105,11 +2058,11 @@ def run(script, params, printer):
     finally:
         if not dry_run:
             if not config.core.debug:
-                _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, opts)
+                _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, int(params['timeout']))
             elif has_remote_actions:
-                _print_debug(printer, local_node, hosts, workdir, opts)
+                _print_debug(printer, local_node, hosts, workdir, int(params['timeout']))
             else:
-                _print_debug(printer, local_node, None, workdir, opts)
+                _print_debug(printer, local_node, None, workdir, int(params['timeout']))
 
 
 def _remove_empty_lines(txt):

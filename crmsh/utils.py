@@ -27,7 +27,6 @@ from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from lxml import etree
 
-import parallax
 import crmsh.parallax
 from . import config
 from . import userdir
@@ -37,7 +36,7 @@ from . import term
 from distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
-
+from .prun import prun
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -165,7 +164,7 @@ class UserOfHost:
             aliases = set(aliases)
             aliases.add(canonical)
             aliases.add(host)
-        except socket.herror:
+        except (socket.herror, socket.gaierror):
             aliases = {host}
         hosts = config.get_option('core', 'hosts')
         if hosts == ['']:
@@ -2154,20 +2153,16 @@ def sysconfig_set(sysconfig_file, **values):
 
 def remote_diff_slurp(nodes, filename):
     from . import tmpfiles
-
     tmpdir = tmpfiles.create_dir()
-    opts = parallax.Options()
-    opts.localdir = tmpdir
-    dst = os.path.basename(filename)
-    return list(parallax.slurp(nodes, filename, dst, opts).items())
+    return crmsh.parallax.parallax_slurp(nodes, tmpdir, filename)
 
 
 def remote_diff_this(local_path, nodes, this_node):
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
-        if isinstance(result, parallax.Error):
+        if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
-        _, _, _, path = result
+        path = result
         _, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
                           (host, this_node, path, local_path))
         page_string(s)
@@ -2176,7 +2171,7 @@ def remote_diff_this(local_path, nodes, this_node):
 def remote_diff(local_path, nodes):
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
-        if isinstance(result, parallax.Error):
+        if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
     h1, r1 = by_host[0]
     h2, r2 = by_host[1]
@@ -2190,15 +2185,16 @@ def remote_checksum(local_path, nodes, this_node):
 
     by_host = remote_diff_slurp(nodes, local_path)
     for host, result in by_host:
-        if isinstance(result, parallax.Error):
+        if isinstance(result, crmsh.parallax.Error):
             raise ValueError(str(result))
 
     print("%-16s  SHA1 checksum of %s" % ('Host', local_path))
     if this_node not in nodes:
-        print("%-16s: %s" % (this_node, hashlib.sha1(open(local_path).read()).hexdigest()))
-    for host, result in by_host:
-        _, _, _, path = result
-        print("%-16s: %s" % (host, hashlib.sha1(open(path).read()).hexdigest()))
+        with open(local_path, 'rb') as f:
+            print("%-16s: %s" % (this_node, hashlib.sha1(f.read()).hexdigest()))
+    for host, path in by_host:
+        with open(path, 'rb') as f:
+            print("%-16s: %s" % (host, hashlib.sha1(f.read()).hexdigest()))
 
 
 def cluster_copy_file(local_path, nodes=None, output=True):
@@ -2210,14 +2206,13 @@ def cluster_copy_file(local_path, nodes=None, output=True):
     rc = True
     if not nodes:
         return rc
-    results = crmsh.parallax.parallax_copy(nodes, local_path, local_path, strict=False)
-    for host, result in results:
-        if isinstance(result, parallax.Error):
-            logger.error("Failed to copy %s to %s: %s", local_path, host, result)
+    results = prun.pcopy_to_remote(local_path, nodes, local_path)
+    for host, exc in results.items():
+        if exc is not None:
+            logger.error("Failed to copy %s to %s@%s: %s", local_path, exc.user, host, exc)
             rc = False
-        elif output:
-            logger.info(host)
         else:
+            logger.info("%s", host)
             logger.debug("Sync file %s to %s", local_path, host)
     return rc
 
@@ -2874,7 +2869,7 @@ class ServiceManager(object):
     @staticmethod
     def _call_with_parallax(cmd, host_list):
         ret = crmsh.parallax.parallax_run(host_list, cmd)
-        if ret is parallax.Error:
+        if ret is crmsh.parallax.Error:
             raise ret
         return ret
 
@@ -3612,5 +3607,12 @@ class HostUserConfig:
 
     def add(self, user, host):
         self._hosts_users[host] = user
+
+def parse_user_at_host(s: str):
+    i = s.find('@')
+    if i == -1:
+        return None, s
+    else:
+        return s[:i], s[i+1:]
 
 # vim:ts=4:sw=4:et:
