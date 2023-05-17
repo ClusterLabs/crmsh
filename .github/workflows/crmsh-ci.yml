@@ -13,7 +13,7 @@ env:
   PACKAGE_NAME: crmsh
   OBS_USER: ${{ secrets.OBS_USER }}
   OBS_PASS: ${{ secrets.OBS_PASS }}
-  OBS_PROJECT: ${{ secrets.OBS_PROJECT }}
+  OBS_PROJECT: ${{ secrets.OBS_PROJECT_CRMSH45 }}
   TARGET_PROJECT: ${{ secrets.TARGET_PROJECT }}
 
 jobs:
@@ -355,7 +355,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: delivery process
-      if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master' && github.event_name == 'push'
+      if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.5' && github.event_name == 'push'
       run: |
         docker pull shap/continuous_deliver:latest
         docker run -t -v "$(pwd):/package" \
@@ -374,7 +374,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: submit process
-      if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master' && github.event_name == 'push'
+      if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.5' && github.event_name == 'push'
       run: |
         docker pull shap/continuous_deliver:latest
         docker run -t -v "$(pwd):/package" \
