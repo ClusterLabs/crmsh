@@ -47,6 +47,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        echo ${{ github.head_ref }}.${{ github.sha }}
         python -m pip install --upgrade pip
         pip install tox
     - name: Test with pytest in tox
