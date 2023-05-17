@@ -48,6 +48,8 @@ jobs:
     - name: Install dependencies
       run: |
         echo ${{ github.head_ref }}.${{ github.sha }}
+        echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
         python -m pip install --upgrade pip
         pip install tox
     - name: Test with pytest in tox
