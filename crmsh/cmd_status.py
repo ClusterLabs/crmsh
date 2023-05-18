@@ -16,8 +16,10 @@ _WARNS = ['pending',
           'Not installed',
           r'UNKNOWN\!',
           'Stopped',
-          'standby']
-_OKS = ['Masters', 'Slaves', 'Started', 'Master', 'Slave', 'Online', 'online', 'ok', 'master']
+          'standby',
+          'WITHOUT quorum']
+_OKS = ['Masters', 'Slaves', 'Started', 'Master', 'Slave', 'Online', 'online', 'ok', 'master',
+        'with quorum']
 _ERRORS = ['not running',
            'unknown error',
            'invalid parameter',
