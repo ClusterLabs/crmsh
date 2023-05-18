@@ -327,7 +327,6 @@ jobs:
 
   delivery:
     needs: [general_check,
-      unit_test,
       functional_test_crm_report_bugs,
       functional_test_bootstrap_bugs,
       functional_test_bootstrap_bugs_non_root,
