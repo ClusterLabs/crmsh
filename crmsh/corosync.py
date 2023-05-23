@@ -439,13 +439,6 @@ def get_free_nodeid(parser):
     return max_id
 
 
-def get_ip(node):
-    try:
-        return socket.gethostbyname(node)
-    except socket.error:
-        return None
-
-
 def get_all_paths():
     p = Parser(utils.read_from_file(conf()))
     return p.all_paths()
@@ -522,66 +515,6 @@ def add_node_ucast(ip_list, node_id=None):
         p.set('quorum.two_node', '0')
 
     utils.str2file(p.to_string(), conf())
-
-
-def add_node(addr, name=None):
-    '''
-    Add node to corosync.conf
-    '''
-    coronodes = None
-    nodes = None
-    nodenames = None
-    coronodes = utils.list_corosync_nodes()
-    nodenames = utils.list_corosync_node_names()
-    try:
-        nodes = utils.list_cluster_nodes()
-    except Exception:
-        nodes = []
-    ipaddr = get_ip(addr)
-    if addr in nodenames + coronodes or (ipaddr and ipaddr in coronodes):
-        logger.warning("%s already in corosync.conf" % (addr))
-        return
-    if name and name in nodenames + coronodes:
-        logger.warning("%s already in corosync.conf" % (name))
-        return
-    if addr in nodes:
-        logger.warning("%s already in configuration" % (addr))
-        return
-    if name and name in nodes:
-        logger.warning("%s already in configuration" % (name))
-        return
-
-    p = Parser(utils.read_from_file(conf()))
-
-    node_addr = addr
-    node_id = get_free_nodeid(p)
-    node_name = name
-    node_value = (make_value('nodelist.node.ring0_addr', node_addr) +
-                  make_value('nodelist.node.nodeid', str(node_id)))
-    if node_name:
-        node_value += make_value('nodelist.node.name', node_name)
-
-    p.add('nodelist', make_section('nodelist.node', node_value))
-
-    num_nodes = p.count('nodelist.node')
-    p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
-    if p.get("quorum.device.model") == "net":
-        p.set('quorum.two_node', '0')
-
-    utils.str2file(p.to_string(), conf())
-
-    # update running config (if any)
-    if nodes:
-        utils.ext_cmd(["corosync-cmapctl",
-                       "-s", "nodelist.node.%s.nodeid" % (num_nodes - 1),
-                       "u32", str(node_id)], shell=False)
-        utils.ext_cmd(["corosync-cmapctl",
-                       "-s", "nodelist.node.%s.ring0_addr" % (num_nodes - 1),
-                       "str", node_addr], shell=False)
-        if node_name:
-            utils.ext_cmd(["corosync-cmapctl",
-                           "-s", "nodelist.node.%s.name" % (num_nodes - 1),
-                           "str", node_name], shell=False)
 
 
 def del_node(addr):
