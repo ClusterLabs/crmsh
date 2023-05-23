@@ -1246,33 +1246,6 @@ Corosync is the underlying messaging layer for most HA clusters.
 This level provides commands for editing and managing the corosync
 configuration.
 
-[[cmdhelp_corosync_add-node,Add a corosync node]]
-==== `add-node`
-
-Adds a node to the corosync configuration. This is used with the `udpu`
-type configuration in corosync.
-
-A nodeid for the added node is generated automatically.
-
-Note that this command assumes that only a single ring is used, and
-sets only the address for ring0.
-
-Usage:
-.........
-add-node <addr> [name]
-.........
-
-[[cmdhelp_corosync_del-node,Remove a corosync node]]
-==== `del-node`
-
-Removes a node from the corosync configuration. The argument given is
-the `ring0_addr` address set in the configuration file.
-
-Usage:
-.........
-del-node <addr>
-.........
-
 [[cmdhelp_corosync_diff,Diffs the corosync configuration]]
 ==== `diff`
 
