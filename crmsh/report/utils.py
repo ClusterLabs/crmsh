@@ -638,8 +638,11 @@ class Package:
         _, out, _ = ShellUtils().get_stdout_stderr(cmd)
         return '\n'.join([line for line in out.splitlines() if "no packages found" not in line])
 
-    def pkg_ver_rpm(self) -> str:
-        _, out, _ = ShellUtils().get_stdout_stderr(f"rpm -q {self.packages}")
+    def pkg_ver_rpm(self, format='') -> str:
+        if format == '':
+            _, out, _ = ShellUtils().get_stdout_stderr(f"rpm -q {self.packages}")
+        else:
+            _, out, _ = ShellUtils().get_stdout_stderr(f'rpm -q {self.packages} --queryformat="{format}" ')
         return '\n'.join([line for line in out.splitlines() if "not installed" not in line])
 
     def version(self) -> str:
