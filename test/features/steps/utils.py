@@ -1,9 +1,11 @@
+import concurrent.futures
 import difflib
 import tarfile
 import glob
 import re
 import socket
-from crmsh import utils, bootstrap, parallax, userdir
+from crmsh import utils, userdir
+import behave_agent
 
 
 COLOR_MODE = r'\x1b\[[0-9]+m'
@@ -43,7 +45,6 @@ def _wrap_cmd_non_root(cmd):
     When running command under sudoer, or the current user is not root,
     wrap crm cluster join command with '<user>@', and for the -N option, too
     """
-    user = ""
     sudoer = userdir.get_sudoer()
     current_user = userdir.getuser()
     if sudoer:
@@ -86,23 +87,32 @@ def run_command(context, cmd, exit_on_fail=True):
 def run_command_local_or_remote(context, cmd, addr, exit_on_fail=True):
     if addr == me():
         return run_command(context, cmd, exit_on_fail)
+    cmd = _wrap_cmd_non_root(cmd)
+    sudoer = userdir.get_sudoer()
+    if sudoer is None:
+        user = None
     else:
-        cmd = _wrap_cmd_non_root(cmd)
-        try:
-            results = parallax.parallax_call(addr.split(','), cmd)
-        except ValueError as err:
-            err = re.sub(COLOR_MODE, '', str(err))
+        user = sudoer
+        cmd = f'sudo {cmd}'
+    hosts = addr.split(',')
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(hosts)) as executor:
+        results = list(executor.map(lambda x: (x, behave_agent.call(x, 1122, cmd, user=user)), hosts))
+    out = utils.to_ascii(results[0][1][1])
+    err = utils.to_ascii(results[0][1][2])
+    context.stdout = out
+    context.stderr = err
+    context.return_code = 0
+    for i, (rc, stdout, stderr) in results:
+        if rc != 0:
+            err = re.sub(COLOR_MODE, '', utils.to_ascii(stderr))
             context.stderr = err
             if exit_on_fail:
-                context.logger.error("\n{}\n".format(err))
-                context.failed = True
-        else:
-            out = utils.to_ascii(results[0][1][1])
-            err = utils.to_ascii(results[0][1][2])
-            context.stdout = out
-            context.stderr = err
-            context.return_code = 0
-            return 0, out, err
+                import os
+                context.logger.error("Failed to run %s on %s@%s :%s", cmd, os.geteuid(), hosts[i], err)
+                raise ValueError("{}".format(err))
+            else:
+                return
+    return 0, out, err
 
 
 def check_service_state(context, service_name, state, addr):
