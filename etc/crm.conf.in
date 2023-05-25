@@ -118,3 +118,14 @@ ocf_root = @OCF_ROOT_DIR@
 ; example 1, and all clear text ip addresses like in example 2 above.
 ;
 ; sanitize_rule = passw.*
+
+[trento]
+web_url = http://127.0.0.1:4000
+wanda_url = http://127.0.0.1:4001
+; the crm.conf is 644 root:root, so it's ok storing the key here
+wanda_key = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ0cmVudG8tcHJvamVjdCIsImV4cCI6MTc4NTc4NzkwNiwiaWF0IjoxNjg1Nzg3OTA3LCJpc3MiOiJodHRwczovL2dpdGh1Yi5jb20vdHJlbnRvLXByb2plY3Qvd2ViIiwianRpIjoiMnRpaHVhcnF2Z2l2NmxzcTVvMDAwdXZoIiwibmJmIjoxNjg1Nzg3OTA3LCJzdWIiOjEsInR5cCI6IkJlYXJlciJ9.WdMyzOykE5nmBQxwY5z69vO2G4k6Nuunzjws53zsBWM
+; if there is no key, the crm will use the login+pass
+wanda_username = admin
+wanda_password = adminpassword
+provider = kvm
+restapi_timeout = 10

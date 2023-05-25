@@ -300,7 +300,16 @@ DEFAULTS = {
         'single_node': opt_boolean('no'),
         'sanitize_rule': opt_string('passw.*'),
         'verbosity': opt_string('0')
-    }
+    },
+    'trento': {
+        'web_url': opt_string('http://127.0.0.1:4000'),
+        'wanda_url': opt_string('http://127.0.0.1:4001'),
+        'wanda_key': opt_string(''),
+        'wanda_username': opt_string('admin'),
+        'wanda_password': opt_string('adminpassword'),
+        'provider': opt_string('kvm'),
+        'restapi_timeout': opt_string('10'),
+    },
 }
 
 _parser = None
@@ -375,7 +384,7 @@ class _Configuration(object):
         return DEFAULTS[section][name].get(self.get_impl(section, name))
 
     def set(self, section, name, value):
-        if section not in ('core', 'path', 'color', 'report'):
+        if section not in ('core', 'path', 'color', 'report', 'trento'):
             raise ValueError("Setting invalid section " + str(section))
         if not self._defaults.has_option(section, name):
             raise ValueError("Setting invalid option %s.%s" % (section, name))
@@ -497,6 +506,7 @@ core = _Section('core')
 path = _Section('path')
 color = _Section('color')
 report = _Section('report')
+trento = _Section('trento')
 
 
 def load_version():
