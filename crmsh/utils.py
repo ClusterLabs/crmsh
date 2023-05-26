@@ -194,19 +194,8 @@ class UserOfHost:
         if rc == 0:
             user = userdir.getuser()
             return user, user
-        sudoer = userdir.get_sudoer()
-        if sudoer is None:
+        else:
             return None
-        result = su_subprocess_run(
-            sudoer,
-            'ssh {} -o BatchMode=yes {}@{} sudo true'.format(constants.SSH_OPTION, sudoer, host),
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if result.returncode == 0:
-            return sudoer, sudoer
-        return None
 
 
 
