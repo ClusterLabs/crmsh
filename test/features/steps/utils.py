@@ -167,3 +167,10 @@ def assert_eq(expected, actual):
             except Exception:
                 pass
         raise AssertionError(msg)
+
+def assert_in(expected, actual):
+    if expected not in actual:
+        msg = "\033[32m" "Expected" "\033[31m" " not in Actual" "\033[0m" "\n" \
+              "\033[32m" "Expected:" "\033[0m" " {}\n" \
+              "\033[31m" "Actual:" "\033[0m" " {}".format(expected, actual)
+        raise AssertionError(msg)

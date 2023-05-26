@@ -11,7 +11,7 @@ from crmsh import corosync, sbd, userdir, bootstrap
 from crmsh import utils as crmutils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
-                  assert_eq, is_unclean
+                  assert_eq, is_unclean, assert_in
 import const
 
 
@@ -141,13 +141,13 @@ def step_impl(context):
 
 @then('Expected "{msg}" in stdout')
 def step_impl(context, msg):
-    assert msg in context.stdout
+    assert_in(msg, context.stdout)
     context.stdout = None
 
 
 @then('Expected "{msg}" in stderr')
 def step_impl(context, msg):
-    assert msg in context.stderr
+    assert_in(msg, context.stderr)
     context.stderr = None
 
 
@@ -177,25 +177,25 @@ def step_impl(context, msg):
 
 @then('Except "{msg}"')
 def step_impl(context, msg):
-    assert msg in context.stderr
+    assert_in(msg, context.stderr)
     context.stderr = None
 
 
 @then('Except multiple lines')
 def step_impl(context):
-    assert context.text in context.stderr
+    assert_in(context.text, context.stderr)
     context.stderr = None
 
 
 @then('Expected multiple lines in output')
 def step_impl(context):
-    assert context.text in context.stdout
+    assert_in(context.text, context.stdout)
     context.stdout = None
 
 
 @then('Except "{msg}" in stderr')
 def step_impl(context, msg):
-    assert msg in context.stderr
+    assert_in(msg, context.stderr)
     context.stderr = None
 
 
