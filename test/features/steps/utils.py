@@ -119,18 +119,15 @@ def check_service_state(context, service_name, state, addr):
     if state not in ["started", "stopped", "enabled", "disabled"]:
         context.logger.error("\nService state should be \"started/stopped/enabled/disabled\"\n")
         context.failed = True
-
-    state_dict = {"started": True,
-            "stopped": False,
-            "enabled": True,
-            "disabled": False}
-    if state in ["started", "stopped"]:
-        check_func = utils.service_is_active
+    if state in {'enabled', 'disabled'}:
+        rc, _, _ = behave_agent.call(addr, 1122, f'systemctl is-enabled {service_name}', 'root')
+        return (state == 'enabled') == (rc == 0)
+    elif state in {'started', 'stopped'}:
+        rc, _, _ = behave_agent.call(addr, 1122, f'systemctl is-active {service_name}', 'root')
+        return (state == 'started') == (rc == 0)
     else:
-        check_func = utils.service_is_enabled
-
-    remote_addr = None if addr == me() else addr
-    return check_func(service_name, remote_addr) is state_dict[state]
+        context.logger.error("\nService state should be \"started/stopped/enabled/disabled\"\n")
+        raise ValueError("Service state should be \"started/stopped/enabled/disabled\"")
 
 
 def check_cluster_state(context, state, addr):
