@@ -872,7 +872,6 @@ def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typin
         # After this, login to remote_node is passwordless
         public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True))
         hacluster_public_key_list.append(swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_user, add=True))
-        change_user_shell('hacluster', node)
     if len(node_list) > 1:
         shell_script = _merge_authorized_keys(public_key_list)
         hacluster_shell_script = _merge_authorized_keys(hacluster_public_key_list)
@@ -901,6 +900,8 @@ def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typin
         user_by_host.add(user, node)
     user_by_host.add(local_user, utils.this_node())
     user_by_host.save_remote(node_list)
+    for node in node_list:
+        change_user_shell('hacluster', node)
 
 
 def _merge_authorized_keys(keys: typing.List[str]) -> bytes:
@@ -1708,7 +1709,6 @@ def join_ssh_impl(seed_host, seed_user):
     # After this, login to remote_node is passwordless
     swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
     configure_ssh_key('hacluster')
-    change_user_shell('hacluster', seed_host)
     swap_public_ssh_key(seed_host, 'hacluster', 'hacluster', local_user, seed_user, add=True)
 
     # This makes sure the seed host has its own SSH keys in its own
@@ -1726,6 +1726,8 @@ def join_ssh_impl(seed_host, seed_user):
         user_by_host.add(user, node)
     user_by_host.add(local_user, utils.this_node())
     user_by_host.save_local()
+
+    change_user_shell('hacluster', seed_host)
 
 
 def swap_public_ssh_key(
