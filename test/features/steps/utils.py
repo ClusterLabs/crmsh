@@ -53,16 +53,16 @@ def _wrap_cmd_non_root(cmd):
         user = current_user
     else:
         return cmd
-    if "cluster join" in cmd and "@" not in cmd:
-        return re.sub("-c *[\'\"]?([^\s]\S+)[\'\"]?", f"-c {user}@\\1", cmd)
-    elif "cluster init" in cmd and "-N" in cmd and "@" not in cmd:
-        return re.sub("-N *[\'\"]?([^\s]\S+)[\'\"]?", f"-N {user}@\\1", cmd)
+    if re.search('cluster (:?join|geo_join|geo_init_arbitrator)', cmd) and "@" not in cmd:
+        cmd = re.sub(r'''((?:-c|-N|--qnetd-hostname|--cluster-node)(?:\s+|=)['"]?)(\S{2,}['"]?)''', f'\\1{user}@\\2', cmd)
+    elif "cluster init" in cmd and ("-N" in cmd or "--qnetd-hostname" in cmd) and "@" not in cmd:
+        cmd = re.sub(r'''((?:-c|-N|--qnetd-hostname|--cluster-node)(?:\s+|=)['"]?)(\S{2,}['"]?)''', f'\\1{user}@\\2', cmd)
     elif "cluster init" in cmd and "--node" in cmd and "@" not in cmd:
         search_patt = r"--node [\'\"](.*)[\'\"]"
         res = re.search(search_patt, cmd)
         if res:
             node_str = ' '.join([f"{user}@{n}" for n in res.group(1).split()])
-            return re.sub(search_patt, f"--node '{node_str}'", cmd)
+            cmd = re.sub(search_patt, f"--node '{node_str}'", cmd)
     return cmd
 
 
@@ -102,13 +102,13 @@ def run_command_local_or_remote(context, cmd, addr, exit_on_fail=True):
     context.stdout = out
     context.stderr = err
     context.return_code = 0
-    for i, (rc, stdout, stderr) in results:
+    for host, (rc, stdout, stderr) in results:
         if rc != 0:
             err = re.sub(COLOR_MODE, '', utils.to_ascii(stderr))
             context.stderr = err
             if exit_on_fail:
                 import os
-                context.logger.error("Failed to run %s on %s@%s :%s", cmd, os.geteuid(), hosts[i], err)
+                context.logger.error("Failed to run %s on %s@%s :%s", cmd, os.geteuid(), host, err)
                 raise ValueError("{}".format(err))
             else:
                 return
