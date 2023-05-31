@@ -2747,6 +2747,7 @@ def geo_fetch_config(node):
             except utils.UserOfHost.UserNotFoundError:
                 local_user = userdir.getuser()
             remote_user = local_user
+    configure_ssh_key(local_user)
     logger.info("Retrieving configuration - This may prompt for %s@%s:", remote_user, node)
     utils.ssh_copy_id(local_user, remote_user, node)
     cmd = "tar -c -C '{}' .".format(BOOTH_DIR)
