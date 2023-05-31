@@ -2738,7 +2738,7 @@ def geo_fetch_config(node):
         try:
             local_user = utils.user_of(utils.this_node())
         except utils.UserOfHost.UserNotFoundError:
-            local_user = userdir.getuser()
+            local_user = user
         remote_user = user
     else:
         try:
@@ -2752,6 +2752,10 @@ def geo_fetch_config(node):
     configure_ssh_key(local_user)
     logger.info("Retrieving configuration - This may prompt for %s@%s:", remote_user, node)
     utils.ssh_copy_id(local_user, remote_user, node)
+    user_by_host = utils.HostUserConfig()
+    user_by_host.add(local_user, utils.this_node())
+    user_by_host.add(remote_user, node)
+    user_by_host.save_local()
     cmd = "tar -c -C '{}' .".format(BOOTH_DIR)
     with tempfile.TemporaryDirectory() as tmpdir:
         pipe_outlet, pipe_inlet = os.pipe()
