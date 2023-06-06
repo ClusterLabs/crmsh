@@ -142,24 +142,6 @@ class Corosync(command.UI):
             context.fatal_error("No corosync log file configured")
         utils.page_file(logfile)
 
-    @command.name('add-node')
-    @command.alias('add_node')
-    @command.skill_level('administrator')
-    def do_addnode(self, context, addr, name=None):
-        "Add a node to the corosync nodelist"
-        corosync.add_node(addr, name)
-
-    @command.name('del-node')
-    @command.alias('del_node')
-    @command.skill_level('administrator')
-    @command.completers(_push_completer)
-    def do_delnode(self, context, name):
-        "Remove a node from the corosync nodelist"
-        transport = corosync.get_value('totem.transport')
-        if not transport or transport != "udpu":
-            context.fatal_error("Only support udpu transport now")
-        corosync.del_node(name)
-
     @command.skill_level('administrator')
     @command.completers(completers.call(corosync.get_all_paths))
     def do_get(self, context, path):
