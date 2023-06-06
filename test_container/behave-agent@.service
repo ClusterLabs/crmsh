@@ -1,0 +1,9 @@
+[Unit]
+Description=behave test agent
+CollectMode=inactive-or-failed
+
+[Service]
+ExecStart=/opt/behave_agent.py
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal

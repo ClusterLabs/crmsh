@@ -1,9 +1,11 @@
+import concurrent.futures
 import difflib
 import tarfile
 import glob
 import re
 import socket
-from crmsh import utils, bootstrap, parallax, userdir
+from crmsh import utils, userdir
+import behave_agent
 
 
 COLOR_MODE = r'\x1b\[[0-9]+m'
@@ -43,7 +45,6 @@ def _wrap_cmd_non_root(cmd):
     When running command under sudoer, or the current user is not root,
     wrap crm cluster join command with '<user>@', and for the -N option, too
     """
-    user = ""
     sudoer = userdir.get_sudoer()
     current_user = userdir.getuser()
     if sudoer:
@@ -52,16 +53,16 @@ def _wrap_cmd_non_root(cmd):
         user = current_user
     else:
         return cmd
-    if "cluster join" in cmd and "@" not in cmd:
-        return re.sub("-c *[\'\"]?([^\s]\S+)[\'\"]?", f"-c {user}@\\1", cmd)
-    elif "cluster init" in cmd and "-N" in cmd and "@" not in cmd:
-        return re.sub("-N *[\'\"]?([^\s]\S+)[\'\"]?", f"-N {user}@\\1", cmd)
+    if re.search('cluster (:?join|geo_join|geo_init_arbitrator)', cmd) and "@" not in cmd:
+        cmd = re.sub(r'''((?:-c|-N|--qnetd-hostname|--cluster-node)(?:\s+|=)['"]?)(\S{2,}['"]?)''', f'\\1{user}@\\2', cmd)
+    elif "cluster init" in cmd and ("-N" in cmd or "--qnetd-hostname" in cmd) and "@" not in cmd:
+        cmd = re.sub(r'''((?:-c|-N|--qnetd-hostname|--cluster-node)(?:\s+|=)['"]?)(\S{2,}['"]?)''', f'\\1{user}@\\2', cmd)
     elif "cluster init" in cmd and "--node" in cmd and "@" not in cmd:
         search_patt = r"--node [\'\"](.*)[\'\"]"
         res = re.search(search_patt, cmd)
         if res:
             node_str = ' '.join([f"{user}@{n}" for n in res.group(1).split()])
-            return re.sub(search_patt, f"--node '{node_str}'", cmd)
+            cmd = re.sub(search_patt, f"--node '{node_str}'", cmd)
     return cmd
 
 
@@ -86,41 +87,47 @@ def run_command(context, cmd, exit_on_fail=True):
 def run_command_local_or_remote(context, cmd, addr, exit_on_fail=True):
     if addr == me():
         return run_command(context, cmd, exit_on_fail)
+    cmd = _wrap_cmd_non_root(cmd)
+    sudoer = userdir.get_sudoer()
+    if sudoer is None:
+        user = None
     else:
-        cmd = _wrap_cmd_non_root(cmd)
-        try:
-            results = parallax.parallax_call(addr.split(','), cmd)
-        except ValueError as err:
-            err = re.sub(COLOR_MODE, '', str(err))
+        user = sudoer
+        cmd = f'sudo {cmd}'
+    hosts = addr.split(',')
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(hosts)) as executor:
+        results = list(executor.map(lambda x: (x, behave_agent.call(x, 1122, cmd, user=user)), hosts))
+    out = utils.to_ascii(results[0][1][1])
+    err = utils.to_ascii(results[0][1][2])
+    context.stdout = out
+    context.stderr = err
+    context.return_code = 0
+    for host, (rc, stdout, stderr) in results:
+        if rc != 0:
+            err = re.sub(COLOR_MODE, '', utils.to_ascii(stderr))
             context.stderr = err
             if exit_on_fail:
-                context.logger.error("\n{}\n".format(err))
-                context.failed = True
-        else:
-            out = utils.to_ascii(results[0][1][1])
-            err = utils.to_ascii(results[0][1][2])
-            context.stdout = out
-            context.stderr = err
-            context.return_code = 0
-            return 0, out, err
+                import os
+                context.logger.error("Failed to run %s on %s@%s :%s", cmd, os.geteuid(), host, err)
+                raise ValueError("{}".format(err))
+            else:
+                return
+    return 0, out, err
 
 
 def check_service_state(context, service_name, state, addr):
     if state not in ["started", "stopped", "enabled", "disabled"]:
         context.logger.error("\nService state should be \"started/stopped/enabled/disabled\"\n")
         context.failed = True
-
-    state_dict = {"started": True,
-            "stopped": False,
-            "enabled": True,
-            "disabled": False}
-    if state in ["started", "stopped"]:
-        check_func = utils.service_is_active
+    if state in {'enabled', 'disabled'}:
+        rc, _, _ = behave_agent.call(addr, 1122, f'systemctl is-enabled {service_name}', 'root')
+        return (state == 'enabled') == (rc == 0)
+    elif state in {'started', 'stopped'}:
+        rc, _, _ = behave_agent.call(addr, 1122, f'systemctl is-active {service_name}', 'root')
+        return (state == 'started') == (rc == 0)
     else:
-        check_func = utils.service_is_enabled
-
-    remote_addr = None if addr == me() else addr
-    return check_func(service_name, remote_addr) is state_dict[state]
+        context.logger.error("\nService state should be \"started/stopped/enabled/disabled\"\n")
+        raise ValueError("Service state should be \"started/stopped/enabled/disabled\"")
 
 
 def check_cluster_state(context, state, addr):
@@ -159,4 +166,11 @@ def assert_eq(expected, actual):
                 msg = "{}\n" "\033[31m" "Diff:" "\033[0m" "\n{}".format(msg, diff)
             except Exception:
                 pass
+        raise AssertionError(msg)
+
+def assert_in(expected, actual):
+    if expected not in actual:
+        msg = "\033[32m" "Expected" "\033[31m" " not in Actual" "\033[0m" "\n" \
+              "\033[32m" "Expected:" "\033[0m" " {}\n" \
+              "\033[31m" "Actual:" "\033[0m" " {}".format(expected, actual)
         raise AssertionError(msg)
