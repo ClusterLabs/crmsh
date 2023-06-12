@@ -3071,20 +3071,6 @@ def has_stonith_running():
     return has_stonith_device or using_diskless_sbd
 
 
-def parse_append_action_argument(input_list, parse_re="[; ]"):
-    """
-    Parse append action argument into a list, like:
-      -s "/dev/sdb1;/dev/sdb2"
-      -s /dev/sdb1 -s /dev/sbd2
-
-      Both return ["/dev/sdb1", "/dev/sdb2"]
-    """
-    result_list = []
-    for item in input_list:
-        result_list += re_split_string(parse_re, item)
-    return result_list
-
-
 def has_disk_mounted(dev):
     """
     Check if device already mounted

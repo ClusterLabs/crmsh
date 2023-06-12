@@ -226,7 +226,6 @@ class Context(object):
             self.node_list = [self.cluster_node]
             return
 
-        self.node_list = utils.parse_append_action_argument(self.node_list)
         if any('@' in user_node for user_node in self.node_list):
             self.initialize_user(users_of_specified_hosts='specified')
         elif len(self.node_list) == 0:
@@ -256,8 +255,6 @@ class Context(object):
 
         if self.node_list and self.stage:
             utils.fatal("Can't use -N/--nodes option and stage({}) together".format(self.stage))
-        if utils.has_dup_value(self.node_list):
-            utils.fatal("Duplicated input for -N/--nodes option")
         for node in self.node_list:
             utils.ping_node(node)
 
@@ -285,8 +282,6 @@ class Context(object):
         if self.nic_list:
             if len(self.nic_list) > 2:
                 utils.fatal("Maximum number of interface is 2")
-            if utils.has_dup_value(self.nic_list):
-                utils.fatal("Duplicated input for -i/--interface option")
         if self.no_overwrite_sshkey:
             logger.warning("--no-overwrite-sshkey option is deprecated since crmsh does not overwrite ssh keys by default anymore and will be removed in future versions")
         if self.type == "join" and self.watchdog:
