@@ -9,6 +9,8 @@ Feature: crmsh bootstrap sbd management
     Then    Except "ERROR: cluster.init: Maximum number of SBD device is 3"
     When    Try "crm cluster init -s "/dev/sda1;/dev/sdaxxxx" -y"
     Then    Except "ERROR: cluster.init: /dev/sdaxxxx doesn't look like a block device"
+    When    Try "crm cluster init -s "/dev/sda1;/dev/sda1" -y"
+    Then    Except "ERROR: cluster.init: Duplicated input for -s/--sbd-device option"
 
   @clean
   Scenario: Setup sbd with init and join process(bsc#1170999)
