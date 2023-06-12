@@ -385,7 +385,7 @@ class SBDManager(object):
         """
         dev_list = []
         if self.sbd_devices_input:
-            dev_list = utils.parse_append_action_argument(self.sbd_devices_input)
+            dev_list = self.sbd_devices_input
             self._verify_sbd_device(dev_list)
             for dev in dev_list:
                 self.no_overwrite_map[dev] = self._no_overwrite_check(dev)
