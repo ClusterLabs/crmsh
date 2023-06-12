@@ -3164,4 +3164,8 @@ def read_from_file(infile):
     with open(infile, 'rt', encoding='utf-8', errors='replace') as f:
         data = f.read()
     return to_ascii(data)
+
+
+def has_dup_value(_list):
+    return _list and len(_list) != len(set(_list))
 # vim:ts=4:sw=4:et:

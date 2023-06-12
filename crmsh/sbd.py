@@ -325,6 +325,8 @@ class SBDManager(object):
         """
         if len(dev_list) > 3:
             raise ValueError("Maximum number of SBD device is 3")
+        if utils.has_dup_value(dev_list):
+            raise ValueError("Duplicated input for -s/--sbd-device option")
         for dev in dev_list:
             if not utils.is_block_device(dev):
                 raise ValueError("{} doesn't look like a block device".format(dev))
