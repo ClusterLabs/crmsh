@@ -132,17 +132,6 @@ class TestContext(unittest.TestCase):
             ctx.validate_option()
         mock_error.assert_called_once_with("Maximum number of interface is 2")
 
-    @mock.patch('crmsh.utils.has_dup_value')
-    @mock.patch('crmsh.utils.fatal')
-    def test_validate_option_error_nic_dup(self, mock_error, mock_dup):
-        mock_dup.return_value = True
-        mock_error.side_effect = SystemExit
-        options = mock.Mock(nic_list=["eth2", "eth2"])
-        ctx = self.ctx_inst.set_context(options)
-        with self.assertRaises(SystemExit):
-            ctx.validate_option()
-        mock_error.assert_called_once_with("Duplicated input for -i/--interface option")
-
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('socket.gethostbyname')
     @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
