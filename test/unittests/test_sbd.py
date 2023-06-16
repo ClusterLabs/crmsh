@@ -457,12 +457,9 @@ class TestSBDManager(unittest.TestCase):
         mock_compare.assert_called_once_with("/dev/sdb1", [])
 
     @mock.patch('crmsh.sbd.SBDManager._verify_sbd_device')
-    @mock.patch('crmsh.utils.parse_append_action_argument')
-    def test_get_sbd_device_from_option(self, mock_parse, mock_verify):
-        mock_parse.return_value = ["/dev/sdb1", "/dev/sdc1"]
+    def test_get_sbd_device_from_option(self, mock_verify):
         self.sbd_inst._get_sbd_device()
-        mock_parse.assert_called_once_with(mock_parse.return_value)
-        mock_verify.assert_called_once_with(mock_parse.return_value)
+        mock_verify.assert_called_once_with(['/dev/sdb1', '/dev/sdc1'])
 
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device_interactive')
     def test_get_sbd_device_from_interactive(self, mock_interactive):
