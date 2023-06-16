@@ -402,41 +402,19 @@ def test_valid_port():
     assert utils.valid_port(10000000) is False
     assert utils.valid_port(1234) is True
 
-@mock.patch("crmsh.corosync.get_value")
-def test_is_qdevice_configured_false(mock_get_value):
-    mock_get_value.return_value = "ip"
-    assert utils.is_qdevice_configured() is False
-    mock_get_value.assert_called_once_with("quorum.device.model")
-
-@mock.patch("crmsh.corosync.get_value")
-def test_is_qdevice_configured_true(mock_get_value):
-    mock_get_value.return_value = "net"
-    assert utils.is_qdevice_configured() is True
-    mock_get_value.assert_called_once_with("quorum.device.model")
-
-@mock.patch("crmsh.corosync.get_value")
-def test_is_qdevice_tls_on_false(mock_get_value):
-    mock_get_value.return_value = "off"
-    assert utils.is_qdevice_tls_on() is False
-    mock_get_value.assert_called_once_with("quorum.device.net.tls")
-
-@mock.patch("crmsh.corosync.get_value")
-def test_is_qdevice_tls_on_true(mock_get_value):
-    mock_get_value.return_value = "on"
-    assert utils.is_qdevice_tls_on() is True
-    mock_get_value.assert_called_once_with("quorum.device.net.tls")
 
 @mock.patch("crmsh.utils.get_stdout")
 def test_get_nodeinfo_from_cmaptool_return_none(mock_get_stdout):
     mock_get_stdout.return_value = (1, None)
     assert bool(utils.get_nodeinfo_from_cmaptool()) is False
-    mock_get_stdout.assert_called_once_with("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    mock_get_stdout.assert_called_once_with("corosync-cmapctl -b runtime.members")
+
 
 @mock.patch("re.findall")
 @mock.patch("re.search")
 @mock.patch("crmsh.utils.get_stdout")
 def test_get_nodeinfo_from_cmaptool(mock_get_stdout, mock_search, mock_findall):
-    mock_get_stdout.return_value = (0, 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)\nruntime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
+    mock_get_stdout.return_value = (0, 'runtime.members.1.ip (str) = r(0) ip(192.168.43.129)\nruntime.members.2.ip (str) = r(0) ip(192.168.43.128)')
     match_inst1 = mock.Mock()
     match_inst2 = mock.Mock()
     mock_search.side_effect = [match_inst1, match_inst2]
@@ -448,10 +426,10 @@ def test_get_nodeinfo_from_cmaptool(mock_get_stdout, mock_search, mock_findall):
     assert result['1'] == ["192.168.43.129"]
     assert result['2'] == ["192.168.43.128"]
 
-    mock_get_stdout.assert_called_once_with("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    mock_get_stdout.assert_called_once_with("corosync-cmapctl -b runtime.members")
     mock_search.assert_has_calls([
-        mock.call(r'members\.(.*)\.ip', 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)'),
-        mock.call(r'members\.(.*)\.ip', 'runtime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
+        mock.call(r'members\.(.*)\.ip', 'runtime.members.1.ip (str) = r(0) ip(192.168.43.129)'),
+        mock.call(r'members\.(.*)\.ip', 'runtime.members.2.ip (str) = r(0) ip(192.168.43.128)')
     ])
     match_inst1.group.assert_called_once_with(1)
     match_inst2.group.assert_called_once_with(1)
@@ -599,37 +577,6 @@ def test_detect_cloud_gcp(mock_is_program, mock_aws, mock_azure, mock_gcp):
     mock_aws.assert_called_once_with()
     mock_azure.assert_called_once_with()
     mock_gcp.assert_called_once_with()
-
-@mock.patch("crmsh.utils.get_stdout")
-def test_interface_choice(mock_get_stdout):
-    ip_a_output = """
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-    inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
-       valid_lft forever preferred_lft forever
-2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
-    link/ether 52:54:00:9e:1b:4f brd ff:ff:ff:ff:ff:ff
-    inet 192.168.122.241/24 brd 192.168.122.255 scope global enp1s0
-       valid_lft forever preferred_lft forever
-    inet6 fe80::5054:ff:fe9e:1b4f/64 scope link 
-       valid_lft forever preferred_lft forever
-3: br-933fa0e1438c: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
-    link/ether 9e:fe:24:df:59:49 brd ff:ff:ff:ff:ff:ff
-    inet 10.10.10.1/24 brd 10.10.10.255 scope global br-933fa0e1438c
-       valid_lft forever preferred_lft forever
-    inet6 fe80::9cfe:24ff:fedf:5949/64 scope link 
-       valid_lft forever preferred_lft forever
-4: veth3fff6e9@if7: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
-    link/ether 1e:2c:b3:73:6b:42 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-    inet6 fe80::1c2c:b3ff:fe73:6b42/64 scope link 
-       valid_lft forever preferred_lft forever
-       valid_lft forever preferred_lft forever
-"""
-    mock_get_stdout.return_value = (0, ip_a_output)
-    assert utils.interface_choice() == ["enp1s0", "br-933fa0e1438c", "veth3fff6e9"]
-    mock_get_stdout.assert_called_once_with("ip a")
 
 
 class TestIP(unittest.TestCase):
@@ -927,28 +874,6 @@ class TestInterfacesInfo(unittest.TestCase):
         self.assertEqual(res, ["eth8"])
 
         mock_run.assert_called_once_with("ip -o route show")
-
-    @mock.patch('crmsh.utils.InterfacesInfo.nic_list', new_callable=mock.PropertyMock)
-    def test_get_default_ip_list_failed_detect(self, mock_nic_list):
-        mock_nic_list.side_effect = [["eth0", "eth1"], ["eth0", "eth1"]]
-
-        with self.assertRaises(ValueError) as err:
-            self.interfaces_info_with_wrong_nic.get_default_ip_list()
-        self.assertEqual("Failed to detect IP address for eth7", str(err.exception))
-
-        mock_nic_list.assert_has_calls([mock.call(), mock.call()])
-
-    @mock.patch('crmsh.utils.InterfacesInfo._nic_first_ip')
-    @mock.patch('crmsh.utils.InterfacesInfo.nic_list', new_callable=mock.PropertyMock)
-    def test_get_default_ip_list(self, mock_nic_list, mock_first_ip):
-        mock_nic_list.side_effect = [["eth0", "eth1"], ["eth0", "eth1"], ["eth0", "eth1"]]
-        mock_first_ip.side_effect = ["10.10.10.1", "20.20.20.1"]
-
-        res = self.interfaces_info_with_custom_nic.get_default_ip_list()
-        self.assertEqual(res, ["10.10.10.1", "20.20.20.1"])
-
-        mock_nic_list.assert_has_calls([mock.call(), mock.call(), mock.call()])
-        mock_first_ip.assert_has_calls([mock.call("eth1"), mock.call("eth0")])
 
     @mock.patch('crmsh.utils.Interface')
     @mock.patch('crmsh.utils.InterfacesInfo.interface_list', new_callable=mock.PropertyMock)
@@ -1741,7 +1666,7 @@ def test_check_no_quorum_policy_with_dlm(mock_dlm, mock_get_property, mock_warn)
     mock_warn.assert_called_once_with('The DLM cluster best practice suggests to set the cluster property "no-quorum-policy=freeze"')
 
 
-@mock.patch('crmsh.utils.is_qdevice_configured')
+@mock.patch('crmsh.corosync.is_qdevice_configured')
 @mock.patch('crmsh.utils.list_cluster_nodes')
 def test_is_2node_cluster_without_qdevice(mock_list, mock_is_qdevice):
     mock_list.return_value = ["node1", "node2"]
