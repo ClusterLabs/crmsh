@@ -40,7 +40,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         Init function
         """
-        self.ocfs2_devices = utils.parse_append_action_argument(context.ocfs2_devices)
+        self.ocfs2_devices = context.ocfs2_devices
         self.use_cluster_lvm2 = context.use_cluster_lvm2
         self.mount_point = context.mount_point
         self.use_stage = context.stage == "ocfs2"
@@ -72,8 +72,6 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
             raise ValueError("Without Cluster LVM2 (-C option), -o option only support one device")
         if self.use_cluster_lvm2 and not self.ocfs2_devices:
             raise ValueError("-C option only valid together with -o option")
-        if len(self.ocfs2_devices) != len(set(self.ocfs2_devices)):
-            raise ValueError("Duplicated inputs for -o option")
         if self.mount_point and utils.has_mount_point_used(self.mount_point):
             raise ValueError("Mount point {} already mounted".format(self.mount_point))
 

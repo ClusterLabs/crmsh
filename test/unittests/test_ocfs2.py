@@ -87,11 +87,6 @@ class TestOCFS2Manager(unittest.TestCase):
             self.ocfs2_inst4._verify_options()
         self.assertEqual("-C option only valid together with -o option", str(err.exception))
 
-    def test_verify_options_dup(self):
-        with self.assertRaises(ValueError) as err:
-            self.ocfs2_inst5._verify_options()
-        self.assertEqual("Duplicated inputs for -o option", str(err.exception))
-
     @mock.patch('crmsh.utils.has_mount_point_used')
     def test_verify_options_mount(self, mock_mount):
         mock_mount.return_value = True

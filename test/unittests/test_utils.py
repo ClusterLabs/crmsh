@@ -1495,13 +1495,6 @@ def test_has_disk_mounted(mock_run):
     mock_run.assert_called_once_with("mount")
 
 
-def test_parse_append_action_argument():
-    res = utils.parse_append_action_argument(["/dev/sda1", "/dev/sda2 "])
-    assert res == ["/dev/sda1", "/dev/sda2"]
-    res = utils.parse_append_action_argument(["/dev/sda1 ; /dev/sda2"])
-    assert res == ["/dev/sda1", "/dev/sda2"]
-
-
 @mock.patch('crmsh.sbd.SBDManager.is_using_diskless_sbd')
 @mock.patch('crmsh.utils.get_stdout_or_raise_error')
 def test_has_stonith_running(mock_run, mock_diskless):

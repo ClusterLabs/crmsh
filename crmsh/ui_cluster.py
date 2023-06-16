@@ -4,7 +4,7 @@
 
 import sys
 import re
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from argparse import ArgumentParser, RawDescriptionHelpFormatter, Action
 
 import crmsh.parallax
 from . import command
@@ -66,6 +66,20 @@ def get_cluster_name():
     else:
         cluster_name = cib_factory.get_property('cluster-name')
     return cluster_name
+
+
+class CustomAppendAction(Action):
+    """
+    Custom class for argparse append action:
+    - Flatten the value like '-s "/dev/sda1;/dev/sda2"'
+    - Detect duplicated input
+    """
+    def __call__(self, parser, namespace, value, option_string=None):
+        items = getattr(namespace, self.dest, [])
+        items.extend([x for x in re.split("[; ]", value) if x])
+        if utils.has_dup_value(items):
+            parser.error(f"Duplicated input for '{'/'.join(self.option_strings)}' option")
+        setattr(namespace, self.dest, items)
 
 
 class Cluster(command.UI):
@@ -292,7 +306,7 @@ Examples:
                             help='Answer "yes" to all prompts (use with caution, this is destructive, especially those storage related configurations and stages.)')
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
-        parser.add_argument("-N", "--node", metavar="NODENAME", dest="node_list", action="append", default=[],
+        parser.add_argument("-N", "--node", metavar="NODENAME", dest="node_list", action=CustomAppendAction, default=[],
                             help='The member node of the cluster. Note: the current node is always get initialized during bootstrap in the beginning.')
         parser.add_argument("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
                             help="Enable SBD even if no SBD device is configured (diskless mode)")
@@ -304,7 +318,7 @@ Examples:
                             help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default; Deprecated)')
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
-        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(), default=[],
+        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action=CustomAppendAction, choices=utils.interface_choice(), default=[],
                                    help="Bind to IP address on interface IF. Use -i second time for second interface")
         network_group.add_argument("-u", "--unicast", action="store_true", dest="unicast",
                                    help="Configure corosync to communicate over unicast(udpu). This is the default transport type")
@@ -334,9 +348,9 @@ Examples:
                                    help="MODE of operation of heuristics (on/sync/off, default:sync)")
 
         storage_group = parser.add_argument_group("Storage configuration", "Options for configuring shared storage.")
-        storage_group.add_argument("-s", "--sbd-device", dest="sbd_devices", metavar="DEVICE", action="append", default=[],
+        storage_group.add_argument("-s", "--sbd-device", dest="sbd_devices", metavar="DEVICE", action=CustomAppendAction, default=[],
                                    help="Block device to use for SBD fencing, use \";\" as separator or -s multiple times for multi path (up to 3 devices)")
-        storage_group.add_argument("-o", "--ocfs2-device", dest="ocfs2_devices", metavar="DEVICE", action="append", default=[],
+        storage_group.add_argument("-o", "--ocfs2-device", dest="ocfs2_devices", metavar="DEVICE", action=CustomAppendAction, default=[],
                 help="Block device to use for OCFS2; When using Cluster LVM2 to manage the shared storage, user can specify one or multiple raw disks, use \";\" as separator or -o multiple times for multi path (must specify -C option) NOTE: this is a Technical Preview")
         storage_group.add_argument("-C", "--cluster-lvm2", action="store_true", dest="use_cluster_lvm2",
                 help="Use Cluster LVM2 (only valid together with -o option) NOTE: this is a Technical Preview")
@@ -418,7 +432,7 @@ Examples:
             "-c", "--cluster-node", dest="cluster_node", metavar="[USER@]HOST",
             help="User and host to login to an existing cluster node. The host can be specified with either a hostname or an IP.",
         )
-        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action="append", choices=utils.interface_choice(), default=[],
+        network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action=CustomAppendAction, choices=utils.interface_choice(), default=[],
                 help="Bind to IP address on interface IF. Use -i second time for second interface")
         options, args = parse_options(parser, args)
         if options is None or args is None:
