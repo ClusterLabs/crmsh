@@ -3,6 +3,7 @@
 # See COPYING for license information.
 
 import re
+import copy
 import subprocess
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
@@ -375,6 +376,24 @@ class NodeMgmt(command.UI):
             xml_query_path_oppsite = constants.XML_NODE_QUERY_STANDBY_PATH
 
         cib = xmlutil.cibdump2elem()
+        # IMPORTANT:
+        # Do NOT call cibdump2elem twice, or you risk a race where the
+        # resulting diff will contain more changes than the values for
+        # "standby", potentially rolling back the effect of other operations.
+        # Really use the same xml as "original" and basis for the changes.
+        # Thus the "deepcopy" here.
+        #
+        # Possible optimization: instead of deepcopy here and xml_tostring
+        # below and str2tmp in diff_and_patch you probably want to change
+        # diff_and_patch to accept a file (as well), then
+        # from . import tmpfiles
+        # orig_cib_tmpfile = xmlutil.cibdump2tmp()
+        # tmpfiles.add(orig_cib_tmpfile)
+        # cib = xmlutil.file2cib_elem(orig_cib_tmpfile)
+        # ...
+        # diff_and_patch(orig_file=orig_cib_tmpfile, new_str=xmlutil.xml_tostring(cib))
+        orig_cib = copy.deepcopy(cib)
+
         xml_item_list = cib.xpath(xml_path)
         for xml_item in xml_item_list:
             if xml_item.get("uname") in node_list:
@@ -396,7 +415,6 @@ class NodeMgmt(command.UI):
                 res_item = xmlutil.get_set_nodes(interface_item, "instance_attributes", create=True)
                 xmlutil.set_attr(res_item[0], "standby", "on")
 
-        orig_cib = xmlutil.cibdump2elem()
         rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
         if not rc:
             return False
@@ -416,6 +434,10 @@ class NodeMgmt(command.UI):
             return
 
         cib = xmlutil.cibdump2elem()
+        # IMPORTANT: Do NOT call cibdump2elem twice, or you risk a race.
+        # Really use the same xml as "original" and basis for the changes.
+        # Thus the "deepcopy" here; see also do_standby().
+        orig_cib = copy.deepcopy(cib)
         for node in node_list:
             node_id = utils.get_nodeid_from_name(node)
             for query_path in [constants.XML_NODE_QUERY_STANDBY_PATH, constants.XML_STATUS_QUERY_STANDBY_PATH]:
@@ -423,7 +445,6 @@ class NodeMgmt(command.UI):
                 if item and item[0].get("value") != "off":
                     item[0].set("value", "off")
 
-        orig_cib = xmlutil.cibdump2elem()
         rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
         if not rc:
             return False
