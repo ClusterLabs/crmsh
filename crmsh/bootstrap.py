@@ -1878,6 +1878,9 @@ def join_cluster(seed_host, remote_user):
     init_network()
 
     link_number = corosync.get_link_number()
+    join_link_number = len(_context.default_ip_list)
+    if link_number != join_link_number:
+        utils.fatal(f"knet transport of all cluster nodes need {link_number} links via '-i' options, but provided {join_link_number}")
 
     detect_mountpoint(seed_host)
 
