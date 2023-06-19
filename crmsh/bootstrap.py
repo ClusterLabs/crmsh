@@ -1841,23 +1841,7 @@ def sync_files_to_disk():
         utils.cluster_run_cmd("sync {}".format(files_string.strip()))
 
 
-def join_cluster(seed_host, remote_user):
-    """
-    Cluster configuration for joining node.
-    """
-    is_qdevice_configured = corosync.is_qdevice_configured()
-    if is_qdevice_configured and not utils.service_is_available("corosync-qdevice.service"):
-        utils.fatal("corosync-qdevice.service is not available")
-
-    shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
-
-    # check if use IPv6
-    _context.ipv6 = corosync.is_using_ipv6()
-
-    init_network()
-
-    link_number = corosync.get_link_number()
-
+def detect_mountpoint(seed_host: str) -> None:
     # It would be massively useful at this point if new nodes could come
     # up in standby mode, so we could query the CIB locally to see if
     # there was any further local setup that needed doing, e.g.: creating
@@ -1876,6 +1860,26 @@ def join_cluster(seed_host, remote_user):
                 invoke("mkdir -p {}".format(m))
     else:
         logger.info("No existing IP/hostname specified - skipping mountpoint detection/creation")
+
+
+def join_cluster(seed_host, remote_user):
+    """
+    Cluster configuration for joining node.
+    """
+    is_qdevice_configured = corosync.is_qdevice_configured()
+    if is_qdevice_configured and not utils.service_is_available("corosync-qdevice.service"):
+        utils.fatal("corosync-qdevice.service is not available")
+
+    shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
+
+    # check if use IPv6
+    _context.ipv6 = corosync.is_using_ipv6()
+
+    init_network()
+
+    link_number = corosync.get_link_number()
+
+    detect_mountpoint(seed_host)
 
     # If corosync.conf() doesn't exist or is empty, we will fail here. (bsc#943227)
     if not os.path.exists(corosync.conf()):
