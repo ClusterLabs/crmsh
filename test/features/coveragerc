@@ -1,0 +1,4 @@
+[run]
+data_file = /.coverage
+parallel = True
+source_pkgs = crmsh
