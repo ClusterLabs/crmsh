@@ -148,8 +148,10 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
         remote_nodes.remove(local_node)
         remote_nodes = list(remote_nodes)
         local_user = crmsh.utils.user_pair_for_ssh(remote_nodes[0])[0]
-        remote_users = [crmsh.utils.user_pair_for_ssh(node)[1] for node in remote_nodes]
-        crmsh.bootstrap.init_ssh_impl(local_user, remote_nodes, remote_users)
+        crmsh.bootstrap.init_ssh_impl(
+            local_user,
+            [(crmsh.utils.user_pair_for_ssh(node)[1], node) for node in remote_nodes],
+        )
 
 
 def main_check_local(args) -> int:
