@@ -4,7 +4,9 @@
 
 import sys
 import re
-from argparse import ArgumentParser, RawDescriptionHelpFormatter, Action
+import argparse
+import typing
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
 from . import command
@@ -68,18 +70,75 @@ def get_cluster_name():
     return cluster_name
 
 
-class CustomAppendAction(Action):
+class ArgparseCustomizableAction(argparse.Action):
+    def __call__(self, parser, namespace, value, option_string=None):
+        previous_value = getattr(namespace, self.dest, None)
+        parsed_value = self.parse(parser, previous_value, value, option_string=None)
+        self.validate(parser, parsed_value, option_string)
+        setattr(namespace, self.dest, parsed_value)
+
+    def parse(self, parser, previous_value, raw_value, option_string):
+        """Parse one argument and return the parsed value.
+
+        Arguments:
+            previous_value: The previous value hold in the destinating attribute.
+            raw_value: The string value to be parse.
+            option_string: The command-line option string associated with this action.
+        """
+        raise NotImplementedError
+
+    def validate(self, parser, parsed_value, option_string):
+        pass
+
+
+class ArgparseActionSplitAndAppendParseMixin(ArgparseCustomizableAction):
+    """Parse `--foo a;b --foo "c d" --foo e` into ['a', 'b', 'c', 'd', 'e']"""
+    def parse(self, parser, previous_value, raw_value, option_string):
+        items = previous_value if previous_value is not None else []
+        items.extend([x for x in re.split("[; ]", raw_value) if x])
+        return items
+
+
+class ArgparseActionUniqueListItemValidateMixin(ArgparseCustomizableAction):
+    """Validate te uniqueness of parsed list items."""
+    def validate(self, parser, parsed_value, option_string):
+        if len(parsed_value) != len(set(parsed_value)):
+            parser.error(f"Duplicated input for '{'/'.join(self.option_strings)}' option")
+
+
+class CustomAppendAction(ArgparseActionSplitAndAppendParseMixin, ArgparseActionUniqueListItemValidateMixin):
     """
     Custom class for argparse append action:
     - Flatten the value like '-s "/dev/sda1;/dev/sda2"'
     - Detect duplicated input
     """
-    def __call__(self, parser, namespace, value, option_string=None):
-        items = getattr(namespace, self.dest, [])
-        items.extend([x for x in re.split("[; ]", value) if x])
-        if utils.has_dup_value(items):
-            parser.error(f"Duplicated input for '{'/'.join(self.option_strings)}' option")
-        setattr(namespace, self.dest, items)
+    pass
+
+
+class ArgparseActionUniqueHostInListItemValidateMixin(ArgparseCustomizableAction):
+    """Validate the uniqueness of hosts in a parsed list in the format of 'user@host'"""
+    def validate(self, parser, parsed_value, option_string):
+        known_hosts = set()
+        for item in parsed_value:
+            match = re.match("^(?:[^@]+@)?([^@]+)$", item)
+            if match is None:
+                parser.error("Malformed value for option {} [<user>@]<host>: {}.".format(
+                    '/'.join(self.option_strings), parsed_value
+                ))
+            host = match.group(1)
+            if host in known_hosts:
+                parser.error("Duplicated host in option {}: {}".format(
+                    '/'.join(self.option_strings), parsed_value
+                ))
+            known_hosts.add(host)
+
+
+class ArgparseUserAtHostAppendAction(
+    ArgparseActionSplitAndAppendParseMixin,
+    ArgparseActionUniqueHostInListItemValidateMixin,
+):
+    pass
+
 
 
 class Cluster(command.UI):
@@ -306,7 +365,7 @@ Examples:
                             help='Answer "yes" to all prompts (use with caution, this is destructive, especially those storage related configurations and stages.)')
         parser.add_argument("-n", "--name", metavar="NAME", dest="cluster_name", default="hacluster",
                             help='Set the name of the configured cluster.')
-        parser.add_argument("-N", "--node", metavar="NODENAME", dest="node_list", action=CustomAppendAction, default=[],
+        parser.add_argument("-N", "--node", metavar="[USER@]HOST", dest="user_at_node_list", action=ArgparseUserAtHostAppendAction, default=[],
                             help='The member node of the cluster. Note: the current node is always get initialized during bootstrap in the beginning.')
         parser.add_argument("-S", "--enable-sbd", dest="diskless_sbd", action="store_true",
                             help="Enable SBD even if no SBD device is configured (diskless mode)")
@@ -429,7 +488,7 @@ Examples:
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument(
-            "-c", "--cluster-node", dest="cluster_node", metavar="[USER@]HOST",
+            "-c", "--cluster-node", metavar="[USER@]HOST", dest="cluster_node",
             help="User and host to login to an existing cluster node. The host can be specified with either a hostname or an IP.",
         )
         network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action=CustomAppendAction, choices=utils.interface_choice(), default=[],
@@ -572,7 +631,10 @@ Cluster Description
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_argument("-a", "--arbitrator", help="IP address of geo cluster arbitrator", dest="arbitrator", metavar="IP")
+        parser.add_argument(
+            "-a", "--arbitrator", dest="arbitrator", metavar="[USER@]HOST",
+            help="Geo cluster arbitrator",
+        )
         parser.add_argument("-s", "--clusters", help="Geo cluster description (see details below)", dest="clusters", metavar="DESC")
         parser.add_argument("-t", "--tickets", help="Tickets to create (space-separated)", dest="tickets", metavar="LIST")
         options, args = parse_options(parser, args)
@@ -624,7 +686,7 @@ an existing cluster.""",
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_argument("-c", "--cluster-node", help="IP address of an already-configured geo cluster or arbitrator", dest="cluster_node", metavar="IP")
+        parser.add_argument("-c", "--cluster-node", metavar="[USER@]HOST", help="An already-configured geo cluster or arbitrator", dest="cluster_node")
         parser.add_argument("-s", "--clusters", help="Geo cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
         options, args = parse_options(parser, args)
         if options is None or args is None:
@@ -662,7 +724,7 @@ to get the geo cluster configuration.""",
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_argument("-c", "--cluster-node", help="IP address of an already-configured geo cluster", dest="cluster_node", metavar="IP")
+        parser.add_argument("-c", "--cluster-node", metavar="[USER@]HOST", help="An already-configured geo cluster", dest="cluster_node")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
