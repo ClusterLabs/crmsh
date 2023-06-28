@@ -69,7 +69,7 @@ optional arguments:
                         destructive, especially those storage related
                         configurations and stages.)
   -n NAME, --name NAME  Set the name of the configured cluster.
-  -N NODENAME, --node NODENAME
+  -N [USER@]HOST, --node [USER@]HOST
                         The member node of the cluster. Note: the current node
                         is always get initialized during bootstrap in the
                         beginning.
@@ -285,8 +285,8 @@ optional arguments:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
-  -a IP, --arbitrator IP
-                        IP address of geo cluster arbitrator
+  -a [USER@]HOST, --arbitrator [USER@]HOST
+                        Geo cluster arbitrator
   -s DESC, --clusters DESC
                         Geo cluster description (see details below)
   -t LIST, --tickets LIST
@@ -325,9 +325,8 @@ optional arguments:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
-  -c IP, --cluster-node IP
-                        IP address of an already-configured geo cluster or
-                        arbitrator
+  -c [USER@]HOST, --cluster-node [USER@]HOST
+                        An already-configured geo cluster or arbitrator
   -s DESC, --clusters DESC
                         Geo cluster description (see geo-init for details)'''
 
@@ -344,5 +343,5 @@ optional arguments:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
-  -c IP, --cluster-node IP
-                        IP address of an already-configured geo cluster'''
+  -c [USER@]HOST, --cluster-node [USER@]HOST
+                        An already-configured geo cluster'''
