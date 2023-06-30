@@ -123,7 +123,9 @@ def upgrade_if_needed():
     if not crmsh.utils.can_ask(background_wait=False):
         return
     nodes = crmsh.utils.list_cluster_nodes(no_reg=True)
-    if nodes and _is_upgrade_needed(nodes) and not crmsh.utils.check_passwordless_between_nodes(nodes):
+    if nodes is not None and len(nodes) > 1 \
+            and _is_upgrade_needed(nodes) \
+            and not crmsh.utils.check_passwordless_between_nodes(nodes):
         logger.debug("upgradeutil: configuration fix needed")
         try:
             if not _is_cluster_target_seq_consistent(nodes):
