@@ -260,6 +260,116 @@ class TestContext(unittest.TestCase):
             mock.call("s390")
             ])
 
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_without_args_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = None
+        context = bootstrap.Context()
+        context.cluster_node = None
+        context.user_at_node_list = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
+
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_without_args_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = 'alice'
+        context = bootstrap.Context()
+        context.cluster_node = None
+        context.user_at_node_list = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
+
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_cluster_node_without_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = None
+        context = bootstrap.Context()
+        context.cluster_node = 'node1'
+        context.user_at_node_list = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
+
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_cluster_node_with_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = None
+        context = bootstrap.Context()
+        context.cluster_node = 'alice@node1'
+        context.user_at_node_list = None
+        with self.assertRaises(ValueError):
+            context.initialize_user()
+
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_cluster_node_without_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = 'bob'
+        context = bootstrap.Context()
+        context.cluster_node = 'node1'
+        context.user_at_node_list = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
+
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_cluster_node_with_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = 'bob'
+        context = bootstrap.Context()
+        context.cluster_node = 'alice@node1'
+        context.user_at_node_list = None
+        context.initialize_user()
+        self.assertEqual('bob', context.current_user)
+
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_node_list_without_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = None
+        context = bootstrap.Context()
+        context.user_at_node_list = ['node1', 'node2']
+        context.cluster_node = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
+
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_node_list_with_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = None
+        context = bootstrap.Context()
+        context.user_at_node_list = ['alice@node1', 'alice@node2']
+        context.cluster_node = None
+        with self.assertRaises(ValueError):
+            context.initialize_user()
+
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_node_list_without_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = 'bob'
+        context = bootstrap.Context()
+        context.user_at_node_list = ['node1', 'node2']
+        context.cluster_node = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
+
+    @mock.patch('crmsh.userdir.get_sudoer')
+    @mock.patch('crmsh.userdir.getuser')
+    def test_initialize_user_node_list_with_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+        mock_getuser.return_value = 'root'
+        mock_get_sudoer.return_value = 'bob'
+        context = bootstrap.Context()
+        context.user_at_node_list = ['alice@node1', 'alice@node2']
+        context.cluster_node = None
+        context.initialize_user()
+        self.assertEqual('bob', context.current_user)
+
 
 class TestBootstrap(unittest.TestCase):
     """
@@ -319,7 +429,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.start_service')
     def test_init_ssh(self, mock_start_service, mock_config_ssh):
-        bootstrap._context = mock.Mock(current_user="alice", node_list=[])
+        bootstrap._context = mock.Mock(current_user="alice", user_at_node_list=[])
         bootstrap.init_ssh()
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
         mock_config_ssh.assert_has_calls([
@@ -435,7 +545,7 @@ class TestBootstrap(unittest.TestCase):
     def test_join_ssh_no_seed_host(self, mock_error):
         mock_error.side_effect = ValueError
         with self.assertRaises(ValueError):
-            bootstrap.join_ssh_impl(None, None)
+            bootstrap.join_ssh(None, None)
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
     @mock.patch('crmsh.bootstrap.change_user_shell')
@@ -450,7 +560,7 @@ class TestBootstrap(unittest.TestCase):
         mock_swap.return_value = None
         mock_ssh_copy_id.return_value = 0
 
-        bootstrap.join_ssh_impl("node1", "alice")
+        bootstrap.join_ssh("node1", "alice")
 
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
         mock_config_ssh.assert_has_calls([
@@ -480,7 +590,7 @@ class TestBootstrap(unittest.TestCase):
         mock_ssh_copy_id.return_value = 255
 
         with self.assertRaises(ValueError):
-            bootstrap.join_ssh_impl("node1", "alice")
+            bootstrap.join_ssh("node1", "alice")
 
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
         mock_config_ssh.assert_has_calls([
@@ -519,7 +629,7 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('crmsh.utils.this_node')
     def test_bootstrap_add_return(self, mock_this_node):
-        ctx = mock.Mock(node_list=[])
+        ctx = mock.Mock(user_at_node_list=[])
         bootstrap.bootstrap_add(ctx)
         mock_this_node.assert_not_called()
 
@@ -527,7 +637,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.this_node')
     def test_bootstrap_add(self, mock_this_node, mock_info, mock_run):
-        ctx = mock.Mock(current_user="alice", user_list=["bob", "carol"], node_list=["node2", "node3"], nic_list=["eth1"])
+        ctx = mock.Mock(current_user="alice", user_at_node_list=["bob@node2", "carol@node3"], nic_list=["eth1"])
         mock_this_node.return_value = "node1"
         bootstrap.bootstrap_add(ctx)
         mock_info.assert_has_calls([
@@ -540,12 +650,12 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.su_get_stdout_stderr')
     def test_setup_passwordless_with_other_nodes_failed_fetch_nodelist(self, mock_run, mock_error):
-        bootstrap._context = mock.Mock(user_list=["alice"], current_user="carol")
+        bootstrap._context = mock.Mock(current_user="carol")
         mock_run.return_value = (1, None, None)
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
-            bootstrap.setup_passwordless_with_other_nodes("node1")
+            bootstrap.setup_passwordless_with_other_nodes("node1", "alice")
 
         mock_run.assert_called_once_with('carol', 'ssh {} alice@node1 sudo crm_node -l'.format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("Can't fetch cluster nodes list from node1: None")
@@ -561,7 +671,7 @@ class TestBootstrap(unittest.TestCase):
             mock_host_user_config_class,
             mock_error,
     ):
-        bootstrap._context = mock.Mock(user_list=["alice"], current_user="carol")
+        bootstrap._context = mock.Mock(current_user="carol")
         out_node_list = """1 node1 member
         2 node2 member"""
         mock_run.side_effect = [
@@ -572,7 +682,7 @@ class TestBootstrap(unittest.TestCase):
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
-            bootstrap.setup_passwordless_with_other_nodes("node1")
+            bootstrap.setup_passwordless_with_other_nodes("node1", "alice")
 
         mock_run.assert_has_calls([
             mock.call('carol', 'ssh {} alice@node1 sudo crm_node -l'.format(constants.SSH_OPTION)),
@@ -609,7 +719,7 @@ class TestBootstrap(unittest.TestCase):
                 (0, "node1", None)
                 ]
 
-        bootstrap.setup_passwordless_with_other_nodes("node1")
+        bootstrap.setup_passwordless_with_other_nodes("node1", "alice")
 
         mock_run.assert_has_calls([
             mock.call('carol', 'ssh {} alice@node1 sudo crm_node -l'.format(constants.SSH_OPTION)),
@@ -664,52 +774,51 @@ class TestBootstrap(unittest.TestCase):
         mock_append.assert_called_once_with("/home/alice/.ssh/id_rsa.pub", "/home/alice/.ssh/authorized_keys")
 
     @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
-    def test_get_cluster_node_hostname(self, mock_run):
-        bootstrap._context = mock.Mock(cluster_node="node1")
+    def test_get_node_canonical_hostname(self, mock_run):
         mock_run.return_value = (0, "Node1", None)
 
-        peer_node = bootstrap.get_cluster_node_hostname()
+        peer_node = bootstrap.get_node_canonical_hostname('node1')
         self.assertEqual('Node1', peer_node)
         mock_run.assert_called_once_with('node1', 'crm_node --name')
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
-    def test_get_cluster_node_hostname_error(self, mock_run, mock_error):
-        bootstrap._context = mock.Mock(cluster_node="node1")
+    def test_get_node_canonical_hostname_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
-            bootstrap.get_cluster_node_hostname()
+            bootstrap.get_node_canonical_hostname('node1')
 
         mock_run.assert_called_once_with("node1", "crm_node --name")
         mock_error.assert_called_once_with("error")
 
     @mock.patch('crmsh.utils.this_node')
-    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
-    def test_is_online_local_offline(self, mock_is_online, mock_get_peer, mock_this_node):
+    def test_is_online_local_offline(self, mock_is_online, mock_get_hostname, mock_this_node):
+        bootstrap._context = mock.Mock(cluster_node='node2')
         mock_this_node.return_value = "node1"
         mock_is_online.return_value = False
 
         assert bootstrap.is_online() is False
 
         mock_this_node.assert_called_once_with()
-        mock_get_peer.assert_not_called()
+        mock_get_hostname.assert_not_called()
         mock_is_online.assert_called_once_with("node1")
 
     @mock.patch('crmsh.utils.this_node')
-    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
-    def test_is_online_on_init_node(self, mock_is_online, mock_get_peer, mock_this_node):
+    def test_is_online_on_init_node(self, mock_is_online, mock_get_hostname, mock_this_node):
+        bootstrap._context = mock.Mock(cluster_node=None)
         mock_this_node.return_value = "node1"
-        mock_get_peer.return_value = None
         mock_is_online.return_value = True
 
         assert bootstrap.is_online() is True
 
         mock_this_node.assert_called_once_with()
-        mock_get_peer.assert_called_once_with()
+        mock_get_hostname.assert_not_called()
         mock_is_online.assert_called_once_with("node1")
 
     @mock.patch('crmsh.utils.fatal')
@@ -718,21 +827,22 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
-    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
-    def test_is_online_peer_offline(self, mock_is_online, mock_get_peer, mock_this_node,
+    def test_is_online_peer_offline(self, mock_is_online, mock_get_hostname, mock_this_node,
             mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
+        bootstrap._context = mock.Mock(cluster_node='node1')
         mock_is_online.side_effect = [True, False]
         bootstrap.COROSYNC_CONF_ORIG = "/tmp/crmsh_tmpfile"
         mock_this_node.return_value = "node2"
-        mock_get_peer.return_value = "node1"
+        mock_get_hostname.return_value = "node1"
         mock_corosync_conf.side_effect = [ "/etc/corosync/corosync.conf",
                 "/etc/corosync/corosync.conf"]
 
         bootstrap.is_online()
 
         mock_this_node.assert_called_once_with()
-        mock_get_peer.assert_called_once_with()
+        mock_get_hostname.assert_called_once_with('node1')
         mock_corosync_conf.assert_has_calls([
             mock.call(),
             mock.call()
@@ -748,18 +858,19 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
-    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
-    def test_is_online_both_online(self, mock_is_online, mock_get_peer, mock_this_node,
+    def test_is_online_both_online(self, mock_is_online, mock_get_hostname, mock_this_node,
             mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
+        bootstrap._context = mock.Mock(cluster_node='node2')
         mock_is_online.side_effect = [True, True]
         mock_this_node.return_value = "node2"
-        mock_get_peer.return_value = "node1"
+        mock_get_hostname.return_value = "node2"
 
         assert bootstrap.is_online() is True
 
         mock_this_node.assert_called_once_with()
-        mock_get_peer.assert_called_once_with()
+        mock_get_hostname.assert_called_once_with('node2')
         mock_corosync_conf.assert_not_called()
         mock_copy.assert_not_called()
         mock_csync2.assert_not_called()
@@ -1391,7 +1502,7 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
     @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.remove_qdevice')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.service_is_active')
@@ -1414,12 +1525,12 @@ class TestValidation(unittest.TestCase):
             ])
         mock_qdevice.assert_not_called()
         mock_error.assert_not_called()
-        mock_hostname.assert_called_once_with()
+        mock_hostname.assert_called_once_with('node1')
         mock_confirm.assert_called_once_with('Removing node "node1" from the cluster: Are you sure?')
 
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.remove_qdevice')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.service_is_active')
@@ -1444,7 +1555,7 @@ class TestValidation(unittest.TestCase):
             mock.call("csync2.socket")
             ])
         mock_qdevice.assert_not_called()
-        mock_hostname.assert_called_once_with()
+        mock_hostname.assert_called_once_with('node1')
         mock_confirm.assert_called_once_with('Removing node "node1" from the cluster: Are you sure?')
         mock_this_node.assert_called_once_with()
         mock_error.assert_called_once_with("Removing self requires --force")
@@ -1453,7 +1564,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.remove_self')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.remove_qdevice')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.service_is_active')
@@ -1475,7 +1586,7 @@ class TestValidation(unittest.TestCase):
             mock.call("csync2.socket")
             ])
         mock_qdevice.assert_not_called()
-        mock_hostname.assert_called_once_with()
+        mock_hostname.assert_called_once_with('node1')
         mock_confirm.assert_not_called()
         mock_this_node.assert_called_once_with()
         mock_error.assert_not_called()
@@ -1485,7 +1596,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.xmlutil.listnodes')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.remove_qdevice')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.service_is_active')
@@ -1510,7 +1621,7 @@ class TestValidation(unittest.TestCase):
             mock.call("csync2.socket")
             ])
         mock_qdevice.assert_not_called()
-        mock_hostname.assert_called_once_with()
+        mock_hostname.assert_called_once_with('node2')
         mock_confirm.assert_not_called()
         mock_this_node.assert_called_once_with()
         mock_error.assert_called_once_with("Specified node node2 is not configured in cluster! Unable to remove.")
@@ -1521,7 +1632,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.xmlutil.listnodes')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('crmsh.bootstrap.get_cluster_node_hostname')
+    @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.remove_qdevice')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.service_is_active')
@@ -1546,16 +1657,18 @@ class TestValidation(unittest.TestCase):
             mock.call("csync2.socket")
             ])
         mock_qdevice.assert_not_called()
-        mock_hostname.assert_called_once_with()
+        mock_hostname.assert_called_once_with('node2')
         mock_confirm.assert_not_called()
         mock_error.assert_not_called()
-        mock_remove.assert_called_once_with()
+        mock_remove.assert_called_once_with('node2')
         mock_run.assert_called_once_with('rm -rf /var/lib/crmsh', 'node2')
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
     @mock.patch('crmsh.xmlutil.listnodes')
-    def test_remove_self_other_nodes(self, mock_list, mock_run, mock_error):
+    @mock.patch('crmsh.utils.this_node')
+    def test_remove_self_other_nodes(self, mock_this_node, mock_list, mock_run, mock_error):
+        mock_this_node.return_value = 'node1'
         mock_list.return_value = ["node1", "node2"]
         mock_run.return_value = (1, '', 'err')
         mock_error.side_effect = SystemExit
@@ -1581,20 +1694,18 @@ class TestValidation(unittest.TestCase):
 
     @mock.patch('crmsh.utils.get_iplist_from_name')
     @mock.patch('crmsh.corosync.get_values')
-    def test_set_cluster_node_ip_host(self, mock_get_values, mock_get_iplist):
+    def test_get_cluster_node_ip_host(self, mock_get_values, mock_get_iplist):
         mock_get_values.return_value = ["node1", "node2"]
-        bootstrap._context = mock.Mock(cluster_node="node1")
-        bootstrap.set_cluster_node_ip()
+        self.assertIsNone(bootstrap.get_cluster_node_ip('node1'))
         mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
         mock_get_iplist.assert_not_called()
 
     @mock.patch('crmsh.utils.get_iplist_from_name')
     @mock.patch('crmsh.corosync.get_values')
-    def test_set_cluster_node_ip(self, mock_get_values, mock_get_iplist):
+    def test_get_cluster_node_ip(self, mock_get_values, mock_get_iplist):
         mock_get_values.return_value = ["10.10.10.1", "10.10.10.2"]
         mock_get_iplist.return_value = ["10.10.10.1"]
-        bootstrap._context = mock.Mock(cluster_node="node1")
-        bootstrap.set_cluster_node_ip()
+        self.assertEqual("10.10.10.1", bootstrap.get_cluster_node_ip('node1'))
         mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
         mock_get_iplist.assert_called_once_with('node1')
 
@@ -1629,16 +1740,17 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
-    @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
+    @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
     def test_remove_node_from_cluster_rm_node_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error, mock_rm_conf_files, mock_call_delnode):
+        mock_get_ip.return_value = '192.0.2.100'
         mock_call_delnode.return_value = False
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
             bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
-            bootstrap.remove_node_from_cluster()
+            bootstrap.remove_node_from_cluster('node1')
 
-        mock_get_ip.assert_called_once_with()
+        mock_get_ip.assert_not_called()
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
         mock_invoke.assert_not_called()
@@ -1652,17 +1764,18 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
-    @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
+    @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
     def test_remove_node_from_cluster_rm_csync_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_invokerc, mock_error, mock_rm_conf_files, mock_call_delnode):
+        mock_get_ip.return_value = '192.0.2.100'
         mock_call_delnode.return_value = True
         mock_invokerc.return_value = False
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
             bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
-            bootstrap.remove_node_from_cluster()
+            bootstrap.remove_node_from_cluster('node1')
 
-        mock_get_ip.assert_called_once_with()
+        mock_get_ip.assert_not_called()
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
         mock_invoke.assert_not_called()
@@ -1685,18 +1798,19 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
-    @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
+    @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
     def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
             mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_decrease, mock_csync2, mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_cal_delnode):
+        mock_get_ip.return_value = "10.10.10.1"
         mock_cal_delnode.return_value = True
         mock_invoke.side_effect = [(True, None, None)]
         mock_invokerc.return_value = True
         mock_get_values.return_value = ["10.10.10.1"]
 
-        bootstrap._context = mock.Mock(cluster_node="node1", cluster_node_ip=None, rm_list=["file1", "file2"])
-        bootstrap.remove_node_from_cluster()
+        bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
+        bootstrap.remove_node_from_cluster('node1')
 
-        mock_get_ip.assert_called_once_with()
+        mock_get_ip.assert_called_once_with('node1')
         mock_status.assert_has_calls([
             mock.call("Removing the node node1"),
             mock.call("Propagating configuration changes across the remaining nodes")
@@ -1709,7 +1823,7 @@ class TestValidation(unittest.TestCase):
         mock_invokerc.assert_called_once_with("sed -i /node1/d {}".format(bootstrap.CSYNC2_CFG))
         mock_error.assert_not_called()
         mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
-        mock_del.assert_called_once_with("node1")
+        mock_del.assert_called_once_with("10.10.10.1")
         mock_decrease.assert_called_once_with()
         mock_csync2.assert_has_calls([
             mock.call(bootstrap.CSYNC2_CFG),
