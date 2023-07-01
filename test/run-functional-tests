@@ -429,6 +429,23 @@ run_origin_regression_test() {
 }
 
 
+prepare_coverage_env() {
+	for node in $*; do
+            docker exec -t $node /bin/sh -c 'sed -i '\''1a\import coverage\nimport atexit\ncov=coverage.Coverage(config_file="/opt/crmsh/test/features/coveragerc")\natexit.register(lambda:(cov.stop(),cov.save()))\ncov.start()'\'' /usr/sbin/crm'
+	done
+}
+
+
+fetch_coverage_report() {
+	local unique_id=$(dd if=/dev/urandom count=1 bs=6 | base64 | tr '+/' '-_')
+	for node in $*; do
+		docker_exec "$node" "coverage combine; coverage xml -o /opt/coverage.xml"
+		# see https://github.com/codecov/codecov-cli/blob/master/codecov_cli/services/upload/coverage_file_finder.py
+		docker cp "$node":/opt/coverage.xml coverage."$unique_id"."$node".xml
+	done
+}
+
+
 WITH_QNETD_NODE=0
 NORMAL_USER_FLAG=0
 CONFIG_COROSYNC_FLAG=1
@@ -521,12 +538,14 @@ for case_num in $*;do
 	setup_cluster ${node_arry[@]}
 	adjust_test_case ${node_arry[0]} $case_file_in_container
 	echo
+        prepare_coverage_env "${node_arry[@]}"
 	if [ "$NORMAL_USER_FLAG" -eq 0 ];then
 		info "Running \"$case_file_in_container\" under 'root'..."
 		docker_exec ${node_arry[0]} "behave --no-logcapture $case_file_in_container || exit 1" || exit 1
 	else
 		info "Running \"$case_file_in_container\" under normal user 'alice'..."
-		docker_exec ${node_arry[0]} "su - alice -c 'sudo behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
+                docker_exec ${node_arry[0]} "su - alice -c 'sudo behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
 	fi
+	fetch_coverage_report "${node_arry[@]}"
 	echo
 done
