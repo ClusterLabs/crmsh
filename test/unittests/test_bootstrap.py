@@ -58,11 +58,13 @@ class TestContext(unittest.TestCase):
         Global tearDown.
         """
 
-    def test_set_context(self):
+    @mock.patch('crmsh.bootstrap.Context.initialize_user')
+    def test_set_context(self, mock_initialize_user: mock.MagicMock):
         options = mock.Mock(yes_to_all=True, ipv6=False)
         ctx = self.ctx_inst.set_context(options)
         self.assertEqual(ctx.yes_to_all, True)
         self.assertEqual(ctx.ipv6, False)
+        mock_initialize_user.assert_called_once()
 
     @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice_return(self, mock_qdevice):
@@ -71,23 +73,28 @@ class TestContext(unittest.TestCase):
 
     @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice(self, mock_qdevice):
-        options = mock.Mock(qnetd_addr="node3", qdevice_port=123, stage="")
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.qnetd_addr = "node3"
+        ctx.qdevice_port = 123
+        ctx.stage = ""
         ctx.initialize_qdevice()
         mock_qdevice.assert_called_once_with('node3', port=123, ssh_user=None, algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
 
     @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice_with_user(self, mock_qdevice):
-        options = mock.Mock(qnetd_addr="alice@node3", qdevice_port=123, stage="")
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.qnetd_addr = "alice@node3"
+        ctx.qdevice_port = 123
+        ctx.stage = ""
         ctx.initialize_qdevice()
         mock_qdevice.assert_called_once_with('node3', port=123, ssh_user='alice', algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
 
     @mock.patch('crmsh.utils.fatal')
     def test_validate_sbd_option_error_together(self, mock_error):
         mock_error.side_effect = SystemExit
-        options = mock.Mock(sbd_devices=["/dev/sda1"], diskless_sbd=True)
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.sbd_devices = ["/dev/sda1"]
+        ctx.diskless_sbd = True
         with self.assertRaises(SystemExit):
             ctx._validate_sbd_option()
         mock_error.assert_called_once_with("Can't use -s and -S options together")
@@ -95,8 +102,9 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     def test_validate_sbd_option_error_sbd_stage_no_option(self, mock_error):
         mock_error.side_effect = SystemExit
-        options = mock.Mock(stage="sbd", yes_to_all=True)
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.stage = "sbd"
+        ctx.yes_to_all = True
         with self.assertRaises(SystemExit):
             ctx._validate_sbd_option()
         mock_error.assert_called_once_with("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
@@ -105,8 +113,9 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.service_is_active')
     def test_validate_sbd_option_error_sbd_stage_service(self, mock_active, mock_error):
         mock_error.side_effect = SystemExit
-        options = mock.Mock(stage="sbd", diskless_sbd=True)
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.stage = "sbd"
+        ctx.diskless_sbd = True
         mock_active.return_value = True
         with self.assertRaises(SystemExit):
             ctx._validate_sbd_option()
@@ -117,7 +126,10 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.service_is_active')
     def test_validate_sbd_option_error_sbd_stage(self, mock_active, mock_check_all):
         options = mock.Mock(stage="sbd", diskless_sbd=True, cluster_is_running=True)
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.stage = "sbd"
+        ctx.diskless_sbd = True
+        ctx.cluster_is_running = True
         mock_active.return_value = False
         ctx._validate_sbd_option()
         mock_active.assert_called_once_with("sbd.service")
@@ -126,8 +138,8 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     def test_validate_option_error_nic_number(self, mock_error):
         mock_error.side_effect = SystemExit
-        options = mock.Mock(nic_list=["eth1", "eth2", "eth3"])
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.nic_list = ["eth1", "eth2", "eth3"]
         with self.assertRaises(SystemExit):
             ctx.validate_option()
         mock_error.assert_called_once_with("Maximum number of interface is 2")
@@ -137,7 +149,9 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
     def test_validate_cluster_node_same_name(self, mock_ip_in_local, mock_gethost, mock_fatal):
         options = mock.Mock(cluster_node="me", type="join")
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.cluster_node = "me"
+        ctx.type = "join"
         mock_fatal.side_effect = SystemExit
         mock_gethost.return_value = ("10.10.10.41", None)
         mock_ip_in_local.return_value = True
@@ -148,8 +162,9 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('socket.gethostbyname')
     def test_validate_cluster_node_unknown_name(self, mock_gethost, mock_fatal):
-        options = mock.Mock(cluster_node="xxxx", type="join")
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.cluster_node = "xxxx"
+        ctx.type = "join"
         mock_fatal.side_effect = SystemExit
         mock_gethost.side_effect = socket.gaierror("gethostbyname error")
         with self.assertRaises(SystemExit):
@@ -159,8 +174,9 @@ class TestContext(unittest.TestCase):
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.bootstrap.Validation.valid_admin_ip')
     def test_validate_option(self, mock_admin_ip, mock_warn):
-        options = mock.Mock(admin_ip="10.10.10.123", qdevice_inst=mock.Mock())
-        ctx = self.ctx_inst.set_context(options)
+        ctx = crmsh.bootstrap.Context()
+        ctx.admin_ip = "10.10.10.123"
+        ctx.qdevice_inst = mock.Mock()
         ctx._validate_sbd_option = mock.Mock()
         ctx._validate_nodes_option = mock.Mock()
         ctx.validate_option()
@@ -1747,10 +1763,10 @@ class TestValidation(unittest.TestCase):
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
-            bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
+            bootstrap._context = mock.Mock(rm_list=["file1", "file2"])
             bootstrap.remove_node_from_cluster('node1')
 
-        mock_get_ip.assert_not_called()
+        mock_get_ip.assert_called_once_with('node1')
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
         mock_invoke.assert_not_called()
@@ -1772,10 +1788,10 @@ class TestValidation(unittest.TestCase):
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
-            bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
+            bootstrap._context = mock.Mock(rm_list=["file1", "file2"])
             bootstrap.remove_node_from_cluster('node1')
 
-        mock_get_ip.assert_not_called()
+        mock_get_ip.assert_called_once_with('node1')
         mock_status.assert_called_once_with("Removing the node node1")
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
         mock_invoke.assert_not_called()
