@@ -1,6 +1,6 @@
 import logging
 import re
-from crmsh import utils, parallax, userdir
+from crmsh import utils , userdir
 import time
 
 
@@ -29,7 +29,8 @@ def before_tag(context, tag):
             resource_cleanup()
             while True:
                 time.sleep(1)
-                if utils.get_dc():
+                rc, stdout, _ = utils.get_stdout_stderr('sudo crmadmin -D -t 1')
+                if rc == 0 and stdout.startswith('Designated'):
                     break
             utils.get_stdout_or_raise_error("sudo crm cluster stop --all")
     if tag == "skip_non_root":

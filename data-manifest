@@ -73,6 +73,7 @@ test/features/bootstrap_sbd_normal.feature
 test/features/cluster_api.feature
 test/features/configure_bugs.feature
 test/features/constraints_bugs.feature
+test/features/coveragerc
 test/features/crm_report_bugs.feature
 test/features/environment.py
 test/features/geo_setup.feature
@@ -84,6 +85,7 @@ test/features/qdevice_usercase.feature
 test/features/qdevice_validate.feature
 test/features/resource_failcount.feature
 test/features/resource_set.feature
+test/features/steps/behave_agent.py
 test/features/steps/const.py
 test/features/steps/__init__.py
 test/features/steps/step_implementation.py

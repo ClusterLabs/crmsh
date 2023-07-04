@@ -95,9 +95,8 @@ class Context(object):
         self.watchdog = None
         self.no_overwrite_sshkey = None
         self.nic_list = []
-        self.node_list = []
+        self.user_at_node_list = []
         self.node_list_in_cluster = []
-        self.user_list = []
         self.current_user = None
         self.unicast = None
         self.multicast = None
@@ -117,7 +116,6 @@ class Context(object):
         self.use_cluster_lvm2 = None
         self.mount_point = None
         self.cluster_node = None
-        self.cluster_node_ip = None
         self.force = None
         self.arbitrator = None
         self.clusters = None
@@ -150,6 +148,7 @@ class Context(object):
         ctx = cls()
         for opt in vars(options):
             setattr(ctx, opt, getattr(options, opt))
+        ctx.initialize_user()
         return ctx
 
     def initialize_qdevice(self):
@@ -176,10 +175,18 @@ class Context(object):
                 mode=self.qdevice_heuristics_mode,
                 is_stage=self.stage == "qdevice")
 
-    def initialize_user(self, users_of_specified_hosts: str):
+    def initialize_user(self):
         """
         users_of_specified_hosts: 'not_specified', 'specified', 'no_hosts'
         """
+        if self.cluster_node is None and self.user_at_node_list is None:
+            users_of_specified_hosts = 'no_hosts'
+        elif self.cluster_node is not None and '@' in self.cluster_node:
+            users_of_specified_hosts = 'specified'
+        elif self.user_at_node_list is not None and any('@' in x for x in self.user_at_node_list):
+            users_of_specified_hosts = 'specified'
+        else:
+            users_of_specified_hosts = 'not_specified'
         sudoer = userdir.get_sudoer()
         has_sudoer = sudoer is not None
         if users_of_specified_hosts == 'specified':
@@ -214,48 +221,17 @@ class Context(object):
         """
         Validate -N/--nodes option
         """
-        if self.type == "join":
-            user, node = utils.parse_user_at_host(self.cluster_node)
-            if user is not None:
-                self.user_list = [user]
-                self.cluster_node = node
-                self.initialize_user(users_of_specified_hosts='specified')
-            else:
-                self.initialize_user(users_of_specified_hosts='not_specified')
-                self.user_list = [self.current_user]
-            self.node_list = [self.cluster_node]
-            return
-
-        if any('@' in user_node for user_node in self.node_list):
-            self.initialize_user(users_of_specified_hosts='specified')
-        elif len(self.node_list) == 0:
-            self.initialize_user(users_of_specified_hosts='no_hosts')
-        else:
-            self.initialize_user(users_of_specified_hosts='not_specified')
-        me = utils.this_node()
-        _node_list = []
-        _user_list = []
-        was_localhost_already = False
-        for user_node in self.node_list:
-            user, node = utils.parse_user_at_host(user_node)
-            if user is None:
-                user = self.current_user
-            if node == me:
-                if was_localhost_already:
-                    utils.fatal("Duplicated input for -N/--nodes option")
-                was_localhost_already = True
-                if user != self.current_user:
-                    utils.fatal("Overriding current user '{}' by '{}'. Ouch, don't do it.".format(
-                        self.current_user, user))
-            else:
-                _node_list.append(node)
-                _user_list.append(user)
-        self.node_list = _node_list
-        self.user_list = _user_list
-
-        if self.node_list and self.stage:
+        if self.user_at_node_list and self.stage:
             utils.fatal("Can't use -N/--nodes option and stage({}) together".format(self.stage))
-        for node in self.node_list:
+        me = utils.this_node()
+        was_localhost_already = False
+        li = [utils.parse_user_at_host(x) for x in self.user_at_node_list]
+        if utils.has_dup_value([node for user, node in li]):
+            utils.fatal("Duplicated host in -N/--nodes options.")
+        for user in (user for user, node in li if node == me and user is not None and user != self.current_user):
+            utils.fatal(f"Overriding current user '{self.current_user}' by '{user}'. Ouch, don't do it.")
+        self.user_at_node_list = [value for (user, node), value in zip(li, self.user_at_node_list) if node != me]
+        for user, node in (utils.parse_user_at_host(x) for x in self.user_at_node_list):
             utils.ping_node(node)
 
     def _validate_cluster_node(self):
@@ -263,13 +239,14 @@ class Context(object):
         Validate cluster_node on join side
         """
         if self.cluster_node and self.type == 'join':
+            user, node = _parse_user_at_host(self.cluster_node, None)
             try:
                 # self.cluster_node might be hostname or IP address
-                ip_addr = socket.gethostbyname(self.cluster_node)
+                ip_addr = socket.gethostbyname(node)
                 if utils.InterfacesInfo.ip_in_local(ip_addr):
                     utils.fatal("Please specify peer node's hostname or IP address")
             except socket.gaierror as err:
-                utils.fatal("\"{}\": {}".format(self.cluster_node, err))
+                utils.fatal("\"{}\": {}".format(node, err))
 
     def validate_option(self):
         """
@@ -292,8 +269,8 @@ class Context(object):
             self.skip_csync2 = utils.get_boolean(os.getenv("SKIP_CSYNC2_SYNC"))
         if self.skip_csync2 and self.stage:
             utils.fatal("-x option or SKIP_CSYNC2_SYNC can't be used with any stage")
-        self._validate_nodes_option()
         self._validate_cluster_node()
+        self._validate_nodes_option()
         self._validate_sbd_option()
 
     def init_sbd_manager(self):
@@ -477,17 +454,14 @@ def wait_for_cluster(timeout_ms=WAIT_TIMEOUT_MS_DEFAULT):
             sleep(2)
 
 
-def get_cluster_node_hostname():
+def get_node_canonical_hostname(host: str) -> str:
     """
-    Get the hostname of the cluster node
+    Get the canonical hostname of the cluster node
     """
-    peer_node = None
-    if _context.cluster_node:
-        rc, out, err = utils.get_stdout_stderr_auto_ssh_no_input(_context.cluster_node, 'crm_node --name')
-        if rc != 0:
-            utils.fatal(err)
-        peer_node = out
-    return peer_node
+    rc, out, err = utils.get_stdout_stderr_auto_ssh_no_input(host, 'crm_node --name')
+    if rc != 0:
+        utils.fatal(err)
+    return out
 
 
 def is_online():
@@ -499,18 +473,19 @@ def is_online():
         return False
 
     # if peer_node is None, this is in the init process
-    peer_node = get_cluster_node_hostname()
-    if peer_node is None:
+    if _context.cluster_node is None:
         return True
     # In join process
     # If the joining node is already online but can't find the init node
     # The communication IP maybe mis-configured
-    if not xmlutil.CrmMonXmlParser.is_node_online(peer_node):
+    user, cluster_node = _parse_user_at_host(_context.cluster_node, None)
+    cluster_node = get_node_canonical_hostname(cluster_node)
+    if not xmlutil.CrmMonXmlParser.is_node_online(cluster_node):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
         sync_file(corosync.conf())
         utils.stop_service("corosync")
         print()
-        utils.fatal("Cannot see peer node \"{}\", please check the communication IP".format(peer_node))
+        utils.fatal("Cannot see peer node \"{}\", please check the communication IP".format(cluster_node))
     return True
 
 
@@ -844,40 +819,45 @@ def append_unique(fromfile, tofile, user=None, remote=None, from_local=False):
             append(fromfile, tofile, remote=remote)
 
 
+def _parse_user_at_host(s: str, default_user: str) -> typing.Tuple[str, str]:
+    user, host = utils.parse_user_at_host(s)
+    if user is None:
+        user = default_user
+    return user, host
+
+
 def init_ssh():
-    init_ssh_impl(_context.current_user, _context.node_list, _context.user_list)
-    if _context.node_list:
-        for node in _context.node_list:
+    user_host_list = [_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list]
+    init_ssh_impl(_context.current_user, user_host_list)
+    if user_host_list:
+        for user, node in user_host_list:
             if utils.service_is_active("pacemaker.service", remote_addr=node):
                 utils.fatal("Cluster is currently active on {} - can't run".format(node))
 
 
-def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typing.List[str]):
+def init_ssh_impl(local_user: str, user_node_list: typing.List[typing.Tuple[str, str]]):
     """ Configure passwordless SSH."""
     utils.start_service("sshd.service", enable=True)
     configure_ssh_key(local_user)
     configure_ssh_key('hacluster')
 
     # If not use -N/--nodes option
-    if not node_list:
+    if not user_node_list:
         return
 
     print()
     # Swap public ssh key between remote node and local
     public_key_list = list()
     hacluster_public_key_list = list()
-    for i, node in enumerate(node_list):
-        remote_user = user_list[i]
+    for i, (remote_user, node) in enumerate(user_node_list):
         utils.ssh_copy_id(local_user, remote_user, node)
         # After this, login to remote_node is passwordless
         public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True))
         hacluster_public_key_list.append(swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_user, add=True))
-        change_user_shell('hacluster', node)
-    if len(node_list) > 1:
+    if len(user_node_list) > 1:
         shell_script = _merge_authorized_keys(public_key_list)
         hacluster_shell_script = _merge_authorized_keys(hacluster_public_key_list)
-        for i, node in enumerate(node_list):
-            remote_user = user_list[i]
+        for i, (remote_user, node) in enumerate(user_node_list):
             result = utils.su_subprocess_run(
                 local_user,
                 'ssh {} {}@{} /bin/sh'.format(constants.SSH_OPTION, remote_user, node),
@@ -897,10 +877,12 @@ def init_ssh_impl(local_user: str, node_list: typing.List[str], user_list: typin
             if result.returncode != 0:
                 utils.fatal('Failed to add public keys to {}@{}: {}'.format(remote_user, node, result.stdout))
     user_by_host = utils.HostUserConfig()
-    for user, node in zip(user_list, node_list):
+    for user, node in user_node_list:
         user_by_host.add(user, node)
     user_by_host.add(local_user, utils.this_node())
-    user_by_host.save_remote(node_list)
+    user_by_host.save_remote([node for user, node in user_node_list])
+    for user, node in user_node_list:
+        change_user_shell('hacluster', node)
 
 
 def _merge_authorized_keys(keys: typing.List[str]) -> bytes:
@@ -1181,9 +1163,9 @@ def init_csync2_remote():
     remote node to csync2 config on some existing node.  It is intentionally
     not documented in ha-cluster-init's user-visible usage information.
     """
-    newhost = _context.cluster_node
-    if not newhost:
+    if not _context.cluster_node:
         utils.fatal("Hostname not specified")
+    user, newhost = _parse_user_at_host(_context.cluster_node, _context.current_user)
 
     curr_cfg = open(CSYNC2_CFG).read()
 
@@ -1679,11 +1661,7 @@ def init():
     init_network()
 
 
-def join_ssh(seed_host):
-    join_ssh_impl(seed_host, _context.user_list[0])
-
-
-def join_ssh_impl(seed_host, seed_user):
+def join_ssh(seed_host, seed_user):
     """
     SSH configuration for joining node.
     """
@@ -1708,7 +1686,6 @@ def join_ssh_impl(seed_host, seed_user):
     # After this, login to remote_node is passwordless
     swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
     configure_ssh_key('hacluster')
-    change_user_shell('hacluster', seed_host)
     swap_public_ssh_key(seed_host, 'hacluster', 'hacluster', local_user, seed_user, add=True)
 
     # This makes sure the seed host has its own SSH keys in its own
@@ -1722,10 +1699,11 @@ def join_ssh_impl(seed_host, seed_user):
         local_user,
     )
     user_by_host = utils.HostUserConfig()
-    for user, node in zip(_context.user_list, _context.node_list):
-        user_by_host.add(user, node)
+    user_by_host.add(seed_user, seed_host)
     user_by_host.add(local_user, utils.this_node())
     user_by_host.save_local()
+
+    change_user_shell('hacluster', seed_host)
 
 
 def swap_public_ssh_key(
@@ -1773,7 +1751,7 @@ def remote_public_key_from(remote_user, local_sudoer, remote_node, remote_sudoer
     return result.stdout.decode('utf-8')
 
 
-def join_csync2(seed_host):
+def join_csync2(seed_host, remote_user):
     """
     Csync2 configuration for joining node.
     """
@@ -1789,7 +1767,6 @@ def join_csync2(seed_host):
     # local hosts_line=$(etc_hosts_get_me)
     # [ -n "$hosts_line" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
 
-    remote_user = _context.user_list[0]
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
     cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
@@ -1824,14 +1801,16 @@ def join_csync2(seed_host):
             logger.warning("csync2 run failed - some files may not be sync'd: %s", stderr)
 
 
-def join_ssh_merge(_cluster_node):
+def join_ssh_merge(cluster_node, remote_user):
     """
     Ensure known_hosts is the same in all nodes
     """
     logger.info("Merging known_hosts")
 
-    hosts = [utils.this_node()] + _context.node_list_in_cluster
-    users = [_context.current_user] + _context.user_list
+    hosts = utils.list_cluster_nodes()
+    if hosts is None:
+        hosts = list()
+    hosts.append(cluster_node)
 
     # To create local entry in known_hosts
     rc, _, _ = utils.get_stdout_stderr_as_local_sudoer("ssh {} {} true".format(SSH_OPTION, utils.this_node()))
@@ -1849,8 +1828,8 @@ def join_ssh_merge(_cluster_node):
     if known_hosts_new:
         hoststxt = "\n".join(sorted(known_hosts_new))
         #results = parallax.parallax_copy(hosts, tmpf, known_hosts_path, strict=False)
-        for user, host in zip(users, hosts):
-            utils.write_remote_file(hoststxt, "~/.ssh/known_hosts", user, remote=host)
+        for host in hosts:
+            utils.write_remote_file(hoststxt, "~/.ssh/known_hosts", utils.user_of(host), remote=host)
 
 
 def update_expected_votes():
@@ -1932,14 +1911,13 @@ def update_expected_votes():
     sync_file(corosync.conf())
 
 
-def setup_passwordless_with_other_nodes(init_node):
+def setup_passwordless_with_other_nodes(init_node, remote_user):
     """
     Setup passwordless with other cluster nodes
 
     Should fetch the node list from init node, then swap the key
     """
     # Fetch cluster nodes list
-    remote_user = _context.user_list[0]
     local_user = _context.current_user
     cmd = f'ssh {SSH_OPTION} {remote_user}@{init_node} sudo crm_node -l'
     rc, out, err = utils.su_get_stdout_stderr(local_user, cmd)
@@ -2019,7 +1997,7 @@ def sync_files_to_disk():
         utils.cluster_run_cmd("sync {}".format(files_string.strip()))
 
 
-def join_cluster(seed_host):
+def join_cluster(seed_host, remote_user):
     """
     Cluster configuration for joining node.
     """
@@ -2062,8 +2040,7 @@ def join_cluster(seed_host):
     # mountpoints for clustered filesystems.  Unfortunately we don't have
     # that yet, so the following crawling horror takes a punt on the seed
     # node being up, then asks it for a list of mountpoints...
-    remote_user = _context.user_list[0]
-    if _context.cluster_node:
+    if seed_host:
         _rc, outp, _ = utils.get_stdout_stderr_auto_ssh_no_input(seed_host, "cibadmin -Q --xpath \"//primitive\"")
         if outp:
             xml = etree.fromstring(outp)
@@ -2231,7 +2208,7 @@ def start_qdevice_on_join_node(seed_host):
         utils.start_service("corosync-qdevice.service", enable=True)
 
 
-def set_cluster_node_ip():
+def get_cluster_node_ip(node: str) -> str:
     """
     ringx_addr might be hostname or IP
     _context.cluster_node by now is always hostname
@@ -2240,7 +2217,6 @@ def set_cluster_node_ip():
     Then filter out which one is configured as ring0_addr
     At last assign that ip to _context.cluster_node_ip which will be removed later
     """
-    node = _context.cluster_node
     addr_list = corosync.get_values('nodelist.node.ring0_addr')
     if node in addr_list:
         return
@@ -2248,8 +2224,7 @@ def set_cluster_node_ip():
     ip_list = utils.get_iplist_from_name(node)
     for ip in ip_list:
         if ip in addr_list:
-            _context.cluster_node_ip = ip
-            break
+            return ip
 
 
 def stop_services(stop_list, remote_addr=None):
@@ -2274,13 +2249,11 @@ def rm_configuration_files(remote=None):
         utils.get_stdout_or_raise_error(cmd, remote=remote)
 
 
-def remove_node_from_cluster():
+def remove_node_from_cluster(node):
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
     """
-    node = _context.cluster_node
-    set_cluster_node_ip()
-
+    node_ip = get_cluster_node_ip(node)
     stop_services(SERVICES_STOP_LIST, remote_addr=node)
     qdevice.QDevice.remove_qdevice_db([node])
     rm_configuration_files(node)
@@ -2295,8 +2268,7 @@ def remove_node_from_cluster():
 
     # Remove node from nodelist
     if corosync.get_values("nodelist.node.ring0_addr"):
-        del_target = _context.cluster_node_ip or node
-        corosync.del_node(del_target)
+        corosync.del_node(node_ip if node_ip is not None else node)
 
     decrease_expected_votes()
 
@@ -2422,7 +2394,7 @@ def bootstrap_add(context):
     """
     Adds the given node to the cluster.
     """
-    if not context.node_list:
+    if not context.user_at_node_list:
         return
 
     global _context
@@ -2433,7 +2405,7 @@ def bootstrap_add(context):
         options += '-i {} '.format(nic)
     options = " {}".format(options.strip()) if options else ""
 
-    for (user, node) in zip(_context.user_list, _context.node_list):
+    for (user, node) in (_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list):
         print()
         logger.info("Adding node {} to cluster".format(node))
         cmd = 'crm cluster join -y {} -c {}@{}'.format(options, _context.current_user, utils.this_node())
@@ -2461,11 +2433,11 @@ def bootstrap_join(context):
     if not check_prereqs("join"):
         return
 
-    cluster_node = _context.cluster_node
     if _context.stage != "":
-        globals()["join_" + _context.stage](cluster_node)
+        remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
+        globals()["join_" + _context.stage](cluster_node, remote_user)
     else:
-        if not _context.yes_to_all and cluster_node is None:
+        if not _context.yes_to_all and _context.cluster_node is None:
             logger.info("""Join This Node to Cluster:
   You will be asked for the IP address of an existing node, from which
   configuration will be copied.  If you have not already configured
@@ -2473,15 +2445,17 @@ def bootstrap_join(context):
   password of the existing node.
 """)
             # TODO: prompt for user@host
-            cluster_node = prompt_for_string("IP address or hostname of existing node (e.g.: 192.168.1.1)", ".+")
-            _context.cluster_node = cluster_node
+            cluster_user_at_node = prompt_for_string("IP address or hostname of existing node (e.g.: 192.168.1.1)", ".+")
+            _context.cluster_node = cluster_user_at_node
+            _context.initialize_user()
 
         init_upgradeutil()
+        remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
         utils.ping_node(cluster_node)
 
-        join_ssh_impl(cluster_node, _context.user_list[0])
-
+        join_ssh(cluster_node, remote_user)
         remote_user = utils.user_of(cluster_node)
+
         n = 0
         while n < REJOIN_COUNT:
             if utils.service_is_active("pacemaker.service", cluster_node):
@@ -2496,19 +2470,19 @@ def bootstrap_join(context):
         try:
             with lock_inst.lock():
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
-                setup_passwordless_with_other_nodes(cluster_node)
-                join_remote_auth(cluster_node)
+                setup_passwordless_with_other_nodes(cluster_node, remote_user)
+                join_remote_auth(cluster_node, remote_user)
                 _context.skip_csync2 = not utils.service_is_active(CSYNC2_SERVICE, cluster_node)
                 if _context.skip_csync2:
                     utils.stop_service(CSYNC2_SERVICE, disable=True)
                     retrieve_all_config_files(cluster_node)
                     logger.warning("csync2 is not initiated yet. Before using csync2 for the first time, please run \"crm cluster init csync2 -y\" on any one node. Note, this may take a while.")
                 else:
-                    join_csync2(cluster_node)
-                join_ssh_merge(cluster_node)
+                    join_csync2(cluster_node, remote_user)
+                join_ssh_merge(cluster_node, remote_user)
                 probe_partitions()
-                join_ocfs2(cluster_node)
-                join_cluster(cluster_node)
+                join_ocfs2(cluster_node, remote_user)
+                join_cluster(cluster_node, remote_user)
         except (lock.SSHError, lock.ClaimLockError) as err:
             utils.fatal(err)
 
@@ -2519,7 +2493,7 @@ def bootstrap_finished():
     logger.info("Done (log saved to %s)" % (log.CRMSH_LOG_FILE))
 
 
-def join_ocfs2(peer_host):
+def join_ocfs2(peer_host, peer_user):
     """
     If init node configured OCFS2 device, verify that device on join node
     """
@@ -2527,7 +2501,7 @@ def join_ocfs2(peer_host):
     ocfs2_inst.join_ocfs2(peer_host)
 
 
-def join_remote_auth(node):
+def join_remote_auth(node, user):
     if os.path.exists(PCMK_REMOTE_AUTH):
         utils.rmfile(PCMK_REMOTE_AUTH)
     pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
@@ -2601,31 +2575,33 @@ def bootstrap_remove(context):
   executed from a different node in the cluster.
 """)
         _context.cluster_node = prompt_for_string("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
+        _context.initialize_user()
 
     if not _context.cluster_node:
         utils.fatal("No existing IP/hostname specified (use -c option)")
 
-    _context.cluster_node = get_cluster_node_hostname()
+    remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
+    cluster_node = get_node_canonical_hostname(cluster_node)
 
-    if not force_flag and not confirm("Removing node \"{}\" from the cluster: Are you sure?".format(_context.cluster_node)):
+    if not force_flag and not confirm("Removing node \"{}\" from the cluster: Are you sure?".format(cluster_node)):
         return
 
-    if _context.cluster_node == utils.this_node():
+    if cluster_node == utils.this_node():
         if not force_flag:
             utils.fatal("Removing self requires --force")
         remove_self(force_flag)
-    elif _context.cluster_node in xmlutil.listnodes():
-        remove_node_from_cluster()
+    elif cluster_node in xmlutil.listnodes():
+        remove_node_from_cluster(cluster_node)
     else:
-        utils.fatal("Specified node {} is not configured in cluster! Unable to remove.".format(_context.cluster_node))
+        utils.fatal("Specified node {} is not configured in cluster! Unable to remove.".format(cluster_node))
 
     # In case any crm command can re-generate upgrade_seq again
-    utils.get_stdout_or_raise_error("rm -rf /var/lib/crmsh", _context.cluster_node)
+    utils.get_stdout_or_raise_error("rm -rf /var/lib/crmsh", cluster_node)
     bootstrap_finished()
 
 
 def remove_self(force_flag=False):
-    me = _context.cluster_node
+    me = utils.this_node()
     yes_to_all = _context.yes_to_all
     nodes = xmlutil.listnodes(include_remote_nodes=False)
     othernode = next((x for x in nodes if x != me), None)
@@ -2731,7 +2707,7 @@ def geo_fetch_config(node):
         try:
             local_user = utils.user_of(utils.this_node())
         except utils.UserOfHost.UserNotFoundError:
-            local_user = userdir.getuser()
+            local_user = user
         remote_user = user
     else:
         try:
@@ -2745,6 +2721,10 @@ def geo_fetch_config(node):
     configure_ssh_key(local_user)
     logger.info("Retrieving configuration - This may prompt for %s@%s:", remote_user, node)
     utils.ssh_copy_id(local_user, remote_user, node)
+    user_by_host = utils.HostUserConfig()
+    user_by_host.add(local_user, utils.this_node())
+    user_by_host.add(remote_user, node)
+    user_by_host.save_local()
     cmd = "tar -c -C '{}' .".format(BOOTH_DIR)
     with tempfile.TemporaryDirectory() as tmpdir:
         pipe_outlet, pipe_inlet = os.pipe()
@@ -2815,13 +2795,12 @@ def bootstrap_arbitrator(context):
     """
     global _context
     _context = context
-    node = _context.cluster_node
 
     init_common_geo()
     check_tty()
-    geo_fetch_config(node)
+    geo_fetch_config(_context.cluster_node)
     if not os.path.isfile(BOOTH_CFG):
-        utils.fatal("Failed to copy {} from {}".format(BOOTH_CFG, node))
+        utils.fatal("Failed to copy {} from {}".format(BOOTH_CFG, _context.cluster_node))
     # TODO: verify that the arbitrator IP in the configuration is us?
     logger.info("Enabling and starting the booth arbitrator service")
     utils.start_service("booth@booth", enable=True)

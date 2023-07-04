@@ -5,11 +5,6 @@ Feature: Regression test for bootstrap bugs
   Need nodes: hanode1 hanode2 hanode3
 
   @clean
-  Scenario: parallax OSError: Too many open files
-    Given   Cluster service is "stopped" on "hanode2"
-    When    Run parallax call many times on "hanode2"
-
-  @clean
   Scenario: Set placement-strategy value as "default"(bsc#1129462)
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
