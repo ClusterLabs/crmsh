@@ -96,7 +96,7 @@ class Context(object):
             rv = self._back_out() and rv
 
         # wait for dc if wait flag set
-        if rv and self._wait_for_dc:
+        if self._wait_for_dc:
             return utils.wait4dc(self.command_name, not options.batch)
         return rv
 
@@ -270,7 +270,7 @@ class Context(object):
         rv = self.command_info.function(*arglist)
 
         # should we wait till the command takes effect?
-        if rv and self.should_wait():
+        if self.should_wait():
             self._wait_for_dc = True
         return rv
 
