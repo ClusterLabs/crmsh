@@ -66,6 +66,8 @@ jobs:
         index=`$GET_INDEX_OF crm_report_bugs`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_bugs:
     runs-on: ubuntu-20.04
@@ -79,6 +81,8 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_bugs`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_bugs_non_root:
     runs-on: ubuntu-20.04
@@ -92,6 +96,8 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_bugs`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_common:
     runs-on: ubuntu-20.04
@@ -105,6 +111,8 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_common_non_root:
     runs-on: ubuntu-20.04
@@ -118,6 +126,8 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_options:
     runs-on: ubuntu-20.04
@@ -131,6 +141,8 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_options`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_options_non_root:
     runs-on: ubuntu-20.04
@@ -144,6 +156,8 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_options`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_setup_remove:
     runs-on: ubuntu-20.04
@@ -157,6 +171,8 @@ jobs:
         index=`$GET_INDEX_OF qdevice_setup_remove`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_setup_remove_non_root:
     runs-on: ubuntu-20.04
@@ -170,6 +186,8 @@ jobs:
         index=`$GET_INDEX_OF qdevice_setup_remove`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_options:
     runs-on: ubuntu-20.04
@@ -183,6 +201,8 @@ jobs:
         index=`$GET_INDEX_OF qdevice_options`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_validate:
     runs-on: ubuntu-20.04
@@ -196,6 +216,8 @@ jobs:
         index=`$GET_INDEX_OF qdevice_validate`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_validate_non_root:
     runs-on: ubuntu-20.04
@@ -209,6 +231,8 @@ jobs:
         index=`$GET_INDEX_OF qdevice_validate`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_user_case:
     runs-on: ubuntu-20.04
@@ -222,6 +246,8 @@ jobs:
         index=`$GET_INDEX_OF qdevice_usercase`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_resource_failcount:
     runs-on: ubuntu-20.04
@@ -235,6 +261,8 @@ jobs:
         index=`$GET_INDEX_OF resource_failcount`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_resource_set:
     runs-on: ubuntu-20.04
@@ -248,6 +276,8 @@ jobs:
         index=`$GET_INDEX_OF resource_set`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_resource_set_non_root:
     runs-on: ubuntu-20.04
@@ -261,6 +291,8 @@ jobs:
         index=`$GET_INDEX_OF resource_set`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_configure_sublevel:
     runs-on: ubuntu-20.04
@@ -274,6 +306,8 @@ jobs:
         index=`$GET_INDEX_OF configure_bugs`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_constraints_bugs:
     runs-on: ubuntu-20.04
@@ -287,6 +321,8 @@ jobs:
         index=`$GET_INDEX_OF constraints_bugs`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_geo_cluster:
     runs-on: ubuntu-20.04
@@ -300,6 +336,8 @@ jobs:
         index=`$GET_INDEX_OF geo_setup`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_healthcheck:
     runs-on: ubuntu-20.04
@@ -313,6 +351,8 @@ jobs:
         index=`$GET_INDEX_OF healthcheck`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_cluster_api:
     runs-on: ubuntu-20.04
@@ -325,6 +365,8 @@ jobs:
         sudo systemctl restart docker.service
         $DOCKER_SCRIPT `$GET_INDEX_OF cluster_api`
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_user_access:
     runs-on: ubuntu-20.04
@@ -337,6 +379,8 @@ jobs:
         sudo systemctl restart docker.service
         $DOCKER_SCRIPT `$GET_INDEX_OF user_access`
     - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   original_regression_test:
     runs-on: ubuntu-20.04
