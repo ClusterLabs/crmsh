@@ -12,7 +12,7 @@ import crmsh.utils
 
 # pump this seq when upgrade check need to be run
 CURRENT_UPGRADE_SEQ = (1, 0)
-DATA_DIR = os.path.expanduser('~hacluster/crmsh')
+DATA_DIR = '/var/lib/crmsh'
 SEQ_FILE_PATH = DATA_DIR + '/upgrade_seq'
 # touch this file to force a upgrade process
 FORCE_UPGRADE_FILE_PATH = DATA_DIR + '/upgrade_forced'
@@ -72,8 +72,21 @@ def _is_upgrade_needed(nodes):
     except FileNotFoundError:
         pass
     if not needed:
+        s = _get_file_content(SEQ_FILE_PATH, b'').strip()
+        if s == b'':
+            # try the old path
+            seq_file_path = os.path.expanduser('~hacluster/crmsh') + '/upgrade_seq'
+            s = _get_file_content(seq_file_path, b'').strip()
+            if s != b'':
+                try:
+                    os.mkdir(DATA_DIR)
+                except FileExistsError:
+                    pass
+                with open(SEQ_FILE_PATH, 'wb') as f:
+                    f.write(s)
+                    f.write(b'\n')
         try:
-            local_seq = _parse_upgrade_seq(_get_file_content(SEQ_FILE_PATH, b'').strip())
+            local_seq = _parse_upgrade_seq(s)
         except ValueError:
             local_seq = (0, 0)
         needed = CURRENT_UPGRADE_SEQ > local_seq
