@@ -25,3 +25,10 @@ Feature: healthcheck detect and fix problems in a crmsh deployment
     And     File "~hacluster/.ssh/id_rsa" exists on "hanode1"
     And     File "~hacluster/.ssh/id_rsa" exists on "hanode2"
     And     File "~hacluster/.ssh/id_rsa" exists on "hanode3"
+
+  @clean
+  Scenario: An upgrade_seq file in ~hacluster/crmsh/ will be migrated to /var/lib/crmsh (bsc#1213050)
+    When    Run "mv /var/lib/crmsh ~hacluster/" on "hanode1"
+    Then    File "~hacluster/crmsh/upgrade_seq" exists on "hanode1"
+    When    Run "crm cluster status" on "hanode1"
+    Then    File "/var/lib/crmsh/upgrade_seq" exists on "hanode1"
