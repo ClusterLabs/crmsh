@@ -898,7 +898,6 @@ class CibConfig(command.UI):
             logger.info("apparently there is nothing to commit")
             logger.info("try changing something first")
             return True
-        replace = replace or not utils.cibadmin_can_patch()
         rc1 = True
         if replace and not force:
             rc1 = cib_factory.is_current_cib_equal()

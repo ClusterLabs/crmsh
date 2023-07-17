@@ -112,3 +112,22 @@ Feature: Regression test for bootstrap bugs
     When    Run "crm cluster remove HANODE2 -y" on "hanode1"
     Then    Cluster service is "stopped" on "hanode2"
     And     Online nodes are "hanode1"
+
+  @clean
+  Scenario: Stop service quickly(bsc#1203601)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "crm cluster stop --all" on "hanode1"
+    Then    Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster start --all;crm cluster stop --all" on "hanode1"
+    Then    Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "systemctl start corosync" on "hanode1"
+    Then    Service "corosync" is "started" on "hanode1"
+    When    Run "crm cluster stop" on "hanode1"
+    Then    Service "corosync" is "stopped" on "hanode1"

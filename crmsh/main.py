@@ -158,12 +158,6 @@ def set_interactive():
         options.interactive = True
 
 
-def compatibility_setup():
-    if not utils.is_pcmk_118():
-        del constants.attr_defaults["node"]
-        constants.cib_no_section_rc = 22
-
-
 def add_quotes(args):
     '''
     Add quotes if there's whitespace in one of the
@@ -250,7 +244,6 @@ def main_input_loop(context, user_args):
     Main input loop for crmsh. Parses input
     line by line.
     """
-    compatibility_setup()
     rc = handle_noninteractive_use(context, user_args)
     if rc is not None:
         return rc

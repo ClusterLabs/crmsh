@@ -553,7 +553,6 @@ class Report(object):
             i = (i+1) % len(self.nodecolors)
 
     def _report_setup_source(self):
-        constants.pcmk_version = None
         # is this an crm report or a crm_report?
         for descname in ("description.txt", "report.summary"):
             self.desc = os.path.join(self.loc, descname)

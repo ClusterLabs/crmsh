@@ -28,7 +28,7 @@ from . import userdir
 from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta, RAInfo
 from .utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from .utils import ask, lines2cli, olist
-from .utils import page_string, cibadmin_can_patch, str2tmp, ensure_sudo_readable
+from .utils import page_string, str2tmp, ensure_sudo_readable
 from .utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
 from .xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
 from .xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
@@ -2619,7 +2619,7 @@ class CibFactory(object):
         'Commit the configuration to the CIB.'
         if not self.is_cib_sane():
             return False
-        if not replace and cibadmin_can_patch():
+        if not replace:
             rc = self._patch_cib(force)
         else:
             rc = self._replace_cib(force)
@@ -2783,9 +2783,8 @@ class CibFactory(object):
             cib = text2elem(cib)
         if not self._import_cib(cib):
             return False
-        if cibadmin_can_patch():
-            self.cib_orig = copy.deepcopy(self.cib_elem)
-            sanitize_cib_for_patching(self.cib_orig)
+        self.cib_orig = copy.deepcopy(self.cib_elem)
+        sanitize_cib_for_patching(self.cib_orig)
         sanitize_cib(self.cib_elem)
         show_unrecognized_elems(self.cib_elem)
         self._populate()
