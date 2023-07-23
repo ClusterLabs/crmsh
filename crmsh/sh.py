@@ -434,7 +434,7 @@ class ShellUtils:
         return proc.returncode, stdout_data.strip()
 
     @classmethod
-    def get_stdout_stderr(cls, cmd, input_s=None, shell=True, raw=False, no_reg=False):
+    def get_stdout_stderr(cls, cmd, input_s=None, shell=True, raw=False, no_reg=False, timeout=None):
         '''
         Run a cmd, return (rc, stdout, stderr)
         '''
@@ -446,7 +446,8 @@ class ShellUtils:
             stdin=input_s and subprocess.PIPE or None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
-        stdout_data, stderr_data = proc.communicate(input_s)
+        # will raise subprocess.TimeoutExpired if set timeout
+        stdout_data, stderr_data = proc.communicate(input_s, timeout=timeout)
         if raw:
             return proc.returncode, stdout_data, stderr_data
         else:

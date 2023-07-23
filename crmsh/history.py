@@ -15,7 +15,7 @@ from . import logparser
 from . import utils
 from . import log
 from .sh import ShellUtils
-from crmsh.report import utillib
+from crmsh.report import core
 
 
 logger = log.setup_logger(__name__)
@@ -107,7 +107,7 @@ def mkarchive(idir):
     if not home:
         logger.error("no home directory, nowhere to pack report")
         return False
-    _, ext = utillib.pick_first_compress()
+    _, ext = core.pick_first_compress()
     if not ext:
         return False
     name = os.path.join(home, os.path.basename(idir))
@@ -469,7 +469,7 @@ class Report(object):
         if not utils.is_path_sane(d):
             return None
         utils.rmdir_r(d)
-        _, ext = utillib.pick_first_compress()
+        _, ext = core.pick_first_compress()
         if not ext:
             return None
         tarball = f"{d}.tar{ext}"

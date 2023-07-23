@@ -3101,4 +3101,7 @@ def parse_user_at_host(s: str):
     else:
         return s[:i], s[i+1:]
 
+
+def file_is_empty(file: str) -> bool:
+    return os.stat(file).st_size == 0
 # vim:ts=4:sw=4:et:
