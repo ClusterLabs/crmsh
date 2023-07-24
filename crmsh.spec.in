@@ -1,7 +1,7 @@
 #
 # spec file for package crmsh
 #
-# Copyright (c) 2020 SUSE LINUX GmbH, Nuernberg, Germany.
+# Copyright (c) 2023 SUSE LLC
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -38,7 +38,7 @@ License:        GPL-2.0-or-later
 Group:          %{pkg_group}
 Version:        @VERSION@
 Release:        0
-Url:            http://crmsh.github.io
+URL:            http://crmsh.github.io
 Source0:        %{name}-%{version}.tar.bz2
 Source1:        %{name}.tmpfiles.d.conf
 
@@ -54,7 +54,8 @@ Requires:       python3 >= 3.4
 Requires:       python3-lxml
 Requires:       python3-python-dateutil
 BuildRequires:  python3-lxml
-BuildRequires:  python3-setuptools
+BuildRequires:  python3-pip
+BuildRequires:  python3-wheel
 
 %if 0%{?suse_version}
 # only require csync2 on SUSE since bootstrap
@@ -81,14 +82,14 @@ BuildRequires:  automake
 BuildRequires:  pkgconfig
 BuildRequires:  python3
 
-%if 0%{?suse_version} > 1210
+%if 0%{?suse_version}
 # xsltproc is necessary for manpage generation; this is split out into
 # libxslt-tools as of openSUSE 12.2.  Possibly strictly should be
 # required by asciidoc
 BuildRequires:  libxslt-tools
 %endif
 
-%if 0%{?suse_version} > 1110 || 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version} || 0%{?rhel} || 0%{?fedora}
+%if 0%{?suse_version} || 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version} || 0%{?rhel} || 0%{?fedora}
 BuildArch:      noarch
 %endif
 
@@ -103,23 +104,21 @@ Summary:        Test package for crmsh
 Group:          %{pkg_group}
 Requires:       crmsh
 %if %{with regression_tests}
-Requires(post):  mailx
-Requires(post):  procps
-Requires(post):  python3-python-dateutil
-Requires(post):  python3-tox
-Requires(post):  pacemaker
-%if 0%{?suse_version} > 1110
+Requires(post): mailx
+Requires(post): procps
+Requires(post): python3-python-dateutil
+Requires(post): python3-tox
+Requires(post): pacemaker
 BuildArch:      noarch
-%endif
 %if 0%{?suse_version}
-Requires(post):  libglue-devel
+Requires(post): libglue-devel
 %else
-Requires(post):  cluster-glue-libs-devel
+Requires(post): cluster-glue-libs-devel
 %endif
 %if 0%{?fedora_version}
-Requires(post):  PyYAML
+Requires(post): PyYAML
 %else
-Requires(post):  python3-PyYAML
+Requires(post): python3-PyYAML
 %endif
 %endif
 
@@ -144,8 +143,14 @@ like hawk to implement configuration wizards.
 
 # replace the shebang in all the scripts
 # with ${_bindir}/python3
-find . -type f -exec perl -pi -e 'BEGIN{undef $/};s[^#\!/usr/bin/python[3]?][#\!%{_bindir}/python3]' {} \;
-find . -type f -exec perl -pi -e 'BEGIN{undef $/};s[^#\!/usr/bin/env python[3]?][#\!%{_bindir}/python3]' {} \;
+find . -type f -exec sed -i \
+    -e "s|#!/usr/bin/python3?|#!%{__python3}|" \
+    -e "s|#!/usr/bin/env python3?|#!%{__python3}|" \
+    {} \;
+sed -i -e '1{\@^#!%{_bindir}/python3@d}' crmsh/report/core.py
+
+# this is wrong FIXME
+sed -i -e '/data_files/d' setup.py
 
 %build
 ./autogen.sh
@@ -156,7 +161,16 @@ find . -type f -exec perl -pi -e 'BEGIN{undef $/};s[^#\!/usr/bin/env python[3]?]
     --with-version=%{version}    \
     --docdir=%{crmsh_docdir}
 
-make %{_smp_mflags} VERSION="%{version}" sysconfdir=%{_sysconfdir} localstatedir=%{_var}
+%python3_pyproject_wheel
+
+# Generate manpages
+for manpg in doc/crm{,sh_crm_report}.8.adoc ; do
+    a2x -f manpage $manpg
+done
+
+for docad in doc/crm{,sh_crm_report}.8.adoc ; do
+    asciidoc --unsafe --backend=xhtml11 $docad
+done
 
 %if %{with regression_tests}
 tox
@@ -167,14 +181,39 @@ fi
 %endif
 
 %install
-make DESTDIR=%{buildroot} docdir=%{crmsh_docdir} install
-install -Dm0644 contrib/bash_completion.sh %{buildroot}%{_datadir}/bash-completion/completions/crm
+# make DESTDIR=%%{buildroot} docdir=%%{crmsh_docdir} install
+%python3_pyproject_install
+
+# additional directories
+install -d -m0770 %{buildroot}%{_localstatedir}/cache/crm
+install -d -m0770 %{buildroot}%{_localstatedir}/log/crmsh
+install -d -m0755 %{buildroot}%{_tmpfilesdir}
+
+# install configuration
+install -Dm0644 -t %{buildroot}%{_sysconfdir}/crm etc/{crm.conf,profiles.yml}
+install -m0644 %{SOURCE1} %{buildroot}%{_tmpfilesdir}/%{name}.conf
+
+# install manpages
+install -Dpm0644 -t %{buildroot}%{_mandir}/man8 doc/*.8
+install -Dpm0644 -t %{buildroot}%{_datadir}/crmsh/ doc/crm.8.adoc
+
+# install data
+for d in $(cat data-manifest); do
+	if [ -x $d ] ; then mode="0755" ; else mode="0644" ; fi
+	install -D -m $mode $d %{buildroot}%{_datadir}/crmsh/$d
+done
+mv %{buildroot}%{_datadir}/crmsh/test{,s}
+install -p test/testcases/xmlonly.sh \
+	%{buildroot}%{_datadir}/crmsh/tests/testcases/configbasic-xml.filter
+
+install -Dm0644 contrib/bash_completion.sh \
+	%{buildroot}%{_datadir}/bash-completion/completions/crm
+
 if [ -f %{buildroot}%{_bindir}/crm ]; then
 	install -Dm0755 %{buildroot}%{_bindir}/crm %{buildroot}%{_sbindir}/crm
 	rm %{buildroot}%{_bindir}/crm
 fi
-install -d -m 0755 %{buildroot}%{_tmpfilesdir}
-install -m 0644 %{SOURCE1} %{buildroot}%{_tmpfilesdir}/%{name}.conf
+
 %if 0%{?suse_version}
 %fdupes %{buildroot}
 %endif
@@ -218,20 +257,13 @@ result2=$?
 
 %{_tmpfilesdir}/%{name}.conf
 
-%doc %{_mandir}/man8/*
-%{crmsh_docdir}/COPYING
-%{crmsh_docdir}/AUTHORS
-%{crmsh_docdir}/crm.8.html
-%{crmsh_docdir}/crmsh_crm_report.8.html
-%{crmsh_docdir}/profiles.html
-%{crmsh_docdir}/ChangeLog
-%{crmsh_docdir}/README.md
-%{crmsh_docdir}/contrib/*
+%doc doc/*.html
+%doc COPYING AUTHORS ChangeLog README.md
+%doc contrib/*
+%{_mandir}/man8/*
 
 %config %{_sysconfdir}/crm
 
-%dir %{crmsh_docdir}
-%dir %{crmsh_docdir}/contrib
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
 %dir %attr (770, %{uname}, %{gname}) %{_var}/log/crmsh
 %{_datadir}/bash-completion/completions/crm
