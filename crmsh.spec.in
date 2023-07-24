@@ -51,8 +51,8 @@ Requires(pre):  pacemaker
 Requires:       %{name}-scripts >= %{version}-%{release}
 Requires:       /usr/bin/which
 Requires:       python3 >= 3.4
+Requires:       python3-PyYAML
 Requires:       python3-lxml
-Requires:       python3-python-dateutil
 BuildRequires:  python3-lxml
 BuildRequires:  python3-pip
 BuildRequires:  python3-wheel
@@ -64,15 +64,16 @@ Requires:       csync2
 %endif
 
 %if 0%{?suse_version}
-Requires:       python3-PyYAML
 # Suse splits this off into a separate package
 Requires:       python3-curses
+Requires:       python3-python-dateutil
 BuildRequires:  fdupes
 BuildRequires:  python3-curses
-%endif
-
-%if 0%{?fedora_version}
-Requires:       PyYAML
+%else
+Requires:       python3-dateutil
+BuildRequires:  pyproject-rpm-macros
+BuildRequires:  python3-devel
+BuildRequires:  python3-setuptools
 %endif
 
 # Required for core functionality
@@ -106,7 +107,11 @@ Requires:       crmsh
 %if %{with regression_tests}
 Requires(post): mailx
 Requires(post): procps
+%if 0%{?suse_version}
 Requires(post): python3-python-dateutil
+%else
+Requires(post): python3-dateutil
+%endif
 Requires(post): python3-tox
 Requires(post): pacemaker
 BuildArch:      noarch
@@ -115,11 +120,7 @@ Requires(post): libglue-devel
 %else
 Requires(post): cluster-glue-libs-devel
 %endif
-%if 0%{?fedora_version}
-Requires(post): PyYAML
-%else
 Requires(post): python3-PyYAML
-%endif
 %endif
 
 %description test
@@ -161,7 +162,13 @@ sed -i -e '/data_files/d' setup.py
     --with-version=%{version}    \
     --docdir=%{crmsh_docdir}
 
+%if 0%{?suse_version}
 %python3_pyproject_wheel
+%else
+%generate_buildrequires
+%pyproject_buildrequires -t
+%pyproject_wheel
+%endif
 
 # Generate manpages
 for manpg in doc/crm{,sh_crm_report}.8.adoc ; do
@@ -182,7 +189,11 @@ fi
 
 %install
 # make DESTDIR=%%{buildroot} docdir=%%{crmsh_docdir} install
+%if 0%{?suse_version}
 %python3_pyproject_install
+%else
+%pyproject_install
+%endif
 
 # additional directories
 install -d -m0770 %{buildroot}%{_localstatedir}/cache/crm
