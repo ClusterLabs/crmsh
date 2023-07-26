@@ -1,4 +1,3 @@
 lxml
 PyYAML
 python-dateutil
-parallax
