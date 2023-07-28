@@ -2334,39 +2334,6 @@ def check_ssh_passwd_need(local_user, remote_user, host):
     return rc != 0
 
 
-def check_passwordless_between_nodes(node_list, user='root'):
-    """
-    Check passwordless between cluster nodes
-    Suppose each node has the same user
-    Return a list of hosts that require passwords between
-    """
-    need_pw_pair_list = []
-    me = this_node()
-    # check local node between remote node
-    for node in node_list:
-        if node == me:
-            continue
-        if check_ssh_passwd_need(user, user, node):
-            need_pw_pair_list.append((me, node))
-
-    if not need_pw_pair_list:
-        for node in node_list:
-            for n in node_list:
-                if node == n or node == me:
-                    continue
-                if user == 'root':
-                    cmd = f"ssh {node} \"ssh {SSH_OPTION} -T -o Batchmode=yes {user}@{n} true\""
-                else:
-                    cmd = f"ssh {node} \"su - {user} -c 'ssh {SSH_OPTION} -T -o Batchmode=yes {user}@{n} true'\""
-                rc, _, _ = get_stdout_stderr(cmd)
-                if rc != 0:
-                    need_pw_pair_list.append((node, n))
-
-    for m, n in need_pw_pair_list:
-        logger.debug("There is no passwordless configured from %s to %s under '%s'", m, n, user)
-    return need_pw_pair_list
-
-
 def check_port_open(ip, port):
     import socket
 
