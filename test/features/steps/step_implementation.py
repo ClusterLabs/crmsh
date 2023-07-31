@@ -102,6 +102,11 @@ def step_impl(context, cmd, addr):
     _, out, _ = run_command_local_or_remote(context, cmd, addr)
 
 
+@then('Run "{cmd}" OK on "{addr}"')
+def step_impl(context, cmd, addr):
+    _, out, _ = run_command_local_or_remote(context, cmd, addr)
+
+
 @then('Print stdout')
 def step_impl(context):
     context.logger.info("\n{}".format(context.stdout))
@@ -493,10 +498,19 @@ def step_impl(context, count, node):
 def step_impl(context, nodelist):
     if userdir.getuser() != 'root' or userdir.get_sudoer():
         return True
-    need_pw_list = crmutils.check_passwordless_between_nodes(nodelist.split(), 'hacluster')
-    for m, n in need_pw_list:
-        context.logger.error(f"There is no passwordless configured from {m} to {n} under 'hacluster'")
-    assert need_pw_list == []
+    failed = False
+    nodes = nodelist.split()
+    for i in range(0, len(nodes)):
+        for j in range(i + 1, len(nodes)):
+            rc, _, _ = behave_agent.call(
+                nodes[i], 1122,
+                f'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 {nodes[j]} true',
+                user='hacluster',
+            )
+            if rc != 0:
+                failed = True
+                context.logger.error(f"There is no passwordless configured from {nodes[i]} to {nodes[j]} under 'hacluster'")
+    assert not failed
 
 
 @then('Check user shell for hacluster between "{nodelist}"')
