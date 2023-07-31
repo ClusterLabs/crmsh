@@ -12,7 +12,7 @@ class TestPrun(unittest.TestCase):
     @mock.patch("os.geteuid")
     @mock.patch("crmsh.userdir.getuser")
     @mock.patch("crmsh.prun.prun._is_local_host")
-    @mock.patch("crmsh.utils.user_pair_for_ssh")
+    @mock.patch("crmsh.utils.UserOfHost.user_pair_for_ssh")
     @mock.patch("crmsh.prun.runner.Runner.run")
     @mock.patch("crmsh.prun.runner.Runner.add_task")
     def test_prun(
@@ -61,7 +61,7 @@ class TestPrun(unittest.TestCase):
     @mock.patch("os.geteuid")
     @mock.patch("crmsh.userdir.getuser")
     @mock.patch("crmsh.prun.prun._is_local_host")
-    @mock.patch("crmsh.utils.user_pair_for_ssh")
+    @mock.patch("crmsh.utils.UserOfHost.user_pair_for_ssh")
     @mock.patch("crmsh.prun.runner.Runner.run")
     @mock.patch("crmsh.prun.runner.Runner.add_task")
     def test_prun_root(
