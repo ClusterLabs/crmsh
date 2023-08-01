@@ -3,6 +3,7 @@
 
 import os
 import typing
+import pwd
 
 from . import log
 
@@ -11,9 +12,10 @@ logger = log.setup_logger(__name__)
 
 
 def getuser():
-    "Returns the name of the current user"
-    import getpass
-    return getpass.getuser()
+    "Returns the name of the current effective user"
+    effective_uid = os.geteuid()
+    user_info = pwd.getpwuid(effective_uid)
+    return user_info.pw_name
 
 
 def get_sudoer() -> typing.Optional[str]:
