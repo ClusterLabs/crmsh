@@ -103,6 +103,7 @@ class Runner:
                     stdin=asyncio.subprocess.PIPE if task.input else asyncio.subprocess.DEVNULL,
                     stdout=stdout,
                     stderr=stderr,
+                    start_new_session=True,
                 )
             finally:
                 # Closing the pipe inlet make the writer thread to exit.
