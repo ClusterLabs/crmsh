@@ -618,7 +618,7 @@ _COROSYNC_CONF_TEMPLATE_TAIL = """
 logging {
     fileline:   off
     to_stderr:  no
-    to_logfile:     no
+    to_logfile: yes
     logfile:    /var/log/cluster/corosync.log
     to_syslog:  yes
     debug:      off
