@@ -17,6 +17,8 @@ SEQ_FILE_PATH = DATA_DIR + '/upgrade_seq'
 # touch this file to force a upgrade process
 FORCE_UPGRADE_FILE_PATH = DATA_DIR + '/upgrade_forced'
 
+TIMEOUT_CHECK_SSH_AVAILABLE = 3
+
 
 VERSION_FEATURES = {
     (1, 0): [crmsh.healthcheck.PasswordlessHaclusterAuthenticationFeature]
@@ -140,7 +142,8 @@ def upgrade_if_needed():
     if not crmsh.utils.can_ask(background_wait=False):
         return
     nodes = crmsh.utils.list_cluster_nodes(no_reg=True)
-    if nodes and _is_upgrade_needed(nodes) and not crmsh.utils.check_passwordless_between_nodes(nodes):
+    if nodes and _is_upgrade_needed(nodes) \
+            and not crmsh.utils.check_passwordless_between_nodes(nodes, timeout_seconds=TIMEOUT_CHECK_SSH_AVAILABLE):
         logger.debug("upgradeutil: configuration fix needed")
         try:
             if not _is_cluster_target_seq_consistent(nodes):

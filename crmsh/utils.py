@@ -2104,18 +2104,18 @@ def get_iplist_corosync_using():
     return re.findall(r'id\s*=\s*(.*)', out)
 
 
-def check_ssh_passwd_need(host, user="root"):
+def check_ssh_passwd_need(host, user="root", timeout_seconds=15):
     """
     Check whether access to host need password
     """
-    ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
+    ssh_options = f"-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout={timeout_seconds}"
     ssh_cmd = "ssh {} -T -o Batchmode=yes {} true".format(ssh_options, host)
     ssh_cmd = add_su(ssh_cmd, user)
     rc, _, _ = get_stdout_stderr(ssh_cmd)
     return rc != 0
 
 
-def check_passwordless_between_nodes(node_list, user='root'):
+def check_passwordless_between_nodes(node_list, user='root', timeout_seconds=15):
     """
     Check passwordless between cluster nodes
     Suppose each node has the same user
@@ -2127,7 +2127,7 @@ def check_passwordless_between_nodes(node_list, user='root'):
     for node in node_list:
         if node == me:
             continue
-        if check_ssh_passwd_need(node, user):
+        if check_ssh_passwd_need(node, user, timeout_seconds=timeout_seconds):
             need_pw_pair_list.append((me, node))
 
     if not need_pw_pair_list:
@@ -2136,9 +2136,9 @@ def check_passwordless_between_nodes(node_list, user='root'):
                 if node == n or node == me:
                     continue
                 if user == 'root':
-                    cmd = f"ssh {node} \"ssh {SSH_OPTION} -T -o Batchmode=yes {user}@{n} true\""
+                    cmd = f"ssh {node} \"ssh {SSH_OPTION} -o ConnectTimeout={timeout_seconds} -T -o Batchmode=yes {user}@{n} true\""
                 else:
-                    cmd = f"ssh {node} \"su - {user} -c 'ssh {SSH_OPTION} -T -o Batchmode=yes {user}@{n} true'\""
+                    cmd = f"ssh {node} \"su - {user} -c 'ssh {SSH_OPTION} -o ConnectTimeout={timeout_seconds} -T -o Batchmode=yes {user}@{n} true'\""
                 rc, _, _ = get_stdout_stderr(cmd)
                 if rc != 0:
                     need_pw_pair_list.append((node, n))
