@@ -190,40 +190,73 @@ class Cluster(command.UI):
         for node in node_list:
             logger.info("The cluster stack started on {}".format(node))
 
+    @staticmethod
+    def _node_ready_to_stop_cluster_service(node):
+        """
+        Check if the specific node is ready to stop cluster service
+
+        If both corosync.service and pacemaker.service is active, return True
+        If some services started, stop them first and return False
+        """
+        corosync_active = utils.service_is_active("corosync.service", remote_addr=node)
+        sbd_active = utils.service_is_active("sbd.service", remote_addr=node)
+        pacemaker_active = utils.service_is_active("pacemaker.service", remote_addr=node)
+
+        if not corosync_active:
+            if sbd_active:
+                utils.stop_service("corosync", remote_addr=node)
+                logger.info(f"The cluster stack stopped on {node}")
+            else:
+                logger.info(f"The cluster stack already stopped on {node}")
+            return False
+
+        elif not pacemaker_active:
+            utils.stop_service("corosync", remote_addr=node)
+            logger.info("The cluster stack stopped on {}".format(node))
+            return False
+
+        return True
+
+    @staticmethod
+    def _wait_for_dc(node=None):
+        """
+        Wait for the cluster's DC to become available
+        """
+        if not utils.service_is_active("pacemaker.service", remote_addr=node):
+            return
+
+        dc_deadtime = utils.get_property("dc-deadtime", peer=node) or str(constants.DC_DEADTIME_DEFAULT)
+        dc_timeout = int(dc_deadtime.strip('s')) + 5
+        try:
+            utils.check_function_with_timeout(utils.get_dc, wait_timeout=dc_timeout, peer=node)
+        except TimeoutError:
+            logger.error("No DC found currently, please wait if the cluster is still starting")
+            raise utils.TerminateSubCommand
+
+    @staticmethod
+    def _set_dlm(node=None):
+        """
+        When dlm running and quorum is lost, before stop cluster service, should set
+        enable_quorum_fencing=0, enable_quorum_lockspace=0 for dlm config option
+        """
+        if utils.is_dlm_running(node) and not utils.is_quorate(node):
+            logger.debug("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
+            utils.set_dlm_option(peer=node, enable_quorum_fencing=0, enable_quorum_lockspace=0)
+
     @command.skill_level('administrator')
     def do_stop(self, context, *args):
         '''
         Stops the cluster stack on all nodes or specific node(s)
         '''
         node_list = parse_option_for_nodes(context, *args)
-        for node in node_list[:]:
-            if not utils.service_is_active("corosync.service", remote_addr=node):
-                if utils.service_is_active("sbd.service", remote_addr=node):
-                    utils.stop_service("corosync", remote_addr=node)
-                    logger.info("The cluster stack stopped on {}".format(node))
-                else:
-                    logger.info("The cluster stack already stopped on {}".format(node))
-                node_list.remove(node)
-            elif not utils.service_is_active("pacemaker.service", remote_addr=node):
-                utils.stop_service("corosync", remote_addr=node)
-                logger.info("The cluster stack stopped on {}".format(node))
-                node_list.remove(node)
+        node_list = [n for n in node_list if self._node_ready_to_stop_cluster_service(n)]
         if not node_list:
             return
+        logger.debug(f"stop node list: {node_list}")
 
-        dc_deadtime = utils.get_property("dc-deadtime") or str(constants.DC_DEADTIME_DEFAULT)
-        dc_timeout = int(dc_deadtime.strip('s')) + 5
-        try:
-            utils.check_function_with_timeout(utils.get_dc, wait_timeout=dc_timeout)
-        except TimeoutError:
-            logger.error("No DC found currently, please wait if the cluster is still starting")
-            return False
+        self._wait_for_dc(node_list[0])
 
-        # When dlm running and quorum is lost, before stop cluster service, should set
-        # enable_quorum_fencing=0, enable_quorum_lockspace=0 for dlm config option
-        if utils.is_dlm_running() and not utils.is_quorate():
-            logger.debug("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
-            utils.set_dlm_option(enable_quorum_fencing=0, enable_quorum_lockspace=0)
+        self._set_dlm(node_list[0])
 
         # Stop pacemaker since it can make sure cluster has quorum until stop corosync
         node_list = utils.stop_service("pacemaker", node_list=node_list)
