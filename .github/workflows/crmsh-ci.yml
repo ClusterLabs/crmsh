@@ -4,17 +4,13 @@
 
 name: crmsh CI
 
-on: [push, pull_request]
+on:
+  - pull_request
+  - workflow_call
 
 env:
   DOCKER_SCRIPT: ./test/run-functional-tests
   GET_INDEX_OF: ./test/run-functional-tests _get_index_of
-  FOLDER: /package
-  PACKAGE_NAME: crmsh
-  OBS_USER: ${{ secrets.OBS_USER }}
-  OBS_PASS: ${{ secrets.OBS_PASS }}
-  OBS_PROJECT: ${{ secrets.OBS_PROJECT_CRMSH45 }}
-  TARGET_PROJECT: ${{ secrets.TARGET_PROJECT }}
 
 jobs:
   general_check:
@@ -345,65 +341,3 @@ jobs:
     - name: original regression test
       run:  |
         $DOCKER_SCRIPT `$GET_INDEX_OF "regression test"`
-
-  delivery:
-    needs: [general_check,
-      unit_test,
-      functional_test_crm_report_bugs,
-      functional_test_bootstrap_bugs,
-      functional_test_bootstrap_bugs_non_root,
-      functional_test_bootstrap_common,
-      functional_test_bootstrap_common_non_root,
-      functional_test_bootstrap_options,
-      functional_test_bootstrap_options_non_root,
-      functional_test_qdevice_setup_remove,
-      functional_test_qdevice_setup_remove_non_root,
-      functional_test_qdevice_options,
-      functional_test_qdevice_validate,
-      functional_test_qdevice_validate_non_root,
-      functional_test_qdevice_user_case,
-      functional_test_resource_failcount,
-      functional_test_resource_set,
-      functional_test_resource_set_non_root,
-      functional_test_configure_sublevel,
-      functional_test_constraints_bugs,
-      functional_test_geo_cluster,
-      functional_test_healthcheck,
-      functional_test_cluster_api,
-      functional_test_user_access,
-      original_regression_test]
-    runs-on: ubuntu-20.04
-    timeout-minutes: 10
-    steps:
-    - uses: actions/checkout@v3
-    - name: delivery process
-      if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.5' && github.event_name == 'push'
-      run: |
-        docker pull shap/continuous_deliver:latest
-        docker run -t -v "$(pwd):/package" \
-          -e OBS_USER=$OBS_USER \
-          -e OBS_PASS=$OBS_PASS \
-          -e FOLDER=$FOLDER \
-          -e OBS_PROJECT=$OBS_PROJECT \
-          -e PACKAGE_NAME=$PACKAGE_NAME \
-          shap/continuous_deliver \
-          /bin/bash -c "cd /package;/scripts/upload.sh"
-
-  submit:
-    needs: delivery
-    runs-on: ubuntu-20.04
-    timeout-minutes: 10
-    steps:
-    - uses: actions/checkout@v3
-    - name: submit process
-      if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.5' && github.event_name == 'push'
-      run: |
-        docker pull shap/continuous_deliver:latest
-        docker run -t -v "$(pwd):/package" \
-          -e OBS_USER=$OBS_USER \
-          -e OBS_PASS=$OBS_PASS \
-          -e OBS_PROJECT=$OBS_PROJECT \
-          -e PACKAGE_NAME=$PACKAGE_NAME \
-          -e TARGET_PROJECT=$TARGET_PROJECT \
-          shap/continuous_deliver \
-          /bin/bash -c "cd /package;/scripts/submit.sh"
