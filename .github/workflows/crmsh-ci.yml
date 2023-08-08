@@ -4,17 +4,13 @@
 
 name: crmsh CI
 
-on: [push, pull_request]
+on:
+  - pull_request
+  - workflow_call
 
 env:
   DOCKER_SCRIPT: ./test/run-functional-tests
   GET_INDEX_OF: ./test/run-functional-tests _get_index_of
-  FOLDER: /package
-  PACKAGE_NAME: crmsh
-  OBS_USER: ${{ secrets.OBS_USER }}
-  OBS_PASS: ${{ secrets.OBS_PASS }}
-  OBS_PROJECT: ${{ secrets.OBS_PROJECT }}
-  TARGET_PROJECT: ${{ secrets.TARGET_PROJECT }}
 
 jobs:
   general_check:
@@ -66,8 +62,6 @@ jobs:
         index=`$GET_INDEX_OF crm_report_bugs`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_bugs:
     runs-on: ubuntu-20.04
@@ -81,8 +75,6 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_bugs`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_bugs_non_root:
     runs-on: ubuntu-20.04
@@ -96,8 +88,6 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_bugs`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_common:
     runs-on: ubuntu-20.04
@@ -111,8 +101,6 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_common_non_root:
     runs-on: ubuntu-20.04
@@ -126,8 +114,6 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_options:
     runs-on: ubuntu-20.04
@@ -141,8 +127,6 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_options`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_bootstrap_options_non_root:
     runs-on: ubuntu-20.04
@@ -156,8 +140,6 @@ jobs:
         index=`$GET_INDEX_OF bootstrap_options`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_setup_remove:
     runs-on: ubuntu-20.04
@@ -171,8 +153,6 @@ jobs:
         index=`$GET_INDEX_OF qdevice_setup_remove`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_setup_remove_non_root:
     runs-on: ubuntu-20.04
@@ -186,8 +166,6 @@ jobs:
         index=`$GET_INDEX_OF qdevice_setup_remove`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_options:
     runs-on: ubuntu-20.04
@@ -201,8 +179,6 @@ jobs:
         index=`$GET_INDEX_OF qdevice_options`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_validate:
     runs-on: ubuntu-20.04
@@ -216,8 +192,6 @@ jobs:
         index=`$GET_INDEX_OF qdevice_validate`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_validate_non_root:
     runs-on: ubuntu-20.04
@@ -231,8 +205,6 @@ jobs:
         index=`$GET_INDEX_OF qdevice_validate`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_qdevice_user_case:
     runs-on: ubuntu-20.04
@@ -246,8 +218,6 @@ jobs:
         index=`$GET_INDEX_OF qdevice_usercase`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_resource_failcount:
     runs-on: ubuntu-20.04
@@ -261,8 +231,6 @@ jobs:
         index=`$GET_INDEX_OF resource_failcount`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_resource_set:
     runs-on: ubuntu-20.04
@@ -276,8 +244,6 @@ jobs:
         index=`$GET_INDEX_OF resource_set`
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_resource_set_non_root:
     runs-on: ubuntu-20.04
@@ -291,8 +257,6 @@ jobs:
         index=`$GET_INDEX_OF resource_set`
         $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_configure_sublevel:
     runs-on: ubuntu-20.04
@@ -306,8 +270,6 @@ jobs:
         index=`$GET_INDEX_OF configure_bugs`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_constraints_bugs:
     runs-on: ubuntu-20.04
@@ -321,8 +283,6 @@ jobs:
         index=`$GET_INDEX_OF constraints_bugs`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_geo_cluster:
     runs-on: ubuntu-20.04
@@ -336,8 +296,6 @@ jobs:
         index=`$GET_INDEX_OF geo_setup`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_healthcheck:
     runs-on: ubuntu-20.04
@@ -351,8 +309,6 @@ jobs:
         index=`$GET_INDEX_OF healthcheck`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_cluster_api:
     runs-on: ubuntu-20.04
@@ -365,8 +321,6 @@ jobs:
         sudo systemctl restart docker.service
         $DOCKER_SCRIPT `$GET_INDEX_OF cluster_api`
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   functional_test_user_access:
     runs-on: ubuntu-20.04
@@ -379,8 +333,6 @@ jobs:
         sudo systemctl restart docker.service
         $DOCKER_SCRIPT `$GET_INDEX_OF user_access`
     - uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
 
   original_regression_test:
     runs-on: ubuntu-20.04
@@ -390,65 +342,3 @@ jobs:
     - name: original regression test
       run:  |
         $DOCKER_SCRIPT `$GET_INDEX_OF "regression test"`
-
-  delivery:
-    needs: [general_check,
-      functional_test_crm_report_bugs,
-      functional_test_bootstrap_bugs,
-      functional_test_bootstrap_bugs_non_root,
-      functional_test_bootstrap_common,
-      functional_test_bootstrap_common_non_root,
-      functional_test_bootstrap_options,
-      functional_test_bootstrap_options_non_root,
-      functional_test_qdevice_setup_remove,
-      functional_test_qdevice_setup_remove_non_root,
-      functional_test_qdevice_options,
-      functional_test_qdevice_validate,
-      functional_test_qdevice_validate_non_root,
-      functional_test_qdevice_user_case,
-      functional_test_resource_failcount,
-      functional_test_resource_set,
-      functional_test_resource_set_non_root,
-      functional_test_configure_sublevel,
-      functional_test_constraints_bugs,
-      functional_test_geo_cluster,
-      functional_test_healthcheck,
-      functional_test_cluster_api,
-      functional_test_user_access,
-      original_regression_test]
-    runs-on: ubuntu-20.04
-    timeout-minutes: 10
-    steps:
-    - uses: actions/checkout@v3
-    - name: delivery process
-      if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master' && github.event_name == 'push'
-      run: |
-        docker pull shap/continuous_deliver:latest
-        docker run -t -v "$(pwd):/package" \
-          -e OBS_USER=$OBS_USER \
-          -e OBS_PASS=$OBS_PASS \
-          -e FOLDER=$FOLDER \
-          -e OBS_PROJECT=$OBS_PROJECT \
-          -e PACKAGE_NAME=$PACKAGE_NAME \
-          shap/continuous_deliver \
-          /bin/bash -c "cd /package;/scripts/upload.sh"
-
-  submit:
-    needs: delivery
-    runs-on: ubuntu-20.04
-    timeout-minutes: 10
-    if: ${{ false }}
-    steps:
-    - uses: actions/checkout@v3
-    - name: submit process
-      if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master' && github.event_name == 'push'
-      run: |
-        docker pull shap/continuous_deliver:latest
-        docker run -t -v "$(pwd):/package" \
-          -e OBS_USER=$OBS_USER \
-          -e OBS_PASS=$OBS_PASS \
-          -e OBS_PROJECT=$OBS_PROJECT \
-          -e PACKAGE_NAME=$PACKAGE_NAME \
-          -e TARGET_PROJECT=$TARGET_PROJECT \
-          shap/continuous_deliver \
-          /bin/bash -c "cd /package;/scripts/submit.sh"
