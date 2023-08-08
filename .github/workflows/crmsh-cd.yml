@@ -1,0 +1,57 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+# For more information about secrets see: https://docs.github.com/en/free-pro-team@latest/actions/reference/encrypted-secrets
+
+name: crmsh CD
+
+on: push
+
+env:
+  FOLDER: /package
+  PACKAGE_NAME: crmsh
+  OBS_USER: ${{ secrets.OBS_USER }}
+  OBS_PASS: ${{ secrets.OBS_PASS }}
+  OBS_PROJECT: ${{ secrets.OBS_PROJECT_CRMSH45 }}
+  TARGET_PROJECT: ${{ secrets.TARGET_PROJECT }}
+
+jobs:
+  integration:
+    uses: ./.github/workflows/crmsh-ci.yml
+
+  delivery:
+    needs: integration
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v3
+    - name: delivery process
+      if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.5' && github.event_name == 'push'
+      run: |
+        docker pull shap/continuous_deliver:latest
+        docker run -t -v "$(pwd):/package" \
+          -e OBS_USER=$OBS_USER \
+          -e OBS_PASS=$OBS_PASS \
+          -e FOLDER=$FOLDER \
+          -e OBS_PROJECT=$OBS_PROJECT \
+          -e PACKAGE_NAME=$PACKAGE_NAME \
+          shap/continuous_deliver \
+          /bin/bash -c "cd /package;/scripts/upload.sh"
+
+  submit:
+    needs: delivery
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v3
+    - name: submit process
+      if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.5' && github.event_name == 'push'
+      run: |
+        docker pull shap/continuous_deliver:latest
+        docker run -t -v "$(pwd):/package" \
+          -e OBS_USER=$OBS_USER \
+          -e OBS_PASS=$OBS_PASS \
+          -e OBS_PROJECT=$OBS_PROJECT \
+          -e PACKAGE_NAME=$PACKAGE_NAME \
+          -e TARGET_PROJECT=$TARGET_PROJECT \
+          shap/continuous_deliver \
+          /bin/bash -c "cd /package;/scripts/submit.sh"
