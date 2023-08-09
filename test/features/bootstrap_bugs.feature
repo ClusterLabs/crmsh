@@ -133,6 +133,20 @@ Feature: Regression test for bootstrap bugs
     When    Run "crm cluster stop" on "hanode1"
     Then    Service "corosync" is "stopped" on "hanode1"
 
+  @clean
+  Scenario: Can't stop all nodes' cluster service when local node's service is down(bsc#1213889)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Wait for DC
+    And     Run "crm cluster stop" on "hanode1"
+    And     Run "crm cluster stop --all" on "hanode1"
+    Then    Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+
   @skip_non_root
   @clean
   Scenario: crm cluster join default behavior change in ssh key handling (bsc#1210693)
