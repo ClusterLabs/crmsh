@@ -17,6 +17,8 @@ SEQ_FILE_PATH = DATA_DIR + '/upgrade_seq'
 # touch this file to force a upgrade process
 FORCE_UPGRADE_FILE_PATH = DATA_DIR + '/upgrade_forced'
 
+TIMEOUT_SSH_GET_SEQUENCE = 3
+
 
 VERSION_FEATURES = {
     (1, 0): [crmsh.healthcheck.PasswordlessHaclusterAuthenticationFeature]
@@ -92,11 +94,19 @@ def _is_upgrade_needed(nodes):
 def _is_cluster_target_seq_consistent(nodes):
     cmd = '/usr/bin/env python3 -m crmsh.upgradeutil get-seq'
     try:
-        results = list(_parallax_run(nodes, cmd).values())
-    except crmsh.parallax.Error as e:
+        results = prun.prun({node: cmd for node in nodes}, timeout_seconds=TIMEOUT_SSH_GET_SEQUENCE)
+        for node, result in results.items():
+            if isinstance(result, prun.PRunError):
+                logger.debug("upgradeutil: get-seq failed: %s", result)
+                raise _SkipUpgrade() from None
+    except (prun.PRunError, crmsh.utils.UserOfHost.UserNotFoundError) as e:
+        logger.debug("upgradeutil: get-seq failed: %s", e)
         raise _SkipUpgrade() from None
     try:
-        return all(CURRENT_UPGRADE_SEQ == _parse_upgrade_seq(stdout.strip()) if rc == 0 else False for rc, stdout, stderr in results)
+        return all(
+            CURRENT_UPGRADE_SEQ == _parse_upgrade_seq(result.stdout.strip()) if result.returncode == 0 else False
+            for result in results.values()
+        )
     except ValueError as e:
         logger.warning("Remote command '%s' returns unexpected output: %s", cmd, results, exc_info=e)
         return False
@@ -137,8 +147,7 @@ def upgrade_if_needed():
         return
     nodes = crmsh.utils.list_cluster_nodes(no_reg=True)
     if nodes is not None and len(nodes) > 1 \
-            and _is_upgrade_needed(nodes) \
-            and not crmsh.utils.check_passwordless_between_nodes(nodes):
+            and _is_upgrade_needed(nodes):
         logger.debug("upgradeutil: configuration fix needed")
         try:
             if not _is_cluster_target_seq_consistent(nodes):
