@@ -45,15 +45,26 @@ Feature: crm report functional test for verifying bugs
 
   @clean
   Scenario: Collect corosync.log(bsc#1148874)
-    When    Run "sed -i 's/\(\s+logfile:\s+\).*/\1\/var\/log\/cluster\/corosync.log/' /etc/corosync/corosync.conf" on "hanode1"
+    When    Run "sed -i 's/\(\s*to_logfile:\s*\).*/\1no/' /etc/corosync/corosync.conf" on "hanode1"
+    When    Run "sed -i 's/\(\s*to_logfile:\s*\).*/\1no/' /etc/corosync/corosync.conf" on "hanode2"
+    And     Run "corosync-cfgtool -R" on "hanode1"
+    And     Run "rm -f /var/log/cluster/corosync.log" on "hanode1"
+    And     Run "rm -f /var/log/cluster/corosync.log" on "hanode2"
+    And     Run "crm cluster stop --all" on "hanode1"
+    And     Run "crm cluster start --all" on "hanode1"
+    And     Run "sleep 15" on "hanode1"
+
     And     Run "crm report report" on "hanode1"
     And     Run "tar jxf report.tar.bz2" on "hanode1"
     Then    File "corosync.log" not in "report.tar.bz2"
     When    Run "rm -rf report.tar.gz report" on "hanode1"
 
     When    Run "sed -i 's/\(\s*to_logfile:\s*\).*/\1yes/' /etc/corosync/corosync.conf" on "hanode1"
-    And     Run "crm cluster stop" on "hanode1"
-    And     Run "crm cluster start" on "hanode1"
+    When    Run "sed -i 's/\(\s*to_logfile:\s*\).*/\1yes/' /etc/corosync/corosync.conf" on "hanode2"
+    And     Run "crm cluster stop --all" on "hanode1"
+    And     Run "crm cluster start --all" on "hanode1"
+    And     Run "sleep 15" on "hanode1"
+
     And     Run "crm report report" on "hanode1"
     And     Run "tar jxf report.tar.bz2" on "hanode1"
     Then    File "corosync.log" in "report.tar.bz2"
