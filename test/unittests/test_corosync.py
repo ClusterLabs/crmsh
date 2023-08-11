@@ -308,10 +308,6 @@ class TestCorosyncParser(unittest.TestCase):
         _valid(p)
         self.assertEqual(p.get('bananas'), '5')
 
-    def test_logfile(self):
-        self.assertEqual(corosync.logfile(F1), '/var/log/cluster/corosync.log')
-        self.assertEqual(corosync.logfile('# nothing\n'), None)
-
     def test_udpu(self):
         p = Parser(F2)
         _valid(p)

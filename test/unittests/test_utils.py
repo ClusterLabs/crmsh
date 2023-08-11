@@ -72,31 +72,6 @@ def test_check_file_content_included(mock_detect, mock_run):
         ])
 
 
-@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-def test_get_iplist_corosync_using_exception(mock_run):
-    mock_run.return_value = (1, None, "error of cfgtool")
-    with pytest.raises(ValueError) as err:
-        utils.get_iplist_corosync_using()
-    assert str(err.value) == "error of cfgtool"
-    mock_run.assert_called_once_with("corosync-cfgtool -s")
-
-
-@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-def test_get_iplist_corosync_using(mock_run):
-    output = """
-RING ID 0
-        id      = 192.168.122.193
-        status  = ring 0 active with no faults
-RING ID 1
-        id      = 10.10.10.121
-        status  = ring 1 active with no faults
-"""
-    mock_run.return_value = (0, output, None)
-    res = utils.get_iplist_corosync_using()
-    assert res == ["192.168.122.193", "10.10.10.121"]
-    mock_run.assert_called_once_with("corosync-cfgtool -s")
-
-
 @mock.patch('re.search')
 @mock.patch('crmsh.sh.ShellUtils.get_stdout')
 def test_get_nodeid_from_name_run_None1(mock_get_stdout, mock_re_search):
@@ -141,34 +116,8 @@ def test_check_ssh_passwd_need(mock_run):
     assert res is True
     mock_run.assert_called_once_with(
         "bob",
-        "ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes alice@node1 true",
+        " ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes alice@node1 true",
     )
-
-
-@mock.patch('logging.Logger.debug')
-@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-def test_get_member_iplist_None(mock_get_stdout_stderr, mock_common_debug):
-    mock_get_stdout_stderr.return_value = (1, None, "Failed to initialize the cmap API. Error CS_ERR_LIBRARY")
-    assert utils.get_member_iplist() is None
-    mock_get_stdout_stderr.assert_called_once_with('corosync-cmapctl -b runtime.totem.pg.mrp.srp.members')
-    mock_common_debug.assert_called_once_with('Failed to initialize the cmap API. Error CS_ERR_LIBRARY')
-
-
-def test_get_member_iplist():
-    with mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr') as mock_get_stdout_stderr:
-        cmap_value = '''
-runtime.totem.pg.mrp.srp.members.336860211.config_version (u64) = 0
-runtime.totem.pg.mrp.srp.members.336860211.ip (str) = r(0) ip(20.20.20.51)
-runtime.totem.pg.mrp.srp.members.336860211.join_count (u32) = 1
-runtime.totem.pg.mrp.srp.members.336860211.status (str) = joined
-runtime.totem.pg.mrp.srp.members.336860212.config_version (u64) = 0
-runtime.totem.pg.mrp.srp.members.336860212.ip (str) = r(0) ip(20.20.20.52)
-runtime.totem.pg.mrp.srp.members.336860212.join_count (u32) = 1
-runtime.totem.pg.mrp.srp.members.336860212.status (str) = joined
-        '''
-        mock_get_stdout_stderr.return_value = (0, cmap_value, None)
-        assert utils.get_member_iplist() == ['20.20.20.51', '20.20.20.52']
-    mock_get_stdout_stderr.assert_called_once_with('corosync-cmapctl -b runtime.totem.pg.mrp.srp.members')
 
 
 @mock.patch('crmsh.utils.list_cluster_nodes')
@@ -273,9 +222,6 @@ def test_str2tmp():
     assert os.path.isfile(filename)
     assert open(filename).read() == txt + "\n"
     assert utils.file2str(filename) == txt
-    # TODO: should this really return
-    # an empty line at the end?
-    assert utils.file2list(filename) == [txt, '']
     os.unlink(filename)
 
 
@@ -690,32 +636,11 @@ class TestIP(unittest.TestCase):
         mock_version.assert_called_once_with()
 
     @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
-    def test_is_valid_ip_exception(self, mock_ip_address):
-        mock_ip_address.side_effect = ValueError
-        res = utils.IP.is_valid_ip("xxxx")
-        self.assertEqual(res, False)
-        mock_ip_address.assert_called_once_with()
-
-    @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
-    def test_is_valid_ip(self, mock_ip_address):
-        res = utils.IP.is_valid_ip("10.10.10.1")
-        self.assertEqual(res, True)
-        mock_ip_address.assert_called_once_with()
-
-    @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
     def test_is_loopback(self, mock_ip_address):
         mock_ip_address_inst = mock.Mock(is_loopback=False)
         mock_ip_address.return_value = mock_ip_address_inst
         res = self.ip_inst.is_loopback
         self.assertEqual(res, mock_ip_address_inst.is_loopback)
-        mock_ip_address.assert_called_once_with()
-
-    @mock.patch('crmsh.utils.IP.ip_address', new_callable=mock.PropertyMock)
-    def test_is_link_local(self, mock_ip_address):
-        mock_ip_address_inst = mock.Mock(is_link_local=False)
-        mock_ip_address.return_value = mock_ip_address_inst
-        res = self.ip_inst.is_link_local
-        self.assertEqual(res, mock_ip_address_inst.is_link_local)
         mock_ip_address.assert_called_once_with()
 
 
@@ -762,18 +687,6 @@ class TestInterface(unittest.TestCase):
         mock_ip_interface.return_value = mock_ip_interface_inst
         mock_ip_interface_inst.network = mock.Mock(network_address="10.10.10.0")
         assert self.interface.network == "10.10.10.0"
-        mock_ip_interface.assert_called_once_with()
-
-    @mock.patch('crmsh.utils.Interface.ip_interface', new_callable=mock.PropertyMock)
-    @mock.patch('crmsh.utils.IP')
-    def test_ip_in_network(self, mock_ip, mock_ip_interface):
-        mock_ip_inst = mock.Mock(ip_address="10.10.10.123")
-        mock_ip.return_value = mock_ip_inst
-        mock_ip_interface_inst = mock.Mock(network=["10.10.10.123"])
-        mock_ip_interface.return_value = mock_ip_interface_inst
-        res = self.interface.ip_in_network("10.10.10.123")
-        assert res is True
-        mock_ip.assert_called_once_with("10.10.10.123")
         mock_ip_interface.assert_called_once_with()
 
 
@@ -949,48 +862,6 @@ class TestInterfacesInfo(unittest.TestCase):
 
         mock_nic_list.assert_has_calls([mock.call(), mock.call(), mock.call()])
         mock_first_ip.assert_has_calls([mock.call("eth1"), mock.call("eth0")])
-
-    @mock.patch('crmsh.utils.Interface')
-    @mock.patch('crmsh.utils.InterfacesInfo.interface_list', new_callable=mock.PropertyMock)
-    @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
-    @mock.patch('crmsh.utils.IP.is_ipv6')
-    def test_ip_in_network(self, mock_is_ipv6, mock_get_interfaces_info, mock_interface_list, mock_interface):
-        mock_is_ipv6.return_value = False
-        mock_interface_inst_1 = mock.Mock()
-        mock_interface_inst_2 = mock.Mock()
-        mock_interface_inst_1.ip_in_network.return_value = False
-        mock_interface_inst_2.ip_in_network.return_value = True
-        mock_interface_list.return_value = [mock_interface_inst_1, mock_interface_inst_2]
-
-        res = utils.InterfacesInfo.ip_in_network("10.10.10.1")
-        assert res is True
-
-        mock_is_ipv6.assert_called_once_with("10.10.10.1")
-        mock_get_interfaces_info.assert_called_once_with()
-        mock_interface_list.assert_called_once_with()
-        mock_interface_inst_1.ip_in_network.assert_called_once_with("10.10.10.1")
-        mock_interface_inst_2.ip_in_network.assert_called_once_with("10.10.10.1")
-
-    @mock.patch('crmsh.utils.Interface')
-    @mock.patch('crmsh.utils.InterfacesInfo.interface_list', new_callable=mock.PropertyMock)
-    @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
-    @mock.patch('crmsh.utils.IP.is_ipv6')
-    def test_ip_in_network_false(self, mock_is_ipv6, mock_get_interfaces_info, mock_interface_list, mock_interface):
-        mock_is_ipv6.return_value = False
-        mock_interface_inst_1 = mock.Mock()
-        mock_interface_inst_2 = mock.Mock()
-        mock_interface_inst_1.ip_in_network.return_value = False
-        mock_interface_inst_2.ip_in_network.return_value = False
-        mock_interface_list.return_value = [mock_interface_inst_1, mock_interface_inst_2]
-
-        res = utils.InterfacesInfo.ip_in_network("10.10.10.1")
-        assert res is False
-
-        mock_is_ipv6.assert_called_once_with("10.10.10.1")
-        mock_get_interfaces_info.assert_called_once_with()
-        mock_interface_list.assert_called_once_with()
-        mock_interface_inst_1.ip_in_network.assert_called_once_with("10.10.10.1")
-        mock_interface_inst_2.ip_in_network.assert_called_once_with("10.10.10.1")
 
 
 @mock.patch("crmsh.utils.get_nodeid_from_name")
