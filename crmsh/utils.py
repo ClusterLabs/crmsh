@@ -2879,7 +2879,7 @@ def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0], no_raise=F
             stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE,
         )
     if no_raise or result.returncode in success_val_list:
-        return result.stdout.decode('utf-8')
+        return result.stdout.decode('utf-8').strip('\n')
     else:
         if remote is None:
             raise ValueError("Failed to run '{}': {}".format(cmd, result.stderr.decode('utf-8')))
