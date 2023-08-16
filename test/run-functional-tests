@@ -15,6 +15,10 @@ HA_NETWORK_V6_ARRAY[1]="2001:db8:20::/64"
 BEHAVE_CASE_DIR="$(dirname $0)/features/"
 BEHAVE_CASE_EXCLUDE="sbd"
 
+declare -a hanode_list_to_form_cluster
+declare -a hanode_list_new_members
+declare -a hanode_list_current_cluster
+
 read -r -d '' SSHD_CONFIG_AZURE << EOM
 PermitRootLogin no
 AuthorizedKeysFile .ssh/authorized_keys
@@ -110,22 +114,28 @@ Users can make the code change under crmsh.git including test cases. This tool w
 
 OPTIONS:
   -h, --help		Show this help message and exit
-  -l            	List existing functional test cases and exit
-  -n NUM        	Only setup a cluster with NUM nodes(containers)
+  -l			List existing functional test cases and exit
+  -n NUM		NUM of nodes(containers) with the node name 'hanode{1..$NUM}'
   -x			Don't config corosync on containers(with -n option)
   -d			Cleanup the cluster containers
-  -u			Create normal users, and Azure like ssh environment
-  -q			Create a qnetd node(with -n and -x option)
+  -u			Run test as a normal user like in Public Cloud, eg. Azure
+  -q			Create a qnetd node(with -n and -x option, and named 'qnetd-node')
 
 EXAMPLES:
 To launch 2 nodes with the running cluster with the very basic corosync.conf
 # crmsh.git/test/run-functional-tests -n 2
 
-To launch 2 nodes without the cluster stack running to play with "crm cluster init/join"
-# crmsh.git/run-functional-tests -n 2 -x
+To grow more cluster nodes with a bigger number than '2' in the above example
+# crmsh.git/test/run-functional-tests -n 5
 
-To launch 2 nodes without the cluster stack running, and a qnetd node(named 'qnetd-node')
-# crmsh.git/run-functional-tests -n 2 -x -q
+To launch 2 bare nodes, eg. to play with "crm cluster init/join"
+# crmsh.git/test/run-functional-tests -n 2 -x
+
+To grow more bare nodes
+# crmsh.git/test/run-functional-tests -n 7 -x
+
+To launch 2 bare nodes besides a qnetd node(named 'qnetd-node')
+# crmsh.git/test/run-functional-tests -n 2 -x -q
 
 To list the existing test cases. Users could add his own new test cases.
 # crmsh.git/test/run-functional-tests -l
@@ -194,7 +204,11 @@ deploy_ha_node() {
 
 	info "Deploying \"$node_name\"..."
 	podman run --rm -d $podman_options $podman_capabilties $podman_security $CONTAINER_IMAGE > /dev/null
-        podman network connect ha_network_second $node_name
+	if [ $? -ne 0 ]; then 
+		warning Likely $node_name already exists.
+		return
+	fi
+    podman network connect ha_network_second $node_name
 
 	if [ "$node_name" != "qnetd-node" ];then
 		rm_qnetd_cmd="rpm -q corosync-qnetd && rpm -e corosync-qnetd"
@@ -257,43 +271,77 @@ is_podman5_or_newer() {
     fi
 }
 
-config_cluster() {
-	node_num=$#
-	insert_str=""
-	if [[ is_podman5_or_newer ]];then
-		container_ip_array=($(podman network inspect $HA_NETWORK_ARRAY | jq -r '.[] | .containers[] | .interfaces[] | .subnets[] | select(.ipnet | test("^(\\d{1,3}\\.){3}\\d{1,3}\\/\\d+$")) | .ipnet | split("/") | .[0]'))
-	else
-		container_ip_array=(`podman network inspect $HA_NETWORK_ARRAY -f '{{range .Containers}}{{printf "%s " .IPv4Address}}{{end}}'`)
-    fi
-
-	for i in $(seq $node_num -1 1);do
-		ip=`echo ${container_ip_array[$((i-1))]}|awk -F/ '{print $1}'`
-		insert_str+="\\n\\tnode {\n\t\tring0_addr: $ip\n\t\tnodeid: $i\n\t}"
-	done
-	corosync_conf_str=$(sed "/nodelist/a \\${insert_str}" <(echo "$COROSYNC_CONF_TEMPLATE"))
-	if [ $node_num -eq 2 ];then
-		corosync_conf_str=$(sed "/corosync_votequorum/a \\\\ttwo_node: 1" <(echo "$corosync_conf_str"))
-	fi
-
-	info "Copy corosync.conf to $*"
-	for node in $*;do
-		if [ $node == $1 ];then
-			podman_exec $1 "echo \"$corosync_conf_str\" >> $COROSYNC_CONF"
-			podman_exec $1 "corosync-keygen -l -k $COROSYNC_AUTH &> /dev/null"
-		else
-			while :
-			do
-				podman_exec $1 "ssh -T -o Batchmode=yes $node true &> /dev/null" && break
-				sleep 1
-			done
-			podman_exec $1 "scp -p $COROSYNC_CONF $COROSYNC_AUTH $node:/etc/corosync &> /dev/null"
+get_cluster_new_nodes() {
+	hanode_list_to_form_cluster=($(podman ps -a --format '{{.Names}}'|grep hanode|sort -n -k1.7|tr '\r' ' '))
+	hanode_list_current_cluster=($(podman_exec hanode1 "crm node server 2>/dev/null" 2>/dev/null|sort -n -k1.7|tr '\r' ' '))
+	hanode_list_new_members=()
+	for element in "${hanode_list_to_form_cluster[@]}"; do
+		if ! [[ " ${hanode_list_current_cluster[@]} " =~ " $element " ]]; then
+			hanode_list_new_members+=("$element")
 		fi
 	done
 }
 
+config_cluster() {
+	get_cluster_new_nodes
+
+	if [ ${#hanode_list_new_members[@]} -eq 0 ]; then
+		return
+	else
+		info ${#hanode_list_new_members[@]} new node\(s\) "'${hanode_list_new_members[@]}'"
+	fi
+
+	insert_str=""
+	if [[ is_podman5_or_newer ]];then
+		container_ip_array=($(podman network inspect $HA_NETWORK_ARRAY | jq -r '
+		.[] | .containers | to_entries | sort_by(.value.name | capture("hanode(?<num>\\d+)").num | tonumber) |
+		.[] | .value.interfaces[] | .subnets[] | select(.ipnet | test("^(\\d{1,3}\\.){3}\\d{1,3}\\/\\d+$")) | .ipnet '
+		))
+	else
+		#FIXME: to grow nodes, the result need sort by the container name numerically
+		container_ip_array=(`podman network inspect $HA_NETWORK_ARRAY -f '{{range .Containers}}{{printf "%s " .IPv4Address}}{{end}}'`)
+    fi
+
+	for i in $(seq ${#hanode_list_to_form_cluster[@]} -1 1);do
+		ip=`echo ${container_ip_array[$((i-1))]}|awk -F/ '{print $1}'`
+		insert_str+="\\n\\tnode {\n\t\tring0_addr: $ip\n\t\tnodeid: $i\n\t}"
+	done
+	corosync_conf_str=$(sed "/nodelist/a \\${insert_str}" <(echo "$COROSYNC_CONF_TEMPLATE"))
+	if [ ${#hanode_list_to_form_cluster[@]} -eq 2 ];then
+		corosync_conf_str=$(sed "/corosync_votequorum/a \\\\ttwo_node: 1" <(echo "$corosync_conf_str"))
+	fi
+	if search_running_container_by_name "qnetd-node";then
+		info "Generate corosync.conf without qdevice/qnetd for the cluster hanode{1..${#hanode_list_to_form_cluster[@]}}"
+	else
+		info "Generate corosync.conf for the cluster hanode{1..${#hanode_list_to_form_cluster[@]}}"
+	fi
+
+	echo -n "INFO: Copy corosync.conf to all cluster nodes hanode{1..${#hanode_list_to_form_cluster[@]}} "
+	for node in ${hanode_list_to_form_cluster[@]};do
+		if [ $node == "hanode1" ];then
+			podman_exec "hanode1" "echo \"$corosync_conf_str\" > $COROSYNC_CONF"
+			podman_exec "hanode1" "corosync-keygen -l -k $COROSYNC_AUTH &> /dev/null"
+		else
+			while :
+			do
+				podman_exec "hanode1" "ssh -T -o Batchmode=yes $node true &> /dev/null" && break
+				sleep 1
+			done
+			podman_exec "hanode1" "scp -p $COROSYNC_CONF $COROSYNC_AUTH $node:/etc/corosync &> /dev/null"
+			echo -n "."
+		fi
+	done
+	echo " Done"
+}
+
 
 start_cluster() {
-	for node in $*;do
+	if [ ${#hanode_list_current_cluster[@]} -ne 0 ] && [ ${#hanode_list_new_members[@]} -ne 0 ]; then
+		podman_exec hanode1 "corosync-cfgtool -R > /dev/null"
+		info On the existing cluster hanode{1..${#hanode_list_current_cluster[@]}}: reloading corosync.conf ... Done
+	fi
+
+	for node in ${hanode_list_new_members[@]};do
 		podman_exec $node "crm cluster enable && crm cluster start" 1> /dev/null
 		if [ "$?" -eq 0 ];then
 			info "Cluster service started on \"$node\""
@@ -304,34 +352,47 @@ start_cluster() {
 }
 
 
-container_already_exists() {
-	podman ps -a|grep -q "$1"
-	if [ "$?" -eq 0 ];then
-		fatal "Container \"$1\" already running"
-	fi
+search_running_container_by_name() {
+	podman ps -a --format '{{.Names}}' | grep -q "^$1$"
 }
 
 
 setup_cluster() {
-	hanodes_arry=()
-	is_number $1
-	if [ "$?" -eq 0 ];then
-		for i in $(seq 1 $1);do
-			hanodes_arry+=("hanode$i")
-		done
+	get_cluster_new_nodes
+
+	hanodes_array=()
+	if is_number "$1"; then
+		# add more nodes after the last node, ordered by the node name
+		if [ ${#hanode_list_to_form_cluster[@]} -gt 0 ]; then
+			last_node_num="${hanode_list_to_form_cluster[-1]:6}"
+			warning Skip creating cluster nodes. Here are the existing ones: hanode{1..${#hanode_list_to_form_cluster[@]}}
+		else
+			last_node_num=0
+		fi
+		num_of_new_nodes=$(( $1 - ${#hanode_list_to_form_cluster[@]} ))
+		if [ "$num_of_new_nodes" -gt 0 ]; then
+			for i in $(seq $(( last_node_num + 1 )) $(( last_node_num + num_of_new_nodes )) ); do
+				hanodes_array+=("hanode$i")
+			done
+		elif [ "$WITH_QNETD_NODE" -eq 0 ];then
+			return
+		fi
 	else
-		hanodes_arry=($*)
+		num_of_new_nodes=$#
+		hanodes_array=($*)
 	fi
 
-	if [ $WITH_QNETD_NODE -eq 1 ];then
-	  create_node ${hanodes_arry[@]} "qnetd-node"
+	if [ "$WITH_QNETD_NODE" -eq 1 ] && ! search_running_container_by_name "qnetd-node";then
+	  create_node ${hanodes_array[@]} "qnetd-node"
 	else
-	  create_node ${hanodes_arry[@]}
+	  [ "$WITH_QNETD_NODE" -eq 1 ] && warning Skip creating the existing qnetd-node
+	  [ "$num_of_new_nodes" -eq 0 ] && return
+	  create_node ${hanodes_array[@]}
 	fi
 
 	[ "$CONFIG_COROSYNC_FLAG" -eq 0 ] && return
-	config_cluster ${hanodes_arry[@]}
-	start_cluster ${hanodes_arry[@]}
+	config_cluster
+	start_cluster
 	podman_exec "hanode1" "crm configure property stonith-enabled=false" 1> /dev/null
 }
 
