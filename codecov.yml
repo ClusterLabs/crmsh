@@ -1,3 +1,11 @@
+coverage:
+  status:
+    project:
+      default:
+        threshold: 0.1%
+    patch:
+      default:
+        threshold: 0.1%
 codecov: 
   token: 16b01c29-3b23-4923-b33a-4d26a49d80c4
   notify:
