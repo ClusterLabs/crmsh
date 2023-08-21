@@ -16,16 +16,17 @@ env:
 
 jobs:
   integration:
+    if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master'
     uses: ./.github/workflows/crmsh-ci.yml
 
   delivery:
+    if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master'
     needs: integration
     runs-on: ubuntu-20.04
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v3
     - name: delivery process
-      if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
         docker pull shap/continuous_deliver:latest
         docker run -t -v "$(pwd):/package" \
@@ -45,7 +46,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: submit process
-      if: github.repository == 'ClusterLabs/crmsh' && github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
         docker pull shap/continuous_deliver:latest
         docker run -t -v "$(pwd):/package" \
