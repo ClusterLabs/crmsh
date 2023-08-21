@@ -534,4 +534,10 @@ RSC_ROLE_UNPROMOTED = "Unpromoted"
 RSC_ROLE_PROMOTED_LEGACY = "Master"
 RSC_ROLE_UNPROMOTED_LEGACY = "Slave"
 PCMK_VERSION_DEFAULT = "2.0.0"
+
+INTERFACE_HELP = """Bind to IP address on interface IF. 
+Allowed value is nic name or IP address. 
+If a nic name is provided, the first IP of that nic will be used. 
+Use multiple -i for more links. Note: Only one link is allowed for the non knet transport type
+"""
 # vim:ts=4:sw=4:et:

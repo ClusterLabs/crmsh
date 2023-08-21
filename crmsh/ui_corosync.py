@@ -143,13 +143,12 @@ class Corosync(command.UI):
         utils.page_file(logfile)
 
     @command.skill_level('administrator')
-    @command.completers(completers.call(corosync.get_all_paths))
     def do_get(self, context, path):
         "Get a corosync configuration value"
         for v in corosync.get_values(path):
             print(v)
 
     @command.skill_level('administrator')
-    def do_set(self, context, path, value):
+    def do_set(self, context, path, value, index: int = 0):
         "Set a corosync configuration value"
-        corosync.set_value(path, value)
+        corosync.set_value(path, value, index)

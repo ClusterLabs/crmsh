@@ -242,7 +242,9 @@ vmware
 .INP: list bogus
 Traceback (most recent call last):
     rv = self.execute_command() is not False
+         ^^^^^^^^^^^^^^^^^^^^^^
     rv = self.command_info.function(*arglist)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     context.fatal_error("Unexpected argument '%s': expected  [all|names]" % (arg))
     raise ValueError(msg)
 ValueError: Unexpected argument 'bogus': expected  [all|names]

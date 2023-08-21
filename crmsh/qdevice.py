@@ -16,6 +16,7 @@ from . import xmlutil
 from . import bootstrap
 from . import lock
 from . import log
+from . import conf_parser
 
 
 logger = log.setup_logger(__name__)
@@ -579,38 +580,44 @@ class QDevice(object):
         self.fetch_p12_from_cluster()
         self.import_p12_on_local()
 
-    def write_qdevice_config(self):
+    def write_qdevice_config(self) -> None:
         """
         Write qdevice attributes to config file
         """
-        p = corosync.Parser(utils.read_from_file(corosync.conf()))
-        p.remove("quorum.device")
-        p.add('quorum', corosync.make_section('quorum.device', []))
-        p.set('quorum.device.votes', '1')
-        p.set('quorum.device.model', 'net')
-        p.add('quorum.device', corosync.make_section('quorum.device.net', []))
-        p.set('quorum.device.net.tls', self.tls)
-        p.set('quorum.device.net.host', self.qnetd_addr)
-        p.set('quorum.device.net.port', self.port)
-        p.set('quorum.device.net.algorithm', self.algo)
-        p.set('quorum.device.net.tie_breaker', self.tie_breaker)
+        inst = conf_parser.ConfParser()
+        inst.convert2dict()
+        qdevice_config_dict = {
+                "model": "net",
+                "net": {
+                    "tls": self.tls,
+                    "host": self.qnetd_addr,
+                    "port": self.port,
+                    "algorithm": self.algo,
+                    "tie_breaker": self.tie_breaker
+                    }
+                }
+        if self.algo == "ffsplit":
+            # According to man corosync-qdevice, if the algorithm is lms, do not set votes
+            qdevice_config_dict['votes'] = 1
+        inst.set("quorum.device", qdevice_config_dict)
         if self.cmds:
-            p.add('quorum.device', corosync.make_section('quorum.device.heuristics', []))
-            p.set('quorum.device.heuristics.mode', self.mode)
+            heuristics_dict = {"mode": self.mode}
             for i, cmd in enumerate(self.cmds.strip(';').split(';')):
                 cmd_name = re.sub("[.-]", "_", os.path.basename(cmd.split()[0]))
                 exec_name = "exec_{}{}".format(cmd_name, i)
-                p.set('quorum.device.heuristics.{}'.format(exec_name), cmd)
-        utils.str2file(p.to_string(), corosync.conf())
+                heuristics_dict[exec_name] = cmd
+            inst.set("quorum.device.heuristics", heuristics_dict)
+        utils.str2file(inst.convert2string(), corosync.conf())
 
     @staticmethod
     def remove_qdevice_config():
         """
         Remove configuration of qdevice
         """
-        p = corosync.Parser(utils.read_from_file(corosync.conf()))
-        p.remove("quorum.device")
-        utils.str2file(p.to_string(), corosync.conf())
+        inst = conf_parser.ConfParser()
+        inst.convert2dict()
+        inst.remove("quorum.device")
+        utils.str2file(inst.convert2string(), corosync.conf())
 
     @staticmethod
     def remove_qdevice_db(addr_list=[]):
@@ -625,11 +632,11 @@ class QDevice(object):
         parallax.parallax_call(node_list, cmd)
 
     @classmethod
-    def remove_certification_files_on_qnetd(cls):
+    def remove_certification_files_on_qnetd(cls) -> None:
         """
         Remove this cluster related .crq and .crt files on qnetd
         """
-        if not utils.is_qdevice_configured():
+        if not corosync.is_qdevice_configured():
             return
         qnetd_host = corosync.get_value('quorum.device.net.host')
         cluster_name = corosync.get_value('totem.cluster_name')
@@ -639,15 +646,14 @@ class QDevice(object):
         cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=cls_inst.qdevice_crq_on_qnetd)
         utils.get_stdout_or_raise_error(cmd, remote=qnetd_host)
 
-    def config_qdevice(self):
+    def config_qdevice(self) -> None:
         """
         Update configuration and reload corosync if necessary
         """
         self.write_qdevice_config()
-        if not corosync.is_unicast():
-            corosync.add_nodelist_from_cmaptool()
         with logger_utils.status_long("Update configuration"):
-            bootstrap.update_expected_votes()
+            corosync.configure_two_node(qdevice_adding=True)
+            bootstrap.sync_file(corosync.conf())
             if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
                 utils.cluster_run_cmd("crm corosync reload")
 

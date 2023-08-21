@@ -63,12 +63,14 @@ Feature: corosync qdevice/qnetd setup/remove process
     Then    Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
     And     Service "corosync-qdevice" is "started" on "hanode2"
+    And     two_node in corosync.conf is "0"
     And     Show corosync qdevice configuration
     When    Run "crm cluster remove --qdevice -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
     And     Service "corosync-qdevice" is "stopped" on "hanode1"
     And     Service "corosync-qdevice" is "stopped" on "hanode2"
+    And     two_node in corosync.conf is "1"
     And     Show corosync qdevice configuration
 
   @clean
@@ -80,23 +82,20 @@ Feature: corosync qdevice/qnetd setup/remove process
     Then    Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
     And     Service "corosync-qdevice" is "started" on "hanode2"
-    And     Expected votes will be "3"
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     And     Online nodes are "hanode1 hanode2 hanode3"
     And     Service "corosync-qdevice" is "started" on "hanode3"
-    And     Expected votes will be "4"
     When    Run "crm cluster join -c hanode1 -y" on "hanode4"
     Then    Cluster service is "started" on "hanode4"
     And     Online nodes are "hanode1 hanode2 hanode3 hanode4"
     And     Service "corosync-qdevice" is "started" on "hanode4"
-    And     Expected votes will be "5"
     And     Show corosync qdevice configuration
     And     Show status from qnetd
 
   @clean
   Scenario: Setup qdevice on multi nodes existing cluster
-    When    Run "crm cluster init -u -y" on "hanode1"
+    When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
@@ -107,10 +106,8 @@ Feature: corosync qdevice/qnetd setup/remove process
     When    Run "crm cluster join -c hanode1 -y" on "hanode4"
     Then    Cluster service is "started" on "hanode4"
     And     Online nodes are "hanode1 hanode2 hanode3 hanode4"
-    And     Expected votes will be "4"
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
     Then    Show corosync qdevice configuration
-    And     Expected votes will be "5"
     And     Service "corosync-qdevice" is "started" on "hanode4"
     And     Service "corosync-qdevice" is "started" on "hanode3"
     And     Service "corosync-qdevice" is "started" on "hanode2"
@@ -119,7 +116,7 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @clean
   Scenario: Setup qdevice using IPv6
-    When    Run "crm cluster init -u -y" on "hanode1"
+    When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # vim: noexpandtab ts=4 sw=4 sts=4
-DOCKER_IMAGE=${DOCKER_IMAGE:-"nyang23/haleap:15.5"}
+DOCKER_IMAGE=${DOCKER_IMAGE:-"liangxin1300/alpha"}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
 DOCKER_SERVICE="docker.service"
@@ -33,47 +33,25 @@ EOM
 
 read -r -d '' COROSYNC_CONF_TEMPLATE << EOM
 totem {
-        version: 2
-        cluster_name: hacluster
-        clear_node_high_bit: yes
-        interface {
-                ringnumber: 0
-                mcastport: 5405
-                ttl: 1
-        }
-
-        transport: udpu
-        crypto_hash: sha1
-        crypto_cipher: aes256
-        token: 5000
-        join: 60
-        max_messages: 20
-        token_retransmits_before_loss_const: 10
-}
-
-logging {
-        fileline: off
-        to_stderr: no
-        to_logfile: no
-        logfile: /var/log/cluster/corosync.log
-        to_syslog: yes
-        debug: off
-        timestamp: on
-        logger_subsys {
-                subsys: QUORUM
-                debug: off
-        }
-
+    version: 2
+    cluster_name: cluster1
+    transport: knet
+    crypto_cipher: aes256
+    crypto_hash: sha256
 }
 
 nodelist {
 }
 
 quorum {
+    provider: corosync_votequorum
+}
 
-        # Enable and configure quorum subsystem (default: off)
-        # see also corosync.conf.5 and votequorum.5
-        provider: corosync_votequorum
+logging {
+    to_logfile: yes
+    logfile: /var/log/cluster/corosync.log
+    to_syslog: yes
+    timestamp: on
 }
 EOM
 

@@ -73,7 +73,7 @@ class SBDTimeout(object):
         When using diskless SBD with Qdevice, adjust value of sbd_watchdog_timeout
         """
         # add sbd after qdevice started
-        if utils.is_qdevice_configured() and utils.service_is_active("corosync-qdevice.service"):
+        if corosync.is_qdevice_configured() and utils.service_is_active("corosync-qdevice.service"):
             qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
             if self.sbd_watchdog_timeout <= qdevice_sync_timeout:
                 watchdog_timeout_with_qdevice = qdevice_sync_timeout + self.QDEVICE_SYNC_TIMEOUT_MARGIN

@@ -1172,7 +1172,7 @@ Node node1: UNCLEAN (offline)
  st	(stonith:null):	Stopped 
      Stopped: [ node1 ]
      Stopped: [ node1 ]
- p3	(ocf::heartbeat:Dummy):	Stopped ( disabled ) 
+p3	(ocf:heartbeat:Dummy):	 Stopped (disabled) 
      Stopped: [ node1 ]
 
 Original: node1 capacity:
