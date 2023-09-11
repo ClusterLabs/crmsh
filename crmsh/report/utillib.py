@@ -22,7 +22,7 @@ from threading import Timer
 from inspect import getmembers, isfunction
 
 import crmsh.config
-from crmsh import utils as crmutils
+from crmsh import utils as crmutils, sh
 from crmsh import corosync, log, userdir
 from crmsh.report import constants, collect
 
@@ -416,7 +416,7 @@ def get_distro_info():
         res = re.search("PRETTY_NAME=\"(.*)\"", read_from_file(constants.OSRELEASE))
     elif which("lsb_release"):
         logger.debug("Using lsb_release to get distribution info")
-        out = crmutils.get_stdout_or_raise_error("lsb_release -d")
+        out = sh.auto_shell().get_stdout_or_raise_error("lsb_release -d")
         res = re.search("Description:\s+(.*)", out)
     return res.group(1) if res else "Unknown"
 
@@ -1362,7 +1362,7 @@ def start_slave_collector(node, arg_str):
         cmd = r'ssh {} {} "{} {}"'.format(constants.SSH_OPTS, node, constants.SUDO, cmd)
         for item in arg_str.split():
             cmd += " {}".format(str(item))
-        code, out, err = crmutils.su_get_stdout_stderr(constants.SSH_USER, cmd)
+        code, out, err = sh.LocalShell().get_stdout_stderr(constants.SSH_USER, cmd)
         if code != 0:
             logger.warning(err)
             for ip in get_peer_ip():

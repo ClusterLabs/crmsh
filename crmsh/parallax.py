@@ -2,7 +2,7 @@
 # See COPYING for license information.
 import typing
 
-import crmsh.utils
+from crmsh.sh import Utils
 from crmsh.prun import prun
 
 
@@ -22,7 +22,10 @@ def parallax_call(nodes, cmd, *, timeout_seconds: int = -1):
         if isinstance(result, prun.PRunError):
             raise ValueError('Failed to run command {} on {}@{}: {}'.format(cmd, result.user, result.host, result))
         elif result.returncode != 0:
-            raise ValueError("Failed on {}: {}".format(node, crmsh.utils.to_ascii(result.stderr)))
+            raise ValueError("Failed on {}: {}".format(
+                node,
+                Utils.decode_str(result.stderr) if result.stderr is not None else None,
+            ))
     return [(node, (result.returncode, result.stdout, result.stderr)) for node, result in results.items()]
 
 

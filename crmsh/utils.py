@@ -28,7 +28,8 @@ from stat import S_ISBLK
 from lxml import etree
 
 import crmsh.parallax
-from . import config
+import crmsh.user_of_host
+from . import config, sh
 from . import userdir
 from . import constants
 from . import options
@@ -37,6 +38,7 @@ from distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
 from .prun import prun
+from .service_manager import ServiceManager
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -107,109 +109,14 @@ getuser = userdir.getuser
 gethomedir = userdir.gethomedir
 
 
-class UserOfHost:
-    class UserNotFoundError(Exception):
-        pass
-
-    @staticmethod
-    def instance():
-        return _user_of_host_instance
-
-    def __init__(self):
-        self._user_cache = dict()
-        self._user_pair_cache = dict()
-
-    def user_of(self, host):
-        cached = self._user_cache.get(host)
-        if cached is None:
-            ret = self._get_user_of_host_from_config(host)
-            if ret is None:
-                raise self.UserNotFoundError
-            else:
-                self._user_cache[host] = ret
-                return ret
-        else:
-            return cached
-
-    def user_pair_for_ssh(self, host: str) -> typing.Tuple[str, str]:
-        """Return (local_user, remote_user) pair for ssh connection"""
-        local_user = None
-        remote_user = None
-        try:
-            local_user = self.user_of(this_node())
-            remote_user = self.user_of(host)
-            return local_user, remote_user
-        except self.UserNotFoundError:
-            cached = self._user_pair_cache.get(host)
-            if cached is None:
-                if local_user is not None:
-                    ret = local_user, local_user
-                    self._user_pair_cache[host] = ret
-                    return ret
-                else:
-                    ret = self._guess_user_for_ssh(host)
-                    if ret is None:
-                        raise self.UserNotFoundError
-                    else:
-                        self._user_pair_cache[host] = ret
-                        return ret
-            else:
-                return cached
-
-
-    @staticmethod
-    def _get_user_of_host_from_config(host):
-        try:
-            canonical, aliases, _ = socket.gethostbyaddr(host)
-            aliases = set(aliases)
-            aliases.add(canonical)
-            aliases.add(host)
-        except (socket.herror, socket.gaierror):
-            aliases = {host}
-        hosts = config.get_option('core', 'hosts')
-        if hosts == ['']:
-            return None
-        for item in hosts:
-            if item.find('@') != -1:
-                user, node = item.split('@')
-            else:
-                user = userdir.getuser()
-                node = item
-            if node in aliases:
-                return user
-        logger.debug('Failed to get the user of host %s (aliases: %s). Known hosts are %s', host, aliases, hosts)
-        return None
-
-    @staticmethod
-    def _guess_user_for_ssh(host: str) -> typing.Tuple[str, str]:
-        args = ['ssh']
-        args.extend(constants.SSH_OPTION_ARGS)
-        args.extend(['-o', 'BatchMode=yes', host, 'sudo', 'true'])
-        rc = subprocess.call(
-            args,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if rc == 0:
-            user = userdir.getuser()
-            return user, user
-        else:
-            return None
-
-
-
-_user_of_host_instance = UserOfHost()
-
-
 def user_of(host):
-    return _user_of_host_instance.user_of(host)
+    return crmsh.user_of_host.instance().user_of(host)
 
 
 def user_pair_for_ssh(host):
     try:
-        return _user_of_host_instance.user_pair_for_ssh(host)
-    except UserOfHost.UserNotFoundError:
+        return crmsh.user_of_host.instance().user_pair_for_ssh(host)
+    except crmsh.user_of_host.UserNotFoundError:
         raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
 
 
@@ -217,7 +124,7 @@ def ssh_copy_id_no_raise(local_user, remote_user, remote_node):
     if check_ssh_passwd_need(local_user, remote_user, remote_node):
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
         cmd = "ssh-copy-id -i ~/.ssh/id_rsa.pub '{}@{}' &> /dev/null".format(remote_user, remote_node)
-        result = su_subprocess_run(local_user, cmd, tty=True)
+        result = sh.LocalShell().su_subprocess_run(local_user, cmd, tty=True)
         return result.returncode
     else:
         return 0
@@ -767,15 +674,16 @@ def write_remote_file(text, tofile, user, remote):
 {text}
 EOF
 '''
-    result = subprocess_run_auto_ssh_no_input(
-        shell_script,
+    result = sh.auto_shell().subprocess_run_no_input(
         remote,
         user,
+        shell_script,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
     )
     if result.returncode != 0:
         raise ValueError("Failed to write to {}@{}/{}: {}".format(user, remote, tofile, result.stdout.decode('utf-8')))
+
 
 def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path):
     """
@@ -789,7 +697,7 @@ def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path)
     rc, out, err = get_stdout_stderr_as_local_sudoer(cmd)
     # If failed, try the hard way
     if rc != 0:
-        rc, out, err = get_stdout_stderr_auto_ssh_no_input(remote_node, 'cat {}'.format(remote_text_file))
+        rc, out, err = sh.auto_shell().get_stdout_stderr_no_input(remote_node, 'cat {}'.format(remote_text_file))
         if rc != 0:
             raise ValueError("Failed to read {}@{}/{}: {}".format(remote_user, remote_node, remote_text_file, err))
         full_path = os.path.join(local_path, os.path.basename(remote_text_file))
@@ -1027,19 +935,6 @@ def pipe_cmd_nosudo(cmd):
     return rc
 
 
-def run_cmd_on_remote(cmd, remote_addr, prompt_msg=None):
-    """
-    Run a cmd on remote node
-    return (rc, stdout, err_msg)
-    """
-    result = subprocess_run_auto_ssh_no_input(
-        cmd, remote_addr,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    return result.returncode, result.stdout.decode('utf-8'), result.stderr.decode('utf-8')
-
-
 def get_stdout(cmd, input_s=None, stderr_on=True, shell=True, raw=False):
     '''
     Run a cmd, return stdout output.
@@ -1080,42 +975,12 @@ def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False, no_reg=False):
     return proc.returncode, to_ascii(stdout_data).strip(), to_ascii(stderr_data).strip()
 
 
-def su_get_stdout_stderr(user, cmd, input_s=None, raw=False):
-    if user == userdir.getuser():
-        args = ['/bin/sh', '-c', cmd]
-    elif 0 == os.geteuid():
-        args = ['su', user, '--login', '-c', cmd]
-    else:
-        raise AssertionError('trying to run su as a non-root user')
-    result = subprocess.run(
-        args,
-        input=input_s.encode('utf-8') if (input_s is not None and not raw) else input_s,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    if raw:
-        return result.returncode, result.stdout, result.stderr
-    return result.returncode, to_ascii(result.stdout).strip(), to_ascii(result.stderr).strip()
-
-
-def get_stdout_stderr_as_local_sudoer(cmd, input_s=None, raw=False):
+def get_stdout_stderr_as_local_sudoer(cmd, input_s=None):
     try:
         user = user_of(this_node())
-    except UserOfHost.UserNotFoundError:
+    except crmsh.user_of_host.UserNotFoundError:
         user = 'root'
-    return su_get_stdout_stderr(user, cmd, input_s, raw)
-
-
-def get_stdout_stderr_auto_ssh_no_input(host, cmd, raw=False):
-    result = subprocess_run_auto_ssh_no_input(
-        cmd,
-        host,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    if raw:
-        return result.returncode, result.stdout, result.stderr
-    return result.returncode, to_ascii(result.stdout).strip(), to_ascii(result.stderr).strip()
+    return sh.LocalShell().get_stdout_stderr(user, cmd, input_s)
 
 
 def stdout2list(cmd, stderr_on=True, shell=True):
@@ -1754,7 +1619,7 @@ def load_graphviz_file(ini_f):
 
 def get_pcmk_version():
     cmd = "/usr/sbin/pacemakerd --version"
-    out = get_stdout_or_raise_error(cmd)
+    out = sh.auto_shell().get_stdout_or_raise_error(cmd)
     version = out.split()[1]
     logger.debug("Found pacemaker version: %s", version)
     return version
@@ -2256,10 +2121,11 @@ def detect_aws():
     """
     Detect if in AWS
     """
+    shell = sh.auto_shell()
     # will match on xen instances
-    xen_test = get_stdout_or_raise_error("dmidecode -s system-version").lower()
+    xen_test = shell.get_stdout_or_raise_error("dmidecode -s system-version").lower()
     # will match on nitro/kvm instances
-    kvm_test = get_stdout_or_raise_error("dmidecode -s system-manufacturer").lower()
+    kvm_test = shell.get_stdout_or_raise_error("dmidecode -s system-manufacturer").lower()
     if "amazon" in xen_test or "amazon" in kvm_test:
         return True
     return False
@@ -2274,8 +2140,9 @@ def detect_azure():
     # might return American Megatrends Inc. instead of Microsoft Corporation in Azure.
     # The better way is to check the result of dmidecode -s chassis-asset-tag is
     # 7783-7084-3265-9085-8269-3286-77, aka. the ascii code of MSFT AZURE VM
-    system_manufacturer = get_stdout_or_raise_error("dmidecode -s system-manufacturer")
-    chassis_asset_tag = get_stdout_or_raise_error("dmidecode -s chassis-asset-tag")
+    shell = sh.auto_shell()
+    system_manufacturer = shell.get_stdout_or_raise_error("dmidecode -s system-manufacturer")
+    chassis_asset_tag = shell.get_stdout_or_raise_error("dmidecode -s chassis-asset-tag")
     if "microsoft corporation" in system_manufacturer.lower() or \
             ''.join([chr(int(n)) for n in re.findall("\d\d", chassis_asset_tag)]) == "MSFT AZURE VM":
         # To detect azure we also need to make an API request
@@ -2291,7 +2158,7 @@ def detect_gcp():
     """
     Detect if in GCP
     """
-    bios_vendor = get_stdout_or_raise_error("dmidecode -s bios-vendor")
+    bios_vendor = sh.auto_shell().get_stdout_or_raise_error("dmidecode -s bios-vendor")
     if "Google" in bios_vendor:
         # To detect GCP we also need to make an API request
         result = _cloud_metadata_request(
@@ -2368,7 +2235,7 @@ def check_ssh_passwd_need(local_user, remote_user, host):
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
     ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
-    rc, _, _ = su_get_stdout_stderr(local_user, ssh_cmd)
+    rc, _ = sh.LocalShell().get_rc_and_error(local_user, ssh_cmd)
     return rc != 0
 
 
@@ -2428,8 +2295,7 @@ def get_iplist_from_name(name):
 
 
 def valid_nodeid(nodeid):
-    from . import bootstrap
-    if not service_is_active('corosync.service'):
+    if not ServiceManager().service_is_active('corosync.service'):
         return False
 
     for _id, _ in get_nodeinfo_from_cmaptool().items():
@@ -2746,10 +2612,11 @@ def check_file_content_included(source_file, target_file, remote=None, source_lo
     if not detect_file(target_file, remote=remote):
         return False
 
+    shell = sh.auto_shell()
     cmd = "cat {}".format(target_file)
-    target_data = get_stdout_or_raise_error(cmd, remote=remote)
+    target_data = shell.get_stdout_or_raise_error(cmd, host=remote)
     cmd = "cat {}".format(source_file)
-    source_data = get_stdout_or_raise_error(cmd, remote=None if source_local else remote)
+    source_data = shell.get_stdout_or_raise_error(cmd, host=None if source_local else remote)
     return source_data in target_data
 
 def check_text_included(text, target_file, remote=None):
@@ -2758,115 +2625,8 @@ def check_text_included(text, target_file, remote=None):
         return False
 
     cmd = "cat {}".format(target_file)
-    target_data = get_stdout_or_raise_error(cmd, remote=remote)
+    target_data = sh.auto_shell().get_stdout_or_raise_error(cmd, remote)
     return text in target_data
-
-
-class ServiceManager(object):
-    """
-    Class to manage systemctl services
-    """
-    @classmethod
-    def service_is_available(cls, name, remote_addr=None):
-        """
-        Check whether service is available
-        """
-        return 0 == cls._run_on_single_host("systemctl list-unit-files '{}'".format(name), remote_addr)
-
-    @classmethod
-    def service_is_enabled(cls, name, remote_addr=None):
-        """
-        Check whether service is enabled
-        """
-        return 0 == cls._run_on_single_host("systemctl is-enabled '{}'".format(name), remote_addr)
-
-    @classmethod
-    def service_is_active(cls, name, remote_addr=None):
-        """
-        Check whether service is active
-        """
-        return 0 == cls._run_on_single_host("systemctl is-active '{}'".format(name), remote_addr)
-
-    @classmethod
-    def start_service(cls, name, enable=False, remote_addr=None, node_list=[]):
-        """
-        Start service
-        Return success node list
-        """
-        if enable:
-            cmd = "systemctl enable --now '{}'".format(name)
-        else:
-            cmd = "systemctl start '{}'".format(name)
-        return cls._call(remote_addr, node_list, cmd)
-
-    @staticmethod
-    def _call(remote_addr: str, node_list: typing.List[str], cmd: str) -> typing.List[str]:
-        assert not (bool(remote_addr) and bool(node_list))
-        if len(node_list) == 1:
-            remote_addr = node_list[0]
-            node_list = list()
-        if node_list:
-            results = ServiceManager._call_with_parallax(cmd, node_list)
-            return [host for host, result in results.items() if isinstance(result, tuple) and result[0] == 0]
-        else:
-            rc = ServiceManager._run_on_single_host(cmd, remote_addr)
-            if rc == 0:
-                return [remote_addr]
-            else:
-                return list()
-
-    @staticmethod
-    def _run_on_single_host(cmd, host):
-        rc, _, _ = get_stdout_stderr_auto_ssh_no_input(host, cmd)
-        if rc == 255:
-            raise ValueError("Failed to run command on host {}: {}".format(host, cmd))
-        return rc
-
-    @staticmethod
-    def _call_with_parallax(cmd, host_list):
-        ret = crmsh.parallax.parallax_run(host_list, cmd)
-        if ret is crmsh.parallax.Error:
-            raise ret
-        return ret
-
-    @classmethod
-    def stop_service(cls, name, disable=False, remote_addr=None, node_list=[]):
-        """
-        Stop service
-        Return success node list
-        """
-        if disable:
-            cmd = "systemctl disable --now '{}'".format(name)
-        else:
-            cmd = "systemctl stop '{}'".format(name)
-        return cls._call(remote_addr, node_list, cmd)
-
-    @classmethod
-    def enable_service(cls, name, remote_addr=None, node_list=[]):
-        """
-        Enable service
-        Return success node list
-        """
-        cmd = "systemctl enable '{}'".format(name)
-        return cls._call(remote_addr, node_list, cmd)
-
-    @classmethod
-    def disable_service(cls, name, remote_addr=None, node_list=[]):
-        """
-        Disable service
-        Return success node list
-        """
-        cmd = "systemctl disable '{}'".format(name)
-        return cls._call(remote_addr, node_list, cmd)
-
-
-service_is_available = ServiceManager.service_is_available
-service_is_enabled = ServiceManager.service_is_enabled
-service_is_active = ServiceManager.service_is_active
-start_service = ServiceManager.start_service
-stop_service = ServiceManager.stop_service
-enable_service = ServiceManager.enable_service
-disable_service = ServiceManager.disable_service
 
 
 def package_is_installed(pkg, remote_addr=None):
@@ -2876,7 +2636,7 @@ def package_is_installed(pkg, remote_addr=None):
     cmd = "rpm -q --quiet {}".format(pkg)
     if remote_addr:
         # check on remote
-        rc, _, _ = get_stdout_stderr_auto_ssh_no_input(remote_addr, cmd)
+        rc, _, _ = sh.auto_shell().get_stdout_stderr_no_input(remote_addr, cmd)
     else:
         # check on local
         rc, _ = get_stdout(cmd)
@@ -2899,93 +2659,11 @@ def calculate_quorate_status(expected_votes, actual_votes):
     return int(actual_votes)/int(expected_votes) > 0.5
 
 
-def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0], no_raise=False):
-    """
-    Common function to get stdout from cmd or raise exception
-    """
-    if remote is None:
-        result = subprocess.run(
-            ['/bin/sh'],
-            input=cmd.encode('utf-8'),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE,
-        )
-    else:
-        result = subprocess_run_auto_ssh_no_input(
-            cmd, remote,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE,
-        )
-    if no_raise or result.returncode in success_val_list:
-        return result.stdout.decode('utf-8').strip('\n')
-    else:
-        if remote is None:
-            raise ValueError("Failed to run '{}': {}".format(cmd, result.stderr.decode('utf-8')))
-        else:
-            raise ValueError("Failed to run command on remote host {}: '{}': {}".format(remote, cmd, result.stderr.decode('utf-8')))
-
-
-def subprocess_run_auto_ssh_no_input(cmd, remote=None, user=None, **kwargs):
-    assert 'input' not in kwargs and 'stdin' not in kwargs
-    if remote is None or remote == this_node():
-        if user is None:
-            args = ['/bin/sh']
-        else:
-            args = ['sudo', '-H', '-u', user, '/bin/sh']
-        return subprocess.run(
-            args,
-            input=cmd.encode('utf-8'),
-            **kwargs,
-        )
-    else:
-        local_user, remote_user = user_pair_for_ssh(remote)
-        if user is None:
-            user = 'root'
-        return su_subprocess_run(
-            local_user,
-            'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_user, remote, user),
-            input=cmd.encode('utf-8'),
-            **kwargs,
-        )
-
-
-def su_get_stdout_or_raise_error(cmd, user, success_values={0}, no_raise=False):
-    """run a command as a non-root user on local host"""
-    if user == userdir.getuser():
-        args = ['/bin/sh', '-c', cmd]
-    elif 0 == os.geteuid():
-        args = ['su', user, '-c', cmd]
-    else:
-        raise AssertionError('trying to run su as a non-root user')
-    result = subprocess.run(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE
-    )
-    if no_raise or result.returncode in success_values:
-        return result.stdout
-    else:
-        raise ValueError("Failed to run su {} -c '{}': {}".format(user, cmd, result.stderr))
-
-
-def su_subprocess_run(user: str, cmd: str, tty=False, **kwargs):
-    if user == userdir.getuser():
-        args = ['/bin/sh', '-c', cmd]
-    elif 0 == os.geteuid():
-        if tty:
-            args = ['su', user, '--pty', '--login', '-c', cmd]
-        else:
-            args = ['su', user, '--login', '-c', cmd]
-    else:
-        raise AssertionError('trying to run su as a non-root user')
-    return subprocess.run(args, **kwargs)
-
-
 def get_quorum_votes_dict(remote=None):
     """
     Return a dictionary which contain expect votes and total votes
     """
-    out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=remote, success_val_list=[0, 2])
+    out = sh.auto_shell().get_stdout_or_raise_error("corosync-quorumtool -s", remote, success_exit_status={0, 2})
     return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
 
 
@@ -2993,7 +2671,7 @@ def check_all_nodes_reachable():
     """
     Check if all cluster nodes are reachable
     """
-    out = get_stdout_or_raise_error("crm_node -l")
+    out = sh.auto_shell().get_stdout_or_raise_error("crm_node -l")
     for node in re.findall("\d+ (.*) \w+", out):
         ping_node(node)
 
@@ -3021,7 +2699,7 @@ def has_stonith_running():
     Check if any stonith device registered
     """
     from . import sbd
-    out = get_stdout_or_raise_error("stonith_admin -L")
+    out = sh.auto_shell().get_stdout_or_raise_error("stonith_admin -L")
     has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
     using_diskless_sbd = sbd.SBDManager.is_using_diskless_sbd()
     return has_stonith_device or using_diskless_sbd
@@ -3031,7 +2709,7 @@ def has_disk_mounted(dev):
     """
     Check if device already mounted
     """
-    out = get_stdout_or_raise_error("mount")
+    out = sh.auto_shell().get_stdout_or_raise_error("mount")
     return re.search("\n{} on ".format(dev), out) is not None
 
 
@@ -3039,7 +2717,7 @@ def has_mount_point_used(directory):
     """
     Check if mount directory already mounted
     """
-    out = get_stdout_or_raise_error("mount")
+    out = sh.auto_shell().get_stdout_or_raise_error("mount")
     return re.search(" on {}".format(directory), out) is not None
 
 
@@ -3074,7 +2752,7 @@ def get_all_vg_name():
     """
     Get all available VGs
     """
-    out = get_stdout_or_raise_error("vgdisplay")
+    out = sh.auto_shell().get_stdout_or_raise_error("vgdisplay")
     return re.findall("VG Name\s+(.*)", out)
 
 
@@ -3082,7 +2760,7 @@ def get_pe_number(vg_id):
     """
     Get pe number
     """
-    output = get_stdout_or_raise_error("vgdisplay {}".format(vg_id))
+    output = sh.auto_shell().get_stdout_or_raise_error("vgdisplay {}".format(vg_id))
     res = re.search("Total PE\s+(\d+)", output)
     if not res:
         raise ValueError("Cannot find PE on VG({})".format(vg_id))
@@ -3108,7 +2786,7 @@ def get_dev_uuid_2(dev, peer=None):
     """
     Get UUID of device using blkid
     """
-    out = get_stdout_or_raise_error("blkid {}".format(dev), remote=peer)
+    out = sh.auto_shell().get_stdout_or_raise_error("blkid {}".format(dev), peer)
     res = re.search("UUID=\"(.*?)\"", out)
     return res.group(1) if res else None
 
@@ -3125,7 +2803,7 @@ def get_dev_info(dev, *_type, peer=None):
     Get device info using lsblk
     """
     cmd = "lsblk -fno {} {}".format(','.join(_type), dev)
-    return get_stdout_or_raise_error(cmd, remote=peer)
+    return sh.auto_shell().get_stdout_or_raise_error(cmd, peer)
 
 
 def is_dev_used_for_lvm(dev, peer=None):
@@ -3163,14 +2841,14 @@ def append_res_to_group(group_id, res_id):
     Append resource to exist group
     """
     cmd = "crm configure modgroup {} add {}".format(group_id, res_id)
-    get_stdout_or_raise_error(cmd)
+    sh.auto_shell().get_stdout_or_raise_error(cmd)
 
 
 def get_qdevice_sync_timeout():
     """
     Get qdevice sync_timeout
     """
-    out = get_stdout_or_raise_error("crm corosync status qdevice")
+    out = sh.auto_shell().sh.auto_shell().get_stdout_or_raise_error("crm corosync status qdevice")
     res = re.search("Sync HB interval:\s+(\d+)ms", out)
     if not res:
         raise ValueError("Cannot find qdevice sync timeout")
@@ -3197,7 +2875,7 @@ def is_standby(node):
     """
     Check if the node is already standby
     """
-    out = get_stdout_or_raise_error("crm_mon -1")
+    out = sh.auto_shell().get_stdout_or_raise_error("crm_mon -1")
     return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
 
 
@@ -3205,7 +2883,7 @@ def get_dlm_option_dict():
     """
     Get dlm config option dictionary
     """
-    out = get_stdout_or_raise_error("dlm_tool dump_config")
+    out = sh.auto_shell().get_stdout_or_raise_error("dlm_tool dump_config")
     return dict(re.findall("(\w+)=(\w+)", out))
 
 
@@ -3213,12 +2891,13 @@ def set_dlm_option(**kargs):
     """
     Set dlm option
     """
+    shell = sh.auto_shell()
     dlm_option_dict = get_dlm_option_dict()
     for option, value in kargs.items():
         if option not in dlm_option_dict:
             raise ValueError('"{}" is not dlm config option'.format(option))
         if dlm_option_dict[option] != value:
-            get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value))
+            shell.get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value))
 
 
 def is_dlm_running():
@@ -3241,7 +2920,7 @@ def is_quorate():
     """
     Check if cluster is quorated
     """
-    out = get_stdout_or_raise_error("corosync-quorumtool -s", success_val_list=[0, 2])
+    out = sh.auto_shell().get_stdout_or_raise_error("corosync-quorumtool -s", success_exit_status={0, 2})
     res = re.search(r'Quorate:\s+(.*)', out)
     if res:
         return res.group(1) == "Yes"
@@ -3262,7 +2941,7 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
     """
     Get value of pcmk_delay_max
     """
-    if service_is_active("pacemaker.service") and two_node_without_qdevice:
+    if ServiceManager().service_is_active("pacemaker.service") and two_node_without_qdevice:
         return constants.PCMK_DELAY_MAX
     return 0
 
@@ -3310,7 +2989,7 @@ def set_property(property_name, property_value, property_type="crm_config", cond
         logger.warning("\"{}\" in {} is set to {}, it was {}".format(property_name, property_type, property_value, origin_value))
     property_sub_cmd = "property" if property_type == "crm_config" else property_type
     cmd = "crm configure {} {}={}".format(property_sub_cmd, property_name, property_value)
-    get_stdout_or_raise_error(cmd)
+    sh.auto_shell().get_stdout_or_raise_error(cmd)
 
 
 def get_systemd_timeout_start_in_sec(time_res):
@@ -3446,7 +3125,7 @@ def fetch_cluster_node_list_from_node(init_node):
     Fetch cluster member list from one known cluster node
     """
     cluster_nodes_list = []
-    out = get_stdout_or_raise_error("crm_node -l", remote=init_node)
+    out = sh.auto_shell().get_stdout_or_raise_error("crm_node -l", init_node)
     for line in out.splitlines():
         # Parse line in format: <id> <nodename> <state>, and collect the nodename.
         tokens = line.split()

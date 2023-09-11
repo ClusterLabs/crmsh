@@ -6,9 +6,9 @@ import typing
 
 import crmsh.constants
 import crmsh.userdir
-import crmsh.utils
 from crmsh.prun.runner import Task, Runner
-
+from crmsh.user_of_host import UserOfHost
+from crmsh.sh import Utils
 
 _DEFAULT_CONCURRENCY = 32
 
@@ -96,7 +96,7 @@ def prun_multimap(
 
 
 def _build_run_task(remote: str, cmdline: str) -> Task:
-    local_sudoer, remote_sudoer = crmsh.utils.UserOfHost.instance().user_pair_for_ssh(remote)
+    local_sudoer, remote_sudoer = UserOfHost.instance().user_pair_for_ssh(remote)
     if _is_local_host(remote):
         if 0 == os.geteuid():
             args = ['/bin/sh']
@@ -125,7 +125,7 @@ def _handle_run_result(task: Task, interceptor: PRunInterceptor = PRunIntercepto
     if task.returncode is None:
         return interceptor.exception(TimeOutError(task.context['ssh_user'], task.context['host']))
     elif task.returncode == 255:
-        return interceptor.exception(SSHError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stderr)))
+        return interceptor.exception(SSHError(task.context['ssh_user'], task.context['host'], Utils.decode_str(task.stderr)))
     else:
         return interceptor.result(ProcessResult(task.returncode, task.stdout, task.stderr))
 
@@ -147,7 +147,7 @@ def pcopy_to_remote(
         else:
             return {x: None for x in hosts}
     flags = '-pr' if recursive else '-p'
-    local_sudoer, _ = crmsh.utils.UserOfHost.instance().user_pair_for_ssh(hosts[0])
+    local_sudoer, _ = UserOfHost.instance().user_pair_for_ssh(hosts[0])
     script = "put {} '{}' '{}'\n".format(flags, src, dst)
     ssh = None
     try:
@@ -171,7 +171,7 @@ exec sudo -u {local_sudoer} ssh "$@"''')
 
 
 def _build_copy_task(ssh: str, script: str, host: str):
-    _, remote_sudoer = crmsh.utils.UserOfHost.instance().user_pair_for_ssh(host)
+    _, remote_sudoer = UserOfHost.instance().user_pair_for_ssh(host)
     cmd = "sftp {} {} -o BatchMode=yes -s 'sudo PATH=/usr/lib/ssh:/usr/libexec/ssh /bin/sh -c \"exec sftp-server\"' -b - {}@{}".format(
         ssh,
         crmsh.constants.SSH_OPTION,
@@ -190,9 +190,9 @@ def _parse_copy_result(task: Task) -> typing.Optional[PRunError]:
     if task.returncode == 0:
         return None
     elif task.returncode == 255:
-        return SSHError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stdout))
+        return SSHError(task.context['ssh_user'], task.context['host'], Utils.decode_str(task.stdout))
     else:
-        return PRunError(task.context['ssh_user'], task.context['host'], crmsh.utils.to_ascii(task.stdout))
+        return PRunError(task.context['ssh_user'], task.context['host'], Utils.decode_str(task.stdout))
 
 
 def pfetch_from_remote(
@@ -206,7 +206,7 @@ def pfetch_from_remote(
 
     Files are copied to directory <dst>/<host>/ corresponding to each source host."""
     flags = '-pR' if recursive else '-p'
-    local_sudoer, _ = crmsh.utils.UserOfHost.instance().user_pair_for_ssh(hosts[0])
+    local_sudoer, _ = UserOfHost.instance().user_pair_for_ssh(hosts[0])
     ssh = None
     try:
         ssh = tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False)
@@ -232,7 +232,7 @@ exec sudo -u {local_sudoer} ssh "$@"''')
 
 
 def _build_fetch_task( ssh: str, host: str, src: str, dst: str, flags: str) -> Task:
-    _, remote_sudoer = crmsh.utils.UserOfHost.instance().user_pair_for_ssh(host)
+    _, remote_sudoer = UserOfHost.instance().user_pair_for_ssh(host)
     cmd = "sftp {} {} -o BatchMode=yes -s 'sudo PATH=/usr/lib/ssh:/usr/libexec/ssh /bin/sh -c \"exec sftp-server\"' -b - {}@{}".format(
         ssh,
         crmsh.constants.SSH_OPTION,

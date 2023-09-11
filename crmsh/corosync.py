@@ -9,7 +9,7 @@ import os
 import re
 import socket
 
-from . import utils
+from . import utils, sh
 from . import tmpfiles
 from . import parallax
 from . import log
@@ -89,7 +89,7 @@ def query_qdevice_status():
     if not utils.is_qdevice_configured():
         raise ValueError("QDevice/QNetd not configured!")
     cmd = "corosync-qdevice-tool -sv"
-    out = utils.get_stdout_or_raise_error(cmd)
+    out = sh.auto_shell().get_stdout_or_raise_error(cmd)
     utils.print_cluster_nodes()
     print(out)
 
@@ -763,7 +763,7 @@ def get_corosync_value(key):
     Get corosync configuration value from corosync-cmapctl or corosync.conf
     """
     try:
-        out = utils.get_stdout_or_raise_error("corosync-cmapctl {}".format(key))
+        out = sh.auto_shell().get_stdout_or_raise_error("corosync-cmapctl {}".format(key))
         res = re.search(r'{}\s+.*=\s+(.*)'.format(key), out)
         return res.group(1) if res else None
     except ValueError:

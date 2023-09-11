@@ -10,7 +10,7 @@ from crmsh import utils as crmshutils
 from crmsh import log
 from . import utils
 from . import config
-
+from ..service_manager import ServiceManager
 
 logger = log.setup_logger(__name__)
 
@@ -102,7 +102,7 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
           * pacemaker.service is active
           * stonith is enabled
         """
-        if not crmshutils.service_is_active("pacemaker.service"):
+        if not ServiceManager().service_is_active("pacemaker.service"):
             raise TaskError("Cluster not running!")
         if need_fence:
             self.get_fence_info()

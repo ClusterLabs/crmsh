@@ -9,14 +9,14 @@ import copy
 import bz2
 from collections import defaultdict
 
-from . import config
+from . import config, sh
 from . import options
 from . import schema
 from . import constants
 from . import userdir
 from tempfile import mktemp
 from .utils import add_sudo, str2file, str2tmp, get_boolean, handle_role_for_ocf_1_1, copy_local_file, rmfile
-from .utils import get_stdout, get_stdout_or_raise_error, stdout2list, crm_msec, crm_time_cmp
+from .utils import get_stdout, stdout2list, crm_msec, crm_time_cmp
 from .utils import olist, get_cib_in_use, get_tempdir, to_ascii, is_boolean_true
 from . import log
 
@@ -1521,7 +1521,7 @@ class CrmMonXmlParser(object):
         """
         Load xml output of crm_mon
         """
-        output = get_stdout_or_raise_error(constants.CRM_MON_XML_OUTPUT, remote=self.peer, no_raise=True)
+        rc, output, stderr = sh.auto_shell().get_stdout_stderr_no_input(self.peer, constants.CRM_MON_XML_OUTPUT)
         self.xml_elem = text2elem(output)
 
     @classmethod

@@ -1,13 +1,13 @@
 import re
 from contextlib import contextmanager
-from . import utils
+from . import utils, sh
 from . import bootstrap
 from . import ra
 from . import corosync
 from . import log
 from . import xmlutil
 from . import constants
-
+from .service_manager import ServiceManager
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -93,7 +93,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         if not self.use_stage:
             return
-        out = utils.get_stdout_or_raise_error("crm configure show")
+        out = sh.auto_shell().get_stdout_or_raise_error("crm configure show")
         if "fstype=ocfs2" in out:
             logger.info("Already configured OCFS2 related resources")
             raise utils.TerminateSubCommand
@@ -118,7 +118,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         Raise error when ocfs2 device is the same with sbd device
         """
         from . import sbd
-        if utils.service_is_enabled("sbd.service"):
+        if ServiceManager().service_is_enabled("sbd.service"):
             sbd_device_list = sbd.SBDManager.get_sbd_device_from_config()
             for dev in self.ocfs2_devices:
                 if dev in sbd_device_list:
@@ -140,7 +140,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
                 raise utils.TerminateSubCommand
 
         for dev in self.ocfs2_devices:
-            utils.get_stdout_or_raise_error("wipefs -a {}".format(dev))
+            sh.auto_shell().get_stdout_or_raise_error("wipefs -a {}".format(dev))
 
     def _dynamic_verify(self):
         """
@@ -168,38 +168,40 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         with logger_utils.status_long("  Creating OCFS2 filesystem for {}".format(target)):
             self.cluster_name = corosync.get_value('totem.cluster_name')
-            utils.get_stdout_or_raise_error(self.MKFS_CMD.format(self.cluster_name, self.MAX_CLONE_NUM, target))
+            sh.auto_shell().get_stdout_or_raise_error(self.MKFS_CMD.format(self.cluster_name, self.MAX_CLONE_NUM, target))
 
     @contextmanager
     def _vg_change(self):
         """
         vgchange process using contextmanager
         """
-        utils.get_stdout_or_raise_error("vgchange -ay {}".format(self.vg_id))
+        shell = sh.auto_shell()
+        shell.get_stdout_or_raise_error("vgchange -ay {}".format(self.vg_id))
         try:
             yield
         finally:
-            utils.get_stdout_or_raise_error("vgchange -an {}".format(self.vg_id))
+            shell.get_stdout_or_raise_error("vgchange -an {}".format(self.vg_id))
 
     def _create_lv(self):
         """
         Create PV, VG, LV and return LV path
         """
         disks_string = ' '.join(self.ocfs2_devices)
+        shell = sh.auto_shell()
 
         # Create PV
         with logger_utils.status_long("  Creating PV for {}".format(disks_string)):
-            utils.get_stdout_or_raise_error("pvcreate {} -y".format(disks_string))
+            shell.get_stdout_or_raise_error("pvcreate {} -y".format(disks_string))
 
         # Create VG
         self.vg_id = utils.gen_unused_id(utils.get_all_vg_name(), self.VG_ID)
         with logger_utils.status_long("  Creating VG {}".format(self.vg_id)):
-            utils.get_stdout_or_raise_error("vgcreate --shared {} {} -y".format(self.vg_id, disks_string))
+            shell.get_stdout_or_raise_error("vgcreate --shared {} {} -y".format(self.vg_id, disks_string))
 
         # Create LV
         with logger_utils.status_long("  Creating LV {} on VG {}".format(self.LV_ID, self.vg_id)):
             pe_number = utils.get_pe_number(self.vg_id)
-            utils.get_stdout_or_raise_error("lvcreate -l {} {} -n {} -y".format(pe_number, self.vg_id, self.LV_ID))
+            shell.get_stdout_or_raise_error("lvcreate -l {} {} -n {} -y".format(pe_number, self.vg_id, self.LV_ID))
  
         return "/dev/{}/{}".format(self.vg_id, self.LV_ID)
 
@@ -312,7 +314,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         Find device name from OCF Filesystem param on peer node
         """
-        out = utils.get_stdout_or_raise_error("crm configure show", remote=peer)
+        out = sh.auto_shell().get_stdout_or_raise_error("crm configure show", peer)
         for line in out.splitlines():
             if "fstype=ocfs2" in line:
                 res = re.search("device=\"(.*?)\"", line)

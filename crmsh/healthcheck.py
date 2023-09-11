@@ -150,6 +150,7 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
         local_user = crmsh.utils.user_pair_for_ssh(remote_nodes[0])[0]
         crmsh.bootstrap.init_ssh_impl(
             local_user,
+            None,
             [(crmsh.utils.user_pair_for_ssh(node)[1], node) for node in remote_nodes],
         )
 
