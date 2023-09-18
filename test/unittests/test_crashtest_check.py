@@ -44,9 +44,9 @@ class TestCheck(TestCase):
         mock_hostname.assert_called_once_with()
         mock_task_inst.error.assert_called_once_with('Hostname "node1" is unresolvable.\n  Please add an entry to /etc/hosts or configure DNS.')
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_available')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_available')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_time_service_none(self, mock_task, mock_service_available, mock_service_enabled, mock_service_active):
         mock_task_inst = mock.Mock()
@@ -65,9 +65,9 @@ class TestCheck(TestCase):
             ])
         mock_task_inst.warn.assert_called_once_with("No NTP service found.")
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_available')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_available')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_time_service_warn(self, mock_task, mock_service_available, mock_service_enabled, mock_service_active):
         mock_task_inst = mock.Mock()
@@ -88,9 +88,9 @@ class TestCheck(TestCase):
             mock.call("chronyd.service is not active"),
             ])
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_available')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_available')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_time_service(self, mock_task, mock_service_available, mock_service_enabled, mock_service_active):
         mock_task_inst = mock.Mock()
@@ -170,7 +170,7 @@ class TestCheck(TestCase):
             ])
         mock_task_inst.warn.assert_called_once_with("Failed to detect firewall")
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.crash_test.check.crmshutils.package_is_installed')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_firewall_warn(self, mock_task, mock_installed, mock_active):
@@ -189,7 +189,7 @@ class TestCheck(TestCase):
         mock_task_inst.warn.assert_called_once_with("firewalld.service is not active")
 
     @mock.patch('crmsh.crash_test.check.check_port_open')
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.crash_test.check.crmshutils.package_is_installed')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_firewall(self, mock_task, mock_installed, mock_active, mock_check_port):
@@ -229,8 +229,8 @@ class TestCheck(TestCase):
         mock_check_nodes.assert_called_once_with()
         mock_check_resources.assert_called_once_with()
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_cluster_service_pacemaker_disable(self, mock_task, mock_enabled, mock_active):
         mock_task_inst = mock.Mock(passed=False)
@@ -259,8 +259,8 @@ class TestCheck(TestCase):
         mock_task_inst.info.assert_called_once_with("corosync.service is running")
         mock_task_inst.error.assert_called_once_with("pacemaker.service is not running!")
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_enabled')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_cluster_service(self, mock_task, mock_enabled, mock_active):
         mock_task_inst = mock.Mock(passed=True)
@@ -325,7 +325,7 @@ class TestCheck(TestCase):
         mock_task_inst.info.assert_called_once_with("stonith is enabled")
         mock_task_inst.warn.assert_called_once_with("No stonith resource configured!")
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.utils.FenceInfo')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
@@ -353,7 +353,7 @@ class TestCheck(TestCase):
             mock.call("sbd service is not running!")
             ])
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.utils.FenceInfo')
     @mock.patch('crmsh.crash_test.task.TaskCheck')

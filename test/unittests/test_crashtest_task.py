@@ -589,7 +589,7 @@ class TestTask(TestCase):
     def test_to_json(self):
         self.task_inst.to_json()
 
-    @mock.patch('crmsh.crash_test.task.crmshutils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     def test_task_pre_check_exception(self, mock_active):
         mock_active.return_value = False
         with self.assertRaises(task.TaskError) as err:
@@ -597,7 +597,7 @@ class TestTask(TestCase):
         self.assertEqual("Cluster not running!", str(err.exception))
         mock_active.assert_called_once_with("pacemaker.service")
 
-    @mock.patch('crmsh.crash_test.task.crmshutils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     def test_task_pre_check_exception_no_fence(self, mock_active):
         mock_active.return_value = True
         self.task_inst.get_fence_info = mock.Mock()

@@ -37,7 +37,7 @@ class TestCluster(unittest.TestCase):
         """
 
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     @mock.patch('crmsh.utils.is_qdevice_configured')
     def test_do_start_already_started(self, mock_qdevice_configured, mock_parse_nodes, mock_active, mock_info):
@@ -60,8 +60,8 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.start_pacemaker')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.is_qdevice_configured')
-    @mock.patch('crmsh.utils.start_service')
-    @mock.patch('crmsh.utils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.start_service')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_start_pacemaker, mock_check_qdevice):
         context_inst = mock.Mock()
@@ -81,7 +81,7 @@ class TestCluster(unittest.TestCase):
         mock_info.assert_called_once_with("The cluster stack started on node1")
 
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     def test_do_stop_already_stopped(self, mock_parse_nodes, mock_active, mock_info):
         context_inst = mock.Mock()
@@ -96,14 +96,14 @@ class TestCluster(unittest.TestCase):
 
     @mock.patch('logging.Logger.debug')
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.stop_service')
+    @mock.patch('crmsh.service_manager.ServiceManager.stop_service')
     @mock.patch('crmsh.utils.set_dlm_option')
     @mock.patch('crmsh.utils.is_quorate')
     @mock.patch('crmsh.utils.is_dlm_running')
     @mock.patch('crmsh.utils.get_dc')
     @mock.patch('crmsh.utils.check_function_with_timeout')
     @mock.patch('crmsh.utils.get_property')
-    @mock.patch('crmsh.utils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     def test_do_stop(self, mock_parse_nodes, mock_active, mock_get_property, mock_check, mock_get_dc, mock_dlm_running, mock_is_quorate, mock_set_dlm, mock_stop, mock_info, mock_debug):
         context_inst = mock.Mock()

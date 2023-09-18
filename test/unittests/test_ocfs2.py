@@ -132,7 +132,7 @@ class TestOCFS2Manager(unittest.TestCase):
         self.ocfs2_inst3._check_if_already_configured()
 
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
     def test_check_if_already_configured(self, mock_run, mock_info):
         mock_run.return_value = "data xxx fstype=ocfs2  sss"
         with self.assertRaises(utils.TerminateSubCommand):
@@ -158,7 +158,7 @@ class TestOCFS2Manager(unittest.TestCase):
 
     @mock.patch('crmsh.ocfs2.OCFS2Manager._dynamic_raise_error')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
-    @mock.patch('crmsh.utils.service_is_enabled')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
     def test_check_sbd_and_ocfs2_dev(self, mock_enabled, mock_get_device, mock_error):
         mock_enabled.return_value = True
         mock_get_device.return_value = ["/dev/sdb2"]
@@ -186,7 +186,7 @@ class TestOCFS2Manager(unittest.TestCase):
             mock.call("/dev/sdc2 contains a ext4 file system - Proceed anyway?")
             ])
 
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.utils.get_dev_fs_type')
     @mock.patch('crmsh.utils.has_dev_partitioned')
@@ -237,7 +237,7 @@ class TestOCFS2Manager(unittest.TestCase):
         assert res == ("g1", "\ngroup g1 d vip")
         mock_gen_unused.assert_called_once_with([], "g1")
 
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.corosync.get_value')
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     def test_mkfs(self, mock_long, mock_get_value, mock_run):
@@ -247,7 +247,7 @@ class TestOCFS2Manager(unittest.TestCase):
         mock_get_value.assert_called_once_with("totem.cluster_name")
         mock_run.assert_called_once_with("mkfs.ocfs2 --cluster-stack pcmk --cluster-name hacluster -N 8 -x /dev/sdb2")
 
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
     def test_vg_change(self, mock_run):
         self.ocfs2_inst3.vg_id = "vg1"
         with self.ocfs2_inst3._vg_change():
@@ -260,7 +260,7 @@ class TestOCFS2Manager(unittest.TestCase):
     @mock.patch('crmsh.utils.get_pe_number')
     @mock.patch('crmsh.utils.gen_unused_id')
     @mock.patch('crmsh.utils.get_all_vg_name')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     def test_create_lv(self, mock_long, mock_run, mock_all_vg, mock_unused, mock_pe_num):
         mock_all_vg.return_value = []
@@ -410,14 +410,14 @@ class TestOCFS2Manager(unittest.TestCase):
         mock_all_id.assert_called_once_with()
         mock_ocfs2.assert_called_once_with()
 
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
     def test_find_target_on_join_none(self, mock_run):
         mock_run.return_value = "data"
         res = self.ocfs2_inst3._find_target_on_join("node1")
         assert res is None
-        mock_run.assert_called_once_with("crm configure show", remote="node1")
+        mock_run.assert_called_once_with("crm configure show", "node1")
 
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
     def test_find_target_on_join_exception(self, mock_run):
         mock_run.return_value = """
 params directory="/srv/clusterfs" fstype=ocfs2
@@ -425,16 +425,16 @@ params directory="/srv/clusterfs" fstype=ocfs2
         with self.assertRaises(ValueError) as err:
             self.ocfs2_inst3._find_target_on_join("node1")
         self.assertEqual("Filesystem require configure device", str(err.exception))
-        mock_run.assert_called_once_with("crm configure show", remote="node1")
+        mock_run.assert_called_once_with("crm configure show", "node1")
 
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
     def test_find_target_on_join(self, mock_run):
         mock_run.return_value = """
 params directory="/srv/clusterfs" fstype=ocfs2 device="/dev/sda2"
         """
         res = self.ocfs2_inst3._find_target_on_join("node1")
         self.assertEqual(res, "/dev/sda2")
-        mock_run.assert_called_once_with("crm configure show", remote="node1")
+        mock_run.assert_called_once_with("crm configure show", "node1")
 
     @mock.patch('crmsh.ocfs2.OCFS2Manager._find_target_on_join')
     def test_join_ocfs2_return(self, mock_find):

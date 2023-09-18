@@ -53,7 +53,7 @@ def test_check_file_content_included_target_not_exist(mock_detect):
         ])
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.utils.detect_file')
 def test_check_file_content_included(mock_detect, mock_run):
     mock_detect.side_effect = [True, True]
@@ -67,8 +67,8 @@ def test_check_file_content_included(mock_detect, mock_run):
         mock.call("file2", remote=None)
         ])
     mock_run.assert_has_calls([
-        mock.call("cat file2", remote=None),
-        mock.call("cat file1", remote=None)
+        mock.call("cat file2", host=None),
+        mock.call("cat file1", host=None)
         ])
 
 
@@ -134,12 +134,12 @@ def test_get_nodeid_from_name(mock_get_stdout, mock_re_search):
     mock_re_search_inst.group.assert_called_once_with(1)
 
 
-@mock.patch('crmsh.utils.su_get_stdout_stderr')
-def test_check_ssh_passwd_need(mock_su_get_stdout_stderr):
-    mock_su_get_stdout_stderr.return_value = (1, None, None)
+@mock.patch('crmsh.sh.LocalShell.get_rc_and_error')
+def test_check_ssh_passwd_need(mock_run):
+    mock_run.return_value = (1, 'foo')
     res = utils.check_ssh_passwd_need("bob", "alice", "node1")
     assert res is True
-    mock_su_get_stdout_stderr.assert_called_once_with(
+    mock_run.assert_called_once_with(
         "bob",
         "ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes alice@node1 true",
     )
@@ -461,7 +461,7 @@ def test_get_nodeinfo_from_cmaptool(mock_get_stdout, mock_search, mock_findall):
     ])
 
 @mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
-@mock.patch("crmsh.utils.service_is_active")
+@mock.patch("crmsh.service_manager.ServiceManager.service_is_active")
 def test_valid_nodeid_false_service_not_active(mock_is_active, mock_nodeinfo):
     mock_is_active.return_value = False
     assert utils.valid_nodeid("3") is False
@@ -469,7 +469,7 @@ def test_valid_nodeid_false_service_not_active(mock_is_active, mock_nodeinfo):
     mock_nodeinfo.assert_not_called()
 
 @mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
-@mock.patch("crmsh.utils.service_is_active")
+@mock.patch("crmsh.service_manager.ServiceManager.service_is_active")
 def test_valid_nodeid_false(mock_is_active, mock_nodeinfo):
     mock_is_active.return_value = True
     mock_nodeinfo.return_value = {'1': ["10.10.10.1"], "2": ["20.20.20.2"]}
@@ -478,7 +478,7 @@ def test_valid_nodeid_false(mock_is_active, mock_nodeinfo):
     mock_nodeinfo.assert_called_once_with()
 
 @mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
-@mock.patch("crmsh.utils.service_is_active")
+@mock.patch("crmsh.service_manager.ServiceManager.service_is_active")
 def test_valid_nodeid_true(mock_is_active, mock_nodeinfo):
     mock_is_active.return_value = True
     mock_nodeinfo.return_value = {'1': ["10.10.10.1"], "2": ["20.20.20.2"]}
@@ -486,7 +486,7 @@ def test_valid_nodeid_true(mock_is_active, mock_nodeinfo):
     mock_is_active.assert_called_once_with('corosync.service')
     mock_nodeinfo.assert_called_once_with()
 
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_detect_aws_false(mock_run):
     mock_run.side_effect = ["test", "test"]
     assert utils.detect_aws() is False
@@ -495,7 +495,7 @@ def test_detect_aws_false(mock_run):
         mock.call("dmidecode -s system-manufacturer")
         ])
 
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_detect_aws_xen(mock_run):
     mock_run.side_effect = ["4.2.amazon", "Xen"]
     assert utils.detect_aws() is True
@@ -504,7 +504,7 @@ def test_detect_aws_xen(mock_run):
         mock.call("dmidecode -s system-manufacturer")
         ])
 
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_detect_aws_kvm(mock_run):
     mock_run.side_effect = ["Not Specified", "Amazon EC2"]
     assert utils.detect_aws() is True
@@ -513,7 +513,7 @@ def test_detect_aws_kvm(mock_run):
         mock.call("dmidecode -s system-manufacturer")
         ])
 
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_detect_azure_false(mock_run):
     mock_run.side_effect = ["test", "test"]
     assert utils.detect_azure() is False
@@ -523,7 +523,7 @@ def test_detect_azure_false(mock_run):
         ])
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_detect_azure_microsoft_corporation(mock_run, mock_request):
     mock_run.side_effect = ["microsoft corporation", "test"]
     mock_request.return_value = "data"
@@ -534,7 +534,7 @@ def test_detect_azure_microsoft_corporation(mock_run, mock_request):
         ])
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_detect_azure_chassis(mock_run, mock_request):
     mock_run.side_effect = ["test", "7783-7084-3265-9085-8269-3286-77"]
     mock_request.return_value = "data"
@@ -544,14 +544,14 @@ def test_detect_azure_chassis(mock_run, mock_request):
         mock.call("dmidecode -s chassis-asset-tag")
         ])
 
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_detect_gcp_false(mock_run):
     mock_run.return_value = "test"
     assert utils.detect_gcp() is False
     mock_run.assert_called_once_with("dmidecode -s bios-vendor")
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_detect_gcp(mock_run, mock_request):
     mock_run.return_value = "Google instance"
     mock_request.return_value = "data"
@@ -993,96 +993,6 @@ class TestInterfacesInfo(unittest.TestCase):
         mock_interface_inst_2.ip_in_network.assert_called_once_with("10.10.10.1")
 
 
-class TestServiceManager(unittest.TestCase):
-    """
-    Unitary tests for class utils.ServiceManager
-    """
-    @mock.patch('crmsh.utils.ServiceManager._call_with_parallax')
-    @mock.patch('crmsh.utils.ServiceManager._run_on_single_host')
-    def test_call_single_node(
-            self,
-            mock_run_on_single_host:mock.MagicMock,
-            mock_call_with_parallax: mock.MagicMock,
-    ):
-        mock_run_on_single_host.return_value = 0
-        self.assertEqual(['node1'], utils.ServiceManager._call('node1', list(), 'foo'))
-        mock_run_on_single_host.assert_called_once_with('foo', 'node1')
-        mock_call_with_parallax.assert_not_called()
-
-    @mock.patch('crmsh.utils.ServiceManager._call_with_parallax')
-    @mock.patch('crmsh.utils.ServiceManager._run_on_single_host')
-    def test_call_single_node_failure(
-            self,
-            mock_run_on_single_host:mock.MagicMock,
-            mock_call_with_parallax: mock.MagicMock,
-    ):
-        mock_run_on_single_host.return_value = 1
-        self.assertEqual(list(), utils.ServiceManager._call('node1', list(), 'foo'))
-        mock_run_on_single_host.assert_called_once_with('foo', 'node1')
-        mock_call_with_parallax.assert_not_called()
-
-    @mock.patch('crmsh.utils.ServiceManager._call_with_parallax')
-    @mock.patch('crmsh.utils.ServiceManager._run_on_single_host')
-    def test_call_multiple_node(
-            self,
-            mock_run_on_single_host: mock.MagicMock,
-            mock_call_with_parallax: mock.MagicMock,
-    ):
-        mock_call_with_parallax.return_value = {'node1': (0, '', ''), 'node2': (1, 'out', 'err')}
-        self.assertEqual(['node1'], utils.ServiceManager._call(None, ['node1', 'node2'], 'foo'))
-        mock_run_on_single_host.assert_not_called()
-        mock_call_with_parallax.assert_called_once_with('foo', ['node1', 'node2'])
-
-    @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
-    def test_run_on_single_host_return_1(self, mock_run: mock.MagicMock):
-        mock_run.return_value = (1, 'bar', 'err')
-        self.assertEqual(1, crmsh.utils.ServiceManager._run_on_single_host('foo', 'node1'))
-        mock_run.assert_called_once_with('node1', 'foo')
-
-    @mock.patch('crmsh.utils.get_stdout_stderr_auto_ssh_no_input')
-    def test_run_on_single_host_return_255(self, mock_run: mock.MagicMock):
-        mock_run.return_value = (255, 'bar', 'err')
-        with self.assertRaises(ValueError):
-            crmsh.utils.ServiceManager._run_on_single_host('foo', 'node1')
-        mock_run.assert_called_once_with('node1', 'foo')
-
-    @mock.patch('crmsh.utils.ServiceManager._call')
-    def test_start_service(self, mock_call: mock.MagicMock):
-        mock_call.return_value = ['node1']
-        self.assertEqual(['node1'], utils.ServiceManager.start_service('service1', remote_addr='node1'))
-        mock_call.assert_called_once_with('node1', [], "systemctl start 'service1'")
-
-    @mock.patch('crmsh.utils.ServiceManager._call')
-    def test_start_service_on_multiple_host(self, mock_call: mock.MagicMock):
-        mock_call.return_value = ['node1', 'node2']
-        self.assertEqual(['node1', 'node2'], utils.ServiceManager.start_service('service1', node_list=['node1', 'node2']))
-        mock_call.assert_called_once_with(None, ['node1', 'node2'], "systemctl start 'service1'")
-
-    @mock.patch('crmsh.utils.ServiceManager._call')
-    def test_start_and_enable_service(self, mock_call: mock.MagicMock):
-        mock_call.return_value = ['node1']
-        self.assertEqual(['node1'], utils.ServiceManager.start_service('service1', enable=True, remote_addr='node1'))
-        mock_call.assert_called_once_with('node1', [], "systemctl enable --now 'service1'")
-
-    @mock.patch('crmsh.utils.ServiceManager._call')
-    def test_stop_service(self, mock_call: mock.MagicMock):
-        mock_call.return_value = ['node1']
-        self.assertEqual(['node1'], utils.ServiceManager.stop_service('service1', remote_addr='node1'))
-        mock_call.assert_called_once_with('node1', [], "systemctl stop 'service1'")
-
-    @mock.patch('crmsh.utils.ServiceManager._call')
-    def test_enable_service(self, mock_call: mock.MagicMock):
-        mock_call.return_value = ['node1']
-        self.assertEqual(['node1'], utils.ServiceManager.enable_service('service1', remote_addr='node1'))
-        mock_call.assert_called_once_with('node1', [], "systemctl enable 'service1'")
-
-    @mock.patch('crmsh.utils.ServiceManager._call')
-    def test_disable_service(self, mock_call: mock.MagicMock):
-        mock_call.return_value = ['node1']
-        self.assertEqual(['node1'], utils.ServiceManager.disable_service('service1', remote_addr='node1'))
-        mock_call.assert_called_once_with('node1', [], "systemctl disable 'service1'")
-
-
 @mock.patch("crmsh.utils.get_nodeid_from_name")
 def test_get_iplist_from_name_no_nodeid(mock_get_nodeid):
     mock_get_nodeid.return_value = None
@@ -1127,185 +1037,7 @@ def test_calculate_quorate_status():
     assert utils.calculate_quorate_status(3, 1) is False
 
 
-@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
-@mock.patch("subprocess.run")
-def test_get_stdout_or_raise_error_local(
-        mock_subprocess_run: mock.MagicMock,
-        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
-):
-    mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
-    out = utils.get_stdout_or_raise_error("foo")
-    mock_subprocess_run.assert_called_once_with(
-        ['/bin/sh'],
-        input=b'foo',
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    mock_subprocess_run_auto_ssh_no_input.assert_not_called()
-    assert "bar" == out
-
-
-@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
-@mock.patch("subprocess.run")
-def test_get_stdout_or_raise_error_local_failure(
-        mock_subprocess_run: mock.MagicMock,
-        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
-):
-    mock_subprocess_run.return_value = mock.Mock(returncode=1, stdout=b'bar', stderr=b'err')
-    exception = None
-    try:
-        out = utils.get_stdout_or_raise_error("foo")
-    except ValueError as e:
-        exception = e
-
-    mock_subprocess_run.assert_called_once_with(
-        ['/bin/sh'],
-        input=b'foo',
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    mock_subprocess_run_auto_ssh_no_input.assert_not_called()
-    assert isinstance(exception, ValueError)
-
-
-@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
-@mock.patch("subprocess.run")
-def test_get_stdout_or_raise_error_local_failure_no_raise(
-        mock_subprocess_run: mock.MagicMock,
-        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
-):
-    mock_subprocess_run.return_value = mock.Mock(returncode=1, stdout=b'bar', stderr=b'err')
-    out = utils.get_stdout_or_raise_error("foo", no_raise=True)
-
-    mock_subprocess_run.assert_called_once_with(
-        ['/bin/sh'],
-        input=b'foo',
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    mock_subprocess_run_auto_ssh_no_input.assert_not_called()
-    assert "bar" == out
-
-
-@mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
-@mock.patch("subprocess.run")
-def test_get_stdout_or_raise_error_remote(
-        mock_subprocess_run: mock.MagicMock,
-        mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
-):
-    mock_subprocess_run_auto_ssh_no_input.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
-    out = utils.get_stdout_or_raise_error("foo", 'node1')
-    mock_subprocess_run.assert_not_called()
-    mock_subprocess_run_auto_ssh_no_input.assert_called_once_with(
-        "foo",
-        'node1',
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    assert "bar" == out
-
-
-class TestSubprocessRunUtils(unittest.TestCase):
-    @mock.patch("subprocess.run")
-    def test_subprocess_run_auto_ssh_no_input_local_no_su(self, mock_subprocess_run):
-        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
-        result = utils.subprocess_run_auto_ssh_no_input("foo", stderr=subprocess.DEVNULL)
-        mock_subprocess_run.assert_called_once_with(['/bin/sh'], input=b'foo', stderr=subprocess.DEVNULL)
-        self.assertEqual(0, result.returncode)
-        self.assertEqual(b'bar', result.stdout)
-
-    @mock.patch("subprocess.run")
-    def test_subprocess_run_auto_ssh_no_input_local_su(self, mock_subprocess_run):
-        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
-        result = utils.subprocess_run_auto_ssh_no_input("foo", user="alice", stderr=subprocess.DEVNULL)
-        mock_subprocess_run.assert_called_once_with(
-            ['sudo', '-H', '-u', 'alice', '/bin/sh'],
-            input=b'foo',
-            stderr=subprocess.DEVNULL,
-        )
-        self.assertEqual(0, result.returncode)
-        self.assertEqual(b'bar', result.stdout)
-
-    @mock.patch("crmsh.utils.this_node")
-    @mock.patch('crmsh.utils.user_pair_for_ssh')
-    @mock.patch("crmsh.utils.su_subprocess_run")
-    @mock.patch("subprocess.run")
-    def test_subprocess_run_auto_ssh_no_input_remote_no_user(
-            self,
-            mock_subprocess_run: mock.MagicMock,
-            mock_su_subprocess_run: mock.MagicMock,
-            mock_user_pair_for_ssh: mock.MagicMock,
-            mock_this_node: mock.MagicMock,
-    ):
-        mock_this_node.return_value = 'node1'
-        mock_user_pair_for_ssh.return_value = "alice", "bob"
-        mock_su_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
-        result = utils.subprocess_run_auto_ssh_no_input("foo", "node2", stderr=subprocess.DEVNULL)
-        mock_user_pair_for_ssh.assert_called_once_with('node2')
-        mock_subprocess_run.assert_not_called()
-        mock_su_subprocess_run.assert_called_once_with(
-            'alice',
-            'ssh -o StrictHostKeyChecking=no bob@node2 sudo -H -u root /bin/sh',
-            input=b'foo',
-            stderr=subprocess.DEVNULL,
-        )
-        self.assertEqual(0, result.returncode)
-        self.assertEqual(b'bar', result.stdout)
-
-    @mock.patch("os.geteuid")
-    @mock.patch("crmsh.userdir.getuser")
-    @mock.patch("subprocess.run")
-    def test_su_subprocess_run(
-            self,
-            mock_subprocess_run: mock.MagicMock,
-            mock_get_user: mock.MagicMock,
-            mock_geteuid: mock.MagicMock,
-    ):
-        mock_geteuid.return_value = 0
-        mock_get_user.return_value = 'root'
-        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
-        result = utils.su_subprocess_run('alice', 'foo')
-        mock_subprocess_run.assert_called_once_with(
-            ['su', 'alice', '--login', '-c', 'foo']
-        )
-        self.assertEqual(0, result.returncode)
-        self.assertEqual(b'bar', result.stdout)
-
-    @mock.patch("os.geteuid")
-    @mock.patch("crmsh.userdir.getuser")
-    @mock.patch("subprocess.run")
-    def test_su_subprocess_run_with_non_root_user(
-            self,
-            mock_subprocess_run: mock.MagicMock,
-            mock_get_user: mock.MagicMock,
-            mock_geteuid: mock.MagicMock,
-    ):
-        mock_geteuid.return_value = 1000
-        mock_get_user.return_value = 'bob'
-        with self.assertRaises(AssertionError):
-            result = utils.su_subprocess_run('alice', 'foo')
-
-    @mock.patch("os.geteuid")
-    @mock.patch("crmsh.userdir.getuser")
-    @mock.patch("subprocess.run")
-    def test_su_subprocess_run_to_self(
-            self,
-            mock_subprocess_run: mock.MagicMock,
-            mock_get_user: mock.MagicMock,
-            mock_geteuid: mock.MagicMock,
-    ):
-        mock_geteuid.return_value = 1000
-        mock_get_user.return_value = 'alice'
-        mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
-        result = utils.su_subprocess_run('alice', 'foo')
-        mock_subprocess_run.assert_called_once_with(
-            ['/bin/sh', '-c', 'foo'],
-        )
-        self.assertEqual(0, result.returncode)
-        self.assertEqual(b'bar', result.stdout)
-
-
-@mock.patch("crmsh.utils.get_stdout_or_raise_error")
+@mock.patch("crmsh.sh.AutoShell.get_stdout_or_raise_error")
 def test_get_quorum_votes_dict(mock_run):
     mock_run.return_value = """
 Votequorum information
@@ -1318,7 +1050,7 @@ Flags:            Quorate
     """
     res = utils.get_quorum_votes_dict()
     assert res == {'Expected': '1', 'Total': '1'}
-    mock_run.assert_called_once_with("corosync-quorumtool -s", remote=None, success_val_list=[0, 2])
+    mock_run.assert_called_once_with("corosync-quorumtool -s", None, success_exit_status={0, 2})
 
 
 def test_re_split_string():
@@ -1386,12 +1118,12 @@ def test_is_dev_a_plain_raw_disk_or_partition(mock_dev_info):
     mock_dev_info.assert_called_once_with("/dev/md127", "TYPE", peer=None)
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_get_dev_info(mock_run):
     mock_run.return_value = "data"
     res = utils.get_dev_info("/dev/sda1", "TYPE")
     assert res == "data"
-    mock_run.assert_called_once_with("lsblk -fno TYPE /dev/sda1", remote=None)
+    mock_run.assert_called_once_with("lsblk -fno TYPE /dev/sda1", None)
 
 
 @mock.patch('crmsh.utils.get_dev_info')
@@ -1410,7 +1142,7 @@ def test_get_dev_uuid(mock_get_info):
     mock_get_info.assert_called_once_with("/dev/sda1", "UUID", peer=None)
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_get_pe_number_except(mock_run):
     mock_run.return_value = "data"
     with pytest.raises(ValueError) as err:
@@ -1419,7 +1151,7 @@ def test_get_pe_number_except(mock_run):
     mock_run.assert_called_once_with("vgdisplay vg1")
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_get_pe_number(mock_run):
     mock_run.return_value = """
 PE Size               4.00 MiB
@@ -1431,7 +1163,7 @@ Alloc PE / Size       1534 / 5.99 GiB
     mock_run.assert_called_once_with("vgdisplay vg1")
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_get_all_vg_name(mock_run):
     mock_run.return_value = """
 --- Volume group ---
@@ -1471,7 +1203,7 @@ def test_all_exist_id(mock_cib):
     mock_cib.refresh.assert_called_once_with()
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_has_mount_point_used(mock_run):
     mock_run.return_value = """
 /dev/vda2 on /usr/local type btrfs (rw,relatime,space_cache,subvolid=259,subvol=/@/usr/local)
@@ -1483,7 +1215,7 @@ def test_has_mount_point_used(mock_run):
     mock_run.assert_called_once_with("mount")
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_has_disk_mounted(mock_run):
     mock_run.return_value = """
 /dev/vda2 on /usr/local type btrfs (rw,relatime,space_cache,subvolid=259,subvol=/@/usr/local)
@@ -1496,7 +1228,7 @@ def test_has_disk_mounted(mock_run):
 
 
 @mock.patch('crmsh.sbd.SBDManager.is_using_diskless_sbd')
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_has_stonith_running(mock_run, mock_diskless):
     mock_run.return_value = """
 stonith-sbd
@@ -1534,7 +1266,7 @@ def test_is_block_device(mock_stat, mock_isblk):
 
 
 @mock.patch('crmsh.utils.ping_node')
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_check_all_nodes_reachable(mock_run, mock_ping):
     mock_run.return_value = "1084783297 15sp2-1 member"
     utils.check_all_nodes_reachable()
@@ -1549,7 +1281,7 @@ def test_detect_virt(mock_run):
     mock_run.assert_called_once_with("systemd-detect-virt")
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_is_standby(mock_run):
     mock_run.return_value = """
 Node List:
@@ -1559,7 +1291,7 @@ Node List:
     mock_run.assert_called_once_with("crm_mon -1")
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_get_dlm_option_dict(mock_run):
     mock_run.return_value = """
 key1=value1
@@ -1584,7 +1316,7 @@ def test_set_dlm_option_exception(mock_get_dict):
     assert str(err.value) == '"name" is not dlm config option'
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.utils.get_dlm_option_dict')
 def test_set_dlm_option(mock_get_dict, mock_run):
     mock_get_dict.return_value = {
@@ -1602,23 +1334,23 @@ def test_is_dlm_configured(mock_configured):
     mock_configured.assert_called_once_with(constants.DLM_CONTROLD_RA)
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_is_quorate_exception(mock_run):
     mock_run.return_value = "data"
     with pytest.raises(ValueError) as err:
         utils.is_quorate()
     assert str(err.value) == "Failed to get quorate status from corosync-quorumtool"
-    mock_run.assert_called_once_with("corosync-quorumtool -s", success_val_list=[0, 2])
+    mock_run.assert_called_once_with("corosync-quorumtool -s", success_exit_status={0, 2})
 
 
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_is_quorate(mock_run):
     mock_run.return_value = """
 Ring ID:          1084783297/440
 Quorate:          Yes
     """
     assert utils.is_quorate() is True
-    mock_run.assert_called_once_with("corosync-quorumtool -s", success_val_list=[0, 2])
+    mock_run.assert_called_once_with("corosync-quorumtool -s", success_exit_status={0, 2})
 
 
 @mock.patch('crmsh.utils.etree.fromstring')
@@ -1696,7 +1428,7 @@ def test_get_property(mock_run, mock_env):
 
 
 @mock.patch('logging.Logger.warning')
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.utils.get_property')
 def test_set_property(mock_get, mock_run, mock_warn):
     mock_get.return_value = "start"
@@ -1804,7 +1536,7 @@ def test_compatible_role():
 
 
 @mock.patch('logging.Logger.warning')
-@mock.patch('crmsh.utils.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
 def test_fetch_cluster_node_list_from_node(mock_run, mock_warn):
     mock_run.return_value = """
 
@@ -1813,7 +1545,7 @@ def test_fetch_cluster_node_list_from_node(mock_run, mock_warn):
     3 node3 member
     """
     assert utils.fetch_cluster_node_list_from_node("node1") == ["node3"]
-    mock_run.assert_called_once_with("crm_node -l", remote="node1")
+    mock_run.assert_called_once_with("crm_node -l", "node1")
     mock_warn.assert_has_calls([
         mock.call("The node '%s' has no known name and/or state information", "1"),
         mock.call("The node '%s'(state '%s') is not a current member", "node2", "lost")
