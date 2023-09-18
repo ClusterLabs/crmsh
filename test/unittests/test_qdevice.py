@@ -255,7 +255,9 @@ class TestQDevice(unittest.TestCase):
         excepted_err_string = "invalid ALGORITHM choice: '1' (choose from 'ffsplit', 'lms')"
         self.assertEqual(excepted_err_string, str(err.exception))
 
-    def test_check_qdevice_tie_breaker(self):
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    def test_check_qdevice_tie_breaker(self, mock_is_active):
+        mock_is_active.return_value = False
         with self.assertRaises(ValueError) as err:
             qdevice.QDevice.check_qdevice_tie_breaker("1")
         excepted_err_string = "invalid qdevice tie_breaker(lowest/highest/valid_node_id)"

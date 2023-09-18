@@ -673,16 +673,21 @@ class TestSBDManager(unittest.TestCase):
         self.sbd_inst.configure_sbd_resource_and_properties()
         mock_package.assert_called_once_with("sbd")
 
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration')
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_resource_configured')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_configure_sbd_resource_and_properties(self, mock_package, mock_enabled, mock_configured, mock_run, mock_set_property, sbd_adjust):
+    def test_configure_sbd_resource_and_properties(
+            self,
+            mock_package, mock_enabled, mock_configured, mock_run, mock_set_property, sbd_adjust, mock_is_active,
+    ):
         mock_package.return_value = True
         mock_enabled.return_value = True
         mock_configured.return_value = False
+        mock_is_active.return_value = False
         self.sbd_inst._context = mock.Mock(cluster_is_running=True)
         self.sbd_inst._get_sbd_device_from_config = mock.Mock()
         self.sbd_inst._get_sbd_device_from_config.return_value = ["/dev/sda1"]
