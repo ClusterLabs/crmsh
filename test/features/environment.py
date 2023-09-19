@@ -1,11 +1,14 @@
 import logging
 import re
-from crmsh import utils , userdir
+import subprocess
 import time
+
+import crmsh.userdir
+import crmsh.utils
 
 
 def get_online_nodes():
-    _, out, _ = utils.get_stdout_stderr('sudo crm_node -l')
+    _, out, _ = crmsh.utils.get_stdout_stderr('sudo crm_node -l')
     if out:
         return re.findall(r'[0-9]+ (.*) member', out)
     else:
@@ -13,7 +16,12 @@ def get_online_nodes():
 
 
 def resource_cleanup():
-    utils.get_stdout_stderr('sudo crm resource cleanup')
+    subprocess.run(
+        ['sudo', 'crm', 'resource', 'cleanup'],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 def before_step(context, step):
@@ -29,11 +37,16 @@ def before_tag(context, tag):
             resource_cleanup()
             while True:
                 time.sleep(1)
-                rc, stdout, _ = utils.get_stdout_stderr('sudo crmadmin -D -t 1')
+                rc, stdout, _ = crmsh.utils.get_stdout_stderr('sudo crmadmin -D -t 1')
                 if rc == 0 and stdout.startswith('Designated'):
                     break
-            utils.get_stdout_or_raise_error("sudo crm cluster stop --all")
+            subprocess.call(
+                ['sudo', 'crm', 'cluster', 'stop', '--all'],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
     if tag == "skip_non_root":
-        sudoer = userdir.get_sudoer()
-        if sudoer or userdir.getuser() != 'root':
+        sudoer = crmsh.userdir.get_sudoer()
+        if sudoer or crmsh.userdir.getuser() != 'root':
             context.scenario.skip()
