@@ -165,7 +165,6 @@ sed -i -e '/data_files/d' setup.py
 %if 0%{?suse_version}
 %python3_pyproject_wheel
 %else
-%generate_buildrequires
 %pyproject_buildrequires -t
 %pyproject_wheel
 %endif
