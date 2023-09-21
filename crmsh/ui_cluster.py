@@ -62,7 +62,7 @@ def script_args(args):
 
 def get_cluster_name():
     cluster_name = None
-    if not ServiceManager(sh.LocalOnlyAutoShell(sh.LocalShell())).service_is_active("corosync.service"):
+    if not ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service"):
         name = corosync.get_values('totem.cluster_name')
         if name:
             cluster_name = name[0]
@@ -449,7 +449,7 @@ Examples:
         boot_context.ui_context = context
         boot_context.stage = stage
         boot_context.args = args
-        boot_context.cluster_is_running = ServiceManager(sh.LocalOnlyAutoShell(sh.LocalShell())).service_is_active("pacemaker.service")
+        boot_context.cluster_is_running = ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("pacemaker.service")
         boot_context.type = "init"
         boot_context.initialize_qdevice()
         boot_context.validate_option()
@@ -562,7 +562,7 @@ the config.core.force option.""",
         '''
         Rename the cluster.
         '''
-        if not ServiceManager(sh.LocalOnlyAutoShell(sh.LocalShell())).service_is_active("corosync.service"):
+        if not ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service"):
             context.fatal_error("Can't rename cluster when cluster service is stopped")
         old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:

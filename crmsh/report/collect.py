@@ -55,11 +55,11 @@ def collect_ratraces():
     """
     # since the "trace_dir" attribute been removed from cib after untrace
     # need to parse crmsh log file to extract custom trace ra log directory on each node
-    shell = sh.auto_shell()
+    shell = sh.cluster_shell()
     log_contents = ""
     cmd = "grep 'INFO: Trace for .* is written to ' {}*|grep -v 'collect'".format(log.CRMSH_LOG_FILE)
     for node in crmutils.list_cluster_nodes():
-        log_contents += shell.get_stdout_stderr_no_input(node, cmd)[1] + "\n"
+        log_contents += shell.get_rc_stdout_stderr_without_input(node, cmd)[1] + "\n"
     trace_dir_str = ' '.join(list(set(re.findall("written to (.*)/.*", log_contents))))
     if not trace_dir_str:
         return

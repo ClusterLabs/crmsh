@@ -81,7 +81,7 @@ class TestSBDTimeout(unittest.TestCase):
         self.sbd_timeout_inst._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
         mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to 35 for qdevice, it was 5")
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_get_sbd_msgwait_exception(self, mock_run):
         mock_run.return_value = "data"
         with self.assertRaises(ValueError) as err:
@@ -89,7 +89,7 @@ class TestSBDTimeout(unittest.TestCase):
         self.assertEqual("Cannot get sbd msgwait for /dev/sda1", str(err.exception))
         mock_run.assert_called_once_with("sbd -d /dev/sda1 dump")
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_get_sbd_msgwait(self, mock_run):
         mock_run.return_value = """
         Timeout (loop)     : 1
@@ -234,7 +234,7 @@ class TestSBDTimeout(unittest.TestCase):
         self.sbd_timeout_inst.adjust_sbd_delay_start()
         mock_update.assert_called_once_with({"SBD_DELAY_START": "100"})
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
     def test_adjust_systemd_start_timeout_no_delay_start_no(self, mock_get_sbd_value, mock_run):
         mock_get_sbd_value.return_value = "no"
@@ -243,7 +243,7 @@ class TestSBDTimeout(unittest.TestCase):
 
     @mock.patch('crmsh.utils.mkdirp')
     @mock.patch('crmsh.utils.get_systemd_timeout_start_in_sec')
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
     def test_adjust_systemd_start_timeout_no_delay_start_return(self, mock_get_sbd_value, mock_run, mock_get_systemd_sec, mock_mkdirp):
         mock_get_sbd_value.return_value = "10"
@@ -259,7 +259,7 @@ class TestSBDTimeout(unittest.TestCase):
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.utils.mkdirp')
     @mock.patch('crmsh.utils.get_systemd_timeout_start_in_sec')
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
     def test_adjust_systemd_start_timeout_no_delay_start(self, mock_get_sbd_value, mock_run, mock_get_systemd_sec, mock_mkdirp, mock_str2file, mock_csync2, mock_cluster_run):
         mock_get_sbd_value.return_value = "100"
@@ -676,7 +676,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration')
     @mock.patch('crmsh.utils.set_property')
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_resource_configured')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
@@ -823,7 +823,7 @@ class TestSBDManager(unittest.TestCase):
         self.assertEqual("Device /dev/sdb1 doesn't have the same UUID with node1", str(err.exception))
         mock_get_uuid.assert_has_calls([mock.call("/dev/sdb1"), mock.call("/dev/sdb1", "node1")])
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_get_device_uuid_not_match(self, mock_run):
         mock_run.return_value = "data"
         with self.assertRaises(ValueError) as err:
@@ -831,7 +831,7 @@ class TestSBDManager(unittest.TestCase):
         self.assertEqual("Cannot find sbd device UUID for /dev/sdb1", str(err.exception))
         mock_run.assert_called_once_with("sbd -d /dev/sdb1 dump", None)
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_get_device_uuid(self, mock_run):
         output = """
         ==Dumping header on disk /dev/sda1

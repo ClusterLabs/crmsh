@@ -53,7 +53,7 @@ def test_check_file_content_included_target_not_exist(mock_detect):
         ])
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.utils.detect_file')
 def test_check_file_content_included(mock_detect, mock_run):
     mock_detect.side_effect = [True, True]
@@ -486,7 +486,7 @@ def test_valid_nodeid_true(mock_is_active, mock_nodeinfo):
     mock_is_active.assert_called_once_with('corosync.service')
     mock_nodeinfo.assert_called_once_with()
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_detect_aws_false(mock_run):
     mock_run.side_effect = ["test", "test"]
     assert utils.detect_aws() is False
@@ -495,7 +495,7 @@ def test_detect_aws_false(mock_run):
         mock.call("dmidecode -s system-manufacturer")
         ])
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_detect_aws_xen(mock_run):
     mock_run.side_effect = ["4.2.amazon", "Xen"]
     assert utils.detect_aws() is True
@@ -504,7 +504,7 @@ def test_detect_aws_xen(mock_run):
         mock.call("dmidecode -s system-manufacturer")
         ])
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_detect_aws_kvm(mock_run):
     mock_run.side_effect = ["Not Specified", "Amazon EC2"]
     assert utils.detect_aws() is True
@@ -513,7 +513,7 @@ def test_detect_aws_kvm(mock_run):
         mock.call("dmidecode -s system-manufacturer")
         ])
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_detect_azure_false(mock_run):
     mock_run.side_effect = ["test", "test"]
     assert utils.detect_azure() is False
@@ -523,7 +523,7 @@ def test_detect_azure_false(mock_run):
         ])
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_detect_azure_microsoft_corporation(mock_run, mock_request):
     mock_run.side_effect = ["microsoft corporation", "test"]
     mock_request.return_value = "data"
@@ -534,7 +534,7 @@ def test_detect_azure_microsoft_corporation(mock_run, mock_request):
         ])
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_detect_azure_chassis(mock_run, mock_request):
     mock_run.side_effect = ["test", "7783-7084-3265-9085-8269-3286-77"]
     mock_request.return_value = "data"
@@ -544,14 +544,14 @@ def test_detect_azure_chassis(mock_run, mock_request):
         mock.call("dmidecode -s chassis-asset-tag")
         ])
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_detect_gcp_false(mock_run):
     mock_run.return_value = "test"
     assert utils.detect_gcp() is False
     mock_run.assert_called_once_with("dmidecode -s bios-vendor")
 
 @mock.patch("crmsh.utils._cloud_metadata_request")
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_detect_gcp(mock_run, mock_request):
     mock_run.return_value = "Google instance"
     mock_request.return_value = "data"
@@ -1037,7 +1037,7 @@ def test_calculate_quorate_status():
     assert utils.calculate_quorate_status(3, 1) is False
 
 
-@mock.patch("crmsh.sh.AutoShell.get_stdout_or_raise_error")
+@mock.patch("crmsh.sh.ClusterShell.get_stdout_or_raise_error")
 def test_get_quorum_votes_dict(mock_run):
     mock_run.return_value = """
 Votequorum information
@@ -1118,7 +1118,7 @@ def test_is_dev_a_plain_raw_disk_or_partition(mock_dev_info):
     mock_dev_info.assert_called_once_with("/dev/md127", "TYPE", peer=None)
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_get_dev_info(mock_run):
     mock_run.return_value = "data"
     res = utils.get_dev_info("/dev/sda1", "TYPE")
@@ -1142,7 +1142,7 @@ def test_get_dev_uuid(mock_get_info):
     mock_get_info.assert_called_once_with("/dev/sda1", "UUID", peer=None)
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_get_pe_number_except(mock_run):
     mock_run.return_value = "data"
     with pytest.raises(ValueError) as err:
@@ -1151,7 +1151,7 @@ def test_get_pe_number_except(mock_run):
     mock_run.assert_called_once_with("vgdisplay vg1")
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_get_pe_number(mock_run):
     mock_run.return_value = """
 PE Size               4.00 MiB
@@ -1163,7 +1163,7 @@ Alloc PE / Size       1534 / 5.99 GiB
     mock_run.assert_called_once_with("vgdisplay vg1")
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_get_all_vg_name(mock_run):
     mock_run.return_value = """
 --- Volume group ---
@@ -1203,7 +1203,7 @@ def test_all_exist_id(mock_cib):
     mock_cib.refresh.assert_called_once_with()
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_has_mount_point_used(mock_run):
     mock_run.return_value = """
 /dev/vda2 on /usr/local type btrfs (rw,relatime,space_cache,subvolid=259,subvol=/@/usr/local)
@@ -1215,7 +1215,7 @@ def test_has_mount_point_used(mock_run):
     mock_run.assert_called_once_with("mount")
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_has_disk_mounted(mock_run):
     mock_run.return_value = """
 /dev/vda2 on /usr/local type btrfs (rw,relatime,space_cache,subvolid=259,subvol=/@/usr/local)
@@ -1228,7 +1228,7 @@ def test_has_disk_mounted(mock_run):
 
 
 @mock.patch('crmsh.sbd.SBDManager.is_using_diskless_sbd')
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_has_stonith_running(mock_run, mock_diskless):
     mock_run.return_value = """
 stonith-sbd
@@ -1266,7 +1266,7 @@ def test_is_block_device(mock_stat, mock_isblk):
 
 
 @mock.patch('crmsh.utils.ping_node')
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_check_all_nodes_reachable(mock_run, mock_ping):
     mock_run.return_value = "1084783297 15sp2-1 member"
     utils.check_all_nodes_reachable()
@@ -1281,7 +1281,7 @@ def test_detect_virt(mock_run):
     mock_run.assert_called_once_with("systemd-detect-virt")
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_is_standby(mock_run):
     mock_run.return_value = """
 Node List:
@@ -1291,7 +1291,7 @@ Node List:
     mock_run.assert_called_once_with("crm_mon -1")
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_get_dlm_option_dict(mock_run):
     mock_run.return_value = """
 key1=value1
@@ -1316,7 +1316,7 @@ def test_set_dlm_option_exception(mock_get_dict):
     assert str(err.value) == '"name" is not dlm config option'
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.utils.get_dlm_option_dict')
 def test_set_dlm_option(mock_get_dict, mock_run):
     mock_get_dict.return_value = {
@@ -1334,7 +1334,7 @@ def test_is_dlm_configured(mock_configured):
     mock_configured.assert_called_once_with(constants.DLM_CONTROLD_RA)
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_is_quorate_exception(mock_run):
     mock_run.return_value = "data"
     with pytest.raises(ValueError) as err:
@@ -1343,7 +1343,7 @@ def test_is_quorate_exception(mock_run):
     mock_run.assert_called_once_with("corosync-quorumtool -s", success_exit_status={0, 2})
 
 
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_is_quorate(mock_run):
     mock_run.return_value = """
 Ring ID:          1084783297/440
@@ -1428,7 +1428,7 @@ def test_get_property(mock_run, mock_env):
 
 
 @mock.patch('logging.Logger.warning')
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.utils.get_property')
 def test_set_property(mock_get, mock_run, mock_warn):
     mock_get.return_value = "start"
@@ -1536,7 +1536,7 @@ def test_compatible_role():
 
 
 @mock.patch('logging.Logger.warning')
-@mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_fetch_cluster_node_list_from_node(mock_run, mock_warn):
     mock_run.return_value = """
 

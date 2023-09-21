@@ -90,7 +90,7 @@ class SBDTimeout(object):
         """
         Get msgwait for sbd device
         """
-        out = sh.auto_shell().get_stdout_or_raise_error("sbd -d {} dump".format(dev))
+        out = sh.cluster_shell().get_stdout_or_raise_error("sbd -d {} dump".format(dev))
         # Format like "Timeout (msgwait)  : 30"
         res = re.search("\(msgwait\)\s+:\s+(\d+)", out)
         if not res:
@@ -204,7 +204,7 @@ class SBDTimeout(object):
             return
 
         cmd = "systemctl show -p TimeoutStartUSec sbd --value"
-        out = sh.auto_shell().get_stdout_or_raise_error(cmd)
+        out = sh.cluster_shell().get_stdout_or_raise_error(cmd)
         start_timeout = utils.get_systemd_timeout_start_in_sec(out)
         if start_timeout > int(sbd_delay_start_value):
             return
@@ -292,7 +292,7 @@ class SBDManager(object):
         """
         Get UUID for specific device and node
         """
-        out = sh.auto_shell().get_stdout_or_raise_error("sbd -d {} dump".format(dev), node)
+        out = sh.cluster_shell().get_stdout_or_raise_error("sbd -d {} dump".format(dev), node)
         res = re.search("UUID\s*:\s*(.*)\n", out)
         if not res:
             raise ValueError("Cannot find sbd device UUID for {}".format(dev))
@@ -524,7 +524,7 @@ class SBDManager(object):
                 not ServiceManager().service_is_enabled("sbd.service") or \
                 xmlutil.CrmMonXmlParser.is_resource_configured(self.SBD_RA):
             return
-        shell = sh.auto_shell()
+        shell = sh.cluster_shell()
 
         # disk-based sbd
         if self._get_sbd_device_from_config():

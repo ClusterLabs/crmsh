@@ -674,7 +674,7 @@ def write_remote_file(text, tofile, user, remote):
 {text}
 EOF
 '''
-    result = sh.auto_shell().subprocess_run_no_input(
+    result = sh.cluster_shell().subprocess_run_without_input(
         remote,
         user,
         shell_script,
@@ -697,7 +697,7 @@ def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path)
     rc, out, err = get_stdout_stderr_as_local_sudoer(cmd)
     # If failed, try the hard way
     if rc != 0:
-        rc, out, err = sh.auto_shell().get_stdout_stderr_no_input(remote_node, 'cat {}'.format(remote_text_file))
+        rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote_node, 'cat {}'.format(remote_text_file))
         if rc != 0:
             raise ValueError("Failed to read {}@{}/{}: {}".format(remote_user, remote_node, remote_text_file, err))
         full_path = os.path.join(local_path, os.path.basename(remote_text_file))
@@ -980,7 +980,7 @@ def get_stdout_stderr_as_local_sudoer(cmd, input_s=None):
         user = user_of(this_node())
     except crmsh.user_of_host.UserNotFoundError:
         user = 'root'
-    return sh.LocalShell().get_stdout_stderr(user, cmd, input_s)
+    return sh.LocalShell().get_rc_stdout_stderr(user, cmd, input_s)
 
 
 def stdout2list(cmd, stderr_on=True, shell=True):
@@ -1619,7 +1619,7 @@ def load_graphviz_file(ini_f):
 
 def get_pcmk_version():
     cmd = "/usr/sbin/pacemakerd --version"
-    out = sh.auto_shell().get_stdout_or_raise_error(cmd)
+    out = sh.cluster_shell().get_stdout_or_raise_error(cmd)
     version = out.split()[1]
     logger.debug("Found pacemaker version: %s", version)
     return version
@@ -2121,7 +2121,7 @@ def detect_aws():
     """
     Detect if in AWS
     """
-    shell = sh.auto_shell()
+    shell = sh.cluster_shell()
     # will match on xen instances
     xen_test = shell.get_stdout_or_raise_error("dmidecode -s system-version").lower()
     # will match on nitro/kvm instances
@@ -2140,7 +2140,7 @@ def detect_azure():
     # might return American Megatrends Inc. instead of Microsoft Corporation in Azure.
     # The better way is to check the result of dmidecode -s chassis-asset-tag is
     # 7783-7084-3265-9085-8269-3286-77, aka. the ascii code of MSFT AZURE VM
-    shell = sh.auto_shell()
+    shell = sh.cluster_shell()
     system_manufacturer = shell.get_stdout_or_raise_error("dmidecode -s system-manufacturer")
     chassis_asset_tag = shell.get_stdout_or_raise_error("dmidecode -s chassis-asset-tag")
     if "microsoft corporation" in system_manufacturer.lower() or \
@@ -2158,7 +2158,7 @@ def detect_gcp():
     """
     Detect if in GCP
     """
-    bios_vendor = sh.auto_shell().get_stdout_or_raise_error("dmidecode -s bios-vendor")
+    bios_vendor = sh.cluster_shell().get_stdout_or_raise_error("dmidecode -s bios-vendor")
     if "Google" in bios_vendor:
         # To detect GCP we also need to make an API request
         result = _cloud_metadata_request(
@@ -2612,7 +2612,7 @@ def check_file_content_included(source_file, target_file, remote=None, source_lo
     if not detect_file(target_file, remote=remote):
         return False
 
-    shell = sh.auto_shell()
+    shell = sh.cluster_shell()
     cmd = "cat {}".format(target_file)
     target_data = shell.get_stdout_or_raise_error(cmd, host=remote)
     cmd = "cat {}".format(source_file)
@@ -2625,7 +2625,7 @@ def check_text_included(text, target_file, remote=None):
         return False
 
     cmd = "cat {}".format(target_file)
-    target_data = sh.auto_shell().get_stdout_or_raise_error(cmd, remote)
+    target_data = sh.cluster_shell().get_stdout_or_raise_error(cmd, remote)
     return text in target_data
 
 
@@ -2636,7 +2636,7 @@ def package_is_installed(pkg, remote_addr=None):
     cmd = "rpm -q --quiet {}".format(pkg)
     if remote_addr:
         # check on remote
-        rc, _, _ = sh.auto_shell().get_stdout_stderr_no_input(remote_addr, cmd)
+        rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote_addr, cmd)
     else:
         # check on local
         rc, _ = get_stdout(cmd)
@@ -2663,7 +2663,7 @@ def get_quorum_votes_dict(remote=None):
     """
     Return a dictionary which contain expect votes and total votes
     """
-    out = sh.auto_shell().get_stdout_or_raise_error("corosync-quorumtool -s", remote, success_exit_status={0, 2})
+    out = sh.cluster_shell().get_stdout_or_raise_error("corosync-quorumtool -s", remote, success_exit_status={0, 2})
     return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
 
 
@@ -2671,7 +2671,7 @@ def check_all_nodes_reachable():
     """
     Check if all cluster nodes are reachable
     """
-    out = sh.auto_shell().get_stdout_or_raise_error("crm_node -l")
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l")
     for node in re.findall("\d+ (.*) \w+", out):
         ping_node(node)
 
@@ -2699,7 +2699,7 @@ def has_stonith_running():
     Check if any stonith device registered
     """
     from . import sbd
-    out = sh.auto_shell().get_stdout_or_raise_error("stonith_admin -L")
+    out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
     has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
     using_diskless_sbd = sbd.SBDManager.is_using_diskless_sbd()
     return has_stonith_device or using_diskless_sbd
@@ -2709,7 +2709,7 @@ def has_disk_mounted(dev):
     """
     Check if device already mounted
     """
-    out = sh.auto_shell().get_stdout_or_raise_error("mount")
+    out = sh.cluster_shell().get_stdout_or_raise_error("mount")
     return re.search("\n{} on ".format(dev), out) is not None
 
 
@@ -2717,7 +2717,7 @@ def has_mount_point_used(directory):
     """
     Check if mount directory already mounted
     """
-    out = sh.auto_shell().get_stdout_or_raise_error("mount")
+    out = sh.cluster_shell().get_stdout_or_raise_error("mount")
     return re.search(" on {}".format(directory), out) is not None
 
 
@@ -2752,7 +2752,7 @@ def get_all_vg_name():
     """
     Get all available VGs
     """
-    out = sh.auto_shell().get_stdout_or_raise_error("vgdisplay")
+    out = sh.cluster_shell().get_stdout_or_raise_error("vgdisplay")
     return re.findall("VG Name\s+(.*)", out)
 
 
@@ -2760,7 +2760,7 @@ def get_pe_number(vg_id):
     """
     Get pe number
     """
-    output = sh.auto_shell().get_stdout_or_raise_error("vgdisplay {}".format(vg_id))
+    output = sh.cluster_shell().get_stdout_or_raise_error("vgdisplay {}".format(vg_id))
     res = re.search("Total PE\s+(\d+)", output)
     if not res:
         raise ValueError("Cannot find PE on VG({})".format(vg_id))
@@ -2786,7 +2786,7 @@ def get_dev_uuid_2(dev, peer=None):
     """
     Get UUID of device using blkid
     """
-    out = sh.auto_shell().get_stdout_or_raise_error("blkid {}".format(dev), peer)
+    out = sh.cluster_shell().get_stdout_or_raise_error("blkid {}".format(dev), peer)
     res = re.search("UUID=\"(.*?)\"", out)
     return res.group(1) if res else None
 
@@ -2803,7 +2803,7 @@ def get_dev_info(dev, *_type, peer=None):
     Get device info using lsblk
     """
     cmd = "lsblk -fno {} {}".format(','.join(_type), dev)
-    return sh.auto_shell().get_stdout_or_raise_error(cmd, peer)
+    return sh.cluster_shell().get_stdout_or_raise_error(cmd, peer)
 
 
 def is_dev_used_for_lvm(dev, peer=None):
@@ -2841,14 +2841,14 @@ def append_res_to_group(group_id, res_id):
     Append resource to exist group
     """
     cmd = "crm configure modgroup {} add {}".format(group_id, res_id)
-    sh.auto_shell().get_stdout_or_raise_error(cmd)
+    sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
 def get_qdevice_sync_timeout():
     """
     Get qdevice sync_timeout
     """
-    out = sh.auto_shell().sh.auto_shell().get_stdout_or_raise_error("crm corosync status qdevice")
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm corosync status qdevice")
     res = re.search("Sync HB interval:\s+(\d+)ms", out)
     if not res:
         raise ValueError("Cannot find qdevice sync timeout")
@@ -2875,7 +2875,7 @@ def is_standby(node):
     """
     Check if the node is already standby
     """
-    out = sh.auto_shell().get_stdout_or_raise_error("crm_mon -1")
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1")
     return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
 
 
@@ -2883,7 +2883,7 @@ def get_dlm_option_dict():
     """
     Get dlm config option dictionary
     """
-    out = sh.auto_shell().get_stdout_or_raise_error("dlm_tool dump_config")
+    out = sh.cluster_shell().get_stdout_or_raise_error("dlm_tool dump_config")
     return dict(re.findall("(\w+)=(\w+)", out))
 
 
@@ -2891,7 +2891,7 @@ def set_dlm_option(**kargs):
     """
     Set dlm option
     """
-    shell = sh.auto_shell()
+    shell = sh.cluster_shell()
     dlm_option_dict = get_dlm_option_dict()
     for option, value in kargs.items():
         if option not in dlm_option_dict:
@@ -2920,7 +2920,7 @@ def is_quorate():
     """
     Check if cluster is quorated
     """
-    out = sh.auto_shell().get_stdout_or_raise_error("corosync-quorumtool -s", success_exit_status={0, 2})
+    out = sh.cluster_shell().get_stdout_or_raise_error("corosync-quorumtool -s", success_exit_status={0, 2})
     res = re.search(r'Quorate:\s+(.*)', out)
     if res:
         return res.group(1) == "Yes"
@@ -2989,7 +2989,7 @@ def set_property(property_name, property_value, property_type="crm_config", cond
         logger.warning("\"{}\" in {} is set to {}, it was {}".format(property_name, property_type, property_value, origin_value))
     property_sub_cmd = "property" if property_type == "crm_config" else property_type
     cmd = "crm configure {} {}={}".format(property_sub_cmd, property_name, property_value)
-    sh.auto_shell().get_stdout_or_raise_error(cmd)
+    sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
 def get_systemd_timeout_start_in_sec(time_res):
@@ -3125,7 +3125,7 @@ def fetch_cluster_node_list_from_node(init_node):
     Fetch cluster member list from one known cluster node
     """
     cluster_nodes_list = []
-    out = sh.auto_shell().get_stdout_or_raise_error("crm_node -l", init_node)
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l", init_node)
     for line in out.splitlines():
         # Parse line in format: <id> <nodename> <state>, and collect the nodename.
         tokens = line.split()

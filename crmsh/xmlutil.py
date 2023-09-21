@@ -1521,7 +1521,7 @@ class CrmMonXmlParser(object):
         """
         Load xml output of crm_mon
         """
-        rc, output, stderr = sh.auto_shell().get_stdout_stderr_no_input(self.peer, constants.CRM_MON_XML_OUTPUT)
+        rc, output, stderr = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.peer, constants.CRM_MON_XML_OUTPUT)
         self.xml_elem = text2elem(output)
 
     @classmethod

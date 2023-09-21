@@ -93,7 +93,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         if not self.use_stage:
             return
-        out = sh.auto_shell().get_stdout_or_raise_error("crm configure show")
+        out = sh.cluster_shell().get_stdout_or_raise_error("crm configure show")
         if "fstype=ocfs2" in out:
             logger.info("Already configured OCFS2 related resources")
             raise utils.TerminateSubCommand
@@ -140,7 +140,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
                 raise utils.TerminateSubCommand
 
         for dev in self.ocfs2_devices:
-            sh.auto_shell().get_stdout_or_raise_error("wipefs -a {}".format(dev))
+            sh.cluster_shell().get_stdout_or_raise_error("wipefs -a {}".format(dev))
 
     def _dynamic_verify(self):
         """
@@ -168,14 +168,14 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         with logger_utils.status_long("  Creating OCFS2 filesystem for {}".format(target)):
             self.cluster_name = corosync.get_value('totem.cluster_name')
-            sh.auto_shell().get_stdout_or_raise_error(self.MKFS_CMD.format(self.cluster_name, self.MAX_CLONE_NUM, target))
+            sh.cluster_shell().get_stdout_or_raise_error(self.MKFS_CMD.format(self.cluster_name, self.MAX_CLONE_NUM, target))
 
     @contextmanager
     def _vg_change(self):
         """
         vgchange process using contextmanager
         """
-        shell = sh.auto_shell()
+        shell = sh.cluster_shell()
         shell.get_stdout_or_raise_error("vgchange -ay {}".format(self.vg_id))
         try:
             yield
@@ -187,7 +187,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         Create PV, VG, LV and return LV path
         """
         disks_string = ' '.join(self.ocfs2_devices)
-        shell = sh.auto_shell()
+        shell = sh.cluster_shell()
 
         # Create PV
         with logger_utils.status_long("  Creating PV for {}".format(disks_string)):
@@ -314,7 +314,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         Find device name from OCF Filesystem param on peer node
         """
-        out = sh.auto_shell().get_stdout_or_raise_error("crm configure show", peer)
+        out = sh.cluster_shell().get_stdout_or_raise_error("crm configure show", peer)
         for line in out.splitlines():
             if "fstype=ocfs2" in line:
                 res = re.search("device=\"(.*?)\"", line)

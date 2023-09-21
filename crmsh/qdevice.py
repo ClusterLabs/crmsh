@@ -295,7 +295,7 @@ class QDevice(object):
         exception_msg = ""
         suggest = ""
         duplicated_cluster_name = False
-        shell = sh.auto_shell()
+        shell = sh.cluster_shell()
         if not utils.package_is_installed("corosync-qnetd", remote_addr=self.qnetd_addr):
             exception_msg = "Package \"corosync-qnetd\" not installed on {}!".format(self.qnetd_addr)
             suggest = "install \"corosync-qnetd\" on {}".format(self.qnetd_addr)
@@ -427,7 +427,7 @@ class QDevice(object):
         """
         cmd = "corosync-qdevice-net-certutil -r -n {}".format(self.cluster_name)
         QDevice.log_only_to_file("Step 5: Generate certificate request {}".format(self.qdevice_crq_filename), cmd)
-        sh.auto_shell().get_stdout_or_raise_error(cmd)
+        sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
     def copy_crq_to_qnetd(self):
         """
@@ -473,7 +473,7 @@ class QDevice(object):
         QDevice.log_only_to_file(
                 "Step 9: Import certificate file {} on local".format(os.path.basename(self.qnetd_cluster_crt_on_local)),
                 cmd)
-        sh.auto_shell().get_stdout_or_raise_error(cmd)
+        sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
     def copy_p12_to_cluster(self):
         """
@@ -546,7 +546,7 @@ class QDevice(object):
 
         cmd = "corosync-qdevice-net-certutil -i -c {}".format(self.qnetd_cacert_on_cluster)
         QDevice.log_only_to_file("Step 2: Initialize database on local", cmd)
-        sh.auto_shell().get_stdout_or_raise_error(cmd)
+        sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
     def fetch_p12_from_cluster(self):
         """
@@ -569,7 +569,7 @@ class QDevice(object):
         """
         cmd = "corosync-qdevice-net-certutil -m -c {}".format(self.qdevice_p12_on_cluster)
         QDevice.log_only_to_file("Step 4: Import cluster certificate and key", cmd)
-        sh.auto_shell().get_stdout_or_raise_error(cmd)
+        sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
     def certificate_process_on_join(self):
         """
@@ -635,7 +635,7 @@ class QDevice(object):
         qnetd_host = corosync.get_value('quorum.device.net.host')
         cluster_name = corosync.get_value('totem.cluster_name')
         cls_inst = cls(qnetd_host, cluster_name=cluster_name)
-        shell = sh.auto_shell()
+        shell = sh.cluster_shell()
         cmd = "test -f {crt_file} && rm -f {crt_file}".format(crt_file=cls_inst.qnetd_cluster_crt_on_qnetd)
         shell.get_stdout_or_raise_error(cmd, qnetd_host)
         cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=cls_inst.qdevice_crq_on_qnetd)
@@ -708,7 +708,7 @@ class QDevice(object):
         """
         Check if qdevice can contribute vote
         """
-        out = sh.auto_shell().get_stdout_or_raise_error("corosync-quorumtool -s", success_exit_status={0, 2})
+        out = sh.cluster_shell().get_stdout_or_raise_error("corosync-quorumtool -s", success_exit_status={0, 2})
         res = re.search(r'\s+0\s+0\s+Qdevice', out)
         if res:
             qnetd_host = corosync.get_value('quorum.device.net.host')

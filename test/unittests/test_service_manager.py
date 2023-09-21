@@ -12,12 +12,12 @@ class TestServiceManager(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.AutoShell))
+        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.ClusterShell))
         self.service_manager._run_on_single_host = mock.Mock(self.service_manager._run_on_single_host)
         self.service_manager._call = mock.Mock(self.service_manager._call)
 
     def test_call_single_node(self, mock_call_with_parallax: mock.MagicMock):
-        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.AutoShell))
+        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.ClusterShell))
         self.service_manager._run_on_single_host = mock.Mock(self.service_manager._run_on_single_host)
         self.service_manager._run_on_single_host.return_value = 0
         self.assertEqual(['node1'], self.service_manager._call('node1', list(), 'foo'))
@@ -25,7 +25,7 @@ class TestServiceManager(unittest.TestCase):
         mock_call_with_parallax.assert_not_called()
 
     def test_call_single_node_failure(self, mock_call_with_parallax: mock.MagicMock):
-        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.AutoShell))
+        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.ClusterShell))
         self.service_manager._run_on_single_host = mock.Mock(self.service_manager._run_on_single_host)
         self.service_manager._run_on_single_host.return_value = 1
         self.assertEqual(list(), self.service_manager._call('node1', list(), 'foo'))
@@ -33,7 +33,7 @@ class TestServiceManager(unittest.TestCase):
         mock_call_with_parallax.assert_not_called()
 
     def test_call_multiple_node(self, mock_call_with_parallax: mock.MagicMock):
-        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.AutoShell))
+        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.ClusterShell))
         self.service_manager._run_on_single_host = mock.Mock(self.service_manager._run_on_single_host)
         mock_call_with_parallax.return_value = {'node1': (0, '', ''), 'node2': (1, 'out', 'err')}
         self.assertEqual(['node1'], self.service_manager._call(None, ['node1', 'node2'], 'foo'))
@@ -41,17 +41,17 @@ class TestServiceManager(unittest.TestCase):
         mock_call_with_parallax.assert_called_once_with('foo', ['node1', 'node2'])
 
     def test_run_on_single_host_return_1(self, mock_call_with_parallax: mock.MagicMock):
-        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.AutoShell))
-        self.service_manager._shell.get_stdout_stderr_no_input.return_value = (1, 'bar', 'err')
+        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.ClusterShell))
+        self.service_manager._shell.get_rc_stdout_stderr_without_input.return_value = (1, 'bar', 'err')
         self.assertEqual(1, self.service_manager._run_on_single_host('foo', 'node1'))
-        self.service_manager._shell.get_stdout_stderr_no_input.assert_called_once_with('node1', 'foo')
+        self.service_manager._shell.get_rc_stdout_stderr_without_input.assert_called_once_with('node1', 'foo')
 
     def test_run_on_single_host_return_255(self, mock_call_with_parallax: mock.MagicMock):
-        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.AutoShell))
-        self.service_manager._shell.get_stdout_stderr_no_input.return_value = (255, 'bar', 'err')
+        self.service_manager = ServiceManager(mock.Mock(crmsh.sh.ClusterShell))
+        self.service_manager._shell.get_rc_stdout_stderr_without_input.return_value = (255, 'bar', 'err')
         with self.assertRaises(ValueError):
             self.service_manager._run_on_single_host('foo', 'node1')
-        self.service_manager._shell.get_stdout_stderr_no_input.assert_called_once_with('node1', 'foo')
+        self.service_manager._shell.get_rc_stdout_stderr_without_input.assert_called_once_with('node1', 'foo')
 
     def test_start_service(self, mock_call_with_parallax: mock.MagicMock):
         self.service_manager._call.return_value = ['node1']

@@ -132,7 +132,7 @@ class TestRemoteLock(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_stderr_no_input')
+    @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')
     def test_run_ssh_error(self, mock_run):
         mock_run.return_value = (255, None, "ssh error")
         with self.assertRaises(lock.SSHError) as err:
@@ -140,7 +140,7 @@ class TestRemoteLock(unittest.TestCase):
         self.assertEqual("ssh error", str(err.exception))
         mock_run.assert_called_once_with("node1", "cmd")
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_stderr_no_input')
+    @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')
     def test_run(self, mock_run):
         mock_run.return_value = (0, None, None)
         res = self.lock_inst._run("cmd")

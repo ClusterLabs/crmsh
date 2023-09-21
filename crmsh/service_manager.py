@@ -9,11 +9,8 @@ class ServiceManager(object):
     Class to manage systemctl services
     """
 
-    def __init__(self, shell: crmsh.sh.AutoShell = None):
-        if shell is None:
-            self._shell = crmsh.sh.auto_shell()
-        else:
-            self._shell = shell
+    def __init__(self, shell: crmsh.sh.ClusterShell = None):
+        self._shell = crmsh.sh.cluster_shell() if shell is None else shell
 
     def service_is_available(self, name, remote_addr=None):
         """
@@ -60,7 +57,7 @@ class ServiceManager(object):
                 return list()
 
     def _run_on_single_host(self, cmd, host):
-        rc, _, _ = self._shell.get_stdout_stderr_no_input(host, cmd)
+        rc, _, _ = self._shell.get_rc_stdout_stderr_without_input(host, cmd)
         if rc == 255:
             raise ValueError("Failed to run command on host {}: {}".format(host, cmd))
         return rc

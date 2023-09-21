@@ -115,7 +115,7 @@ class RemoteLock(Lock):
         Run command on remote node
         """
         # TODO: pass SSH_OPTION
-        rc, out, err = sh.auto_shell().get_stdout_stderr_no_input(self.remote_node, cmd)
+        rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.remote_node, cmd)
         if rc == self.SSH_EXIT_ERR:
             raise SSHError(err)
         return rc, out, err

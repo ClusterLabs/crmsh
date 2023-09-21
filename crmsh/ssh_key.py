@@ -39,7 +39,7 @@ class KeyFile(Key):
 
 
 class AuthorizedKeyManager:
-    def __init__(self, shell: sh.SshShell):
+    def __init__(self, shell: sh.SSHShell):
         self._shell = shell
 
     def add(self, host: typing.Optional[str], user: str, key: Key):

@@ -62,7 +62,7 @@ class Corosync(command.UI):
         '''
         Quick cluster health status. Corosync status or QNetd status
         '''
-        if not ServiceManager(sh.LocalOnlyAutoShell(sh.LocalShell())).service_is_active("corosync.service"):
+        if not ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service"):
             logger.error("corosync.service is not running!")
             return False
 

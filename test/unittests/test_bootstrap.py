@@ -478,7 +478,7 @@ class TestBootstrap(unittest.TestCase):
         mock_nologin.assert_called_once_with("hacluster", None)
         mock_confirm.assert_called_once_with("Continue?")
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.is_nologin')
     def test_change_user_shell(self, mock_nologin, mock_invoke):
         bootstrap._context = mock.Mock(yes_to_all=True)
@@ -550,7 +550,7 @@ class TestBootstrap(unittest.TestCase):
         mock_check.assert_called_once_with("fromfile", "tofile", remote=None, source_local=False)
         mock_append.assert_called_once_with("fromfile", "tofile", remote=None)
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_append_to_remote_file(self, mock_run):
         bootstrap.append_to_remote_file("fromfile", "root", "node1", "tofile")
         cmd = "cat fromfile | ssh {} root@node1 'cat >> tofile'".format(constants.SSH_OPTION)
@@ -648,7 +648,7 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.bootstrap_add(ctx)
         mock_this_node.assert_not_called()
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.this_node')
     def test_bootstrap_add(self, mock_this_node, mock_info, mock_run):
@@ -663,7 +663,7 @@ class TestBootstrap(unittest.TestCase):
             ])
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.sh.LocalShell.get_stdout_stderr')
+    @mock.patch('crmsh.sh.LocalShell.get_rc_stdout_stderr')
     def test_setup_passwordless_with_other_nodes_failed_fetch_nodelist(self, mock_run, mock_error):
         bootstrap._context = mock.Mock(current_user="carol")
         mock_run.return_value = (1, None, None)
@@ -678,7 +678,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.HostUserConfig')
     @mock.patch('crmsh.bootstrap._fetch_core_hosts')
-    @mock.patch('crmsh.sh.LocalShell.get_stdout_stderr')
+    @mock.patch('crmsh.sh.LocalShell.get_rc_stdout_stderr')
     def test_setup_passwordless_with_other_nodes_failed_fetch_hostname(
             self,
             mock_run,
@@ -712,7 +712,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.utils.ssh_copy_id')
     @mock.patch('crmsh.utils.user_of')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
-    @mock.patch('crmsh.sh.LocalShell.get_stdout_stderr')
+    @mock.patch('crmsh.sh.LocalShell.get_rc_stdout_stderr')
     def test_setup_passwordless_with_other_nodes(
             self,
             mock_run,
@@ -788,7 +788,7 @@ class TestBootstrap(unittest.TestCase):
         ])
         mock_append.assert_called_once_with("/home/alice/.ssh/id_rsa.pub", "/home/alice/.ssh/authorized_keys")
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_stderr_no_input')
+    @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')
     def test_get_node_canonical_hostname(self, mock_run):
         mock_run.return_value = (0, "Node1", None)
 
@@ -797,7 +797,7 @@ class TestBootstrap(unittest.TestCase):
         mock_run.assert_called_once_with('node1', 'crm_node --name')
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_stderr_no_input')
+    @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')
     def test_get_node_canonical_hostname_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
         mock_error.side_effect = SystemExit
@@ -1252,7 +1252,7 @@ class TestBootstrap(unittest.TestCase):
         mock_cluster_cmd.assert_called_once_with("sync file1 file2")
 
     @mock.patch('logging.Logger.debug')
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.cib_factory')
     def test_adjust_pcmk_delay_2node(self, mock_cib_factory, mock_run, mock_debug):
         mock_cib_factory.refresh = mock.Mock()
@@ -1262,7 +1262,7 @@ class TestBootstrap(unittest.TestCase):
         mock_run.assert_called_once_with("crm resource param res_1 set pcmk_delay_max {}s".format(constants.PCMK_DELAY_MAX))
 
     @mock.patch('logging.Logger.debug')
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.cib_factory')
     def test_adjust_pcmk_delay(self, mock_cib_factory, mock_run, mock_debug):
         mock_cib_factory.refresh = mock.Mock()
@@ -1298,14 +1298,14 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.adjust_priority_in_rsc_defaults(False)
         mock_set.assert_called_once_with('priority', 0, property_type='rsc_defaults')
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_adjust_priority_fencing_delay_no_fence_agent(self, mock_run):
         mock_run.return_value = None
         bootstrap.adjust_priority_fencing_delay(False)
         mock_run.assert_called_once_with("crm configure show related:stonith")
 
     @mock.patch('crmsh.utils.set_property')
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_adjust_priority_fencing_delay_no_pcmk_delay(self, mock_run, mock_set):
         mock_run.return_value = "data"
         bootstrap.adjust_priority_fencing_delay(False)
@@ -1578,7 +1578,7 @@ class TestValidation(unittest.TestCase):
         mock_this_node.assert_called_once_with()
         mock_error.assert_called_once_with("Removing self requires --force")
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.remove_self')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
@@ -1644,7 +1644,7 @@ class TestValidation(unittest.TestCase):
         mock_this_node.assert_called_once_with()
         mock_error.assert_called_once_with("Specified node node2 is not configured in cluster! Unable to remove.")
 
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.utils.fetch_cluster_node_list_from_node')
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
     @mock.patch('crmsh.xmlutil.listnodes')
@@ -1682,7 +1682,7 @@ class TestValidation(unittest.TestCase):
         mock_run.assert_called_once_with('rm -rf /var/lib/crmsh', 'node2')
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_stderr_no_input')
+    @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')
     @mock.patch('crmsh.xmlutil.listnodes')
     @mock.patch('crmsh.utils.this_node')
     def test_remove_self_other_nodes(self, mock_this_node, mock_list, mock_run, mock_error):
@@ -1700,7 +1700,7 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_called_once_with("Failed to remove this node from node2")
 
     @mock.patch('crmsh.utils.package_is_installed')
-    @mock.patch('crmsh.sh.AutoShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_rm_configuration_files(self, mock_run, mock_installed):
         bootstrap._context = mock.Mock(rm_list=["file1", "file2"])
         mock_installed.return_value = True
