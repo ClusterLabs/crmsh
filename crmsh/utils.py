@@ -38,6 +38,7 @@ from distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
 from .prun import prun
+from .sh import ShellUtils
 from .service_manager import ServiceManager
 
 logger = log.setup_logger(__name__)
@@ -446,7 +447,7 @@ def chown(path, user, group):
         os.chown(path, uid, gid)
     except os.error as err:
         cmd = "sudo chown {}:{} {}".format(user, group, path)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             fatal("Failed to chown {}: {}".format(path, err))
 
@@ -456,15 +457,15 @@ def chmod(path, mod):
         os.chmod(path, mod)
     except os.error as err:
         cmd = "sudo chmod {} {}".format(format(mod,'o'), path)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             fatal("Failed to chmod {}: {}".format(path, err))
 
 
 def touch(file_name):
-    rc, out, err = get_stdout_stderr("touch " + file_name, no_reg=True)
+    rc, out, err = ShellUtils().get_stdout_stderr("touch " + file_name, no_reg=True)
     if rc != 0:
-        rc, out, err = get_stdout_stderr("sudo touch " + file_name, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr("sudo touch " + file_name, no_reg=True)
         if rc != 0:
             fatal("Failed create file {}: {}".format(file_name, err))
 
@@ -475,11 +476,11 @@ def copy_local_file(src, dest):
     except os.error as err:
         if err.errno not in (errno.EPERM, errno.EACCES):
             raise
-        rc, out, err = get_stdout_stderr("sudo cp {} {}".format(src, dest), no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr("sudo cp {} {}".format(src, dest), no_reg=True)
         if rc != 0:
             fatal("Failed to copy file from {} to {}: {}".format(src, dest, err))
         cmd = "sudo chown {}:{} {}".format(userdir.getuser(), "haclient", dest)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             fatal("Failed to chown {}: {}".format(dest, err))
 
@@ -493,7 +494,7 @@ def rmfile(path, ignore_errors=False):
         os.remove(path)
     except os.error as err:
         if err.errno in (errno.EPERM, errno.EACCES):
-            rc, out, err = get_stdout_stderr("sudo rm " + path, no_reg=True)
+            rc, out, err = ShellUtils().get_stdout_stderr("sudo rm " + path, no_reg=True)
             if rc != 0 and not ignore_errors:
                 fatal("Failed to remove {}: {}".format(path, err))
         elif not ignore_errors:
@@ -662,7 +663,7 @@ def str2file(s, fname, mod=0o644):
         escaped = s.translate(str.maketrans({'"':  r'\"'})) # other symbols are already escaped
         cmd = 'printf "{}" | sudo tee {} >/dev/null'.format(escaped, fname)
         cmd += ' && sudo chmod {} {}'.format(format(mod,'o'), fname)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             #raise ValueError("Failed to write to {}: {}".format(s, err)) # fatal?
             logger.error(err)
@@ -912,7 +913,7 @@ def mkdirs_owned(dirs, mode=0o777, uid=-1, gid=-1):
                 uid = userdir.getuser()
             cmd += " && sudo chown {} {}".format(uid, dirs)
             cmd += " && sudo chgrp {} {}".format(gid, dirs)
-            rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+            rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
             if rc != 0:
                 fatal("Failed to create {}: {}".format(' '.join(dirs), err))
             return
@@ -933,29 +934,6 @@ def pipe_cmd_nosudo(cmd):
         print(outp)
         print(err_outp)
     return rc
-
-
-def get_stdout(cmd, input_s=None, stderr_on=True, shell=True, raw=False):
-    '''
-    Run a cmd, return stdout output.
-    Optional input string "input_s".
-    stderr_on controls whether to show output which comes on stderr.
-    '''
-    if stderr_on:
-        stderr = None
-    else:
-        stderr = subprocess.PIPE
-    if options.regression_tests:
-        print(".EXT", cmd)
-    proc = subprocess.Popen(cmd,
-                            shell=shell,
-                            stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE,
-                            stderr=stderr)
-    stdout_data, stderr_data = proc.communicate(input_s)
-    if raw:
-        return proc.returncode, stdout_data
-    return proc.returncode, to_ascii(stdout_data).strip()
 
 
 def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False, no_reg=False):
@@ -988,7 +966,7 @@ def stdout2list(cmd, stderr_on=True, shell=True):
     Run a cmd, fetch output, return it as a list of lines.
     stderr_on controls whether to show output which comes on stderr.
     '''
-    rc, s = get_stdout(add_sudo(cmd), stderr_on=stderr_on, shell=shell)
+    rc, s = ShellUtils().get_stdout(add_sudo(cmd), stderr_on=stderr_on, shell=shell)
     if not s:
         return rc, []
     return rc, s.split('\n')
@@ -1006,7 +984,7 @@ def append_file(dest, src):
 
 def get_dc():
     cmd = "crmadmin -D -t 1"
-    rc, s, _ = get_stdout_stderr(add_sudo(cmd))
+    rc, s, _ = ShellUtils().get_stdout_stderr(add_sudo(cmd))
     if rc != 0:
         return None
     if not s.startswith("Designated"):
@@ -1042,7 +1020,7 @@ def wait4dc(what="", show_progress=True):
         logger.warning("can't find DC")
         return False
     cmd = "crm_attribute -Gq -t crm_config -n crmd-transition-delay 2> /dev/null"
-    delay = get_stdout(add_sudo(cmd))[1]
+    delay = ShellUtils().get_stdout(add_sudo(cmd))[1]
     if delay:
         delaymsec = crm_msec(delay)
         if delaymsec > 0:
@@ -1059,7 +1037,7 @@ def wait4dc(what="", show_progress=True):
             logger.warning("DC lost during wait")
             return False
         cmd = "crmadmin -S %s" % dc
-        rc, s = get_stdout(add_sudo(cmd))
+        rc, s = ShellUtils().get_stdout(add_sudo(cmd))
         if rc != 0:
             logger.error("Exit code of command {} is {}".format(cmd, rc))
             return False
@@ -1107,7 +1085,7 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     if options.regression_tests:
         ptest = ">/dev/null %s" % ptest
     logger.debug("invoke: %s", ptest)
-    rc, s = get_stdout(ptest, input_s=graph_s)
+    rc, s = ShellUtils().get_stdout(ptest, input_s=graph_s)
     if rc != 0:
         logger.debug("'%s' exited with (rc=%d)", ptest, rc)
         if actions and rc == 1:
@@ -1713,7 +1691,7 @@ def cibadmin_features():
     # usage example:
     if 'corosync-plugin' in cibadmin_features()
     '''
-    rc, outp = get_stdout(['cibadmin', '-!'], shell=False)
+    rc, outp = ShellUtils().get_stdout(['cibadmin', '-!'], shell=False)
     if rc == 0:
         m = re.match(r'Pacemaker\s(\S+)\s\(Build: ([^\)]+)\):\s(.*)', outp.strip())
         if m and len(m.groups()) > 2:
@@ -1845,7 +1823,7 @@ def print_cluster_nodes():
     """
     Print the output of crm_node -l
     """
-    rc, out, _ = get_stdout_stderr("crm_node -l")
+    rc, out, _ = ShellUtils().get_stdout_stderr("crm_node -l")
     if rc == 0 and out:
         print("{}\n".format(out))
 
@@ -1856,7 +1834,7 @@ def list_cluster_nodes(no_reg=False):
     '''
     from . import xmlutil
     cib = None
-    rc, out, err = get_stdout_stderr(constants.CIB_QUERY, no_reg=no_reg)
+    rc, out, err = ShellUtils().get_stdout_stderr(constants.CIB_QUERY, no_reg=no_reg)
     # When cluster service running
     if rc == 0:
         cib = etree.fromstring(out)
@@ -1906,7 +1884,7 @@ def list_cluster_nodes_except_me():
 def service_info(name):
     p = is_program('systemctl')
     if p:
-        rc, outp = get_stdout([p, 'show',
+        rc, outp = ShellUtils().get_stdout([p, 'show',
                                '-p', 'UnitFileState',
                                '-p', 'ActiveState',
                                '-p', 'SubState',
@@ -1924,7 +1902,7 @@ def service_info(name):
 def running_on(resource):
     "returns list of node names where the given resource is running"
     rsc_locate = "crm_resource --resource '%s' --locate"
-    rc, out, err = get_stdout_stderr(rsc_locate % (resource))
+    rc, out, err = ShellUtils().get_stdout_stderr(rsc_locate % (resource))
     if rc != 0:
         return []
     nodes = []
@@ -2017,7 +1995,7 @@ def remote_diff_this(local_path, nodes, this_node):
         if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
         path = result
-        _, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
+        _, s = ShellUtils().get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
                           (host, this_node, path, local_path))
         page_string(s)
 
@@ -2029,7 +2007,7 @@ def remote_diff(local_path, nodes):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
     h1, r1 = by_host[0]
     h2, r2 = by_host[1]
-    _, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
+    _, s = ShellUtils().get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
                       (h1, h2, r1[3], r2[3]))
     page_string(s)
 
@@ -2207,7 +2185,7 @@ def debug_timestamp():
 
 
 def get_member_iplist():
-    rc, out, err= get_stdout_stderr("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    rc, out, err= ShellUtils().get_stdout_stderr("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
     if rc != 0:
         logger.debug(err)
         return None
@@ -2224,7 +2202,7 @@ def get_iplist_corosync_using():
     """
     Get ip list used by corosync
     """
-    rc, out, err = get_stdout_stderr("corosync-cfgtool -s")
+    rc, out, err = ShellUtils().get_stdout_stderr("corosync-cfgtool -s")
     if rc != 0:
         raise ValueError(err)
     return re.findall(r'id\s*=\s*(.*)', out)
@@ -2266,7 +2244,7 @@ def is_qdevice_tls_on():
 
 def get_nodeinfo_from_cmaptool():
     nodeid_ip_dict = {}
-    rc, out = get_stdout("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    rc, out = ShellUtils().get_stdout("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
     if rc != 0:
         return nodeid_ip_dict
 
@@ -2305,7 +2283,7 @@ def valid_nodeid(nodeid):
 
 
 def get_nodeid_from_name(name):
-    rc, out = get_stdout('crm_node -l')
+    rc, out = ShellUtils().get_stdout('crm_node -l')
     if rc != 0:
         return None
     res = re.search(r'^([0-9]+) {} '.format(name), out, re.M)
@@ -2326,7 +2304,7 @@ def check_space_option_value(options):
 
 
 def interface_choice():
-    _, out = get_stdout("ip a")
+    _, out = ShellUtils().get_stdout("ip a")
     # should consider interface format like "ethx@xxx"
     interface_list = re.findall(r'(?:[0-9]+:) (.*?)(?=: |@.*?: )', out)
     return [nic for nic in interface_list if nic != "lo"]
@@ -2466,7 +2444,7 @@ class InterfacesInfo(object):
         IMPORTANT: This is the method that populates the data, should always be called after initialize
         """
         cmd = "ip -{} -o addr show".format(self.ip_version)
-        rc, out, err = get_stdout_stderr(cmd)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd)
         if rc != 0:
             raise ValueError(err)
 
@@ -2554,7 +2532,7 @@ class InterfacesInfo(object):
 
         #TODO what if user only has ipv6 route?
         cmd = "ip -o route show"
-        rc, out, err = get_stdout_stderr(cmd)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd)
         if rc != 0:
             raise ValueError(err)
         res = re.search(r'^default via .* dev (.*?) ', out)
@@ -2639,7 +2617,7 @@ def package_is_installed(pkg, remote_addr=None):
         rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote_addr, cmd)
     else:
         # check on local
-        rc, _ = get_stdout(cmd)
+        rc, _ = ShellUtils().get_stdout(cmd)
     return rc == 0
 
 
@@ -2647,7 +2625,7 @@ def ping_node(node):
     """
     Check if the remote node is reachable
     """
-    rc, _, err = get_stdout_stderr("ping -c 1 {}".format(node))
+    rc, _, err = ShellUtils().get_stdout_stderr("ping -c 1 {}".format(node))
     if rc != 0:
         raise ValueError("host \"{}\" is unreachable: {}".format(node, err))
 
@@ -2859,7 +2837,7 @@ def detect_virt():
     """
     Detect if running in virt environment
     """
-    rc, _, _ = get_stdout_stderr("systemd-detect-virt")
+    rc, _, _ = ShellUtils().get_stdout_stderr("systemd-detect-virt")
     return rc == 0
 
 
@@ -2957,7 +2935,7 @@ def get_property(name, property_type="crm_config"):
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
     else:
         cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
-    rc, stdout, _ = get_stdout_stderr(cmd)
+    rc, stdout, _ = ShellUtils().get_stdout_stderr(cmd)
     return stdout if rc == 0 else None
 
 
@@ -3061,7 +3039,7 @@ def diff_and_patch(orig_cib_str, current_cib_str):
     tmpfiles.add(current_cib_file)
 
     cmd = "crm_diff -u -o '{}' -n '{}'".format(orig_cib_file, current_cib_file)
-    rc, cib_diff, err = get_stdout_stderr(cmd)
+    rc, cib_diff, err = ShellUtils().get_stdout_stderr(cmd)
     if rc == 0: # no difference
         return True
     if err:
@@ -3099,7 +3077,7 @@ def detect_file(_file, remote=None):
     else:
         # FIXME
         cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user_of(remote), remote, _file)
-    code, _, _ = get_stdout_stderr(cmd)
+    code, _, _ = ShellUtils().get_stdout_stderr(cmd)
     rc = code == 0
     return rc
 
@@ -3144,7 +3122,7 @@ def has_sudo_access():
     """
     Check if current user has sudo access
     """
-    rc, _, _ = get_stdout_stderr("sudo -S -k -n id -u")
+    rc, _, _ = ShellUtils().get_stdout_stderr("sudo -S -k -n id -u")
     return rc == 0
 
 

@@ -6,9 +6,10 @@ import re
 import time
 from contextlib import contextmanager
 
-from . import utils, sh
+from . import sh
 from . import config
 from . import log
+from .sh import ShellUtils
 
 
 logger = log.setup_logger(__name__)
@@ -45,7 +46,7 @@ class Lock(object):
         """
         Run command on local
         """
-        return utils.get_stdout_stderr(cmd)
+        return ShellUtils().get_stdout_stderr(cmd)
 
     def _create_lock_dir(self):
         """

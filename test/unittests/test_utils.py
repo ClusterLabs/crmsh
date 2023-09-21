@@ -27,14 +27,14 @@ def setup_function():
     imp.reload(utils)
 
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
 def test_print_cluster_nodes(mock_run):
     mock_run.return_value = (0, "data", None)
     utils.print_cluster_nodes()
     mock_run.assert_called_once_with("crm_node -l")
 
 
-@mock.patch("crmsh.utils.get_stdout")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout")
 def test_package_is_installed_local(mock_run):
     mock_run.return_value = (0, None)
     res = utils.package_is_installed("crmsh")
@@ -72,7 +72,7 @@ def test_check_file_content_included(mock_detect, mock_run):
         ])
 
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
 def test_get_iplist_corosync_using_exception(mock_run):
     mock_run.return_value = (1, None, "error of cfgtool")
     with pytest.raises(ValueError) as err:
@@ -81,7 +81,7 @@ def test_get_iplist_corosync_using_exception(mock_run):
     mock_run.assert_called_once_with("corosync-cfgtool -s")
 
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
 def test_get_iplist_corosync_using(mock_run):
     output = """
 RING ID 0
@@ -98,7 +98,7 @@ RING ID 1
 
 
 @mock.patch('re.search')
-@mock.patch('crmsh.utils.get_stdout')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout')
 def test_get_nodeid_from_name_run_None1(mock_get_stdout, mock_re_search):
     mock_get_stdout.return_value = (1, None)
     mock_re_search_inst = mock.Mock()
@@ -110,7 +110,7 @@ def test_get_nodeid_from_name_run_None1(mock_get_stdout, mock_re_search):
 
 
 @mock.patch('re.search')
-@mock.patch('crmsh.utils.get_stdout')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout')
 def test_get_nodeid_from_name_run_None2(mock_get_stdout, mock_re_search):
     mock_get_stdout.return_value = (0, "172167901 node1 member\n172168231 node2 member")
     mock_re_search.return_value = None
@@ -121,7 +121,7 @@ def test_get_nodeid_from_name_run_None2(mock_get_stdout, mock_re_search):
 
 
 @mock.patch('re.search')
-@mock.patch('crmsh.utils.get_stdout')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout')
 def test_get_nodeid_from_name(mock_get_stdout, mock_re_search):
     mock_get_stdout.return_value = (0, "172167901 node1 member\n172168231 node2 member")
     mock_re_search_inst = mock.Mock()
@@ -146,7 +146,7 @@ def test_check_ssh_passwd_need(mock_run):
 
 
 @mock.patch('logging.Logger.debug')
-@mock.patch('crmsh.utils.get_stdout_stderr')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
 def test_get_member_iplist_None(mock_get_stdout_stderr, mock_common_debug):
     mock_get_stdout_stderr.return_value = (1, None, "Failed to initialize the cmap API. Error CS_ERR_LIBRARY")
     assert utils.get_member_iplist() is None
@@ -155,7 +155,7 @@ def test_get_member_iplist_None(mock_get_stdout_stderr, mock_common_debug):
 
 
 def test_get_member_iplist():
-    with mock.patch('crmsh.utils.get_stdout_stderr') as mock_get_stdout_stderr:
+    with mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr') as mock_get_stdout_stderr:
         cmap_value = '''
 runtime.totem.pg.mrp.srp.members.336860211.config_version (u64) = 0
 runtime.totem.pg.mrp.srp.members.336860211.ip (str) = r(0) ip(20.20.20.51)
@@ -426,7 +426,7 @@ def test_is_qdevice_tls_on_true(mock_get_value):
     assert utils.is_qdevice_tls_on() is True
     mock_get_value.assert_called_once_with("quorum.device.net.tls")
 
-@mock.patch("crmsh.utils.get_stdout")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout")
 def test_get_nodeinfo_from_cmaptool_return_none(mock_get_stdout):
     mock_get_stdout.return_value = (1, None)
     assert bool(utils.get_nodeinfo_from_cmaptool()) is False
@@ -434,7 +434,7 @@ def test_get_nodeinfo_from_cmaptool_return_none(mock_get_stdout):
 
 @mock.patch("re.findall")
 @mock.patch("re.search")
-@mock.patch("crmsh.utils.get_stdout")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout")
 def test_get_nodeinfo_from_cmaptool(mock_get_stdout, mock_search, mock_findall):
     mock_get_stdout.return_value = (0, 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)\nruntime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
     match_inst1 = mock.Mock()
@@ -600,7 +600,7 @@ def test_detect_cloud_gcp(mock_is_program, mock_aws, mock_azure, mock_gcp):
     mock_azure.assert_called_once_with()
     mock_gcp.assert_called_once_with()
 
-@mock.patch("crmsh.utils.get_stdout")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout")
 def test_interface_choice(mock_get_stdout):
     ip_a_output = """
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
@@ -818,7 +818,7 @@ class TestInterfacesInfo(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_get_interfaces_info_no_address(self, mock_run):
         only_lo = "1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever"
         mock_run.return_value = (0, only_lo, None)
@@ -828,7 +828,7 @@ class TestInterfacesInfo(unittest.TestCase):
         mock_run.assert_called_once_with("ip -4 -o addr show")
 
     @mock.patch('crmsh.utils.Interface')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_get_interfaces_info_one_addr(self, mock_run, mock_interface):
         mock_run.return_value = (0, self.network_output_error, None)
         mock_interface_inst_1 = mock.Mock(is_loopback=True, is_link_local=False)
@@ -901,7 +901,7 @@ class TestInterfacesInfo(unittest.TestCase):
     @mock.patch('crmsh.utils.InterfacesInfo.nic_list', new_callable=mock.PropertyMock)
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_get_default_nic_list_from_route_no_default(self, mock_run, mock_get_interfaces_info, mock_warn, mock_nic_list):
         output = """10.10.10.0/24 dev eth1 proto kernel scope link src 10.10.10.51 
         20.20.20.0/24 dev eth2 proto kernel scope link src 20.20.20.51"""
@@ -915,7 +915,7 @@ class TestInterfacesInfo(unittest.TestCase):
         mock_warn.assert_called_once_with("No default route configured. Using the first found nic")
         mock_nic_list.assert_has_calls([mock.call(), mock.call()])
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_get_default_nic_list_from_route(self, mock_run):
         output = """default via 192.168.122.1 dev eth8 proto dhcp 
         10.10.10.0/24 dev eth1 proto kernel scope link src 10.10.10.51 
@@ -1023,7 +1023,7 @@ def test_get_iplist_from_name(mock_get_nodeid, mock_get_nodeinfo):
     mock_get_nodeinfo.assert_called_once_with()
 
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
 def test_ping_node(mock_run):
     mock_run.return_value = (1, None, "error data")
     with pytest.raises(ValueError) as err:
@@ -1274,7 +1274,7 @@ def test_check_all_nodes_reachable(mock_run, mock_ping):
     mock_ping.assert_called_once_with("15sp2-1")
 
 
-@mock.patch('crmsh.utils.get_stdout_stderr')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
 def test_detect_virt(mock_run):
     mock_run.return_value = (0, None, None)
     assert utils.detect_virt() is True
@@ -1354,7 +1354,7 @@ Quorate:          Yes
 
 
 @mock.patch('crmsh.utils.etree.fromstring')
-@mock.patch('crmsh.utils.get_stdout_stderr')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
 def test_list_cluster_nodes_none(mock_run, mock_etree):
     mock_run.return_value = (0, "data", None)
     mock_etree.return_value = None
@@ -1365,7 +1365,7 @@ def test_list_cluster_nodes_none(mock_run, mock_etree):
 
 
 @mock.patch('crmsh.utils.etree.fromstring')
-@mock.patch('crmsh.utils.get_stdout_stderr')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
 def test_list_cluster_nodes_none_no_reg(mock_run, mock_etree):
     mock_run.return_value = (0, "data", None)
     mock_etree.return_value = None
@@ -1377,7 +1377,7 @@ def test_list_cluster_nodes_none_no_reg(mock_run, mock_etree):
 
 @mock.patch('os.path.isfile')
 @mock.patch('os.getenv')
-@mock.patch('crmsh.utils.get_stdout_stderr')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
 def test_list_cluster_nodes_cib_not_exist(mock_run, mock_env, mock_isfile):
     mock_run.return_value = (1, None, None)
     mock_env.return_value = constants.CIB_RAW_FILE
@@ -1392,7 +1392,7 @@ def test_list_cluster_nodes_cib_not_exist(mock_run, mock_env, mock_isfile):
 @mock.patch('crmsh.xmlutil.file2cib_elem')
 @mock.patch('os.path.isfile')
 @mock.patch('os.getenv')
-@mock.patch('crmsh.utils.get_stdout_stderr')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
 def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem):
     mock_run.return_value = (1, None, None)
     mock_env.return_value = constants.CIB_RAW_FILE
@@ -1419,7 +1419,7 @@ def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem):
 
 
 @mock.patch('os.getenv')
-@mock.patch('crmsh.utils.get_stdout_stderr')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
 def test_get_property(mock_run, mock_env):
     mock_run.return_value = (0, "data", None)
     mock_env.return_value = "cib.xml"
@@ -1558,7 +1558,7 @@ def test_cluster_copy_file_return(mock_list_nodes):
     assert utils.cluster_copy_file("/file1") == True
 
 
-@mock.patch('crmsh.utils.get_stdout_stderr')
+@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
 def test_has_sudo_access(mock_run):
     mock_run.return_value = (0, None, None)
     assert utils.has_sudo_access() is True

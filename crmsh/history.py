@@ -9,12 +9,12 @@ import glob
 import configparser
 
 from . import config
-from . import constants
 from . import userdir
 from . import logtime
 from . import logparser
 from . import utils
 from . import log
+from .sh import ShellUtils
 
 
 logger = log.setup_logger(__name__)
@@ -222,7 +222,7 @@ class Report(object):
                 self.error(msg)
                 return None
         try:
-            rc, tf_loc = utils.get_stdout("tar -t%s < %s 2> /dev/null | head -1" % (tar_unpack_option, utils.quote(bfname)))
+            rc, tf_loc = ShellUtils().get_stdout("tar -t%s < %s 2> /dev/null | head -1" % (tar_unpack_option, utils.quote(bfname)))
             if os.path.abspath(tf_loc) != os.path.abspath(loc):
                 logger.debug("top directory in tarball: %s, doesn't match the tarball name: %s", tf_loc, loc)
                 loc = os.path.join(os.path.dirname(loc), tf_loc)
@@ -477,7 +477,7 @@ class Report(object):
                 "-v" if config.core.debug else "", self.from_dt.ctime(),
                 to_option, nodes_option, str(config.core.report_tool_options), d)
         logger.debug("Running command: {}".format(cmd))
-        rc, out, err = utils.get_stdout_stderr(cmd)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd)
         if rc != 0:
             if err:
                 print(err)

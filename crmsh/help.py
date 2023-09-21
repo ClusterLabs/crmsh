@@ -27,7 +27,8 @@ Help for the level itself is like this:
 
 import os
 import re
-from .utils import page_string, get_stdout_stderr
+from .sh import ShellUtils
+from .utils import page_string
 from . import config
 from . import clidisplay
 from .ordereddict import odict
@@ -95,7 +96,7 @@ class HelpEntry(object):
 
         short_help = clidisplay.help_header(self.short)
         if self.from_cli and self.level and self.name:
-            _, output, _ = get_stdout_stderr(f"crm {self.level} {self.name} --help-without-redirect")
+            _, output, _ = ShellUtils().get_stdout_stderr(f"crm {self.level} {self.name} --help-without-redirect")
             page_string(short_help + '\n\n'+ output)
             return
 

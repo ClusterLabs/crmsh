@@ -44,6 +44,7 @@ from . import qdevice
 from . import parallax
 from . import log
 from .service_manager import ServiceManager
+from .sh import ShellUtils
 from .ui_node import NodeMgmt
 from .user_of_host import UserOfHost, UserNotFoundError
 
@@ -400,7 +401,7 @@ def invoke(*args):
     Return (boolean, stdout, stderr)
     """
     logger_utils.log_only_to_file("invoke: " + " ".join(args))
-    rc, stdout, stderr = utils.get_stdout_stderr(" ".join(args))
+    rc, stdout, stderr = ShellUtils().get_stdout_stderr(" ".join(args))
     if stdout:
         logger_utils.log_only_to_file("stdout: {}".format(stdout))
     if stderr:
@@ -527,7 +528,7 @@ def partprobe():
     #  ATT Training Engineer
     #  Data Center Engineer
     #  bheaton@suse.com
-    _rc, out, _err = utils.get_stdout_stderr("sfdisk -l")
+    _rc, out, _err = ShellUtils().get_stdout_stderr("sfdisk -l")
     disks = re.findall(r'^Disk\s*(/.+):', out, re.M)
     invoke("partprobe", *disks)
 
@@ -728,12 +729,12 @@ def init_cluster_local():
 
     # reset password, but only if it's not already set
     # (We still need the hacluster for the hawk).
-    _rc, outp = utils.get_stdout("passwd -S hacluster")
+    _rc, outp = ShellUtils().get_stdout("passwd -S hacluster")
     ps = outp.strip().split()[1]
     pass_msg = ""
     if ps not in ("P", "PS"):
         logger_utils.log_only_to_file(': Resetting password of hacluster user')
-        rc, outp, errp = utils.get_stdout_stderr("passwd hacluster", input_s=b"linux\nlinux\n")
+        rc, outp, errp = ShellUtils().get_stdout_stderr("passwd hacluster", input_s=b"linux\nlinux\n")
         if rc != 0:
             logger.warning("Failed to reset password of hacluster user: %s" % (outp + errp))
         else:
@@ -1519,7 +1520,7 @@ def init_cluster():
     """
     init_cluster_local()
 
-    _rc, nnodes = utils.get_stdout("crm_node -l")
+    _rc, nnodes = ShellUtils().get_stdout("crm_node -l")
     nnodes = len(nnodes.splitlines())
     if nnodes < 1:
         utils.fatal("No nodes found in cluster")
@@ -1877,7 +1878,7 @@ def update_expected_votes():
     nodecount = 0
     expected_votes = 0
     while True:
-        rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
+        rc, nodelist_text = ShellUtils().get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
         if rc == 0:
             try:
                 nodelist_xml = etree.fromstring(nodelist_text)
@@ -2150,7 +2151,7 @@ def join_cluster(seed_host, remote_user):
         if ipv6_flag and not is_unicast:
             # for ipv6 mcast
             nodeid_dict = {}
-            _rc, outp, _ = utils.get_stdout_stderr("crm_node -l")
+            _rc, outp, _ = ShellUtils().get_stdout_stderr("crm_node -l")
             if _rc == 0:
                 for line in outp.splitlines():
                     tokens = line.split()
@@ -2172,7 +2173,7 @@ def join_cluster(seed_host, remote_user):
         invoke("corosync-cfgtool -R")
 
         # Ditch no-quorum-policy=ignore
-        _rc, outp = utils.get_stdout("crm configure show")
+        _rc, outp = ShellUtils().get_stdout("crm configure show")
         if re.search('no-quorum-policy=.*ignore', outp):
             invoke("crm_attribute --attr-name no-quorum-policy --delete-attr")
 

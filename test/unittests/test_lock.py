@@ -48,7 +48,7 @@ class TestLock(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_run(self, mock_run):
         mock_run.return_value = (0, "output data", None)
         rc, out, err = self.local_inst._run("test_cmd")

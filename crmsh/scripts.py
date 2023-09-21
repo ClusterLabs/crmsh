@@ -24,7 +24,8 @@ from . import options
 from . import userdir
 from . import utils
 from . import log
-from crmsh.prun import prun
+from .prun import prun
+from .sh import ShellUtils
 import crmsh.parallax
 
 
@@ -1993,7 +1994,7 @@ class RunActions(object):
             return {}
         elif config.core.debug:
             self.printer.print_command(self.local_node_name(), cmdline)
-        rc, out, err = utils.get_stdout_stderr(cmdline, input_s=input_s, shell=True)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmdline, input_s=input_s, shell=True)
         if rc != 0:
             self.printer.error(self.local_node_name(), "Error (%d): %s" % (rc, err))
             return None

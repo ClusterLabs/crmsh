@@ -9,6 +9,7 @@ from . import constants
 from . import corosync
 from . import xmlutil
 from .service_manager import ServiceManager
+from .sh import ShellUtils
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -619,7 +620,7 @@ class SBDManager(object):
         Check if sbd device already initialized
         """
         cmd = "sbd -d {} dump".format(dev)
-        rc, _, _ = utils.get_stdout_stderr(cmd)
+        rc, _, _ = ShellUtils().get_stdout_stderr(cmd)
         return rc == 0
 
 

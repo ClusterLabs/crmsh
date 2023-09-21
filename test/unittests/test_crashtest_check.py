@@ -111,7 +111,7 @@ class TestCheck(TestCase):
             mock.call("chronyd.service is active")
             ])
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.utils.corosync_port_list')
     def test_check_port_open_return(self, mock_corosync_port, mock_run):
         mock_corosync_port.return_value = ["1234", "5678"]
@@ -134,7 +134,7 @@ class TestCheck(TestCase):
         mock_corosync_port.assert_called_once_with()
         task_inst.error.assert_called_once_with("Can not get corosync's port")
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.utils.corosync_port_list')
     def test_check_port_open(self, mock_corosync_port, mock_run):
         mock_corosync_port.return_value = ["1234", "5678"]
@@ -305,7 +305,7 @@ class TestCheck(TestCase):
         mock_fence_info.assert_called_once_with()
         mock_task_inst.warn.assert_called_once_with("stonith is disabled")
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.utils.FenceInfo')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_fencing_no_resources(self, mock_task, mock_fence_info, mock_run):
@@ -326,7 +326,7 @@ class TestCheck(TestCase):
         mock_task_inst.warn.assert_called_once_with("No stonith resource configured!")
 
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.utils.FenceInfo')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_fencing_has_warn(self, mock_task, mock_fence_info, mock_run, mock_active):
@@ -354,7 +354,7 @@ class TestCheck(TestCase):
             ])
 
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.utils.FenceInfo')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_fencing(self, mock_task, mock_fence_info, mock_run, mock_active):
@@ -380,7 +380,7 @@ class TestCheck(TestCase):
             ])
         mock_active.assert_called_once_with("sbd")
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_nodes_error(self, mock_task, mock_run):
         mock_task_inst = mock.Mock()
@@ -395,7 +395,7 @@ class TestCheck(TestCase):
         mock_run.assert_called_once_with("crm_mon -1")
         mock_task_inst.error.assert_called_once_with("run \"crm_mon -1\" error: error data")
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_nodes(self, mock_task, mock_run):
         mock_task_inst = mock.Mock()
@@ -428,7 +428,7 @@ Node List:
             ])
         mock_task_inst.warn.assert_called_once_with("OFFLINE nodes: [ 15sp2-2 ]")
 
-    @mock.patch('crmsh.crash_test.check.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
     def test_check_nodes_warn(self, mock_task, mock_run):
         mock_task_inst = mock.Mock()
@@ -545,7 +545,7 @@ Active Resources:
     @mock.patch('crmsh.crash_test.task.TaskCheck.print_result')
     @mock.patch('crmsh.crash_test.utils.is_valid_sbd')
     @mock.patch('crmsh.crash_test.utils.msg_info')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
     def test_check_sbd_exist_and_valid(cls, mock_os_path_exists,
@@ -570,7 +570,7 @@ Active Resources:
     @mock.patch('crmsh.crash_test.utils.find_candidate_sbd')
     @mock.patch('crmsh.crash_test.utils.is_valid_sbd')
     @mock.patch('crmsh.crash_test.utils.msg_warn')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
     def test_check_sbd_exist_and_not_valid_but_no_can(cls, mock_os_path_exists,
@@ -601,7 +601,7 @@ Active Resources:
     @mock.patch('crmsh.crash_test.utils.is_valid_sbd')
     @mock.patch('crmsh.crash_test.utils.msg_info')
     @mock.patch('crmsh.crash_test.utils.msg_warn')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
     def test_check_sbd_exist_and_not_exist_has_can(cls, mock_os_path_exists,
@@ -633,7 +633,7 @@ Active Resources:
     @mock.patch('crmsh.crash_test.utils.is_valid_sbd')
     @mock.patch('crmsh.crash_test.utils.msg_info')
     @mock.patch('crmsh.crash_test.utils.msg_warn')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.utils.parse_sysconfig')
     @mock.patch('os.path.exists')
     def test_check_sbd_exist_and_not_valid_has_can(cls, mock_os_path_exists,

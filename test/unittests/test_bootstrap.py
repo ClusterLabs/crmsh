@@ -1223,7 +1223,7 @@ class TestBootstrap(unittest.TestCase):
         mock_qdevice_inst.certificate_process_on_join.assert_called_once_with()
         mock_start_service.assert_called_once_with("corosync-qdevice.service", enable=True)
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.log.LoggerUtils.log_only_to_file')
     def test_invoke(self, mock_log, mock_run):
         mock_run.return_value = (0, "output", "error")

@@ -124,7 +124,7 @@ Expected State:    a) sbd process restarted
     @mock.patch('crmsh.crash_test.task.TaskKill.process_monitor')
     @mock.patch('crmsh.crash_test.task.Task.fence_action_monitor')
     @mock.patch('threading.Thread')
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.Task.info')
     @mock.patch('crmsh.crash_test.utils.get_process_status')
     def test_run(self, mock_status, mock_info, mock_run, mock_thread, mock_fence_monitor, mock_process_monitor):
@@ -343,7 +343,7 @@ Fence timeout:     60
         mock_result.assert_called_once_with()
         mock_json.assert_called_once_with()
 
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check_no_cmd(self, mock_pre_check, mock_run):
         mock_run.return_value = (1, None, "error")
@@ -354,7 +354,7 @@ Fence timeout:     60
         mock_pre_check.assert_called_once_with()
 
     @mock.patch('crmsh.crash_test.utils.online_nodes')
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check_error(self, mock_pre_check, mock_run, mock_online_nodes):
         mock_run.return_value = (0, None, None)
@@ -365,7 +365,7 @@ Fence timeout:     60
         mock_run.assert_called_once_with("which iptables")
         mock_online_nodes.assert_called_once_with()
 
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.crmshutils.get_iplist_from_name')
     @mock.patch('crmsh.crash_test.task.Task.info')
     @mock.patch('crmsh.crash_test.utils.peer_node_list')
@@ -394,7 +394,7 @@ Fence timeout:     60
         self.task_sp_inst.un_block()
         mock_unblock_iptables.assert_called_once_with()
 
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.crmshutils.get_iplist_from_name')
     @mock.patch('crmsh.crash_test.task.Task.info')
     def test_un_block_iptables(self, mock_info, mock_get_iplist, mock_run):
@@ -480,7 +480,7 @@ Fence timeout:     60
         mock_result.assert_called_once_with()
         mock_json.assert_called_once_with()
 
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check_no_cmd(self, mock_pre_check, mock_run):
         mock_run.return_value = (1, None, "error")
@@ -491,7 +491,7 @@ Fence timeout:     60
         mock_pre_check.assert_called_once_with()
 
     @mock.patch('crmsh.crash_test.utils.check_node_status')
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check_error(self, mock_pre_check, mock_run, mock_node_status):
         mock_run.side_effect = [(0, None, None), (0, None, None), (0, None, None)]
@@ -508,7 +508,7 @@ Fence timeout:     60
 
     @mock.patch('crmsh.crash_test.task.Task.fence_action_monitor')
     @mock.patch('threading.Thread')
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.Task.info')
     def test_run(self, mock_info, mock_run, mock_thread, mock_monitor):
         mock_thread_inst = mock.Mock()
@@ -669,7 +669,7 @@ class TestTask(TestCase):
     @mock.patch('crmsh.crash_test.utils.str_to_datetime')
     @mock.patch('time.sleep')
     @mock.patch('crmsh.crash_test.task.Task.info')
-    @mock.patch('crmsh.crash_test.task.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_fence_action_monitor(self, mock_run, mock_info, mock_sleep, mock_datetime):
         self.task_inst.thread_stop_event = mock.Mock()
         self.task_inst.thread_stop_event.is_set.side_effect = [False, False, False, False]

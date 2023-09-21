@@ -1,6 +1,5 @@
 import re
 import os
-import sys
 
 from crmsh import utils as crmshutils
 from crmsh import bootstrap as crmshboot
@@ -10,6 +9,7 @@ from . import utils
 from . import task
 from . import config
 from ..service_manager import ServiceManager
+from ..sh import ShellUtils
 
 
 def fix(context):
@@ -155,7 +155,7 @@ def check_port_open(task, firewall_type):
         return
 
     if firewall_type == "firewalld":
-        rc, out, err = crmshutils.get_stdout_stderr('firewall-cmd --list-port')
+        rc, out, err = ShellUtils().get_stdout_stderr('firewall-cmd --list-port')
         if rc != 0:
             task.error(err)
             return
@@ -236,7 +236,7 @@ def check_fencing():
             return
 
         task_inst.info("stonith is enabled")
-        rc, outp, _ = crmshutils.get_stdout_stderr("crm_mon -r1 | grep '(stonith:.*):'")
+        rc, outp, _ = ShellUtils().get_stdout_stderr("crm_mon -r1 | grep '(stonith:.*):'")
         if rc != 0:
             task_inst.warn("No stonith resource configured!")
             return
@@ -268,7 +268,7 @@ def check_nodes():
     """
     task_inst = task.TaskCheck("Checking nodes")
     with task_inst.run():
-        rc, outp, errp = crmshutils.get_stdout_stderr("crm_mon -1")
+        rc, outp, errp = ShellUtils().get_stdout_stderr("crm_mon -1")
         if rc != 0:
             task_inst.error("run \"crm_mon -1\" error: {}".format(errp))
             return

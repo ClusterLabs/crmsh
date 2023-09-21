@@ -5,10 +5,11 @@ import time
 
 import crmsh.userdir
 import crmsh.utils
+from crmsh.sh import ShellUtils
 
 
 def get_online_nodes():
-    _, out, _ = crmsh.utils.get_stdout_stderr('sudo crm_node -l')
+    _, out, _ = ShellUtils().get_stdout_stderr('sudo crm_node -l')
     if out:
         return re.findall(r'[0-9]+ (.*) member', out)
     else:
@@ -37,7 +38,7 @@ def before_tag(context, tag):
             resource_cleanup()
             while True:
                 time.sleep(1)
-                rc, stdout, _ = crmsh.utils.get_stdout_stderr('sudo crmadmin -D -t 1')
+                rc, stdout, _ = ShellUtils().get_stdout_stderr('sudo crmadmin -D -t 1')
                 if rc == 0 and stdout.startswith('Designated'):
                     break
             subprocess.call(

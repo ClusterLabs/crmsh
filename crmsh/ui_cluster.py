@@ -19,6 +19,7 @@ from . import qdevice
 from .cibconfig import cib_factory
 from .prun import prun
 from .service_manager import ServiceManager
+from .sh import ShellUtils
 from .ui_node import parse_option_for_nodes
 from . import constants
 
@@ -767,7 +768,7 @@ to get the geo cluster configuration.""",
             else:
                 print("%-16s unknown" % (svc))
 
-        rc, outp = utils.get_stdout(['corosync-cfgtool', '-s'], shell=False)
+        rc, outp = ShellUtils().get_stdout(['corosync-cfgtool', '-s'], shell=False)
         if rc == 0:
             print("")
             print(outp)

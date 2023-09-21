@@ -96,7 +96,7 @@ def test_query_status_except():
     assert str(err.value) == "Wrong type \"xxx\" to query status"
 
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
 def test_query_ring_status_except(mock_run):
     mock_run.return_value = (1, None, "error")
     with pytest.raises(ValueError) as err:
@@ -105,7 +105,7 @@ def test_query_ring_status_except(mock_run):
     mock_run.assert_called_once_with("corosync-cfgtool -s")
 
 
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
 def test_query_ring_status(mock_run):
     mock_run.return_value = (0, "data", None)
     corosync.query_ring_status()
@@ -113,7 +113,7 @@ def test_query_ring_status(mock_run):
 
 
 @mock.patch("crmsh.utils.print_cluster_nodes")
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
 def test_query_quorum_status_except(mock_run, mock_print_nodes):
     mock_run.return_value = (1, None, "error")
     with pytest.raises(ValueError) as err:
@@ -124,7 +124,7 @@ def test_query_quorum_status_except(mock_run, mock_print_nodes):
 
 
 @mock.patch("crmsh.utils.print_cluster_nodes")
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
 def test_query_quorum_status(mock_run, mock_print_nodes):
     mock_run.return_value = (0, "data", None)
     corosync.query_quorum_status()
@@ -133,7 +133,7 @@ def test_query_quorum_status(mock_run, mock_print_nodes):
 
 
 @mock.patch("crmsh.utils.print_cluster_nodes")
-@mock.patch("crmsh.utils.get_stdout_stderr")
+@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
 def test_query_quorum_status_no_quorum(mock_run, mock_print_nodes):
     mock_run.return_value = (2, "no quorum", None)
     corosync.query_quorum_status()

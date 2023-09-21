@@ -3,7 +3,7 @@
 This module provides various methods to run shell commands, on both local and remote hosts, as current or another user.
 There many variant of the methods to allow fine-gain control of parameter passing and error handling.
 
-3 different implementations are provided:
+4 different implementations are provided:
 
 1. LocalShell allows to run command on local host as various users. It is the most feature-rich one, allowing
    interactive I/O from/to the terminal.
@@ -13,6 +13,7 @@ There many variant of the methods to allow fine-gain control of parameter passin
 3. ClusterShell runs command on cluster nodes. It leverages su, sudo and ssh to obtain a appreciated session on a
    destination node. It is only available after ssh bootstrap as it depends on the knowledge about cluster node and user
    configurations.
+4. ShellUtils runs command on local host as current user. It is a simple wrapper around subprocess module.
 
 The LocalShell and SshShell is expected to be used in ssh bootstrap. Once the ssh bootstrap finishes, AuthShell should
 be used.
@@ -28,6 +29,8 @@ from . import constants
 from .pyshim import cache
 from . import user_of_host
 from .user_of_host import UserOfHost
+
+import crmsh.options
 
 logger = logging.getLogger(__name__)
 
@@ -313,6 +316,54 @@ class ClusterShell:
             return Utils.decode_str(stdout).strip()
         else:
             raise CommandFailure(cmd, host, None, Utils.decode_str(stderr).strip())
+
+
+class ShellUtils:
+    @classmethod
+    def get_stdout(cls, cmd, input_s=None, stderr_on=True, shell=True, raw=False):
+        '''
+        Run a cmd, return stdout output.
+        Optional input string "input_s".
+        stderr_on controls whether to show output which comes on stderr.
+        '''
+        if crmsh.options.regression_tests:
+            print(".EXT", cmd)
+        proc = subprocess.Popen(
+            cmd,
+            shell=shell,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL if stderr_on else subprocess.PIPE,
+        )
+        stdout_data, _ = proc.communicate(input_s)
+        if raw:
+            return proc.returncode, stdout_data
+        else:
+            if isinstance(stdout_data, bytes):
+                stdout_data = Utils.decode_str(stdout_data)
+        return proc.returncode, stdout_data.strip()
+
+    @classmethod
+    def get_stdout_stderr(cls, cmd, input_s=None, shell=True, raw=False, no_reg=False):
+        '''
+        Run a cmd, return (rc, stdout, stderr)
+        '''
+        if crmsh.options.regression_tests and not no_reg:
+            print(".EXT", cmd)
+        proc = subprocess.Popen(
+            cmd,
+            shell=shell,
+            stdin=input_s and subprocess.PIPE or None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        stdout_data, stderr_data = proc.communicate(input_s)
+        if raw:
+            return proc.returncode, stdout_data, stderr_data
+        else:
+            if isinstance(stdout_data, bytes):
+                stdout_data = Utils.decode_str(stdout_data)
+                stderr_data = Utils.decode_str(stderr_data)
+        return proc.returncode, stdout_data.strip(), stderr_data.strip()
 
 
 class LocalOnlyClusterShell(ClusterShell):
