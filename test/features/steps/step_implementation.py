@@ -9,6 +9,7 @@ from behave import given, when, then
 import behave_agent
 from crmsh import corosync, sbd, userdir, bootstrap
 from crmsh import utils as crmutils
+from crmsh.sh import ShellUtils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
                   assert_eq, is_unclean, assert_in
@@ -48,7 +49,7 @@ def step_impl(context, nodes):
     for node in nodes:
         # wait for ssh service
         for _ in range(10):
-            rc, _, _ = crmutils.get_stdout_stderr('ssh {} true'.format(node))
+            rc, _, _ = ShellUtils().get_stdout_stderr('ssh {} true'.format(node))
             if rc == 0:
                 break
             time.sleep(1)
@@ -384,13 +385,13 @@ def step_impl(context, f):
 
 @given('Resource "{res_id}" is started on "{node}"')
 def step_impl(context, res_id, node):
-    rc, out, err = crmutils.get_stdout_stderr("crm_mon -1")
+    rc, out, err = ShellUtils().get_stdout_stderr("crm_mon -1")
     assert re.search(r'\*\s+{}\s+.*Started\s+{}'.format(res_id, node), out) is not None
 
 
 @then('Resource "{res_id}" is started on "{node}"')
 def step_impl(context, res_id, node):
-    rc, out, err = crmutils.get_stdout_stderr("crm_mon -1")
+    rc, out, err = ShellUtils().get_stdout_stderr("crm_mon -1")
     assert re.search(r'\*\s+{}\s+.*Started\s+{}'.format(res_id, node), out) is not None
 
 
@@ -487,7 +488,7 @@ def step_impl(context, node):
 def step_impl(context, count, node):
     index = 0
     while index <= int(count):
-        rc, out, _ = crmutils.get_stdout_stderr("stonith_admin -h {}".format(node))
+        rc, out, _ = ShellUtils().get_stdout_stderr("stonith_admin -h {}".format(node))
         if "Node {} last fenced at:".format(node) in out:
             return True
         time.sleep(1)

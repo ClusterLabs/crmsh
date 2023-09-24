@@ -202,6 +202,8 @@ test/unittests/test_qdevice.py
 test/unittests/test_ratrace.py
 test/unittests/test_sbd.py
 test/unittests/test_scripts.py
+test/unittests/test_service_manager.py
+test/unittests/test_sh.py
 test/unittests/test_time.py
 test/unittests/test_ui_cluster.py
 test/unittests/test_upgradeuitl.py

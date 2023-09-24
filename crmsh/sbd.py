@@ -1,14 +1,15 @@
 import os
 import re
 import shutil
-from . import utils
+from . import utils, sh
 from . import bootstrap
 from .bootstrap import SYSCONFIG_SBD, SBD_SYSTEMD_DELAY_START_DIR
 from . import log
 from . import constants
 from . import corosync
 from . import xmlutil
-
+from .service_manager import ServiceManager
+from .sh import ShellUtils
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -73,7 +74,7 @@ class SBDTimeout(object):
         When using diskless SBD with Qdevice, adjust value of sbd_watchdog_timeout
         """
         # add sbd after qdevice started
-        if utils.is_qdevice_configured() and utils.service_is_active("corosync-qdevice.service"):
+        if utils.is_qdevice_configured() and ServiceManager().service_is_active("corosync-qdevice.service"):
             qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
             if self.sbd_watchdog_timeout <= qdevice_sync_timeout:
                 watchdog_timeout_with_qdevice = qdevice_sync_timeout + self.QDEVICE_SYNC_TIMEOUT_MARGIN
@@ -90,7 +91,7 @@ class SBDTimeout(object):
         """
         Get msgwait for sbd device
         """
-        out = utils.get_stdout_or_raise_error("sbd -d {} dump".format(dev))
+        out = sh.cluster_shell().get_stdout_or_raise_error("sbd -d {} dump".format(dev))
         # Format like "Timeout (msgwait)  : 30"
         res = re.search("\(msgwait\)\s+:\s+(\d+)", out)
         if not res:
@@ -113,7 +114,7 @@ class SBDTimeout(object):
         For non-bootstrap case, get stonith-watchdog-timeout value from cluster property
         """
         default = SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT
-        if not utils.service_is_active("pacemaker.service"):
+        if not ServiceManager().service_is_active("pacemaker.service"):
             return default
         value = utils.get_property("stonith-watchdog-timeout")
         return int(value.strip('s')) if value else default
@@ -204,7 +205,7 @@ class SBDTimeout(object):
             return
 
         cmd = "systemctl show -p TimeoutStartUSec sbd --value"
-        out = utils.get_stdout_or_raise_error(cmd)
+        out = sh.cluster_shell().get_stdout_or_raise_error(cmd)
         start_timeout = utils.get_systemd_timeout_start_in_sec(out)
         if start_timeout > int(sbd_delay_start_value):
             return
@@ -292,7 +293,7 @@ class SBDManager(object):
         """
         Get UUID for specific device and node
         """
-        out = utils.get_stdout_or_raise_error("sbd -d {} dump".format(dev), remote=node)
+        out = sh.cluster_shell().get_stdout_or_raise_error("sbd -d {} dump".format(dev), node)
         res = re.search("UUID\s*:\s*(.*)\n", out)
         if not res:
             raise ValueError("Cannot find sbd device UUID for {}".format(dev))
@@ -521,13 +522,14 @@ class SBDManager(object):
         Configure stonith-sbd resource and related properties
         """
         if not utils.package_is_installed("sbd") or \
-                not utils.service_is_enabled("sbd.service") or \
+                not ServiceManager().service_is_enabled("sbd.service") or \
                 xmlutil.CrmMonXmlParser.is_resource_configured(self.SBD_RA):
             return
+        shell = sh.cluster_shell()
 
         # disk-based sbd
         if self._get_sbd_device_from_config():
-            utils.get_stdout_or_raise_error("crm configure primitive {} {}".format(self.SBD_RA_ID, self.SBD_RA))
+            shell.get_stdout_or_raise_error("crm configure primitive {} {}".format(self.SBD_RA_ID, self.SBD_RA))
             utils.set_property("stonith-enabled", "true")
         # disk-less sbd
         else:
@@ -535,7 +537,7 @@ class SBDManager(object):
                 self.timeout_inst = SBDTimeout(self._context)
                 self.timeout_inst.initialize_timeout()
             cmd = self.DISKLESS_CRM_CMD.format(self.timeout_inst.stonith_watchdog_timeout, constants.STONITH_TIMEOUT_DEFAULT)
-            utils.get_stdout_or_raise_error(cmd)
+            shell.get_stdout_or_raise_error(cmd)
 
         # in sbd stage
         if self._context.cluster_is_running:
@@ -551,7 +553,7 @@ class SBDManager(object):
 
         if not utils.package_is_installed("sbd"):
             return
-        if not os.path.exists(SYSCONFIG_SBD) or not utils.service_is_enabled("sbd.service", peer_host):
+        if not os.path.exists(SYSCONFIG_SBD) or not ServiceManager().service_is_enabled("sbd.service", peer_host):
             bootstrap.invoke("systemctl disable sbd.service")
             return
         self._watchdog_inst = Watchdog(remote_user=remote_user, peer_host=peer_host)
@@ -591,7 +593,7 @@ class SBDManager(object):
         """
         inst = cls(bootstrap.Context())
         dev_list = inst._get_sbd_device_from_config()
-        if not dev_list and utils.service_is_active("sbd.service"):
+        if not dev_list and ServiceManager().service_is_active("sbd.service"):
             return True
         return False
 
@@ -618,7 +620,7 @@ class SBDManager(object):
         Check if sbd device already initialized
         """
         cmd = "sbd -d {} dump".format(dev)
-        rc, _, _ = utils.get_stdout_stderr(cmd)
+        rc, _, _ = ShellUtils().get_stdout_stderr(cmd)
         return rc == 0
 
 

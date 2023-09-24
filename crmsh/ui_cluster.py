@@ -9,7 +9,7 @@ import typing
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
-from . import command
+from . import command, sh
 from . import utils
 from . import scripts
 from . import completers as compl
@@ -18,6 +18,8 @@ from . import corosync
 from . import qdevice
 from .cibconfig import cib_factory
 from .prun import prun
+from .service_manager import ServiceManager
+from .sh import ShellUtils
 from .ui_node import parse_option_for_nodes
 from . import constants
 
@@ -61,7 +63,7 @@ def script_args(args):
 
 def get_cluster_name():
     cluster_name = None
-    if not utils.service_is_active("corosync.service"):
+    if not ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service"):
         name = corosync.get_values('totem.cluster_name')
         if name:
             cluster_name = name[0]
@@ -174,16 +176,17 @@ class Cluster(command.UI):
             start_qdevice = True
             service_check_list.append("corosync-qdevice.service")
 
+        service_manager = ServiceManager()
         node_list = parse_option_for_nodes(context, *args)
         for node in node_list[:]:
-            if all([utils.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
+            if all([service_manager.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
                 logger.info("The cluster stack already started on {}".format(node))
                 node_list.remove(node)
         if not node_list:
             return
 
         if start_qdevice:
-            utils.start_service("corosync-qdevice", node_list=node_list)
+            service_manager.start_service("corosync-qdevice", node_list=node_list)
         node_list = bootstrap.start_pacemaker(node_list)
         if start_qdevice:
             qdevice.QDevice.check_qdevice_vote()
@@ -195,17 +198,18 @@ class Cluster(command.UI):
         '''
         Stops the cluster stack on all nodes or specific node(s)
         '''
+        service_manager = ServiceManager()
         node_list = parse_option_for_nodes(context, *args)
         for node in node_list[:]:
-            if not utils.service_is_active("corosync.service", remote_addr=node):
-                if utils.service_is_active("sbd.service", remote_addr=node):
-                    utils.stop_service("corosync", remote_addr=node)
+            if not service_manager.service_is_active("corosync.service", remote_addr=node):
+                if service_manager.service_is_active("sbd.service", remote_addr=node):
+                    service_manager.stop_service("corosync", remote_addr=node)
                     logger.info("The cluster stack stopped on {}".format(node))
                 else:
                     logger.info("The cluster stack already stopped on {}".format(node))
                 node_list.remove(node)
-            elif not utils.service_is_active("pacemaker.service", remote_addr=node):
-                utils.stop_service("corosync", remote_addr=node)
+            elif not service_manager.service_is_active("pacemaker.service", remote_addr=node):
+                service_manager.stop_service("corosync", remote_addr=node)
                 logger.info("The cluster stack stopped on {}".format(node))
                 node_list.remove(node)
         if not node_list:
@@ -226,12 +230,12 @@ class Cluster(command.UI):
             utils.set_dlm_option(enable_quorum_fencing=0, enable_quorum_lockspace=0)
 
         # Stop pacemaker since it can make sure cluster has quorum until stop corosync
-        node_list = utils.stop_service("pacemaker", node_list=node_list)
+        node_list = service_manager.stop_service("pacemaker", node_list=node_list)
         # Then, stop qdevice if is active
-        if utils.service_is_active("corosync-qdevice.service"):
-            utils.stop_service("corosync-qdevice.service", node_list=node_list)
+        if service_manager.service_is_active("corosync-qdevice.service"):
+            service_manager.stop_service("corosync-qdevice.service", node_list=node_list)
         # Last, stop corosync
-        node_list = utils.stop_service("corosync", node_list=node_list)
+        node_list = service_manager.stop_service("corosync", node_list=node_list)
 
         for node in node_list:
             logger.info("The cluster stack stopped on {}".format(node))
@@ -251,9 +255,10 @@ class Cluster(command.UI):
         Enable the cluster services on this node
         '''
         node_list = parse_option_for_nodes(context, *args)
-        node_list = utils.enable_service("pacemaker.service", node_list=node_list)
-        if utils.service_is_available("corosync-qdevice.service") and utils.is_qdevice_configured():
-            utils.enable_service("corosync-qdevice.service", node_list=node_list)
+        service_manager = ServiceManager()
+        node_list = service_manager.enable_service("pacemaker.service", node_list=node_list)
+        if service_manager.service_is_available("corosync-qdevice.service") and utils.is_qdevice_configured():
+            service_manager.enable_service("corosync-qdevice.service", node_list=node_list)
         for node in node_list:
             logger.info("Cluster services enabled on %s", node)
 
@@ -263,8 +268,9 @@ class Cluster(command.UI):
         Disable the cluster services on this node
         '''
         node_list = parse_option_for_nodes(context, *args)
-        node_list = utils.disable_service("pacemaker.service", node_list=node_list)
-        utils.disable_service("corosync-qdevice.service", node_list=node_list)
+        service_manager = ServiceManager()
+        node_list = service_manager.disable_service("pacemaker.service", node_list=node_list)
+        service_manager.disable_service("corosync-qdevice.service", node_list=node_list)
         for node in node_list:
             logger.info("Cluster services disabled on %s", node)
 
@@ -430,7 +436,7 @@ Examples:
             parser.error("Invalid stage (%s)" % (stage))
 
         if options.qnetd_addr:
-            if not utils.service_is_available("corosync-qdevice.service"):
+            if not ServiceManager().service_is_available("corosync-qdevice.service"):
                 utils.fatal("corosync-qdevice.service is not available")
             if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
                 parser.error("Option --qdevice-heuristics is required if want to configure heuristics mode")
@@ -444,7 +450,7 @@ Examples:
         boot_context.ui_context = context
         boot_context.stage = stage
         boot_context.args = args
-        boot_context.cluster_is_running = utils.service_is_active("pacemaker.service")
+        boot_context.cluster_is_running = ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("pacemaker.service")
         boot_context.type = "init"
         boot_context.initialize_qdevice()
         boot_context.validate_option()
@@ -557,7 +563,7 @@ the config.core.force option.""",
         '''
         Rename the cluster.
         '''
-        if not utils.service_is_active("corosync.service"):
+        if not ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service"):
             context.fatal_error("Can't rename cluster when cluster service is stopped")
         old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:
@@ -762,7 +768,7 @@ to get the geo cluster configuration.""",
             else:
                 print("%-16s unknown" % (svc))
 
-        rc, outp = utils.get_stdout(['corosync-cfgtool', '-s'], shell=False)
+        rc, outp = ShellUtils().get_stdout(['corosync-cfgtool', '-s'], shell=False)
         if rc == 0:
             print("")
             print(outp)

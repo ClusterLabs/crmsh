@@ -1,5 +1,4 @@
 import os
-import sys
 import re
 import time
 import threading
@@ -10,7 +9,8 @@ from crmsh import utils as crmshutils
 from crmsh import log
 from . import utils
 from . import config
-
+from ..service_manager import ServiceManager
+from ..sh import ShellUtils
 
 logger = log.setup_logger(__name__)
 
@@ -102,7 +102,7 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
           * pacemaker.service is active
           * stonith is enabled
         """
-        if not crmshutils.service_is_active("pacemaker.service"):
+        if not ServiceManager().service_is_active("pacemaker.service"):
             raise TaskError("Cluster not running!")
         if need_fence:
             self.get_fence_info()
@@ -130,7 +130,7 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
 
         # Try to find out which node fire the fence action
         while not self.thread_stop_event.is_set():
-            rc, out, _ = crmshutils.get_stdout_stderr("crm_mon -1|grep -A1 \"Fencing Actions:\"")
+            rc, out, _ = ShellUtils().get_stdout_stderr("crm_mon -1|grep -A1 \"Fencing Actions:\"")
             if rc == 0 and out:
                 match = re.search(r"of (.*) pending: .*origin=(.*)$", out)
                 if match:
@@ -142,7 +142,7 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
 
         # Try to find out proof that fence happened
         while not self.thread_stop_event.is_set():
-            rc, out, _ = crmshutils.get_stdout_stderr(config.FENCE_HISTORY.format(node=target_node))
+            rc, out, _ = ShellUtils().get_stdout_stderr(config.FENCE_HISTORY.format(node=target_node))
             if rc == 0 and out:
                 match = re.search(r"Node {} last fenced at: (.*)".format(target_node), out)
                 if match:
@@ -201,7 +201,7 @@ Fence timeout:     {}
         self.task_pre_check()
 
         for cmd in ['crm_node', 'stonith_admin', 'crm_attribute']:
-            rc, _, err = crmshutils.get_stdout_stderr("which {}".format(cmd))
+            rc, _, err = ShellUtils().get_stdout_stderr("which {}".format(cmd))
             if rc != 0 and err:
                 raise TaskError(err)
 
@@ -213,7 +213,7 @@ Fence timeout:     {}
         Fence node and start a thread to monitor the result
         """
         self.info("Trying to fence node \"{}\"".format(self.target_node))
-        crmshutils.get_stdout_stderr(config.FENCE_NODE.format(self.target_node))
+        ShellUtils().get_stdout_stderr(config.FENCE_NODE.format(self.target_node))
         th = threading.Thread(target=self.fence_action_monitor)
         th.start()
 
@@ -404,7 +404,7 @@ Expected State:    {}
             else:
                 continue
             self.info("Trying to run \"{}\"".format(self.cmd))
-            crmshutils.get_stdout_stderr(self.cmd)
+            ShellUtils().get_stdout_stderr(self.cmd)
             # endless loop will lead to fence
             if not self.looping:
                 break
@@ -481,7 +481,7 @@ Fence timeout:     {}
         self.task_pre_check()
 
         for cmd in ["iptables"]:
-            rc, _, err = crmshutils.get_stdout_stderr("which {}".format(cmd))
+            rc, _, err = ShellUtils().get_stdout_stderr("which {}".format(cmd))
             if rc != 0 and err:
                 raise TaskError(err)
 
@@ -507,7 +507,7 @@ Fence timeout:     {}
         for node in self.peer_nodelist:
             self.info("Trying to temporarily block {} communication ip".format(node))
             for ip in crmshutils.get_iplist_from_name(node):
-                crmshutils.get_stdout_stderr(config.BLOCK_IP.format(action='I', peer_ip=ip))
+                ShellUtils().get_stdout_stderr(config.BLOCK_IP.format(action='I', peer_ip=ip))
 
     def un_block(self):
         """
@@ -522,14 +522,14 @@ Fence timeout:     {}
         for node in self.peer_nodelist:
             self.info("Trying to recover {} communication ip".format(node))
             for ip in crmshutils.get_iplist_from_name(node):
-                crmshutils.get_stdout_stderr(config.BLOCK_IP.format(action='D', peer_ip=ip))
+                ShellUtils().get_stdout_stderr(config.BLOCK_IP.format(action='D', peer_ip=ip))
 
     def run(self):
         """
         Fence node and start a thread to monitor the result
         """
         #self.info("Trying to fence node \"{}\"".format(self.target_node))
-        #crmshutils.get_stdout_stderr(config.FENCE_NODE.format(self.target_node), wait=False)
+        #ShellUtils().get_stdout_stderr(config.FENCE_NODE.format(self.target_node), wait=False)
         th = threading.Thread(target=self.fence_action_monitor)
         th.start()
 

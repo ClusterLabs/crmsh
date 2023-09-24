@@ -13,8 +13,9 @@ from . import config
 from . import options
 from . import userdir
 from . import utils
+from .sh import ShellUtils
 from .utils import stdout2list, is_program, is_process, to_ascii
-from .utils import os_types_list, get_stdout
+from .utils import os_types_list
 from .utils import crm_msec, crm_time_cmp
 from . import log
 
@@ -53,7 +54,7 @@ def can_use_lrmadmin():
     # after this glue release all users can get meta-data and
     # similar from lrmd
     minimum_glue = "1.0.10"
-    _rc, glue_ver = get_stdout("%s -v" % lrmadmin_prog, stderr_on=False)
+    _rc, glue_ver = ShellUtils().get_stdout("%s -v" % lrmadmin_prog, stderr_on=False)
     if not glue_ver:  # lrmadmin probably not found
         return False
     v_min = version.LooseVersion(minimum_glue)
@@ -69,7 +70,7 @@ def can_use_lrmadmin():
 
 @utils.memoize
 def can_use_crm_resource():
-    _rc, s = get_stdout("crm_resource --list-ocf-providers", stderr_on=False)
+    _rc, s = ShellUtils().get_stdout("crm_resource --list-ocf-providers", stderr_on=False)
     return s != ""
 
 

@@ -10,9 +10,10 @@ import stat
 import pwd
 import datetime
 
-from crmsh import log
+from crmsh import log, sh
 from crmsh import utils as crmutils
 from crmsh.report import constants, utillib
+from crmsh.sh import ShellUtils
 
 
 logger = log.setup_report_logger(__name__)
@@ -21,7 +22,7 @@ logger = log.setup_report_logger(__name__)
 def collect_ocfs2_info():
     ocfs2_f = os.path.join(constants.WORKDIR, constants.OCFS2_F)
     with open(ocfs2_f, "w") as f:
-        rc, out, err = crmutils.get_stdout_stderr("mounted.ocfs2 -d")
+        rc, out, err = ShellUtils().get_stdout_stderr("mounted.ocfs2 -d")
         if rc != 0:
             f.write("Failed to run \"mounted.ocfs2 -d\": {}".format(err))
             return
@@ -43,7 +44,7 @@ def collect_ocfs2_info():
             if not utillib.which(cmd_name) or \
                cmd_name == "cat" and not os.path.exists(cmd.split()[1]):
                 continue
-            _, out = crmutils.get_stdout(cmd)
+            _, out = ShellUtils().get_stdout(cmd)
             f.write("\n\n#=====[ Command ] ==========================#\n")
             f.write("# %s\n"%(cmd))
             f.write(out)
@@ -55,10 +56,11 @@ def collect_ratraces():
     """
     # since the "trace_dir" attribute been removed from cib after untrace
     # need to parse crmsh log file to extract custom trace ra log directory on each node
+    shell = sh.cluster_shell()
     log_contents = ""
     cmd = "grep 'INFO: Trace for .* is written to ' {}*|grep -v 'collect'".format(log.CRMSH_LOG_FILE)
     for node in crmutils.list_cluster_nodes():
-        log_contents += crmutils.get_stdout_or_raise_error(cmd, remote=node, no_raise=True) + "\n"
+        log_contents += shell.get_rc_stdout_stderr_without_input(node, cmd)[1] + "\n"
     trace_dir_str = ' '.join(list(set(re.findall("written to (.*)/.*", log_contents))))
     if not trace_dir_str:
         return
@@ -225,7 +227,7 @@ def collect_sbd_info():
     sbd_f = os.path.join(constants.WORKDIR, constants.SBD_F)
     cmd = ". {};export SBD_DEVICE;{};{}".format(constants.SBDCONF, "sbd dump", "sbd list")
     with open(sbd_f, "w") as f:
-        _, out = crmutils.get_stdout(cmd)
+        _, out = ShellUtils().get_stdout(cmd)
         f.write("\n\n#=====[ Command ] ==========================#\n")
         f.write("# %s\n"%(cmd))
         f.write(out)

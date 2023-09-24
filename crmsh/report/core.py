@@ -13,6 +13,7 @@ import shutil
 from crmsh import utils as crmutils
 from crmsh import config, log, userdir
 from crmsh.report import constants, utillib
+from crmsh.sh import ShellUtils
 
 
 logger = log.setup_report_logger(__name__)
@@ -290,7 +291,7 @@ def run():
     if is_collector():
         utillib.collect_info()
         cmd = r"cd %s/.. && tar -h -cf - %s" % (constants.WORKDIR, constants.WE)
-        code, out, err = crmutils.get_stdout_stderr(cmd, raw=True)
+        code, out, err = ShellUtils().get_stdout_stderr(cmd, raw=True)
         print("{}{}".format(constants.COMPRESS_DATA_FLAG, out))
     else:
         p_list = []

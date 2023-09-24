@@ -22,9 +22,10 @@ from threading import Timer
 from inspect import getmembers, isfunction
 
 import crmsh.config
-from crmsh import utils as crmutils
+from crmsh import utils as crmutils, sh
 from crmsh import corosync, log, userdir
 from crmsh.report import constants, collect
+from crmsh.sh import ShellUtils
 
 
 logger = log.setup_report_logger(__name__)
@@ -416,7 +417,7 @@ def get_distro_info():
         res = re.search("PRETTY_NAME=\"(.*)\"", read_from_file(constants.OSRELEASE))
     elif which("lsb_release"):
         logger.debug("Using lsb_release to get distribution info")
-        out = crmutils.get_stdout_or_raise_error("lsb_release -d")
+        out = sh.cluster_shell().get_stdout_or_raise_error("lsb_release -d")
         res = re.search("Description:\s+(.*)", out)
     return res.group(1) if res else "Unknown"
 
@@ -767,7 +768,7 @@ def get_cib_dir():
 
 
 def get_command_info(cmd):
-    code, out, err = crmutils.get_stdout_stderr(cmd)
+    code, out, err = ShellUtils().get_stdout_stderr(cmd)
     if out:
         return (code, out + '\n')
     else:
@@ -1120,7 +1121,7 @@ def mktemplate(argv):
 def pe_to_dot(pe_file):
     dotf = '.'.join(pe_file.split('.')[:-1]) + '.dot'
     cmd = "%s -D %s -x %s" % (constants.PTEST, dotf, pe_file)
-    code, _ = crmutils.get_stdout(cmd)
+    code, _ = ShellUtils().get_stdout(cmd)
     if code != 0:
         logger.warning("pe_to_dot: %s -> %s failed", pe_file, dotf)
 
@@ -1216,7 +1217,7 @@ def print_log(logf):
     """
     cat = find_decompressor(logf)
     cmd = "%s %s" % (cat, logf)
-    out = crmutils.get_stdout(cmd)
+    out = ShellUtils().get_stdout(cmd)
     return out
 
 
@@ -1356,19 +1357,19 @@ def start_slave_collector(node, arg_str):
     if node == constants.WE:
         for item in arg_str.split():
             cmd += " {}".format(str(item))
-        _, out = crmutils.get_stdout(cmd)
+        _, out = ShellUtils().get_stdout(cmd)
     else:
         node = f"{constants.SSH_USER}@{node}" if constants.SSH_USER else node
         cmd = r'ssh {} {} "{} {}"'.format(constants.SSH_OPTS, node, constants.SUDO, cmd)
         for item in arg_str.split():
             cmd += " {}".format(str(item))
-        code, out, err = crmutils.su_get_stdout_stderr(constants.SSH_USER, cmd)
+        code, out, err = sh.LocalShell().get_rc_stdout_stderr(constants.SSH_USER, cmd)
         if code != 0:
             logger.warning(err)
             for ip in get_peer_ip():
                 logger.info("Trying connect by %s", ip)
                 cmd = cmd.replace(node, ip, 1)
-                code, out, err = crmutils.get_stdout_stderr(cmd)
+                code, out, err = ShellUtils().get_stdout_stderr(cmd)
                 if code != 0:
                     logger.warning(err)
                 break
@@ -1388,7 +1389,7 @@ def start_slave_collector(node, arg_str):
             print(data)
 
     cmd = r"(cd {} && tar xf -)".format(constants.WORKDIR)
-    crmutils.get_stdout(cmd, input_s=eval(compress_data))
+    ShellUtils().get_stdout(cmd, input_s=eval(compress_data))
 
 
 def str_to_bool(v):
@@ -1404,15 +1405,15 @@ def dump_D_process():
     dump D-state process stack
     '''
     out_string = ""
-    _, out, _ = crmutils.get_stdout_stderr("ps aux|awk '$8 ~ /^D/{print $2}'")
+    _, out, _ = ShellUtils().get_stdout_stderr("ps aux|awk '$8 ~ /^D/{print $2}'")
     len_D_process = len(out.split('\n')) if out else 0
     out_string += "Dump D-state process stack: {}\n".format(len_D_process)
     if len_D_process == 0:
         return out_string
     for pid in out.split('\n'):
-        _, cmd_out, _ = crmutils.get_stdout_stderr("cat /proc/{}/comm".format(pid))
+        _, cmd_out, _ = ShellUtils().get_stdout_stderr("cat /proc/{}/comm".format(pid))
         out_string += "pid: {}     comm: {}\n".format(pid, cmd_out)
-        _, stack_out, _ = crmutils.get_stdout_stderr("cat /proc/{}/stack".format(pid))
+        _, stack_out, _ = ShellUtils().get_stdout_stderr("cat /proc/{}/stack".format(pid))
         out_string += stack_out + "\n\n"
     return out_string
 
@@ -1422,13 +1423,13 @@ def lsof_ocfs2_device():
     List open files for OCFS2 device
     """
     out_string = ""
-    _, out, _ = crmutils.get_stdout_stderr("mount")
+    _, out, _ = ShellUtils().get_stdout_stderr("mount")
     dev_list = re.findall("\n(.*) on .* type ocfs2 ", out)
     for dev in dev_list:
         cmd = "lsof {}".format(dev)
         out_string += "\n\n#=====[ Command ] ==========================#\n"
         out_string += "# {}\n".format(cmd)
-        _, cmd_out, _ = crmutils.get_stdout_stderr(cmd)
+        _, cmd_out, _ = ShellUtils().get_stdout_stderr(cmd)
         if cmd_out:
             out_string += cmd_out
     return out_string
@@ -1462,7 +1463,7 @@ def verify_deb(packages):
     res = ""
     for pack in packages.split():
         cmd = r"dpkg --verify %s | grep -v 'not installed'" % pack
-        code, out = crmutils.get_stdout(cmd)
+        code, out = ShellUtils().get_stdout(cmd)
         if code != 0 and out:
             res = "For package %s:\n" % pack
             res += out + "\n"
@@ -1495,7 +1496,7 @@ def verify_rpm(packages):
     res = ""
     for pack in packages.split():
         cmd = r"rpm --verify %s|grep -v 'not installed'" % pack
-        code, out = crmutils.get_stdout(cmd)
+        code, out = ShellUtils().get_stdout(cmd)
         if code != 0 and out:
             res = "For package %s:\n" % pack
             res += out + "\n"

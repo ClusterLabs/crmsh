@@ -25,12 +25,10 @@ import typing
 
 import yaml
 import socket
-from tempfile import mktemp
 from string import Template
 from lxml import etree
 
-import crmsh.parallax
-from . import config, constants
+from . import config, constants, ssh_key, sh
 from . import upgradeutil
 from . import utils
 from . import xmlutil
@@ -45,7 +43,10 @@ from . import ocfs2
 from . import qdevice
 from . import parallax
 from . import log
+from .service_manager import ServiceManager
+from .sh import ShellUtils
 from .ui_node import NodeMgmt
+from .user_of_host import UserOfHost, UserNotFoundError
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -142,6 +143,7 @@ class Context(object):
                 COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
                 "/var/lib/csync2/*", "~/.config/crm/*"]
+        self.ssh_key_file = None
 
     @classmethod
     def set_context(cls, options):
@@ -212,7 +214,7 @@ class Context(object):
         if self.stage == "sbd":
             if not self.sbd_devices and not self.diskless_sbd and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
-            if utils.service_is_active("sbd.service") and not config.core.force:
+            if ServiceManager().service_is_active("sbd.service") and not config.core.force:
                 utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
             if self.cluster_is_running:
                 utils.check_all_nodes_reachable()
@@ -399,7 +401,7 @@ def invoke(*args):
     Return (boolean, stdout, stderr)
     """
     logger_utils.log_only_to_file("invoke: " + " ".join(args))
-    rc, stdout, stderr = utils.get_stdout_stderr(" ".join(args))
+    rc, stdout, stderr = ShellUtils().get_stdout_stderr(" ".join(args))
     if stdout:
         logger_utils.log_only_to_file("stdout: {}".format(stdout))
     if stderr:
@@ -424,7 +426,7 @@ def crm_configure_load(action, configuration):
 
     configuration_tmpfile = utils.str2tmp(configuration)
     tmpfiles.add(configuration_tmpfile)
-    utils.get_stdout_or_raise_error(f"crm -F configure load {action} {configuration_tmpfile}")
+    sh.cluster_shell().get_stdout_or_raise_error(f"crm -F configure load {action} {configuration_tmpfile}")
 
 
 def wait_for_resource(message, resource, timeout_ms=WAIT_TIMEOUT_MS_DEFAULT):
@@ -458,7 +460,7 @@ def get_node_canonical_hostname(host: str) -> str:
     """
     Get the canonical hostname of the cluster node
     """
-    rc, out, err = utils.get_stdout_stderr_auto_ssh_no_input(host, 'crm_node --name')
+    rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(host, 'crm_node --name')
     if rc != 0:
         utils.fatal(err)
     return out
@@ -483,7 +485,7 @@ def is_online():
     if not xmlutil.CrmMonXmlParser.is_node_online(cluster_node):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
         sync_file(corosync.conf())
-        utils.stop_service("corosync")
+        ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).stop_service("corosync")
         print()
         utils.fatal("Cannot see peer node \"{}\", please check the communication IP".format(cluster_node))
     return True
@@ -526,7 +528,7 @@ def partprobe():
     #  ATT Training Engineer
     #  Data Center Engineer
     #  bheaton@suse.com
-    _rc, out, _err = utils.get_stdout_stderr("sfdisk -l")
+    _rc, out, _err = ShellUtils().get_stdout_stderr("sfdisk -l")
     disks = re.findall(r'^Disk\s*(/.+):', out, re.M)
     invoke("partprobe", *disks)
 
@@ -570,15 +572,16 @@ def check_prereqs(stage):
 
     timekeepers = ('chronyd.service', 'ntp.service', 'ntpd.service')
     timekeeper = None
+    service_manager = ServiceManager()
     for tk in timekeepers:
-        if utils.service_is_available(tk):
+        if service_manager.service_is_available(tk):
             timekeeper = tk
             break
 
     if timekeeper is None:
         logger.warning("No NTP service found.")
         warned = True
-    elif not utils.service_is_enabled(timekeeper):
+    elif not service_manager.service_is_enabled(timekeeper):
         logger.warning("{} is not configured to start at system boot.".format(timekeeper))
         warned = True
 
@@ -645,7 +648,7 @@ def configure_firewall(tcp=None, udp=None):
         utils.sysconfig_set(SYSCONFIG_FW, FW_CONFIGURATIONS_EXT=ext)
 
         # No need to do anything else if the firewall is inactive
-        if not utils.service_is_active("SuSEfirewall2"):
+        if not ServiceManager().service_is_active("SuSEfirewall2"):
             return
 
         # Firewall is active, either restart or complain if we couldn't tweak it
@@ -654,7 +657,7 @@ def configure_firewall(tcp=None, udp=None):
             utils.fatal("Failed to restart firewall (SuSEfirewall2)")
 
     def init_firewall_firewalld(tcp, udp):
-        has_firewalld = utils.service_is_active("firewalld")
+        has_firewalld = ServiceManager().service_is_active("firewalld")
         cmdbase = 'firewall-cmd --zone=public --permanent ' if has_firewalld else 'firewall-offline-cmd --zone=public '
 
         def cmd(args):
@@ -719,19 +722,19 @@ def firewall_open_corosync_ports():
 
 def init_cluster_local():
     # Caller should check this, but I'm paranoid...
-    if utils.service_is_active("corosync.service"):
+    if ServiceManager().service_is_active("corosync.service"):
         utils.fatal("corosync service is running!")
 
     firewall_open_corosync_ports()
 
     # reset password, but only if it's not already set
     # (We still need the hacluster for the hawk).
-    _rc, outp = utils.get_stdout("passwd -S hacluster")
+    _rc, outp = ShellUtils().get_stdout("passwd -S hacluster")
     ps = outp.strip().split()[1]
     pass_msg = ""
     if ps not in ("P", "PS"):
         logger_utils.log_only_to_file(': Resetting password of hacluster user')
-        rc, outp, errp = utils.get_stdout_stderr("passwd hacluster", input_s=b"linux\nlinux\n")
+        rc, outp, errp = ShellUtils().get_stdout_stderr("passwd hacluster", input_s=b"linux\nlinux\n")
         if rc != 0:
             logger.warning("Failed to reset password of hacluster user: %s" % (outp + errp))
         else:
@@ -741,8 +744,9 @@ def init_cluster_local():
     invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
 
     # only try to start hawk if hawk is installed
-    if utils.service_is_available("hawk.service"):
-        utils.start_service("hawk.service", enable=True)
+    service_manager = ServiceManager()
+    if service_manager.service_is_available("hawk.service"):
+        service_manager.start_service("hawk.service", enable=True)
         logger.info("Hawk cluster interface is now running. To see cluster status, open:")
         logger.info("  https://{}:7630/".format(_context.default_ip_list[0]))
         logger.info("Log in with username 'hacluster'{}".format(pass_msg))
@@ -767,7 +771,7 @@ def start_pacemaker(node_list=[], enable_flag=False):
     # not _context means not in init or join process
     if not _context and \
             utils.package_is_installed("sbd") and \
-            utils.service_is_enabled("sbd.service") and \
+            ServiceManager().service_is_enabled("sbd.service") and \
             SBDTimeout.is_sbd_delay_start():
         target_dir = "/run/systemd/system/sbd.service.d/"
         cmd1 = "mkdir -p {}".format(target_dir)
@@ -778,15 +782,16 @@ def start_pacemaker(node_list=[], enable_flag=False):
             parallax.parallax_call(node_list, cmd)
 
     # To avoid possible JOIN flood in corosync
+    service_manager = ServiceManager()
     if len(node_list) > 5:
         for node in node_list[:]:
             time.sleep(0.25)
             try:
-                utils.start_service("corosync.service", remote_addr=node)
+                service_manager.start_service("corosync.service", remote_addr=node)
             except ValueError as err:
                 node_list.remove(node)
                 logger.error(err)
-    return utils.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
+    return service_manager.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
 def install_tmp(tmpfile, to):
@@ -798,7 +803,7 @@ def install_tmp(tmpfile, to):
 
 def append(fromfile, tofile, remote=None):
     cmd = "cat {} >> {}".format(fromfile, tofile)
-    utils.get_stdout_or_raise_error(cmd, remote=remote)
+    sh.cluster_shell().get_stdout_or_raise_error(cmd, host=remote)
 
 
 def append_unique(fromfile, tofile, user=None, remote=None, from_local=False):
@@ -828,24 +833,50 @@ def _parse_user_at_host(s: str, default_user: str) -> typing.Tuple[str, str]:
 
 def init_ssh():
     user_host_list = [_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list]
-    init_ssh_impl(_context.current_user, user_host_list)
+    init_ssh_impl(
+        _context.current_user,
+        ssh_key.KeyFile(_context.ssh_key_file) if _context.ssh_key_file is not None else None,
+        user_host_list,
+    )
     if user_host_list:
+        service_manager = ServiceManager()
         for user, node in user_host_list:
-            if utils.service_is_active("pacemaker.service", remote_addr=node):
+            if service_manager.service_is_active("pacemaker.service", remote_addr=node):
                 utils.fatal("Cluster is currently active on {} - can't run".format(node))
 
 
-def init_ssh_impl(local_user: str, user_node_list: typing.List[typing.Tuple[str, str]]):
-    """ Configure passwordless SSH."""
-    utils.start_service("sshd.service", enable=True)
-    configure_ssh_key(local_user)
+def init_ssh_impl(local_user: str, ssh_public_key: typing.Optional[ssh_key.Key], user_node_list: typing.List[typing.Tuple[str, str]]):
+    """ Configure passwordless SSH.
+
+    The local_user on local host will be configured.
+    If user_node_list is not empty, those user and host will also be configured.
+    If ssh_public_key is specified, it will be added to authorized_keys; if not, a new key pair will be generated for each node.
+    """
+    ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).start_service("sshd.service", enable=True)
+    shell = sh.SSHShell(sh.LocalShell(), local_user)
+    authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
+    if ssh_public_key is not None:
+        # Use specified key. Do not generate new ones.
+        authorized_key_manager.add(None, local_user, ssh_public_key)
+    else:
+        configure_ssh_key(local_user)
     configure_ssh_key('hacluster')
 
-    # If not use -N/--nodes option
-    if not user_node_list:
-        return
+    if user_node_list:
+        print()
+        if ssh_public_key is not None:
+            for user, node in user_node_list:
+                logger.info("Adding public key to authorized_keys on %s@%s", user, node)
+                authorized_key_manager.add(node, user, ssh_public_key)
+        else:
+            _init_ssh_on_remote_nodes(local_user, ssh_public_key, user_node_list)
 
-    print()
+
+def _init_ssh_on_remote_nodes(
+        local_user: str,
+        ssh_public_key: typing.Optional[ssh_key.Key],
+        user_node_list: typing.List[typing.Tuple[str, str]],
+):
     # Swap public ssh key between remote node and local
     public_key_list = list()
     hacluster_public_key_list = list()
@@ -855,10 +886,11 @@ def init_ssh_impl(local_user: str, user_node_list: typing.List[typing.Tuple[str,
         public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True))
         hacluster_public_key_list.append(swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_user, add=True))
     if len(user_node_list) > 1:
+        shell = sh.LocalShell()
         shell_script = _merge_authorized_keys(public_key_list)
         hacluster_shell_script = _merge_authorized_keys(hacluster_public_key_list)
         for i, (remote_user, node) in enumerate(user_node_list):
-            result = utils.su_subprocess_run(
+            result = shell.su_subprocess_run(
                 local_user,
                 'ssh {} {}@{} /bin/sh'.format(constants.SSH_OPTION, remote_user, node),
                 input=shell_script,
@@ -867,7 +899,7 @@ def init_ssh_impl(local_user: str, user_node_list: typing.List[typing.Tuple[str,
             )
             if result.returncode != 0:
                 utils.fatal('Failed to add public keys to {}@{}: {}'.format(remote_user, node, result.stdout))
-            result = utils.su_subprocess_run(
+            result = shell.su_subprocess_run(
                 local_user,
                 'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_user, node, 'hacluster'),
                 input=hacluster_shell_script,
@@ -899,7 +931,7 @@ def _merge_authorized_keys(keys: typing.List[str]) -> bytes:
 
 def _fetch_core_hosts(local_user, remote_user, remote_host) -> typing.Tuple[typing.List[str], typing.List[str]]:
     cmd = 'crm options show core.hosts'
-    result = utils.su_subprocess_run(
+    result = sh.LocalShell().su_subprocess_run(
         local_user,
         f'ssh {SSH_OPTION} {remote_user}@{remote_host} sudo /bin/sh',
         input=cmd.encode('utf-8'),
@@ -943,7 +975,7 @@ def is_nologin(user, remote=None):
     pattern = f"{user}:.*:/.*/nologin"
     if remote:
         cmd = f"cat {passwd_file}|grep {pattern}"
-        rc, _, _ = utils.run_cmd_on_remote(cmd, remote)
+        rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote, cmd)
         return rc == 0
     else:
         with open(passwd_file) as f:
@@ -963,7 +995,7 @@ def change_user_shell(user, remote=None):
                 _context.with_other_user = False
                 return
         cmd = f"usermod -s /bin/bash {user}"
-        utils.get_stdout_or_raise_error(cmd, remote)
+        sh.cluster_shell().get_stdout_or_raise_error(cmd, remote)
 
 
 def configure_ssh_key(user):
@@ -974,6 +1006,7 @@ def configure_ssh_key(user):
     Add <home_dir>/.ssh/id_rsa.pub to <home_dir>/.ssh/authorized_keys anyway, make sure itself authorized
     """
     change_user_shell(user)
+    shell = sh.LocalShell()
 
     cmd = ""
     private_key, public_key, authorized_file = key_files(user).values()
@@ -985,11 +1018,11 @@ def configure_ssh_key(user):
         cmd = "ssh-keygen -y -f {} > {}".format(private_key, public_key)
 
     if cmd:
-        utils.su_get_stdout_or_raise_error(cmd, user=user)
+        shell.get_stdout_or_raise_error(user, cmd)
 
     if not utils.detect_file(authorized_file):
         cmd = "touch {}".format(authorized_file)
-        utils.su_get_stdout_or_raise_error(cmd, user=user)
+        shell.get_stdout_or_raise_error(user, cmd)
 
     append_unique(public_key, authorized_file, user)
 
@@ -1000,13 +1033,14 @@ def generate_ssh_key_pair_on_remote(
         remote_user: str
 ) -> str:
     """generate a key pair on remote and return the public key"""
+    shell = sh.LocalShell()
     # pass cmd through stdin rather than as arguments. It seems sudo has its own argument parsing mechanics,
     # which breaks shell expansion used in cmd
     cmd = '''
 [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
 [ -f ~/.ssh/id_rsa.pub ] || ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
 '''
-    result = utils.su_subprocess_run(
+    result = shell.su_subprocess_run(
         local_sudoer,
         'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote_host, remote_user),
         input=cmd.encode('utf-8'),
@@ -1017,7 +1051,7 @@ def generate_ssh_key_pair_on_remote(
         raise ValueError(codecs.decode(result.stdout, 'utf-8', 'replace'))
 
     cmd = 'cat ~/.ssh/id_rsa.pub'
-    result = utils.su_subprocess_run(
+    result = shell.su_subprocess_run(
         local_sudoer,
         'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote_host, remote_user),
         input=cmd.encode('utf-8'),
@@ -1063,7 +1097,7 @@ def export_ssh_key_non_interactive(local_user_to_export, remote_user_to_swap, re
 {key}
 EOF
 '''.format(user=remote_user_to_swap, key=public_key)
-    result = utils.su_subprocess_run(
+    result = sh.LocalShell().su_subprocess_run(
         local_sudoer,
         'ssh {} {}@{} sudo /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote_node),
         input=cmd.encode('utf-8'),
@@ -1081,15 +1115,17 @@ def import_ssh_key(local_user, remote_user, local_sudoer, remote_node, remote_su
     remote_key_content = remote_public_key_from(remote_user, local_sudoer, remote_node, remote_sudoer)
     _, _, local_authorized_file = key_files(local_user).values()
     if not utils.check_text_included(remote_key_content, local_authorized_file, remote=None):
-        cmd = "echo '{}' >> {}".format(remote_key_content, local_authorized_file)
-        utils.get_stdout_or_raise_error(cmd, remote=None)
+        sh.LocalShell().get_stdout_or_raise_error(
+            local_user,
+            "sed -i '$a {}' '{}'".format(remote_key_content, local_authorized_file),
+        )
 
 def append_to_remote_file(fromfile, user, remote_node, tofile):
     """
     Append content of fromfile to tofile on remote_node
     """
     cmd = "cat {} | ssh {} {}@{} 'cat >> {}'".format(fromfile, SSH_OPTION, user, remote_node, tofile)
-    utils.get_stdout_or_raise_error(cmd)
+    sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
 def init_csync2():
@@ -1125,9 +1161,10 @@ key /etc/csync2/key_hagroup;
         for f in [CSYNC2_CFG, CSYNC2_KEY]:
             sync_file(f)
 
+    service_manager = ServiceManager()
     for host in host_list:
         logger.info("Starting {} service on {}".format(CSYNC2_SERVICE, host))
-        utils.start_service(CSYNC2_SERVICE, enable=True, remote_addr=host)
+        service_manager.start_service(CSYNC2_SERVICE, enable=True, remote_addr=host)
 
     _msg = "syncing" if _context.skip_csync2 else "checking"
     with logger_utils.status_long("csync2 {} files".format(_msg)):
@@ -1483,7 +1520,7 @@ def init_cluster():
     """
     init_cluster_local()
 
-    _rc, nnodes = utils.get_stdout("crm_node -l")
+    _rc, nnodes = ShellUtils().get_stdout("crm_node -l")
     nnodes = len(nnodes.splitlines())
     if nnodes < 1:
         utils.fatal("No nodes found in cluster")
@@ -1588,12 +1625,12 @@ def init_qdevice():
         configure_qdevice_interactive()
     # If don't want to config qdevice, return
     if not _context.qdevice_inst:
-        utils.disable_service("corosync-qdevice.service")
+        ServiceManager().disable_service("corosync-qdevice.service")
         return
     logger.info("""Configure Qdevice/Qnetd:""")
     cluster_node_list = utils.list_cluster_nodes()
     for node in cluster_node_list:
-        if not utils.service_is_available("corosync-qdevice.service", node):
+        if not ServiceManager().service_is_available("corosync-qdevice.service", node):
             utils.fatal("corosync-qdevice.service is not available on {}".format(node))
     qdevice_inst = _context.qdevice_inst
     qnetd_addr = qdevice_inst.qnetd_addr
@@ -1603,19 +1640,19 @@ def init_qdevice():
         # if the remote user is specified explicitly, use it
         ssh_user = qdevice_inst.ssh_user
         try:
-            local_user = utils.UserOfHost.instance().user_of(utils.this_node())
-        except utils.UserOfHost.UserNotFoundError:
+            local_user = UserOfHost.instance().user_of(utils.this_node())
+        except UserNotFoundError:
             local_user = ssh_user
     else:
         try:
             # if ssh session has ready been available, use that
-            local_user, ssh_user = utils.UserOfHost.instance().user_pair_for_ssh(qnetd_addr)
-        except utils.UserOfHost.UserNotFoundError:
+            local_user, ssh_user = UserOfHost.instance().user_pair_for_ssh(qnetd_addr)
+        except UserNotFoundError:
             pass
     if ssh_user is None:
         try:
-            local_user = utils.UserOfHost.instance().user_of(utils.this_node())
-        except utils.UserOfHost.UserNotFoundError:
+            local_user = UserOfHost.instance().user_of(utils.this_node())
+        except UserNotFoundError:
             local_user = userdir.getuser()
         ssh_user = local_user
     # Configure ssh passwordless to qnetd if detect password is needed
@@ -1669,7 +1706,7 @@ def join_ssh(seed_host, seed_user):
         utils.fatal("No existing IP/hostname specified (use -c option)")
 
     local_user = _context.current_user
-    utils.start_service("sshd.service", enable=True)
+    ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).start_service("sshd.service", enable=True)
     configure_ssh_key(local_user)
     if 0 != utils.ssh_copy_id_no_raise(local_user, seed_user, seed_host):
         msg = f"Failed to login to {seed_user}@{seed_host}. Please check the credentials."
@@ -1692,11 +1729,11 @@ def join_ssh(seed_host, seed_user):
     # authorized_keys file (again, to help with the case where the
     # user has done manual initial setup without the assistance of
     # ha-cluster-init).
-    utils.su_get_stdout_or_raise_error(
+    sh.LocalShell().get_stdout_or_raise_error(
+        local_user,
         "ssh {} {}@{} sudo crm cluster init -i {} ssh_remote".format(
             SSH_OPTION, seed_user, seed_host, _context.default_nic_list[0],
         ),
-        local_user,
     )
     user_by_host = utils.HostUserConfig()
     user_by_host.add(seed_user, seed_host)
@@ -1724,7 +1761,7 @@ def swap_public_ssh_key(
     if add:
         public_key = generate_ssh_key_pair_on_remote(local_sudoer, remote_node, remote_sudoer, remote_user_to_swap)
         _, _, local_authorized_file = key_files(local_user_to_swap).values()
-        utils.su_get_stdout_or_raise_error("sed -i '$a {}' '{}'".format(public_key, local_authorized_file), local_user_to_swap)
+        sh.LocalShell().get_stdout_or_raise_error(local_user_to_swap, "sed -i '$a {}' '{}'".format(public_key, local_authorized_file))
         return public_key
     else:
         try:
@@ -1736,7 +1773,7 @@ def swap_public_ssh_key(
 def remote_public_key_from(remote_user, local_sudoer, remote_node, remote_sudoer):
     "Get the id_rsa.pub from the remote node"
     cmd = 'cat ~/.ssh/id_rsa.pub'
-    result = utils.su_subprocess_run(
+    result = sh.LocalShell().su_subprocess_run(
         local_sudoer,
         'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote_node, remote_user),
         input=cmd.encode('utf-8'),
@@ -1769,8 +1806,9 @@ def join_csync2(seed_host, remote_user):
 
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
+    shell = sh.cluster_shell()
     cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
-    utils.get_stdout_or_raise_error(cmd, seed_host)
+    shell.get_stdout_or_raise_error(cmd, seed_host)
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
     # same list of hosts)
@@ -1782,7 +1820,7 @@ def join_csync2(seed_host, remote_user):
     utils.copy_remote_textfile(remote_user, seed_host, "/etc/csync2/key_hagroup", "/etc/csync2")
 
     logger.info("Starting {} service".format(CSYNC2_SERVICE))
-    utils.start_service(CSYNC2_SERVICE, enable=True)
+    ServiceManager(shell).start_service(CSYNC2_SERVICE, enable=True)
 
     # Sync new config out.  This goes to all hosts; csync2.cfg definitely
     # needs to go to all hosts (else hosts other than the seed and the
@@ -1795,7 +1833,7 @@ def join_csync2(seed_host, remote_user):
     # when it updates expected_votes.  Grrr...
     with logger_utils.status_long("csync2 syncing files in cluster"):
         cmd = "sudo csync2 -rm /;sudo csync2 -rxv || sudo csync2 -rf / && sudo csync2 -rxv"
-        rc, _, stderr = utils.get_stdout_stderr_auto_ssh_no_input(seed_host, cmd)
+        rc, _, stderr = shell.get_rc_stdout_stderr_without_input(seed_host, cmd)
         if rc != 0:
             print("")
             logger.warning("csync2 run failed - some files may not be sync'd: %s", stderr)
@@ -1821,7 +1859,7 @@ def join_ssh_merge(cluster_node, remote_user):
     cat_cmd = "[ -e ~/.ssh/known_hosts ] && cat ~/.ssh/known_hosts || true"
     #logger_utils.log_only_to_file("parallax.call {} : {}".format(hosts, cat_cmd))
     for host in hosts:
-        known_hosts_content = utils.get_stdout_or_raise_error(cat_cmd, remote=host)
+        known_hosts_content = sh.cluster_shell().get_stdout_or_raise_error(cat_cmd, host)
         if known_hosts_content:
             known_hosts_new.update((utils.to_ascii(known_hosts_content) or "").splitlines())
 
@@ -1829,7 +1867,7 @@ def join_ssh_merge(cluster_node, remote_user):
         hoststxt = "\n".join(sorted(known_hosts_new))
         #results = parallax.parallax_copy(hosts, tmpf, known_hosts_path, strict=False)
         for host in hosts:
-            utils.write_remote_file(hoststxt, "~/.ssh/known_hosts", utils.user_of(host), remote=host)
+            utils.write_remote_file(hoststxt, "~/.ssh/known_hosts", utils.user_of(host), host)
 
 
 def update_expected_votes():
@@ -1840,7 +1878,7 @@ def update_expected_votes():
     nodecount = 0
     expected_votes = 0
     while True:
-        rc, nodelist_text = utils.get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
+        rc, nodelist_text = ShellUtils().get_stdout("cibadmin -Ql --xpath '/cib/status/node_state'")
         if rc == 0:
             try:
                 nodelist_xml = etree.fromstring(nodelist_text)
@@ -1919,8 +1957,9 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
     """
     # Fetch cluster nodes list
     local_user = _context.current_user
+    shell = sh.LocalShell()
     cmd = f'ssh {SSH_OPTION} {remote_user}@{init_node} sudo crm_node -l'
-    rc, out, err = utils.su_get_stdout_stderr(local_user, cmd)
+    rc, out, err = shell.get_rc_stdout_stderr(local_user, cmd)
     if rc != 0:
         utils.fatal("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
     cluster_nodes_list = []
@@ -1953,7 +1992,7 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
 
     # Filter out init node from cluster_nodes_list
     cmd = "ssh {} {}@{} hostname".format(SSH_OPTION, remote_user , init_node)
-    rc, out, err = utils.su_get_stdout_stderr(local_user, cmd)
+    rc, out, err = shell.get_rc_stdout_stderr(local_user, cmd)
     if rc != 0:
         utils.fatal("Can't fetch hostname of {}: {}".format(init_node, err))
     # Swap ssh public key between join node and other cluster nodes
@@ -1976,16 +2015,17 @@ def swap_key_for_hacluster(other_node_list):
     In some cases, old cluster may not be configured passwordless for hacluster.
     The new join node should check and swap the public key between the old cluster nodes.
     """
+    shell = sh.cluster_shell()
     for node in other_node_list:
         for n in other_node_list:
             if node == n:
                 continue
             logger.info("Checking passwordless for hacluster between %s and %s", node, n)
             _, public_key, authorized_file = key_files('hacluster').values()
-            public_key_content = utils.get_stdout_or_raise_error(f'cat {public_key}', remote=n)
-            if not utils.check_text_included(public_key_content, authorized_file, remote=node):
+            public_key_content = shell.get_stdout_or_raise_error(f'cat {public_key}', n)
+            if not utils.check_text_included(public_key_content, authorized_file, node):
                 cmd = "echo '{}' >> {}".format(public_key_content, authorized_file)
-                utils.get_stdout_or_raise_error(cmd, remote=node)
+                shell.get_stdout_or_raise_error(cmd, node)
 
 
 def sync_files_to_disk():
@@ -2014,7 +2054,7 @@ def join_cluster(seed_host, remote_user):
             corosync.set_value("totem.nodeid", nodeid)
 
     is_qdevice_configured = utils.is_qdevice_configured()
-    if is_qdevice_configured and not utils.service_is_available("corosync-qdevice.service"):
+    if is_qdevice_configured and not ServiceManager().service_is_available("corosync-qdevice.service"):
         utils.fatal("corosync-qdevice.service is not available")
 
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
@@ -2040,8 +2080,9 @@ def join_cluster(seed_host, remote_user):
     # mountpoints for clustered filesystems.  Unfortunately we don't have
     # that yet, so the following crawling horror takes a punt on the seed
     # node being up, then asks it for a list of mountpoints...
+    shell = sh.cluster_shell()
     if seed_host:
-        _rc, outp, _ = utils.get_stdout_stderr_auto_ssh_no_input(seed_host, "cibadmin -Q --xpath \"//primitive\"")
+        _rc, outp, _ = shell.get_rc_stdout_stderr_without_input(seed_host, "cibadmin -Q --xpath \"//primitive\"")
         if outp:
             xml = etree.fromstring(outp)
             mountpoints = xml.xpath(' and '.join(['//primitive[@class="ocf"',
@@ -2083,7 +2124,7 @@ def join_cluster(seed_host, remote_user):
         except corosync.IPAlreadyConfiguredError as e:
             logger.warning(e)
         sync_file(corosync.conf())
-        utils.get_stdout_or_raise_error('sudo corosync-cfgtool -R', seed_host)
+        shell.get_stdout_or_raise_error('sudo corosync-cfgtool -R', seed_host)
 
     _context.sbd_manager.join_sbd(remote_user, seed_host)
 
@@ -2110,7 +2151,7 @@ def join_cluster(seed_host, remote_user):
         if ipv6_flag and not is_unicast:
             # for ipv6 mcast
             nodeid_dict = {}
-            _rc, outp, _ = utils.get_stdout_stderr("crm_node -l")
+            _rc, outp, _ = ShellUtils().get_stdout_stderr("crm_node -l")
             if _rc == 0:
                 for line in outp.splitlines():
                     tokens = line.split()
@@ -2132,7 +2173,7 @@ def join_cluster(seed_host, remote_user):
         invoke("corosync-cfgtool -R")
 
         # Ditch no-quorum-policy=ignore
-        _rc, outp = utils.get_stdout("crm configure show")
+        _rc, outp = ShellUtils().get_stdout("crm configure show")
         if re.search('no-quorum-policy=.*ignore', outp):
             invoke("crm_attribute --attr-name no-quorum-policy --delete-attr")
 
@@ -2156,7 +2197,7 @@ def join_cluster(seed_host, remote_user):
     if is_qdevice_configured:
         start_qdevice_on_join_node(seed_host)
     else:
-        utils.disable_service("corosync-qdevice.service")
+        ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).disable_service("corosync-qdevice.service")
 
 
 def adjust_priority_in_rsc_defaults(is_2node_wo_qdevice):
@@ -2180,7 +2221,7 @@ def adjust_priority_fencing_delay(is_2node_wo_qdevice):
     and the current cluster is 2 nodes without qdevice,
     set priority-fencing-delay=2*pcmk_delay_max
     """
-    out = utils.get_stdout_or_raise_error("crm configure show related:stonith")
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm configure show related:stonith")
     if not out:
         return
     pcmk_delay_max_v_list = re.findall("pcmk_delay_max=(\w+)", out)
@@ -2205,7 +2246,7 @@ def start_qdevice_on_join_node(seed_host):
             qnetd_addr = corosync.get_value("quorum.device.net.host")
             qdevice_inst = qdevice.QDevice(qnetd_addr, cluster_node=seed_host)
             qdevice_inst.certificate_process_on_join()
-        utils.start_service("corosync-qdevice.service", enable=True)
+        ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).start_service("corosync-qdevice.service", enable=True)
 
 
 def get_cluster_node_ip(node: str) -> str:
@@ -2231,22 +2272,24 @@ def stop_services(stop_list, remote_addr=None):
     """
     Stop cluster related service
     """
+    service_manager = ServiceManager()
     for service in stop_list:
-        if utils.service_is_active(service, remote_addr=remote_addr):
+        if service_manager.service_is_active(service, remote_addr=remote_addr):
             logger.info("Stopping the %s%s", service, " on {}".format(remote_addr) if remote_addr else "")
-            utils.stop_service(service, disable=True, remote_addr=remote_addr)
+            service_manager.stop_service(service, disable=True, remote_addr=remote_addr)
 
 
 def rm_configuration_files(remote=None):
     """
     Delete configuration files from the node to be removed
     """
-    utils.get_stdout_or_raise_error("rm -f {}".format(' '.join(_context.rm_list)), remote=remote)
+    shell = sh.cluster_shell()
+    shell.get_stdout_or_raise_error("rm -f {}".format(' '.join(_context.rm_list)), remote)
     # restore original sbd configuration file from /usr/share/fillup-templates/sysconfig.sbd
     if utils.package_is_installed("sbd", remote_addr=remote):
         from .sbd import SBDManager
         cmd = "cp {} {}".format(SBDManager.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
-        utils.get_stdout_or_raise_error(cmd, remote=remote)
+        shell.get_stdout_or_raise_error(cmd, remote)
 
 
 def remove_node_from_cluster(node):
@@ -2358,7 +2401,8 @@ def bootstrap_init(context):
             utils.fatal("Expected NODE argument to csync2_remote")
         _context.cluster_node = args[1]
 
-    if stage and _context.cluster_is_running and not utils.service_is_active(CSYNC2_SERVICE):
+    if stage and _context.cluster_is_running and \
+            not ServiceManager(shell=sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active(CSYNC2_SERVICE):
         _context.skip_csync2 = True
         _context.node_list_in_cluster = utils.list_cluster_nodes()
     elif not _context.cluster_is_running:
@@ -2369,7 +2413,7 @@ def bootstrap_init(context):
     else:
         init_ssh()
         if _context.skip_csync2:
-            utils.stop_service(CSYNC2_SERVICE, disable=True)
+            ServiceManager().stop_service(CSYNC2_SERVICE, disable=True)
         else:
             init_csync2()
         init_corosync()
@@ -2410,7 +2454,7 @@ def bootstrap_add(context):
         logger.info("Adding node {} to cluster".format(node))
         cmd = 'crm cluster join -y {} -c {}@{}'.format(options, _context.current_user, utils.this_node())
         logger.info("Running command on {}: {}".format(node, cmd))
-        out = utils.get_stdout_or_raise_error(cmd, node)
+        out = sh.cluster_shell().get_stdout_or_raise_error(cmd, node)
         print(out)
 
 
@@ -2426,7 +2470,7 @@ def bootstrap_join(context):
 
     check_tty()
 
-    corosync_active = utils.service_is_active("corosync.service")
+    corosync_active = ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service")
     if corosync_active and _context.stage != "ssh":
         utils.fatal("Abort: Cluster is currently active. Run this command on a node joining the cluster.")
 
@@ -2456,9 +2500,10 @@ def bootstrap_join(context):
         join_ssh(cluster_node, remote_user)
         remote_user = utils.user_of(cluster_node)
 
+        service_manager = ServiceManager()
         n = 0
         while n < REJOIN_COUNT:
-            if utils.service_is_active("pacemaker.service", cluster_node):
+            if service_manager.service_is_active("pacemaker.service", cluster_node):
                 break
             n += 1
             logger.warning("Cluster is inactive on %s. Retry in %d seconds", cluster_node, REJOIN_INTERVAL)
@@ -2472,9 +2517,9 @@ def bootstrap_join(context):
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node, remote_user)
                 join_remote_auth(cluster_node, remote_user)
-                _context.skip_csync2 = not utils.service_is_active(CSYNC2_SERVICE, cluster_node)
+                _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
                 if _context.skip_csync2:
-                    utils.stop_service(CSYNC2_SERVICE, disable=True)
+                    service_manager.stop_service(CSYNC2_SERVICE, disable=True)
                     retrieve_all_config_files(cluster_node)
                     logger.warning("csync2 is not initiated yet. Before using csync2 for the first time, please run \"crm cluster init csync2 -y\" on any one node. Note, this may take a while.")
                 else:
@@ -2554,13 +2599,14 @@ def bootstrap_remove(context):
 
     init()
 
-    if not utils.service_is_active("corosync.service"):
+    service_manager = ServiceManager()
+    if not service_manager.service_is_active("corosync.service"):
         utils.fatal("Cluster is not active - can't execute removing action")
 
     if _context.qdevice_rm_flag and _context.cluster_node:
         utils.fatal("Either remove node or qdevice")
 
-    _context.skip_csync2 = not utils.service_is_active(CSYNC2_SERVICE)
+    _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE)
     if _context.skip_csync2:
         _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(utils.this_node())
 
@@ -2596,7 +2642,7 @@ def bootstrap_remove(context):
         utils.fatal("Specified node {} is not configured in cluster! Unable to remove.".format(cluster_node))
 
     # In case any crm command can re-generate upgrade_seq again
-    utils.get_stdout_or_raise_error("rm -rf /var/lib/crmsh", cluster_node)
+    sh.cluster_shell().get_stdout_or_raise_error("rm -rf /var/lib/crmsh", cluster_node)
     bootstrap_finished()
 
 
@@ -2608,7 +2654,7 @@ def remove_self(force_flag=False):
     if othernode is not None:
         # remove from other node
         cmd = "crm{} cluster remove{} -c {}".format(" -F" if force_flag else "", " -y" if yes_to_all else "", me)
-        rc, _, _ = utils.get_stdout_stderr_auto_ssh_no_input(othernode, cmd)
+        rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(othernode, cmd)
         if rc != 0:
             utils.fatal("Failed to remove this node from {}".format(othernode))
     else:
@@ -2706,16 +2752,16 @@ def geo_fetch_config(node):
     if user is not None:
         try:
             local_user = utils.user_of(utils.this_node())
-        except utils.UserOfHost.UserNotFoundError:
+        except UserNotFoundError:
             local_user = user
         remote_user = user
     else:
         try:
-            local_user, remote_user = utils.UserOfHost.instance().user_pair_for_ssh(node)
-        except utils.UserOfHost.UserNotFoundError:
+            local_user, remote_user = UserOfHost.instance().user_pair_for_ssh(node)
+        except UserNotFoundError:
             try:
                 local_user = utils.user_of(utils.this_node())
-            except utils.UserOfHost.UserNotFoundError:
+            except UserNotFoundError:
                 local_user = userdir.getuser()
             remote_user = local_user
     configure_ssh_key(local_user)
@@ -2736,7 +2782,7 @@ def geo_fetch_config(node):
         finally:
             os.close(pipe_outlet)
         try:
-            result = utils.subprocess_run_auto_ssh_no_input(cmd, node, stdout=pipe_inlet, stderr=subprocess.PIPE)
+            result = sh.cluster_shell().subprocess_run_without_input(node, None, cmd, stdout=pipe_inlet, stderr=subprocess.PIPE)
         finally:
             os.close(pipe_inlet)
         rc = child.wait()
@@ -2803,7 +2849,7 @@ def bootstrap_arbitrator(context):
         utils.fatal("Failed to copy {} from {}".format(BOOTH_CFG, _context.cluster_node))
     # TODO: verify that the arbitrator IP in the configuration is us?
     logger.info("Enabling and starting the booth arbitrator service")
-    utils.start_service("booth@booth", enable=True)
+    ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).start_service("booth@booth", enable=True)
 
 
 def get_stonith_timeout_generally_expected():
@@ -2828,15 +2874,16 @@ def adjust_pcmk_delay_max(is_2node_wo_qdevice):
     """
     cib_factory.refresh()
 
+    shell = sh.cluster_shell()
     if is_2node_wo_qdevice:
         for res in cib_factory.fence_id_list_without_pcmk_delay():
             cmd = "crm resource param {} set pcmk_delay_max {}s".format(res, PCMK_DELAY_MAX)
-            utils.get_stdout_or_raise_error(cmd)
+            shell.get_stdout_or_raise_error(cmd)
             logger.debug("Add parameter 'pcmk_delay_max={}s' for resource '{}'".format(PCMK_DELAY_MAX, res))
     else:
         for res in cib_factory.fence_id_list_with_pcmk_delay():
             cmd = "crm resource param {} delete pcmk_delay_max".format(res)
-            utils.get_stdout_or_raise_error(cmd)
+            shell.get_stdout_or_raise_error(cmd)
             logger.debug("Delete parameter 'pcmk_delay_max' for resource '{}'".format(res))
 
 
@@ -2844,7 +2891,7 @@ def adjust_stonith_timeout():
     """
     Adjust stonith-timeout for sbd and other scenarios
     """
-    if utils.service_is_active("sbd.service"):
+    if ServiceManager().service_is_active("sbd.service"):
         from .sbd import SBDTimeout
         SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
     else:
@@ -2867,7 +2914,7 @@ def adjust_properties():
     - remove qdevice
     - add sbd via stage
     """
-    if not utils.service_is_active("pacemaker.service"):
+    if not ServiceManager().service_is_active("pacemaker.service"):
         return
     is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
     adjust_pcmk_delay_max(is_2node_wo_qdevice)
@@ -2893,7 +2940,7 @@ def retrieve_all_config_files(cluster_node):
         finally:
             os.close(pipe_outlet)
         try:
-            result = utils.subprocess_run_auto_ssh_no_input(cmd, cluster_node, stdout=pipe_inlet, stderr=subprocess.DEVNULL)
+            result = sh.cluster_shell().subprocess_run_without_input(cluster_node, None, cmd, stdout=pipe_inlet, stderr=subprocess.DEVNULL)
         finally:
             os.close(pipe_inlet)
         rc = child.wait()

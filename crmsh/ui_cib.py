@@ -13,6 +13,7 @@ from . import config
 from . import options
 from .cibstatus import cib_status
 from .cibconfig import cib_factory
+from .sh import ShellUtils
 from . import tmpfiles
 from . import completers as compl
 from . import log
@@ -154,7 +155,7 @@ class CibShadow(command.UI):
     @command.skill_level('administrator')
     def do_diff(self, context):
         "usage: diff"
-        rc, s = utils.get_stdout(utils.add_sudo("%s -d" % self.extcmd_stdout))
+        rc, s = ShellUtils().get_stdout(utils.add_sudo("%s -d" % self.extcmd_stdout))
         utils.page_string(s)
 
     @command.skill_level('administrator')

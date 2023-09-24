@@ -2,14 +2,14 @@
 # See COPYING for license information.
 
 import os
-from . import command
+from . import command, sh
 from . import completers
 from . import utils
 from . import corosync
 from . import parallax
 from . import bootstrap
 from . import log
-
+from .service_manager import ServiceManager
 
 logger = log.setup_logger(__name__)
 
@@ -62,7 +62,7 @@ class Corosync(command.UI):
         '''
         Quick cluster health status. Corosync status or QNetd status
         '''
-        if not utils.service_is_active("corosync.service"):
+        if not ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service"):
             logger.error("corosync.service is not running!")
             return False
 

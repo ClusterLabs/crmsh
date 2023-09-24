@@ -5,6 +5,7 @@
 import re
 from . import clidisplay
 from . import utils
+from .sh import ShellUtils
 
 _crm_mon = None
 
@@ -75,18 +76,19 @@ def crm_mon(opts=''):
     returns: rc, stdout
     """
     global _crm_mon
+    shell = ShellUtils()
     if _crm_mon is None:
         prog = utils.is_program("crm_mon")
         if not prog:
             raise IOError("crm_mon not available, check your installation")
-        _, out = utils.get_stdout("%s --help" % (prog))
+        _, out = shell.get_stdout("%s --help" % (prog))
         if "--pending" in out:
             _crm_mon = "%s -1 -j" % (prog)
         else:
             _crm_mon = "%s -1" % (prog)
 
     status_cmd = "%s %s" % (_crm_mon, opts)
-    return utils.get_stdout(utils.add_sudo(status_cmd))
+    return shell.get_stdout(utils.add_sudo(status_cmd))
 
 
 def cmd_status(args):
@@ -137,7 +139,7 @@ def cmd_verify(args):
             cmd1 += " -s"
 
     cmd1 = utils.add_sudo(cmd1)
-    rc, s, e = utils.get_stdout_stderr(cmd1)
+    rc, s, e = ShellUtils().get_stdout_stderr(cmd1)
     e = '\n'.join(clidisplay.error(l) for l in e.split('\n')).strip()
     utils.page_string("\n".join((s, e)))
     return rc == 0 and not e
