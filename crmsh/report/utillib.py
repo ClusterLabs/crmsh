@@ -1374,7 +1374,7 @@ def start_slave_collector(node, arg_str):
                     logger.warning(err)
                 break
         if err:
-            print(err)
+            print(err, file=sys.stderr)
 
     if out == '': # if we couldn't get anything
         return
