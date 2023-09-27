@@ -936,23 +936,6 @@ def pipe_cmd_nosudo(cmd):
     return rc
 
 
-def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False, no_reg=False):
-    '''
-    Run a cmd, return (rc, stdout, stderr)
-    '''
-    if options.regression_tests and not no_reg:
-        print(".EXT", cmd)
-    proc = subprocess.Popen(cmd,
-                            shell=shell,
-                            stdin=input_s and subprocess.PIPE or None,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    stdout_data, stderr_data = proc.communicate(input_s)
-    if raw:
-        return proc.returncode, stdout_data, stderr_data
-    return proc.returncode, to_ascii(stdout_data).strip(), to_ascii(stderr_data).strip()
-
-
 def get_stdout_stderr_as_local_sudoer(cmd, input_s=None):
     try:
         user = user_of(this_node())
