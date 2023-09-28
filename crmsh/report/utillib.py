@@ -1126,7 +1126,7 @@ def pe_to_dot(pe_file):
 
 
 def pick_compress():
-    constants.COMPRESS_PROG = pick_first(["bzip2", "gzip", "xz"])
+    constants.COMPRESS_PROG = pick_first(["gzip", "bzip2", "xz"])
     if constants.COMPRESS_PROG:
         if constants.COMPRESS_PROG == "xz":
             constants.COMPRESS_EXT = ".xz"
