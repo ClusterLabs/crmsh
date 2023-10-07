@@ -1126,25 +1126,25 @@ def pe_to_dot(pe_file):
 
 
 def pick_compress():
-    constants.COMPRESS_PROG = pick_first(["gzip", "bzip2", "xz"])
-    if constants.COMPRESS_PROG:
-        if constants.COMPRESS_PROG == "xz":
-            constants.COMPRESS_EXT = ".xz"
-        elif constants.COMPRESS_PROG == "bzip2":
-            constants.COMPRESS_EXT = ".bz2"
-        else:
-            constants.COMPRESS_EXT = ".gz"
+    prog, ext = pick_first_compress()
+    if prog:
+        constants.COMPRESS_PROG, constants.COMPRESS_EXT = prog, ext
     else:
-        logger.warning("could not find a compression program; \
-                     the resulting tarball may be huge")
+        logger.warning("the resulting tarball may be huge")
         constants.COMPRESS_PROG = "cat"
 
 
-def pick_first(choice):
-    for tmp in choice:
-        if crmutils.is_program(tmp):
-            return tmp
-    return None
+def pick_first_compress():
+    compress_prog_suffix_dict = {
+        "gzip": ".gz",
+        "bzip2": ".bz2",
+        "xz": ".xz"
+    }
+    for cmd, suffix in compress_prog_suffix_dict.items():
+        if shutil.which(cmd):
+            return cmd, suffix
+    logger.warning("Could not find a compression program")
+    return None, None
 
 
 def pkg_ver_deb(packages):
