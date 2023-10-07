@@ -106,7 +106,9 @@ def mkarchive(idir):
     if not home:
         logger.error("no home directory, nowhere to pack report")
         return False
-    archive = '%s.tar.bz2' % os.path.join(home, os.path.basename(idir))
+    archive = pick_tarball(os.path.join(home, os.path.basename(idir)))
+    if not archive:
+        return False
     cmd = "tar -C '%s/..' -cj -f '%s' %s" % \
         (idir, archive, os.path.basename(idir))
     if utils.pipe_cmd_nosudo(cmd) != 0:
@@ -115,6 +117,15 @@ def mkarchive(idir):
     else:
         print("Report saved in '%s'" % archive)
     return True
+
+
+def pick_tarball(tarball_prefix):
+    for compress_type in ("gz", "bz2"):
+        tarball = f"{tarball_prefix}.tar.{compress_type}"
+        if os.path.isfile(tarball):
+            return tarball
+    logger.error("Could not find tarball for crm report")
+    return None
 
 
 CH_SRC, CH_TIME, CH_UPD = 1, 2, 3
@@ -464,7 +475,9 @@ class Report(object):
         if not utils.is_path_sane(d):
             return None
         utils.rmdir_r(d)
-        tarball = "%s.tar.bz2" % d
+        tarball = pick_tarball(d)
+        if not tarball:
+            return None
         to_option = ""
         if self.to_dt:
             to_option = "-t '%s'" % logtime.human_date(self.to_dt)
