@@ -15,6 +15,7 @@ from . import logtime
 from . import logparser
 from . import utils
 from . import log
+from crmsh.report import utillib
 
 
 logger = log.setup_logger(__name__)
@@ -106,7 +107,11 @@ def mkarchive(idir):
     if not home:
         logger.error("no home directory, nowhere to pack report")
         return False
-    archive = '%s.tar.bz2' % os.path.join(home, os.path.basename(idir))
+    _, ext = utillib.pick_first_compress()
+    if not ext:
+        return False
+    name = os.path.join(home, os.path.basename(idir))
+    archive = f'{name}.tar{ext}'
     cmd = "tar -C '%s/..' -cj -f '%s' %s" % \
         (idir, archive, os.path.basename(idir))
     if utils.pipe_cmd_nosudo(cmd) != 0:
@@ -464,7 +469,10 @@ class Report(object):
         if not utils.is_path_sane(d):
             return None
         utils.rmdir_r(d)
-        tarball = "%s.tar.bz2" % d
+        _, ext = utillib.pick_first_compress()
+        if not ext:
+            return None
+        tarball = f"{d}.tar{ext}"
         to_option = ""
         if self.to_dt:
             to_option = "-t '%s'" % logtime.human_date(self.to_dt)
