@@ -64,6 +64,12 @@ RESULT_TIME_SUFFIX = "%a-%d-%b-%Y"
 NAME = "crm report"
 COROSYNC_LIB = "/var/lib/corosync"
 
+DESCRIPTION_HELP = '''Description:
+crm report is a utility to collect all information (logs,
+configuration files, system information, etc) relevant to
+Pacemaker (CRM) over the given period of time.
+'''
+
 EXTRA_HELP = '''
 Examples
   # collect from 2pm, today

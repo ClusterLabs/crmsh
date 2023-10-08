@@ -96,7 +96,8 @@ class HelpEntry(object):
 
         short_help = clidisplay.help_header(self.short)
         if self.from_cli and self.level and self.name:
-            _, output, _ = ShellUtils().get_stdout_stderr(f"crm {self.level} {self.name} --help-without-redirect")
+            level = '' if self.level == 'root' else self.level
+            _, output, _ = ShellUtils().get_stdout_stderr(f"crm {level} {self.name} --help-without-redirect")
             page_string(short_help + '\n\n'+ output)
             return
 

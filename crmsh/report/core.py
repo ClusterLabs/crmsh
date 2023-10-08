@@ -78,18 +78,28 @@ class Context:
 from crmsh.report import constants, utils, collect
 
 
+class CapitalizedHelpFormatter(argparse.HelpFormatter):
+    def add_usage(self, usage, actions, groups, prefix=None):
+        if prefix is None:
+            prefix = 'Usage: '
+        return super().add_usage(usage.capitalize(), actions, groups, prefix)
+
+    def start_section(self, heading):
+        return super().start_section(heading.capitalize())
+
+
 def add_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-            usage=f"{constants.NAME} [options] [dest]",
+            usage=f"\n{constants.NAME} [options] [dest]",
             add_help=False,
-            formatter_class=lambda prog: argparse.HelpFormatter(prog, width=80)
+            formatter_class=lambda prog: CapitalizedHelpFormatter(prog, width=80)
             )
     parser.add_argument("-h", "--help", action="store_true", dest="help",
                         help="Show this help message and exit")
     parser.add_argument('-f', dest='from_time', metavar='FROM_TIME',
-                        help='Time to start from (default: 12 hours before)')
+                        help='Time to start from (default: 12 hours ago), can be specific time or delta time until now')
     parser.add_argument('-t', dest='to_time', metavar='TO_TIME',
-                        help='Time to finish at (default: now)')
+                        help='Time to finish at (default: now); can be specific time or delta time until now')
     parser.add_argument('-d', dest='no_compress', action='store_true',
                         help="Don't compress, but leave result in a directory")
     parser.add_argument('-n', dest='node_list', metavar='NODE', action=ui_cluster.CustomAppendAction, default=[],
@@ -115,10 +125,11 @@ def add_arguments() -> argparse.Namespace:
     parser.add_argument('-v', dest='debug', action='count', default=0,
                         help='Increase verbosity')
     parser.add_argument('dest', nargs='?',
-                        help='Report name (may include path where to store the report)')
+                        help="Report name (which may include the path for storing the report), default format is 'crm_report-current_date,' such as 'crm_report-Mon-09-Oct-2023'")
 
     args = parser.parse_args()
     if args.help:
+        print(constants.DESCRIPTION_HELP)
         parser.print_help()
         print(constants.EXTRA_HELP)
         sys.exit(0)
