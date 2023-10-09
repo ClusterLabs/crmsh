@@ -143,7 +143,7 @@ class Context(object):
                 COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
                 "/var/lib/csync2/*", "~/.config/crm/*"]
-        self.ssh_key_file = None
+        self.use_ssh_agent = False
 
     @classmethod
     def set_context(cls, options):
@@ -485,7 +485,7 @@ def is_online():
     if not xmlutil.CrmMonXmlParser.is_node_online(cluster_node):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
         sync_file(corosync.conf())
-        ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).stop_service("corosync")
+        ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).stop_service("corosync")
         print()
         utils.fatal("Cannot see peer node \"{}\", please check the communication IP".format(cluster_node))
     return True
@@ -833,11 +833,16 @@ def _parse_user_at_host(s: str, default_user: str) -> typing.Tuple[str, str]:
 
 def init_ssh():
     user_host_list = [_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list]
-    init_ssh_impl(
-        _context.current_user,
-        ssh_key.KeyFile(_context.ssh_key_file) if _context.ssh_key_file is not None else None,
-        user_host_list,
-    )
+    if _context.use_ssh_agent:
+        try:
+            ssh_agent = ssh_key.AgentClient()
+            keys = ssh_agent.list()
+        except ssh_key.Error:
+            logger.error("Cannot get a public key from ssh-agent.")
+            raise
+    else:
+        keys = list()
+    init_ssh_impl(_context.current_user, keys, user_host_list)
     if user_host_list:
         service_manager = ServiceManager()
         for user, node in user_host_list:
@@ -845,50 +850,74 @@ def init_ssh():
                 utils.fatal("Cluster is currently active on {} - can't run".format(node))
 
 
-def init_ssh_impl(local_user: str, ssh_public_key: typing.Optional[ssh_key.Key], user_node_list: typing.List[typing.Tuple[str, str]]):
+def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], user_node_list: typing.List[typing.Tuple[str, str]]):
     """ Configure passwordless SSH.
 
     The local_user on local host will be configured.
     If user_node_list is not empty, those user and host will also be configured.
-    If ssh_public_key is specified, it will be added to authorized_keys; if not, a new key pair will be generated for each node.
+    If ssh_public_keys is not empty, it will be added to authorized_keys; if not, a new key pair will be generated for each node.
     """
-    ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).start_service("sshd.service", enable=True)
-    shell = sh.SSHShell(sh.LocalShell(), local_user)
+    ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("sshd.service", enable=True)
+    if ssh_public_keys:
+        local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
+    else:
+        local_shell = sh.LocalShell()
+    shell = sh.SSHShell(local_shell, local_user)
     authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
-    if ssh_public_key is not None:
+    if ssh_public_keys:
         # Use specified key. Do not generate new ones.
-        authorized_key_manager.add(None, local_user, ssh_public_key)
+        for key in ssh_public_keys:
+            authorized_key_manager.add(None, local_user, key)
     else:
         configure_ssh_key(local_user)
     configure_ssh_key('hacluster')
 
     if user_node_list:
         print()
-        if ssh_public_key is not None:
+        if ssh_public_keys:
             for user, node in user_node_list:
                 logger.info("Adding public key to authorized_keys on %s@%s", user, node)
-                authorized_key_manager.add(node, user, ssh_public_key)
+                for key in ssh_public_keys:
+                    authorized_key_manager.add(node, local_user, key)
+                if user != 'root' and 0 != shell.subprocess_run_without_input(
+                        node, user, 'sudo true',
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                ).returncode:
+                    raise ValueError(f'Failed to sudo on {user}@{node}')
         else:
-            _init_ssh_on_remote_nodes(local_user, ssh_public_key, user_node_list)
+            _init_ssh_on_remote_nodes(local_user, user_node_list)
+        user_by_host = utils.HostUserConfig()
+        for user, node in user_node_list:
+            user_by_host.add(user, node)
+        user_by_host.add(local_user, utils.this_node())
+        user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
+        user_by_host.save_remote([node for user, node in user_node_list])
+        for user, node in user_node_list:
+            change_user_shell('hacluster', node)
+        # Starting from here, ClusterShell is available
+        shell = sh.ClusterShell(local_shell, UserOfHost.instance())
+        authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
+        _init_ssh_for_secondary_user_on_remote_nodes(
+            shell, authorized_key_manager,
+            [node for user, node in user_node_list],
+            'hacluster',
+        )
 
 
 def _init_ssh_on_remote_nodes(
         local_user: str,
-        ssh_public_key: typing.Optional[ssh_key.Key],
         user_node_list: typing.List[typing.Tuple[str, str]],
 ):
     # Swap public ssh key between remote node and local
     public_key_list = list()
-    hacluster_public_key_list = list()
     for i, (remote_user, node) in enumerate(user_node_list):
         utils.ssh_copy_id(local_user, remote_user, node)
         # After this, login to remote_node is passwordless
         public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True))
-        hacluster_public_key_list.append(swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_user, add=True))
     if len(user_node_list) > 1:
         shell = sh.LocalShell()
         shell_script = _merge_authorized_keys(public_key_list)
-        hacluster_shell_script = _merge_authorized_keys(hacluster_public_key_list)
         for i, (remote_user, node) in enumerate(user_node_list):
             result = shell.su_subprocess_run(
                 local_user,
@@ -899,22 +928,26 @@ def _init_ssh_on_remote_nodes(
             )
             if result.returncode != 0:
                 utils.fatal('Failed to add public keys to {}@{}: {}'.format(remote_user, node, result.stdout))
-            result = shell.su_subprocess_run(
-                local_user,
-                'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_user, node, 'hacluster'),
-                input=hacluster_shell_script,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
-            if result.returncode != 0:
-                utils.fatal('Failed to add public keys to {}@{}: {}'.format(remote_user, node, result.stdout))
-    user_by_host = utils.HostUserConfig()
-    for user, node in user_node_list:
-        user_by_host.add(user, node)
-    user_by_host.add(local_user, utils.this_node())
-    user_by_host.save_remote([node for user, node in user_node_list])
-    for user, node in user_node_list:
-        change_user_shell('hacluster', node)
+
+
+def _init_ssh_for_secondary_user_on_remote_nodes(
+        cluster_shell: sh.ClusterShell,
+        authorized_key_manager: ssh_key.AuthorizedKeyManager,
+        nodes: typing.Iterable[str],
+        user: str,
+):
+    """Initialize ssh for another user via an already working ClusterShell."""
+    key_file_manager = ssh_key.KeyFileManager(cluster_shell)
+    local_keys = [ssh_key.KeyFile(path) for path in key_file_manager.list_public_key_for_user(None, user)]
+    assert local_keys
+    for node in nodes:
+        if not sh.SSHShell(cluster_shell.local_shell, user).can_run_as(node, user):
+            for key in local_keys:
+                authorized_key_manager.add(node, user, key)
+            remote_keys = key_file_manager.ensure_key_pair_exists_for_user(node, user)
+            for key in remote_keys:
+                authorized_key_manager.add(None, user, key)
+
 
 
 def _merge_authorized_keys(keys: typing.List[str]) -> bytes:
@@ -929,18 +962,9 @@ def _merge_authorized_keys(keys: typing.List[str]) -> bytes:
     return buf
 
 
-def _fetch_core_hosts(local_user, remote_user, remote_host) -> typing.Tuple[typing.List[str], typing.List[str]]:
+def _fetch_core_hosts(shell: sh.ClusterShell, remote_host) -> typing.Tuple[typing.List[str], typing.List[str]]:
     cmd = 'crm options show core.hosts'
-    result = sh.LocalShell().su_subprocess_run(
-        local_user,
-        f'ssh {SSH_OPTION} {remote_user}@{remote_host} sudo /bin/sh',
-        input=cmd.encode('utf-8'),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    if result.returncode != 0:
-        utils.fatal('Failed to run command "{}" on host {}: {}'.format(cmd, remote_host, result.stderr.decode('utf-8')))
-    text = result.stdout.decode('utf-8')
+    text = shell.get_stdout_or_raise_error(cmd, remote_host)
     match = re.match('core\\.hosts\\s*=\\s*(.*)\\s*', text)
     if match is None:
         utils.fatal('Malformed core.hosts from host {}: {}'.format(remote_host, text))
@@ -1704,43 +1728,84 @@ def join_ssh(seed_host, seed_user):
     """
     if not seed_host:
         utils.fatal("No existing IP/hostname specified (use -c option)")
-
     local_user = _context.current_user
-    ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).start_service("sshd.service", enable=True)
-    configure_ssh_key(local_user)
-    if 0 != utils.ssh_copy_id_no_raise(local_user, seed_user, seed_host):
-        msg = f"Failed to login to {seed_user}@{seed_host}. Please check the credentials."
-        sudoer = userdir.get_sudoer()
-        if sudoer and seed_user != sudoer:
-            args = ['sudo crm']
-            args += [x for x in sys.argv[1:]]
-            for i, arg in enumerate(args):
-                if arg == '-c' or arg == '--cluster-node' and i + 1 < len(args):
-                    if '@' not in args[i+1]:
-                        args[i + 1] = f'{sudoer}@{seed_host}'
-                        msg += '\nOr, run "{}".'.format(' '.join(args))
-        raise ValueError(msg)
-    # After this, login to remote_node is passwordless
-    swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
-    configure_ssh_key('hacluster')
-    swap_public_ssh_key(seed_host, 'hacluster', 'hacluster', local_user, seed_user, add=True)
+
+    if _context.use_ssh_agent:
+        try:
+            ssh_agent = ssh_key.AgentClient()
+            keys = ssh_agent.list()
+        except ssh_key.Error:
+            logger.error("Cannot get a public key from ssh-agent.")
+            raise
+    else:
+        keys = list()
+    return join_ssh_impl(local_user, seed_host, seed_user, keys)
+
+
+def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List[ssh_key.Key]):
+    ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("sshd.service", enable=True)
+    if ssh_public_keys:
+        local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
+        join_ssh_with_ssh_agent(local_shell, local_user, seed_host, seed_user, ssh_public_keys)
+    else:
+        local_shell = sh.LocalShell()
+        if not ssh_public_keys:
+            configure_ssh_key(local_user)
+            if 0 != utils.ssh_copy_id_no_raise(local_user, seed_user, seed_host):
+                msg = f"Failed to login to {seed_user}@{seed_host}. Please check the credentials."
+                sudoer = userdir.get_sudoer()
+                if sudoer and seed_user != sudoer:
+                    args = ['sudo crm']
+                    args += [x for x in sys.argv[1:]]
+                    for i, arg in enumerate(args):
+                        if arg == '-c' or arg == '--cluster-node' and i + 1 < len(args):
+                            if '@' not in args[i+1]:
+                                args[i + 1] = f'{sudoer}@{seed_host}'
+                                msg += '\nOr, run "{}".'.format(' '.join(args))
+                raise ValueError(msg)
+            # After this, login to remote_node is passwordless
+            swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
+            configure_ssh_key('hacluster')
+            swap_public_ssh_key(seed_host, 'hacluster', 'hacluster', local_user, seed_user, add=True)
 
     # This makes sure the seed host has its own SSH keys in its own
     # authorized_keys file (again, to help with the case where the
     # user has done manual initial setup without the assistance of
     # ha-cluster-init).
-    sh.LocalShell().get_stdout_or_raise_error(
-        local_user,
-        "ssh {} {}@{} sudo crm cluster init -i {} ssh_remote".format(
-            SSH_OPTION, seed_user, seed_host, _context.default_nic_list[0],
-        ),
-    )
+    if not ssh_public_keys:
+        local_shell.get_stdout_or_raise_error(
+            local_user,
+            "ssh {} {}@{} sudo crm cluster init -i {} ssh_remote".format(
+                SSH_OPTION, seed_user, seed_host, _context.default_nic_list[0],
+            ),
+        )
     user_by_host = utils.HostUserConfig()
     user_by_host.add(seed_user, seed_host)
     user_by_host.add(local_user, utils.this_node())
+    user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
     user_by_host.save_local()
 
-    change_user_shell('hacluster', seed_host)
+    change_user_shell('hacluster')
+
+
+def join_ssh_with_ssh_agent(
+        local_shell: sh.LocalShell,
+        local_user: str, seed_host: str, seed_user: str,
+        ssh_public_keys: typing.List[ssh_key.Key],
+):
+    # As ssh-agent is used, the local_user does not have any effects
+    shell = sh.SSHShell(local_shell, 'root')
+    if not shell.can_run_as(seed_host, seed_user):
+        raise ValueError(f'Failed to login to {seed_user}@{seed_host}')
+    if seed_user != 'root' and 0 != shell.subprocess_run_without_input(
+            seed_host, seed_user, 'sudo true',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+    ).returncode:
+        raise ValueError(f'Failed to sudo on {seed_user}@{seed_host}')
+    authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
+    for key in ssh_public_keys:
+        authorized_key_manager.add(None, local_user, key)
 
 
 def swap_public_ssh_key(
@@ -1850,16 +1915,16 @@ def join_ssh_merge(cluster_node, remote_user):
         hosts = list()
     hosts.append(cluster_node)
 
-    # To create local entry in known_hosts
-    rc, _, _ = utils.get_stdout_stderr_as_local_sudoer("ssh {} {} true".format(SSH_OPTION, utils.this_node()))
-    assert rc == 0
+    shell = sh.cluster_shell()
+    # create local entry in known_hosts
+    shell.ssh_to_localhost(None, 'true')
 
     known_hosts_new = set()
 
     cat_cmd = "[ -e ~/.ssh/known_hosts ] && cat ~/.ssh/known_hosts || true"
     #logger_utils.log_only_to_file("parallax.call {} : {}".format(hosts, cat_cmd))
     for host in hosts:
-        known_hosts_content = sh.cluster_shell().get_stdout_or_raise_error(cat_cmd, host)
+        known_hosts_content = shell.get_stdout_or_raise_error(cat_cmd, host)
         if known_hosts_content:
             known_hosts_new.update((utils.to_ascii(known_hosts_content) or "").splitlines())
 
@@ -1957,9 +2022,8 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
     """
     # Fetch cluster nodes list
     local_user = _context.current_user
-    shell = sh.LocalShell()
-    cmd = f'ssh {SSH_OPTION} {remote_user}@{init_node} sudo crm_node -l'
-    rc, out, err = shell.get_rc_stdout_stderr(local_user, cmd)
+    shell = sh.cluster_shell()
+    rc, out, err = shell.get_rc_stdout_stderr_without_input(init_node, 'crm_node -l')
     if rc != 0:
         utils.fatal("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
     cluster_nodes_list = []
@@ -1982,7 +2046,7 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
     user_by_host = utils.HostUserConfig()
     user_by_host.add(local_user, utils.this_node())
     try:
-        user_list, host_list = _fetch_core_hosts(local_user, remote_user, init_node)
+        user_list, host_list = _fetch_core_hosts(shell, init_node)
         for user, host in zip(user_list, host_list):
             user_by_host.add(user, host)
     except ValueError:
@@ -1991,20 +2055,22 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
     user_by_host.save_local()
 
     # Filter out init node from cluster_nodes_list
-    cmd = "ssh {} {}@{} hostname".format(SSH_OPTION, remote_user , init_node)
-    rc, out, err = shell.get_rc_stdout_stderr(local_user, cmd)
+    rc, out, err = shell.get_rc_stdout_stderr_without_input(init_node, 'hostname')
     if rc != 0:
         utils.fatal("Can't fetch hostname of {}: {}".format(init_node, err))
     # Swap ssh public key between join node and other cluster nodes
-    for node in (node for node in cluster_nodes_list if node != out):
-        remote_user_to_swap = utils.user_of(node)
-        remote_privileged_user = remote_user_to_swap
-        utils.ssh_copy_id(local_user, remote_privileged_user, node)
-        swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
+    if not _context.use_ssh_agent:
+        for node in (node for node in cluster_nodes_list if node != out):
+            remote_user_to_swap = utils.user_of(node)
+            remote_privileged_user = remote_user_to_swap
+            utils.ssh_copy_id(local_user, remote_privileged_user, node)
+            swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
+            if local_user != 'hacluster':
+                change_user_shell('hacluster', node)
+                swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user, add=True)
         if local_user != 'hacluster':
-            change_user_shell('hacluster', node)
-            swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user, add=True)
-    if local_user != 'hacluster':
+            swap_key_for_hacluster(cluster_nodes_list)
+    else:
         swap_key_for_hacluster(cluster_nodes_list)
 
     user_by_host.save_remote(cluster_nodes_list)
@@ -2197,7 +2263,7 @@ def join_cluster(seed_host, remote_user):
     if is_qdevice_configured:
         start_qdevice_on_join_node(seed_host)
     else:
-        ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).disable_service("corosync-qdevice.service")
+        ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).disable_service("corosync-qdevice.service")
 
 
 def adjust_priority_in_rsc_defaults(is_2node_wo_qdevice):
@@ -2246,7 +2312,7 @@ def start_qdevice_on_join_node(seed_host):
             qnetd_addr = corosync.get_value("quorum.device.net.host")
             qdevice_inst = qdevice.QDevice(qnetd_addr, cluster_node=seed_host)
             qdevice_inst.certificate_process_on_join()
-        ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).start_service("corosync-qdevice.service", enable=True)
+        ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("corosync-qdevice.service", enable=True)
 
 
 def get_cluster_node_ip(node: str) -> str:
@@ -2402,7 +2468,7 @@ def bootstrap_init(context):
         _context.cluster_node = args[1]
 
     if stage and _context.cluster_is_running and \
-            not ServiceManager(shell=sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active(CSYNC2_SERVICE):
+            not ServiceManager(shell=sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active(CSYNC2_SERVICE):
         _context.skip_csync2 = True
         _context.node_list_in_cluster = utils.list_cluster_nodes()
     elif not _context.cluster_is_running:
@@ -2449,12 +2515,16 @@ def bootstrap_add(context):
         options += '-i {} '.format(nic)
     options = " {}".format(options.strip()) if options else ""
 
+    if context.use_ssh_agent:
+        options += ' --use-ssh-agent'
+
+    shell = sh.ClusterShell(sh.LocalShell(), UserOfHost.instance(), _context.use_ssh_agent)
     for (user, node) in (_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list):
         print()
         logger.info("Adding node {} to cluster".format(node))
         cmd = 'crm cluster join -y {} -c {}@{}'.format(options, _context.current_user, utils.this_node())
         logger.info("Running command on {}: {}".format(node, cmd))
-        out = sh.cluster_shell().get_stdout_or_raise_error(cmd, node)
+        out = shell.get_stdout_or_raise_error(cmd, node)
         print(out)
 
 
@@ -2470,7 +2540,7 @@ def bootstrap_join(context):
 
     check_tty()
 
-    corosync_active = ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service")
+    corosync_active = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("corosync.service")
     if corosync_active and _context.stage != "ssh":
         utils.fatal("Abort: Cluster is currently active. Run this command on a node joining the cluster.")
 
@@ -2849,7 +2919,7 @@ def bootstrap_arbitrator(context):
         utils.fatal("Failed to copy {} from {}".format(BOOTH_CFG, _context.cluster_node))
     # TODO: verify that the arbitrator IP in the configuration is us?
     logger.info("Enabling and starting the booth arbitrator service")
-    ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).start_service("booth@booth", enable=True)
+    ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("booth@booth", enable=True)
 
 
 def get_stonith_timeout_generally_expected():

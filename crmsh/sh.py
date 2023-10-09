@@ -21,6 +21,7 @@ be used.
 import logging
 import os
 import pwd
+import re
 import socket
 import subprocess
 import typing
@@ -95,15 +96,18 @@ class LocalShell:
     def get_effective_user_name() -> str:
         return pwd.getpwuid(LocalShell.geteuid()).pw_name
 
+    def __init__(self, additional_environ: typing.Dict[str, str] = None):
+        self.additional_environ = additional_environ
+        self.preserve_env = additional_environ.keys() if additional_environ is not None else None
+
     def can_run_as(self, user: str):
         return self.geteuid() == 0 or self.get_effective_user_name() == user
 
     def su_subprocess_run(
             self,
-            user: str,
+            user: typing.Optional[str],
             cmd: str,
             tty=False,
-            preserve_env: typing.Optional[typing.List[str]] = None,
             **kwargs,
     ):
         """Call subprocess.run as another user.
@@ -111,24 +115,30 @@ class LocalShell:
         This variant is the most flexible one as it pass unknown kwargs to the underlay subprocess.run. However, it
         accepts only cmdline but not argv, as the argv is used internally to switch user.
         """
-        if self.get_effective_user_name() == user:
+        if user is None or self.get_effective_user_name() == user:
             args = ['/bin/sh', '-c', cmd]
         elif 0 == self.geteuid():
             args = ['su', user, '--login', '-c', cmd]
             if tty:
                 args.append('--pty')
-            if preserve_env:
+            if self.preserve_env:
                 args.append('-w')
-                args.append(','.join(preserve_env))
+                args.append(','.join(self.preserve_env))
         else:
             raise AuthorizationError(
                 cmd, None, user,
                 f"non-root user '{self.get_effective_user_name()}' cannot switch to another user"
             )
-        logger.debug('su_subprocess_run: %s, %s', args, kwargs)
-        return subprocess.run(args, **kwargs)
+        if not self.additional_environ:
+            logger.debug('su_subprocess_run: %s, %s', args, kwargs)
+            return subprocess.run(args, **kwargs)
+        else:
+            logger.debug('su_subprocess_run: %s, env=%s, %s', args, self.additional_environ, kwargs)
+            env = dict(os.environ)
+            env.update(self.additional_environ)
+            return subprocess.run(args, env=env, **kwargs)
 
-    def get_rc_stdout_stderr_raw(self, user: str, cmd: str, input: typing.Optional[bytes] = None):
+    def get_rc_stdout_stderr_raw(self, user: typing.Optional[str], cmd: str, input: typing.Optional[bytes] = None):
         result = self.su_subprocess_run(
             user, cmd,
             input=input,
@@ -137,13 +147,13 @@ class LocalShell:
         )
         return result.returncode, result.stdout, result.stderr
 
-    def get_rc_stdout_stderr(self, user: str, cmd: str, input: typing.Optional[str] = None):
+    def get_rc_stdout_stderr(self, user: typing.Optional[str], cmd: str, input: typing.Optional[str] = None):
         rc, stdout, stderr = self.get_rc_stdout_stderr_raw(user, cmd, input.encode('utf-8') if input is not None else None)
         return rc, Utils.decode_str(stdout).strip(), Utils.decode_str(stderr).strip()
 
     def get_rc_and_error(
             self,
-            user: str,
+            user: typing.Optional[str],
             cmd: str,
     ) -> typing.Tuple[int, typing.Optional[str]]:
         """Run a command for its side effects. Returns (rc, error_message)
@@ -151,17 +161,8 @@ class LocalShell:
         If the return code is 0, outputs from the command will be ignored and (0, None) is returned.
         If the return code is not 0, outputs from the stdout and stderr is combined as a single message.
         """
-        if self.get_effective_user_name() == user:
-            args = ['/bin/sh', '-c', cmd]
-        elif self.geteuid() == 0:
-            args = ['su', user, '--login', '-c', cmd]
-        else:
-            raise AuthorizationError(
-                cmd, None, user,
-                f"non-root user '{self.get_effective_user_name()}' cannot switch to another user"
-            )
-        result = subprocess.run(
-            args,
+        result = self.su_subprocess_run(
+            user, cmd,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -174,7 +175,7 @@ class LocalShell:
 
     def get_stdout_or_raise_error(
             self,
-            user: str,
+            user: typing.Optional[str],
             cmd: str,
             success_exit_status: typing.Optional[typing.Set[int]] = None,
     ):
@@ -206,6 +207,8 @@ class SSHShell:
         self.local_user = local_user
 
     def can_run_as(self, host: typing.Optional[str], user: str) -> bool:
+        # This method does not call subprocess_run_without_input. The reason may be some of the callers expect that ssh
+        # is used even if the destination host is localhost.
         if host is None or host == self.local_shell.hostname():
             return self.local_shell.can_run_as(user)
         else:
@@ -263,28 +266,74 @@ class ClusterShell:
     For remote nodes, the local and remote user used for SSH sessions are determined from cluster configuration recorded
     during bootstrap.
     """
-    def __init__(self, local_shell: LocalShell, user_of_host: UserOfHost):
+    def __init__(
+            self,
+            local_shell: LocalShell,
+            user_of_host: UserOfHost,
+            forward_ssh_agent: bool = False,
+            raise_ssh_error: bool = False,  # whether to raise AuthorizationError when ssh returns with 255
+    ):
         self.local_shell = local_shell
         self.user_of_host = user_of_host
+        self.forward_ssh_agent = forward_ssh_agent
+        self.raise_ssh_error = raise_ssh_error
+
+    def can_run_as(self, host: typing.Optional[str], user: str) -> bool:
+        result = self.subprocess_run_without_input(
+            host, user, 'true',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return 0 == result.returncode
 
     def subprocess_run_without_input(self, host: typing.Optional[str], user: typing.Optional[str], cmd: str, **kwargs):
         assert 'input' not in kwargs and 'stdin' not in kwargs
         if host is None or host == self.local_shell.hostname():
-            return subprocess.run(
-                ['/bin/sh'],
-                input=cmd.encode('utf-8'),
-                **kwargs,
-            )
+            if user is None:
+                return subprocess.run(
+                    ['/bin/sh'],
+                    input=cmd.encode('utf-8'),
+                    **kwargs,
+                )
+            else:
+                return self.local_shell.su_subprocess_run(
+                    user, cmd,
+                    **kwargs,
+                )
         else:
             if user is None:
                 user = 'root'
             local_user, remote_user = self.user_of_host.user_pair_for_ssh(host)
-            return self.local_shell.su_subprocess_run(
+            result = self.local_shell.su_subprocess_run(
                 local_user,
-                'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_user, host, user),
+                'ssh {} {} {}@{} sudo -H -u {} {} /bin/sh'.format(
+                    '-A' if self.forward_ssh_agent else '',
+                    constants.SSH_OPTION,
+                    remote_user,
+                    host,
+                    user,
+                    '--preserve-env=SSH_AUTH_SOCK' if self.forward_ssh_agent else '',
+                    constants.SSH_OPTION,
+                ),
                 input=cmd.encode('utf-8'),
                 **kwargs,
             )
+            if self.raise_ssh_error and result.returncode == 255:
+                raise AuthorizationError(cmd, host, remote_user, Utils.decode_str(result.stderr).strip())
+            else:
+                return result
+
+    def get_rc_and_error(self, host: typing.Optional[str], user: str, cmd: str):
+        result = self.subprocess_run_without_input(
+            host, user, cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        if result.returncode == 0:
+            return 0, None
+        else:
+            return result.returncode, Utils.decode_str(result.stdout).strip()
 
     def get_rc_stdout_stderr_raw_without_input(self, host, cmd) -> typing.Tuple[int, bytes, bytes]:
         result = self.subprocess_run_without_input(
@@ -317,8 +366,34 @@ class ClusterShell:
         else:
             raise CommandFailure(cmd, host, None, Utils.decode_str(stderr).strip())
 
+    def ssh_to_localhost(self, user: typing.Optional[str], cmd: str, **kwargs):
+        if user is None:
+            user = 'root'
+        host = self.local_shell.hostname()
+        local_user, remote_user = self.user_of_host.user_pair_for_ssh(host)
+        result = self.local_shell.su_subprocess_run(
+            local_user,
+            'ssh {} {} {}@{} sudo -H -u {} {} /bin/sh'.format(
+                '-A' if self.forward_ssh_agent else '',
+                constants.SSH_OPTION,
+                remote_user,
+                host,
+                user,
+                '--preserve-env=SSH_AUTH_SOCK' if self.forward_ssh_agent else '',
+                constants.SSH_OPTION,
+            ),
+            input=cmd.encode('utf-8'),
+            **kwargs,
+        )
+        if self.raise_ssh_error and result.returncode == 255:
+            raise AuthorizationError(cmd, host, remote_user, Utils.decode_str(result.stderr).strip())
+        else:
+            return result
+
 
 class ShellUtils:
+    CONTROL_CHARACTER_PATTER = re.compile('[\u0000-\u001F]')
+
     @classmethod
     def get_stdout(cls, cmd, input_s=None, stderr_on=True, shell=True, raw=False):
         '''
@@ -366,7 +441,7 @@ class ShellUtils:
         return proc.returncode, stdout_data.strip(), stderr_data.strip()
 
 
-class LocalOnlyClusterShell(ClusterShell):
+class ClusterShellAdaptorForLocalShell(ClusterShell):
     """A adaptor to wrap a LocalShell as a ClusterShell.
 
     Some modules depend on shell and are called both during bootstrap and after bootstrap. Use a LocalShell as their
