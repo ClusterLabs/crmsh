@@ -872,6 +872,8 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
         configure_ssh_key(local_user)
     configure_ssh_key('hacluster')
 
+    user_by_host = utils.HostUserConfig()
+    user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
     if user_node_list:
         print()
         if ssh_public_keys:
@@ -887,12 +889,9 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
                     raise ValueError(f'Failed to sudo on {user}@{node}')
         else:
             _init_ssh_on_remote_nodes(local_user, user_node_list)
-        user_by_host = utils.HostUserConfig()
         for user, node in user_node_list:
             user_by_host.add(user, node)
         user_by_host.add(local_user, utils.this_node())
-        user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
-        user_by_host.save_remote([node for user, node in user_node_list])
         for user, node in user_node_list:
             change_user_shell('hacluster', node)
         # Starting from here, ClusterShell is available
@@ -903,6 +902,7 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
             [node for user, node in user_node_list],
             'hacluster',
         )
+    user_by_host.save_remote([node for user, node in user_node_list])
 
 
 def _init_ssh_on_remote_nodes(
@@ -1680,7 +1680,13 @@ def init_qdevice():
             local_user = userdir.getuser()
         ssh_user = local_user
     # Configure ssh passwordless to qnetd if detect password is needed
-    if utils.check_ssh_passwd_need(local_user, ssh_user, qnetd_addr):
+    if UserOfHost.instance().use_ssh_agent():
+        for key in ssh_key.AgentClient().list():
+            ssh_key.AuthorizedKeyManager(sh.SSHShell(
+                sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')}),
+                'root',
+            )).add(qnetd_addr, ssh_user, key)
+    elif utils.check_ssh_passwd_need(local_user, ssh_user, qnetd_addr):
         configure_ssh_key(local_user)
         if 0 != utils.ssh_copy_id_no_raise(local_user, ssh_user, qnetd_addr):
             msg = f"Failed to login to {ssh_user}@{qnetd_addr}. Please check the credentials."
