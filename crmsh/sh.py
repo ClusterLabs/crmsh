@@ -118,7 +118,7 @@ class LocalShell:
         if user is None or self.get_effective_user_name() == user:
             args = ['/bin/sh', '-c', cmd]
         elif 0 == self.geteuid():
-            args = ['su', user, '--login', '-c', cmd]
+            args = ['su', user, '--login', '-s', '/bin/sh', '-c', cmd]
             if tty:
                 args.append('--pty')
             if self.preserve_env:

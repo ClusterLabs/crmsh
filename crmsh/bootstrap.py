@@ -871,6 +871,7 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
     else:
         configure_ssh_key(local_user)
     configure_ssh_key('hacluster')
+    change_user_shell('hacluster')
 
     user_by_host = utils.HostUserConfig()
     user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
@@ -892,8 +893,7 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
         for user, node in user_node_list:
             user_by_host.add(user, node)
         user_by_host.add(local_user, utils.this_node())
-        for user, node in user_node_list:
-            change_user_shell('hacluster', node)
+        user_by_host.save_local()
         # Starting from here, ClusterShell is available
         shell = sh.ClusterShell(local_shell, UserOfHost.instance())
         authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
@@ -902,7 +902,9 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
             [node for user, node in user_node_list],
             'hacluster',
         )
-    user_by_host.save_remote([node for user, node in user_node_list])
+        for user, node in user_node_list:
+            change_user_shell('hacluster', node)
+        user_by_host.save_remote([node for user, node in user_node_list])
 
 
 def _init_ssh_on_remote_nodes(
@@ -1031,24 +1033,10 @@ def configure_ssh_key(user):
     """
     change_user_shell(user)
     shell = sh.LocalShell()
-
-    cmd = ""
-    private_key, public_key, authorized_file = key_files(user).values()
-
-    if not utils.detect_file(private_key):
-        logger.info("SSH key for {} does not exist, hence generate it now".format(user))
-        cmd = "ssh-keygen -q -f {} -C 'Cluster Internal on {}' -N ''".format(private_key, utils.this_node())
-    elif not utils.detect_file(public_key):
-        cmd = "ssh-keygen -y -f {} > {}".format(private_key, public_key)
-
-    if cmd:
-        shell.get_stdout_or_raise_error(user, cmd)
-
-    if not utils.detect_file(authorized_file):
-        cmd = "touch {}".format(authorized_file)
-        shell.get_stdout_or_raise_error(user, cmd)
-
-    append_unique(public_key, authorized_file, user)
+    key_file_manager = ssh_key.KeyFileManager(sh.ClusterShellAdaptorForLocalShell(shell))
+    authorized_key_manager = ssh_key.AuthorizedKeyManager(sh.SSHShell(shell, None))
+    key = key_file_manager.ensure_key_pair_exists_for_user(None, user)[0]
+    authorized_key_manager.add(None, user, key)
 
 
 def generate_ssh_key_pair_on_remote(
@@ -1755,24 +1743,21 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
         join_ssh_with_ssh_agent(local_shell, local_user, seed_host, seed_user, ssh_public_keys)
     else:
         local_shell = sh.LocalShell()
-        if not ssh_public_keys:
-            configure_ssh_key(local_user)
-            if 0 != utils.ssh_copy_id_no_raise(local_user, seed_user, seed_host):
-                msg = f"Failed to login to {seed_user}@{seed_host}. Please check the credentials."
-                sudoer = userdir.get_sudoer()
-                if sudoer and seed_user != sudoer:
-                    args = ['sudo crm']
-                    args += [x for x in sys.argv[1:]]
-                    for i, arg in enumerate(args):
-                        if arg == '-c' or arg == '--cluster-node' and i + 1 < len(args):
-                            if '@' not in args[i+1]:
-                                args[i + 1] = f'{sudoer}@{seed_host}'
-                                msg += '\nOr, run "{}".'.format(' '.join(args))
-                raise ValueError(msg)
-            # After this, login to remote_node is passwordless
-            swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
-            configure_ssh_key('hacluster')
-            swap_public_ssh_key(seed_host, 'hacluster', 'hacluster', local_user, seed_user, add=True)
+        configure_ssh_key(local_user)
+        if 0 != utils.ssh_copy_id_no_raise(local_user, seed_user, seed_host):
+            msg = f"Failed to login to {seed_user}@{seed_host}. Please check the credentials."
+            sudoer = userdir.get_sudoer()
+            if sudoer and seed_user != sudoer:
+                args = ['sudo crm']
+                args += [x for x in sys.argv[1:]]
+                for i, arg in enumerate(args):
+                    if arg == '-c' or arg == '--cluster-node' and i + 1 < len(args):
+                        if '@' not in args[i+1]:
+                            args[i + 1] = f'{sudoer}@{seed_host}'
+                            msg += '\nOr, run "{}".'.format(' '.join(args))
+            raise ValueError(msg)
+        # After this, login to remote_node is passwordless
+        swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
 
     # This makes sure the seed host has its own SSH keys in its own
     # authorized_keys file (again, to help with the case where the
@@ -1791,7 +1776,9 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
     user_by_host.save_local()
 
+    configure_ssh_key('hacluster')
     change_user_shell('hacluster')
+    swap_public_ssh_key_for_secondary_user(sh.cluster_shell(), seed_host, 'hacluster')
 
 
 def join_ssh_with_ssh_agent(
@@ -1812,6 +1799,15 @@ def join_ssh_with_ssh_agent(
     authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
     for key in ssh_public_keys:
         authorized_key_manager.add(None, local_user, key)
+
+
+def swap_public_ssh_key_for_secondary_user(shell: sh.ClusterShell, host: str, user: str):
+    key_file_manager = ssh_key.KeyFileManager(shell)
+    local_key = ssh_key.KeyFile(key_file_manager.list_public_key_for_user(None, user)[0])
+    remote_key = key_file_manager.ensure_key_pair_exists_for_user(host, user)[0]
+    authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
+    authorized_key_manager.add(None, user, remote_key)
+    authorized_key_manager.add(host, user, local_key)
 
 
 def swap_public_ssh_key(
@@ -2088,16 +2084,18 @@ def swap_key_for_hacluster(other_node_list):
     The new join node should check and swap the public key between the old cluster nodes.
     """
     shell = sh.cluster_shell()
+    key_file_manager = ssh_key.KeyFileManager(shell)
+    authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
+    keys: typing.List[ssh_key.Key] = [
+        key_file_manager.ensure_key_pair_exists_for_user(node, 'hacluster')[0]
+        for node in other_node_list
+    ]
+    keys.append(ssh_key.KeyFile(key_file_manager.list_public_key_for_user(None, 'hacluster')[0]))
+    for key in keys:
+        authorized_key_manager.add(None, 'hacluster', key)
     for node in other_node_list:
-        for n in other_node_list:
-            if node == n:
-                continue
-            logger.info("Checking passwordless for hacluster between %s and %s", node, n)
-            _, public_key, authorized_file = key_files('hacluster').values()
-            public_key_content = shell.get_stdout_or_raise_error(f'cat {public_key}', n)
-            if not utils.check_text_included(public_key_content, authorized_file, node):
-                cmd = "echo '{}' >> {}".format(public_key_content, authorized_file)
-                shell.get_stdout_or_raise_error(cmd, node)
+        for key in keys:
+            authorized_key_manager.add(node, 'hacluster', key)
 
 
 def sync_files_to_disk():

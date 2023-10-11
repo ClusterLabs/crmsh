@@ -162,7 +162,7 @@ class KeyFileManager:
     def list_public_key_for_user(self, host: typing.Optional[str], user: str) -> typing.List[str]:
         result = self.cluster_shell.subprocess_run_without_input(
             host, user,
-            f'ls ~/.ssh/id_*.pub',
+            'ls ~/.ssh/id_*.pub',
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -191,14 +191,18 @@ class KeyFileManager:
 
     def ensure_key_pair_exists_for_user(self, host: typing.Optional[str], user: str) -> typing.List[InMemoryPublicKey]:
         script = '''if [ ! \\( {condition} \\) ]; then
-    ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -C 'Cluster internal on {host}' -N '' <> /dev/null
+    ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -C "Cluster internal on $(hostname)" -N '' <> /dev/null
 fi
-for file in ~/.ssh/id_{{{pattern}}}.pub; do
-    if [ -f "$file" ]; then cat "$file"; fi
+for file in ~/.ssh/id_{{{pattern}}}; do
+    if [ -f "$file" ]; then
+        if ! [ -f "$file".pub ]; then
+            ssh-keygen -y -f "$file" > "$file".pub
+        fi
+        cat "$file".pub
+    fi
 done
 '''.format(
             condition=' -o '.join([f'-f ~/.ssh/id_{t}' for t in self.KNOWN_KEY_TYPES]),
-            host=host,
             pattern=','.join(self.KNOWN_KEY_TYPES),
         )
         result = self.cluster_shell.subprocess_run_without_input(
