@@ -54,11 +54,24 @@ jobs:
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v3
-    - name: functional test for crm_report
+    - name: functional test for crm_report bugs
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
         index=`$GET_INDEX_OF crm_report_bugs`
+        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+    - uses: codecov/codecov-action@v3
+
+  functional_test_crm_report_normal:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for crm_report normal
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        index=`$GET_INDEX_OF crm_report_normal`
         $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
     - uses: codecov/codecov-action@v3
 

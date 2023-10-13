@@ -19,21 +19,21 @@ Feature: Regression test for bootstrap bugs
     Then    Got output "default"
 
   @clean
-  Scenario: Space value not allowed for option(bsc#1141976)
+  Scenario: Empty value not allowed for option(bsc#1141976)
     When    Try "crm -c ' '"
-    Then    Except "ERROR: Space value not allowed for dest "cib""
+    Then    Except "ERROR: Empty value not allowed for dest "cib""
     When    Try "crm cluster init --name ' '"
-    Then    Except "ERROR: cluster.init: Space value not allowed for dest "cluster_name""
+    Then    Except "ERROR: cluster.init: Empty value not allowed for dest "cluster_name""
     When    Try "crm cluster join -c ' '"
-    Then    Except "ERROR: cluster.join: Space value not allowed for dest "cluster_node""
+    Then    Except "ERROR: cluster.join: Empty value not allowed for dest "cluster_node""
     When    Try "crm cluster remove -c ' '"
-    Then    Except "ERROR: cluster.remove: Space value not allowed for dest "cluster_node""
+    Then    Except "ERROR: cluster.remove: Empty value not allowed for dest "cluster_node""
     When    Try "crm cluster geo_init -a ' '"
-    Then    Except "ERROR: cluster.geo_init: Space value not allowed for dest "arbitrator""
+    Then    Except "ERROR: cluster.geo_init: Empty value not allowed for dest "arbitrator""
     When    Try "crm cluster geo_join -c ' '"
-    Then    Except "ERROR: cluster.geo_join: Space value not allowed for dest "cluster_node""
+    Then    Except "ERROR: cluster.geo_join: Empty value not allowed for dest "cluster_node""
     When    Try "crm cluster geo_init_arbitrator -c ' '"
-    Then    Except "ERROR: cluster.geo_init_arbitrator: Space value not allowed for dest "cluster_node""
+    Then    Except "ERROR: cluster.geo_init_arbitrator: Empty value not allowed for dest "cluster_node""
 
   @clean
   Scenario: Setup cluster with crossed network(udpu only)

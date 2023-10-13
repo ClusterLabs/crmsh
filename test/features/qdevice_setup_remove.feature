@@ -25,6 +25,7 @@ Feature: corosync qdevice/qnetd setup/remove process
     And     Service "corosync-qnetd" is "started" on "qnetd-node"
     And     Show status from qnetd
     And     Show corosync qdevice configuration
+    And     Show qdevice status
 
   @clean
   Scenario: Setup qdevice/qnetd on running cluster

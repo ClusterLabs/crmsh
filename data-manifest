@@ -75,6 +75,7 @@ test/features/configure_bugs.feature
 test/features/constraints_bugs.feature
 test/features/coveragerc
 test/features/crm_report_bugs.feature
+test/features/crm_report_normal.feature
 test/features/environment.py
 test/features/geo_setup.feature
 test/features/healthcheck.feature
