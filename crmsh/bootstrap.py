@@ -228,8 +228,6 @@ class Context(object):
         me = utils.this_node()
         was_localhost_already = False
         li = [utils.parse_user_at_host(x) for x in self.user_at_node_list]
-        if utils.has_dup_value([node for user, node in li]):
-            utils.fatal("Duplicated host in -N/--nodes options.")
         for user in (user for user, node in li if node == me and user is not None and user != self.current_user):
             utils.fatal(f"Overriding current user '{self.current_user}' by '{user}'. Ouch, don't do it.")
         self.user_at_node_list = [value for (user, node), value in zip(li, self.user_at_node_list) if node != me]
@@ -792,13 +790,6 @@ def start_pacemaker(node_list=[], enable_flag=False):
                 node_list.remove(node)
                 logger.error(err)
     return service_manager.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
-
-
-def install_tmp(tmpfile, to):
-    with open(tmpfile, "r") as src:
-        with utils.open_atomic(to, "w") as dst:
-            for line in src:
-                dst.write(line)
 
 
 def append(fromfile, tofile, remote=None):

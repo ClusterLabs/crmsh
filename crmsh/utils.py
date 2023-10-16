@@ -719,17 +719,6 @@ def file2str(fname, noerr=True):
     return s.strip()
 
 
-def file2list(fname):
-    '''
-    Read a file into a list (newlines dropped).
-    '''
-    try:
-        return open(fname).read().split('\n')
-    except IOError as msg:
-        logger.error(msg)
-        return None
-
-
 def safe_open_w(fname):
     if fname == "-":
         f = sys.stdout
@@ -1161,13 +1150,6 @@ def shortdate(ts):
     if ts is not None:
         return time.strftime("%F", time.localtime(ts))
     return time.strftime("%F", time.localtime(0))
-
-
-def sort_by_mtime(l):
-    'Sort a (small) list of files by time mod.'
-    l2 = [(os.stat(x).st_mtime, x) for x in l]
-    l2.sort()
-    return [x[1] for x in l2]
 
 
 def file_find_by_name(root, filename):
@@ -1668,20 +1650,6 @@ def is_larger_than_pcmk_118(cib_f=None):
     return is_min_pcmk_ver("1.1.8", cib_f=cib_f)
 
 
-@memoize
-def cibadmin_features():
-    '''
-    # usage example:
-    if 'corosync-plugin' in cibadmin_features()
-    '''
-    rc, outp = ShellUtils().get_stdout(['cibadmin', '-!'], shell=False)
-    if rc == 0:
-        m = re.match(r'Pacemaker\s(\S+)\s\(Build: ([^\)]+)\):\s(.*)', outp.strip())
-        if m and len(m.groups()) > 2:
-            return m.group(3).split()
-    return []
-
-
 # quote function from python module shlex.py in python 3.3
 
 _find_unsafe = re.compile(r'[^\w@%+=:,./-]').search
@@ -1746,22 +1714,6 @@ def fetch_lifetime_opt(args, iso8601=True):
         if opt in _LIFETIME or (iso8601 and _ISO8601_RE.match(opt)):
             return args.pop()
     return None
-
-
-def resolve_hostnames(hostnames):
-    '''
-    Tries to resolve the given list of hostnames.
-    returns (ok, failed-hostname)
-    ok: True if all hostnames resolved
-    failed-hostname: First failed hostname resolution
-    '''
-    import socket
-    for node in hostnames:
-        try:
-            socket.gethostbyname(node)
-        except socket.error:
-            return False, node
-    return True, None
 
 
 def list_corosync_node_names():
@@ -2167,29 +2119,6 @@ def debug_timestamp():
     return datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
 
 
-def get_member_iplist():
-    rc, out, err= ShellUtils().get_stdout_stderr("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
-    if rc != 0:
-        logger.debug(err)
-        return None
-
-    ip_list = []
-    for line in out.split('\n'):
-        match = re.search(r'ip\((.*?)\)', line)
-        if match:
-            ip_list.append(match.group(1))
-    return ip_list
-
-
-def get_iplist_corosync_using():
-    """
-    Get ip list used by corosync
-    """
-    rc, out, err = ShellUtils().get_stdout_stderr("corosync-cfgtool -s")
-    if rc != 0:
-        raise ValueError(err)
-    return re.findall(r'id\s*=\s*(.*)', out)
-
 def check_ssh_passwd_need(local_user, remote_user, host):
     """
     Check whether access to host need password
@@ -2333,32 +2262,12 @@ class IP(object):
         """
         return cls(addr).version == 6
 
-    @classmethod
-    def is_valid_ip(cls, addr):
-        """
-        Check whether the address is valid IP address
-        """
-        cls_inst = cls(addr)
-        try:
-            cls_inst.ip_address
-        except ValueError:
-            return False
-        else:
-            return True
-
     @property
     def is_loopback(self):
         """
         Check whether the address is loopback address
         """
         return self.ip_address.is_loopback
-
-    @property
-    def is_link_local(self):
-        """
-        Check whether the address is link-local address
-        """
-        return self.ip_address.is_link_local
 
 
 class Interface(IP):
@@ -2393,12 +2302,6 @@ class Interface(IP):
         Get network address
         """
         return str(self.ip_interface.network.network_address)
-
-    def ip_in_network(self, addr):
-        """
-        Check whether the addr in the network
-        """
-        return IP(addr).ip_address in self.ip_interface.network
 
 
 class InterfacesInfo(object):
@@ -2550,18 +2453,6 @@ class InterfacesInfo(object):
                     _ip_list.append(self._nic_first_ip(nic))
                     break
         return _ip_list
-
-    @classmethod
-    def ip_in_network(cls, addr):
-        """
-        Check whether given address was in one of local networks
-        """
-        cls_inst = cls(IP.is_ipv6(addr))
-        cls_inst.get_interfaces_info()
-        for interface_inst in cls_inst.interface_list:
-            if interface_inst.ip_in_network(addr):
-                return True
-        return False
 
 
 def check_file_content_included(source_file, target_file, remote=None, source_local=False):
@@ -3044,10 +2935,6 @@ def read_from_file(infile):
     with open(infile, 'rt', encoding='utf-8', errors='replace') as f:
         data = f.read()
     return to_ascii(data)
-
-
-def has_dup_value(_list):
-    return _list and len(_list) != len(set(_list))
 
 
 def detect_file(_file, remote=None):
