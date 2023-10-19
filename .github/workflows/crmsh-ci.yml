@@ -333,6 +333,18 @@ jobs:
         $DOCKER_SCRIPT `$GET_INDEX_OF user_access`
     - uses: codecov/codecov-action@v3
 
+  functional_test_ssh_agent:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for user access
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        $DOCKER_SCRIPT `$GET_INDEX_OF ssh_agent`
+    - uses: codecov/codecov-action@v3
+
   original_regression_test:
     runs-on: ubuntu-20.04
     timeout-minutes: 40

@@ -98,6 +98,10 @@ def step_impl(context, addr, iface):
     assert bool(res) is True
 
 
+@given('Run "{cmd}" OK on "{addr}"')
+def step_impl(context, cmd, addr):
+    _, out, _ = run_command_local_or_remote(context, cmd, addr)
+
 @when('Run "{cmd}" on "{addr}"')
 def step_impl(context, cmd, addr):
     _, out, _ = run_command_local_or_remote(context, cmd, addr)
@@ -523,3 +527,10 @@ def step_impl(context, nodelist):
             assert bootstrap.is_nologin('hacluster') is False
         else:
             assert bootstrap.is_nologin('hacluster', node) is False
+
+
+@given('ssh-agent is started at "{path}" on nodes [{nodes:str+}]')
+def step_impl(context, path, nodes):
+    for node in nodes:
+        rc, _, _ = behave_agent.call(node, 1122, f"systemd-run -u ssh-agent /usr/bin/ssh-agent -D -a '{path}'", user='root')
+        assert 0 == rc
