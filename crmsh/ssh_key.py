@@ -46,6 +46,12 @@ class KeyFile(Key):
                 self._public_key = f.read().strip()
             return self._public_key
 
+    def __eq__(self, other):
+        return isinstance(other, KeyFile) and self._path == other._path and self.public_key() == other.public_key()
+
+    def __repr__(self):
+        return f'KeyFile(path={self._path}, key={self.public_key()})'
+
 
 class InMemoryPublicKey(Key):
     def __init__(self, content: str):
@@ -53,6 +59,9 @@ class InMemoryPublicKey(Key):
 
     def public_key(self) -> str:
         return self.content
+
+    def __eq__(self, other):
+        return isinstance(other, InMemoryPublicKey) and self.content == other.content
 
 
 class AuthorizedKeyManager:
