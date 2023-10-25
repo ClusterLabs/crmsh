@@ -63,6 +63,7 @@ class CibShadow(command.UI):
             fd, fname = tmpfiles.create(directory=xmlutil.cib_shadow_dir(), prefix="shadow.crmsh_")
             name = os.path.basename(fname).replace("shadow.", "")
             constants.tmp_cib = True
+            os.close(fd)
 
         if "empty" in opt_l:
             new_cmd = "%s -e '%s'" % (self.extcmd, name)

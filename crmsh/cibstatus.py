@@ -237,6 +237,7 @@ class CibStatus(object):
         if config.core.dotty and not nograph:
             fd, dotfile = mkstemp()
             cmd = "%s -D %s" % (cmd, dotfile)
+            os.close(fd)
         else:
             dotfile = None
         rc = ext_cmd(cmd % self.source_file())

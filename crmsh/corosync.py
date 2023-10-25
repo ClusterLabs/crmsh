@@ -175,7 +175,7 @@ def pull_configuration(from_node):
     Copy the configuration from the given node to this node
     '''
     local_path = conf()
-    _, fname = tmpfiles.create()
+    fd, fname = tmpfiles.create()
     print("Retrieving %s:%s..." % (from_node, local_path))
     cmd = ['scp', '-qC',
            '-o', 'PasswordAuthentication=no',
@@ -196,6 +196,7 @@ def pull_configuration(from_node):
         local_file = open(local_path, 'w')
         local_file.write(data)
         local_file.close()
+        os.close(fd)
     else:
         raise ValueError("Failed to retrieve %s from %s" % (local_path, from_node))
 
