@@ -679,7 +679,6 @@ def str2tmp(_str, suffix=".pcmk"):
     if not s.endswith('\n'):
         f.write("\n")
     f.close()
-    os.close(fd)
     return tmp
 
 
