@@ -2822,29 +2822,6 @@ def bootstrap_init_geo(context):
 
 
 def geo_fetch_config(node):
-    user, node = utils.parse_user_at_host(node)
-    if user is not None:
-        try:
-            local_user = utils.user_of(utils.this_node())
-        except UserNotFoundError:
-            local_user = user
-        remote_user = user
-    else:
-        try:
-            local_user, remote_user = UserOfHost.instance().user_pair_for_ssh(node)
-        except UserNotFoundError:
-            try:
-                local_user = utils.user_of(utils.this_node())
-            except UserNotFoundError:
-                local_user = userdir.getuser()
-            remote_user = local_user
-    configure_ssh_key(local_user)
-    logger.info("Retrieving configuration - This may prompt for %s@%s:", remote_user, node)
-    utils.ssh_copy_id(local_user, remote_user, node)
-    user_by_host = utils.HostUserConfig()
-    user_by_host.add(local_user, utils.this_node())
-    user_by_host.add(remote_user, node)
-    user_by_host.save_local()
     cmd = "tar -c -C '{}' .".format(BOOTH_DIR)
     with tempfile.TemporaryDirectory() as tmpdir:
         pipe_outlet, pipe_inlet = os.pipe()
@@ -2875,6 +2852,27 @@ def geo_fetch_config(node):
             raise ValueError("Problem encountered with booth configuration from {}: {}".format(node, err))
 
 
+def _select_user_pair_for_ssh_for_secondary_components(dest: str):
+    """Select a user pair for operating secondary components, e.g. qdevice and geo cluster arbitor"""
+    user, node = utils.parse_user_at_host(dest)
+    if user is not None:
+        try:
+            local_user = utils.user_of(utils.this_node())
+        except UserNotFoundError:
+            local_user = user
+        remote_user = user
+    else:
+        try:
+            local_user, remote_user = UserOfHost.instance().user_pair_for_ssh(node)
+        except UserNotFoundError:
+            try:
+                local_user = utils.user_of(utils.this_node())
+            except UserNotFoundError:
+                local_user = userdir.getuser()
+            remote_user = local_user
+    return local_user, remote_user, node
+
+
 def geo_cib_config(clusters):
     cluster_name = corosync.get_values('totem.cluster_name')[0]
     if cluster_name not in list(clusters.keys()):
@@ -2902,7 +2900,29 @@ def bootstrap_join_geo(context):
     _context = context
     init_common_geo()
     check_tty()
-    geo_fetch_config(_context.cluster_node)
+    user, node = utils.parse_user_at_host(_context.cluster_node)
+    if not sh.cluster_shell().can_run_as(node, 'root'):
+        local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
+        if context.use_ssh_agent:
+            try:
+                ssh_agent = ssh_key.AgentClient()
+                keys = ssh_agent.list()
+            except ssh_key.Error:
+                logger.error("Cannot get a public key from ssh-agent.")
+                raise
+            local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
+            join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
+        else:
+            configure_ssh_key(local_user)
+            if 0 != utils.ssh_copy_id_no_raise(local_user, remote_user, node):
+                raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
+            swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True)
+        user_by_host = utils.HostUserConfig()
+        user_by_host.add(local_user, utils.this_node())
+        user_by_host.add(remote_user, node)
+        user_by_host.set_no_generating_ssh_key(context.use_ssh_agent)
+        user_by_host.save_local()
+    geo_fetch_config(node)
     logger.info("Sync booth configuration across cluster")
     csync2_update(BOOTH_DIR)
     geo_cib_config(_context.clusters)
@@ -2918,7 +2938,29 @@ def bootstrap_arbitrator(context):
 
     init_common_geo()
     check_tty()
-    geo_fetch_config(_context.cluster_node)
+    user, node = utils.parse_user_at_host(_context.cluster_node)
+    if not sh.cluster_shell().can_run_as(node, 'root'):
+        local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
+        if context.use_ssh_agent:
+            try:
+                ssh_agent = ssh_key.AgentClient()
+                keys = ssh_agent.list()
+            except ssh_key.Error:
+                logger.error("Cannot get a public key from ssh-agent.")
+                raise
+            local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
+            join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
+        else:
+            configure_ssh_key(local_user)
+            if 0 != utils.ssh_copy_id_no_raise(local_user, remote_user, node):
+                raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
+            swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True)
+        user_by_host = utils.HostUserConfig()
+        user_by_host.add(local_user, utils.this_node())
+        user_by_host.add(remote_user, node)
+        user_by_host.set_no_generating_ssh_key(context.use_ssh_agent)
+        user_by_host.save_local()
+    geo_fetch_config(node)
     if not os.path.isfile(BOOTH_CFG):
         utils.fatal("Failed to copy {} from {}".format(BOOTH_CFG, _context.cluster_node))
     # TODO: verify that the arbitrator IP in the configuration is us?

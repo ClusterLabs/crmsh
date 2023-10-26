@@ -735,6 +735,8 @@ to get the geo cluster configuration.""",
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_argument("-c", "--cluster-node", metavar="[USER@]HOST", help="An already-configured geo cluster", dest="cluster_node")
+        parser.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
+                            help="Use an existing key from ssh-agent instead of creating new key pairs")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return

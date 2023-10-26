@@ -279,11 +279,14 @@ class ClusterShell:
         self.raise_ssh_error = raise_ssh_error
 
     def can_run_as(self, host: typing.Optional[str], user: str) -> bool:
-        result = self.subprocess_run_without_input(
-            host, user, 'true',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        try:
+            result = self.subprocess_run_without_input(
+                host, user, 'true',
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except user_of_host.UserNotFoundError:
+            return False
         return 0 == result.returncode
 
     def subprocess_run_without_input(self, host: typing.Optional[str], user: typing.Optional[str], cmd: str, **kwargs):
