@@ -1705,7 +1705,7 @@ def list_cluster_nodes():
 
     try:
         # when pacemaker running
-        rc, outp = stdout2list(['crm_node', '-l'], stderr_on=False, shell=False)
+        rc, outp = stdout2list("crm_node -l", stderr_on=False)
         if rc == 0:
             return [x for x in [getname(line.split()) for line in outp] if x and x != '(null)']
 
