@@ -5,6 +5,7 @@ import re
 import subprocess
 import tempfile
 import typing
+from io import StringIO
 
 from crmsh import sh
 
@@ -18,11 +19,29 @@ class Error(ValueError):
 
 
 class AgentNotAvailableError(Error):
-    pass
+    def __init__(self, msg):
+        super().__init__(f'{msg}{self.diagnose()}')
+
+    @staticmethod
+    def diagnose() -> str:
+        with StringIO() as buf:
+            if 'SSH_AUTH_SOCK' not in os.environ:
+                buf.write(' Environment variable SSH_AUTH_SOCK does not exist.')
+                if 'SUDO_USER' in os.environ:
+                    buf.write(' Please check whether ssh-agent is available and consider using "sudo --preserve-env=SSH_AUTH_SOCK".')
+            return buf.getvalue()
 
 
 class NoKeysInAgentError(Error):
-    pass
+    def __init__(self, msg):
+        super().__init__(f'{msg}{self.diagnose()}')
+
+    @staticmethod
+    def diagnose() -> str:
+        ssh_auth_sock = os.environ["SSH_AUTH_SOCK"]
+        st = os.stat(ssh_auth_sock)
+        owner_name = pwd.getpwuid(st.st_uid).pw_name
+        return f' crmsh is using an ssh-agent listening at {ssh_auth_sock}, owned by {owner_name}. Please add at least one key pair with `ssh-add`'
 
 
 class Key:

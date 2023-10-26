@@ -4,9 +4,19 @@ Feature: ssh-agent support
   Test ssh-agent support for crmsh
   Need nodes: hanode1 hanode2 hanode3 qnetd-node
 
+  Scenario: Errors are reported when ssh-agent is not avaible
+    When    Try "crm cluster init --use-ssh-agent -y" on "hanode1"
+    Then    Expected "Environment variable SSH_AUTH_SOCK does not exist." in stderr
+    When    Try "SSH_AUTH_SOCK=/root/ssh-auth-sock crm cluster init --use-ssh-agent -y" on "hanode1"
+    Then    Expected "Environment variable SSH_AUTH_SOCK does not exist." not in stderr
+
+  Scenario: Errors are reported when there are no keys in ssh-agent
+    Given   ssh-agent is started at "/root/ssh-auth-sock" on nodes ["hanode1", "hanode2", "hanode3"]
+    When    Try "SSH_AUTH_SOCK=/root/ssh-auth-sock crm cluster init --use-ssh-agent -y" on "hanode1"
+    Then    Expected "ssh-add" in stderr
+
   Scenario: Skip creating ssh key pairs with --use-ssh-agent
     Given   Run "mkdir /root/ssh_disabled && mv /root/.ssh/id_* /root/ssh_disabled" OK on "hanode1,hanode2,hanode3"
-    And     ssh-agent is started at "/root/ssh-auth-sock" on nodes ["hanode1", "hanode2", "hanode3"]
     When    Run "SSH_AUTH_SOCK=/root/ssh-auth-sock ssh-add /root/ssh_disabled/id_rsa" on "hanode1,hanode2,hanode3"
     And     Run "SSH_AUTH_SOCK=/root/ssh-auth-sock crm cluster init --use-ssh-agent -y" on "hanode1"
     And     Run "SSH_AUTH_SOCK=/root/ssh-auth-sock crm cluster join --use-ssh-agent -y -c hanode1" on "hanode2"

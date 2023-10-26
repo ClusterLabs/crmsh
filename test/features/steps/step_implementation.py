@@ -100,7 +100,7 @@ def step_impl(context, addr, iface):
 
 @given('Run "{cmd}" OK on "{addr}"')
 def step_impl(context, cmd, addr):
-    _, out, _ = run_command_local_or_remote(context, cmd, addr)
+    _, out, _ = run_command_local_or_remote(context, cmd, addr, True)
 
 @when('Run "{cmd}" on "{addr}"')
 def step_impl(context, cmd, addr):
