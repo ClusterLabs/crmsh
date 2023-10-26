@@ -157,7 +157,7 @@ def test_list_cluster_nodes_pacemaker_running():
         crm_node_value= ["336860211 15sp1-1 member", "336860212 15sp1-2 member"]
         mock_stdout2list.return_value = (0, crm_node_value)
         assert utils.list_cluster_nodes() == ['15sp1-1', '15sp1-2']
-    mock_stdout2list.assert_called_once_with(['crm_node', '-l'], shell=False, stderr_on=False)
+    mock_stdout2list.assert_called_once_with("crm_node -l", stderr_on=False)
 
 
 @mock.patch('crmsh.utils.stdout2list')
@@ -166,7 +166,7 @@ def test_list_cluster_nodes_corosync_running(mock_get_member_iplist, mock_stdout
     mock_stdout2list.return_value = (1, None)
     mock_get_member_iplist.return_value = ["node1", "node2"]
     assert utils.list_cluster_nodes() == ["node1", "node2"]
-    mock_stdout2list.assert_called_once_with(['crm_node', '-l'], shell=False, stderr_on=False)
+    mock_stdout2list.assert_called_once_with("crm_node -l", stderr_on=False)
     mock_get_member_iplist.assert_called_once_with()
 
 
