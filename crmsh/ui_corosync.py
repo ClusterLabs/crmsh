@@ -119,8 +119,17 @@ class Corosync(command.UI):
         Edit the corosync configuration.
         '''
         cfg = corosync.conf()
+        if not os.path.isfile(cfg):
+            logger.warning(f"{cfg} does not exist")
+            return False
         try:
-            utils.edit_file_ext(cfg, template='')
+            rc = utils.edit_file_ext(cfg, template='')
+            if rc == 1:
+                logger.warning(f"\"{cfg}\" has changed, should be synced with other nodes")
+                logger.info("Use \"crm corosync diff\" to show the difference")
+                logger.info("Use \"crm corosync push\" to sync")
+                return False
+            return True
         except IOError as e:
             context.fatal_error(str(e))
 
