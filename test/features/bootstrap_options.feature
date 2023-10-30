@@ -10,7 +10,7 @@ Feature: crmsh bootstrap process - options
       "-u":      Configure corosync to communicate over unicast
       "-U":      Configure corosync to communicate over multicast
   Tag @clean means need to stop cluster service if the service is available
-  Need nodes: hanode1 hanode2
+  Need nodes: hanode1 hanode2 hanode3
 
   @clean
   Scenario: Check help output
@@ -39,7 +39,7 @@ Feature: crmsh bootstrap process - options
   Scenario: Init whole cluster service on node "hanode1" using "--node" option
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y --node "hanode1 hanode2"" on "hanode1"
+    When    Run "crm cluster init -y --node "hanode1 hanode2 hanode3"" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
