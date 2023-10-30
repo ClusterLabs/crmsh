@@ -85,14 +85,10 @@ class ConfParser(object):
         """
         Verify config file
         """
-        if not os.path.exists(self._config_file):
-            raise ValueError("File \"{}\" not exist".format(self._config_file))
-        if not os.path.isfile(self._config_file):
-            raise ValueError("\"{}\" is not a file".format(self._config_file))
-        with open(self._config_file) as f:
-            data = f.read()
-            if len(re.findall("[{}]", data)) % 2 != 0:
-                raise ValueError("{}: Missing closing brace".format(self._config_file))
+        try:
+            corosync.verify_corosync_conf(self._config_file)
+        except Exception as e:
+            utils.fatal(str(e))
 
     def _convert2dict_raw(self, file_content_lines, initial_path=""):
         """

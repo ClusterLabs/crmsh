@@ -329,3 +329,31 @@ def token_and_consensus_timeout():
     """
     _dict = get_corosync_value_dict()
     return _dict["token"] + _dict["consensus"]
+
+
+class CorosyncConfigParseError(Exception):
+    pass
+class CorosyncConfigNotExist(Exception):
+    pass
+class CorosyncConfigEmpty(Exception):
+    pass
+
+
+def verify_corosync_conf(cfg_file=None):
+    """
+    Verify corosync.conf
+    """
+    corosync_conf_file = cfg_file or conf()
+    if not os.path.isfile(corosync_conf_file):
+        raise CorosyncConfigNotExist(f"{corosync_conf_file} not exist")
+    if os.stat(corosync_conf_file).st_size == 0:
+        raise CorosyncConfigEmpty(f"{corosync_conf_file} is empty")
+
+    cmd = f"corosync -t {corosync_conf_file}"
+    error_pattern = "(parser error:|parse error)"
+    rc, _, err = utils.get_stdout_stderr(cmd)
+    if rc != 0:
+        res = re.search(f"({error_pattern} .*)", err)
+        if res:
+            err = res.group(1)
+        raise CorosyncConfigParseError(err)
