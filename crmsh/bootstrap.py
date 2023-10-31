@@ -1792,15 +1792,16 @@ def join_ssh_with_ssh_agent(
 ):
     # As ssh-agent is used, the local_user does not have any effects
     shell = sh.SSHShell(local_shell, 'root')
+    authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
     if not shell.can_run_as(seed_host, seed_user):
-        raise ValueError(f'Failed to login to {seed_user}@{seed_host}')
+        for key in ssh_public_keys:
+            authorized_key_manager.add(seed_host, seed_user, key)
     if seed_user != 'root' and 0 != shell.subprocess_run_without_input(
             seed_host, seed_user, 'sudo true',
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
     ).returncode:
         raise ValueError(f'Failed to sudo on {seed_user}@{seed_host}')
-    authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
     for key in ssh_public_keys:
         authorized_key_manager.add(None, local_user, key)
 
