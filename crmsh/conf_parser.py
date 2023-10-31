@@ -128,14 +128,15 @@ class ConfParser(object):
 
         return corodict, index
 
-    def convert2dict(self):
+    def convert2dict(self, verify=False):
         """
         Wrapped _convert2dict_raw function
         """
         if self._config_data:
             _dict, _ = self._convert2dict_raw(self._config_data.splitlines())
         else:
-            self._verify_config_file()
+            if verify:
+                self._verify_config_file()
             with open(self._config_file) as f:
                 _dict, _ = self._convert2dict_raw(f.read().splitlines())
         self._config_inst = Dotable.parse(_dict)
@@ -295,7 +296,7 @@ class ConfParser(object):
         Then write back to config file
         """
         inst = cls()
-        inst.convert2dict()
+        inst.convert2dict(verify=True)
         inst.set(path, value, index)
         utils.str2file(inst.convert2string(), inst._config_file)
 
@@ -304,6 +305,6 @@ class ConfParser(object):
         """
         """
         inst = cls()
-        inst.convert2dict()
+        inst.convert2dict(verify=True)
         inst.remove(path, index)
         utils.str2file(inst.convert2string(), inst._config_file)
