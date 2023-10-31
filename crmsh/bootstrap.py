@@ -837,6 +837,7 @@ def init_ssh():
         try:
             ssh_agent = ssh_key.AgentClient()
             keys = ssh_agent.list()
+            logger.info("Using public keys from ssh-agent...")
         except ssh_key.Error:
             logger.error("Cannot get a public key from ssh-agent.")
             raise
@@ -866,6 +867,7 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
     authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
     if ssh_public_keys:
         # Use specified key. Do not generate new ones.
+        logger.info("Adding public keys to authorized_keys for user %s...", local_user)
         for key in ssh_public_keys:
             authorized_key_manager.add(None, local_user, key)
     else:
@@ -879,7 +881,7 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
         print()
         if ssh_public_keys:
             for user, node in user_node_list:
-                logger.info("Adding public key to authorized_keys on %s@%s", user, node)
+                logger.info("Adding public keys to authorized_keys on %s@%s", user, node)
                 for key in ssh_public_keys:
                     authorized_key_manager.add(node, local_user, key)
                 if user != 'root' and 0 != shell.subprocess_run_without_input(
@@ -1669,6 +1671,7 @@ def init_qdevice():
         ssh_user = local_user
     # Configure ssh passwordless to qnetd if detect password is needed
     if UserOfHost.instance().use_ssh_agent():
+        logger.info("Adding public keys to authorized_keys for user root...")
         for key in ssh_key.AgentClient().list():
             ssh_key.AuthorizedKeyManager(sh.SSHShell(
                 sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')}),
@@ -1728,6 +1731,7 @@ def join_ssh(seed_host, seed_user):
         try:
             ssh_agent = ssh_key.AgentClient()
             keys = ssh_agent.list()
+            logger.info("Using public keys from ssh-agent...")
         except ssh_key.Error:
             logger.error("Cannot get a public key from ssh-agent.")
             raise
@@ -2907,6 +2911,7 @@ def bootstrap_join_geo(context):
             try:
                 ssh_agent = ssh_key.AgentClient()
                 keys = ssh_agent.list()
+                logger.info("Using public keys from ssh-agent...")
             except ssh_key.Error:
                 logger.error("Cannot get a public key from ssh-agent.")
                 raise
@@ -2945,6 +2950,7 @@ def bootstrap_arbitrator(context):
             try:
                 ssh_agent = ssh_key.AgentClient()
                 keys = ssh_agent.list()
+                logger.info("Using public keys from ssh-agent...")
             except ssh_key.Error:
                 logger.error("Cannot get a public key from ssh-agent.")
                 raise
