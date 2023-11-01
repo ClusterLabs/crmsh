@@ -15,8 +15,11 @@ Feature: Functional test for configure sub level
     And     Online nodes are "hanode1 hanode2"
 
     # mask password by default
-    When    Run "crm node utilization hanode1 set password qwertyui" on "hanode1"
+    When    Run "crm node utilization hanode1 set password=qwertyui" on "hanode1"
     When    Try "crm configure show|grep password|grep qwertyui"
+    Then    Expected return code is "1"
+    When    Run "crm node utilization hanode2 set password testingpass" on "hanode1"
+    When    Try "crm configure show|grep password|grep testingpass"
     Then    Expected return code is "1"
     And     Show crm configure
 
