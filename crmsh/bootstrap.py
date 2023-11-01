@@ -357,6 +357,8 @@ Configure SBD:
         self.diskless_sbd = diskless_sbd
         self._sbd_devices = None
         self._watchdog_inst = None
+        self.no_overwrite_map = {}
+        self.no_update_config = False
 
     def _parse_sbd_device(self):
         """
@@ -410,6 +412,12 @@ Configure SBD:
                 raise ValueError("{} doesn't look like a block device".format(dev))
             self._compare_device_uuid(dev, compare_node_list)
 
+    def _no_overwrite_check(self, dev):
+        """
+        Check if device already initialized and if need to overwrite
+        """
+        return SBDManager.has_sbd_device_already_initialized(dev) and not confirm("SBD is already configured to use {} - overwrite?".format(dev))
+
     def _get_sbd_device_interactive(self):
         """
         Get sbd device on interactive mode
@@ -425,7 +433,10 @@ Configure SBD:
             return
 
         configured_dev_list = self._get_sbd_device_from_config()
-        if configured_dev_list and not confirm("SBD is already configured to use {} - overwrite?".format(';'.join(configured_dev_list))):
+        for dev in configured_dev_list:
+            self.no_overwrite_map[dev] = self._no_overwrite_check(dev)
+        if self.no_overwrite_map and all(self.no_overwrite_map.values()):
+            self.no_update_config = True
             return configured_dev_list
 
         dev_list = []
@@ -437,14 +448,22 @@ Configure SBD:
             if dev == "none":
                 self.diskless_sbd = True
                 return
+
             dev_list = utils.re_split_string(self.PARSE_RE, dev)
             try:
                 self._verify_sbd_device(dev_list)
             except ValueError as err_msg:
                 print_error_msg(str(err_msg))
                 continue
-            for dev_item in dev_list:
-                warn("All data on {} will be destroyed!".format(dev_item))
+
+            for dev in dev_list:
+                if dev not in self.no_overwrite_map:
+                    self.no_overwrite_map[dev] = self._no_overwrite_check(dev)
+                if self.no_overwrite_map[dev]:
+                    if dev == dev_list[-1]:
+                        return dev_list
+                    continue
+                warn("All data on {} will be destroyed!".format(dev))
                 if confirm('Are you sure you wish to use this device?'):
                     dev_looks_sane = True
                 else:
@@ -461,6 +480,10 @@ Configure SBD:
         if self.sbd_devices_input:
             dev_list = self._parse_sbd_device()
             self._verify_sbd_device(dev_list)
+            for dev in dev_list:
+                self.no_overwrite_map[dev] = self._no_overwrite_check(dev)
+            if all(self.no_overwrite_map.values()) and dev_list == self._get_sbd_device_from_config():
+                self.no_update_config = True
         elif not self.diskless_sbd:
             dev_list = self._get_sbd_device_interactive()
         self._sbd_devices = dev_list
@@ -472,6 +495,8 @@ Configure SBD:
         if self.diskless_sbd:
             return
         for dev in self._sbd_devices:
+            if dev in self.no_overwrite_map and self.no_overwrite_map[dev]:
+                continue
             rc, _, err = invoke("sbd -d {} create".format(dev))
             if not rc:
                 error("Failed to initialize SBD device {}: {}".format(dev, err))
@@ -480,6 +505,10 @@ Configure SBD:
         """
         Update /etc/sysconfig/sbd
         """
+        if self.no_update_config:
+            csync2_update(SYSCONFIG_SBD)
+            return
+
         shutil.copyfile(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
         sbd_config_dict = {
                 "SBD_PACEMAKER": "yes",
@@ -501,7 +530,7 @@ Configure SBD:
         if res:
             return utils.re_split_string(self.PARSE_RE, res)
         else:
-            return None
+            return []
 
     def sbd_init(self):
         """
@@ -518,9 +547,13 @@ Configure SBD:
         if not self._sbd_devices and not self.diskless_sbd:
             invoke("systemctl disable sbd.service")
             return
+        msg = ""
         if self.diskless_sbd:
             warn(self.DISKLESS_SBD_WARNING)
-        with status_long("Initializing {}SBD...".format("diskless " if self.diskless_sbd else "")):
+            msg = "Configuring diskless SBD"
+        elif not all(self.no_overwrite_map.values()):
+            msg = "Initializing SBD"
+        with status_long(msg):
             self._initialize_sbd()
             self._update_configuration()
             invoke("systemctl enable sbd.service")
@@ -575,6 +608,15 @@ Configure SBD:
         if not dev_list:
             raise ValueError("No sbd device configured")
         inst._verify_sbd_device(dev_list, utils.list_cluster_nodes_except_me())
+
+    @staticmethod
+    def has_sbd_device_already_initialized(dev):
+        """
+        Check if sbd device already initialized
+        """
+        cmd = "sbd -d {} dump".format(dev)
+        rc, _, _ = utils.get_stdout_stderr(cmd)
+        return rc == 0
 
 
 _context = None
@@ -823,8 +865,9 @@ def status(msg):
 
 @contextmanager
 def status_long(msg):
-    log("# {}...".format(msg))
-    if not _context.quiet:
+    if msg:
+        log("# {}...".format(msg))
+    if not _context.quiet and msg:
         sys.stdout.write("  {}...".format(msg))
         sys.stdout.flush()
     try:
@@ -832,7 +875,8 @@ def status_long(msg):
     except:
         raise
     else:
-        status_done()
+        if msg:
+            status_done()
 
 
 def status_progress():
