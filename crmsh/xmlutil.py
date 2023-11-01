@@ -1535,6 +1535,22 @@ class CrmMonXmlParser(object):
         return len(elem_list) != 0
 
     @classmethod
+    def get_node_list(cls, attr=None):
+        attr_dict = {
+            'standby': '@standby="true"',
+            'online': '@standby="false"'
+        }
+        if not attr or attr not in attr_dict:
+            xpath_str = '//node'
+        else:
+            xpath_str = f'//node[{attr_dict[attr]}]'
+
+        cls_inst = cls()
+        cls_inst._load()
+        elem_list = cls_inst.xml_elem.xpath(xpath_str)
+        return [e.get('name') for e in elem_list]
+
+    @classmethod
     def is_resource_configured(cls, ra_type, peer=None):
         """
         Check if the RA configured
