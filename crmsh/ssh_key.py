@@ -238,7 +238,6 @@ done
             script,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            start_new_session=True,
         )
         if result.returncode != 0:
             print(script)

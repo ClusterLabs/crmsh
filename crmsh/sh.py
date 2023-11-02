@@ -25,6 +25,7 @@ import re
 import socket
 import subprocess
 import typing
+from io import StringIO
 
 from . import constants
 from .pyshim import cache
@@ -45,14 +46,25 @@ class Error(ValueError):
 class AuthorizationError(Error):
     def __init__(self, cmd: str, host: typing.Optional[str], user: str, msg: str):
         super().__init__(
-            'Failed to run command on {optional_user}{host}: {msg}: {cmd}'.format(
+            'Failed to run command {cmd} on {optional_user}{host}: {msg} {diagnose}'.format(
                 optional_user=f'{user}@' if user is not None else '',
-                host=host, msg=msg, cmd=cmd
+                host=host, msg=msg, cmd=cmd,
+                diagnose=self.diagnose(),
             ),
             cmd
         )
         self.host = host
         self.user = user
+
+    @staticmethod
+    def diagnose() -> str:
+        if user_of_host.instance().use_ssh_agent():
+            with StringIO() as buf:
+                if 'SSH_AUTH_SOCK' not in os.environ:
+                    buf.write('Environment variable SSH_AUTH_SOCK does not exist.')
+                    if 'SUDO_USER' in os.environ:
+                        buf.write(' Please check whether ssh-agent is available and consider using "sudo --preserve-env=SSH_AUTH_SOCK".')
+                return buf.getvalue()
 
 
 class CommandFailure(Error):
@@ -309,7 +321,7 @@ class ClusterShell:
             local_user, remote_user = self.user_of_host.user_pair_for_ssh(host)
             result = self.local_shell.su_subprocess_run(
                 local_user,
-                'ssh {} {} {}@{} sudo -H -u {} {} /bin/sh'.format(
+                'ssh {} {} -o BatchMode=yes {}@{} sudo -H -u {} {} /bin/sh'.format(
                     '-A' if self.forward_ssh_agent else '',
                     constants.SSH_OPTION,
                     remote_user,
@@ -319,6 +331,7 @@ class ClusterShell:
                     constants.SSH_OPTION,
                 ),
                 input=cmd.encode('utf-8'),
+                start_new_session=True,
                 **kwargs,
             )
             if self.raise_ssh_error and result.returncode == 255:
@@ -331,7 +344,6 @@ class ClusterShell:
             host, user, cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            start_new_session=True,
         )
         if result.returncode == 0:
             return 0, None
@@ -463,4 +475,4 @@ class ClusterShellAdaptorForLocalShell(ClusterShell):
 
 
 def cluster_shell():
-    return ClusterShell(LocalShell(), user_of_host.instance())
+    return ClusterShell(LocalShell(), user_of_host.instance(), raise_ssh_error=True)
