@@ -444,7 +444,7 @@ def wait_for_resource(message, resource, timeout_ms=WAIT_TIMEOUT_MS_DEFAULT):
     with logger_utils.status_long(message) as progress_bar:
         start_time = int(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
         while True:
-            if xmlutil.CrmMonXmlParser.is_resource_started(resource):
+            if xmlutil.CrmMonXmlParser().is_resource_started(resource):
                 break
             status_progress(progress_bar)
             if 0 < timeout_ms <= (int(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000) - start_time):
@@ -479,7 +479,7 @@ def is_online():
     Check whether local node is online
     Besides that, in join process, check whether init node is online
     """
-    if not xmlutil.CrmMonXmlParser.is_node_online(utils.this_node()):
+    if not xmlutil.CrmMonXmlParser().is_node_online(utils.this_node()):
         return False
 
     # if peer_node is None, this is in the init process
@@ -490,7 +490,7 @@ def is_online():
     # The communication IP maybe mis-configured
     user, cluster_node = _parse_user_at_host(_context.cluster_node, None)
     cluster_node = get_node_canonical_hostname(cluster_node)
-    if not xmlutil.CrmMonXmlParser.is_node_online(cluster_node):
+    if not xmlutil.CrmMonXmlParser().is_node_online(cluster_node):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
         sync_file(corosync.conf())
         utils.get_stdout_or_raise_error('sudo corosync-cfgtool -R', cluster_node)

@@ -1514,88 +1514,61 @@ class CrmMonXmlParser(object):
         Init function
         when peer set, parse peer node's results
         """
-        self.xml_elem = None
         self.peer = peer
+        self.xml_elem = self._load()
 
     def _load(self):
         """
         Load xml output of crm_mon
         """
         output = get_stdout_or_raise_error(constants.CRM_MON_XML_OUTPUT, remote=self.peer, no_raise=True)
-        self.xml_elem = text2elem(output)
+        return text2elem(output)
 
-    @classmethod
-    def is_node_online(cls, node):
+    def is_node_online(self, node):
         """
-        Check if node online
+        Check if a node is online
         """
-        cls_inst = cls()
-        cls_inst._load()
-        elem_list = cls_inst.xml_elem.xpath('//node[@name="{}" and @online="true"]'.format(node))
-        return len(elem_list) != 0
+        xpath = f'//node[@name="{node}" and @online="true"]'
+        return bool(self.xml_elem.xpath(xpath))
 
-    @classmethod
-    def get_node_list(cls, attr=None):
+    def get_node_list(self, attr=None):
+        """
+        Get a list of nodes based on the given attribute
+        """
         attr_dict = {
-            'standby': '@standby="true"',
-            'online': '@standby="false"'
+            'standby': '[@standby="true"]',
+            'online': '[@standby="false"]'
         }
-        if not attr or attr not in attr_dict:
-            xpath_str = '//node'
-        else:
-            xpath_str = f'//node[{attr_dict[attr]}]'
+        xpath_str = f'//node{attr_dict.get(attr, "")}'
+        return [e.get('name') for e in self.xml_elem.xpath(xpath_str)]
 
-        cls_inst = cls()
-        cls_inst._load()
-        elem_list = cls_inst.xml_elem.xpath(xpath_str)
-        return [e.get('name') for e in elem_list]
-
-    @classmethod
-    def is_resource_configured(cls, ra_type, peer=None):
+    def is_resource_configured(self, ra_type):
         """
-        Check if the RA configured
+        Check if the RA is configured
         """
-        cls_inst = cls(peer=peer)
-        cls_inst._load()
-        elem_list = cls_inst.xml_elem.xpath('//resource[@resource_agent="{}"]'.format(ra_type))
-        return len(elem_list) != 0
+        xpath = f'//resource[@resource_agent="{ra_type}"]'
+        return bool(self.xml_elem.xpath(xpath))
 
-    @classmethod
-    def is_any_resource_running(cls, peer=None):
+    def is_any_resource_running(self):
         """
         Check if any RA is running
         """
-        cls_inst = cls(peer=peer)
-        cls_inst._load()
-        elem_list = cls_inst.xml_elem.xpath('//resource[@active="true"]')
-        return len(elem_list) != 0
+        xpath = '//resource[@active="true"]'
+        return bool(self.xml_elem.xpath(xpath))
 
-    @classmethod
-    def is_resource_started(cls, ra, peer=None):
+    def is_resource_started(self, ra):
         """
         Check if the RA started(in all clone instances if configured as clone)
 
         @ra could be resource id or resource type
         """
-        cls_inst = cls(peer=peer)
-        cls_inst._load()
-        elem_list = cls_inst.xml_elem.xpath('//resource[(@id="{ra}" or @resource_agent="{ra}") and @active="true"]'.format(ra=ra))
-        # Stopped or not exist
-        if not elem_list:
-            return False
-        # Starting will return False
-        return all([True if elem.get('role') == 'Started' else False for elem in elem_list])
+        xpath = f'//resource[(@id="{ra}" or @resource_agent="{ra}") and @active="true" and @role="Started"]'
+        return bool(self.xml_elem.xpath(xpath))
 
-    @classmethod
-    def get_resource_id_list_via_type(cls, ra_type, peer=None):
+    def get_resource_id_list_via_type(self, ra_type):
         """
         Given configured ra type, get the ra id list
         """
-        id_list = []
-        cls_inst = cls(peer=peer)
-        cls_inst._load()
-        elem_list = cls_inst.xml_elem.xpath('//resource[@resource_agent="{ra_type}"]'.format(ra_type=ra_type))
-        if not elem_list:
-            return id_list
-        return [elem.get('id') for elem in elem_list]
+        xpath = f'//resource[@resource_agent="{ra_type}"]'
+        return [elem.get('id') for elem in self.xml_elem.xpath(xpath)]
 # vim:ts=4:sw=4:et:

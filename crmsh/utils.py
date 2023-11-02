@@ -3174,7 +3174,7 @@ def is_dlm_running():
     Check if dlm ra controld is running
     """
     from . import xmlutil
-    return xmlutil.CrmMonXmlParser.is_resource_started(constants.DLM_CONTROLD_RA)
+    return xmlutil.CrmMonXmlParser().is_resource_started(constants.DLM_CONTROLD_RA)
 
 
 def is_dlm_configured():
@@ -3182,7 +3182,7 @@ def is_dlm_configured():
     Check if dlm configured
     """
     from . import xmlutil
-    return xmlutil.CrmMonXmlParser.is_resource_configured(constants.DLM_CONTROLD_RA)
+    return xmlutil.CrmMonXmlParser().is_resource_configured(constants.DLM_CONTROLD_RA)
 
 
 def is_quorate():

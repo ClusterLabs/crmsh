@@ -455,7 +455,7 @@ class SBDManager(object):
         """
         Try to configure sbd resource, restart cluster on needed
         """
-        if not xmlutil.CrmMonXmlParser.is_any_resource_running():
+        if not xmlutil.CrmMonXmlParser().is_any_resource_running():
             logger.info("Restarting cluster service")
             utils.cluster_run_cmd("crm cluster restart")
             bootstrap.wait_for_cluster()
@@ -522,7 +522,7 @@ class SBDManager(object):
         """
         if not utils.package_is_installed("sbd") or \
                 not utils.service_is_enabled("sbd.service") or \
-                xmlutil.CrmMonXmlParser.is_resource_configured(self.SBD_RA):
+                xmlutil.CrmMonXmlParser().is_resource_configured(self.SBD_RA):
             return
 
         # disk-based sbd
@@ -623,9 +623,9 @@ class SBDManager(object):
 
 
 def clean_up_existing_sbd_resource():
-    if xmlutil.CrmMonXmlParser.is_resource_configured(SBDManager.SBD_RA):
-        sbd_id_list = xmlutil.CrmMonXmlParser.get_resource_id_list_via_type(SBDManager.SBD_RA)
-        if xmlutil.CrmMonXmlParser.is_resource_started(SBDManager.SBD_RA):
+    if xmlutil.CrmMonXmlParser().is_resource_configured(SBDManager.SBD_RA):
+        sbd_id_list = xmlutil.CrmMonXmlParser().get_resource_id_list_via_type(SBDManager.SBD_RA)
+        if xmlutil.CrmMonXmlParser().is_resource_started(SBDManager.SBD_RA):
             for sbd_id in sbd_id_list:
                 utils.ext_cmd("crm resource stop {}".format(sbd_id))
         utils.ext_cmd("crm configure delete {}".format(' '.join(sbd_id_list)))
