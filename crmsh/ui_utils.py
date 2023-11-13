@@ -49,6 +49,8 @@ def manage_attr(cmd, attr_ext_commands, rsc, subcmd, attr, value):
     '''
     try:
         attr_cmd = _get_attr_cmd(attr_ext_commands, subcmd)
+        if re.search("\w+=\w+", attr):
+            attr, value = attr.split('=')
         return _dispatch_attr_cmd(cmd, attr_cmd, rsc, subcmd, attr, value)
     except ValueError as msg:
         cmdline = [rsc, subcmd, attr]
