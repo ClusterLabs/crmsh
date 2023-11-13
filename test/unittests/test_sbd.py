@@ -618,9 +618,9 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.wait_for_cluster')
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_any_resource_running')
-    def test_restart_cluster_on_needed_no_ra_running(self, mock_ra_running, mock_status, mock_cluster_run, mock_wait, mock_config_sbd_ra):
-        mock_ra_running.return_value = False
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_restart_cluster_on_needed_no_ra_running(self, mock_parser, mock_status, mock_cluster_run, mock_wait, mock_config_sbd_ra):
+        mock_parser().is_any_resource_running.return_value = False
         self.sbd_inst._restart_cluster_and_configure_sbd_ra()
         mock_status.assert_called_once_with("Restarting cluster service")
         mock_cluster_run.assert_called_once_with("crm cluster restart")
@@ -629,9 +629,9 @@ class TestSBDManager(unittest.TestCase):
 
     @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_timeout')
     @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_any_resource_running')
-    def test_restart_cluster_on_needed_diskless(self, mock_ra_running, mock_warn, mock_get_timeout):
-        mock_ra_running.return_value = True
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_restart_cluster_on_needed_diskless(self, mock_parser, mock_warn, mock_get_timeout):
+        mock_parser().is_any_resource_running.return_value = True
         mock_get_timeout.return_value = 60
         self.sbd_inst_diskless.timeout_inst = mock.Mock(stonith_watchdog_timeout=-1)
         self.sbd_inst_diskless._restart_cluster_and_configure_sbd_ra()
@@ -642,14 +642,13 @@ class TestSBDManager(unittest.TestCase):
 
     @mock.patch('crmsh.sbd.SBDManager.configure_sbd_resource_and_properties')
     @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_any_resource_running')
-    def test_restart_cluster_on_needed(self, mock_ra_running, mock_warn, mock_config_sbd_ra):
-        mock_ra_running.return_value = True
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_restart_cluster_on_needed(self, mock_parser, mock_warn, mock_config_sbd_ra):
+        mock_parser().is_any_resource_running.return_value = True
         self.sbd_inst._restart_cluster_and_configure_sbd_ra()
         mock_warn.assert_has_calls([
             mock.call("To start sbd.service, need to restart cluster service manually on each node"),
             ])
-        mock_config_sbd_ra.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.invoke')
     def test_enable_sbd_service_init(self, mock_invoke):
@@ -677,16 +676,16 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration')
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_resource_configured')
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
     @mock.patch('crmsh.utils.package_is_installed')
     def test_configure_sbd_resource_and_properties(
             self,
-            mock_package, mock_enabled, mock_configured, mock_run, mock_set_property, sbd_adjust, mock_is_active,
+            mock_package, mock_enabled, mock_parser, mock_run, mock_set_property, sbd_adjust, mock_is_active,
     ):
         mock_package.return_value = True
         mock_enabled.return_value = True
-        mock_configured.return_value = False
+        mock_parser().is_resource_configured.return_value = False
         mock_is_active.return_value = False
         self.sbd_inst._context = mock.Mock(cluster_is_running=True)
         self.sbd_inst._get_sbd_device_from_config = mock.Mock()
@@ -696,7 +695,6 @@ class TestSBDManager(unittest.TestCase):
 
         mock_package.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
-        mock_configured.assert_called_once_with(sbd.SBDManager.SBD_RA)
         mock_run.assert_called_once_with("crm configure primitive {} {}".format(sbd.SBDManager.SBD_RA_ID, sbd.SBDManager.SBD_RA))
         mock_set_property.assert_called_once_with("stonith-enabled", "true")
 

@@ -1327,11 +1327,11 @@ def test_set_dlm_option(mock_get_dict, mock_run):
     mock_run.assert_called_once_with('dlm_tool set_config "key2=test"')
 
 
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_resource_configured')
-def test_is_dlm_configured(mock_configured):
-    mock_configured.return_value = True
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+def test_is_dlm_configured(mock_parser):
+    mock_parser().is_resource_configured.return_value = True
     assert utils.is_dlm_configured() is True
-    mock_configured.assert_called_once_with(constants.DLM_CONTROLD_RA)
+    mock_parser().is_resource_configured.assert_called_once_with(constants.DLM_CONTROLD_RA)
 
 
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')

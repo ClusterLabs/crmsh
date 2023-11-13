@@ -38,32 +38,30 @@ def test_evaluate_qdevice_quorum_effect_reload(mock_get_dict, mock_quorate):
     mock_quorate.assert_called_once_with(3, 2)
 
 
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_any_resource_running')
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
 @mock.patch('crmsh.utils.calculate_quorate_status')
 @mock.patch('crmsh.utils.get_quorum_votes_dict')
-def test_evaluate_qdevice_quorum_effect_later(mock_get_dict, mock_quorate, mock_ra_running):
+def test_evaluate_qdevice_quorum_effect_later(mock_get_dict, mock_quorate, mock_parser):
     mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
     mock_quorate.return_value = False
-    mock_ra_running.return_value = True
+    mock_parser().is_any_resource_running.return_value = True
     res = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
     assert res == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER
     mock_get_dict.assert_called_once_with()
     mock_quorate.assert_called_once_with(2, 1)
-    mock_ra_running.assert_called_once_with()
 
 
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_any_resource_running')
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
 @mock.patch('crmsh.utils.calculate_quorate_status')
 @mock.patch('crmsh.utils.get_quorum_votes_dict')
-def test_evaluate_qdevice_quorum_effect(mock_get_dict, mock_quorate, mock_ra_running):
+def test_evaluate_qdevice_quorum_effect(mock_get_dict, mock_quorate, mock_parser):
     mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
     mock_quorate.return_value = False
-    mock_ra_running.return_value = False
+    mock_parser().is_any_resource_running.return_value = False
     res = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
     assert res == qdevice.QdevicePolicy.QDEVICE_RESTART
     mock_get_dict.assert_called_once_with()
     mock_quorate.assert_called_once_with(2, 1)
-    mock_ra_running.assert_called_once_with()
 
 
 @mock.patch('crmsh.lock.RemoteLock')
