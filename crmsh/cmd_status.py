@@ -88,7 +88,7 @@ def crm_mon(opts=''):
             _crm_mon = "%s -1" % (prog)
 
     status_cmd = "%s %s" % (_crm_mon, opts)
-    return shell.get_stdout(utils.add_sudo(status_cmd))
+    return shell.get_stdout_stderr(utils.add_sudo(status_cmd))
 
 
 def cmd_status(args):
@@ -117,9 +117,9 @@ def cmd_status(args):
     extra = ' '.join(opts.get(arg, arg) for arg in args)
     if not args:
         extra = "-r"
-    rc, s = crm_mon(extra)
+    rc, s, err = crm_mon(extra)
     if rc != 0:
-        raise IOError("crm_mon (rc=%d): %s" % (rc, s))
+        raise IOError(f"{err} (rc={rc})")
 
     utils.page_string(CrmMonFilter()(s))
     return True
