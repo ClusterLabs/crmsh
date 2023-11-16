@@ -531,6 +531,9 @@ def step_impl(context, nodelist):
 
 @given('ssh-agent is started at "{path}" on nodes [{nodes:str+}]')
 def step_impl(context, path, nodes):
+    user =  userdir.get_sudoer()
+    if not user:
+        user = userdir.getuser()
     for node in nodes:
-        rc, _, _ = behave_agent.call(node, 1122, f"systemd-run -u ssh-agent /usr/bin/ssh-agent -D -a '{path}'", user='root')
+        rc, _, _ = behave_agent.call(node, 1122, f"systemd-run --uid '{user}' -u ssh-agent /usr/bin/ssh-agent -D -a '{path}'", user='root')
         assert 0 == rc

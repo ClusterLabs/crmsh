@@ -342,7 +342,7 @@ jobs:
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
-        $DOCKER_SCRIPT `$GET_INDEX_OF ssh_agent`
+        $DOCKER_SCRIPT `$GET_INDEX_OF ssh_agent` && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT -u `$GET_INDEX_OF ssh_agent`
     - uses: codecov/codecov-action@v3
 
   original_regression_test:
