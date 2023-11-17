@@ -46,7 +46,7 @@ def get_pcmk_log() -> str:
     ]
 
     if os.path.isfile(constants.PCMKCONF):
-        data = utils.read_from_file(constants.PCMKCONF)
+        data = crmutils.read_from_file(constants.PCMKCONF)
         if data:
             res = re.search(r'^ *PCMK_logfile *= *(.*)', data, re.M)
             if res:

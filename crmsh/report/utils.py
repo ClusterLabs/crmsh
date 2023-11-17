@@ -1,11 +1,8 @@
 # Copyright (C) 2017 Xin Liang <XLiang@suse.com>
 # See COPYING for license information.
 
-import bz2
-import lzma
 import datetime
 import glob
-import gzip
 import os
 import re
 import shutil
@@ -130,7 +127,7 @@ def check_collected_files(context: core.Context) -> List[str]:
             f_in_work_dir = os.path.join(context.work_dir, node, f)
             if os.path.isfile(f_in_work_dir) and not crmutils.file_is_empty(f_in_work_dir):
                 results.append(f"{desc} {node}:")
-                results.append(read_from_file(f_in_work_dir))
+                results.append(crmutils.read_from_file(f_in_work_dir))
 
     return results
 
@@ -144,7 +141,7 @@ def extract_critical_log(context: core.Context) -> List[str]:
     log_pattern_str = '|'.join(log_pattern_list)
 
     for f in glob.glob(f"{context.work_dir}/*/*.log"):
-        _list = re.findall(log_pattern_str, read_from_file(f))
+        _list = re.findall(log_pattern_str, crmutils.read_from_file(f))
         if _list:
             result_list.append(f"\nWARNINGS or ERRORS in {'/'.join(f.split('/')[3:])}:")
             result_list.extend(_list)
@@ -203,7 +200,7 @@ def get_distro_info() -> str:
     res = None
     if os.path.exists(constants.OSRELEASE):
         logger.debug2(f"Using {constants.OSRELEASE} to get distribution info")
-        res = re.search("PRETTY_NAME=\"(.*)\"", read_from_file(constants.OSRELEASE))
+        res = re.search("PRETTY_NAME=\"(.*)\"", crmutils.read_from_file(constants.OSRELEASE))
     elif shutil.which("lsb_release"):
         logger.debug2("Using lsb_release to get distribution info")
         out = sh.LocalShell().get_stdout_or_raise_error("lsb_release -d")
@@ -393,7 +390,7 @@ def is_our_log(context: core.Context, logf: str) -> int:
 
     Return log type LogType
     """
-    data = read_from_file(logf)
+    data = crmutils.read_from_file(logf)
     if not data:
         return LogType.EMPTY
     stamp_type = determin_log_format(data)
@@ -423,7 +420,7 @@ def create_description_template(context: core.Context) -> None:
         sysinfo_node_f = os.path.join(context.work_dir, n, constants.SYSINFO_F)
         if os.path.isfile(sysinfo_node_f):
             out_string += f"[Info from node {n}]:\n"
-            out_string += read_from_file(sysinfo_node_f)
+            out_string += crmutils.read_from_file(sysinfo_node_f)
             out_string += "\n\n\n\n"
 
     description_f = os.path.join(context.work_dir, constants.DESCRIPTION_F)
@@ -434,7 +431,7 @@ def print_logseg(log_file: str, from_time: float, to_time: float) -> str:
     """
     Print the log segment specified by the given timestamps
     """
-    data = read_from_file(log_file)
+    data = crmutils.read_from_file(log_file)
     if not data:
         return ""
 
@@ -511,7 +508,7 @@ class Sanitizer:
         cib_file_list = glob.glob(f"{self.context.work_dir}/*/{constants.CIB_F}")
         if not cib_file_list:
             raise ReportGenericError(f"CIB file {constants.CIB_F} was not collected")
-        data = read_from_file(cib_file_list[0])
+        data = crmutils.read_from_file(cib_file_list[0])
         if not data:
             raise ReportGenericError(f"File {cib_file_list[0]} is empty")
         self.cib_data = data
@@ -582,7 +579,7 @@ class Sanitizer:
         if not self.context.sanitize:
             return
         for f in self.file_list_in_workdir:
-            data = read_from_file(f)
+            data = crmutils.read_from_file(f)
             if not data:
                 continue
             replaced_str = self._sub_sensitive_string(data)
@@ -639,36 +636,8 @@ class Package:
         return getattr(self, f"verify_{self.pkg_type}")()
 
 
-def get_open_method(infile):
-    """
-    Get the appropriate file open method based on the file extension
-    """
-    file_type_open_dict = {
-        "gz": gzip.open,
-        "bz2": bz2.open,
-        "xz": lzma.open
-    }
-    file_ext = infile.split('.')[-1]
-    return file_type_open_dict.get(file_ext, open)
-
-
-def read_from_file(infile: str) -> str:
-    """
-    Read content from a file
-    """
-    _open = get_open_method(infile)
-    try:
-        with _open(infile, 'rt', encoding='utf-8', errors='replace') as f:
-            data = f.read()
-    except Exception as err:
-        logger.error("When reading file \"%s\": %s", infile, str(err))
-        return ""
-
-    return crmutils.to_ascii(data)
-
-
 def write_to_file(data: str, tofile: str) -> None:
-    _open = get_open_method(tofile)
+    _open = crmutils.get_open_method(tofile)
     with _open(tofile, 'w') as f:
         if _open == open:
             f.write(data)

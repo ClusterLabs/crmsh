@@ -22,6 +22,9 @@ import argparse
 import random
 import string
 import grp
+import gzip
+import bz2
+import lzma
 from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
@@ -2927,16 +2930,6 @@ def diff_and_patch(orig_cib_str, current_cib_str):
     return True
 
 
-def read_from_file(infile):
-    """
-    Read data from file in a save way, to avoid UnicodeDecodeError
-    """
-    data = None
-    with open(infile, 'rt', encoding='utf-8', errors='replace') as f:
-        data = f.read()
-    return to_ascii(data)
-
-
 def detect_file(_file, remote=None):
     """
     Detect if file exists, support both local and remote
@@ -3104,4 +3097,32 @@ def parse_user_at_host(s: str):
 
 def file_is_empty(file: str) -> bool:
     return os.stat(file).st_size == 0
+
+
+def get_open_method(infile):
+    """
+    Get the appropriate file open method based on the file extension
+    """
+    file_type_open_dict = {
+        "gz": gzip.open,
+        "bz2": bz2.open,
+        "xz": lzma.open
+    }
+    file_ext = infile.split('.')[-1]
+    return file_type_open_dict.get(file_ext, open)
+
+
+def read_from_file(infile: str) -> str:
+    """
+    Read content from a file
+    """
+    _open = get_open_method(infile)
+    try:
+        with _open(infile, 'rt', encoding='utf-8', errors='replace') as f:
+            data = f.read()
+    except Exception as err:
+        logger.error("When reading file \"%s\": %s", infile, str(err))
+        return ""
+
+    return data
 # vim:ts=4:sw=4:et:
