@@ -10,6 +10,7 @@ import stat
 import pwd
 import datetime
 
+import crmsh.user_of_host
 from crmsh import log, sh
 from crmsh import utils as crmutils
 from crmsh.report import constants, utillib
@@ -56,7 +57,14 @@ def collect_ratraces():
     """
     # since the "trace_dir" attribute been removed from cib after untrace
     # need to parse crmsh log file to extract custom trace ra log directory on each node
-    shell = sh.cluster_shell()
+    if crmsh.user_of_host.instance().use_ssh_agent():
+        shell = sh.ClusterShell(
+            sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '')}),
+            crmsh.user_of_host.instance(),
+            forward_ssh_agent=True,
+        )
+    else:
+        shell = sh.cluster_shell()
     log_contents = ""
     cmd = "grep 'INFO: Trace for .* is written to ' {}*|grep -v 'collect'".format(log.CRMSH_LOG_FILE)
     for node in crmutils.list_cluster_nodes():

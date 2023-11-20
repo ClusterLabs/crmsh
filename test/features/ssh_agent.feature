@@ -36,6 +36,9 @@ Feature: ssh-agent support
     And     Run "test x1 == x$(awk 'END {print NR}' ~/.ssh/authorized_keys)" OK on "hanode3"
     And     Run "test x3 == x$(sudo awk 'END {print NR}' ~hacluster/.ssh/authorized_keys)" OK on "hanode3"
 
+  Scenario: crm report
+    Then    Run "SSH_AUTH_SOCK=/tmp/ssh-auth-sock crm report" OK
+
   Scenario: Use qnetd
     Given   Run "crm cluster stop" OK on "hanode1,hanode2,hanode3"
     When    Run "SSH_AUTH_SOCK=/tmp/ssh-auth-sock crm cluster init --use-ssh-agent -y" on "hanode1"
