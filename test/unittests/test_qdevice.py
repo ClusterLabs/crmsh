@@ -771,66 +771,6 @@ class TestQDevice(unittest.TestCase):
         mock_fetch_p12_from_cluster.assert_called_once_with()
         mock_import_p12_on_local.assert_called_once_with()
 
-    @mock.patch("crmsh.utils.str2file")
-    @mock.patch("crmsh.corosync.make_section")
-    @mock.patch("crmsh.corosync.Parser")
-    @mock.patch("crmsh.corosync.conf")
-    @mock.patch("crmsh.utils.read_from_file")
-    def test_write_qdevice_config(self, mock_read_file, mock_conf, mock_parser, mock_mksection, mock_str2file):
-        mock_mksection.side_effect = [
-            ["device {", "}"],
-            ["net {", "}"]
-        ]
-        mock_read_file.return_value = "data"
-        mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
-        mock_instance = mock.Mock()
-        mock_parser.return_value = mock_instance
-        mock_instance.to_string.return_value = "string data"
-
-        self.qdevice_with_ip.write_qdevice_config()
-
-        mock_conf.assert_has_calls([mock.call(), mock.call()])
-        mock_parser.assert_called_once_with("data")
-        mock_instance.remove.assert_called_once_with("quorum.device")
-        mock_instance.add.assert_has_calls([
-            mock.call('quorum', ["device {", "}"]),
-            mock.call('quorum.device', ["net {", "}"])
-        ])
-        mock_instance.set.assert_has_calls([
-            mock.call('quorum.device.votes', '1'),
-            mock.call('quorum.device.model', 'net'),
-            mock.call('quorum.device.net.tls', 'on'),
-            mock.call('quorum.device.net.host', '10.10.10.123'),
-            mock.call('quorum.device.net.port', 5403),
-            mock.call('quorum.device.net.algorithm', 'ffsplit'),
-            mock.call('quorum.device.net.tie_breaker', 'lowest')
-        ])
-        mock_instance.to_string.assert_called_once_with()
-        mock_mksection.assert_has_calls([
-            mock.call('quorum.device', []),
-            mock.call('quorum.device.net', [])
-        ])
-        mock_str2file.assert_called_once_with("string data", "corosync.conf")
-
-    @mock.patch("crmsh.utils.str2file")
-    @mock.patch("crmsh.corosync.Parser")
-    @mock.patch("crmsh.corosync.conf")
-    @mock.patch("crmsh.utils.read_from_file")
-    def test_remove_qdevice_config(self, mock_read_file, mock_conf, mock_parser, mock_str2file):
-        mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
-        mock_read_file.return_value = "data"
-        mock_instance = mock.Mock()
-        mock_parser.return_value = mock_instance
-        mock_instance.to_string.return_value = "string data"
-
-        self.qdevice_with_ip.remove_qdevice_config()
-
-        mock_conf.assert_has_calls([mock.call(), mock.call()])
-        mock_parser.assert_called_once_with("data")
-        mock_instance.remove.assert_called_once_with("quorum.device")
-        mock_instance.to_string.assert_called_once_with()
-        mock_str2file.assert_called_once_with("string data", "corosync.conf")
-
     @mock.patch("crmsh.parallax.parallax_call")
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('os.path.exists')
@@ -983,29 +923,7 @@ Membership information
         mock_enable_qnetd.assert_called_once_with()
         mock_start_qnetd.assert_called_once_with()
 
-    @mock.patch('crmsh.utils.cluster_run_cmd')
-    @mock.patch('crmsh.bootstrap.update_expected_votes')
-    @mock.patch('crmsh.log.LoggerUtils.status_long')
-    @mock.patch('crmsh.corosync.add_nodelist_from_cmaptool')
-    @mock.patch('crmsh.corosync.is_unicast')
-    @mock.patch('crmsh.qdevice.QDevice.write_qdevice_config')
-    def test_config_qdevice(self, mock_write, mock_is_unicast, mock_add_nodelist, mock_status_long,
-            mock_update_votes, mock_run):
-        mock_is_unicast.return_value = False
-        mock_status_long.return_value.__enter__ = mock.Mock()
-        mock_status_long.return_value.__exit__ = mock.Mock()
-        self.qdevice_with_ip.qdevice_reload_policy = qdevice.QdevicePolicy.QDEVICE_RELOAD
-
-        self.qdevice_with_ip.config_qdevice()
-
-        mock_write.assert_called_once_with()
-        mock_is_unicast.assert_called_once_with()
-        mock_add_nodelist.assert_called_once_with()
-        mock_status_long.assert_called_once_with("Update configuration")
-        mock_update_votes.assert_called_once_with()
-        mock_run.assert_called_once_with("crm corosync reload")
-
-    @mock.patch('crmsh.utils.is_qdevice_configured')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_remove_certification_files_on_qnetd_return(self, mock_configured):
         mock_configured.return_value = False
         qdevice.QDevice.remove_certification_files_on_qnetd()
@@ -1013,7 +931,7 @@ Membership information
 
     @mock.patch('crmsh.utils.get_stdout_or_raise_error')
     @mock.patch('crmsh.corosync.get_value')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_remove_certification_files_on_qnetd(self, mock_configured, mock_get_value, mock_run):
         mock_configured.return_value = True
         mock_get_value.side_effect = ["qnetd-node", "cluster1"]
@@ -1029,3 +947,41 @@ Membership information
         mock_run.assert_has_calls([
             mock.call(crt_cmd, remote="qnetd-node"),
             mock.call(crq_cmd, remote="qnetd-node")])
+
+    @mock.patch('crmsh.corosync.conf')
+    @mock.patch('crmsh.utils.str2file')
+    @mock.patch('crmsh.conf_parser.ConfParser')
+    def test_write_qdevice_config(self, mock_parser, mock_str2file, mock_conf):
+        mock_parser_inst = mock.Mock()
+        mock_parser.return_value = mock_parser_inst
+        mock_parser_inst.convert2string.return_value = "data"
+        mock_conf.return_value = "corosync.conf"
+        self.qdevice_with_invalid_cmds_relative_path.write_qdevice_config()
+        mock_str2file.assert_called_once_with("data", "corosync.conf")
+
+    @mock.patch('crmsh.corosync.conf')
+    @mock.patch('crmsh.utils.str2file')
+    @mock.patch('crmsh.conf_parser.ConfParser')
+    def test_remove_qdevice_config(self, mock_parser, mock_str2file, mock_conf):
+        mock_parser_inst = mock.Mock()
+        mock_parser.return_value = mock_parser_inst
+        mock_parser_inst.convert2string.return_value = "data"
+        mock_conf.return_value = "corosync.conf"
+        self.qdevice_with_invalid_cmds_relative_path.remove_qdevice_config()
+        mock_str2file.assert_called_once_with("data", "corosync.conf")
+        mock_parser_inst.remove.assert_called_once_with("quorum.device")
+
+    @mock.patch('crmsh.utils.cluster_run_cmd')
+    @mock.patch('crmsh.bootstrap.sync_file')
+    @mock.patch('crmsh.corosync.configure_two_node')
+    @mock.patch('crmsh.log.LoggerUtils.status_long')
+    @mock.patch('crmsh.qdevice.QDevice.write_qdevice_config')
+    def test_config_qdevice(self, mock_write_config, mock_status_long, mock_config_two_node, mock_sync_file, mock_run_cmd):
+        mock_status_long.return_value.__enter__ = mock.Mock()
+        mock_status_long.return_value.__exit__ = mock.Mock()
+        self.qdevice_with_ip.qdevice_reload_policy = qdevice.QdevicePolicy.QDEVICE_RELOAD
+
+        self.qdevice_with_ip.config_qdevice()
+        mock_status_long.assert_called_once_with("Update configuration")
+        mock_config_two_node.assert_called_once_with(qdevice_adding=True)
+        mock_run_cmd.assert_called_once_with("crm corosync reload")
