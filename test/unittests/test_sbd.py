@@ -64,7 +64,7 @@ class TestSBDTimeout(unittest.TestCase):
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.utils.get_qdevice_sync_timeout')
     @mock.patch('crmsh.utils.service_is_active')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_adjust_sbd_watchdog_timeout_with_diskless_and_qdevice_sbd_stage(self, mock_is_configured, mock_is_active, mock_get_sync, mock_warn):
         mock_is_configured.return_value = True
         mock_is_active.return_value = True
@@ -74,7 +74,7 @@ class TestSBDTimeout(unittest.TestCase):
         mock_warn.assert_called_once_with("sbd_watchdog_timeout is set to 20 for qdevice, it was 5")
 
     @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_adjust_sbd_watchdog_timeout_with_diskless_and_qdevice_all(self, mock_is_configured, mock_warn):
         mock_is_configured.return_value = False
         self.sbd_timeout_inst.sbd_watchdog_timeout = 5

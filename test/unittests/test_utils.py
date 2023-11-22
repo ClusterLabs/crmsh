@@ -434,8 +434,8 @@ def test_get_nodeinfo_from_cmaptool(mock_get_stdout, mock_search, mock_findall):
     match_inst1.group.assert_called_once_with(1)
     match_inst2.group.assert_called_once_with(1)
     mock_findall.assert_has_calls([
-        mock.call(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.168.43.129)'),
-        mock.call(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', 'runtime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
+        mock.call(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', 'runtime.members.1.ip (str) = r(0) ip(192.168.43.129)'),
+        mock.call(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', 'runtime.members.2.ip (str) = r(0) ip(192.168.43.128)')
     ])
 
 @mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
@@ -744,9 +744,8 @@ class TestInterfacesInfo(unittest.TestCase):
         Test setUp.
         """
         self.interfaces_info = utils.InterfacesInfo()
-        self.interfaces_info_with_second_hb = utils.InterfacesInfo(second_heartbeat=True)
-        self.interfaces_info_with_custom_nic = utils.InterfacesInfo(second_heartbeat=True, custom_nic_list=['eth1'])
-        self.interfaces_info_with_wrong_nic = utils.InterfacesInfo(custom_nic_list=['eth7'])
+        self.interfaces_info_with_custom_nic = utils.InterfacesInfo(custom_nic_addr_list=['eth1'])
+        self.interfaces_info_with_wrong_nic = utils.InterfacesInfo(custom_nic_addr_list=['eth7'])
         self.interfaces_info_fake = utils.InterfacesInfo()
         self.interfaces_info_fake._nic_info_dict = {
                 "eth0": [mock.Mock(ip="10.10.10.1", network="10.10.10.0"), mock.Mock(ip="10.10.10.2", network="10.10.10.0")],
@@ -773,24 +772,6 @@ class TestInterfacesInfo(unittest.TestCase):
             self.interfaces_info.get_interfaces_info()
         self.assertEqual("No address configured", str(err.exception))
         mock_run.assert_called_once_with("ip -4 -o addr show")
-
-    @mock.patch('crmsh.utils.Interface')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_get_interfaces_info_one_addr(self, mock_run, mock_interface):
-        mock_run.return_value = (0, self.network_output_error, None)
-        mock_interface_inst_1 = mock.Mock(is_loopback=True, is_link_local=False)
-        mock_interface_inst_2 = mock.Mock(is_loopback=False, is_link_local=False)
-        mock_interface.side_effect = [mock_interface_inst_1, mock_interface_inst_2]
-
-        with self.assertRaises(ValueError) as err:
-            self.interfaces_info_with_second_hb.get_interfaces_info()
-        self.assertEqual("Cannot configure second heartbeat, since only one address is available", str(err.exception))
-
-        mock_run.assert_called_once_with("ip -4 -o addr show")
-        mock_interface.assert_has_calls([
-            mock.call("127.0.0.1/8"),
-            mock.call("192.168.122.241/24")
-            ])
 
     def test_nic_list(self):
         res = self.interfaces_info_fake.nic_list
@@ -842,36 +823,19 @@ class TestInterfacesInfo(unittest.TestCase):
         mock_interface_list.assert_called_once_with()
 
     def test_nic_first_ip(self):
-        res = self.interfaces_info_fake._nic_first_ip("eth0")
+        res = self.interfaces_info_fake.nic_first_ip("eth0")
         self.assertEqual(res, "10.10.10.1")
 
-    @mock.patch('crmsh.utils.InterfacesInfo.nic_list', new_callable=mock.PropertyMock)
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.utils.InterfacesInfo.get_interfaces_info')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_get_default_nic_list_from_route_no_default(self, mock_run, mock_get_interfaces_info, mock_warn, mock_nic_list):
-        output = """10.10.10.0/24 dev eth1 proto kernel scope link src 10.10.10.51 
-        20.20.20.0/24 dev eth2 proto kernel scope link src 20.20.20.51"""
-        mock_run.return_value = (0, output, None)
-        mock_nic_list.side_effect = [["eth0", "eth1"], ["eth0", "eth1"]]
-
-        res = self.interfaces_info.get_default_nic_list_from_route()
-        self.assertEqual(res, ["eth0"])
-
-        mock_run.assert_called_once_with("ip -o route show")
-        mock_warn.assert_called_once_with("No default route configured. Using the first found nic")
-        mock_nic_list.assert_has_calls([mock.call(), mock.call()])
-
-    @mock.patch('crmsh.utils.get_stdout_stderr')
-    def test_get_default_nic_list_from_route(self, mock_run):
+    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    def test_get_default_nic_from_route(self, mock_run):
         output = """default via 192.168.122.1 dev eth8 proto dhcp 
         10.10.10.0/24 dev eth1 proto kernel scope link src 10.10.10.51 
         20.20.20.0/24 dev eth2 proto kernel scope link src 20.20.20.51 
         192.168.122.0/24 dev eth8 proto kernel scope link src 192.168.122.120"""
-        mock_run.return_value = (0, output, None)
+        mock_run.return_value = output
 
-        res = self.interfaces_info.get_default_nic_list_from_route()
-        self.assertEqual(res, ["eth8"])
+        res = self.interfaces_info.get_default_nic_from_route()
+        self.assertEqual(res, "eth8")
 
         mock_run.assert_called_once_with("ip -o route show")
 

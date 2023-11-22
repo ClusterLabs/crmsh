@@ -39,7 +39,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_do_start_already_started(self, mock_qdevice_configured, mock_parse_nodes, mock_active, mock_info):
         mock_qdevice_configured.return_value = False
         context_inst = mock.Mock()
@@ -59,7 +59,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
     @mock.patch('crmsh.bootstrap.start_pacemaker')
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.is_qdevice_configured')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
     @mock.patch('crmsh.utils.start_service')
     @mock.patch('crmsh.utils.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
