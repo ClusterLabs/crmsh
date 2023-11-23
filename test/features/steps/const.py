@@ -82,6 +82,8 @@ optional arguments:
   --no-overwrite-sshkey
                         Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is
                         used (False by default; Deprecated)
+  --use-ssh-agent       Use an existing key from ssh-agent instead of creating
+                        new key pairs
 
 Network configuration:
   Options for configuring the network and messaging layer.
@@ -228,6 +230,8 @@ Network configuration:
                         User and host to login to an existing cluster node.
                         The host can be specified with either a hostname or an
                         IP.
+  --use-ssh-agent       Use an existing key from ssh-agent instead of creating
+                        new key pairs
   -i IF, --interface IF
                         Bind to IP address on interface IF. Use -i second time
                         for second interface
@@ -344,4 +348,6 @@ optional arguments:
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
   -c [USER@]HOST, --cluster-node [USER@]HOST
-                        An already-configured geo cluster'''
+                        An already-configured geo cluster
+  --use-ssh-agent       Use an existing key from ssh-agent instead of creating
+                        new key pairs'''

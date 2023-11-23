@@ -417,7 +417,7 @@ def get_distro_info():
         res = re.search("PRETTY_NAME=\"(.*)\"", read_from_file(constants.OSRELEASE))
     elif which("lsb_release"):
         logger.debug("Using lsb_release to get distribution info")
-        out = sh.cluster_shell().get_stdout_or_raise_error("lsb_release -d")
+        out = sh.LocalShell().get_stdout_or_raise_error("lsb_release -d")
         res = re.search("Description:\s+(.*)", out)
     return res.group(1) if res else "Unknown"
 

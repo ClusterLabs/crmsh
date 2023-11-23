@@ -936,23 +936,6 @@ def pipe_cmd_nosudo(cmd):
     return rc
 
 
-def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False, no_reg=False):
-    '''
-    Run a cmd, return (rc, stdout, stderr)
-    '''
-    if options.regression_tests and not no_reg:
-        print(".EXT", cmd)
-    proc = subprocess.Popen(cmd,
-                            shell=shell,
-                            stdin=input_s and subprocess.PIPE or None,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    stdout_data, stderr_data = proc.communicate(input_s)
-    if raw:
-        return proc.returncode, stdout_data, stderr_data
-    return proc.returncode, to_ascii(stdout_data).strip(), to_ascii(stderr_data).strip()
-
-
 def get_stdout_stderr_as_local_sudoer(cmd, input_s=None):
     try:
         user = user_of(this_node())
@@ -3168,9 +3151,14 @@ class HostUserConfig:
     """
     def __init__(self):
         self._hosts_users = dict()
+        self._no_generating_ssh_key = False
         self.load()
 
     def load(self):
+        self._load_hosts_users()
+        self._load_no_generating_ssh_key()
+
+    def _load_hosts_users(self):
         users = list()
         hosts = list()
         li = config.get_option('core', 'hosts')
@@ -3185,13 +3173,16 @@ class HostUserConfig:
             hosts.append(parts[1])
         self._hosts_users = {host: user for user, host in zip(users, hosts)}
 
+    def _load_no_generating_ssh_key(self):
+        self._no_generating_ssh_key = config.get_option('core', 'no_generating_ssh_key')
+
     def save_local(self):
         value = [f'{user}@{host}' for host, user in sorted(self._hosts_users.items(), key=lambda x: x[0])]
         config.set_option('core', 'hosts', value)
+        config.set_option('core', 'no_generating_ssh_key', self._no_generating_ssh_key)
         debug_on = config.get_option('core', 'debug')
         if debug_on:
             config.set_option('core', 'debug', 'false')
-        # TODO: it is saved in ~root/.config/crm/crm.conf, is it as suitable path?
         config.save()
         if debug_on:
             config.set_option('core', 'debug', 'true')
@@ -3200,12 +3191,21 @@ class HostUserConfig:
         self.save_local()
         value = [f'{user}@{host}' for host, user in sorted(self._hosts_users.items(), key=lambda x: x[0])]
         crmsh.parallax.parallax_call(remote_hosts, "crm options set core.hosts '{}'".format(', '.join(value)))
+        crmsh.parallax.parallax_call(remote_hosts, "crm options set core.no_generating_ssh_key '{}'".format(
+            'yes' if self._no_generating_ssh_key else 'no'
+        ))
 
     def get(self, host):
         return self._hosts_users[host]
 
     def add(self, user, host):
         self._hosts_users[host] = user
+
+    def set_no_generating_ssh_key(self, value: bool):
+        self._no_generating_ssh_key = value
+
+    def get_no_generating_ssh_key(self) -> bool:
+        return self._no_generating_ssh_key
 
 def parse_user_at_host(s: str):
     i = s.find('@')

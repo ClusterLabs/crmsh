@@ -22,7 +22,7 @@ class TestLocalShell(unittest.TestCase):
             input=b'bar',
         )
         mock_run.assert_called_once_with(
-            ['su', 'alice', '--login', '-c', 'foo'],
+            ['su', 'alice', '--login', '-s', '/bin/sh', '-c', 'foo'],
             input=b'bar',
         )
 

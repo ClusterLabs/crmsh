@@ -63,7 +63,7 @@ def script_args(args):
 
 def get_cluster_name():
     cluster_name = None
-    if not ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service"):
+    if not ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("corosync.service"):
         name = corosync.get_values('totem.cluster_name')
         if name:
             cluster_name = name[0]
@@ -381,6 +381,8 @@ Examples:
                             help="Skip csync2 initialization (an experimental option)")
         parser.add_argument("--no-overwrite-sshkey", action="store_true", dest="no_overwrite_sshkey",
                             help='Avoid "/root/.ssh/id_rsa" overwrite if "-y" option is used (False by default; Deprecated)')
+        parser.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
+                            help="Use an existing key from ssh-agent instead of creating new key pairs")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action=CustomAppendAction, choices=utils.interface_choice(), default=[],
@@ -450,7 +452,7 @@ Examples:
         boot_context.ui_context = context
         boot_context.stage = stage
         boot_context.args = args
-        boot_context.cluster_is_running = ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("pacemaker.service")
+        boot_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         boot_context.type = "init"
         boot_context.initialize_qdevice()
         boot_context.validate_option()
@@ -497,6 +499,8 @@ Examples:
             "-c", "--cluster-node", metavar="[USER@]HOST", dest="cluster_node",
             help="User and host to login to an existing cluster node. The host can be specified with either a hostname or an IP.",
         )
+        network_group.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
+                            help="Use an existing key from ssh-agent instead of creating new key pairs")
         network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action=CustomAppendAction, choices=utils.interface_choice(), default=[],
                 help="Bind to IP address on interface IF. Use -i second time for second interface")
         options, args = parse_options(parser, args)
@@ -563,7 +567,7 @@ the config.core.force option.""",
         '''
         Rename the cluster.
         '''
-        if not ServiceManager(sh.LocalOnlyClusterShell(sh.LocalShell())).service_is_active("corosync.service"):
+        if not ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("corosync.service"):
             context.fatal_error("Can't rename cluster when cluster service is stopped")
         old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:
@@ -731,6 +735,8 @@ to get the geo cluster configuration.""",
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_argument("-c", "--cluster-node", metavar="[USER@]HOST", help="An already-configured geo cluster", dest="cluster_node")
+        parser.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
+                            help="Use an existing key from ssh-agent instead of creating new key pairs")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
