@@ -540,7 +540,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.ssh_key.KeyFileManager.ensure_key_pair_exists_for_user')
     def test_configure_ssh_key(self, mock_ensure_key_pair, mock_add):
         public_key = crmsh.ssh_key.InMemoryPublicKey('foo')
-        mock_ensure_key_pair.return_value = [public_key]
+        mock_ensure_key_pair.return_value = (True, [public_key])
         bootstrap.configure_ssh_key('alice')
         mock_ensure_key_pair.assert_called_once_with(None, 'alice')
         mock_add.assert_called_once_with(None, 'alice', public_key)
@@ -613,8 +613,10 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.ssh_key.KeyFile.public_key')
     @mock.patch('crmsh.ssh_key.KeyFileManager.ensure_key_pair_exists_for_user')
     @mock.patch('crmsh.ssh_key.KeyFileManager.list_public_key_for_user')
+    @mock.patch('logging.Logger.info')
     def test_swap_public_ssh_key_for_secondary_user(
             self,
+            mock_log_info,
             mock_list_public_key_for_user,
             mock_ensure_key_pair_exists_for_user,
             mock_public_key,
@@ -626,10 +628,10 @@ class TestBootstrap(unittest.TestCase):
             user_of_host=mock.Mock(crmsh.user_of_host.UserOfHost),
         )
         mock_list_public_key_for_user.return_value = ['~/.ssh/id_rsa', '~/.ssh/id_ed25519']
-        mock_ensure_key_pair_exists_for_user.return_value = [
+        mock_ensure_key_pair_exists_for_user.return_value = (True, [
             crmsh.ssh_key.InMemoryPublicKey('foo'),
             crmsh.ssh_key.InMemoryPublicKey('bar'),
-        ]
+        ])
         mock_public_key.return_value = 'public_key'
         crmsh.bootstrap.swap_public_ssh_key_for_secondary_user(mock_shell, 'node1', 'alice')
         mock_list_public_key_for_user.assert_called_once_with(None, 'alice')
@@ -638,6 +640,7 @@ class TestBootstrap(unittest.TestCase):
             mock.call(None, 'alice', crmsh.ssh_key.InMemoryPublicKey('foo')),
             mock.call('node1', 'alice', crmsh.ssh_key.KeyFile('~/.ssh/id_rsa')),
         ])
+        mock_log_info.assert_called_with("A new ssh keypair is generated for user %s@%s.", 'alice', 'node1')
 
     @mock.patch('crmsh.bootstrap.change_user_shell')
     @mock.patch('crmsh.sh.LocalShell.get_stdout_or_raise_error')

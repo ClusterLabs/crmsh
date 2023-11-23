@@ -948,7 +948,9 @@ def _init_ssh_for_secondary_user_on_remote_nodes(
         if not sh.SSHShell(cluster_shell.local_shell, user).can_run_as(node, user):
             for key in local_keys:
                 authorized_key_manager.add(node, user, key)
-            remote_keys = key_file_manager.ensure_key_pair_exists_for_user(node, user)
+            is_generated, remote_keys = key_file_manager.ensure_key_pair_exists_for_user(node, user)
+            if is_generated:
+                logger.info("A new ssh keypair is generated for user %s@%s.", user, node)
             for key in remote_keys:
                 authorized_key_manager.add(None, user, key)
 
@@ -1037,8 +1039,10 @@ def configure_ssh_key(user):
     shell = sh.LocalShell()
     key_file_manager = ssh_key.KeyFileManager(sh.ClusterShellAdaptorForLocalShell(shell))
     authorized_key_manager = ssh_key.AuthorizedKeyManager(sh.SSHShell(shell, None))
-    key = key_file_manager.ensure_key_pair_exists_for_user(None, user)[0]
-    authorized_key_manager.add(None, user, key)
+    is_generated, keys = key_file_manager.ensure_key_pair_exists_for_user(None, user)
+    if is_generated:
+        logger.info("A new ssh keypair is generated for user %s.", user)
+    authorized_key_manager.add(None, user, keys[0])
 
 
 def generate_ssh_key_pair_on_remote(
@@ -1809,9 +1813,11 @@ def join_ssh_with_ssh_agent(
 def swap_public_ssh_key_for_secondary_user(shell: sh.ClusterShell, host: str, user: str):
     key_file_manager = ssh_key.KeyFileManager(shell)
     local_key = ssh_key.KeyFile(key_file_manager.list_public_key_for_user(None, user)[0])
-    remote_key = key_file_manager.ensure_key_pair_exists_for_user(host, user)[0]
+    is_generated, remote_keys = key_file_manager.ensure_key_pair_exists_for_user(host, user)
+    if is_generated:
+        logger.info("A new ssh keypair is generated for user %s@%s.", user, host)
     authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
-    authorized_key_manager.add(None, user, remote_key)
+    authorized_key_manager.add(None, user, remote_keys[0])
     authorized_key_manager.add(host, user, local_key)
 
 
@@ -2092,7 +2098,7 @@ def swap_key_for_hacluster(other_node_list):
     key_file_manager = ssh_key.KeyFileManager(shell)
     authorized_key_manager = ssh_key.AuthorizedKeyManager(shell)
     keys: typing.List[ssh_key.Key] = [
-        key_file_manager.ensure_key_pair_exists_for_user(node, 'hacluster')[0]
+        key_file_manager.ensure_key_pair_exists_for_user(node, 'hacluster')[1][0]
         for node in other_node_list
     ]
     keys.append(ssh_key.KeyFile(key_file_manager.list_public_key_for_user(None, 'hacluster')[0]))

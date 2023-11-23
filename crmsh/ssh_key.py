@@ -217,9 +217,21 @@ class KeyFileManager:
             raise sh.CommandFailure(cmd, host, user, sh.Utils.decode_str(result.stderr).strip())
         return [InMemoryPublicKey(line) for line in sh.Utils.decode_str(result.stdout).splitlines()]
 
-    def ensure_key_pair_exists_for_user(self, host: typing.Optional[str], user: str) -> typing.List[InMemoryPublicKey]:
+    def ensure_key_pair_exists_for_user(
+            self,
+            host: typing.Optional[str],
+            user: str,
+    ) -> typing.Tuple[bool, typing.List[InMemoryPublicKey]]:
+        """Ensure at least one keypair exists for the specified user. If it does not exist, generate a new one.
+
+        Return (is_generated, list_of_public_keys):
+
+        * is_generated: whether a new keypair is generated
+        * list_of_public_keys: all public keys of known types, including the newly generated one
+        """
         script = '''if [ ! \\( {condition} \\) ]; then
     ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -C "Cluster internal on $(hostname)" -N '' <> /dev/null
+    echo 'GENERATED=1'
 fi
 for file in ~/.ssh/id_{{{pattern}}}; do
     if [ -f "$file" ]; then
@@ -243,4 +255,11 @@ done
             print(script)
             print(result.stdout)
             raise sh.CommandFailure(f'Script({script[:16]}...) failed. rc = {result.returncode}', host, user, sh.Utils.decode_str(result.stderr).strip())
-        return [InMemoryPublicKey(line) for line in sh.Utils.decode_str(result.stdout).splitlines()]
+        generated = False
+        keys = list()
+        for line in sh.Utils.decode_str(result.stdout).splitlines():
+            if line == 'GENERATED=1':
+                generated = True
+            else:
+                keys.append(InMemoryPublicKey(line))
+        return generated, keys
