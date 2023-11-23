@@ -189,8 +189,9 @@ for a; do
 	fi
 done
 
-if grep -E -wv '(BEGIN|END) testcase|grep: warning:' "$OUTF" >/dev/null
-then
+res=`grep -E -wv '(BEGIN|END) testcase|warning: stray .* before' "$OUTF"`
+if [ -n "$res" ];then
+	echo "The failed messages: $res"
 	echo "seems like some tests failed or else something not expected"
 	echo "check $OUTF and diff files in $OUTDIR"
 	echo "in case you wonder what lrmd was doing, read $(abspath "$CRM_LOGF") and $(abspath "$CRM_DEBUGF")"
