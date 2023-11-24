@@ -30,6 +30,7 @@ Feature: crm report functional test for common cases
     When    Wait "10" seconds
     And     Run "crm resource untrace d2" on "hanode1"
     And     Run "crm report report" on "hanode1"
+    Then    No crmsh tracebacks
     Then    Directory "trace_ra" in "report.tar.bz2"
     And     Directory "trace_d" in "report.tar.bz2"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"

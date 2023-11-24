@@ -122,6 +122,14 @@ def step_impl(context):
     context.logger.info("\n{}".format(context.stderr))
 
 
+@then('No crmsh tracebacks')
+def step_impl(context):
+    if "Traceback (most recent call last):" in context.stderr and \
+            re.search('File "/usr/lib/python.*/crmsh/', context.stderr):
+        context.logger.info("\n{}".format(context.stderr))
+        context.failed = True
+
+
 @when('Try "{cmd}" on "{addr}"')
 def step_impl(context, cmd, addr):
     run_command_local_or_remote(context, cmd, addr, exit_on_fail=False)

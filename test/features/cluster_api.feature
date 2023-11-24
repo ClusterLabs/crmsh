@@ -135,6 +135,7 @@ Feature: Functional test to cover SAP clusterAPI
     When    Run "su - hacluster -c 'crm status'" on "hanode1"
     Then    Expected "Online: [ hanode1 hanode2 ]" in stdout
     When    Run "su - hacluster -c '/usr/sbin/crm report /tmp/report'" on "hanode1"
+    Then    No crmsh tracebacks
     Then    File "/tmp/report.tar.bz2" exists on "hanode1"
     And     Directory "hanode1" in "/tmp/report.tar.bz2"
     And     Directory "hanode2" in "/tmp/report.tar.bz2"
