@@ -988,8 +988,12 @@ def configure_ssh_key(user):
         utils.su_get_stdout_or_raise_error(cmd, user=user)
 
     if not utils.detect_file(authorized_file):
-        cmd = "touch {}".format(authorized_file)
+        cmd = "touch {file} && chmod 0600 {file}".format(file=authorized_file)
         utils.su_get_stdout_or_raise_error(cmd, user=user)
+    else:
+        # bsc#1217279: ~hacluster/.ssh/authorized_keys created by old versions may have root:root 0600
+        cmd = "chown {user}: {file} && chmod 0600 {file}".format(user=user, file=authorized_file)
+        utils.get_stdout_or_raise_error(cmd)
 
     append_unique(public_key, authorized_file, user)
 
@@ -1059,9 +1063,12 @@ def export_ssh_key_non_interactive(local_user_to_export, remote_user_to_swap, re
     with open(os.path.expanduser('~{}/.ssh/id_rsa.pub'.format(local_user_to_export)), 'r', encoding='utf-8') as f:
         public_key = f.read()
     # FIXME: prevent duplicated entries in authorized_keys
-    cmd = '''mkdir -p ~{user}/.ssh && chown {user} ~{user}/.ssh && chmod 0700 ~{user}/.ssh && cat >> ~{user}/.ssh/authorized_keys << "EOF"
+    cmd = '''mkdir -p ~{user}/.ssh \\
+&& chown {user}: ~{user}/.ssh && chmod 0700 ~{user}/.ssh \\
+&& cat >> ~{user}/.ssh/authorized_keys << "EOF"
 {key}
 EOF
+chown {user}: ~{user}/.ssh/authorized_keys && chmod 0600 ~{user}/.ssh/authorized_keys
 '''.format(user=remote_user_to_swap, key=public_key)
     result = utils.su_subprocess_run(
         local_sudoer,
@@ -1081,7 +1088,9 @@ def import_ssh_key(local_user, remote_user, local_sudoer, remote_node, remote_su
     remote_key_content = remote_public_key_from(remote_user, local_sudoer, remote_node, remote_sudoer)
     _, _, local_authorized_file = key_files(local_user).values()
     if not utils.check_text_included(remote_key_content, local_authorized_file, remote=None):
-        cmd = "echo '{}' >> {}".format(remote_key_content, local_authorized_file)
+        cmd = """echo '{content}' >> {file}
+chown '{user}': {file} && chmod 0600 {file}
+""".format(content=remote_key_content, file=local_authorized_file, user=local_user)
         utils.get_stdout_or_raise_error(cmd, remote=None)
 
 def append_to_remote_file(fromfile, user, remote_node, tofile):
@@ -1724,6 +1733,12 @@ def swap_public_ssh_key(
     if add:
         public_key = generate_ssh_key_pair_on_remote(local_sudoer, remote_node, remote_sudoer, remote_user_to_swap)
         _, _, local_authorized_file = key_files(local_user_to_swap).values()
+        # bsc#1217279: ~hacluster/.ssh/authorized_keys created by old versions may have root:root 0600,
+        # sed running as hacluster will not be able to read it
+        utils.get_stdout_or_raise_error("chown '{user}': '{file}' && chmod 0600 '{file}'".format(
+            user=local_user_to_swap,
+            file=local_authorized_file,
+        ))
         utils.su_get_stdout_or_raise_error("sed -i '$a {}' '{}'".format(public_key, local_authorized_file), local_user_to_swap)
         return public_key
     else:
