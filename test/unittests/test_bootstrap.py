@@ -533,7 +533,7 @@ class TestBootstrap(unittest.TestCase):
             mock.call("/test/.ssh/authorized_keys")
             ])
         mock_append_unique.assert_called_once_with("/test/.ssh/id_rsa.pub", "/test/.ssh/authorized_keys", "test")
-        mock_su.assert_called_once_with('touch /test/.ssh/authorized_keys', user="test")
+        mock_su.assert_called_once_with('touch /test/.ssh/authorized_keys && chmod 0600 /test/.ssh/authorized_keys', user="test")
 
     @mock.patch('crmsh.bootstrap.append_to_remote_file')
     @mock.patch('crmsh.utils.check_file_content_included')

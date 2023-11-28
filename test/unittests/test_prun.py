@@ -108,6 +108,43 @@ class TestPrun(unittest.TestCase):
         self.assertTrue(isinstance(results, typing.Dict))
         self.assertSetEqual({"host1", "host2"}, set(results.keys()))
 
+    @mock.patch("os.geteuid")
+    @mock.patch("crmsh.userdir.getuser")
+    @mock.patch("crmsh.prun.prun._is_local_host")
+    @mock.patch("crmsh.utils.UserOfHost.user_pair_for_ssh")
+    @mock.patch("crmsh.prun.runner.Runner.run")
+    @mock.patch("crmsh.prun.runner.Runner.add_task")
+    def test_prun_localhost(
+            self,
+            mock_runner_add_task: mock.MagicMock,
+            mock_runner_run: mock.MagicMock,
+            mock_user_pair_for_ssh: mock.MagicMock,
+            mock_is_local_host: mock.MagicMock,
+            mock_getuser: mock.MagicMock,
+            mock_geteuid: mock.MagicMock,
+    ):
+        host_cmdline = {"host1": "foo"}
+        #mock_user_pair_for_ssh.return_value = "alice", "bob"
+        mock_is_local_host.return_value = True
+        mock_getuser.return_value = 'root'
+        mock_geteuid.return_value = 0
+        results = crmsh.prun.prun.prun(host_cmdline)
+        mock_user_pair_for_ssh.assert_not_called()
+        mock_is_local_host.assert_called_once_with('host1')
+        mock_runner_add_task.assert_called_once_with(
+            TaskArgumentsEq(
+                ['/bin/sh'],
+                b'foo',
+                stdout=crmsh.prun.runner.Task.Capture,
+                stderr=crmsh.prun.runner.Task.Capture,
+                context={"host": 'host1', "ssh_user": 'root'},
+            )
+        )
+        mock_user_pair_for_ssh.assert_not_called()
+        mock_runner_run.assert_called_once()
+        self.assertTrue(isinstance(results, typing.Dict))
+        self.assertSetEqual({"host1"}, set(results.keys()))
+
 
 class TaskArgumentsEq(crmsh.prun.runner.Task):
     def __eq__(self, other):
