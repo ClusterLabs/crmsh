@@ -140,10 +140,12 @@ class AuthorizedKeyManager:
         sed -i '$a {public_key}' {file}
     else
         mkdir -p {dir}
+        chown {user}: {dir}
         chmod 0700 {dir}
         echo '{public_key}' > {file}
         chmod 0600 {file}
     fi
+    chown {user}: {file}
 fi'''
         return cmd
 

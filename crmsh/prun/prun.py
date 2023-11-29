@@ -96,15 +96,25 @@ def prun_multimap(
 
 
 def _build_run_task(remote: str, cmdline: str) -> Task:
-    local_sudoer, remote_sudoer = UserOfHost.instance().user_pair_for_ssh(remote)
     if _is_local_host(remote):
         if 0 == os.geteuid():
             args = ['/bin/sh']
-        elif local_sudoer == crmsh.userdir.getuser():
-            args = ['sudo', '/bin/sh']
+            remote_sudoer = 'root'
         else:
-            raise AssertionError('trying to run sudo as a non-root user')
+            remote_sudoer = crmsh.userdir.get_sudoer()
+            if remote_sudoer == crmsh.userdir.getuser():
+                args = ['sudo', '/bin/sh']
+            else:
+                raise AssertionError('trying to run sudo as a non-root user')
+        return Task(
+            args,
+            cmdline.encode('utf-8'),
+            stdout=Task.Capture,
+            stderr=Task.Capture,
+            context={"host": remote, "ssh_user": remote_sudoer},
+        )
     else:
+        local_sudoer, remote_sudoer = UserOfHost.instance().user_pair_for_ssh(remote)
         shell = 'ssh {} {}@{} sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION, remote_sudoer, remote)
         if local_sudoer == crmsh.userdir.getuser():
             args = ['/bin/sh', '-c', shell]
@@ -112,13 +122,13 @@ def _build_run_task(remote: str, cmdline: str) -> Task:
             args = ['su', local_sudoer, '--login', '-c', shell]
         else:
             raise AssertionError('trying to run su as a non-root user')
-    return Task(
-        args,
-        cmdline.encode('utf-8'),
-        stdout=Task.Capture,
-        stderr=Task.Capture,
-        context={"host": remote, "ssh_user": remote_sudoer},
-    )
+        return Task(
+            args,
+            cmdline.encode('utf-8'),
+            stdout=Task.Capture,
+            stderr=Task.Capture,
+            context={"host": remote, "ssh_user": remote_sudoer},
+        )
 
 
 def _handle_run_result(task: Task, interceptor: PRunInterceptor = PRunInterceptor()):
