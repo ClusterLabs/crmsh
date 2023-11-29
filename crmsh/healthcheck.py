@@ -147,6 +147,10 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
         remote_nodes = set(nodes)
         remote_nodes.remove(local_node)
         remote_nodes = list(remote_nodes)
+        crmsh.parallax.parallax_run(
+            nodes,
+            'chown hacluster: ~hacluster/.ssh/authorized_keys && chmod 0600 ~hacluster/.ssh/authorized_keys',
+        )
         crmsh.bootstrap.configure_ssh_key('hacluster')
         crmsh.bootstrap.swap_key_for_hacluster(remote_nodes)
         for node in remote_nodes:
