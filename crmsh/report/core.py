@@ -445,7 +445,7 @@ def parse_arguments(context: Context) -> None:
     Add, parse and process arguments
     """
     args = add_arguments()
-    crmutils.check_space_option_value(args)
+    crmutils.check_empty_option_value(args)
     for arg in vars(args):
         value = getattr(args, arg)
         if value or not hasattr(context, arg):

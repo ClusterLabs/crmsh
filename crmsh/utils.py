@@ -2208,14 +2208,14 @@ def get_nodeid_from_name(name):
         return None
 
 
-def check_space_option_value(options):
+def check_empty_option_value(options):
     if not isinstance(options, argparse.Namespace):
         raise ValueError("Expected type of \"options\" is \"argparse.Namespace\", not \"{}\"".format(type(options)))
 
     for opt in vars(options):
         value = getattr(options, opt)
         if isinstance(value, str) and len(value.strip()) == 0:
-            raise ValueError("Space value not allowed for dest \"{}\"".format(opt))
+            raise ValueError("Empty value not allowed for dest \"{}\"".format(opt))
 
 
 def interface_choice():

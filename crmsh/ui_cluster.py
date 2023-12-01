@@ -36,7 +36,7 @@ def parse_options(parser, args):
     if hasattr(options, 'help') and options.help:
         parser.print_help()
         return None, None
-    utils.check_space_option_value(options)
+    utils.check_empty_option_value(options)
     return options, args
 
 
