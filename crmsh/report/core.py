@@ -9,6 +9,7 @@ import re
 import sys
 import shutil
 import json
+import ast
 from inspect import getmembers, isfunction
 from typing import List
 
@@ -275,11 +276,19 @@ def start_collector(node: str, context: Context) -> None:
             # crm report data from collector
             compress_data = data.lstrip(constants.COMPRESS_DATA_FLAG)
         else:
-            # log data from collector
+            # INFO log data from collector
             print(data)
 
+    try:
+        # Safely evaluate the string representation of a tarball from push_data
+        data_object = ast.literal_eval(compress_data)
+    except (SyntaxError, ValueError) as e:
+        logger.error(f"Error evaluating data: {e}")
+        return
+
+    # Extract the tarball in the specified working directory
     cmd = f"cd {context.work_dir} && tar x"
-    ShellUtils().get_stdout(cmd, input_s=eval(compress_data))
+    ShellUtils().get_stdout(cmd, input_s=data_object)
 
 
 def process_dest(context: Context) -> None:
