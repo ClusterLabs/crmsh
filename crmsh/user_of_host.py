@@ -98,7 +98,10 @@ class UserOfHost:
     def _guess_user_for_ssh(host: str) -> typing.Tuple[str, str]:
         args = ['ssh']
         args.extend(constants.SSH_OPTION_ARGS)
-        args.extend(['-o', 'BatchMode=yes', host, 'sudo', 'true'])
+        if userdir.get_sudoer():
+            args.extend(['-o', 'BatchMode=yes', host, 'sudo', 'true'])
+        else:
+            args.extend(['-o', 'BatchMode=yes', host, 'true'])
         rc = subprocess.call(
             args,
             stdin=subprocess.DEVNULL,

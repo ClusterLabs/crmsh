@@ -18,11 +18,11 @@ Feature: Functional test to cover SAP clusterAPI
     And     Wait "3" seconds
     Then    Resource "d" type "Dummy" is "Started"
     And     Show cluster status on "hanode1"
+    When    Run "echo 'export PATH=$PATH:/usr/sbin/' > ~hacluster/.bashrc" on "hanode1"
+    When    Run "echo 'export PATH=$PATH:/usr/sbin/' > ~hacluster/.bashrc" on "hanode2"
 
   @clean
   Scenario: Start and stop resource by hacluster
-    When    Run "echo 'export PATH=$PATH:/usr/sbin/' >> ~hacluster/.bashrc" on "hanode1"
-    When    Run "echo 'export PATH=$PATH:/usr/sbin/' >> ~hacluster/.bashrc" on "hanode2"
     When    Run "su - hacluster -c 'crm resource stop d'" on "hanode1"
     Then    Expected return code is "0"
     When    Wait "3" seconds
