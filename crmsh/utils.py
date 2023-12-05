@@ -2127,9 +2127,16 @@ def check_ssh_passwd_need(local_user, remote_user, host):
     Check whether access to host need password
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-    ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
+    ssh_cmd = "{} ssh {} -T -o Batchmode=yes {}@{} true".format(get_ssh_agent_str(), ssh_options, remote_user, host)
     rc, _ = sh.LocalShell().get_rc_and_error(local_user, ssh_cmd)
     return rc != 0
+
+
+def get_ssh_agent_str():
+    ssh_agent_str = ""
+    if crmsh.user_of_host.instance().use_ssh_agent():
+        ssh_agent_str = f"SSH_AUTH_SOCK={os.environ.get('SSH_AUTH_SOCK')}"
+    return ssh_agent_str
 
 
 def check_port_open(ip, port):

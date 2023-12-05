@@ -259,7 +259,7 @@ def start_collector(node: str, context: Context) -> None:
     else:
         node = f"{context.ssh_user}@{node}" if context.ssh_user else node
         cmd = cmd.replace('"', '\\"')
-        cmd = f'ssh {constants.SSH_OPTS} {node} "{context.sudo} {cmd}"'
+        cmd = f'{crmutils.get_ssh_agent_str()} ssh {constants.SSH_OPTS} {node} "{context.sudo} {cmd}"'
         code, out, err = sh.LocalShell().get_rc_stdout_stderr(context.ssh_user, cmd)
 
     if code != 0:
