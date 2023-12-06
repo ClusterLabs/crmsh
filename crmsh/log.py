@@ -6,6 +6,7 @@ import socket
 import shutil
 import logging
 import logging.config
+import typing
 from contextlib import contextmanager
 
 from . import options
@@ -33,13 +34,8 @@ class ConsoleCustomHandler(logging.StreamHandler):
         stream.write(self.terminator)
 
 
-class ConsoleCustomFormatter(logging.Formatter):
-    """
-    A custom formatter for console
-
-    Wrap levelname with colors
-    Wrap message with line number which is used for regression test
-    """
+class ConsoleColoredFormatter(logging.Formatter):
+    """Print levelname with colors"""
     COLORS = {
         "WARNING": constants.YELLOW,
         "INFO": constants.GREEN,
@@ -47,30 +43,24 @@ class ConsoleCustomFormatter(logging.Formatter):
     }
     FORMAT = "%(levelname)s: %(message)s"
 
-    def __init__(self, lineno=-1, fmt=None):
-        self.lineno = lineno
-        if fmt:
-            super().__init__(fmt=fmt)
-        else:
-            super().__init__(fmt=self.FORMAT)
+    def __init__(self, fmt=None):
+        super().__init__(fmt)
+        if not fmt:
+            fmt = self.FORMAT
+        self._colored_formatter: typing.Mapping[str, logging.Formatter] = {
+            level: logging.Formatter(fmt.replace('%(levelname)s', f'{color}%(levelname)s{constants.END}'))
+            for level, color in self.COLORS.items()
+        }
 
     def format(self, record):
-        levelname = record.levelname
-        # wrap with colors
-        if levelname in self.COLORS and not options.regression_tests:
-            record.levelname = self.COLORS[levelname] + levelname + constants.END
-        # wrap with line number
-        if self.lineno > 0:
-            msg = record.msg
-            record.msg = "{}: {}".format(self.lineno, msg)
-            record.levelname = levelname
-        if record.levelname == "DEBUG2":
-            msg = record.msg
-            record.msg = f"{record.funcName}: {msg}"
-        return super().format(record)
+        colored_formatter = self._colored_formatter.get(record.levelname)
+        if colored_formatter is not None:
+            return colored_formatter.format(record)
+        else:
+            return super().format(record)
 
 
-class ConsoleReportFormatter(ConsoleCustomFormatter):
+class ConsoleReportFormatter(ConsoleColoredFormatter):
     """
     Custom formatter for crm report
     """
@@ -143,7 +133,7 @@ LOGGING_CFG = {
             "()": ConsoleReportFormatter
         },
         "console": {
-            "()": ConsoleCustomFormatter
+            "()": ConsoleColoredFormatter
         },
         "file": {
             "()": FileCustomFormatter
@@ -249,7 +239,7 @@ class LoggerUtils(object):
         Pass line number to ConsoleCustomFormatter
         """
         console_handler = self.get_handler("console")
-        console_handler.setFormatter(ConsoleCustomFormatter(lineno=lineno))
+        console_handler.setFormatter(ConsoleColoredFormatter())
 
     def reset_lineno(self, to=0):
         """
