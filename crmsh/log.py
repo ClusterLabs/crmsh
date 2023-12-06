@@ -257,19 +257,6 @@ class LoggerUtils(object):
         self.set_console_formatter(self.lineno)
 
     @contextmanager
-    def suppress_new_line(self):
-        """
-        Supress new line in console
-        """
-        console_handler = self.get_handler("console")
-        try:
-            console_handler.terminator = ""
-            yield
-        finally:
-            sys.stdout.flush()
-            console_handler.terminator = "\n"
-
-    @contextmanager
     def only_file(self):
         """
         Only log to file in bootstrap logger
@@ -482,5 +469,4 @@ def setup_report_logger(name):
     Get the logger for crm report
     """
     logger = setup_logger(name)
-    logger_utils = LoggerUtils(logger)
     return logger
