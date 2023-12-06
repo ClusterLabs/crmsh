@@ -12,8 +12,17 @@ from contextlib import contextmanager
 from . import options
 from . import constants
 
-
+DEBUG2 = logging.DEBUG + 5
 CRMSH_LOG_FILE = "/var/log/crmsh/crmsh.log"
+
+
+class DEBUG2Logger(logging.Logger):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def debug2(self, msg, *args, **kwargs):
+        if self.isEnabledFor(DEBUG2):
+            self._log(DEBUG2, msg, args, **kwargs)
 
 
 class ConsoleCustomHandler(logging.StreamHandler):
@@ -208,14 +217,6 @@ class LoggerUtils(object):
         # used in regression test
         self.lineno = 0
         self.__save_lineno = 0
-
-    def set_debug2_level(self):
-        """
-        Create DEBUG2 level for verbosity
-        """
-        logging.DEBUG2 = logging.DEBUG + 5
-        logging.addLevelName(logging.DEBUG2, "DEBUG2")
-        self.logger.debug2 = lambda msg, *args: self.logger._log(logging.DEBUG2, msg, args)
 
     def get_handler(self, _type):
         """
@@ -459,6 +460,8 @@ def setup_logging(only_help=False):
     except (PermissionError, FileNotFoundError) as e:
         print('{}WARNING:{} Failed to open log file: {}'.format(constants.YELLOW, constants.END, e), file=sys.stderr)
         LOGGING_CFG["handlers"]["file"] = {'class': 'logging.NullHandler'}
+    logging.addLevelName(DEBUG2, "DEBUG2")
+    logging.setLoggerClass(DEBUG2Logger)
     logging.config.dictConfig(LOGGING_CFG)
 
 
@@ -480,5 +483,4 @@ def setup_report_logger(name):
     """
     logger = setup_logger(name)
     logger_utils = LoggerUtils(logger)
-    logger_utils.set_debug2_level()
     return logger
