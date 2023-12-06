@@ -35,10 +35,6 @@ def cfgtool(*args):
     return ShellUtils().get_stdout(['corosync-cfgtool'] + list(args), shell=False)
 
 
-def quorumtool(*args):
-    return ShellUtils().get_stdout(['corosync-quorumtool'] + list(args), shell=False)
-
-
 def query_status(status_type):
     """
     Query status of corosync
@@ -367,13 +363,6 @@ class Parser(object):
                 last = t
                 tstream = tstream[1:]
         return ''.join(joiner(self._tokens))
-
-
-def logfile(conftext):
-    '''
-    Return corosync logfile (if set)
-    '''
-    return Parser(conftext).get('logging.logfile')
 
 
 def push_configuration(nodes):

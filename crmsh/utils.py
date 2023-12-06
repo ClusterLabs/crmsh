@@ -22,6 +22,9 @@ import argparse
 import random
 import string
 import grp
+import gzip
+import bz2
+import lzma
 from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
@@ -719,17 +722,6 @@ def file2str(fname, noerr=True):
     return s.strip()
 
 
-def file2list(fname):
-    '''
-    Read a file into a list (newlines dropped).
-    '''
-    try:
-        return open(fname).read().split('\n')
-    except IOError as msg:
-        logger.error(msg)
-        return None
-
-
 def safe_open_w(fname):
     if fname == "-":
         f = sys.stdout
@@ -1161,13 +1153,6 @@ def shortdate(ts):
     if ts is not None:
         return time.strftime("%F", time.localtime(ts))
     return time.strftime("%F", time.localtime(0))
-
-
-def sort_by_mtime(l):
-    'Sort a (small) list of files by time mod.'
-    l2 = [(os.stat(x).st_mtime, x) for x in l]
-    l2.sort()
-    return [x[1] for x in l2]
 
 
 def file_find_by_name(root, filename):
@@ -1668,20 +1653,6 @@ def is_larger_than_pcmk_118(cib_f=None):
     return is_min_pcmk_ver("1.1.8", cib_f=cib_f)
 
 
-@memoize
-def cibadmin_features():
-    '''
-    # usage example:
-    if 'corosync-plugin' in cibadmin_features()
-    '''
-    rc, outp = ShellUtils().get_stdout(['cibadmin', '-!'], shell=False)
-    if rc == 0:
-        m = re.match(r'Pacemaker\s(\S+)\s\(Build: ([^\)]+)\):\s(.*)', outp.strip())
-        if m and len(m.groups()) > 2:
-            return m.group(3).split()
-    return []
-
-
 # quote function from python module shlex.py in python 3.3
 
 _find_unsafe = re.compile(r'[^\w@%+=:,./-]').search
@@ -1746,22 +1717,6 @@ def fetch_lifetime_opt(args, iso8601=True):
         if opt in _LIFETIME or (iso8601 and _ISO8601_RE.match(opt)):
             return args.pop()
     return None
-
-
-def resolve_hostnames(hostnames):
-    '''
-    Tries to resolve the given list of hostnames.
-    returns (ok, failed-hostname)
-    ok: True if all hostnames resolved
-    failed-hostname: First failed hostname resolution
-    '''
-    import socket
-    for node in hostnames:
-        try:
-            socket.gethostbyname(node)
-        except socket.error:
-            return False, node
-    return True, None
 
 
 def list_corosync_node_names():
@@ -2167,37 +2122,21 @@ def debug_timestamp():
     return datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
 
 
-def get_member_iplist():
-    rc, out, err= ShellUtils().get_stdout_stderr("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
-    if rc != 0:
-        logger.debug(err)
-        return None
-
-    ip_list = []
-    for line in out.split('\n'):
-        match = re.search(r'ip\((.*?)\)', line)
-        if match:
-            ip_list.append(match.group(1))
-    return ip_list
-
-
-def get_iplist_corosync_using():
-    """
-    Get ip list used by corosync
-    """
-    rc, out, err = ShellUtils().get_stdout_stderr("corosync-cfgtool -s")
-    if rc != 0:
-        raise ValueError(err)
-    return re.findall(r'id\s*=\s*(.*)', out)
-
 def check_ssh_passwd_need(local_user, remote_user, host):
     """
     Check whether access to host need password
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-    ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
+    ssh_cmd = "{} ssh {} -T -o Batchmode=yes {}@{} true".format(get_ssh_agent_str(), ssh_options, remote_user, host)
     rc, _ = sh.LocalShell().get_rc_and_error(local_user, ssh_cmd)
     return rc != 0
+
+
+def get_ssh_agent_str():
+    ssh_agent_str = ""
+    if crmsh.user_of_host.instance().use_ssh_agent():
+        ssh_agent_str = f"SSH_AUTH_SOCK={os.environ.get('SSH_AUTH_SOCK')}"
+    return ssh_agent_str
 
 
 def check_port_open(ip, port):
@@ -2276,14 +2215,14 @@ def get_nodeid_from_name(name):
         return None
 
 
-def check_space_option_value(options):
+def check_empty_option_value(options):
     if not isinstance(options, argparse.Namespace):
         raise ValueError("Expected type of \"options\" is \"argparse.Namespace\", not \"{}\"".format(type(options)))
 
     for opt in vars(options):
         value = getattr(options, opt)
         if isinstance(value, str) and len(value.strip()) == 0:
-            raise ValueError("Space value not allowed for dest \"{}\"".format(opt))
+            raise ValueError("Empty value not allowed for dest \"{}\"".format(opt))
 
 
 def interface_choice():
@@ -2333,32 +2272,12 @@ class IP(object):
         """
         return cls(addr).version == 6
 
-    @classmethod
-    def is_valid_ip(cls, addr):
-        """
-        Check whether the address is valid IP address
-        """
-        cls_inst = cls(addr)
-        try:
-            cls_inst.ip_address
-        except ValueError:
-            return False
-        else:
-            return True
-
     @property
     def is_loopback(self):
         """
         Check whether the address is loopback address
         """
         return self.ip_address.is_loopback
-
-    @property
-    def is_link_local(self):
-        """
-        Check whether the address is link-local address
-        """
-        return self.ip_address.is_link_local
 
 
 class Interface(IP):
@@ -2393,12 +2312,6 @@ class Interface(IP):
         Get network address
         """
         return str(self.ip_interface.network.network_address)
-
-    def ip_in_network(self, addr):
-        """
-        Check whether the addr in the network
-        """
-        return IP(addr).ip_address in self.ip_interface.network
 
 
 class InterfacesInfo(object):
@@ -2550,18 +2463,6 @@ class InterfacesInfo(object):
                     _ip_list.append(self._nic_first_ip(nic))
                     break
         return _ip_list
-
-    @classmethod
-    def ip_in_network(cls, addr):
-        """
-        Check whether given address was in one of local networks
-        """
-        cls_inst = cls(IP.is_ipv6(addr))
-        cls_inst.get_interfaces_info()
-        for interface_inst in cls_inst.interface_list:
-            if interface_inst.ip_in_network(addr):
-                return True
-        return False
 
 
 def check_file_content_included(source_file, target_file, remote=None, source_local=False):
@@ -3036,20 +2937,6 @@ def diff_and_patch(orig_cib_str, current_cib_str):
     return True
 
 
-def read_from_file(infile):
-    """
-    Read data from file in a save way, to avoid UnicodeDecodeError
-    """
-    data = None
-    with open(infile, 'rt', encoding='utf-8', errors='replace') as f:
-        data = f.read()
-    return to_ascii(data)
-
-
-def has_dup_value(_list):
-    return _list and len(_list) != len(set(_list))
-
-
 def detect_file(_file, remote=None):
     """
     Detect if file exists, support both local and remote
@@ -3214,4 +3101,35 @@ def parse_user_at_host(s: str):
     else:
         return s[:i], s[i+1:]
 
+
+def file_is_empty(file: str) -> bool:
+    return os.stat(file).st_size == 0
+
+
+def get_open_method(infile):
+    """
+    Get the appropriate file open method based on the file extension
+    """
+    file_type_open_dict = {
+        "gz": gzip.open,
+        "bz2": bz2.open,
+        "xz": lzma.open
+    }
+    file_ext = infile.split('.')[-1]
+    return file_type_open_dict.get(file_ext, open)
+
+
+def read_from_file(infile: str) -> str:
+    """
+    Read content from a file
+    """
+    _open = get_open_method(infile)
+    try:
+        with _open(infile, 'rt', encoding='utf-8', errors='replace') as f:
+            data = f.read()
+    except Exception as err:
+        logger.error("When reading file \"%s\": %s", infile, str(err))
+        return ""
+
+    return data
 # vim:ts=4:sw=4:et:

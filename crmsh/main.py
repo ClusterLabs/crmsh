@@ -301,7 +301,7 @@ def compgen():
 
 def parse_options():
     opts, args = option_parser.parse_known_args()
-    utils.check_space_option_value(opts)
+    utils.check_empty_option_value(opts)
     config.core.debug = "yes" if opts.debug else config.core.debug
     options.profile = opts.profile or options.profile
     options.regression_tests = opts.regression_tests or options.regression_tests

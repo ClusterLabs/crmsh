@@ -34,6 +34,12 @@ Feature: crmsh bootstrap process - options
       usage: init [options] [STAGE]
       crm: error: Duplicated input for '-i/--interface' option
       """
+    When    Try "crm cluster init sbd -x -y" on "hanode1"
+    Then    Expected "-x option or SKIP_CSYNC2_SYNC can't be used with any stage" in stderr
+    When    Try "crm cluster init -i eth0 -i eth1 -i eth2 -y" on "hanode1"
+    Then    Expected "Maximum number of interface is 2" in stderr
+    When    Try "crm cluster init sbd -N hanode1 -N hanode2 -y" on "hanode1"
+    Then    Expected "Can't use -N/--nodes option and stage(sbd) together" in stderr
 
   @clean
   Scenario: Init whole cluster service on node "hanode1" using "--node" option

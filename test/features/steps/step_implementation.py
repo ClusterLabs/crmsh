@@ -122,6 +122,14 @@ def step_impl(context):
     context.logger.info("\n{}".format(context.stderr))
 
 
+@then('No crmsh tracebacks')
+def step_impl(context):
+    if "Traceback (most recent call last):" in context.stderr and \
+            re.search('File "/usr/lib/python.*/crmsh/', context.stderr):
+        context.logger.info("\n{}".format(context.stderr))
+        context.failed = True
+
+
 @when('Try "{cmd}" on "{addr}"')
 def step_impl(context, cmd, addr):
     run_command_local_or_remote(context, cmd, addr, exit_on_fail=False)
@@ -287,6 +295,13 @@ def step_impl(context):
         context.logger.info("\n{}".format(out))
 
 
+@then('Show qdevice status')
+def step_impl(context):
+    _, out, _ = run_command(context, 'crm corosync status qdevice')
+    if out:
+        context.logger.info("\n{}".format(out))
+
+
 @then('Show corosync qdevice configuration')
 def step_impl(context):
     _, out, _ = run_command(context, "sed -n -e '/quorum/,/^}/ p' /etc/corosync/corosync.conf")
@@ -353,15 +368,25 @@ def step_impl(context, votes):
     assert_eq(int(votes), int(corosync.get_value("quorum.expected_votes")))
 
 
+@then('Directory "{directory}" created')
+def step_impl(context, directory):
+    assert os.path.isdir(directory) is True
+
+
+@then('Directory "{directory}" not created')
+def step_impl(context, directory):
+    assert os.path.isdir(directory) is False
+
+
 @then('Default crm_report tar file created')
 def step_impl(context):
-    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
+    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%a-%d-%b-%Y"))
     assert os.path.exists(default_file_name) is True
 
 
 @when('Remove default crm_report tar file')
 def step_impl(context):
-    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
+    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%a-%d-%b-%Y"))
     os.remove(default_file_name)
 
 
@@ -537,3 +562,14 @@ def step_impl(context, path, nodes):
     for node in nodes:
         rc, _, _ = behave_agent.call(node, 1122, f"systemd-run --uid '{user}' -u ssh-agent /usr/bin/ssh-agent -D -a '{path}'", user='root')
         assert 0 == rc
+
+
+@then('This file "{target_file}" will trigger UnicodeDecodeError exception')
+def step_impl(context, target_file):
+    try:
+        with open(target_file, "r", encoding="utf-8") as file:
+            content = file.read()
+    except UnicodeDecodeError as e:
+        return True
+    else:
+        return False

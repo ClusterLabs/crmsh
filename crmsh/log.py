@@ -64,6 +64,9 @@ class ConsoleCustomFormatter(logging.Formatter):
             msg = record.msg
             record.msg = "{}: {}".format(self.lineno, msg)
             record.levelname = levelname
+        if record.levelname == "DEBUG2":
+            msg = record.msg
+            record.msg = f"{record.funcName}: {msg}"
         return super().format(record)
 
 
@@ -93,9 +96,21 @@ class DebugCustomFilter(logging.Filter):
     A custom filter for debug message
     """
     def filter(self, record):
-        from .config import core, report
+        from .config import core
         if record.levelname == "DEBUG":
-            return core.debug or int(report.verbosity) >= 1
+            return core.debug
+        else:
+            return True
+
+
+class ReportDebugCustomFilter(logging.Filter):
+    """
+    A custom filter for crm report debug message
+    """
+    def filter(self, record):
+        from .config import report
+        if record.levelname == "DEBUG":
+            return int(report.verbosity) >= 1
         if record.levelname == "DEBUG2":
             return int(report.verbosity) > 1
         else:
@@ -138,6 +153,9 @@ LOGGING_CFG = {
         "filter": {
             "()": DebugCustomFilter
         },
+        "filter_report": {
+            "()": ReportDebugCustomFilter
+        },
     },
     "handlers": {
         'null': {
@@ -146,7 +164,7 @@ LOGGING_CFG = {
         "console_report": {
             "()": ConsoleCustomHandler,
             "formatter": "console_report",
-            "filters": ["filter"]
+            "filters": ["filter_report"]
         },
         "console": {
             "()": ConsoleCustomHandler,

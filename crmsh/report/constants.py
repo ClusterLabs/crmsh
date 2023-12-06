@@ -1,105 +1,15 @@
 # Copyright (C) 2017 Xin Liang <XLiang@suse.com>
 # See COPYING for license information.
-
-import socket
-from crmsh import config
-
 BIN_CRM = "/usr/sbin/crm"
-ARGOPTS_VALUE = "f:t:l:u:X:p:L:e:E:n:MSDZVsvhdQ"
-B_CONF = None
-CIB_DIR = None
-COMPRESS = config.report.compress
-COMPRESS_DATA_FLAG = "COMPRESS HB_REPORT DATA:::"
-COMPRESS_PROG = ""
-COMPRESS_EXT = ""
-CORES_DIRS = None
-CONF = None
-CRM_DAEMON_DIR = None
-CTS = ""
-DEST = ""
-DESTDIR = ""
-DO_SANITIZE = False
-SANITIZE_RULE = "passw.*"
-SANITIZE_RULE_DICT = dict()
-SANITIZE_VALUE_CIB = []
-SANITIZE_KEY_CIB = []
-SANITIZE_VALUE_RAW = []
-EXTRA_LOGS = config.report.collect_extra_logs
-FORCE_REMOVE_DEST = config.report.remove_exist_dest
-FROM_TIME = ""
-GET_STAMP_FUNC = None
-HA_DEBUGFILE = None
-HA_LOG = ""
-HA_LOGFACILITY = "daemon"
-HA_LOGFILE = None
-HA_LOGLEVEL = "info"
-HA_BIN = None
-HA_VARLIB = None
-LOCAL_SUDO = ""
+BIN_COLLECTOR = f"{BIN_CRM} report __collector"
+COMPRESS_DATA_FLAG = "COMPRESS CRM_REPORT DATA:::"
 LOG_PATTERNS = "CRIT: ERROR: error: warning: crit:"
-NO_DESCRIPTION = 1
-NO_SSH = config.report.single_node
-NODES = ""
-OCF_DIR = None
-PACKAGES = None
-PCMK_LIB = None
-PCMK_LOG = "/var/log/pacemaker/pacemaker.log /var/log/pacemaker.log"
-PE_STATE_DIR = None
 PTEST = "crm_simulate"
-SKIP_LVL = config.report.speed_up
-SLAVE = 0
-SLAVEPIDS = None
 SSH_OPTS = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-SSH_PASSWORD_NODES = []
-SSH_USER = ""
-SUDO = ""
-THIS_IS_NODE = 0
-TMP = None
-TO_TIME = 0
-TRY_SSH = "root hacluster"
-# UNIQUE_MSG = "Mark:HB_REPORT:%d" % now_second
-USER_CLUSTER_TYPE = "Corosync/Pacemaker"
-USER_NODES = ""
-WE = socket.gethostname()
-WORKDIR = None
+CHECK_LOG_LINES = 10
+STAMP_TYPE = ""
 
-
-# Important events
-#
-# Patterns format:
-#  title extended_regexp
-# NB: don't use spaces in titles or regular expressions!
-EVENT_PATTERNS = """
-membership crmd.*(NEW|LOST)|pcmk.*(lost|memb|LOST|MEMB):
-quorum crmd.*Updating.quorum.status|crmd.*quorum.(lost|ac?quir)
-pause Process.pause.detected
-resources lrmd.*(start|stop)
-stonith crmd.*Exec|stonith-ng.*log_oper.*reboot|stonithd.*(requests|(Succeeded|Failed).to.STONITH|result=)
-start_stop Configuration.validated..Starting.heartbeat|Corosync.Cluster.Engine|Executive.Service.RELEASE|Requesting.shutdown|Shutdown.complete
-"""
-
-PACKAGES = """pacemaker libpacemaker3 pacemaker-cli pacemaker-remote
-pacemaker-pygui pacemaker-pymgmt pymgmt-client
-openais libopenais2 libopenais3 corosync libcorosync4
-libcfg6 libcmap4 libcorosync_common4 libcpg4 libquorum5
-libsam4 libtotem_pg5 libvotequorum8
-corosync-qdevice corosync-qnetd
-resource-agents cluster-glue libglue2 ldirectord libqb0
-heartbeat heartbeat-common heartbeat-resources libheartbeat2
-booth
-sbd
-ocfs2-tools ocfs2-tools-o2cb ocfs2console
-ocfs2-kmp-default ocfs2-kmp-pae ocfs2-kmp-xen ocfs2-kmp-debug ocfs2-kmp-trace
-drbd drbd-kmp-xen drbd-kmp-pae drbd-kmp-default drbd-kmp-debug drbd-kmp-trace
-drbd-heartbeat drbd-pacemaker drbd-utils drbd-bash-completion drbd-xen
-lvm2 lvm2-clvm cmirrord
-libdlm libdlm2 libdlm3
-hawk ruby lighttpd
-kernel-default kernel-pae kernel-xen
-glibc
-"""
-
-EMAIL_TMPLATE = """
+DECRIPTION_TMPLATE = """
 Please edit this template and describe the issue/problem you
 encountered. Then, post to
     http://clusterlabs.org/mailman/listinfo/users
@@ -109,40 +19,84 @@ or file a bug at
 Thank you.
 
 Date: {0}
-By: report {1}
+By: crm report {1}
 Subject: [short problem description]
 Severity: [choose one] enhancement minor normal major critical blocking
-Component: [choose one] CRM LRM CCM RA fencing openais comm GUI tools other
 --------------------------------------------------------
 
 Detailed description:
 
 """
 
+PACKAGES = "booth cluster-glue cluster-glue-libs corosync corosync-qdevice corosync-qnetd corosync-testagents crmsh crmsh-scripts csync2 doxygen2man drbd-utils gfs2-kmp-default gfs2-utils hawk-apiserver ldirectord libcfg6 libcmap4 libcorosync_common4 libcpg4 libdlm libdlm3 libqb-tools libqb100 libquorum5 libsam4 libtotem_pg5 libvotequorum8 linstor linstor-common linstor-controller linstor-satellite monitoring-plugins-metadata o2locktop ocfs2-tools ocfs2-tools-o2cb omping pacemaker pacemaker-cli pacemaker-cts pacemaker-libs pacemaker-remote pacemaker-schemas patterns-ha pssh python-pssh python3-linstor python3-linstor-client python3-pacemaker python3-parallax resource-agents resource-agents-zfs ruby2.5-rubygem-sass-listen ruby2.5-rubygem-sass-listen-doc sbd"
 
 ANALYSIS_F = "analysis.txt"
-BT_F = "backtraces.txt"
+COREDUMP_F = "coredump_info.txt"
 CIB_F = "cib.xml"
-CIB_TXT_F = "cib.txt"
-CONFIGURATIONS = ["/etc/drbd.conf",
-                  "/etc/drbd.d",
-                  "/etc/booth/booth.conf"]
+CONFIGURE_SHOW_F = "configure_show.txt"
+CONFIGURATIONS = [
+    "/etc/drbd.conf",
+    "/etc/drbd.d",
+    "/etc/booth/booth.conf"
+]
 COROSYNC_RECORDER_F = "fdata.txt"
+COROSYNC_F = "corosync.conf"
 CRM_MON_F = "crm_mon.txt"
 CRM_VERIFY_F = "crm_verify.txt"
 DESCRIPTION_F = "description.txt"
 DLM_DUMP_F = "dlm_dump.txt"
-HALOG_F = "ha-log.txt"
-HB_UUID_F = "hb_uuid.txt"
-HOSTCACHE = "hostcache"
 JOURNAL_F = "journal.log"
+JOURNAL_PCMK_F = "journal_pacemaker.log"
+JOURNAL_COROSYNC_F = "journal_corosync.log"
+JOURNAL_SBD_F = "journal_sbd.log"
 MEMBERSHIP_F = "members.txt"
 PERMISSIONS_F = "permissions.txt"
 SBDCONF = "/etc/sysconfig/sbd"
+PCMKCONF = "/etc/sysconfig/pacemaker"
 SYSINFO_F = "sysinfo.txt"
 SYSSTATS_F = "sysstats.txt"
 TIME_F = "time.txt"
 OCFS2_F = "ocfs2.txt"
 SBD_F = "sbd.txt"
 OSRELEASE = "/etc/os-release"
+TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+RESULT_TIME_SUFFIX = "%a-%d-%b-%Y"
+NAME = "crm report"
+COROSYNC_LIB = "/var/lib/corosync"
+
+DESCRIPTION_HELP = '''Description:
+crm report is a utility to collect all information (logs,
+configuration files, system information, etc) relevant to
+Pacemaker (CRM) over the given period of time.
+'''
+
+EXTRA_HELP = '''
+Examples
+  # collect from 2pm, today
+  {name} -f 2pm report_1
+
+  # collect from "2007/9/5 12:30" to "2007/9/5 14:00"
+  {name} -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
+
+  # collect from 1:00 to 3:00, today; include /var/log/cluster/ha-debug as extra log
+  {name} -f 1:00 -t 3:00 -E /var/log/cluster/ha-debug report_3
+
+  # collect from "09sep07 2:00" and use 'hacluster' as ssh user
+  {name} -f "09sep07 2:00" -u hacluster report_4
+
+  # collect from 18:00, today; replace sensitive message like "usern.*" or "admin.*"
+  {name} -f 18:00 -s -p "usern.*" -p "admin.*" report_5
+
+  # collect from 1 mounth ago
+  {name} -f 1m
+
+  # collect from 75 hours ago
+  {name} -f 75H
+
+  # collect from 10 minutes ago
+  {name} -f 10M
+
+  # collect from 2 days ago to 1 day ago
+  {name} -f 2d -t 1d
+'''.format(name=NAME)
 # vim:ts=4:sw=4:et:
