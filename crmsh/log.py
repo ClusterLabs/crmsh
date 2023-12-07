@@ -86,16 +86,6 @@ class LeveledFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-class ConsoleReportFormatter(ConsoleColoredFormatter):
-    """
-    Custom formatter for crm report
-    """
-    FORMAT_REPORT = "{}: %(levelname)s: %(message)s".format(socket.gethostname())
-
-    def __init__(self):
-        super().__init__(fmt=self.FORMAT_REPORT)
-
-
 class FileCustomFormatter(logging.Formatter):
     """
     A custom formatter for file
@@ -156,7 +146,12 @@ LOGGING_CFG = {
     "disable_existing_loggers": "False",
     "formatters": {
         "console_report": {
-            "()": ConsoleReportFormatter
+            "()": LeveledFormatter,
+            "base_formatter_factory": ConsoleColoredFormatter,
+            "default_fmt": "{}: %(levelname)s: %(message)s".format(socket.gethostname()),
+            "level_fmt": {
+                DEBUG2: "{}: %(levelname)s: %(funcName)s: %(message)s".format(socket.gethostname()),
+            },
         },
         "console": {
             "()": LeveledFormatter,
