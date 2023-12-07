@@ -118,7 +118,8 @@ class Rabbiteer():
         data = {'env': {'provider': provider},
                 'execution_id': execution_id,
                 'group_id': str(uuid.uuid4()),
-                'targets': []
+                'targets': [],
+                'target_type': 'cluster'
                }
         for agent_id in agent_ids:
             data['targets'].append({'agent_id': agent_id, 'checks': check_ids})
