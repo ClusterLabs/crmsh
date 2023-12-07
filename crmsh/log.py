@@ -69,6 +69,23 @@ class ConsoleColoredFormatter(logging.Formatter):
             return super().format(record)
 
 
+class LeveledFormatter(logging.Formatter):
+    """Format log according to log level."""
+    def __init__(self, base_formatter_factory, default_fmt: str = None, level_fmt: typing.Mapping[int, str] = None):
+        super().__init__()
+        self.default_formatter = base_formatter_factory(default_fmt)
+        self.level_formatter = {
+            level: base_formatter_factory(fmt)
+            for level, fmt in level_fmt.items()
+        }
+
+    def format(self, record):
+        formatter = self.level_formatter.get(record.levelno)
+        if formatter is None:
+            formatter = self.default_formatter
+        return formatter.format(record)
+
+
 class ConsoleReportFormatter(ConsoleColoredFormatter):
     """
     Custom formatter for crm report
@@ -142,7 +159,12 @@ LOGGING_CFG = {
             "()": ConsoleReportFormatter
         },
         "console": {
-            "()": ConsoleColoredFormatter
+            "()": LeveledFormatter,
+            "base_formatter_factory": ConsoleColoredFormatter,
+            "default_fmt": "%(levelname)s: %(message)s",
+            "level_fmt": {
+                DEBUG2: "%(levelname)s: %(funcName)s %(message)s",
+            },
         },
         "file": {
             "()": FileCustomFormatter
