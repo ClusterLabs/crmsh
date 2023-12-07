@@ -86,17 +86,6 @@ class LeveledFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-class FileCustomFormatter(logging.Formatter):
-    """
-    A custom formatter for file
-    """
-    FORMAT = "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname())
-    DATEFMT = "%b %d %H:%M:%S"
-
-    def __init__(self):
-        super().__init__(fmt=self.FORMAT, datefmt=self.DATEFMT)
-
-
 class DebugCustomFilter(logging.Filter):
     """
     A custom filter for debug message
@@ -162,7 +151,8 @@ LOGGING_CFG = {
             },
         },
         "file": {
-            "()": FileCustomFormatter
+            "format": "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
+            "datefmt": "%b %d %H:%M:%S",
         }
     },
     "filters": {
