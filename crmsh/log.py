@@ -25,6 +25,54 @@ class DEBUG2Logger(logging.Logger):
             self._log(DEBUG2, msg, args, **kwargs)
 
 
+class NumberedLoggerInterface(DEBUG2Logger):
+    """
+    Interface to prepend a number to the message, used for regression test. When this class is used directly, no numbers are prepend.
+    """
+    lineno = -1
+
+    @classmethod
+    def reset_lineno(cls, to=0):
+        pass
+
+    @classmethod
+    def incr_lineno(cls):
+        pass
+
+
+class NumberedLogger(NumberedLoggerInterface):
+    """
+    Prepend a number to the message, used for regression test
+    """
+    lineno = -1
+
+    def _log( self, level, msg, args, **kwargs):
+        if NumberedLogger.lineno > 0:
+            msg = f'{self.lineno}: {msg}'
+        super()._log(level, msg, args, **kwargs)
+
+    @classmethod
+    def reset_lineno(cls, to=0):
+        cls.lineno = to
+
+    @classmethod
+    def incr_lineno(cls):
+        cls.lineno += 1
+
+    if (sys.version_info.major, sys.version_info.minor) > (3, 6):
+        def findCaller(self, stack_info=False, stacklevel=1):
+            return super().findCaller(stack_info, stacklevel+1)
+    else:
+        def findCaller(self, stack_info=False):
+            if stack_info:
+                return super().findCaller(stack_info)
+            else:
+                f = sys._getframe(4)
+                co = f.f_code
+                sinfo = None
+                return co.co_filename, f.f_lineno, co.co_name, sinfo
+
+
 class ConsoleCustomHandler(logging.StreamHandler):
     """
     A custom handler for console
@@ -210,19 +258,42 @@ LOGGING_CFG = {
 }
 
 
+NO_COLOR_FORMATTERS = {
+    "console_report": {
+        "()": LeveledFormatter,
+        "base_formatter_factory": logging.Formatter,
+        "default_fmt": "{}: %(levelname)s: %(message)s".format(socket.gethostname()),
+        "level_fmt": {
+            DEBUG2: "{}: %(levelname)s: %(funcName)s: %(message)s".format(socket.gethostname()),
+        },
+    },
+    "console": {
+        "()": LeveledFormatter,
+        "base_formatter_factory": logging.Formatter,
+        "default_fmt": "%(levelname)s: %(message)s",
+        "level_fmt": {
+            DEBUG2: "%(levelname)s: %(funcName)s %(message)s",
+        },
+    },
+    "file": {
+        "format": "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
+        "datefmt": "%b %d %H:%M:%S",
+    }
+}
+
+
 class LoggerUtils(object):
     """
     A class to keep/update some attributes related with logger
     Also has methods related with handler and formatter
     And a set of wrapped log message for specific scenarios
     """
-    def __init__(self, logger):
+    def __init__(self, logger: NumberedLogger):
         """
         Init function
         """
         self.logger = logger
         # used in regression test
-        self.lineno = 0
         self.__save_lineno = 0
 
     def get_handler(self, _type):
@@ -242,26 +313,17 @@ class LoggerUtils(object):
         console_handler = self.get_handler("console")
         console_handler.setLevel(logging.WARNING)
 
-    def set_console_formatter(self, lineno):
-        """
-        Pass line number to ConsoleCustomFormatter
-        """
-        console_handler = self.get_handler("console")
-        console_handler.setFormatter(ConsoleColoredFormatter())
-
     def reset_lineno(self, to=0):
         """
         Reset line number
         """
-        self.lineno = to
-        self.set_console_formatter(to)
+        self.logger.reset_lineno(to)
 
     def incr_lineno(self):
         """
         Increase line number
         """
-        self.lineno += 1
-        self.set_console_formatter(self.lineno)
+        self.logger.incr_lineno()
 
     @contextmanager
     def only_file(self):
@@ -315,11 +377,11 @@ class LoggerUtils(object):
         Mark the line number in the log record
         """
         try:
-            self.__save_lineno = self.lineno
+            self.__save_lineno = self.logger.lineno
             self.reset_lineno()
             yield
         finally:
-            self.reset_lineno(self.__save_lineno)
+            self.logger.reset_lineno(self.__save_lineno)
 
     @contextmanager
     def status_long(self, msg):
@@ -455,8 +517,13 @@ def setup_logging(only_help=False):
         print('{}WARNING:{} Failed to open log file: {}'.format(constants.YELLOW, constants.END, e), file=sys.stderr)
         LOGGING_CFG["handlers"]["file"] = {'class': 'logging.NullHandler'}
     logging.addLevelName(DEBUG2, "DEBUG2")
-    logging.setLoggerClass(DEBUG2Logger)
-    logging.config.dictConfig(LOGGING_CFG)
+    if os.environ.get('CRMSH_REGRESSION_TEST'):
+        logging.setLoggerClass(NumberedLogger)
+        LOGGING_CFG['formatters'] = NO_COLOR_FORMATTERS
+        logging.config.dictConfig(LOGGING_CFG)
+    else:
+        logging.setLoggerClass(NumberedLoggerInterface)
+        logging.config.dictConfig(LOGGING_CFG)
 
 
 def setup_logger(name):
