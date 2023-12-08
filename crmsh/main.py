@@ -45,8 +45,8 @@ def load_rc(context, rcfile):
         try:
             if not context.run(inp):
                 raise ValueError("Error in RC file: " + rcfile)
-        except ValueError as msg:
-            logger.error(msg)
+        except ValueError as e:
+            logger.error(e, exc_info=e)
     f.close()
     sys.stdin = save_stdin
 
@@ -261,14 +261,16 @@ def main_input_loop(context, user_args):
             try:
                 if not context.run(inp):
                     rc = 1
-            except ValueError as msg:
+            except ValueError as e:
                 rc = 1
-                logger.error(msg)
+                logger.error(e, exc_info=e)
         except KeyboardInterrupt:
             if options.interactive and not options.batch:
                 print("Ctrl-C, leaving")
             context.quit(1)
-    return rc
+        except Exception as e:
+            logger.error(e, exc_info=e)
+            context.quit(1)
 
 
 def compgen():
@@ -374,11 +376,10 @@ def run():
             print("Ctrl-C, leaving")
             sys.exit(1)
     except ValueError as e:
-        if config.core.debug:
-            import traceback
-            traceback.print_exc()
-            sys.stdout.flush()
-        logger.error(str(e))
+        logger.error(e, exc_info=e)
         sys.exit(1)
+    except Exception as e:
+        logger.error(e, exc_info=e)
+        raise
 
 # vim:ts=4:sw=4:et:

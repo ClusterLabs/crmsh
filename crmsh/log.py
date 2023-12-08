@@ -91,8 +91,36 @@ class ConsoleCustomHandler(logging.StreamHandler):
         stream.write(self.terminator)
 
 
-class ConsoleColoredFormatter(logging.Formatter):
-    """Print levelname with colors"""
+class NoBacktraceFormatter(logging.Formatter):
+    """Suppress backtrace unless option debug is set."""
+    def format(self, record):
+        """
+        Format the specified record as text.
+
+        The record's attribute dictionary is used as the operand to a
+        string formatting operation which yields the returned string.
+        Before formatting the dictionary, a couple of preparatory steps
+        are carried out. The message attribute of the record is computed
+        using LogRecord.getMessage(). If the formatting string uses the
+        time (as determined by a call to usesTime(), formatTime() is
+        called to format the event time. If there is exception information,
+        it is formatted using formatException() and appended to the message.
+        """
+        if record.exc_info or record.stack_info:
+            from crmsh import config
+            if config.core.debug:
+                return super().format(record)
+            else:
+                record.message = record.getMessage()
+                if self.usesTime():
+                    record.asctime = self.formatTime(record, self.datefmt)
+            return self.formatMessage(record)
+        else:
+            return super().format(record)
+
+
+class ConsoleColoredFormatter(NoBacktraceFormatter):
+    """Print levelname with colors and suppress backtrace."""
     COLORS = {
         logging.WARNING: constants.YELLOW,
         logging.INFO: constants.GREEN,
@@ -105,7 +133,7 @@ class ConsoleColoredFormatter(logging.Formatter):
         if not fmt:
             fmt = self.FORMAT
         self._colored_formatter: typing.Mapping[int, logging.Formatter] = {
-            level: logging.Formatter(fmt.replace('%(levelname)s', f'{color}%(levelname)s{constants.END}'))
+            level: NoBacktraceFormatter(fmt.replace('%(levelname)s', f'{color}%(levelname)s{constants.END}'))
             for level, color in self.COLORS.items()
         }
 
