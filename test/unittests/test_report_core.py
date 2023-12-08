@@ -1,5 +1,6 @@
 from crmsh import config
 from crmsh.report import core, constants, utils, collect
+import crmsh.log
 
 import sys
 import argparse
@@ -164,30 +165,30 @@ class TestRun(unittest.TestCase):
             ])
 
     @mock.patch('os.path.basename')
-    @mock.patch('crmsh.report.core.logger.debug2')
+    @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.mkdirp')
     @mock.patch('crmsh.report.core.is_collector')
     @mock.patch('crmsh.report.core.tmpfiles.create_dir')
-    def test_setup_workdir_collector(self, mock_create_dir, mock_collector, mock_mkdirp, mock_debug, mock_basename):
+    def test_setup_workdir_collector(self, mock_create_dir, mock_collector, mock_mkdirp, mock_logger, mock_basename):
         mock_create_dir.return_value = "/tmp/tmp_dir"
         mock_ctx_inst = mock.Mock(dest="/opt/report", work_dir="/opt/work_dir", me="node1")
         mock_collector.return_value = True
         mock_basename.return_value = "report"
         core.setup_workdir(mock_ctx_inst)
-        mock_debug.assert_called_once_with(f"Setup work directory in {mock_ctx_inst.work_dir}")
+        mock_logger.debug2.assert_called_once_with(f"Setup work directory in {mock_ctx_inst.work_dir}")
 
     @mock.patch('os.path.basename')
-    @mock.patch('crmsh.report.core.logger.debug2')
+    @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.mkdirp')
     @mock.patch('crmsh.report.core.is_collector')
     @mock.patch('crmsh.report.core.tmpfiles.create_dir')
-    def test_setup_workdir(self, mock_create_dir, mock_collector, mock_mkdirp, mock_debug, mock_basename):
+    def test_setup_workdir(self, mock_create_dir, mock_collector, mock_mkdirp, mock_logger, mock_basename):
         mock_create_dir.return_value = "/tmp/tmp_dir"
         mock_ctx_inst = mock.Mock(dest="/opt/report", work_dir="/opt/work_dir")
         mock_collector.return_value = False
         mock_basename.return_value = "report"
         core.setup_workdir(mock_ctx_inst)
-        mock_debug.assert_called_once_with(f"Setup work directory in {mock_ctx_inst.work_dir}")
+        mock_logger.debug2.assert_called_once_with(f"Setup work directory in {mock_ctx_inst.work_dir}")
 
     @mock.patch('os.path.isdir')
     @mock.patch('crmsh.report.core.load_from_crmsh_config')
@@ -242,8 +243,8 @@ class TestRun(unittest.TestCase):
     @mock.patch('crmsh.report.core.adjust_verbosity')
     @mock.patch('crmsh.report.core.config')
     @mock.patch('json.loads')
-    @mock.patch('crmsh.report.core.logger.debug2')
-    def test_load_context(self, mock_debug2, mock_json_loads, mock_config, mock_verbosity):
+    @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
+    def test_load_context(self, mock_logger, mock_json_loads, mock_config, mock_verbosity):
         class Context:
             def __str__(self):
                 return "data"
@@ -255,7 +256,7 @@ class TestRun(unittest.TestCase):
         mock_json_loads.return_value = {"key": "value", "debug": "true"}
         mock_ctx_inst = Context()
         core.load_context(mock_ctx_inst)
-        mock_debug2.assert_called_once_with("Loading context from collector: data")
+        mock_logger.debug2.assert_called_once_with("Loading context from collector: data")
 
     @mock.patch('crmsh.report.core.adjust_verbosity')
     @mock.patch('crmsh.report.core.process_arguments')
@@ -361,10 +362,10 @@ class TestRun(unittest.TestCase):
 
         core.add_arguments()
 
-    @mock.patch('crmsh.report.core.logger.debug2')
+    @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.to_ascii')
     @mock.patch('crmsh.report.core.ShellUtils')
-    def test_push_data(self, mock_sh_utils, mock_to_ascii, mock_debug):
+    def test_push_data(self, mock_sh_utils, mock_to_ascii, mock_logger):
         mock_sh_utils_inst = mock.Mock()
         mock_sh_utils.return_value = mock_sh_utils_inst
         mock_sh_utils_inst.get_stdout_stderr.return_value = (0, "data", "error")
@@ -375,7 +376,7 @@ class TestRun(unittest.TestCase):
             core.push_data(mock_ctx_inst)
         self.assertEqual("error", str(err.exception))
 
-        mock_debug.assert_called_once_with("Pushing data from node1:/opt/work_dir to node1")
+        mock_logger.debug2.assert_called_once_with("Pushing data from node1:/opt/work_dir to node1")
         mock_sh_utils_inst.get_stdout_stderr.assert_called_once_with("cd /opt/work_dir/.. && tar -h -c node1", raw=True)
 
     @mock.patch('crmsh.report.core.finalword')
@@ -392,7 +393,7 @@ class TestRun(unittest.TestCase):
 
     @mock.patch('crmsh.report.core.finalword')
     @mock.patch('crmsh.report.core.sh.cluster_shell')
-    @mock.patch('crmsh.report.core.logger.debug2')
+    @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.report.utils.create_description_template')
     @mock.patch('crmsh.report.utils.analyze')
     @mock.patch('crmsh.report.utils.do_sanitize')
@@ -478,21 +479,19 @@ class TestRun(unittest.TestCase):
         mock_ctx_inst = mock.Mock(from_time=123, to_time=150)
         core.process_arguments(mock_ctx_inst)
 
-    @mock.patch('crmsh.report.core.logger.debug2')
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('logging.Logger.debug')
+    @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
     @mock.patch('crmsh.report.core.userdir.getuser')
     @mock.patch('crmsh.report.core.userdir.get_sudoer')
-    def test_find_ssh_user_not_found(self, mock_get_sudoer, mock_getuser, mock_check_ssh, mock_debug, mock_warn, mock_debug2):
+    def test_find_ssh_user_not_found(self, mock_get_sudoer, mock_getuser, mock_check_ssh, mock_logger):
         mock_get_sudoer.return_value = ""
         mock_getuser.return_value = "user2"
         mock_check_ssh.return_value = True
         mock_ctx_inst = mock.Mock(ssh_user="", ssh_askpw_node_list=[], node_list=["node1", "node2"], me="node1")
         core.find_ssh_user(mock_ctx_inst)
-        mock_warn.assert_called_once_with(f"passwordless ssh to node(s) ['node2'] does not work")
+        mock_logger.warning.assert_called_once_with(f"passwordless ssh to node(s) ['node2'] does not work")
 
-    @mock.patch('crmsh.report.core.logger.debug2')
+    @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('logging.Logger.warning')
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')

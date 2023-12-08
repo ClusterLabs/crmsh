@@ -3,6 +3,7 @@ import datetime
 from crmsh import config
 from crmsh import utils as crmutils
 from crmsh.report import utils, constants
+import crmsh.log
 
 import unittest
 from unittest import mock
@@ -160,19 +161,19 @@ class TestSanitizer(unittest.TestCase):
         self.assertEqual(self.s_inst.cib_data, "data")
         mock_read.assert_called_once_with(f"/opt/node1/{constants.CIB_F}")
 
-    @mock.patch('crmsh.report.utils.logger.debug2')
-    def test_parse_sensitive_set_no_set(self, mock_debug2):
+    @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
+    def test_parse_sensitive_set_no_set(self, mock_logger):
         config.report.sanitize_rule = ""
         self.s_inst_no_sanitize_set._parse_sensitive_set()
         self.assertEqual(self.s_inst_no_sanitize_set.sensitive_regex_set, set(utils.Sanitizer.DEFAULT_RULE_LIST))
-        mock_debug2.assert_called_once_with(f"Regex set to match sensitive data: {set(utils.Sanitizer.DEFAULT_RULE_LIST)}")
+        mock_logger.debug2.assert_called_once_with(f"Regex set to match sensitive data: {set(utils.Sanitizer.DEFAULT_RULE_LIST)}")
 
-    @mock.patch('crmsh.report.utils.logger.debug2')
-    def test_parse_sensitive_set(self, mock_debug2):
+    @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
+    def test_parse_sensitive_set(self, mock_logger):
         config.report.sanitize_rule = "passw.*"
         self.s_inst._parse_sensitive_set()
         self.assertEqual(self.s_inst.sensitive_regex_set, set(['test_patt', 'passw.*']))
-        mock_debug2.assert_called_once_with(f"Regex set to match sensitive data: {set(['test_patt', 'passw.*'])}")
+        mock_logger.debug2.assert_called_once_with(f"Regex set to match sensitive data: {set(['test_patt', 'passw.*'])}")
 
     def test_sanitize_return(self):
         self.s_inst_no_sanitize.sanitize()
@@ -234,10 +235,10 @@ class TestUtils(unittest.TestCase):
 
     @mock.patch('builtins.sorted', side_effect=lambda x, *args, **kwargs: x[::-1])
     @mock.patch('crmsh.report.utils.get_timespan_str')
-    @mock.patch('crmsh.report.utils.logger.debug2')
+    @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('glob.glob')
     @mock.patch('crmsh.report.utils.is_our_log')
-    def test_arch_logs(self, mock_is_our_log, mock_glob, mock_debug2, mock_timespan, mock_sorted):
+    def test_arch_logs(self, mock_is_our_log, mock_glob, mock_logger, mock_timespan, mock_sorted):
         mock_is_our_log.return_value = utils.LogType.GOOD
         mock_glob.return_value = []
         mock_ctx_inst = mock.Mock()
@@ -247,7 +248,7 @@ class TestUtils(unittest.TestCase):
 
         self.assertEqual(return_list, ["file1"])
         self.assertEqual(log_type, utils.LogType.GOOD)
-        mock_debug2.assert_called_once_with("Found logs ['file1'] in 0101-0202")
+        mock_logger.debug2.assert_called_once_with("Found logs ['file1'] in 0101-0202")
 
     @mock.patch('sys.stdout.flush')
     @mock.patch('traceback.print_exc')
@@ -360,7 +361,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(res, expected_result)
 
     @mock.patch('crmsh.report.utils.get_timespan_str')
-    @mock.patch('crmsh.report.utils.logger.debug2')
+    @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.report.utils.arch_logs')
     def test_dump_logset_return(self, mock_arch, mock_debug, mock_timespan):
         mock_arch.return_value = [[], ""]
@@ -428,7 +429,7 @@ class TestUtils(unittest.TestCase):
 
     @mock.patch('crmsh.utils.read_from_file')
     @mock.patch('os.path.exists')
-    @mock.patch('crmsh.report.utils.logger.debug2')
+    @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
     def test_get_distro_info(self, mock_debug2, mock_exists, mock_read):
         mock_exists.return_value = True
         mock_read.return_value = """
@@ -442,7 +443,7 @@ ANSI_COLOR="0;32"
     @mock.patch('shutil.which')
     @mock.patch('crmsh.report.utils.sh.LocalShell')
     @mock.patch('os.path.exists')
-    @mock.patch('crmsh.report.utils.logger.debug2')
+    @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
     def test_get_distro_info_lsb(self, mock_debug2, mock_exists, mock_sh, mock_which):
         mock_which.return_value = True
         mock_exists.return_value = False
@@ -643,15 +644,15 @@ Legacy 003-10-11T22:14:15.003Z log data log
         self.assertEqual(res, "")
 
     @mock.patch('crmsh.report.utils.filter_lines')
-    @mock.patch('crmsh.report.utils.logger.debug2')
+    @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.report.utils.findln_by_timestamp')
     @mock.patch('crmsh.utils.read_from_file')
-    def test_print_logseg(self, mock_read, mock_findln, mock_debug, mock_filter):
+    def test_print_logseg(self, mock_read, mock_findln, mock_logger, mock_filter):
         mock_read.return_value = "line1\nline2\nline3"
         mock_filter.return_value = "line1\nline2\nline3"
         res = utils.print_logseg("log1", 0, 0)
         self.assertEqual(res, mock_filter.return_value)
-        mock_debug.assert_called_once_with("Including segment [%d-%d] from %s", 1, 3, "log1")
+        mock_logger.debug2.assert_called_once_with("Including segment [%d-%d] from %s", 1, 3, "log1")
 
     def test_head(self):
         data = "line1\nline2\nline3"

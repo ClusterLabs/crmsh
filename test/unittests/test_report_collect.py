@@ -1,5 +1,6 @@
 from subprocess import TimeoutExpired
 from crmsh.report import collect, constants
+import crmsh.log
 
 import unittest
 from unittest import mock
@@ -80,13 +81,12 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
         self.assertEqual(collect.get_corosync_log(), mock_get_value.return_value)
 
     @mock.patch('crmsh.report.utils.real_path')
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.report.utils.get_cmd_output')
-    @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.report.utils.ts_to_str')
-    def test_collect_journal_logs(self, mock_ts_to_str, mock_debug, mock_get_cmd_output,
-                                  mock_str2file, mock_debug2, mock_real_path):
+    def test_collect_journal_logs(self, mock_ts_to_str, mock_get_cmd_output,
+                                  mock_str2file, mock_logger, mock_real_path):
         mock_real_path.side_effect = [
                 constants.JOURNAL_F,
                 constants.JOURNAL_PCMK_F,
@@ -113,14 +113,14 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
             mock.call(cmd_list[2]),
             mock.call(cmd_list[3]),
             ])
-        mock_debug2.assert_has_calls([
+        mock_logger.debug2.assert_has_calls([
             mock.call("Collect journal logs since: 10.10 until: 10.12"),
             mock.call(f"Running command: {cmd_list[0]}"),
             mock.call(f"Running command: {cmd_list[1]}"),
             mock.call(f"Running command: {cmd_list[2]}"),
             mock.call(f"Running command: {cmd_list[3]}"),
             ])
-        mock_debug.assert_has_calls([
+        mock_logger.debug.assert_has_calls([
             mock.call(f"Dump jounal log for default into {constants.JOURNAL_F}"),
             mock.call(f"Dump jounal log for pacemaker into {constants.JOURNAL_PCMK_F}"),
             mock.call(f"Dump jounal log for corosync into {constants.JOURNAL_COROSYNC_F}"),
@@ -214,13 +214,13 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
         mock_warning.assert_called_once_with('pe_to_dot: %s -> %s failed', '/opt/pe-input-0.bz2', '/opt/pe-input-0.dot')
 
     @mock.patch('crmsh.report.utils.find_files_in_timespan')
-    @mock.patch('crmsh.report.collect.logger.debug2')
-    def test_collect_pe_inputs_no_found(self, mock_debug, mock_find_files):
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
+    def test_collect_pe_inputs_no_found(self, mock_logger, mock_find_files):
         mock_ctx_inst = mock.Mock(pe_dir="/opt/pe_dir")
         mock_find_files.return_value = []
         collect.collect_pe_inputs(mock_ctx_inst)
         mock_find_files.assert_called_once_with(mock_ctx_inst, [mock_ctx_inst.pe_dir])
-        mock_debug.assert_has_calls([
+        mock_logger.debug2.assert_has_calls([
             mock.call(f"Looking for PE files in {mock_ctx_inst.pe_dir}"),
             mock.call("No PE file found for the giving time")
             ])
@@ -230,9 +230,8 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
     @mock.patch('os.symlink')
     @mock.patch('crmsh.utils.mkdirp')
     @mock.patch('crmsh.report.utils.find_files_in_timespan')
-    @mock.patch('crmsh.report.collect.logger.debug2')
-    @mock.patch('logging.Logger.debug')
-    def test_collect_pe_inputs(self, mock_debug, mock_debug2, mock_find_files, mock_mkdir, mock_symlink, mock_to_dot, mock_real_path):
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
+    def test_collect_pe_inputs(self, mock_logger, mock_find_files, mock_mkdir, mock_symlink, mock_to_dot, mock_real_path):
         mock_real_path.return_value = "pe_dir"
         mock_ctx_inst = mock.Mock(pe_dir="/opt/pe_dir", work_dir="/opt/work_dir", speed_up=False)
         mock_find_files.return_value = ["/opt/pe_dir/pe_input1", "/opt/pe_dir/pe_input2"]
@@ -240,18 +239,17 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
         collect.collect_pe_inputs(mock_ctx_inst)
 
         mock_find_files.assert_called_once_with(mock_ctx_inst, [mock_ctx_inst.pe_dir])
-        mock_debug2.assert_has_calls([
+        mock_logger.debug2.assert_has_calls([
             mock.call(f"Looking for PE files in {mock_ctx_inst.pe_dir}"),
             mock.call(f"Found 2 PE files in {mock_ctx_inst.pe_dir}"),
             ])
-        mock_debug.assert_called_once_with(f"Dump PE files into pe_dir")
+        mock_logger.debug.assert_called_once_with(f"Dump PE files into pe_dir")
 
     @mock.patch('crmsh.report.utils.real_path')
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.str2file')
-    @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.report.utils.get_cmd_output')
-    def test_collect_sys_stats(self, mock_run, mock_warning, mock_str2file, mock_debug2, mock_real_path):
+    def test_collect_sys_stats(self, mock_run, mock_str2file, mock_logger, mock_real_path):
         mock_real_path.return_value = constants.SYSSTATS_F
         mock_run.side_effect = [
                 "data_hostname", "data_uptime", "data_ps_axf", "data_ps_auxw",
@@ -260,7 +258,7 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
                 ]
         mock_ctx_inst = mock.Mock(work_dir="/opt")
         collect.collect_sys_stats(mock_ctx_inst)
-        mock_warning.assert_called_once_with(f"Timeout while running command: df")
+        mock_logger.warning.assert_called_once_with(f"Timeout while running command: df")
         mock_run.assert_has_calls([
             mock.call("hostname", timeout=5),
             mock.call("uptime", timeout=5),
@@ -302,7 +300,7 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
     @mock.patch('crmsh.report.utils.real_path')
     @mock.patch('crmsh.report.collect.dump_configurations')
     @mock.patch('crmsh.report.collect.consume_cib_in_workdir')
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.report.collect.dump_runtime_state')
     @mock.patch('crmsh.report.collect.ServiceManager')
@@ -317,7 +315,7 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
     @mock.patch('crmsh.report.utils.real_path')
     @mock.patch('crmsh.report.collect.dump_configurations')
     @mock.patch('crmsh.report.collect.consume_cib_in_workdir')
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('shutil.copy2')
     @mock.patch('crmsh.report.collect.ServiceManager')
@@ -348,24 +346,23 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
             mock.call("data2", f"/workdir/{constants.CRM_VERIFY_F}")
         ])
 
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.report.collect.sh.cluster_shell')
-    def test_collect_ratraces_return(self, mock_run, mock_debug):
+    def test_collect_ratraces_return(self, mock_run, mock_logger):
         mock_run_inst = mock.Mock()
         mock_run.return_value = mock_run_inst
         mock_run_inst.get_rc_stdout_stderr_without_input.return_value = (0, "data", None)
         mock_ctx_inst = mock.Mock(node_list=["node1"])
         collect.collect_ratraces(mock_ctx_inst)
-        mock_debug.assert_not_called()
+        mock_logger.debug2.assert_not_called()
 
     @mock.patch('crmsh.report.utils.real_path')
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('shutil.copy2')
     @mock.patch('crmsh.utils.mkdirp')
     @mock.patch('crmsh.report.utils.find_files_in_timespan')
-    @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.report.collect.sh.cluster_shell')
-    def test_collect_ratraces(self, mock_run, mock_debug, mock_find, mock_mkdirp, mock_copy, mock_debug2, mock_real_path):
+    def test_collect_ratraces(self, mock_run, mock_find, mock_mkdirp, mock_copy, mock_logger, mock_real_path):
         mock_real_path.return_value = "/var/log"
         mock_run_inst = mock.Mock()
         mock_run.return_value = mock_run_inst
@@ -376,8 +373,8 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
 
         collect.collect_ratraces(mock_ctx_inst)
 
-        mock_debug2.assert_called_once_with('Looking for RA trace files in "%s"', '/var/log/cluster')
-        mock_debug.assert_called_once_with(f'Dump RA trace files into {mock_real_path.return_value}')
+        mock_logger.debug2.assert_called_once_with('Looking for RA trace files in "%s"', '/var/log/cluster')
+        mock_logger.debug.assert_called_once_with(f'Dump RA trace files into {mock_real_path.return_value}')
 
     @mock.patch('crmsh.report.collect.ShellUtils')
     def test_lsof_ocfs2_device(self, mock_run):
@@ -406,7 +403,7 @@ tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=169544k,nr_inodes
         res = collect.ocfs2_commands_output()
         self.assertEqual(res, "\n\n#===== [ Command ] ==========================#\n# mount\ndata")
 
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.report.collect.ShellUtils')
     def test_collect_ocfs2_info_error(self, mock_run, mock_str2file, mock_debug2):
@@ -417,7 +414,7 @@ tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=169544k,nr_inodes
         collect.collect_ocfs2_info(mock_ctx_inst)
         mock_str2file.assert_called_once_with('Failed to run "mounted.ocfs2 -d": error', '/opt/workdir/ocfs2.txt')
 
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.report.collect.ShellUtils')
     def test_collect_ocfs2_info_no_found(self, mock_run, mock_str2file, mock_debug2):
@@ -432,7 +429,7 @@ tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=169544k,nr_inodes
     @mock.patch('crmsh.report.collect.ocfs2_commands_output')
     @mock.patch('crmsh.report.collect.lsof_ocfs2_device')
     @mock.patch('crmsh.report.collect.dump_D_process')
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.report.collect.ShellUtils')
     def test_collect_ocfs2_info(self, mock_run, mock_str2file, mock_debug2, mock_D, mock_lsof, mock_output, mock_real_path):
@@ -492,19 +489,17 @@ id            0x19041a12
         self.assertEqual("Core core.1 was generated by /usr/sbin/crm_mon", res)
 
     @mock.patch('crmsh.report.utils.real_path')
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.str2file')
-    @mock.patch('logging.Logger.warning')
     @mock.patch('shutil.which')
-    def test_dump_core_info_no_gdb(self, mock_which, mock_warning, mock_str2file, mock_debug2, mock_real_path):
+    def test_dump_core_info_no_gdb(self, mock_which, mock_str2file, mock_logger, mock_real_path):
         mock_real_path.return_value = constants.COREDUMP_F
         mock_which.return_value = False
         collect.dump_core_info("/opt/workdir", ["core.1"])
-        mock_warning.assert_called_once_with("Please install gdb to get more info for coredump files")
-        mock_debug2(f"Dump coredump info into {constants.COREDUMP_F}")
+        mock_logger.warning.assert_called_once_with("Please install gdb to get more info for coredump files")
 
     @mock.patch('crmsh.report.utils.real_path')
-    @mock.patch('crmsh.report.collect.logger.debug2')
+    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.report.collect.find_binary_path_for_core')
     @mock.patch('shutil.which')
