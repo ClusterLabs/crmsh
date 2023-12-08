@@ -94,9 +94,9 @@ class ConsoleCustomHandler(logging.StreamHandler):
 class ConsoleColoredFormatter(logging.Formatter):
     """Print levelname with colors"""
     COLORS = {
-        "WARNING": constants.YELLOW,
-        "INFO": constants.GREEN,
-        "ERROR": constants.RED
+        logging.WARNING: constants.YELLOW,
+        logging.INFO: constants.GREEN,
+        logging.ERROR: constants.RED
     }
     FORMAT = "%(levelname)s: %(message)s"
 
@@ -104,13 +104,13 @@ class ConsoleColoredFormatter(logging.Formatter):
         super().__init__(fmt)
         if not fmt:
             fmt = self.FORMAT
-        self._colored_formatter: typing.Mapping[str, logging.Formatter] = {
+        self._colored_formatter: typing.Mapping[int, logging.Formatter] = {
             level: logging.Formatter(fmt.replace('%(levelname)s', f'{color}%(levelname)s{constants.END}'))
             for level, color in self.COLORS.items()
         }
 
     def format(self, record):
-        colored_formatter = self._colored_formatter.get(record.levelname)
+        colored_formatter = self._colored_formatter.get(record.levelno)
         if colored_formatter is not None:
             return colored_formatter.format(record)
         else:
@@ -140,7 +140,7 @@ class DebugCustomFilter(logging.Filter):
     """
     def filter(self, record):
         from .config import core
-        if record.levelname == "DEBUG":
+        if record.levelno == logging.DEBUG:
             return core.debug
         else:
             return True
@@ -152,9 +152,9 @@ class ReportDebugCustomFilter(logging.Filter):
     """
     def filter(self, record):
         from .config import report
-        if record.levelname == "DEBUG":
+        if record.levelno == logging.DEBUG:
             return int(report.verbosity) >= 1
-        if record.levelname == "DEBUG2":
+        if record.levelno == DEBUG2:
             return int(report.verbosity) > 1
         else:
             return True
