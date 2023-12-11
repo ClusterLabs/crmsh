@@ -28,7 +28,7 @@ def step_impl(context, name, state, addr):
 
 @given('Has disk "{disk}" on "{addr}"')
 def step_impl(context, disk, addr):
-    out = run_command_local_or_remote(context, "fdisk -l", addr)
+    _, out, _ = run_command_local_or_remote(context, "fdisk -l", addr)
     assert re.search(r'{} '.format(disk), out) is not None
 
 
@@ -39,19 +39,19 @@ def step_impl(context, nodelist):
 
 @given('Run "{cmd}" OK')
 def step_impl(context, cmd):
-    rc, _, = run_command(context, cmd)
+    rc, _, _ = run_command(context, cmd)
     assert rc == 0
 
 
 @then('Run "{cmd}" OK')
 def step_impl(context, cmd):
-    rc, _, = run_command(context, cmd)
+    rc, _, _ = run_command(context, cmd)
     assert rc == 0
 
 
 @when('Run "{cmd}" OK')
 def step_impl(context, cmd):
-    rc, _, = run_command(context, cmd)
+    rc, _, _ = run_command(context, cmd)
     assert rc == 0
 
 
@@ -64,8 +64,7 @@ def step_impl(context, addr, iface):
 
 @when('Run "{cmd}" on "{addr}"')
 def step_impl(context, cmd, addr):
-    out = run_command_local_or_remote(context, cmd, addr)
-    context.stdout = out
+    _, out, _ = run_command_local_or_remote(context, cmd, addr)
 
 
 @then('Print stdout')
@@ -75,18 +74,17 @@ def step_impl(context):
 
 @then('Print stderr')
 def step_impl(context):
-    context.logger.info("\n{}".format(context.command_error_output))
+    context.logger.info("\n{}".format(context.stderr))
 
 
 @when('Try "{cmd}" on "{addr}"')
 def step_impl(context, cmd, addr):
-    run_command_local_or_remote(context, cmd, addr, err_record=True)
+    run_command_local_or_remote(context, cmd, addr, exit_on_fail=False)
 
 
 @when('Try "{cmd}"')
 def step_impl(context, cmd):
-    rc, out = run_command(context, cmd, err_record=True)
-    context.return_code = rc
+    _, out, _ = run_command(context, cmd, exit_on_fail=False)
 
 
 @when('Wait "{second}" seconds')
@@ -112,6 +110,12 @@ def step_impl(context, msg):
     context.stdout = None
 
 
+@then('Expected "{msg}" in stderr')
+def step_impl(context, msg):
+    assert msg in context.stderr
+    context.stderr = None
+
+
 @then('Expected regrex "{reg_str}" in stdout')
 def step_impl(context, reg_str):
     res = re.search(reg_str, context.stdout)
@@ -132,14 +136,14 @@ def step_impl(context, msg):
 
 @then('Except "{msg}"')
 def step_impl(context, msg):
-    assert msg in context.command_error_output
-    context.command_error_output = None
+    assert msg in context.stderr
+    context.stderr = None
 
 
 @then('Except multiple lines')
 def step_impl(context):
-    assert context.command_error_output.split('\n') == context.text.split('\n')
-    context.command_error_output = None
+    assert context.text in context.stderr
+    context.stderr = None
 
 
 @then('Expected multiple lines in output')
@@ -150,8 +154,8 @@ def step_impl(context):
 
 @then('Except "{msg}" in stderr')
 def step_impl(context, msg):
-    assert msg in context.command_error_output
-    context.command_error_output = None
+    assert msg in context.stderr
+    context.stderr = None
 
 
 @then('Cluster service is "{state}" on "{addr}"')
@@ -181,20 +185,20 @@ def step_impl(context, node):
 
 @then('IP "{addr}" is used by corosync on "{node}"')
 def step_impl(context, addr, node):
-    out = run_command_local_or_remote(context, 'corosync-cfgtool -s', node)
+    _, out, _ = run_command_local_or_remote(context, 'corosync-cfgtool -s', node)
     res = re.search(r' {}\n'.format(addr), out)
     assert bool(res) is True
 
 
 @then('Cluster name is "{name}"')
 def step_impl(context, name):
-    _, out = run_command(context, 'corosync-cmapctl -b totem.cluster_name')
+    _, out, _ = run_command(context, 'corosync-cmapctl -b totem.cluster_name')
     assert out.split()[-1] == name
 
 
 @then('Cluster virtual IP is "{addr}"')
 def step_impl(context, addr):
-    _, out = run_command(context, 'crm configure show|grep -A1 IPaddr2')
+    _, out, _ = run_command(context, 'crm configure show|grep -A1 IPaddr2')
     res = re.search(r' ip={}'.format(addr), out)
     assert bool(res) is True
 
@@ -206,35 +210,35 @@ def step_impl(context):
 
 @then('Show cluster status on "{addr}"')
 def step_impl(context, addr):
-    out = run_command_local_or_remote(context, 'crm_mon -1', addr)
+    _, out, _ = run_command_local_or_remote(context, 'crm_mon -1', addr)
     if out:
         context.logger.info("\n{}".format(out))
 
 
 @then('Show corosync ring status')
 def step_impl(context):
-    _, out = run_command(context, 'crm corosync status ring')
+    _, out, _ = run_command(context, 'crm corosync status ring')
     if out:
         context.logger.info("\n{}".format(out))
 
 
 @then('Show crm configure')
 def step_impl(context):
-    _, out = run_command(context, 'crm configure show')
+    _, out, _ = run_command(context, 'crm configure show')
     if out:
         context.logger.info("\n{}".format(out))
 
 
 @then('Show status from qnetd')
 def step_impl(context):
-    _, out = run_command(context, 'crm corosync status qnetd')
+    _, out, _ = run_command(context, 'crm corosync status qnetd')
     if out:
         context.logger.info("\n{}".format(out))
 
 
 @then('Show corosync qdevice configuration')
 def step_impl(context):
-    _, out = run_command(context, "sed -n -e '/quorum/,/^}/ p' /etc/corosync/corosync.conf")
+    _, out, _ = run_command(context, "sed -n -e '/quorum/,/^}/ p' /etc/corosync/corosync.conf")
     if out:
         context.logger.info("\n{}".format(out))
 
@@ -245,7 +249,7 @@ def step_impl(context, res, res_type, state):
     result = None
     while try_count < 5:
         time.sleep(1)
-        _, out = run_command(context, "crm_mon -1rR")
+        _, out, _ = run_command(context, "crm_mon -1rR")
         if out:
             result = re.search(r'\s{}\s+.*:+{}\):\s+{} '.format(res, res_type, state), out)
             if not result:
@@ -258,7 +262,7 @@ def step_impl(context, res, res_type, state):
 @then('Resource "{res}" failcount on "{node}" is "{number}"')
 def step_impl(context, res, node, number):
     cmd = "crm resource failcount {} show {}".format(res, node)
-    _, out = run_command(context, cmd)
+    _, out, _ = run_command(context, cmd)
     if out:
         result = re.search(r'name=fail-count-{} value={}'.format(res, number), out)
         assert result is not None
@@ -266,7 +270,7 @@ def step_impl(context, res, node, number):
 
 @then('Resource "{res_type}" not configured')
 def step_impl(context, res_type):
-    _, out = run_command(context, "crm configure show")
+    _, out, _ = run_command(context, "crm configure show")
     result = re.search(r' {} '.format(res_type), out)
     assert result is None
 
@@ -329,7 +333,7 @@ def step_impl(context, f, archive):
 @then('File "{f}" was synced in cluster')
 def step_impl(context, f):
     cmd = "crm cluster diff {}".format(f)
-    rc, out = run_command(context, cmd)
+    rc, out, _ = run_command(context, cmd)
     assert_eq("", out)
 
 
@@ -366,14 +370,14 @@ def step_impl(context, key, value):
 
 @then('Parameter "{param_name}" not configured in "{res_id}"')
 def step_impl(context, param_name, res_id):
-    _, out = run_command(context, "crm configure show {}".format(res_id))
+    _, out, _ = run_command(context, "crm configure show {}".format(res_id))
     result = re.search("params {}=".format(param_name), out)
     assert result is None
 
 
 @then('Parameter "{param_name}" configured in "{res_id}"')
 def step_impl(context, param_name, res_id):
-    _, out = run_command(context, "crm configure show {}".format(res_id))
+    _, out, _ = run_command(context, "crm configure show {}".format(res_id))
     result = re.search("params {}=".format(param_name), out)
     assert result is not None
 

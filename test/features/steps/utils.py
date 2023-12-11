@@ -1,9 +1,13 @@
+import getpass
 import difflib
 import tarfile
 import glob
 import re
 import socket
 from crmsh import utils, bootstrap, parallax
+
+
+COLOR_MODE = r'\x1b\[[0-9]+m'
 
 
 def get_file_type(file_path):
@@ -35,35 +39,48 @@ def me():
     return socket.gethostname()
 
 
-def run_command(context, cmd, err_record=False):
-    rc, out, err = utils.get_stdout_stderr(cmd)
-    if rc != 0 and err:
-        if err_record:
-            res = re.sub(r'\x1b\[[0-9]+m', '', err)
-            context.command_error_output = res
-            return rc, re.sub(r'\x1b\[[0-9]+m', '', out)
+def add_sudo(cmd):
+    user = getpass.getuser()
+    if user != 'root':
+        cmd = "sudo {}".format(cmd)
+    return cmd
+
+
+def run_command(context, cmd, exit_on_fail=True):
+    rc, out, err = utils.get_stdout_stderr(add_sudo(cmd))
+    context.return_code = rc
+    if out:
+        out = re.sub(COLOR_MODE, '', out)
+        context.stdout = out
+    if err:
+        err = re.sub(COLOR_MODE, '', err)
+        context.stderr = err
+    if rc != 0 and exit_on_fail:
         if out:
             context.logger.info("\n{}\n".format(out))
         context.logger.error("\n{}\n".format(err))
         context.failed = True
-    return rc, re.sub(r'\x1b\[[0-9]+m', '', out)
+    return rc, out, err
 
 
-def run_command_local_or_remote(context, cmd, addr, err_record=False):
+def run_command_local_or_remote(context, cmd, addr, exit_on_fail=True):
+    cmd = add_sudo(cmd)
     if addr == me():
-        _, out = run_command(context, cmd, err_record)
-        return out
+        return run_command(context, cmd, exit_on_fail)
     else:
         try:
             results = parallax.parallax_call(addr.split(','), cmd)
         except ValueError as err:
-            if err_record:
-                context.command_error_output = re.sub(r'\x1b\[[0-9]+m', '', str(err))
-                return
-            context.logger.error("\n{}\n".format(err))
-            context.failed = True
+            err = re.sub(COLOR_MODE, '', str(err))
+            context.stderr = err
+            if exit_on_fail:
+                context.logger.error("\n{}\n".format(err))
+                context.failed = True
         else:
-            return utils.to_ascii(results[0][1][1])
+            out = utils.to_ascii(results[0][1][1])
+            context.stdout = out
+            context.return_code = 0
+            return 0, out, None
 
 
 def check_service_state(context, service_name, state, addr):
