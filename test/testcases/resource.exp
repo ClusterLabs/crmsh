@@ -133,9 +133,9 @@ resource p0 is NOT running
             <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
           </instance_attributes>
           <operations>
-            <op name="monitor" timeout="30s" interval="10s" id="p2-monitor-10s"/>
+            <op name="monitor" timeout="40s" interval="10s" id="p2-monitor-10s"/>
             <op name="start" timeout="30s" interval="0s" id="p2-start-0s"/>
-            <op name="stop" timeout="30s" interval="0s" id="p2-stop-0s"/>
+            <op name="stop" timeout="40s" interval="0s" id="p2-stop-0s"/>
           </operations>
         </primitive>
       </clone>
@@ -167,9 +167,9 @@ resource p0 is NOT running
             <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
           </instance_attributes>
           <operations>
-            <op name="monitor" timeout="30s" interval="10s" id="p2-monitor-10s"/>
+            <op name="monitor" timeout="40s" interval="10s" id="p2-monitor-10s"/>
             <op name="start" timeout="30s" interval="0s" id="p2-start-0s"/>
-            <op name="stop" timeout="30s" interval="0s" id="p2-stop-0s"/>
+            <op name="stop" timeout="40s" interval="0s" id="p2-stop-0s"/>
           </operations>
         </primitive>
       </clone>
