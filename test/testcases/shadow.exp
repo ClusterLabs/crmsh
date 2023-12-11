@@ -11,13 +11,13 @@ INFO: 3: cib.reset: copied live CIB to regtest
 .EXT >/dev/null </dev/null crm_shadow -b -C 'regtest' --force
 INFO: 5: cib.commit: committed 'regtest' shadow CIB to the cluster
 .INP: delete regtest
+ERROR: 6: cib.delete: regtest shadow CIB is in use
 Traceback (most recent call last):
     rv = self.execute_command() is not False
     rv = self.command_info.function(*arglist)
     context.fatal_error("%s shadow CIB is in use" % name)
     raise ValueError(msg)
 ValueError: regtest shadow CIB is in use
-ERROR: 6: cib.delete: regtest shadow CIB is in use
 .INP: use
 .INP: delete regtest
 .EXT >/dev/null </dev/null crm_shadow -b -D 'regtest' --force

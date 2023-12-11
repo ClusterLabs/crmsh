@@ -6,7 +6,11 @@ import pwd
 import hashlib
 import platform
 import crm_script
+
+import crmsh.log
+crmsh.log.setup_logging()
 from crmsh.report import utils
+
 data = crm_script.get_input()
 
 PACKAGES = ['booth', 'cluster-glue', 'corosync', 'crmsh', 'csync2', 'drbd',
