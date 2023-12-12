@@ -67,7 +67,7 @@
           <operations>
             <op name="start" timeout="60s" interval="0s" id="d2-start-0s"/>
             <op name="stop" timeout="60s" interval="0s" id="d2-stop-0s"/>
-            <op name="monitor" timeout="30s" interval="10s" id="d2-monitor-10s"/>
+            <op name="monitor" timeout="40s" interval="10s" id="d2-monitor-10s"/>
             <op name="monitor" role="Started" interval="60s" timeout="30s" id="d2-monitor-60s"/>
           </operations>
         </primitive>

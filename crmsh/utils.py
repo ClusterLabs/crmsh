@@ -853,14 +853,14 @@ def append_file(dest, src):
         return False
 
 
-def get_dc():
+def get_dc(peer=None):
     cmd = "crmadmin -D -t 1"
-    rc, s, _ = get_stdout_stderr(add_sudo(cmd))
-    if rc != 0:
+    out = get_stdout_or_raise_error(add_sudo(cmd), remote=peer, no_raise=True)
+    if not out:
         return None
-    if not s.startswith("Designated"):
+    if not out.startswith("Designated"):
         return None
-    return s.split()[-1]
+    return out.split()[-1]
 
 
 def wait4dc(what="", show_progress=True):
@@ -2945,47 +2945,62 @@ def is_standby(node):
     return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
 
 
-def get_dlm_option_dict():
+def get_dlm_option_dict(peer=None):
     """
     Get dlm config option dictionary
     """
-    out = get_stdout_or_raise_error("dlm_tool dump_config")
+    out = get_stdout_or_raise_error("dlm_tool dump_config", remote=peer)
     return dict(re.findall("(\w+)=(\w+)", out))
 
 
-def set_dlm_option(**kargs):
+def set_dlm_option(peer=None, **kargs):
     """
     Set dlm option
     """
-    dlm_option_dict = get_dlm_option_dict()
+    dlm_option_dict = get_dlm_option_dict(peer=peer)
     for option, value in kargs.items():
         if option not in dlm_option_dict:
-            raise ValueError('"{}" is not dlm config option'.format(option))
+            raise ValueError(f'"{option}" is not dlm config option')
         if dlm_option_dict[option] != value:
-            get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value))
+            get_stdout_or_raise_error(f'dlm_tool set_config "{option}={value}"', remote=peer)
 
 
-def is_dlm_running():
+def is_dlm_running(peer=None):
     """
     Check if dlm ra controld is running
     """
-    from . import xmlutil
-    return xmlutil.CrmMonXmlParser.is_resource_started(constants.DLM_CONTROLD_RA)
+    return is_resource_running(constants.DLM_CONTROLD_RA, peer=peer)
 
 
-def is_dlm_configured():
+def has_resource_configured(ra_type, peer=None):
+    """
+    Check if the RA configured
+    """
+    out = get_stdout_or_raise_error("crm_mon -1rR", remote=peer)
+    return re.search(ra_type, out) is not None
+
+
+def is_resource_running(ra_type, peer=None):
+    """
+    Check if the RA running
+    """
+    out = get_stdout_or_raise_error("crm_mon -1rR", remote=peer)
+    patt = f"\({ra_type}\):\s*Started"
+    return re.search(patt, out) is not None
+
+
+def is_dlm_configured(peer=None):
     """
     Check if dlm configured
     """
-    from . import xmlutil
-    return xmlutil.CrmMonXmlParser.is_resource_configured(constants.DLM_CONTROLD_RA)
+    return has_resource_configured(constants.DLM_CONTROLD_RA, peer=peer)
 
 
-def is_quorate():
+def is_quorate(peer=None):
     """
     Check if cluster is quorated
     """
-    out = get_stdout_or_raise_error("corosync-quorumtool -s", success_val_list=[0, 2])
+    out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=peer, success_val_list=[0, 2])
     res = re.search(r'Quorate:\s+(.*)', out)
     if res:
         return res.group(1) == "Yes"
@@ -3012,14 +3027,16 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
     return 0
 
 
-def get_property(name):
+def get_property(name, property_type="crm_config", peer=None):
     """
     Get cluster properties
     """
-    cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
-    cmd = "CIB_file={} crm configure get_property {}".format(cib_path, name)
-    rc, stdout, _ = get_stdout_stderr(cmd)
-    return stdout if rc == 0 else None
+    if property_type == "crm_config":
+        cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
+        cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
+    else:
+        cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
+    return get_stdout_or_raise_error(cmd, remote=peer, no_raise=True)
 
 
 def set_property(**kwargs):
@@ -3145,7 +3162,7 @@ def read_from_file(infile):
     return to_ascii(data)
 
 
-def check_function_with_timeout(check_function, wait_timeout=30, interval=1):
+def check_function_with_timeout(check_function, wait_timeout=30, interval=1, *args, **kwargs):
     """
     Run check_function in a loop
     Return when check_function is true
@@ -3154,7 +3171,7 @@ def check_function_with_timeout(check_function, wait_timeout=30, interval=1):
     current_time = int(time.time())
     timeout = current_time + wait_timeout
     while current_time <= timeout:
-        if check_function():
+        if check_function(*args, **kwargs):
             return
         time.sleep(interval)
         current_time = int(time.time())
