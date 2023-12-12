@@ -1162,9 +1162,11 @@ Node List:
     mock_run.assert_called_once_with("crm_mon -1")
 
 
-@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.cluster_shell')
 def test_get_dlm_option_dict(mock_run):
-    mock_run.return_value = """
+    mock_run_inst = mock.Mock()
+    mock_run.return_value = mock_run_inst
+    mock_run_inst.get_stdout_or_raise_error.return_value = """
 key1=value1
 key2=value2
     """
@@ -1173,7 +1175,7 @@ key2=value2
             "key1": "value1",
             "key2": "value2"
             }
-    mock_run.assert_called_once_with("dlm_tool dump_config")
+    mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("dlm_tool dump_config", None)
 
 
 @mock.patch('crmsh.utils.get_dlm_option_dict')
@@ -1187,41 +1189,47 @@ def test_set_dlm_option_exception(mock_get_dict):
     assert str(err.value) == '"name" is not dlm config option'
 
 
-@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.cluster_shell')
 @mock.patch('crmsh.utils.get_dlm_option_dict')
 def test_set_dlm_option(mock_get_dict, mock_run):
+    mock_run_inst = mock.Mock()
+    mock_run.return_value = mock_run_inst
     mock_get_dict.return_value = {
             "key1": "value1",
             "key2": "value2"
             }
     utils.set_dlm_option(key2="test")
-    mock_run.assert_called_once_with('dlm_tool set_config "key2=test"')
+    mock_run_inst.get_stdout_or_raise_error.assert_called_once_with('dlm_tool set_config "key2=test"', None)
 
 
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
-def test_is_dlm_configured(mock_parser):
-    mock_parser().is_resource_configured.return_value = True
+@mock.patch('crmsh.utils.has_resource_configured')
+def test_is_dlm_configured(mock_configured):
+    mock_configured.return_value = True
     assert utils.is_dlm_configured() is True
-    mock_parser().is_resource_configured.assert_called_once_with(constants.DLM_CONTROLD_RA)
+    mock_configured.assert_called_once_with(constants.DLM_CONTROLD_RA, peer=None)
 
 
-@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.cluster_shell')
 def test_is_quorate_exception(mock_run):
-    mock_run.return_value = "data"
+    mock_run_inst = mock.Mock()
+    mock_run.return_value = mock_run_inst
+    mock_run_inst.get_stdout_or_raise_error.return_value = "data"
     with pytest.raises(ValueError) as err:
         utils.is_quorate()
     assert str(err.value) == "Failed to get quorate status from corosync-quorumtool"
-    mock_run.assert_called_once_with("corosync-quorumtool -s", success_exit_status={0, 2})
+    mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-quorumtool -s", None, success_exit_status={0, 2})
 
 
-@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.sh.cluster_shell')
 def test_is_quorate(mock_run):
-    mock_run.return_value = """
+    mock_run_inst = mock.Mock()
+    mock_run.return_value = mock_run_inst
+    mock_run_inst.get_stdout_or_raise_error.return_value = """
 Ring ID:          1084783297/440
 Quorate:          Yes
     """
     assert utils.is_quorate() is True
-    mock_run.assert_called_once_with("corosync-quorumtool -s", success_exit_status={0, 2})
+    mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-quorumtool -s", None, success_exit_status={0, 2})
 
 
 @mock.patch('crmsh.utils.etree.fromstring')
@@ -1290,12 +1298,14 @@ def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem):
 
 
 @mock.patch('os.getenv')
-@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
+@mock.patch('crmsh.sh.cluster_shell')
 def test_get_property(mock_run, mock_env):
-    mock_run.return_value = (0, "data", None)
+    mock_run_inst = mock.Mock()
+    mock_run.return_value = mock_run_inst
+    mock_run_inst.get_rc_stdout_stderr_without_input.return_value = (0, "data", "")
     mock_env.return_value = "cib.xml"
     assert utils.get_property("no-quorum-policy") == "data"
-    mock_run.assert_called_once_with("CIB_file=cib.xml sudo --preserve-env=CIB_file crm configure get_property no-quorum-policy")
+    mock_run_inst.get_rc_stdout_stderr_without_input.assert_called_once_with(None, "CIB_file=cib.xml sudo --preserve-env=CIB_file crm configure get_property no-quorum-policy")
 
 
 @mock.patch('logging.Logger.warning')
