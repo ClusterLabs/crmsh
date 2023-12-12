@@ -1,3 +1,30 @@
+* Tue Dec 12 2023 Xin Liang <XLiang@suse.com>
+- Release 4.5.1
+- Fix: ui_cluster: Improve the process of 'crm cluster stop' (bsc#1213889)
+- Fix: bootstrap: fix the owner and permission of file authorized_keys (bsc#1217279)
+- Fix: utils: Add 'sudo' only when there is a sudoer(bsc#1215549)
+- Fix: prun: should not call user_pair_for_ssh() when target host is localhost (bsc#1217094)
+- Fix: report: Pick up tarball suffix dynamically (bsc#1215438)
+- Fix: report: Pick 'gzip' as the first compress prog for cross-platform compatibility(bsc#1215438)
+- Fix: constants: Add several resource meta attributes (bsc#1215319)
+- Fix: upgradeutil: reduce the timeout for getting sequence from remote node (bsc#1213797)
+- Dev: corosync: Enable logging.to_logfile
+- Fix: userdir: Get the effictive user name instead of using getpass.getuser (bsc#1213821)
+- Dev: requirements: remove parallax use (replaced by crmsh.prun)
+- Fix: upgradeutil: support the change of path of upgrade_seq in crmsh-4.5 (bsc#1213050)
+- Fix: ui_context: wait4dc should assume a subcommand completes successfully if no exceptions are raised (bsc#1212992)
+- Fix: bootstrap: fix the validation of option -N and -c (bsc#1212436)
+- Fix: geo_cluster: the behavior of choosing a default user in geo_join/geo_init_arbitrator is different with `cluster join` (bsc#1211817)
+- Fix: utils: do not use sudoer user to create ssh session unless it is specified explicitly (bsc#1211817)
+- medium: ui_node: fix cib rollback race on node standby
+- Dev: refine non-root sudoer support for crmsh.parallax.parallax_call (bsc#1210709)
+- Fix: bootstrap: `init --qnetd-hostname` fails when username is not specified (bsc#1211200)
+- Fix: bootstrap: crm cluster join default behavior change in ssh key handling (bsc#1210693)
+- Fix: help: Long time to load and parse crm.8.adoc (bsc#1210198)
+- Fix: cibconfig: use any existing rsc_defaults set rather than create another one (bsc#1210614)
+- Fix: lock: Join node failed to wait init node finished (bsc#1210332)
+- Dev: bootstrap: Support replacing sbd device via sbd stage
+
 * Thu Mar 30 2023 Xin Liang <XLiang@suse.com>
 - Release 4.5.0
 - Dev: bootstrap: Remove /var/lib/crm and ~/.config/crm/crm.conf when removing node
