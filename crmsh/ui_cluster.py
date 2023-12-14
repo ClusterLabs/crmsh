@@ -528,14 +528,14 @@ Examples:
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG", help="Use the given watchdog device")
+        parser.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
+                            help="Use an existing key from ssh-agent instead of creating new key pairs")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument(
             "-c", "--cluster-node", metavar="[USER@]HOST", dest="cluster_node",
             help="User and host to login to an existing cluster node. The host can be specified with either a hostname or an IP.",
         )
-        network_group.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
-                            help="Use an existing key from ssh-agent instead of creating new key pairs")
         network_group.add_argument("-i", "--interface", dest="nic_list", metavar="IF", action=CustomAppendAction, choices=utils.interface_choice(), default=[],
                 help="Bind to IP address on interface IF. Use -i second time for second interface")
         options, args = parse_options(parser, args)
