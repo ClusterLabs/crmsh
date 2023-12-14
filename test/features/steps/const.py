@@ -222,6 +222,8 @@ optional arguments:
   -y, --yes             Answer "yes" to all prompts (use with caution)
   -w WATCHDOG, --watchdog WATCHDOG
                         Use the given watchdog device
+  --use-ssh-agent       Use an existing key from ssh-agent instead of creating
+                        new key pairs
 
 Network configuration:
   Options for configuring the network and messaging layer.
@@ -230,8 +232,6 @@ Network configuration:
                         User and host to login to an existing cluster node.
                         The host can be specified with either a hostname or an
                         IP.
-  --use-ssh-agent       Use an existing key from ssh-agent instead of creating
-                        new key pairs
   -i IF, --interface IF
                         Bind to IP address on interface IF. Use -i second time
                         for second interface
