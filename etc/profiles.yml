@@ -29,3 +29,9 @@ knet-default:
 microsoft-azure:
   corosync.totem.token: 30000
   sbd.watchdog_timeout: 60
+
+amazon-web-services:
+  corosync.totem.token: 30000
+
+google-cloud-platform:
+  corosync.totem.token: 20000
