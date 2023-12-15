@@ -37,7 +37,7 @@ class TestCluster(unittest.TestCase):
         """
 
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_do_start_already_started(self, mock_qdevice_configured, mock_parse_nodes, mock_active, mock_info):
@@ -60,8 +60,8 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.start_pacemaker')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.corosync.is_qdevice_configured')
-    @mock.patch('crmsh.utils.start_service')
-    @mock.patch('crmsh.utils.service_is_active')
+    @mock.patch('crmsh.service_manager.ServiceManager.start_service')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_start_pacemaker, mock_check_qdevice):
         context_inst = mock.Mock()
@@ -80,52 +80,94 @@ class TestCluster(unittest.TestCase):
         mock_qdevice_configured.assert_called_once_with()
         mock_info.assert_called_once_with("The cluster stack started on node1")
 
-    @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.service_is_active')
+    @mock.patch('crmsh.ui_cluster.Cluster._wait_for_dc')
+    @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
-    def test_do_stop_already_stopped(self, mock_parse_nodes, mock_active, mock_info):
+    def test_do_stop_return(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc):
+        mock_parse_nodes.return_value = ["node1", "node2"]
+        mock_node_ready_to_stop_cluster_service.side_effect = [False, False]
+
         context_inst = mock.Mock()
-        mock_parse_nodes.return_value = ["node1"]
-        mock_active.side_effect = [False, False]
-        self.ui_cluster_inst.do_stop(context_inst, "node1")
-        mock_active.assert_has_calls([
-            mock.call("corosync.service", remote_addr="node1"),
-            mock.call("sbd.service", remote_addr="node1")
-            ])
-        mock_info.assert_called_once_with("The cluster stack already stopped on node1")
+        self.ui_cluster_inst.do_stop(context_inst, "node1", "node2")
+
+        mock_parse_nodes.assert_called_once_with(context_inst, "node1", "node2")
+        mock_node_ready_to_stop_cluster_service.assert_has_calls([mock.call("node1"), mock.call("node2")])
+        mock_dc.assert_not_called()
 
     @mock.patch('logging.Logger.debug')
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.stop_service')
-    @mock.patch('crmsh.utils.set_dlm_option')
-    @mock.patch('crmsh.utils.is_quorate')
-    @mock.patch('crmsh.utils.is_dlm_running')
-    @mock.patch('crmsh.utils.get_dc')
-    @mock.patch('crmsh.utils.check_function_with_timeout')
-    @mock.patch('crmsh.utils.get_property')
-    @mock.patch('crmsh.utils.service_is_active')
+    @mock.patch('crmsh.ui_cluster.ServiceManager')
+    @mock.patch('crmsh.ui_cluster.Cluster._set_dlm')
+    @mock.patch('crmsh.ui_cluster.Cluster._wait_for_dc')
+    @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
-    def test_do_stop(self, mock_parse_nodes, mock_active, mock_get_property, mock_check, mock_get_dc, mock_dlm_running, mock_is_quorate, mock_set_dlm, mock_stop, mock_info, mock_debug):
+    def test_do_stop(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc,
+                     mock_set_dlm, mock_service_manager, mock_info, mock_debug):
+        mock_parse_nodes.return_value = ["node1", "node2"]
+        mock_node_ready_to_stop_cluster_service.side_effect = [True, False]
+        mock_service_manager_inst = mock.Mock()
+        mock_service_manager.return_value = mock_service_manager_inst
+        mock_service_manager_inst.stop_service.side_effect = [["node1"], ["node1"], ["node1"]]
+        mock_service_manager_inst.service_is_active.return_value = True
+
         context_inst = mock.Mock()
-        mock_stop.side_effect = [["node1"], ["ndoe1"], ["node1"]]
-        mock_parse_nodes.return_value = ["node1"]
-        mock_active.side_effect = [True, True, True]
-        mock_dlm_running.return_value = True
-        mock_is_quorate.return_value = False
-        mock_get_property.return_value = "20s"
+        self.ui_cluster_inst.do_stop(context_inst, "node1", "node2")
 
-        self.ui_cluster_inst.do_stop(context_inst, "node1")
-
-        mock_active.assert_has_calls([
-            mock.call("corosync.service", remote_addr="node1"),
-            mock.call("pacemaker.service", remote_addr="node1"),
-            mock.call("corosync-qdevice.service")
-            ])
-        mock_stop.assert_has_calls([
+        mock_parse_nodes.assert_called_once_with(context_inst, "node1", "node2")
+        mock_node_ready_to_stop_cluster_service.assert_has_calls([mock.call("node1"), mock.call("node2")])
+        mock_debug.assert_called_once_with("stop node list: ['node1']")
+        mock_dc.assert_called_once_with("node1")
+        mock_set_dlm.assert_called_once_with("node1")
+        mock_service_manager_inst.stop_service.assert_has_calls([
             mock.call("pacemaker", node_list=["node1"]),
             mock.call("corosync-qdevice.service", node_list=["node1"]),
-            mock.call("corosync", node_list=["node1"])
+            mock.call("corosync", node_list=["node1"]),
             ])
         mock_info.assert_called_once_with("The cluster stack stopped on node1")
-        mock_debug.assert_called_once_with("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
-        mock_check.assert_called_once_with(mock_get_dc, wait_timeout=25)
+
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.ui_cluster.ServiceManager')
+    def test_node_ready_to_stop_cluster_service_corosync(self, mock_service_manager, mock_info):
+        mock_service_manager_inst = mock.Mock()
+        mock_service_manager.return_value = mock_service_manager_inst
+        mock_service_manager_inst.service_is_active.side_effect = [False, True, False]
+        res = self.ui_cluster_inst._node_ready_to_stop_cluster_service("node1")
+        assert res is False
+        mock_service_manager_inst.service_is_active.assert_has_calls([
+            mock.call("corosync.service", remote_addr="node1"),
+            mock.call("sbd.service", remote_addr="node1"),
+            mock.call("pacemaker.service", remote_addr="node1"),
+            ])
+        mock_service_manager_inst.stop_service.assert_called_once_with("corosync", remote_addr="node1")
+        mock_info.assert_called_once_with("The cluster stack stopped on node1")
+
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.ui_cluster.ServiceManager')
+    def test_node_ready_to_stop_cluster_service_pacemaker(self, mock_service_manager, mock_info):
+        mock_service_manager_inst = mock.Mock()
+        mock_service_manager.return_value = mock_service_manager_inst
+        mock_service_manager_inst.service_is_active.side_effect = [True, True, False]
+        res = self.ui_cluster_inst._node_ready_to_stop_cluster_service("node1")
+        assert res is False
+        mock_service_manager_inst.service_is_active.assert_has_calls([
+            mock.call("corosync.service", remote_addr="node1"),
+            mock.call("sbd.service", remote_addr="node1"),
+            mock.call("pacemaker.service", remote_addr="node1"),
+            ])
+        mock_service_manager_inst.stop_service.assert_called_once_with("corosync", remote_addr="node1")
+        mock_info.assert_called_once_with("The cluster stack stopped on node1")
+
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.ui_cluster.ServiceManager')
+    def test_node_ready_to_stop_cluster_service(self, mock_service_manager, mock_info):
+        mock_service_manager_inst = mock.Mock()
+        mock_service_manager.return_value = mock_service_manager_inst
+        mock_service_manager_inst.service_is_active.side_effect = [True, True, True]
+        res = self.ui_cluster_inst._node_ready_to_stop_cluster_service("node1")
+        assert res is True
+        mock_service_manager_inst.service_is_active.assert_has_calls([
+            mock.call("corosync.service", remote_addr="node1"),
+            mock.call("sbd.service", remote_addr="node1"),
+            mock.call("pacemaker.service", remote_addr="node1"),
+            ])
+        mock_info.assert_not_called()

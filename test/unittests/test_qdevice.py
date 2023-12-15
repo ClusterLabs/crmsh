@@ -253,7 +253,9 @@ class TestQDevice(unittest.TestCase):
         excepted_err_string = "invalid ALGORITHM choice: '1' (choose from 'ffsplit', 'lms')"
         self.assertEqual(excepted_err_string, str(err.exception))
 
-    def test_check_qdevice_tie_breaker(self):
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    def test_check_qdevice_tie_breaker(self, mock_is_active):
+        mock_is_active.return_value = False
         with self.assertRaises(ValueError) as err:
             qdevice.QDevice.check_qdevice_tie_breaker("1")
         excepted_err_string = "invalid qdevice tie_breaker(lowest/highest/valid_node_id)"
@@ -320,8 +322,8 @@ class TestQDevice(unittest.TestCase):
 
         mock_installed.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
 
-    @mock.patch("crmsh.utils.get_stdout_or_raise_error")
-    @mock.patch("crmsh.utils.service_is_active")
+    @mock.patch("crmsh.sh.ClusterShell.get_stdout_or_raise_error")
+    @mock.patch("crmsh.service_manager.ServiceManager.service_is_active")
     @mock.patch("crmsh.utils.package_is_installed")
     def test_valid_qnetd_duplicated_with_qnetd_running(self, mock_installed, mock_is_active, mock_run):
         mock_installed.return_value = True
@@ -336,10 +338,10 @@ class TestQDevice(unittest.TestCase):
 
         mock_installed.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
         mock_is_active.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
-        mock_run.assert_called_once_with("corosync-qnetd-tool -l -c cluster1", remote="10.10.10.123")
+        mock_run.assert_called_once_with("corosync-qnetd-tool -l -c cluster1", "10.10.10.123")
 
-    @mock.patch("crmsh.utils.get_stdout_or_raise_error")
-    @mock.patch("crmsh.utils.service_is_active")
+    @mock.patch("crmsh.sh.ClusterShell.get_stdout_or_raise_error")
+    @mock.patch("crmsh.service_manager.ServiceManager.service_is_active")
     @mock.patch("crmsh.utils.package_is_installed")
     def test_valid_qnetd_duplicated_without_qnetd_running(self, mock_installed, mock_is_active, mock_run):
         mock_installed.return_value = True
@@ -353,24 +355,24 @@ class TestQDevice(unittest.TestCase):
 
         mock_installed.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
         mock_is_active.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
-        mock_run.assert_called_once_with("test -f /etc/corosync/qnetd/nssdb/cluster-hacluster1.crt", remote="10.10.10.123")
+        mock_run.assert_called_once_with("test -f /etc/corosync/qnetd/nssdb/cluster-hacluster1.crt", "10.10.10.123")
 
-    @mock.patch("crmsh.utils.enable_service")
+    @mock.patch("crmsh.service_manager.ServiceManager.enable_service")
     def test_enable_qnetd(self, mock_enable):
         self.qdevice_with_ip.enable_qnetd()
         mock_enable.assert_called_once_with("corosync-qnetd.service", remote_addr="10.10.10.123")
 
-    @mock.patch("crmsh.utils.disable_service")
+    @mock.patch("crmsh.service_manager.ServiceManager.disable_service")
     def test_disable_qnetd(self, mock_disable):
         self.qdevice_with_ip.disable_qnetd()
         mock_disable.assert_called_once_with("corosync-qnetd.service", remote_addr="10.10.10.123")
 
-    @mock.patch("crmsh.utils.start_service")
+    @mock.patch("crmsh.service_manager.ServiceManager.start_service")
     def test_start_qnetd(self, mock_start):
         self.qdevice_with_ip.start_qnetd()
         mock_start.assert_called_once_with("corosync-qnetd.service", remote_addr="10.10.10.123")
 
-    @mock.patch("crmsh.utils.stop_service")
+    @mock.patch("crmsh.service_manager.ServiceManager.stop_service")
     def test_stop_qnetd(self, mock_stop):
         self.qdevice_with_ip.stop_qnetd()
         mock_stop.assert_called_once_with("corosync-qnetd.service", remote_addr="10.10.10.123")
@@ -492,7 +494,7 @@ class TestQDevice(unittest.TestCase):
                                           "corosync-qdevice-net-certutil -i -c {}".format(mock_qnetd_cacert_local.return_value))
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
-    @mock.patch("crmsh.utils.get_stdout_or_raise_error")
+    @mock.patch("crmsh.sh.ClusterShell.get_stdout_or_raise_error")
     def test_create_ca_request(self, mock_stdout_stderr, mock_log):
         mock_stdout_stderr.return_value = (0, None, None)
 
@@ -549,7 +551,7 @@ class TestQDevice(unittest.TestCase):
         mock_parallax_slurp.assert_called_once_with(["10.10.10.123"], "/etc/corosync/qdevice/net", mock_crt_on_qnetd.return_value)
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
-    @mock.patch("crmsh.utils.get_stdout_or_raise_error")
+    @mock.patch("crmsh.sh.ClusterShell.get_stdout_or_raise_error")
     @mock.patch("crmsh.qdevice.QDevice.qnetd_cluster_crt_on_local", new_callable=mock.PropertyMock)
     def test_import_cluster_crt(self, mock_crt_on_local, mock_stdout_stderr, mock_log):
         mock_crt_on_local.return_value = "/etc/corosync/qdevice/net/10.10.10.123/cluster-hacluster.crt"
@@ -694,7 +696,7 @@ class TestQDevice(unittest.TestCase):
         mock_parallax_slurp.assert_called_once_with(["node1.com"], "/etc/corosync/qdevice/net", mock_qnetd_cacert_local.return_value)
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
-    @mock.patch("crmsh.utils.get_stdout_or_raise_error")
+    @mock.patch("crmsh.sh.ClusterShell.get_stdout_or_raise_error")
     @mock.patch("crmsh.qdevice.QDevice.qnetd_cacert_on_cluster", new_callable=mock.PropertyMock)
     def test_init_db_on_local(self, mock_qnetd_cacert_cluster, mock_stdout_stderr, mock_log):
         mock_qnetd_cacert_cluster.return_value = "/etc/corosync/qdevice/net/node1.com/qnetd-cacert.crt"
@@ -745,7 +747,7 @@ class TestQDevice(unittest.TestCase):
         mock_parallax_slurp.assert_called_once_with(["node1.com"], '/etc/corosync/qdevice/net', mock_p12_on_local.return_value)
 
     @mock.patch("crmsh.qdevice.QDevice.log_only_to_file")
-    @mock.patch("crmsh.utils.get_stdout_or_raise_error")
+    @mock.patch("crmsh.sh.ClusterShell.get_stdout_or_raise_error")
     @mock.patch("crmsh.qdevice.QDevice.qdevice_p12_on_cluster", new_callable=mock.PropertyMock)
     def test_import_p12_on_local(self, mock_p12_on_cluster, mock_stdout_stderr, mock_log):
         mock_p12_on_cluster.return_value = "/etc/corosync/qdevice/net/node1.com/qdevice-net-node.p12"
@@ -798,7 +800,7 @@ class TestQDevice(unittest.TestCase):
 
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.corosync.get_value')
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_check_qdevice_vote(self, mock_run, mock_get_value, mock_warning):
         data = """
 Membership information
@@ -810,7 +812,7 @@ Membership information
         mock_run.return_value = data
         mock_get_value.return_value = "qnetd-node"
         qdevice.QDevice.check_qdevice_vote()
-        mock_run.assert_called_once_with("corosync-quorumtool -s", success_val_list=[0, 2])
+        mock_run.assert_called_once_with("corosync-quorumtool -s", success_exit_status={0, 2})
         mock_get_value.assert_called_once_with("quorum.device.net.host")
         mock_warning.assert_called_once_with("Qdevice's vote is 0, which simply means Qdevice can't talk to Qnetd(qnetd-node) for various reasons.")
 
@@ -927,7 +929,7 @@ Membership information
         qdevice.QDevice.remove_certification_files_on_qnetd()
         mock_configured.assert_called_once_with()
 
-    @mock.patch('crmsh.utils.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.corosync.get_value')
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_remove_certification_files_on_qnetd(self, mock_configured, mock_get_value, mock_run):

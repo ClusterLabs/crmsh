@@ -43,7 +43,7 @@ class TestWatchdog(unittest.TestCase):
         res = self.watchdog_inst.watchdog_device_name
         assert res is None
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_verify_watchdog_device_ignore_error(self, mock_run):
         mock_run.return_value = (1, None, "error")
         res = self.watchdog_inst._verify_watchdog_device("/dev/watchdog", True)
@@ -51,7 +51,7 @@ class TestWatchdog(unittest.TestCase):
         mock_run.assert_called_once_with("wdctl /dev/watchdog")
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_verify_watchdog_device_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
         mock_error.side_effect = ValueError
@@ -60,7 +60,7 @@ class TestWatchdog(unittest.TestCase):
         mock_error.assert_called_once_with("Invalid watchdog device /dev/watchdog: error")
         mock_run.assert_called_once_with("wdctl /dev/watchdog")
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_verify_watchdog_device(self, mock_run):
         mock_run.return_value = (0, None, None)
         res = self.watchdog_inst._verify_watchdog_device("/dev/watchdog")
@@ -83,7 +83,7 @@ class TestWatchdog(unittest.TestCase):
         self.assertEqual(res, "/dev/watchdog")
         mock_parse.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_driver_is_loaded(self, mock_run):
         output = """
 button                 24576  0
@@ -96,7 +96,7 @@ btrfs                1474560  1
         mock_run.assert_called_once_with("lsmod")
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_set_watchdog_info_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
         mock_error.side_effect = ValueError
@@ -105,7 +105,7 @@ btrfs                1474560  1
         mock_run.assert_called_once_with(watchdog.Watchdog.QUERY_CMD)
         mock_error.assert_called_once_with("Failed to run {}: error".format(watchdog.Watchdog.QUERY_CMD))
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_set_watchdog_info(self, mock_run):
         output = """
 Discovered 3 watchdog devices:
@@ -145,21 +145,21 @@ Driver: iTCO_wdt
         mock_verify.assert_called_once_with("/dev/watchdog1")
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_get_driver_through_device_remotely_error(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
         self.watchdog_join_inst._get_driver_through_device_remotely("test")
         mock_run.assert_called_once_with("ssh {} alice@node1 sudo sbd query-watchdog".format(constants.SSH_OPTION))
         mock_error.assert_called_once_with("Failed to run sudo sbd query-watchdog remotely: error")
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_get_driver_through_device_remotely_none(self, mock_run):
         mock_run.return_value = (0, "data", None)
         res = self.watchdog_join_inst._get_driver_through_device_remotely("/dev/watchdog")
         self.assertEqual(res, None)
         mock_run.assert_called_once_with("ssh {} alice@node1 sudo sbd query-watchdog".format(constants.SSH_OPTION))
 
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_get_driver_through_device_remotely(self, mock_run):
         output = """
 Discovered 3 watchdog devices:

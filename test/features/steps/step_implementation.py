@@ -9,6 +9,7 @@ from behave import given, when, then
 import behave_agent
 from crmsh import corosync, sbd, userdir, bootstrap
 from crmsh import utils as crmutils
+from crmsh.sh import ShellUtils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
                   assert_eq, is_unclean, assert_in
@@ -48,7 +49,7 @@ def step_impl(context, nodes):
     for node in nodes:
         # wait for ssh service
         for _ in range(10):
-            rc, _, _ = crmutils.get_stdout_stderr('ssh {} true'.format(node))
+            rc, _, _ = ShellUtils().get_stdout_stderr('ssh {} true'.format(node))
             if rc == 0:
                 break
             time.sleep(1)
@@ -97,6 +98,10 @@ def step_impl(context, addr, iface):
     assert bool(res) is True
 
 
+@given('Run "{cmd}" OK on "{addr}"')
+def step_impl(context, cmd, addr):
+    _, out, _ = run_command_local_or_remote(context, cmd, addr, True)
+
 @when('Run "{cmd}" on "{addr}"')
 def step_impl(context, cmd, addr):
     _, out, _ = run_command_local_or_remote(context, cmd, addr)
@@ -115,6 +120,14 @@ def step_impl(context):
 @then('Print stderr')
 def step_impl(context):
     context.logger.info("\n{}".format(context.stderr))
+
+
+@then('No crmsh tracebacks')
+def step_impl(context):
+    if "Traceback (most recent call last):" in context.stderr and \
+            re.search('File "/usr/lib/python.*/crmsh/', context.stderr):
+        context.logger.info("\n{}".format(context.stderr))
+        context.failed = True
 
 
 @when('Try "{cmd}" on "{addr}"')
@@ -289,6 +302,13 @@ def step_impl(context):
         context.logger.info("\n{}".format(out))
 
 
+@then('Show qdevice status')
+def step_impl(context):
+    _, out, _ = run_command(context, 'crm corosync status qdevice')
+    if out:
+        context.logger.info("\n{}".format(out))
+
+
 @then('Show corosync qdevice configuration')
 def step_impl(context):
     _, out, _ = run_command(context, "sed -n -e '/quorum/,/^}/ p' /etc/corosync/corosync.conf")
@@ -355,15 +375,25 @@ def step_impl(context, votes):
     assert_eq(int(votes), int(corosync.get_value("quorum.expected_votes")))
 
 
+@then('Directory "{directory}" created')
+def step_impl(context, directory):
+    assert os.path.isdir(directory) is True
+
+
+@then('Directory "{directory}" not created')
+def step_impl(context, directory):
+    assert os.path.isdir(directory) is False
+
+
 @then('Default crm_report tar file created')
 def step_impl(context):
-    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
+    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%a-%d-%b-%Y"))
     assert os.path.exists(default_file_name) is True
 
 
 @when('Remove default crm_report tar file')
 def step_impl(context):
-    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%w-%d-%m-%Y"))
+    default_file_name = 'crm_report-{}.tar.bz2'.format(datetime.datetime.now().strftime("%a-%d-%b-%Y"))
     os.remove(default_file_name)
 
 
@@ -391,13 +421,13 @@ def step_impl(context, f):
 
 @given('Resource "{res_id}" is started on "{node}"')
 def step_impl(context, res_id, node):
-    rc, out, err = crmutils.get_stdout_stderr("crm_mon -1")
+    rc, out, err = ShellUtils().get_stdout_stderr("crm_mon -1")
     assert re.search(r'\*\s+{}\s+.*Started\s+{}'.format(res_id, node), out) is not None
 
 
 @then('Resource "{res_id}" is started on "{node}"')
 def step_impl(context, res_id, node):
-    rc, out, err = crmutils.get_stdout_stderr("crm_mon -1")
+    rc, out, err = ShellUtils().get_stdout_stderr("crm_mon -1")
     assert re.search(r'\*\s+{}\s+.*Started\s+{}'.format(res_id, node), out) is not None
 
 
@@ -494,7 +524,7 @@ def step_impl(context, node):
 def step_impl(context, count, node):
     index = 0
     while index <= int(count):
-        rc, out, _ = crmutils.get_stdout_stderr("stonith_admin -h {}".format(node))
+        rc, out, _ = ShellUtils().get_stdout_stderr("stonith_admin -h {}".format(node))
         if "Node {} last fenced at:".format(node) in out:
             return True
         time.sleep(1)
@@ -529,3 +559,24 @@ def step_impl(context, nodelist):
             assert bootstrap.is_nologin('hacluster') is False
         else:
             assert bootstrap.is_nologin('hacluster', node) is False
+
+
+@given('ssh-agent is started at "{path}" on nodes [{nodes:str+}]')
+def step_impl(context, path, nodes):
+    user =  userdir.get_sudoer()
+    if not user:
+        user = userdir.getuser()
+    for node in nodes:
+        rc, _, _ = behave_agent.call(node, 1122, f"systemd-run --uid '{user}' -u ssh-agent /usr/bin/ssh-agent -D -a '{path}'", user='root')
+        assert 0 == rc
+
+
+@then('This file "{target_file}" will trigger UnicodeDecodeError exception')
+def step_impl(context, target_file):
+    try:
+        with open(target_file, "r", encoding="utf-8") as file:
+            content = file.read()
+    except UnicodeDecodeError as e:
+        return True
+    else:
+        return False

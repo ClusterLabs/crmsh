@@ -17,7 +17,7 @@ from . import xmlutil
 from .cliformat import cli_nvpairs, nvpairs2list
 from . import term
 from .cibconfig import cib_factory
-from .ui_resource import rm_meta_attribute
+from .sh import ShellUtils
 from . import log
 
 
@@ -516,7 +516,7 @@ class NodeMgmt(command.UI):
     def call_delnode(cls, node):
         "Remove node (how depends on cluster stack)"
         rc = True
-        ec, s = utils.get_stdout("%s -p" % cls.crm_node)
+        ec, s = ShellUtils().get_stdout("%s -p" % cls.crm_node)
         if not s:
             logger.error('%s -p could not list any nodes (rc=%d)', cls.crm_node, ec)
             rc = False
@@ -535,7 +535,7 @@ class NodeMgmt(command.UI):
         if ec != 0:
             node_xpath = "//nodes/node[@uname='{}']".format(node)
             cmd = 'cibadmin --delete-all --force --xpath "{}"'.format(node_xpath)
-            rc, _, err = utils.get_stdout_stderr(cmd)
+            rc, _, err = ShellUtils().get_stdout_stderr(cmd)
             if rc != 0:
                 logger.error('"%s" failed, rc=%d, %s', cmd, rc, err)
                 return False

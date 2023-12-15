@@ -2,13 +2,13 @@ coverage:
   status:
     project:
       default:
-        threshold: 0.1%
+        threshold: 0.35%
     patch:
       default:
-        threshold: 0.1%
+        threshold: 0.35%
 codecov: 
   token: 16b01c29-3b23-4923-b33a-4d26a49d80c4
   notify:
-    after_n_builds: 22
+    after_n_builds: 23
 comment:
-  after_n_builds: 22
+  after_n_builds: 23

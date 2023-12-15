@@ -79,6 +79,8 @@ options:
                         Use the given watchdog device or driver name
   -x, --skip-csync2-sync
                         Skip csync2 initialization (an experimental option)
+  --use-ssh-agent       Use an existing key from ssh-agent instead of creating
+                        new key pairs
 
 Network configuration:
   Options for configuring the network and messaging layer.
@@ -216,6 +218,8 @@ options:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
+  --use-ssh-agent       Use an existing key from ssh-agent instead of creating
+                        new key pairs
 
 Network configuration:
   Options for configuring the network and messaging layer.
@@ -343,4 +347,6 @@ options:
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
   -c [USER@]HOST, --cluster-node [USER@]HOST
-                        An already-configured geo cluster'''
+                        An already-configured geo cluster
+  --use-ssh-agent       Use an existing key from ssh-agent instead of creating
+                        new key pairs'''

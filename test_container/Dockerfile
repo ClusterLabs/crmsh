@@ -17,7 +17,6 @@ RUN ssh-keygen -t rsa -f /root/.ssh/id_rsa -N '' && \
     cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys && \
     chmod 0600 /root/.ssh/authorized_keys
 
-
 RUN python3 -m pip install coverage
 
 RUN mkdir -p /var/log/crmsh

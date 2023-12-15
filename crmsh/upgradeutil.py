@@ -7,6 +7,7 @@ import sys
 import crmsh.healthcheck
 import crmsh.parallax
 import crmsh.utils
+from crmsh import user_of_host
 from crmsh.prun import prun
 
 
@@ -99,7 +100,7 @@ def _is_cluster_target_seq_consistent(nodes):
             if isinstance(result, prun.PRunError):
                 logger.debug("upgradeutil: get-seq failed: %s", result)
                 raise _SkipUpgrade() from None
-    except (prun.PRunError, crmsh.utils.UserOfHost.UserNotFoundError) as e:
+    except (prun.PRunError, user_of_host.UserNotFoundError) as e:
         logger.debug("upgradeutil: get-seq failed: %s", e)
         raise _SkipUpgrade() from None
     try:
@@ -162,16 +163,14 @@ def upgrade_if_needed():
         except _SkipUpgrade:
             logger.debug("upgradeutil: configuration fix skipped")
             return
-        # TODO: replace with parallax_copy when it is ready
-        for node in nodes:
-            crmsh.utils.get_stdout_or_raise_error(
-                "mkdir -p '{}' && echo '{}' > '{}'".format(
-                    DATA_DIR,
-                    _format_upgrade_seq(CURRENT_UPGRADE_SEQ),
-                    SEQ_FILE_PATH,
-                ),
-                node,
-            )
+        crmsh.parallax.parallax_call(
+            nodes,
+            "mkdir -p '{}' && echo '{}' > '{}'".format(
+                DATA_DIR,
+                _format_upgrade_seq(CURRENT_UPGRADE_SEQ),
+                SEQ_FILE_PATH,
+            ),
+        )
         crmsh.parallax.parallax_call(nodes, 'rm -f {}'.format(FORCE_UPGRADE_FILE_PATH))
         logger.debug("configuration fix finished")
 

@@ -84,12 +84,8 @@ class Context(object):
             if cmd:
                 utils.check_user_access(self.current_level().name)
                 rv = self.execute_command() is not False
-        except (ValueError, IOError) as msg:
-            if config.core.debug or options.regression_tests:
-                import traceback
-                traceback.print_exc()
-                sys.stdout.flush()
-            logger.error("%s: %s", self.get_qualified_name(), msg)
+        except (ValueError, IOError) as e:
+            logger.error("%s: %s", self.get_qualified_name(), e, exc_info=e)
             rv = False
         except utils.TerminateSubCommand:
             return False

@@ -6,9 +6,10 @@ import re
 import time
 from contextlib import contextmanager
 
-from . import utils
+from . import sh
 from . import config
 from . import log
+from .sh import ShellUtils
 
 
 logger = log.setup_logger(__name__)
@@ -45,7 +46,7 @@ class Lock(object):
         """
         Run command on local
         """
-        return utils.get_stdout_stderr(cmd)
+        return ShellUtils().get_stdout_stderr(cmd)
 
     def _create_lock_dir(self):
         """
@@ -115,7 +116,7 @@ class RemoteLock(Lock):
         Run command on remote node
         """
         # TODO: pass SSH_OPTION
-        rc, out, err = utils.run_cmd_on_remote(cmd, self.remote_node)
+        rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.remote_node, cmd)
         if rc == self.SSH_EXIT_ERR:
             raise SSHError(err)
         return rc, out, err

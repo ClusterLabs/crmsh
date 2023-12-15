@@ -2,6 +2,7 @@ import re
 from . import utils
 from .constants import SSH_OPTION
 from .bootstrap import invoke, invokerc, WATCHDOG_CFG, SYSCONFIG_SBD
+from .sh import ShellUtils
 
 
 class Watchdog(object):
@@ -30,7 +31,7 @@ class Watchdog(object):
         """
         Use wdctl to verify watchdog device
         """
-        rc, _, err = utils.get_stdout_stderr("wdctl {}".format(dev))
+        rc, _, err = ShellUtils().get_stdout_stderr("wdctl {}".format(dev))
         if rc != 0:
             if ignore_error:
                 return False
@@ -59,7 +60,7 @@ class Watchdog(object):
         """
         Check if driver was already loaded
         """
-        _, out, _ = utils.get_stdout_stderr("lsmod")
+        _, out, _ = ShellUtils().get_stdout_stderr("lsmod")
         return re.search("\n{}\s+".format(driver), out)
 
     def _set_watchdog_info(self):
@@ -67,7 +68,7 @@ class Watchdog(object):
         Set watchdog info through sbd query-watchdog command
         Content in self._watchdog_info_dict: {device_name: driver_name}
         """
-        rc, out, err = utils.get_stdout_stderr(self.QUERY_CMD)
+        rc, out, err = ShellUtils().get_stdout_stderr(self.QUERY_CMD)
         if rc == 0 and out:
             # output format might like:
             #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
@@ -90,7 +91,7 @@ class Watchdog(object):
         """
         # FIXME
         cmd = "ssh {} {}@{} {}".format(SSH_OPTION, self._remote_user, self._peer_host, self.QUERY_CMD)
-        rc, out, err = utils.get_stdout_stderr(cmd)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd)
         if rc == 0 and out:
             # output format might like:
             #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n

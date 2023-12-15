@@ -9,7 +9,7 @@ import typing
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
-from . import command
+from . import command, sh
 from . import utils
 from . import scripts
 from . import completers as compl
@@ -18,6 +18,8 @@ from . import corosync
 from . import qdevice
 from .cibconfig import cib_factory
 from .prun import prun
+from .service_manager import ServiceManager
+from .sh import ShellUtils
 from .ui_node import parse_option_for_nodes
 from . import constants
 
@@ -34,7 +36,7 @@ def parse_options(parser, args):
     if hasattr(options, 'help') and options.help:
         parser.print_help()
         return None, None
-    utils.check_space_option_value(options)
+    utils.check_empty_option_value(options)
     return options, args
 
 
@@ -61,7 +63,7 @@ def script_args(args):
 
 def get_cluster_name():
     cluster_name = None
-    if not utils.service_is_active("corosync.service"):
+    if not ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("corosync.service"):
         name = corosync.get_values('totem.cluster_name')
         if name:
             cluster_name = name[0]
@@ -174,21 +176,77 @@ class Cluster(command.UI):
             start_qdevice = True
             service_check_list.append("corosync-qdevice.service")
 
+        service_manager = ServiceManager()
         node_list = parse_option_for_nodes(context, *args)
         for node in node_list[:]:
-            if all([utils.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
+            if all([service_manager.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
                 logger.info("The cluster stack already started on {}".format(node))
                 node_list.remove(node)
         if not node_list:
             return
 
         if start_qdevice:
-            utils.start_service("corosync-qdevice", node_list=node_list)
+            service_manager.start_service("corosync-qdevice", node_list=node_list)
         node_list = bootstrap.start_pacemaker(node_list)
         if start_qdevice:
             qdevice.QDevice.check_qdevice_vote()
         for node in node_list:
             logger.info("The cluster stack started on {}".format(node))
+
+    @staticmethod
+    def _node_ready_to_stop_cluster_service(node):
+        """
+        Check if the specific node is ready to stop cluster service
+
+        If both corosync.service and pacemaker.service is active, return True
+        If some services started, stop them first and return False
+        """
+        service_manager = ServiceManager()
+
+        corosync_active = service_manager.service_is_active("corosync.service", remote_addr=node)
+        sbd_active = service_manager.service_is_active("sbd.service", remote_addr=node)
+        pacemaker_active = service_manager.service_is_active("pacemaker.service", remote_addr=node)
+
+        if not corosync_active:
+            if sbd_active:
+                service_manager.stop_service("corosync", remote_addr=node)
+                logger.info(f"The cluster stack stopped on {node}")
+            else:
+                logger.info(f"The cluster stack already stopped on {node}")
+            return False
+
+        elif not pacemaker_active:
+            service_manager.stop_service("corosync", remote_addr=node)
+            logger.info("The cluster stack stopped on {}".format(node))
+            return False
+
+        return True
+
+    @staticmethod
+    def _wait_for_dc(node=None):
+        """
+        Wait for the cluster's DC to become available
+        """
+        if not ServiceManager().service_is_active("pacemaker.service", remote_addr=node):
+            return
+
+        dc_deadtime = utils.get_property("dc-deadtime", peer=node) or str(constants.DC_DEADTIME_DEFAULT)
+        dc_timeout = int(dc_deadtime.strip('s')) + 5
+        try:
+            utils.check_function_with_timeout(utils.get_dc, wait_timeout=dc_timeout, peer=node)
+        except TimeoutError:
+            logger.error("No DC found currently, please wait if the cluster is still starting")
+            raise utils.TerminateSubCommand
+
+    @staticmethod
+    def _set_dlm(node=None):
+        """
+        When dlm running and quorum is lost, before stop cluster service, should set
+        enable_quorum_fencing=0, enable_quorum_lockspace=0 for dlm config option
+        """
+        if utils.is_dlm_running(node) and not utils.is_quorate(node):
+            logger.debug("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
+            utils.set_dlm_option(peer=node, enable_quorum_fencing=0, enable_quorum_lockspace=0)
 
     @command.skill_level('administrator')
     def do_stop(self, context, *args):
@@ -196,42 +254,23 @@ class Cluster(command.UI):
         Stops the cluster stack on all nodes or specific node(s)
         '''
         node_list = parse_option_for_nodes(context, *args)
-        for node in node_list[:]:
-            if not utils.service_is_active("corosync.service", remote_addr=node):
-                if utils.service_is_active("sbd.service", remote_addr=node):
-                    utils.stop_service("corosync", remote_addr=node)
-                    logger.info("The cluster stack stopped on {}".format(node))
-                else:
-                    logger.info("The cluster stack already stopped on {}".format(node))
-                node_list.remove(node)
-            elif not utils.service_is_active("pacemaker.service", remote_addr=node):
-                utils.stop_service("corosync", remote_addr=node)
-                logger.info("The cluster stack stopped on {}".format(node))
-                node_list.remove(node)
+        node_list = [n for n in node_list if self._node_ready_to_stop_cluster_service(n)]
         if not node_list:
             return
+        logger.debug(f"stop node list: {node_list}")
 
-        dc_deadtime = utils.get_property("dc-deadtime") or str(constants.DC_DEADTIME_DEFAULT)
-        dc_timeout = int(dc_deadtime.strip('s')) + 5
-        try:
-            utils.check_function_with_timeout(utils.get_dc, wait_timeout=dc_timeout)
-        except TimeoutError:
-            logger.error("No DC found currently, please wait if the cluster is still starting")
-            return False
+        self._wait_for_dc(node_list[0])
 
-        # When dlm running and quorum is lost, before stop cluster service, should set
-        # enable_quorum_fencing=0, enable_quorum_lockspace=0 for dlm config option
-        if utils.is_dlm_running() and not utils.is_quorate():
-            logger.debug("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
-            utils.set_dlm_option(enable_quorum_fencing=0, enable_quorum_lockspace=0)
+        self._set_dlm(node_list[0])
 
+        service_manager = ServiceManager()
         # Stop pacemaker since it can make sure cluster has quorum until stop corosync
-        node_list = utils.stop_service("pacemaker", node_list=node_list)
+        node_list = service_manager.stop_service("pacemaker", node_list=node_list)
         # Then, stop qdevice if is active
-        if utils.service_is_active("corosync-qdevice.service"):
-            utils.stop_service("corosync-qdevice.service", node_list=node_list)
+        if service_manager.service_is_active("corosync-qdevice.service"):
+            service_manager.stop_service("corosync-qdevice.service", node_list=node_list)
         # Last, stop corosync
-        node_list = utils.stop_service("corosync", node_list=node_list)
+        node_list = service_manager.stop_service("corosync", node_list=node_list)
 
         for node in node_list:
             logger.info("The cluster stack stopped on {}".format(node))
@@ -251,9 +290,10 @@ class Cluster(command.UI):
         Enable the cluster services on this node
         '''
         node_list = parse_option_for_nodes(context, *args)
-        node_list = utils.enable_service("pacemaker.service", node_list=node_list)
-        if utils.service_is_available("corosync-qdevice.service") and corosync.is_qdevice_configured():
-            utils.enable_service("corosync-qdevice.service", node_list=node_list)
+        service_manager = ServiceManager()
+        node_list = service_manager.enable_service("pacemaker.service", node_list=node_list)
+        if service_manager.service_is_available("corosync-qdevice.service") and corosync.is_qdevice_configured():
+            service_manager.enable_service("corosync-qdevice.service", node_list=node_list)
         for node in node_list:
             logger.info("Cluster services enabled on %s", node)
 
@@ -263,8 +303,9 @@ class Cluster(command.UI):
         Disable the cluster services on this node
         '''
         node_list = parse_option_for_nodes(context, *args)
-        node_list = utils.disable_service("pacemaker.service", node_list=node_list)
-        utils.disable_service("corosync-qdevice.service", node_list=node_list)
+        service_manager = ServiceManager()
+        node_list = service_manager.disable_service("pacemaker.service", node_list=node_list)
+        service_manager.disable_service("corosync-qdevice.service", node_list=node_list)
         for node in node_list:
             logger.info("Cluster services disabled on %s", node)
 
@@ -373,6 +414,8 @@ Examples:
                             help="Use the given watchdog device or driver name")
         parser.add_argument("-x", "--skip-csync2-sync", dest="skip_csync2", action="store_true",
                             help="Skip csync2 initialization (an experimental option)")
+        parser.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
+                            help="Use an existing key from ssh-agent instead of creating new key pairs")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-i", "--interface", dest="nic_addr_list", metavar="IF", action=CustomAppendAction, default=[], help=constants.INTERFACE_HELP)
@@ -423,7 +466,7 @@ Examples:
             parser.error("Invalid stage (%s)" % (stage))
 
         if options.qnetd_addr:
-            if not utils.service_is_available("corosync-qdevice.service"):
+            if not ServiceManager().service_is_available("corosync-qdevice.service"):
                 utils.fatal("corosync-qdevice.service is not available")
             if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
                 parser.error("Option --qdevice-heuristics is required if want to configure heuristics mode")
@@ -437,7 +480,7 @@ Examples:
         boot_context.ui_context = context
         boot_context.stage = stage
         boot_context.args = args
-        boot_context.cluster_is_running = utils.service_is_active("pacemaker.service")
+        boot_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         boot_context.type = "init"
         boot_context.initialize_qdevice()
         boot_context.validate_option()
@@ -477,6 +520,8 @@ Examples:
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
+        parser.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
+                            help="Use an existing key from ssh-agent instead of creating new key pairs")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument(
@@ -548,7 +593,7 @@ the config.core.force option.""",
         '''
         Rename the cluster.
         '''
-        if not utils.service_is_active("corosync.service"):
+        if not ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("corosync.service"):
             context.fatal_error("Can't rename cluster when cluster service is stopped")
         old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:
@@ -716,6 +761,8 @@ to get the geo cluster configuration.""",
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_argument("-c", "--cluster-node", metavar="[USER@]HOST", help="An already-configured geo cluster", dest="cluster_node")
+        parser.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
+                            help="Use an existing key from ssh-agent instead of creating new key pairs")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
@@ -753,7 +800,7 @@ to get the geo cluster configuration.""",
             else:
                 print("%-16s unknown" % (svc))
 
-        rc, outp = utils.get_stdout(['corosync-cfgtool', '-s'], shell=False)
+        rc, outp = ShellUtils().get_stdout(['corosync-cfgtool', '-s'], shell=False)
         if rc == 0:
             print("")
             print(outp)

@@ -19,21 +19,21 @@ Feature: Regression test for bootstrap bugs
     Then    Got output "default"
 
   @clean
-  Scenario: Space value not allowed for option(bsc#1141976)
+  Scenario: Empty value not allowed for option(bsc#1141976)
     When    Try "crm -c ' '"
-    Then    Except "ERROR: Space value not allowed for dest "cib""
+    Then    Except "ERROR: Empty value not allowed for dest "cib""
     When    Try "crm cluster init --name ' '"
-    Then    Except "ERROR: cluster.init: Space value not allowed for dest "cluster_name""
+    Then    Except "ERROR: cluster.init: Empty value not allowed for dest "cluster_name""
     When    Try "crm cluster join -c ' '"
-    Then    Except "ERROR: cluster.join: Space value not allowed for dest "cluster_node""
+    Then    Except "ERROR: cluster.join: Empty value not allowed for dest "cluster_node""
     When    Try "crm cluster remove -c ' '"
-    Then    Except "ERROR: cluster.remove: Space value not allowed for dest "cluster_node""
+    Then    Except "ERROR: cluster.remove: Empty value not allowed for dest "cluster_node""
     When    Try "crm cluster geo_init -a ' '"
-    Then    Except "ERROR: cluster.geo_init: Space value not allowed for dest "arbitrator""
+    Then    Except "ERROR: cluster.geo_init: Empty value not allowed for dest "arbitrator""
     When    Try "crm cluster geo_join -c ' '"
-    Then    Except "ERROR: cluster.geo_join: Space value not allowed for dest "cluster_node""
+    Then    Except "ERROR: cluster.geo_join: Empty value not allowed for dest "cluster_node""
     When    Try "crm cluster geo_init_arbitrator -c ' '"
-    Then    Except "ERROR: cluster.geo_init_arbitrator: Space value not allowed for dest "cluster_node""
+    Then    Except "ERROR: cluster.geo_init_arbitrator: Empty value not allowed for dest "cluster_node""
 
   @clean
   Scenario: Setup cluster with crossed network
@@ -133,6 +133,20 @@ Feature: Regression test for bootstrap bugs
     When    Run "crm cluster stop" on "hanode1"
     Then    Service "corosync" is "stopped" on "hanode1"
 
+  @clean
+  Scenario: Can't stop all nodes' cluster service when local node's service is down(bsc#1213889)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Wait for DC
+    And     Run "crm cluster stop" on "hanode1"
+    And     Run "crm cluster stop --all" on "hanode1"
+    Then    Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+
   @skip_non_root
   @clean
   Scenario: crm cluster join default behavior change in ssh key handling (bsc#1210693)
@@ -201,3 +215,38 @@ Feature: Regression test for bootstrap bugs
     And     Run "mv /root/.config/crm/crm.conf{.bak,}" on "hanode1"
     And     Run "mv /root/.ssh{,.bak}" on "hanode1"
     Then    Run "crm status" OK on "hanode1"
+    And     Run "rm -rf /root/.ssh && mv /root/.ssh{.bak,}" OK on "hanode1"
+
+  # skip non-root as behave_agent is not able to run commands interactively with non-root sudoer
+  @skip_non_root
+  @clean
+  Scenario: Owner and permssion of file authorized_keys (bsc#1217279)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    # in a newly created cluster
+    When    Run "crm cluster init -y" on "hanode1"
+    And     Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode1"
+    And     Expected "hacluster:haclient" in stdout
+    And     Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode2"
+    And     Expected "hacluster:haclient" in stdout
+    # in an upgraded cluster in which ~hacluster/.ssh/authorized_keys exists
+    When    Run "chown root:root ~hacluster/.ssh/authorized_keys && chmod 0600 ~hacluster/.ssh/authorized_keys" on "hanode1"
+    And     Run "chown root:root ~hacluster/.ssh/authorized_keys && chmod 0600 ~hacluster/.ssh/authorized_keys" on "hanode2"
+    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode1"
+    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode2"
+    And     Run "crm status" on "hanode1"
+    Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode1"
+    And     Expected "hacluster:haclient" in stdout
+    Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode2"
+    And     Expected "hacluster:haclient" in stdout
+    # in an upgraded cluster in which ~hacluster/.ssh/authorized_keys does not exist
+    When    Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh/" on "hanode1"
+    And     Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh/" on "hanode2"
+    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode1"
+    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode2"
+    And     Run "crm status" on "hanode1"
+    Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode1"
+    And     Expected "hacluster:haclient" in stdout
+    Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode2"
+    And     Expected "hacluster:haclient" in stdout
