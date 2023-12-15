@@ -294,6 +294,7 @@ DEFAULTS = {
     'report': {
         'from_time': opt_string('-12H'),
         'compress': opt_boolean('yes'),
+        'compress_prog': opt_string('gzip'),
         'speed_up': opt_boolean('no'),
         'collect_extra_logs': opt_string('/var/log/messages \
                 /var/log/crmsh/crmsh.log /etc/crm/profiles.yml /etc/crm/crm.conf'),

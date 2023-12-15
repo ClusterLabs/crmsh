@@ -166,6 +166,10 @@ def pick_first_compress():
         "bzip2": ".bz2",
         "xz": ".xz"
     }
+    default_prog = config.report.compress_prog
+    default_suffix = compress_prog_suffix_dict.get(default_prog)
+    if shutil.which(default_prog) and default_suffix:
+        return default_prog, default_suffix
     for cmd, suffix in compress_prog_suffix_dict.items():
         if shutil.which(cmd):
             return cmd, suffix
