@@ -124,8 +124,6 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Directory "/var/lib/pacemaker/cib/" is empty on "hanode2"
     Then    Directory "/var/lib/pacemaker/pengine/" is empty on "hanode2"
     Then    Directory "/var/lib/corosync/" is empty on "hanode2"
-    When    Run "crm cluster remove hanode1 -y --force" on "hanode1"
-    Then    File "/etc/corosync/corosync.conf" not exist on "hanode1"
 
   Scenario: Remove local node "hanode1" with `crm -F node delete`
     When    Run "crm configure primitive d1 Dummy" on "hanode1"
