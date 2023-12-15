@@ -7,7 +7,6 @@ name: crmsh CD
 on: push
 
 env:
-  FOLDER: /package
   PACKAGE_NAME: crmsh
   CONTAINER_IMAGE: nyang23/obs-continuous-delivery:latest
   OBS_USER: ${{ secrets.OBS_USER }}
@@ -30,14 +29,13 @@ jobs:
     - name: delivery process
       run: |
         docker pull "${CONTAINER_IMAGE}"
-        docker run -t -v "$(pwd):/package" \
+        docker run -t -v "$(pwd)":/package:ro \
           -e OBS_USER=$OBS_USER \
           -e OBS_PASS=$OBS_PASS \
-          -e FOLDER=$FOLDER \
           -e OBS_PROJECT=$OBS_PROJECT \
           -e PACKAGE_NAME=$PACKAGE_NAME \
           "${CONTAINER_IMAGE}" \
-          /bin/bash -c "cd /package;/scripts/upload.sh"
+          /bin/bash -c "cp -r /package ~/package && cd ~/package && /scripts/upload.sh"
 
   submit:
     if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.6'
@@ -49,11 +47,11 @@ jobs:
     - name: submit process
       run: |
         docker pull "${CONTAINER_IMAGE}"
-        docker run -t -v "$(pwd):/package" \
+        docker run -t \
           -e OBS_USER=$OBS_USER \
           -e OBS_PASS=$OBS_PASS \
           -e OBS_PROJECT=$OBS_PROJECT \
           -e PACKAGE_NAME=$PACKAGE_NAME \
           -e TARGET_PROJECT=$TARGET_PROJECT \
           "${CONTAINER_IMAGE}" \
-          /bin/bash -c "cd /package;/scripts/submit.sh"
+          /bin/bash -c "cd ~ && /scripts/submit.sh"
