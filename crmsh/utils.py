@@ -2243,6 +2243,19 @@ class IP(object):
         """
         return self.ip_address.is_loopback
 
+    @classmethod
+    def is_valid_ip(cls, addr):
+        """
+        Check whether the address is valid IP address
+        """
+        cls_inst = cls(addr)
+        try:
+            cls_inst.ip_address
+        except ValueError:
+            return False
+        else:
+            return True
+
 
 class Interface(IP):
     """
