@@ -146,7 +146,7 @@ class TestRun(unittest.TestCase):
     @mock.patch('logging.Logger.warning')
     @mock.patch('shutil.which')
     def test_pick_first_compress(self, mock_which, mock_warn):
-        mock_which.side_effect = [False, False, False]
+        mock_which.side_effect = [False, False, False, False]
         prog, ext = core.pick_first_compress()
         self.assertIsNone(prog)
         self.assertIsNone(ext)

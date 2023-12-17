@@ -945,8 +945,8 @@ Membership information
         crq_file = "/etc/corosync/qnetd/nssdb/qdevice-net-node.crq.cluster1"
         crq_cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=crq_file)
         mock_run.assert_has_calls([
-            mock.call(crt_cmd, remote="qnetd-node"),
-            mock.call(crq_cmd, remote="qnetd-node")])
+            mock.call(crt_cmd, "qnetd-node"),
+            mock.call(crq_cmd, "qnetd-node")])
 
     @mock.patch('crmsh.corosync.conf')
     @mock.patch('crmsh.utils.str2file')

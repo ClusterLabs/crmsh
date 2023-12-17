@@ -752,7 +752,7 @@ class TestInterfacesInfo(unittest.TestCase):
         res = self.interfaces_info.get_default_nic_from_route()
         self.assertEqual(res, "eth8")
 
-        mock_run_inst.get_stdout_stderr_auto_ssh_no_input.assert_called_once_with("ip -o route show")
+        mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("ip -o route show")
 
 
 @mock.patch("crmsh.utils.get_nodeid_from_name")
