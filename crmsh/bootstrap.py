@@ -1914,10 +1914,7 @@ def join_ssh_merge(cluster_node, remote_user):
     """
     logger.info("Merging known_hosts")
 
-    hosts = utils.list_cluster_nodes()
-    if hosts is None:
-        hosts = list()
-    hosts.append(cluster_node)
+    hosts = _context.node_list_in_cluster
 
     shell = sh.cluster_shell()
     # create local entry in known_hosts
