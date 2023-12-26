@@ -168,6 +168,7 @@ class Corosync(command.UI):
             print(v)
 
     @command.skill_level('administrator')
+    @command.completers(completers.call(corosync.get_all_paths))
     def do_set(self, context, path, value):
         "Set a corosync configuration value"
         corosync.set_value(path, value)
