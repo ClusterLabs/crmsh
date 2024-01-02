@@ -648,14 +648,21 @@ class CibConfig(command.UI):
                 context.fatal_error("Operation \"{}\" not found for resource {}".format(op_type, obj_id))
             if len(op_res) > 1:
                 context.fatal_error("Should specify interval of {}".format(op_type))
+            if name == 'interval':
+                value = value if value.endswith('s') else value + 's'
+                op_res[0].set('id', f'{obj_id}-{op_type}-{value}')
             op_res[0].set(name, value)
 
         # Use case for: set id.op_type.interval.name value
         if len(other_path_list) == 3:
             op_type, iv, name = other_path_list
-            op_res = rsc.node.xpath(".//operations/op[@id='{}-{}-{}']".format(obj_id, op_type, iv))
+            iv = iv[:-1] if iv.endswith('s') else iv
+            op_res = rsc.node.xpath(f".//operations/op[@id='{obj_id}-{op_type}-{iv}' or @id='{obj_id}-{op_type}-{iv}s']")
             if not op_res:
-                context.fatal_error("Operation \"{}\" interval \"{}\" not found for resource {}".format(op_type, iv, obj_id))
+                context.fatal_error(f"Operation \"{op_type}\" interval \"{iv}s\" not found for resource {obj_id}")
+            if name == 'interval':
+                value = value if value.endswith('s') else value + 's'
+                op_res[0].set('id', f'{obj_id}-{op_type}-{value}')
             op_res[0].set(name, value)
 
         rsc.set_updated()
