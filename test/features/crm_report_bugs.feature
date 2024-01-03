@@ -33,6 +33,7 @@ Feature: crm report functional test for verifying bugs
 
   @clean
   Scenario: Include archived logs(bsc#1148873)
+    # For syslog
     When    Write multi lines to file "/var/log/log1" on "hanode1"
       """
       Sep 08 08:36:34 node1 log message line1
@@ -40,11 +41,15 @@ Feature: crm report functional test for verifying bugs
       Sep 08 08:37:02 node1 log message line3
       """
     And     Run "xz /var/log/log1" on "hanode1"
+    # bsc#1218491, unable to gather log files that are in the syslog format
+    And     Run "touch -m -t 202201010000 /var/log/log1.xz" on "hanode1"
     When    Write multi lines to file "/var/log/log1" on "hanode1"
       """
       Sep 08 09:37:02 node1 log message line4
       Sep 08 09:37:12 node1 log message line5
       """
+    # bsc#1218491, unable to gather log files that are in the syslog format
+    And     Run "touch -m -t 202201010001 /var/log/log1" on "hanode1"
     And     Run "crm report -f 20200901 -E /var/log/log1 report1" on "hanode1"
     Then    File "log1" in "report1.tar.bz2"
     When    Run "tar jxf report1.tar.bz2" on "hanode1"
@@ -56,6 +61,33 @@ Feature: crm report functional test for verifying bugs
       Sep 08 08:37:02 node1 log message line3
       Sep 08 09:37:02 node1 log message line4
       Sep 08 09:37:12 node1 log message line5
+      """
+    When    Run "rm -rf report1.tar.gz report1" on "hanode1"
+
+    # For rfc5424
+    When    Write multi lines to file "/var/log/log2" on "hanode1"
+      """
+      2022-09-08T14:24:36.003Z mymachine.example.com myapp - ID47
+      2022-09-08T14:25:15.003Z mymachine.example.com myapp - ID48
+      2022-09-08T14:26:15.003Z mymachine.example.com myapp - ID49
+      """
+    And     Run "xz /var/log/log2" on "hanode1"
+    When    Write multi lines to file "/var/log/log2" on "hanode1"
+      """
+      2022-09-08T14:27:15.003Z mymachine.example.com myapp - ID50
+      2022-09-08T14:28:15.003Z mymachine.example.com myapp - ID51
+      """
+    And     Run "crm report -f 20200901 -E /var/log/log2 report1" on "hanode1"
+    Then    File "log2" in "report1.tar.bz2"
+    When    Run "tar jxf report1.tar.bz2" on "hanode1"
+    And     Run "cat report1/hanode1/log2" on "hanode1"
+    Then    Expected multiple lines in output
+      """
+      2022-09-08T14:24:36.003Z mymachine.example.com myapp - ID47
+      2022-09-08T14:25:15.003Z mymachine.example.com myapp - ID48
+      2022-09-08T14:26:15.003Z mymachine.example.com myapp - ID49
+      2022-09-08T14:27:15.003Z mymachine.example.com myapp - ID50
+      2022-09-08T14:28:15.003Z mymachine.example.com myapp - ID51
       """
     When    Run "rm -rf report1.tar.gz report1" on "hanode1"
 
