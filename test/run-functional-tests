@@ -431,7 +431,7 @@ run_origin_regression_test() {
 
 prepare_coverage_env() {
 	for node in $*; do
-            docker exec -t $node /bin/sh -c 'sed -i '\''1a\import coverage\nimport atexit\ncov=coverage.Coverage(config_file="/opt/crmsh/test/features/coveragerc")\natexit.register(lambda:(cov.stop(),cov.save()))\ncov.start()'\'' /usr/sbin/crm'
+            docker cp "$PROJECT_PATH"/test/features/coverage/sitecustomize.py "$node":/usr/lib64/python3.6/sitecustomize.py
 	done
 }
 
