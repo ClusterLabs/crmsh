@@ -74,7 +74,8 @@ test/features/cluster_api.feature
 test/features/configure_bugs.feature
 test/features/constraints_bugs.feature
 test/features/corosync_ui.feature
-test/features/coveragerc
+test/features/coverage/coveragerc
+test/features/coverage/sitecustomize.py
 test/features/crm_report_bugs.feature
 test/features/crm_report_normal.feature
 test/features/environment.py
