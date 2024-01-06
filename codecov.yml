@@ -12,3 +12,6 @@ codecov:
     after_n_builds: 23
 comment:
   after_n_builds: 23
+
+ignore:
+  - "crmsh/report"
