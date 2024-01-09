@@ -1,3 +1,9 @@
+* Tue Jan 9 2024 Xin Liang <XLiang@suse.com>
+- Release 4.6.0
+- Fix: report: Unable to gather log files that are in the syslog format (bsc#1218491)
+- Dev: ui_corosync: Add a completer for corosync.set to enumerate all current paths
+- Dev: bootstrap: Assign hosts with _context.node_list_in_cluster in join_ssh_merge (bsc#1218331)
+
 * Fri Dec 22 2023 Xin Liang <XLiang@suse.com>
 - Release 4.6.0 rc2
 - Dev: ui_cluster: Move --use-ssh-agent to optional arguments
