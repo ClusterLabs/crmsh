@@ -457,19 +457,19 @@ ANSI_COLOR="0;32"
     def test_find_first_timestamp_none(self, mock_get_timestamp):
         mock_get_timestamp.side_effect = [None, None]
         data = ["line1", "line2"]
-        self.assertIsNone(utils.find_first_timestamp(data))
+        self.assertIsNone(utils.find_first_timestamp(data, "file1"))
         mock_get_timestamp.assert_has_calls([
-            mock.call("line1"),
-            mock.call("line2")
+            mock.call("line1", "file1"),
+            mock.call("line2", "file1")
         ])
 
     @mock.patch('crmsh.report.utils.get_timestamp')
     def test_find_first_timestamp(self, mock_get_timestamp):
         mock_get_timestamp.return_value = 123456
         data = ["line1", "line2"]
-        res = utils.find_first_timestamp(data)
+        res = utils.find_first_timestamp(data, "file1")
         self.assertEqual(res, 123456)
-        mock_get_timestamp.assert_called_once_with("line1")
+        mock_get_timestamp.assert_called_once_with("line1", "file1")
 
     def test_filter_lines(self):
         data = """line1
@@ -522,31 +522,31 @@ Legacy 003-10-11T22:14:15.003Z log data log
         ])
 
     def test_get_timestamp_none(self):
-        self.assertIsNone(utils.get_timestamp(""))
+        self.assertIsNone(utils.get_timestamp("", "file1"))
 
-    @mock.patch('crmsh.utils.parse_to_timestamp')
-    def test_get_timespan_rfc5424(self, mock_parse):
+    @mock.patch('crmsh.report.utils.get_timestamp_from_time_line')
+    def test_get_timespan_rfc5424(self, mock_get_timestamp):
         constants.STAMP_TYPE = "rfc5424"
-        mock_parse.return_value = 12345
-        res = utils.get_timestamp("2003-10-11T22:14:15.003Z mymachine.example.com su")
-        self.assertEqual(res, mock_parse.return_value)
-        mock_parse.assert_called_once_with("2003-10-11T22:14:15.003Z", quiet=True)
+        mock_get_timestamp.return_value = 12345
+        res = utils.get_timestamp("2003-10-11T22:14:15.003Z mymachine.example.com su", "file1")
+        self.assertEqual(res, mock_get_timestamp.return_value)
+        mock_get_timestamp.assert_called_once_with("2003-10-11T22:14:15.003Z", "rfc5424", "file1")
 
-    @mock.patch('crmsh.utils.parse_to_timestamp')
-    def test_get_timespan_syslog(self, mock_parse):
+    @mock.patch('crmsh.report.utils.get_timestamp_from_time_line')
+    def test_get_timespan_syslog(self, mock_get_timestamp):
         constants.STAMP_TYPE = "syslog"
-        mock_parse.return_value = 12345
-        res = utils.get_timestamp("Feb 12 18:30:08 15sp1-1 kernel:")
-        self.assertEqual(res, mock_parse.return_value)
-        mock_parse.assert_called_once_with("Feb 12 18:30:08", quiet=True)
+        mock_get_timestamp.return_value = 12345
+        res = utils.get_timestamp("Feb 12 18:30:08 15sp1-1 kernel:", "file1")
+        self.assertEqual(res, mock_get_timestamp.return_value)
+        mock_get_timestamp.assert_called_once_with("Feb 12 18:30:08", "syslog", "file1")
 
-    @mock.patch('crmsh.utils.parse_to_timestamp')
-    def test_get_timespan_legacy(self, mock_parse):
+    @mock.patch('crmsh.report.utils.get_timestamp_from_time_line')
+    def test_get_timespan_legacy(self, mock_get_timestamp):
         constants.STAMP_TYPE = "legacy"
-        mock_parse.return_value = 12345
-        res = utils.get_timestamp("legacy 2003-10-11T22:14:15.003Z log data")
-        self.assertEqual(res, mock_parse.return_value)
-        mock_parse.assert_called_once_with("2003-10-11T22:14:15.003Z", quiet=True)
+        mock_get_timestamp.return_value = 12345
+        res = utils.get_timestamp("legacy 2003-10-11T22:14:15.003Z log data", "file1")
+        self.assertEqual(res, mock_get_timestamp.return_value)
+        mock_get_timestamp.assert_called_once_with("2003-10-11T22:14:15.003Z", "legacy", "file1")
 
     @mock.patch('crmsh.report.utils.diff_check')
     def test_do_compare(self, mock_diff):
@@ -788,20 +788,20 @@ pacemaker-schedulerd[5677]:  error: Resource"""
         self.assertEqual('\n'.join(res), expected_data)
 
     def test_findln_by_timestamp_1(self):
-        data = """Apr 03 11:03:31 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership)        info: Group event stonith-ng.3: node 2 joined
-Apr 03 11:03:41 15sp1-1 pacemaker-fenced    [1944] (pcmk_cpg_membership)        info: Group event stonith-ng.3: node 1 (15sp1-1) is member
-Apr 03 11:03:51 15sp1-1 pacemaker-fenced    [1944] (corosync_node_name)         info: Unable to get node name for nodeid 2"""
+        pacemaker_file_path = "pacemaker.log.2"
+        with open(pacemaker_file_path) as f:
+            data = f.read()
         data_list = data.split('\n')
         constants.STAMP_TYPE = utils.determin_log_format(data)
-        first_timestamp = utils.get_timestamp(data_list[0])
-        middle_timestamp = utils.get_timestamp(data_list[1])
-        last_timestamp = utils.get_timestamp(data_list[2])
+        first_timestamp = utils.get_timestamp(data_list[0], pacemaker_file_path)
+        middle_timestamp = utils.get_timestamp(data_list[1], pacemaker_file_path)
+        last_timestamp = utils.get_timestamp(data_list[2], pacemaker_file_path)
         assert first_timestamp < middle_timestamp < last_timestamp
-        line_stamp = crmutils.parse_to_timestamp("Apr 03 11:03:41")
-        result_line = utils.findln_by_timestamp(data, line_stamp)
+        line_stamp = crmutils.parse_to_timestamp("Jan 03 11:03:41 2024")
+        result_line = utils.findln_by_timestamp(data, line_stamp, pacemaker_file_path)
         assert result_line == 2
-        line_stamp = crmutils.parse_to_timestamp("Apr 03 12:03:41")
-        result_line = utils.findln_by_timestamp(data, line_stamp)
+        line_stamp = crmutils.parse_to_timestamp("Jan 03 12:03:41 2024")
+        result_line = utils.findln_by_timestamp(data, line_stamp, pacemaker_file_path)
         assert result_line == 3
 
     def test_findln_by_timestamp_irregular(self):
@@ -811,23 +811,52 @@ Apr 03 11:03:51 15sp1-1 pacemaker-fenced    [1944] (corosync_node_name)         
         line4"""
         target_time = "Apr 03 13:10"
         target_time_stamp = crmutils.parse_to_timestamp(target_time)
-        result_line = utils.findln_by_timestamp(data, target_time_stamp)
+        result_line = utils.findln_by_timestamp(data, target_time_stamp, "file1")
         self.assertIsNone(result_line)
 
     def test_findln_by_timestamp(self):
         target_time = "Apr 03 13:10"
-        target_time_stamp = crmutils.parse_to_timestamp(target_time)
+        target_time_stamp = crmutils.parse_to_timestamp(target_time+' 2023')
         with open('pacemaker.log') as f:
             data = f.read()
         constants.STAMP_TYPE = utils.determin_log_format(data)
-        result_line = utils.findln_by_timestamp(data, target_time_stamp)
-        result_line_stamp = utils.get_timestamp(data.split('\n')[result_line-1])
+        pacemaker_file_path = "pacemaker.log"
+        result_line = utils.findln_by_timestamp(data, target_time_stamp, pacemaker_file_path)
+        result_line_stamp = utils.get_timestamp(data.split('\n')[result_line-1], pacemaker_file_path)
         assert result_line_stamp > target_time_stamp
-        result_pre_line_stamp = utils.get_timestamp(data.split('\n')[result_line-2])
+        result_pre_line_stamp = utils.get_timestamp(data.split('\n')[result_line-2], pacemaker_file_path)
         assert result_pre_line_stamp < target_time_stamp
 
         target_time = "Apr 03 11:01:19"
-        target_time_stamp = crmutils.parse_to_timestamp(target_time)
-        result_line = utils.findln_by_timestamp(data, target_time_stamp)
+        target_time_stamp = crmutils.parse_to_timestamp(target_time+' 2023')
+        result_line = utils.findln_by_timestamp(data, target_time_stamp, pacemaker_file_path)
         result_time = ' '.join(data.split('\n')[result_line-1].split()[:3])
         self.assertEqual(result_time, target_time)
+
+    @mock.patch('crmsh.utils.parse_to_timestamp')
+    def test_get_timestamp_from_time_line_not_syslog(self, mock_parse):
+        mock_parse.return_value = 123456
+        res = utils.get_timestamp_from_time_line("line1", "rfc5424", "file1")
+        self.assertEqual(res, mock_parse.return_value)
+
+    @mock.patch('os.path.getmtime')
+    @mock.patch('crmsh.report.utils.datetime')
+    @mock.patch('crmsh.utils.parse_to_timestamp')
+    def test_get_timestamp_from_time_line_next_year(self, mock_parse, mock_datetime, mock_getmtime):
+        mock_parse.return_value = 8888888888888
+        mock_getmtime.return_value = 1691938980.0
+        mock_datetime.datetime.now.return_value = datetime.datetime(2023, 9, 1, 6, 1)
+        mock_datetime.datetime.fromtimestamp.return_value = datetime.datetime(2024, 9, 1, 6, 1)
+        res = utils.get_timestamp_from_time_line("line1", "syslog", "file1")
+        self.assertIsNone(res)
+
+    @mock.patch('os.path.getmtime')
+    @mock.patch('crmsh.report.utils.datetime')
+    @mock.patch('crmsh.utils.parse_to_timestamp')
+    def test_get_timestamp_from_time_line_that_year(self, mock_parse, mock_datetime, mock_getmtime):
+        mock_parse.return_value = 8888888888888
+        mock_getmtime.return_value = 1691938980.0
+        mock_datetime.datetime.now.return_value = datetime.datetime(2023, 9, 1, 6, 1)
+        mock_datetime.datetime.fromtimestamp.return_value = datetime.datetime(2022, 9, 1, 6, 1)
+        res = utils.get_timestamp_from_time_line("line1", "syslog", "file1")
+        self.assertEqual(res, mock_parse.return_value)

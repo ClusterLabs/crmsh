@@ -155,6 +155,7 @@ test/unittests/corosync.conf.2
 test/unittests/corosync.conf.3
 test/unittests/__init__.py
 test/unittests/pacemaker.log
+test/unittests/pacemaker.log.2
 test/unittests/pacemaker_unicode.log
 test/unittests/schemas/acls-1.1.rng
 test/unittests/schemas/acls-1.2.rng

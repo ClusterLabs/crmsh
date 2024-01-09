@@ -260,12 +260,12 @@ def find_files_in_timespan(context: core.Context, target_dir_list: List[str]) ->
     return file_list
 
 
-def find_first_timestamp(data: List[str]) -> float:
+def find_first_timestamp(data: List[str], log_file: str) -> float:
     """
     Find the first timestamp in the given list of log line
     """
     for line in data:
-        timestamp = get_timestamp(line)
+        timestamp = get_timestamp(line, log_file)
         if timestamp:
             return timestamp
     return None
@@ -305,7 +305,7 @@ def determin_log_format(data: str) -> str:
     return None
 
 
-def findln_by_timestamp(data: str, given_timestamp: float) -> int:
+def findln_by_timestamp(data: str, given_timestamp: float, log_file: str) -> int:
     """
     Get line number of the specific time stamp
     """
@@ -316,7 +316,7 @@ def findln_by_timestamp(data: str, given_timestamp: float) -> int:
         middle = (last + first) // 2
         trycnt = 10
         while trycnt > 0:
-            middle_timestamp = get_timestamp(data_list[middle - 1])
+            middle_timestamp = get_timestamp(data_list[middle - 1], log_file)
             if middle_timestamp:
                 break
             # shift the whole first-last segment
@@ -362,7 +362,30 @@ def get_pkg_mgr() -> str:
     return ""
 
 
-def get_timestamp(line: str) -> float:
+def get_timestamp_from_time_line(time_line: str, stamp_type: str, log_file: str):
+    timestamp = crmutils.parse_to_timestamp(time_line, quiet=True)
+    if timestamp and stamp_type == "syslog":
+        now = datetime.datetime.now()
+        # got a timestamp in the future
+        if timestamp > now.timestamp():
+            # syslog doesn't have year info, so we need to guess it
+            mtime = os.path.getmtime(log_file)
+            mtime = datetime.datetime.fromtimestamp(mtime)
+            # assume the log is from last year
+            if mtime.year == now.year:
+                time_line += f" {mtime.year-1}"
+            # assume the log is from that year
+            elif mtime.year < now.year:
+                time_line += f" {mtime.year}"
+            # it's impossible that the log is from next year
+            else:
+                return None
+        return crmutils.parse_to_timestamp(time_line, quiet=True)
+    else:
+        return timestamp
+
+
+def get_timestamp(line: str, log_file: str) -> float:
     """
     Get timestamp for the given line
     """
@@ -377,7 +400,8 @@ def get_timestamp(line: str) -> float:
     elif stamp_type == "legacy":
         time_line = line.split()[1]
 
-    return crmutils.parse_to_timestamp(time_line, quiet=True)
+    return get_timestamp_from_time_line(time_line, stamp_type, log_file)
+
 
 
 def head(n: int, indata: str) -> List[str]:
@@ -398,11 +422,13 @@ def is_our_log(context: core.Context, logf: str) -> int:
         return LogType.IRREGULAR
     constants.STAMP_TYPE = stamp_type
 
-    first_time = find_first_timestamp(head(constants.CHECK_LOG_LINES, data))
-    last_time = find_first_timestamp(tail(constants.CHECK_LOG_LINES, data))
+    first_time = find_first_timestamp(head(constants.CHECK_LOG_LINES, data), logf)
+    last_time = find_first_timestamp(tail(constants.CHECK_LOG_LINES, data), logf)
     from_time = context.from_time
     to_time = context.to_time
 
+    if not first_time or not last_time:
+        return LogType.IRREGULAR
     if from_time > last_time:
         return LogType.BEFORE_TIMESPAN
     if from_time >= first_time or to_time >= first_time:
@@ -435,8 +461,8 @@ def print_logseg(log_file: str, from_time: float, to_time: float) -> str:
     if not data:
         return ""
 
-    from_line = 1 if from_time == 0 else findln_by_timestamp(data, from_time)
-    to_line = len(data.split('\n')) if to_time == 0 else findln_by_timestamp(data, to_time)
+    from_line = 1 if from_time == 0 else findln_by_timestamp(data, from_time, log_file)
+    to_line = len(data.split('\n')) if to_time == 0 else findln_by_timestamp(data, to_time, log_file)
 
     if from_line is None or to_line is None:
         return ""
