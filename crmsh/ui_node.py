@@ -436,6 +436,8 @@ class NodeMgmt(command.UI):
             return
 
         cib = xmlutil.cibdump2elem()
+        if cib is None:
+            return False
         # IMPORTANT: Do NOT call cibdump2elem twice, or you risk a race.
         # Really use the same xml as "original" and basis for the changes.
         # Thus the "deepcopy" here; see also do_standby().
