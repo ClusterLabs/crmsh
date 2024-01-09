@@ -1,5 +1,4 @@
 #!/bin/bash
-# vim: noexpandtab ts=4 sw=4 sts=4
 DOCKER_IMAGE=${DOCKER_IMAGE:-"liangxin1300/alpha"}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"

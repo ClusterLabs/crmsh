@@ -1,4 +1,19 @@
-*Thu Dec 7 2023 Xin Liang <XLiang@suse.com>
+* Tue Jan 9 2024 Xin Liang <XLiang@suse.com>
+- Release 4.6.0
+- Fix: report: Unable to gather log files that are in the syslog format (bsc#1218491)
+- Dev: ui_corosync: Add a completer for corosync.set to enumerate all current paths
+- Dev: bootstrap: Assign hosts with _context.node_list_in_cluster in join_ssh_merge (bsc#1218331)
+
+* Fri Dec 22 2023 Xin Liang <XLiang@suse.com>
+- Release 4.6.0 rc2
+- Dev: ui_cluster: Move --use-ssh-agent to optional arguments
+- Fix: autoconf: --with-version does not override the variable used in `version.in`
+- Dev: unify version string used in setup.py and autotools
+- Fix: ui_cluster: Improve the process of 'crm cluster stop' (bsc#1213889)
+- Fix: scripts.health: call `setup_logging()` before importing crmsh.reprot.utils
+- Dev: log: save backtrace of ValueError in logfile and suppress it in console
+
+* Thu Dec 7 2023 Xin Liang <XLiang@suse.com>
 - Release 4.6.0 rc1
 - Dev: doc: Unify contents of manpage and help info
 - Dev: report: Rewrite crm report module
