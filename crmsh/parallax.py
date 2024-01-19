@@ -51,7 +51,10 @@ class Parallax(object):
     def handle(self, results):
         for host, result in results:
             if isinstance(result, parallax.Error) and self.strict:
-                raise ValueError("Failed on {}: {}".format(host, result))
+                if 'parallax error: SSH requested a password.' in str(result):
+                    raise ValueError(f'Failed on {host}: parallax error: SSH requested a password. Please configure passwordless authenticaiton with "crm cluster init ssh" and "crm cluster join ssh".')
+                else:
+                    raise ValueError("Failed on {}: {}".format(host, result))
         return results
 
     def call(self):
