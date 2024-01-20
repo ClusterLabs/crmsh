@@ -102,7 +102,7 @@ primitive d4 ocf:pacemaker:Dummy \
 primitive d7 Dummy \
 	params rule #uname eq node1 fake=1 \
 	params rule #uname eq node2 fake=2 \
-	op start interval=0 timeout=60s \
+	op start interval=0s timeout=60s \
 	op_params 2: rule #uname eq node1 op_param=dummy \
 	op_params 1: op_param=smart \
 	op_meta 2: rule #ra-version version:gt 1.0 start-delay=120m \
@@ -134,12 +134,12 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 primitive st2 stonith:ssh \
 	params hostlist="node1 node2" \
-	op monitor timeout=20 interval=3600 \
-	op start timeout=20 interval=0s \
-	op stop timeout=15 interval=0s
+	op monitor timeout=20s interval=3600s \
+	op start timeout=20s interval=0s \
+	op stop timeout=15s interval=0s
 group g1 d1 d2
 ms m d4
 ms m5 s5
