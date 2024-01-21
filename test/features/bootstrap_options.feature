@@ -11,6 +11,7 @@ Feature: crmsh bootstrap process - options
 
   @clean
   Scenario: Check help output
+    When    Run "crm configure help primitive" OK		
     When    Run "crm -h" on "hanode1"
     Then    Output is the same with expected "crm" help output
     When    Run "crm cluster init -h" on "hanode1"
