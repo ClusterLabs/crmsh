@@ -1796,9 +1796,10 @@ def list_cluster_nodes(no_reg=False):
     node_list = []
     for node in cib.xpath(constants.XML_NODE_PATH):
         name = node.get('uname') or node.get('id')
+        # exclude remote node
         if node.get('type') == 'remote':
-            srv = cib.xpath("//primitive[@id='%s']/instance_attributes/nvpair[@name='server']" % (name))
-            if srv:
+            xpath = f"//primitive[@provider='pacemaker' and @type='remote']/instance_attributes/nvpair[@name='server' and @value='{name}']"
+            if cib.xpath(xpath):
                 continue
         node_list.append(name)
     return node_list
