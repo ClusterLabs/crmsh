@@ -19,7 +19,13 @@ def parallax_call(nodes, cmd, *, timeout_seconds: int = -1):
     """
     results = prun.prun({node: cmd for node in nodes}, timeout_seconds=timeout_seconds)
     for node, result in results.items():
-        if isinstance(result, prun.PRunError):
+        if isinstance(result, prun.SSHError) and 'authentication failure' in str(result):
+            raise ValueError(
+                'Failed to run command {} on {}@{}: authentication failure. Please configure passwordless authenticaiton with "crm cluster init ssh" and "crm cluster join ssh".'.format(
+                    cmd, result.user, result.host,
+                )
+            )
+        elif isinstance(result, prun.PRunError):
             raise ValueError('Failed to run command {} on {}@{}: {}'.format(cmd, result.user, result.host, result))
         elif result.returncode != 0:
             raise ValueError("Failed on {}: {}".format(node, crmsh.utils.to_ascii(result.stderr)))
@@ -36,7 +42,13 @@ def parallax_slurp(nodes: typing.Sequence[str], localdir, filename) -> typing.Li
     """
     results = prun.pfetch_from_remote(nodes, filename, localdir)
     for node, result in results.items():
-        if isinstance(result, prun.PRunError):
+        if isinstance(result, prun.SSHError) and 'authentication failure' in str(result):
+            raise ValueError(
+                'Failed on {}@{}: authentication failure. Please configure passwordless authentication with "crm cluster init ssh" and "crm cluster join ssh".'.format(
+                    result.user, result.host,
+                )
+            )
+        elif isinstance(result, prun.PRunError):
             raise ValueError("Failed on {}@{}: {}".format(result.user, node, result))
     return [(k, v) for k, v in results.items()]
 
@@ -68,6 +80,12 @@ def parallax_run(nodes, cmd):
     """
     results = prun.prun({node: cmd for node in nodes})
     for value in results.values():
-        if isinstance(value, prun.PRunError):
+        if isinstance(value, prun.SSHError) and 'authentication failure' in str(value):
+            raise ValueError(
+                'Failed to run command {} on {}@{}: authentication failure. Please configure passwordless authentication with "crm cluster init ssh" and "crm cluster join ssh".'.format(
+                    cmd, value.user, value.host,
+                )
+            )
+        elif isinstance(value, prun.PRunError):
             raise ValueError('Failed to run command {} on {}@{}: {}'.format(cmd, value.user, value.host, value))
     return {node: (result.returncode, result.stdout, result.stderr) for node, result in results.items()}
