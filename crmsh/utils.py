@@ -1766,6 +1766,14 @@ def print_cluster_nodes():
         print("{}\n".format(out))
 
 
+def get_address_list_from_corosync_conf():
+    """
+    Return a list of addresses configured in corosync.conf
+    """
+    from . import corosync
+    return corosync.get_values("nodelist.node.ring0_addr")
+
+
 def list_cluster_nodes(no_reg=False):
     '''
     Returns a list of nodes in the cluster.
@@ -1780,10 +1788,10 @@ def list_cluster_nodes(no_reg=False):
     else:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         if not os.path.isfile(cib_path):
-            return None
+            return get_address_list_from_corosync_conf()
         cib = xmlutil.file2cib_elem(cib_path)
     if cib is None:
-        return None
+        return get_address_list_from_corosync_conf()
 
     node_list = []
     for node in cib.xpath(constants.XML_NODE_PATH):
