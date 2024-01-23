@@ -27,7 +27,7 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-        op stop timeout=15 interval=0s
+        op stop timeout=15s interval=0s
 location d1-pref d1 100: node1
 .INP: _test
 .INP: rename d1 p1
@@ -47,7 +47,7 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-        op stop timeout=15 interval=0s
+        op stop timeout=15s interval=0s
 location d1-pref p1 100: node1
 .INP: # delete primitive
 .INP: delete d2
@@ -63,7 +63,7 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 location d1-pref p1 100: node1
 .INP: # delete primitive with constraint
 .INP: delete p1
@@ -76,7 +76,7 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: location d1-pref d1 100: node1
 .INP: _test
@@ -97,7 +97,7 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 group g1 d1
 location d1-pref g1 100: node1
 .INP: _test
@@ -114,7 +114,7 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 location d1-pref d1 100: node1
 .INP: verify
 .INP: # delete a group which is in a clone
@@ -141,7 +141,7 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 location d1-pref d2 100: node1
 .INP: _test
 .INP: group g1 d2 d1
@@ -168,7 +168,7 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 location d1-pref d2 100: node1
 .INP: _test
 .INP: group g1 d2 d1
@@ -187,7 +187,7 @@ primitive st stonith:ssh \
 	meta target-role=Started \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 .INP: _test
 .INP: # verify
 .INP: verify

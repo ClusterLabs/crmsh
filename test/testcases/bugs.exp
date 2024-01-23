@@ -31,9 +31,9 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20 \
-        op start timeout=20 interval=0s \
-        op stop timeout=15 interval=0s
+	op monitor interval=60m timeout=20s \
+        op start timeout=20s interval=0s \
+        op stop timeout=15s interval=0s
 primitive p4 Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
@@ -69,9 +69,9 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20 \
-        op start timeout=20 interval=0s \
-        op stop timeout=15 interval=0s
+	op monitor interval=60m timeout=20s \
+        op start timeout=20s interval=0s \
+        op stop timeout=15s interval=0s
 primitive p4 Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
@@ -170,9 +170,9 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20 \
-        op start timeout=20 interval=0s \
-        op stop timeout=15 interval=0s
+	op monitor interval=60m timeout=20s \
+        op start timeout=20s interval=0s \
+        op stop timeout=15s interval=0s
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
 .INP: commit
@@ -184,9 +184,9 @@ node node1
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20 \
-        op start timeout=20 interval=0s \
-        op stop timeout=15 interval=0s
+	op monitor interval=60m timeout=20s \
+        op start timeout=20s interval=0s \
+        op stop timeout=15s interval=0s
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
 property SAPHanaSR_2: \

@@ -57,8 +57,8 @@ primitive d5 Dummy \
 primitive st stonith:ssh \
 	params hostlist=node1 \
 	op start timeout=60s interval=0s \
-	op monitor timeout=20 interval=3600 \
-	op stop timeout=15 interval=0s
+	op monitor timeout=20s interval=3600s \
+	op stop timeout=15s interval=0s
 colocation c1 inf: ( d1 d3 )
 colocation c2 inf: d3 d1
 colocation c3 inf: d3 d1

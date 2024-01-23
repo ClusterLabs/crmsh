@@ -3147,4 +3147,18 @@ def read_from_file(infile: str) -> str:
         return ""
 
     return data
+
+
+def add_time_unit_if_needed(time_value):
+    """
+    Add time unit if needed
+    """
+    return "{}s".format(time_value) if not time_value_with_unit(time_value) else time_value
+
+
+def time_value_with_unit(time_value):
+    """
+    Check if the time value contains unit
+    """
+    return re.search(r'^\d+[a-z]+$', time_value) is not None
 # vim:ts=4:sw=4:et:

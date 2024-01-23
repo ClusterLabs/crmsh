@@ -33,7 +33,7 @@
         <operations>
           <op name="start" timeout="60s" interval="0s" id="st-start-0s"/>
           <op name="monitor" interval="60m" timeout="60s" id="st-monitor-60m"/>
-          <op name="stop" timeout="15" interval="0s" id="st-stop-0s"/>
+          <op name="stop" timeout="15s" interval="0s" id="st-stop-0s"/>
         </operations>
       </primitive>
       <primitive id="st2" class="stonith" type="ssh">
@@ -41,9 +41,9 @@
           <nvpair name="hostlist" value="node1 node2" id="st2-instance_attributes-hostlist"/>
         </instance_attributes>
         <operations>
-          <op name="monitor" timeout="20" interval="3600" id="st2-monitor-3600"/>
-          <op name="start" timeout="20" interval="0s" id="st2-start-0s"/>
-          <op name="stop" timeout="15" interval="0s" id="st2-stop-0s"/>
+          <op name="monitor" timeout="20s" interval="3600s" id="st2-monitor-3600s"/>
+          <op name="start" timeout="20s" interval="0s" id="st2-start-0s"/>
+          <op name="stop" timeout="15s" interval="0s" id="st2-stop-0s"/>
         </operations>
       </primitive>
       <group id="g1">

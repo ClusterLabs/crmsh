@@ -55,7 +55,7 @@ primitive st stonith:ssh \
 	meta target-role=Started requires=nothing \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 tag ones l1 p1
 tag tag1 p0 p1 p2
 tag tag2 p0 p1 p2

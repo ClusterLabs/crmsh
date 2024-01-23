@@ -20,9 +20,9 @@ primitive p3 ocf:pacemaker:Dummy \
         op stop timeout=20s interval=0s
 primitive st stonith:null \
 	params hostlist=node1 \
-        op monitor timeout=20 interval=3600 \
-	op start timeout=20 interval=0s \
-	op stop timeout=15 interval=0s
+        op monitor timeout=20s interval=3600s \
+	op start timeout=20s interval=0s \
+	op stop timeout=15s interval=0s
 clone c1 p1 \
        meta interleave=true
 clone m1 p2 \
@@ -65,9 +65,9 @@ primitive p3 ocf:pacemaker:Dummy \
         op stop timeout=20s interval=0s
 primitive st stonith:null \
 	params hostlist=node1 \
-        op monitor timeout=20 interval=3600 \
-	op start timeout=20 interval=0s \
-	op stop timeout=15 interval=0s
+        op monitor timeout=20s interval=3600s \
+	op start timeout=20s interval=0s \
+	op stop timeout=15s interval=0s
 property cib-bootstrap-options: \
 	cluster-recheck-interval=10m
 rsc_defaults build-resource-defaults: \

@@ -25,9 +25,9 @@ primitive p2 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20 \
-	op start timeout=20 interval=0s \
-	op stop timeout=15 interval=0s
+	op monitor interval=60m timeout=20s \
+	op start timeout=20s interval=0s \
+	op stop timeout=15s interval=0s
 group g1 p1 p2
 op_defaults op-options: \
 	timeout=2m
@@ -46,9 +46,9 @@ primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20 \
-	op start timeout=20 interval=0s \
-	op stop timeout=15 interval=0s
+	op monitor interval=60m timeout=20s \
+	op start timeout=20s interval=0s \
+	op stop timeout=15s interval=0s
 group g1 p1 p3
 op_defaults op-options: \
 	timeout=2m
@@ -176,9 +176,9 @@ primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20 \
-	op start timeout=20 interval=0s \
-	op stop timeout=15 interval=0s
+	op monitor interval=60m timeout=20s \
+	op start timeout=20s interval=0s \
+	op stop timeout=15s interval=0s
 group g1 p1 p2 d3
 group g2 d1 d2
 clone c1 g1
@@ -305,9 +305,9 @@ primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20 \
-	op start timeout=20 interval=0s \
-	op stop timeout=15 interval=0s
+	op monitor interval=60m timeout=20s \
+	op start timeout=20s interval=0s \
+	op stop timeout=15s interval=0s
 group as a0 a1 a9 a2 a3 a4 a5 a6 a7 a8 aErr
 group g1 p1 p2 d3
 group g2 d1 d2
@@ -412,9 +412,9 @@ primitive p3 Dummy
 primitive st stonith:null \
 	params hostlist=node1 \
 	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20 \
-	op start timeout=20 interval=0s \
-	op stop timeout=15 interval=0s
+	op monitor interval=60m timeout=20s \
+	op start timeout=20s interval=0s \
+	op stop timeout=15s interval=0s
 group as a0 a1 a9 a2 a3 a4 a5 a6 a7 a8 aErr
 group g1 p1 p2 d3
 group g2 d1 d2
