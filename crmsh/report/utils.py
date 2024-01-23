@@ -500,7 +500,9 @@ class Sanitizer:
         """
         Prepare the data and files for the sanitization process
         """
-        self._load_cib_from_work_dir()
+        self.cib_data = self._load_cib_from_work_dir()
+        if not self.cib_data:
+            return False
         self._parse_sensitive_set()
         self._extract_sensitive_value_list()
 
@@ -508,10 +510,12 @@ class Sanitizer:
             if not self.context.sanitize:
                 logger.warning("Some PE/CIB/log files contain possibly sensitive data")
                 logger.warning("Using \"-s\" option can replace sensitive data")
-                return
+                return False
             self._get_file_list_in_work_dir()
         else:
             self.context.sanitize = False
+
+        return True
 
     def _include_sensitive_data(self) -> List[str]:
         """
@@ -533,11 +537,8 @@ class Sanitizer:
         """
         cib_file_list = glob.glob(f"{self.context.work_dir}/*/{constants.CIB_F}")
         if not cib_file_list:
-            raise ReportGenericError(f"CIB file {constants.CIB_F} was not collected")
-        data = crmutils.read_from_file(cib_file_list[0])
-        if not data:
-            raise ReportGenericError(f"File {cib_file_list[0]} is empty")
-        self.cib_data = data
+            return None
+        return crmutils.read_from_file(cib_file_list[0])
 
     def _parse_sensitive_set(self) -> None:
         """
@@ -619,8 +620,8 @@ def do_sanitize(context: core.Context) -> None:
     Perform sanitization by replacing sensitive information in CIB/PE/other logs data with '*'
     """
     inst = Sanitizer(context)
-    inst.prepare()
-    inst.sanitize()
+    if inst.prepare():
+        inst.sanitize()
 
 
 class Package:

@@ -386,6 +386,9 @@ def collect_config(context: core.Context) -> None:
         logger.debug(f"Touch file 'RUNNING' in {utils.real_path(workdir)}")
     else:
         # TODO should determine offline node was ha node
+        if not os.path.isfile(os.path.join(context.cib_dir, constants.CIB_F)):
+            logger.warning(f"Cannot find cib.xml in {context.cib_dir}")
+            return
         shutil.copy2(os.path.join(context.cib_dir, constants.CIB_F), workdir)
         crmutils.str2file("", os.path.join(workdir, "STOPPED"))
         logger.debug(f"Touch file 'STOPPED' in {utils.real_path(workdir)}")
