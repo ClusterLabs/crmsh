@@ -138,27 +138,16 @@ class TestSanitizer(unittest.TestCase):
     @mock.patch('glob.glob')
     def test_load_cib_from_work_dir_no_cib(self, mock_glob):
         mock_glob.return_value = []
-        with self.assertRaises(utils.ReportGenericError) as err:
-            self.s_inst._load_cib_from_work_dir()
-        self.assertEqual(f"CIB file {constants.CIB_F} was not collected", str(err.exception))
-
-    @mock.patch('glob.glob')
-    @mock.patch('crmsh.utils.read_from_file')
-    def test_load_cib_from_work_dir_empty(self, mock_read, mock_glob):
-        mock_glob.return_value = [f"/opt/node1/{constants.CIB_F}"]
-        mock_read.return_value = None
-        with self.assertRaises(utils.ReportGenericError) as err:
-            self.s_inst._load_cib_from_work_dir()
-        self.assertEqual(f"File /opt/node1/{constants.CIB_F} is empty", str(err.exception))
-        mock_read.assert_called_once_with(f"/opt/node1/{constants.CIB_F}")
+        res = self.s_inst._load_cib_from_work_dir()
+        self.assertIsNone(res)
 
     @mock.patch('glob.glob')
     @mock.patch('crmsh.utils.read_from_file')
     def test_load_cib_from_work_dir(self, mock_read, mock_glob):
         mock_glob.return_value = [f"/opt/node1/{constants.CIB_F}"]
         mock_read.return_value = "data"
-        self.s_inst._load_cib_from_work_dir()
-        self.assertEqual(self.s_inst.cib_data, "data")
+        res = self.s_inst._load_cib_from_work_dir()
+        self.assertEqual(res, "data")
         mock_read.assert_called_once_with(f"/opt/node1/{constants.CIB_F}")
 
     @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
