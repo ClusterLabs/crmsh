@@ -6,6 +6,7 @@ Holds user-configurable options.
 
 import os
 import re
+import sys
 import configparser
 from contextlib import contextmanager
 from typing import List
