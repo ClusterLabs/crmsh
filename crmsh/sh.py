@@ -56,15 +56,22 @@ class AuthorizationError(Error):
         self.host = host
         self.user = user
 
-    @staticmethod
-    def diagnose() -> str:
-        if user_of_host.instance().use_ssh_agent():
-            with StringIO() as buf:
+    def diagnose(self) -> str:
+        with StringIO() as buf:
+            if user_of_host.instance().use_ssh_agent():
                 if 'SSH_AUTH_SOCK' not in os.environ:
                     buf.write('Environment variable SSH_AUTH_SOCK does not exist.')
                     if 'SUDO_USER' in os.environ:
                         buf.write(' Please check whether ssh-agent is available and consider using "sudo --preserve-env=SSH_AUTH_SOCK".')
-                return buf.getvalue()
+            return buf.getvalue()
+
+
+class NonInteractiveSSHAuthorizationError(AuthorizationError):
+
+    def diagnose(self) -> str:
+        ret = super().diagnose()
+        if not ret:
+            return 'Please configure passwordless authentication with "crm cluster init ssh" and "crm cluster join ssh"'
 
 
 class CommandFailure(Error):
@@ -335,7 +342,7 @@ class ClusterShell:
                 **kwargs,
             )
             if self.raise_ssh_error and result.returncode == 255:
-                raise AuthorizationError(cmd, host, remote_user, Utils.decode_str(result.stderr).strip())
+                raise NonInteractiveSSHAuthorizationError(cmd, host, remote_user, Utils.decode_str(result.stderr).strip())
             else:
                 return result
 
