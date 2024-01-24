@@ -1739,7 +1739,9 @@ def swap_public_ssh_key(
             user=local_user_to_swap,
             file=local_authorized_file,
         ))
-        utils.su_get_stdout_or_raise_error("sed -i '$a {}' '{}'".format(public_key, local_authorized_file), local_user_to_swap)
+        utils.su_get_stdout_or_raise_error("grep -F '{content}' '{file}' || sed -i '$a {content}' '{file}'".format(
+            content=public_key, file=local_authorized_file
+        ), local_user_to_swap)
         return public_key
     else:
         try:
