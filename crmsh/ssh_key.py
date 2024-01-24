@@ -135,7 +135,7 @@ class AuthorizedKeyManager:
         public_key = key.public_key()
         dir = f'~{user}/.ssh'
         file = f'{dir}/authorized_keys'
-        cmd = f'''if ! grep '{public_key}' {file} > /dev/null; then
+        cmd = f'''if ! grep -F '{public_key}' {file} > /dev/null; then
     if [ -s {file} ]; then
         sed -i '$a {public_key}' {file}
     else

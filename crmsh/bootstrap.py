@@ -1829,8 +1829,9 @@ def swap_public_ssh_key(
 
     if add:
         public_key = generate_ssh_key_pair_on_remote(local_sudoer, remote_node, remote_sudoer, remote_user_to_swap)
-        _, _, local_authorized_file = key_files(local_user_to_swap).values()
-        sh.LocalShell().get_stdout_or_raise_error(local_user_to_swap, "sed -i '$a {}' '{}'".format(public_key, local_authorized_file))
+        ssh_key.AuthorizedKeyManager(sh.SSHShell(sh.LocalShell(), local_user_to_swap)).add(
+            None, local_user_to_swap, ssh_key.InMemoryPublicKey(public_key),
+        )
         return public_key
     else:
         try:
