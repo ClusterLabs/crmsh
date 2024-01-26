@@ -244,14 +244,11 @@ keep the node in standby after reboot. The life time defaults to
         context.fatal_error("Should either use --all or specific node(s)")
 
     # return local node
-    if not options.all and not args:
+    if (not options.all and not args) or (len(args) == 1 and args[0] == utils.this_node()):
         return [utils.this_node()]
     member_list = utils.list_cluster_nodes()
     if not member_list:
         context.fatal_error("Cannot get the node list from cluster")
-    for node in args:
-        if node not in member_list:
-            context.fatal_error("Node \"{}\" is not a cluster node".format(node))
 
     node_list = member_list if options.all else args
     for node in node_list:

@@ -105,5 +105,4 @@ Feature: crm report functional test for common cases
     When    Run "crm cluster stop --all" on "hanode1"
     When    Run "rm -f /var/lib/pacemaker/cib/cib*" on "hanode1"
     When    Run "rm -f /var/lib/pacemaker/cib/cib*" on "hanode2"
-    When    Try "crm report" on "hanode1"
-    Then    Expected "Could not figure out a list of nodes; is this a cluster node" in stderr
+    When    Run "crm report" OK

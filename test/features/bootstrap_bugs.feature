@@ -133,6 +133,25 @@ Feature: Regression test for bootstrap bugs
     Then    Service "corosync" is "stopped" on "hanode1"
 
   @clean
+  Scenario: Can't start cluster with --all option if no cib(bsc#1219052)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+
+    When    Run "crm cluster stop --all" on "hanode1"
+    Then    Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "rm -f /var/lib/pacemaker/cib/*" on "hanode1"
+    When    Run "rm -f /var/lib/pacemaker/cib/*" on "hanode2"
+    And     Run "crm cluster start --all" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    Then    Cluster service is "started" on "hanode2"
+
+  @clean
   Scenario: Can't stop all nodes' cluster service when local node's service is down(bsc#1213889)
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
