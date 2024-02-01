@@ -1040,7 +1040,8 @@ class CibObject(object):
                 for c in node.iterchildren(_type):
                     ret += f"{prefix}{_type} "
                     for item in c.keys():
-                        ret += f"{nvpair_format(item, c.get(item))} "
+                        if item != "id":
+                            ret += f"{nvpair_format(item, c.get(item))} "
 
         if node.tag == "primitive":
             ret += node.get('id')
