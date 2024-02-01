@@ -1004,16 +1004,7 @@ class CibObject(object):
         elif idref is not None:
             ret += "%s " % (nvpair_format("$id-ref", idref))
 
-        if node.tag in ["docker", "network"]:
-            for item in node.keys():
-                ret += "%s " % nvpair_format(item, node.get(item))
-        if node.tag == "primitive":
-            ret += node.get('id')
-        for _type in ["port-mapping", "storage-mapping"]:
-            for c in node.iterchildren(_type):
-                ret += "%s " % _type
-                for item in c.keys():
-                    ret += "%s " % nvpair_format(item, c.get(item))
+        ret += self._attr_set_bundle_str(node)
 
         score = node.get("score")
         if score:
@@ -1027,6 +1018,33 @@ class CibObject(object):
                 ret += "%s " % (cli_nvpair(c))
         if ret[-1] == ' ':
             ret = ret[:-1]
+        return ret
+
+    def _attr_set_bundle_str(self, node):
+        ret = ""
+        prefix = "\\\n\t\t"
+
+        if node.tag in ("docker", "podman", "rkt"):
+            if "image" not in node.keys():
+                logger.error("%s requires 'image' attribute", node.tag)
+                return ret
+            ret += f"{nvpair_format('image', node.get('image'))} "
+            for item in node.keys():
+                if item != "image":
+                    ret += f"{prefix}{nvpair_format(item, node.get(item))} "
+
+        if node.tag in ("network", "storage"):
+            for item in node.keys():
+                ret += f"{nvpair_format(item, node.get(item))} "
+            for _type in ("port-mapping", "storage-mapping"):
+                for c in node.iterchildren(_type):
+                    ret += f"{prefix}{_type} "
+                    for item in c.keys():
+                        ret += f"{nvpair_format(item, c.get(item))} "
+
+        if node.tag == "primitive":
+            ret += node.get('id')
+
         return ret
 
     def _repr_cli_child(self, c, format_mode):
