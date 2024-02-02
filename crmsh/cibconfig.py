@@ -687,7 +687,7 @@ def fix_node_ids(node, oldnode):
         }
 
     idless = set([
-        'operations', 'fencing-topology', 'network', 'docker', 'rkt',
+        'operations', 'fencing-topology', 'network', 'docker', 'podman', 'rkt',
         'storage', 'select', 'select_attributes', 'select_fencing',
         'select_nodes', 'select_resources'
     ])
@@ -1024,7 +1024,7 @@ class CibObject(object):
         ret = ""
         prefix = "\\\n\t\t"
 
-        if node.tag in ("docker", "podman", "rkt"):
+        if node.tag in constants.container_type:
             if "image" not in node.keys():
                 logger.error("%s requires 'image' attribute", node.tag)
                 return ret
@@ -1716,6 +1716,8 @@ class CibBundle(CibObject):
         "instance_attributes": "params",
         "meta_attributes": "meta",
         "docker": "docker",
+        "podman": "podman",
+        "rkt": "rkt",
         "network": "network",
         "storage": "storage",
         "primitive": "primitive",

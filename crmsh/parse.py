@@ -629,7 +629,7 @@ class BaseParser(object):
         for op in oplist:
             del name_map[op]
         bundle_list = olist([op for op in name_map if op.lower()
-                            in ('docker', 'rkt', 'network', 'port-mapping', 'storage', 'primitive')])
+                            in ('docker', 'podman', 'rkt', 'network', 'port-mapping', 'storage', 'primitive')])
         for bl in bundle_list:
             del name_map[bl]
         initial = True
@@ -978,6 +978,7 @@ class ResourceParser(BaseParser):
         out.set('id', self.match_identifier())
         xmlutil.maybe_set(out, 'description', self.try_match_description())
         self.match_arguments(out, {'docker': 'docker',
+                                   'podman': 'podman',
                                    'rkt': 'rkt',
                                    'network': 'network',
                                    'port-mapping': 'port-mapping',

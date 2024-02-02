@@ -348,7 +348,7 @@ extra_cluster_properties = ("dc-version",
                             "cluster-name")
 pcmk_version = ""  # set later
 
-container_type = ["docker", "rkt"]
+container_type = ("docker", "podman", "rkt")
 container_helptxt = {
     "container": {
         "image": """image:(string)

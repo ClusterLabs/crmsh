@@ -343,7 +343,9 @@ def primitive_complete_complex(args):
 
 def container_helptxt(params, helptxt, topic):
     for item in reversed(params):
-        if item in ["storage", "network", "docker", "rkt"]:
+        if item in constants.container_type:
+            return helptxt["container"][topic] + "\n"
+        if item in ("storage", "network"):
             return helptxt[item][topic] + "\n"
         if item == "port-mapping":
             return helptxt["network"][item][topic] + "\n"
@@ -452,7 +454,6 @@ def container_complete_complex(args):
     '''
     container_options_required = ["image"]
     completing = args[-1]
-    container_type = args[2]
 
     completers_set = {
         "network": _container_network_completer,
@@ -470,7 +471,7 @@ def container_complete_complex(args):
             CompletionHelp.help(topic, container_helptxt(args, constants.container_helptxt, topic), args)
         return []
 
-    container_options = utils.filter_keys(constants.container_helptxt[container_type].keys(), args)
+    container_options = utils.filter_keys(constants.container_helptxt["container"].keys(), args)
 
     # required options must be completed
     for s in container_options_required:
