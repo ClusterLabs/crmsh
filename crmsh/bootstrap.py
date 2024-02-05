@@ -867,7 +867,9 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
     change_user_shell('hacluster')
 
     user_by_host = utils.HostUserConfig()
+    user_by_host.clear()
     user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
+    user_by_host.save_local()
     if user_node_list:
         print()
         if ssh_public_keys:
@@ -1770,6 +1772,7 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
             ),
         )
     user_by_host = utils.HostUserConfig()
+    user_by_host.clear()
     user_by_host.add(seed_user, seed_host)
     user_by_host.add(local_user, utils.this_node())
     user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
@@ -2940,6 +2943,9 @@ def bootstrap_arbitrator(context):
     init_common_geo()
     check_tty()
     user, node = utils.parse_user_at_host(_context.cluster_node)
+    user_by_host = utils.HostUserConfig()
+    user_by_host.clear()
+    user_by_host.save_local()
     if not sh.cluster_shell().can_run_as(node, 'root'):
         local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
         if context.use_ssh_agent:
@@ -2957,7 +2963,6 @@ def bootstrap_arbitrator(context):
             if 0 != utils.ssh_copy_id_no_raise(local_user, remote_user, node):
                 raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
             swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True)
-        user_by_host = utils.HostUserConfig()
         user_by_host.add(local_user, utils.this_node())
         user_by_host.add(remote_user, node)
         user_by_host.set_no_generating_ssh_key(context.use_ssh_agent)

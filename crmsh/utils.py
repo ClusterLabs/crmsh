@@ -3108,6 +3108,10 @@ class HostUserConfig:
             'yes' if self._no_generating_ssh_key else 'no'
         ))
 
+    def clear(self):
+        self._hosts_users = dict()
+        self._no_generating_ssh_key = False
+
     def get(self, host):
         return self._hosts_users[host]
 
