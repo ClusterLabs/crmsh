@@ -18,6 +18,7 @@ Feature: ssh-agent support
   Scenario: Skip creating ssh key pairs with --use-ssh-agent
     Given   Run "mkdir ~/ssh_disabled" OK on "hanode1,hanode2,hanode3"
     And     Run "mv ~/.ssh/id_* ~/ssh_disabled" OK on "hanode1,hanode2,hanode3"
+    And     crm.conf poisoned on nodes ["hanode1", "hanode2", "hanode3"]
     When    Run "SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh-add ~/ssh_disabled/id_rsa" on "hanode1,hanode2,hanode3"
     And     Run "SSH_AUTH_SOCK=/tmp/ssh-auth-sock crm cluster init --use-ssh-agent -y" on "hanode1"
     And     Run "SSH_AUTH_SOCK=/tmp/ssh-auth-sock crm cluster join --use-ssh-agent -y -c hanode1" on "hanode2"
@@ -27,6 +28,7 @@ Feature: ssh-agent support
     # check the number of keys in authorized_keys
     And     Run "test x1 == x$(awk 'END {print NR}' ~/.ssh/authorized_keys)" OK
     And     Run "test x3 == x$(sudo awk 'END {print NR}' ~hacluster/.ssh/authorized_keys)" OK
+    And     Run "grep -E 'hosts = (root|alice)@hanode1' /root/.config/crm/crm.conf" OK on "hanode1,hanode2,hanode3"
 
   Scenario: Skip creating ssh key pairs with --use-ssh-agent and use -N
     Given   Run "crm cluster stop" OK on "hanode1,hanode2,hanode3"
@@ -66,6 +68,7 @@ Feature: ssh-agent support
     And     Run "systemctl disable --now booth@booth" OK on "hanode1,hanode2,hanode3"
     And     Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
+    And     crm.conf poisoned on nodes ["hanode1", "hanode2", "hanode3"]
     When    Run "SSH_AUTH_SOCK=/tmp/ssh-auth-sock crm cluster init -y -n cluster1 --use-ssh-agent" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Run "crm configure primitive vip IPaddr2 params ip=@vip.0" on "hanode1"
