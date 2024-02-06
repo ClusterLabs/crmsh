@@ -629,7 +629,7 @@ class BaseParser(object):
         for op in oplist:
             del name_map[op]
         bundle_list = olist([op for op in name_map if op.lower()
-                            in ('docker', 'rkt', 'network', 'port-mapping', 'storage', 'primitive')])
+                            in ('docker', 'podman', 'rkt', 'network', 'port-mapping', 'storage', 'primitive')])
         for bl in bundle_list:
             del name_map[bl]
         initial = True
@@ -732,6 +732,7 @@ class BaseParser(object):
         out.append(operations_node)
 
     def match_container(self, out, _type):
+        bundle_id = out.get('id')
         container_node = None
         self.match(_type)
         all_attrs = self.match_nvpairs(minpairs=0, terminator=['network', 'storage', 'meta', 'primitive'])
@@ -744,15 +745,23 @@ class BaseParser(object):
                 container_node = exist_node
 
             child_flag = False
+            index = 0
             for nvp in all_attrs:
-                if nvp.get('name') in ['port-mapping', 'storage-mapping']:
-                    inst_attrs = xmlutil.child(container_node, nvp.get('name'))
+                name = nvp.get('name')
+                if name in ('port-mapping', 'storage-mapping'):
+                    index += 1
+                    inst_attrs = xmlutil.child(container_node, name)
+                    # set meaningful id for port-mapping and storage-mapping
+                    # when the bundle is newly created
+                    if self.complete_advised:
+                        id_str = f"{bundle_id}_{name.replace('-', '_')}_{index}"
+                        inst_attrs.set('id', id_str)
                     child_flag = True
                     continue
                 if child_flag:
-                    inst_attrs.set(nvp.get('name'), nvp.get('value'))
+                    inst_attrs.set(name, nvp.get('value'))
                 else:
-                    container_node.set(nvp.get('name'), nvp.get('value'))
+                    container_node.set(name, nvp.get('value'))
             out.append(container_node)
 
         else:
@@ -969,6 +978,7 @@ class ResourceParser(BaseParser):
         out.set('id', self.match_identifier())
         xmlutil.maybe_set(out, 'description', self.try_match_description())
         self.match_arguments(out, {'docker': 'docker',
+                                   'podman': 'podman',
                                    'rkt': 'rkt',
                                    'network': 'network',
                                    'port-mapping': 'port-mapping',
