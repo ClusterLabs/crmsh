@@ -332,7 +332,9 @@ class NodeMgmt(command.UI):
             xml = find(uname, cfg_nodes)
             state = find(uname, node_states)
             if xml is not None or state is not None:
-                is_offline = state is not None and state.get("crmd") == "offline"
+                is_offline = state is not None and \
+                    (state.get("crmd") == "offline" or \
+                        (state.get("crmd").isdigit() and int(state.get("crmd")) == 0))
                 print_node(*unpack_node_xmldata(xml if xml is not None else state, is_offline))
 
         if node is not None:
@@ -498,13 +500,14 @@ class NodeMgmt(command.UI):
             cib_elem = xmlutil.cibdump2elem()
             if cib_elem is None:
                 return False
-            if cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node) == ["online"]:
+            crmd = cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node)
+            if crmd == ["online"] or (crmd[0].isdigit() and int(crmd[0]) != 0):
                 return utils.ext_cmd(self.node_cleanup_resources % node) == 0
-            elif cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node) == ["true"]:
+            in_ccm = cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node)
+            if in_ccm == ["true"] or (in_ccm[0].isdigit() and int(in_ccm[0]) != 0):
                 logger.warning("Node is offline according to Pacemaker, but online according to corosync. First shut down node '%s'", node)
                 return False
-            else:
-                return utils.ext_cmd(self.node_clear_state_118 % node) == 0
+            return utils.ext_cmd(self.node_clear_state_118 % node) == 0
         else:
             return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
                 utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
