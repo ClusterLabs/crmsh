@@ -34,7 +34,7 @@ from . import userdir
 from . import constants
 from . import options
 from . import term
-from distutils.version import LooseVersion
+from setuptools._distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
 from .prun import prun

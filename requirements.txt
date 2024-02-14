@@ -1,3 +1,4 @@
 lxml
 PyYAML
 python-dateutil
+setuptools
