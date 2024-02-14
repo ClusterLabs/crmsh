@@ -7,7 +7,7 @@ from __future__ import unicode_literals
 import os
 import socket
 import re
-import imp
+import importlib
 import subprocess
 import unittest
 import pytest
@@ -24,7 +24,7 @@ def setup_function():
     utils._ip_for_cloud = None
     # Mock memoize method and reload the module under test later with imp
     mock.patch('crmsh.utils.memoize', lambda x: x).start()
-    imp.reload(utils)
+    importlib.reload(utils)
 
 
 @mock.patch("crmsh.utils.get_stdout_stderr")
