@@ -49,7 +49,7 @@ def crm_resource(opts):
 
 @utils.memoize
 def can_use_lrmadmin():
-    from distutils import version
+    from setuptools._distutils import version
     # after this glue release all users can get meta-data and
     # similar from lrmd
     minimum_glue = "1.0.10"
