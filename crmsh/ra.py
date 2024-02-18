@@ -26,18 +26,6 @@ logger = log.setup_logger(__name__)
 # Resource Agents interface (meta-data, parameters, etc)
 #
 
-lrmadmin_prog = "lrmadmin"
-
-
-def lrmadmin(opts, xml=False):
-    """
-    Get information directly from lrmd using lrmadmin.
-    """
-    _rc, l = stdout2list("%s %s" % (lrmadmin_prog, opts))
-    if l and not xml:
-        l = l[1:]  # skip the first line
-    return l
-
 
 def crm_resource(opts):
     '''
@@ -45,26 +33,6 @@ def crm_resource(opts):
     '''
     _rc, l = stdout2list("crm_resource %s" % opts, stderr_on=False)
     return l
-
-
-@utils.memoize
-def can_use_lrmadmin():
-    from distutils import version
-    # after this glue release all users can get meta-data and
-    # similar from lrmd
-    minimum_glue = "1.0.10"
-    _rc, glue_ver = get_stdout("%s -v" % lrmadmin_prog, stderr_on=False)
-    if not glue_ver:  # lrmadmin probably not found
-        return False
-    v_min = version.LooseVersion(minimum_glue)
-    v_this = version.LooseVersion(glue_ver)
-    if v_this < v_min:
-        return False
-    if userdir.getuser() not in ("root", config.path.crm_daemon_user):
-        return False
-    if not (is_program(lrmadmin_prog) and is_process(pacemaker_execd())):
-        return False
-    return utils.ext_cmd(">/dev/null 2>&1 %s -C" % lrmadmin_prog) == 0
 
 
 @utils.memoize
@@ -81,8 +49,6 @@ def ra_classes():
         return cache.retrieve("ra_classes")
     if can_use_crm_resource():
         l = crm_resource("--list-standards")
-    elif can_use_lrmadmin():
-        l = lrmadmin("-C")
     else:
         l = ["heartbeat", "lsb", "nagios", "ocf", "stonith", "systemd"]
     l.sort()
@@ -99,8 +65,6 @@ def ra_providers(ra_type, ra_class="ocf"):
             logger.error("no providers for class %s", ra_class)
             return []
         l = crm_resource("--list-ocf-alternatives %s" % ra_type)
-    elif can_use_lrmadmin():
-        l = lrmadmin("-P %s %s" % (ra_class, ra_type), True)
     else:
         l = []
         if ra_class == "ocf":
@@ -181,8 +145,6 @@ def ra_types(ra_class="ocf", ra_provider=""):
         """
         if can_use_crm_resource():
             l = crm_resource("--list-agents %s" % ra_class)
-        elif can_use_lrmadmin():
-            l = lrmadmin("-T %s" % ra_class)
         else:
             l = os_types(ra_class)
         return l
@@ -211,8 +173,6 @@ def ra_meta(ra_class, ra_type, ra_provider):
         if ra_provider:
             return crm_resource("--show-metadata %s:%s:%s" % (ra_class, ra_provider, ra_type))
         return crm_resource("--show-metadata %s:%s" % (ra_class, ra_type))
-    elif can_use_lrmadmin():
-        return lrmadmin("-M %s %s %s" % (ra_class, ra_type, ra_provider), True)
     else:
         l = []
         if ra_class == "ocf":
