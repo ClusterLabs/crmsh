@@ -221,6 +221,7 @@ deploy_ha_node() {
 	fi
 	docker_exec $node_name "rm -rf /run/nologin"
 	docker_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
+	docker_exec $node_name "systemctl start sshd.service"
 
 	if [ "$node_name" != "qnetd-node" ];then
 	  docker cp $PROJECT_PATH $node_name:/opt/crmsh
