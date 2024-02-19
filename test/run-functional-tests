@@ -187,9 +187,8 @@ create_custom_user() {
 	user_name=$1
 	user_id=$2
 	docker_exec $node_name "useradd -m -s /bin/bash ${user_name} 2>/dev/null"
-	docker_exec $node_name "chmod u+w /etc/sudoers"
-	docker_exec $node_name "echo \"${user_name} ALL=(ALL) NOPASSWD: ALL\" >> /etc/sudoers"
-	docker_exec $node_name "chmod u-w /etc/sudoers"
+	docker_exec $node_name "echo \"${user_name} ALL=(ALL) NOPASSWD: ALL\" > /etc/sudoers.d/${user_name}"
+	docker_exec $node_name "chmod 0440 /etc/sudoers.d/${user_name}"
 	docker_exec $node_name "echo 'export PATH=\$PATH:/usr/sbin/' >> ~${user_name}/.bashrc"
 	docker_exec $node_name "echo -e \"linux\\nlinux\" | passwd ${user_name} 2>/dev/null"
 	docker_exec $node_name "cp -r /root/.ssh ~${user_name}/ && chown ${user_name}:haclient -R ~${user_name}/.ssh"
