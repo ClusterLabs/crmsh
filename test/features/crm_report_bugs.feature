@@ -153,6 +153,15 @@ Feature: crm report functional test for verifying bugs
     Then    Expected return code is "1"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"
 
+    # bsc#1220022 with special characters
+    When    Run "crm node utilization hanode2 set password "xin!(liang8e"" on "hanode1"
+    When    Run "crm report report" on "hanode1"
+    When    Run "tar jxf report.tar.bz2" on "hanode1"
+    And     Try "grep -F -R 'xin!(liang8e' report"
+    # No password here
+    Then    Expected return code is "1"
+    When    Run "rm -rf report.tar.bz2 report" on "hanode1"
+    
     # disable sanitize
     When    Run "sed -i 's/; \[report\]/[report]/' /etc/crm/crm.conf" on "hanode1"
     And     Run "sed -i 's/sanitize_rule = .*$/sanitize_rule = /g' /etc/crm/crm.conf" on "hanode1"

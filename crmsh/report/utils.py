@@ -589,11 +589,11 @@ class Sanitizer:
         replace_n: int = 0
 
         if self.sensitive_value_list_with_raw_option:
-            patt_str = '|'.join(self.sensitive_value_list_with_raw_option)
+            patt_str = '|'.join([re.escape(patt) for patt in self.sensitive_value_list_with_raw_option])
             result, replace_raw_n = re.subn(r'\b({})\b'.format(patt_str), "******", data)
         if self.sensitive_value_list:
             key_str = '|'.join(self.sensitive_key_list)
-            patt_str = '|'.join(self.sensitive_value_list)
+            patt_str = '|'.join([re.escape(patt) for patt in self.sensitive_value_list])
             result, replace_n = re.subn(f'({key_str})({patt_str})', '\\1******', result)
 
         return "" if (replace_raw_n == 0 and replace_n == 0) else result
