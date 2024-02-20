@@ -11,17 +11,17 @@ primitive p1 ocf:pacemaker:Dummy \
         op stop timeout=20s interval=0s
 primitive p2 Delay \
 	params startdelay=2 mondelay=2 stopdelay=2 \
-        op monitor timeout=30s interval=10s \
+        op monitor timeout=40s interval=10s \
         op start timeout=30s interval=0s \
-        op stop timeout=30s interval=0s
+        op stop timeout=40s interval=0s
 primitive p3 ocf:pacemaker:Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
         op stop timeout=20s interval=0s
 primitive st stonith:null \
 	params hostlist=node1 \
-        op monitor timeout=20 interval=3600 \
-	op start timeout=20 interval=0s \
+        op monitor timeout=20s interval=3600 \
+	op start timeout=20s interval=0s \
 	op stop timeout=15 interval=0s
 clone c1 p1 \
        meta interleave=true
@@ -56,17 +56,17 @@ primitive p0 ocf:pacemaker:Dummy \
         op stop timeout=20s interval=0s
 primitive p2 Delay \
 	params startdelay=2 mondelay=2 stopdelay=2 \
-        op monitor timeout=30s interval=10s \
+        op monitor timeout=40s interval=10s \
         op start timeout=30s interval=0s \
-        op stop timeout=30s interval=0s
+        op stop timeout=40s interval=0s
 primitive p3 ocf:pacemaker:Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
         op stop timeout=20s interval=0s
 primitive st stonith:null \
 	params hostlist=node1 \
-        op monitor timeout=20 interval=3600 \
-	op start timeout=20 interval=0s \
+        op monitor timeout=20s interval=3600 \
+	op start timeout=20s interval=0s \
 	op stop timeout=15 interval=0s
 property cib-bootstrap-options: \
 	cluster-recheck-interval=10m

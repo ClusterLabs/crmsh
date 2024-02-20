@@ -144,7 +144,7 @@ pcmk_status_retries (integer, [2]): Advanced use only: The maximum number of tim
 
 Operations' defaults (advisory minimum):
 
-    start         timeout=20
+    start         timeout=20s
     stop          timeout=15
-    status        timeout=20
-    monitor       timeout=20 interval=3600
+    status        timeout=20s
+    monitor       timeout=20s interval=3600
