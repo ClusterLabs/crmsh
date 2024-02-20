@@ -1594,8 +1594,10 @@ def sub_sensitive_string(data):
     """
     result = data
     if constants.SANITIZE_VALUE_RAW:
-        result = re.sub(r'\b({})\b'.format('|'.join(constants.SANITIZE_VALUE_RAW)), "******", data)
+        patt = '|'.join([re.escape(s) for s in constants.SANITIZE_VALUE_RAW])
+        result = re.sub(r'\b({})\b'.format(patt), "******", data)
     if constants.SANITIZE_VALUE_CIB:
-        result = re.sub('({})({})'.format('|'.join(constants.SANITIZE_KEY_CIB), '|'.join(constants.SANITIZE_VALUE_CIB)), '\\1******', result)
+        patt = '|'.join([re.escape(s) for s in constants.SANITIZE_VALUE_CIB])
+        result = re.sub('({})({})'.format('|'.join(constants.SANITIZE_KEY_CIB), patt), '\\1******', result)
     return result
 # vim:ts=4:sw=4:et:
