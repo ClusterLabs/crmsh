@@ -1777,6 +1777,8 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     user_by_host.add(local_user, utils.this_node())
     user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
     user_by_host.save_local()
+    user_by_host.add(seed_user, get_node_canonical_hostname(seed_host))
+    user_by_host.save_local()
 
     configure_ssh_key('hacluster')
     change_user_shell('hacluster')
