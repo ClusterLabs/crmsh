@@ -573,3 +573,14 @@ def step_impl(context, target_file):
         return True
     else:
         return False
+
+@given('crm.conf poisoned on nodes [{nodes:str+}]')
+def step_impl(context, nodes):
+    for node in nodes:
+        rc, _, _ = behave_agent.call(
+            node, 1122,
+            f'''mkdir -p /root/.config/crm && cat > /root/.config/crm/crm.conf << EOF
+{const.CRM_CONF_CONTENT_POSIONED}
+EOF''',
+            user='root',
+        )

@@ -332,7 +332,9 @@ optional arguments:
   -c [USER@]HOST, --cluster-node [USER@]HOST
                         An already-configured geo cluster or arbitrator
   -s DESC, --clusters DESC
-                        Geo cluster description (see geo-init for details)'''
+                        Geo cluster description (see geo-init for details)
+  --use-ssh-agent       Use an existing key from ssh-agent instead of creating
+                        new key pairs'''
 
 
 CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT = '''Initialize node as geo cluster arbitrator
@@ -351,3 +353,6 @@ optional arguments:
                         An already-configured geo cluster
   --use-ssh-agent       Use an existing key from ssh-agent instead of creating
                         new key pairs'''
+
+CRM_CONF_CONTENT_POSIONED = '''[core]
+hosts = alan@hanode1, claude@hanode2, john@hanode3'''

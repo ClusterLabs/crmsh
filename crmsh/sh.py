@@ -304,6 +304,8 @@ class ClusterShell:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+        except crmsh.sh.AuthorizationError:
+            return False
         except user_of_host.UserNotFoundError:
             return False
         return 0 == result.returncode
@@ -342,7 +344,10 @@ class ClusterShell:
                 **kwargs,
             )
             if self.raise_ssh_error and result.returncode == 255:
-                raise NonInteractiveSSHAuthorizationError(cmd, host, remote_user, Utils.decode_str(result.stderr).strip())
+                raise NonInteractiveSSHAuthorizationError(
+                    cmd, host, remote_user,
+                    Utils.decode_str(result.stderr).strip() if result.stderr is not None else ''
+                )
             else:
                 return result
 
