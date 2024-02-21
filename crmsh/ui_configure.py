@@ -914,8 +914,7 @@ class CibConfig(command.UI):
         rc1 = True
         if replace and not force:
             rc1 = cib_factory.is_current_cib_equal()
-        rc2 = cib_factory.has_no_primitives() or \
-            self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
+        rc2 = self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
         if rc1 and rc2:
             return cib_factory.commit(replace=replace)
         if force or config.core.force:
