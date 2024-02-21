@@ -1646,6 +1646,15 @@ def test_get_systemd_timeout_start_in_sec():
     assert res == 91
 
 
+def test_is_larger_than_min_version():
+    assert utils.is_larger_than_min_version("pacemaker-3.7", "pacemaker-3.1") is True
+    assert utils.is_larger_than_min_version("pacemaker-3.0", "pacemaker-3.0") is True
+    assert utils.is_larger_than_min_version("pacemaker-3.0", "pacemaker-3.1") is False
+    with pytest.raises(ValueError) as err:
+        utils.is_larger_than_min_version("wrong-format", "pacemaker-3.7")
+    assert str(err.value) == "Invalid version string: wrong-format"
+
+
 @mock.patch('crmsh.utils.is_larger_than_min_version')
 @mock.patch('crmsh.cibconfig.cib_factory')
 def test_is_ocf_1_1_cib_schema_detected(mock_cib, mock_larger):
