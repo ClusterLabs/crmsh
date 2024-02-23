@@ -1,4 +1,6 @@
+import subprocess
 from crmsh import config
+import crmsh.report.sh
 from crmsh.report import core, constants, utils, collect
 import crmsh.log
 
@@ -392,7 +394,7 @@ class TestRun(unittest.TestCase):
         mock_move.assert_called_once_with(mock_ctx_inst.work_dir, mock_ctx_inst.dest_dir)
 
     @mock.patch('crmsh.report.core.finalword')
-    @mock.patch('crmsh.report.core.sh.cluster_shell')
+    @mock.patch('crmsh.sh.cluster_shell')
     @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('crmsh.report.utils.create_description_template')
     @mock.patch('crmsh.report.utils.analyze')
@@ -438,7 +440,7 @@ class TestRun(unittest.TestCase):
     def test_collect_for_nodes(self, mock_start_collector, mock_info, mock_process):
         mock_ctx_inst = mock.Mock(
             node_list=["node1", "node2"],
-            ssh_askpw_node_list=["node2"],
+            passwordless_shell_for_nodes={"node1": mock.Mock(crmsh.report.sh.Shell)},
             ssh_user=""
         )
         mock_process_inst = mock.Mock()
@@ -479,73 +481,52 @@ class TestRun(unittest.TestCase):
         mock_ctx_inst = mock.Mock(from_time=123, to_time=150)
         core.process_arguments(mock_ctx_inst)
 
-    @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
-    @mock.patch('crmsh.utils.check_ssh_passwd_need')
-    @mock.patch('crmsh.report.core.userdir.getuser')
-    @mock.patch('crmsh.report.core.userdir.get_sudoer')
-    def test_find_ssh_user_not_found(self, mock_get_sudoer, mock_getuser, mock_check_ssh, mock_logger):
-        mock_get_sudoer.return_value = ""
-        mock_getuser.return_value = "user2"
-        mock_check_ssh.return_value = True
-        mock_ctx_inst = mock.Mock(ssh_user="", ssh_askpw_node_list=[], node_list=["node1", "node2"], me="node1")
-        core.find_ssh_user(mock_ctx_inst)
-        mock_logger.warning.assert_called_once_with(f"passwordless ssh to node(s) ['node2'] does not work")
 
-    @mock.patch('crmsh.report.core.logger', spec=crmsh.log.DEBUG2Logger)
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('logging.Logger.debug')
-    @mock.patch('crmsh.utils.check_ssh_passwd_need')
-    @mock.patch('crmsh.utils.this_node')
-    @mock.patch('crmsh.report.core.userdir.getuser')
-    @mock.patch('crmsh.report.core.userdir.get_sudoer')
-    def test_find_ssh_user(self, mock_get_sudoer, mock_getuser, mock_this_node, mock_check_ssh, mock_debug, mock_warn, mock_debug2):
-        mock_get_sudoer.return_value = "user1"
-        mock_getuser.return_value = "user2"
-        mock_this_node.return_value = "node1"
-        mock_check_ssh.return_value = False
-        mock_ctx_inst = mock.Mock(ssh_user="", ssh_askpw_node_list=[], node_list=["node1", "node2"])
-        core.find_ssh_user(mock_ctx_inst)
-        self.assertEqual("sudo", mock_ctx_inst.sudo)
-        self.assertEqual("user1", mock_ctx_inst.ssh_user)
-
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.report.core.ShellUtils')
-    def test_start_collector_return(self, mock_sh_utils, mock_warn):
-        mock_sh_utils_inst = mock.Mock()
-        mock_sh_utils.return_value = mock_sh_utils_inst
-        mock_sh_utils_inst.get_stdout_stderr.return_value = (0, '', None)
-        mock_ctx_inst = mock.Mock(me="node1")
-        core.start_collector("node1", mock_ctx_inst)
-        mock_sh_utils_inst.get_stdout_stderr.assert_called_once_with(f"{constants.BIN_COLLECTOR} '{mock_ctx_inst}'")
-
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.report.core.ShellUtils')
-    @mock.patch('crmsh.report.core.sh.LocalShell')
-    @mock.patch('crmsh.utils.this_node')
-    def test_start_collector_warn(self, mock_this_node, mock_sh, mock_sh_utils, mock_warn):
-        mock_sh_utils_inst = mock.Mock()
-        mock_sh_utils.return_value = mock_sh_utils_inst
-        mock_sh_utils_inst.get_stdout = mock.Mock()
-        mock_sh_inst = mock.Mock()
-        mock_sh.return_value = mock_sh_inst
-        mock_sh_inst.get_rc_stdout_stderr.return_value = (1, '', "error")
-        mock_ctx_inst = mock.Mock(ssh_user='', sudo='')
-        mock_this_node.return_value = "node2"
-        core.start_collector("node1", mock_ctx_inst)
-        mock_warn.assert_called_once_with("error")
-
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout')
     @mock.patch('ast.literal_eval')
-    @mock.patch('crmsh.report.core.sh.LocalShell')
-    @mock.patch('crmsh.report.core.ShellUtils')
-    @mock.patch('crmsh.utils.this_node')
-    def test_start_collector(self, mock_this_node, mock_sh_utils, mock_sh, mock_eval):
-        mock_sh_utils_inst = mock.Mock()
-        mock_sh_utils.return_value = mock_sh_utils_inst
-        mock_sh_utils_inst.get_stdout = mock.Mock()
-        mock_sh_inst = mock.Mock()
-        mock_sh.return_value = mock_sh_inst
-        mock_sh_inst.get_rc_stdout_stderr.return_value = (0, f"line1\n{constants.COMPRESS_DATA_FLAG}data", None)
-        mock_ctx_inst = mock.Mock(ssh_user='', sudo='')
-        mock_this_node.return_value = "node2"
-        mock_eval.return_value = "data"
-        core.start_collector("node1", mock_ctx_inst)
+    def test_start_collector(self, mock_literal_eval, mock_get_stdout):
+        mock_shell = mock.Mock(crmsh.report.sh.Shell)
+        mock_context = mock.Mock(
+            ssh_user=None,
+            passwordless_shell_for_nodes={'node1': mock_shell},
+            __str__=mock.Mock(return_value='{"foo":"bar"}')
+        )
+        mock_shell.subprocess_run_without_input.return_value = mock.Mock(
+            returncode=0,
+            stdout=b'',
+            stderr=b'',
+        )
+        core.start_collector('node1', mock_context)
+        mock_shell.subprocess_run_without_input.assert_called_once_with(
+            """/usr/sbin/crm report __collector '{"foo":"bar"}'""",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout')
+    @mock.patch('ast.literal_eval')
+    @mock.patch('logging.Logger.warning')
+    def test_start_collector_warn(self, mock_warning, mock_literal_eval, mock_get_stdout):
+        mock_shell = mock.Mock(crmsh.report.sh.Shell)
+        mock_context = mock.Mock(
+            ssh_user=None,
+            passwordless_shell_for_nodes={'node1': mock_shell},
+            __str__=mock.Mock(return_value='{"foo":"bar"}')
+        )
+        mock_shell.subprocess_run_without_input.return_value = mock.Mock(
+            returncode=1,
+            stdout=b'',
+            stderr=b'asdfgh',
+        )
+        core.start_collector('node1', mock_context)
+        mock_shell.subprocess_run_without_input.assert_called_once_with(
+            """/usr/sbin/crm report __collector '{"foo":"bar"}'""",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        mock_warning.assert_called_with(
+            'Failed to run collector on %s: %s: %s',
+            'node1', 1, 'asdfgh',
+        )
+        mock_literal_eval.assert_not_called()
+        mock_get_stdout.assert_not_called()
