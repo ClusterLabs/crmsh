@@ -199,11 +199,7 @@ def collect_ratraces(context: core.Context) -> None:
         )
     else:
         shell = sh.cluster_shell()
-    log_contents = ""
-    cmd = f"grep 'INFO: Trace for .* is written to ' {log.CRMSH_LOG_FILE}*|grep -v 'collect'"
-    for node in context.node_list:
-        log_contents += shell.get_rc_stdout_stderr_without_input(node, cmd)[1] + "\n"
-    trace_dir_str = ' '.join(list(set(re.findall("written to (.*)/.*", log_contents))))
+    trace_dir_str = ' '.join(context.trace_dir_list)
     if not trace_dir_str:
         return
 
