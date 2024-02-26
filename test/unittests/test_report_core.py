@@ -301,13 +301,14 @@ class TestRun(unittest.TestCase):
 
     @mock.patch('crmsh.report.core.process_results')
     @mock.patch('crmsh.report.core.collect_for_nodes')
+    @mock.patch('crmsh.report.core.load_context_trace_dir_list')
     @mock.patch('crmsh.report.core.find_ssh_user')
     @mock.patch('crmsh.report.core.setup_workdir')
     @mock.patch('crmsh.report.core.load_context_attributes')
     @mock.patch('crmsh.report.core.parse_arguments')
     @mock.patch('crmsh.report.core.is_collector')
     @mock.patch('crmsh.report.core.Context')
-    def test_run_impl(self, mock_context, mock_collector, mock_parse, mock_load, mock_setup, mock_find_ssh, mock_collect, mock_process_results):
+    def test_run_impl(self, mock_context, mock_collector, mock_parse, mock_load, mock_setup, mock_find_ssh, mock_load_context_trace_dir_list, mock_collect, mock_process_results):
         mock_context.return_value = mock.Mock()
         mock_ctx_inst = mock_context.return_value
         mock_collector.side_effect = [False, False]
@@ -320,6 +321,7 @@ class TestRun(unittest.TestCase):
         mock_load.assert_called_once_with(mock_ctx_inst)
         mock_setup.assert_called_once_with(mock_ctx_inst)
         mock_find_ssh.assert_called_once_with(mock_ctx_inst)
+        mock_load_context_trace_dir_list.assert_called_once_with(mock_ctx_inst)
         mock_collect.assert_called_once_with(mock_ctx_inst)
         mock_process_results.assert_called_once_with(mock_ctx_inst)
 
