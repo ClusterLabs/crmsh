@@ -262,18 +262,8 @@ def start_collector(node: str, context: Context) -> None:
         ret = shell.subprocess_run_without_input(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     else:
         # This is a last effort when passwordless ssh is not available
-        node = f"{context.ssh_user}@{node}" if context.ssh_user else node
-        logger.info('Creating ssh connection to %s...', node)
         cmd = cmd.replace('"', '\\"')
-        cmd = 'ssh {} {} "{}{}"'.format(
-            constants.SSH_OPTS,
-            node,
-            '' if context.ssh_user is None or context.ssh_user == 'root' else 'sudo ',
-            cmd,
-        )
-        shell = crmsh.sh.LocalShell()
-        ret = shell.su_subprocess_run(None, cmd, tty=True,  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
+        ret = _interactive_ssh_run_as_root(node, context.ssh_user, cmd)
     if ret.returncode != 0:
         logger.warning(
             'Failed to run collector on %s: %s: %s',
@@ -433,11 +423,35 @@ def load_context_attributes(context: Context) -> None:
 
 
 def load_context_trace_dir_list(context: Context) -> None:
+    # since the "trace_dir" attribute been removed from cib after untrace
+    # need to parse crmsh log file to extract custom trace ra log directory on each node
     log_contents = ""
     cmd = f"grep 'INFO: Trace for .* is written to ' {log.CRMSH_LOG_FILE}*|grep -v 'collect'"
     for node in context.node_list:
-        log_contents += _get_rc_stdout_stderr(node, context, cmd)[1] + "\n"
+        shell = context.passwordless_shell_for_nodes.get(node)
+        if shell is not None:
+            ret = shell.subprocess_run_without_input(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        else:
+            # This is a last effort when passwordless ssh is not available
+            cmd = cmd.replace('"', '\\"')
+            ret = _interactive_ssh_run_as_root(node, context.ssh_user, cmd)
+        if ret.returncode == 0:
+            log_contents += ret.stdout.decode('utf-8')
     context.trace_dir_list = list(set(re.findall("written to (.*)/.*", log_contents)))
+
+
+def _interactive_ssh_run_as_root(host: str, ssh_user: str, cmd: str):
+    # cmd MUST be escaped to make sure it works as an arugment of ssh command
+    target = f"{ssh_user}@{host}" if ssh_user else host
+    logger.info('Creating ssh connection to %s...', target)
+    cmd = 'ssh {} {} "{}{}"'.format(
+        constants.SSH_OPTS,
+        target,
+        '' if ssh_user is None or ssh_user == 'root' else 'sudo ',
+        cmd,
+    )
+    shell = crmsh.sh.LocalShell()
+    return shell.su_subprocess_run(None, cmd, tty=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def adjust_verbosity(context: Context) -> None:
