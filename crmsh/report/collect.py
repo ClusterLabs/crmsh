@@ -189,21 +189,7 @@ def collect_ratraces(context: core.Context) -> None:
     """
     Collect ra trace file from default /var/lib/heartbeat/trace_ra and custom one
     """
-    # since the "trace_dir" attribute been removed from cib after untrace
-    # need to parse crmsh log file to extract custom trace ra log directory on each node
-    if crmsh.user_of_host.instance().use_ssh_agent():
-        shell = sh.ClusterShell(
-            sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '')}),
-            crmsh.user_of_host.instance(),
-            forward_ssh_agent=True,
-        )
-    else:
-        shell = sh.cluster_shell()
-    log_contents = ""
-    cmd = f"grep 'INFO: Trace for .* is written to ' {log.CRMSH_LOG_FILE}*|grep -v 'collect'"
-    for node in context.node_list:
-        log_contents += shell.get_rc_stdout_stderr_without_input(node, cmd)[1] + "\n"
-    trace_dir_str = ' '.join(list(set(re.findall("written to (.*)/.*", log_contents))))
+    trace_dir_str = ' '.join(context.trace_dir_list)
     if not trace_dir_str:
         return
 

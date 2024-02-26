@@ -205,6 +205,7 @@ test/unittests/test_qdevice.py
 test/unittests/test_ratrace.py
 test/unittests/test_report_collect.py
 test/unittests/test_report_core.py
+test/unittests/test_report_sh.py
 test/unittests/test_report_utils.py
 test/unittests/test_sbd.py
 test/unittests/test_scripts.py

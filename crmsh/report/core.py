@@ -6,15 +6,19 @@ import argparse
 import multiprocessing
 import os
 import re
+import subprocess
 import sys
 import shutil
 import json
 import ast
+import typing
 from inspect import getmembers, isfunction
 from typing import List
 
+import crmsh.sh
+import crmsh.report.sh
 from crmsh import utils as crmutils
-from crmsh import config, log, userdir, corosync, tmpfiles, ui_cluster, sh
+from crmsh import config, log, tmpfiles, ui_cluster
 from crmsh.sh import ShellUtils
 
 
@@ -39,13 +43,14 @@ class Context:
         self.single: bool= config.report.single_node
         self.sensitive_regex_list: List[str] = []
         self.regex_list: List[str] = "CRIT: ERROR: error: warning: crit:".split()
-        self.ssh_askpw_node_list: List[str] = []
+        self.passwordless_shell_for_nodes = dict()
         self.me = crmutils.this_node()
         self.pe_dir: str
         self.cib_dir: str
         self.pcmk_lib_dir: str
         self.pcmk_exec_dir: str
         self.cores_dir_list: List[str]
+        self.trace_dir_list: List[str]
         self.dest: str
         self.dest_dir: str
         self.work_dir: str
@@ -59,8 +64,8 @@ class Context:
         self.compress_suffix: str
         self.main_node = self.me
 
-    def __str__(self) ->str:
-        return json.dumps(self.__dict__)
+    def __str__(self) -> str:
+        return json.dumps({k: v for k, v in self.__dict__.items() if k != 'passwordless_shell_for_nodes'})
 
     def __setattr__(self, name: str, value) -> None:
         """
@@ -198,7 +203,7 @@ def process_results(context: Context) -> None:
         cmd_compress = f"{context.compress_prog} > {context.dest_dir}/{context.dest}.tar{context.compress_suffix}"
         cmd = f"{cmd_cd_tar}|{cmd_compress}"
         logger.debug2(f"Running: {cmd}")
-        sh.cluster_shell().get_stdout_or_raise_error(cmd)
+        crmsh.sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
     finalword(context)
 
@@ -234,17 +239,16 @@ def collect_for_nodes(context: Context) -> None:
     Start collectors on each node
     """
     process_list = []
-    for node in context.node_list:
-        if node in context.ssh_askpw_node_list:
-            node_str = f"{context.ssh_user}@{node}" if context.ssh_user else node
-            logger.info(f"Please provide password for {node_str}")
-            start_collector(node, context)
-        else:
+    if len(context.passwordless_shell_for_nodes) == len(context.node_list):
+        for node in context.node_list:
             p = multiprocessing.Process(target=start_collector, args=(node, context))
             p.start()
             process_list.append(p)
-    for p in process_list:
-        p.join()
+        for p in process_list:
+            p.join()
+    else:
+        for node in context.node_list:
+            start_collector(node, context)
 
 
 def start_collector(node: str, context: Context) -> None:
@@ -252,26 +256,25 @@ def start_collector(node: str, context: Context) -> None:
     Start collector at specific node
     """
     cmd = f"{constants.BIN_COLLECTOR} '{context}'"
-    err = ""
 
-    if node == context.me:
-        code, out, err = ShellUtils().get_stdout_stderr(cmd)
+    shell = context.passwordless_shell_for_nodes.get(node)
+    if shell is not None:
+        ret = shell.subprocess_run_without_input(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     else:
-        node = f"{context.ssh_user}@{node}" if context.ssh_user else node
+        # This is a last effort when passwordless ssh is not available
         cmd = cmd.replace('"', '\\"')
-        cmd = f'{crmutils.get_ssh_agent_str()} ssh {constants.SSH_OPTS} {node} "{context.sudo} {cmd}"'
-        code, out, err = sh.LocalShell().get_rc_stdout_stderr(context.ssh_user, cmd)
-
-    if code != 0:
-        logger.warning(err)
-    # ERROR/WARNING/DEBUG messages
-    if err:
-        print(err, file=sys.stderr)
-    if out == '':
+        ret = _interactive_ssh_run_as_root(node, context.ssh_user, cmd)
+    if ret.returncode != 0:
+        logger.warning(
+            'Failed to run collector on %s: %s: %s',
+            node, ret.returncode, crmsh.sh.Utils.decode_str(ret.stderr) if ret.stderr is not None else '',
+        )
         return
+    elif ret.stderr:
+        print(crmsh.sh.Utils.decode_str(ret.stderr), file=sys.stderr)
 
     compress_data = ""
-    for data in out.split("\n"):
+    for data in ret.stdout.decode('utf-8').split("\n"):
         if data.startswith(constants.COMPRESS_DATA_FLAG):
             # crm report data from collector
             compress_data = data.lstrip(constants.COMPRESS_DATA_FLAG)
@@ -377,36 +380,14 @@ def find_ssh_user(context: Context) -> None:
     """
     Finds the SSH user for passwordless SSH access to nodes in the context's node_list
     """
-    ssh_user = ""
-    user_try_list = [
-            context.ssh_user,
-            userdir.get_sudoer(),
-            userdir.getuser()
-        ]
-
+    cluster_shell = crmsh.sh.cluster_shell()
     for n in context.node_list:
-        if n == context.me:
-            continue
-        rc = False
-        for u in user_try_list:
-            if not u:
-                continue
-            ssh_str = f"{u}@{n}"
-            if not crmutils.check_ssh_passwd_need(u, u, n):
-                logger.debug(f"ssh {ssh_str} OK")
-                ssh_user = u
-                rc = True
-                break
-            else:
-                logger.debug(f"ssh {ssh_str} failed")
-        if not rc:
-            context.ssh_askpw_node_list.append(n)
-    if context.ssh_askpw_node_list:
-        logger.warning(f"passwordless ssh to node(s) {context.ssh_askpw_node_list} does not work")
-
-    context.sudo = "" if ssh_user in ("root", "hacluster") else "sudo"
-    context.ssh_user = ssh_user or ""
-    logger.debug2(f"context.ssh_user is {context.ssh_user}")
+        ret = crmsh.report.sh.Shell.find_shell(cluster_shell, n, context.ssh_user)
+        if ret is None:
+            logger.warning("passwordless ssh to node %s does not work", n)
+        else:
+            logger.debug("passwordless ssh to %s is OK", n)
+            context.passwordless_shell_for_nodes[n] = ret
 
 
 def load_from_crmsh_config(context: Context) -> None:
@@ -439,6 +420,38 @@ def load_context_attributes(context: Context) -> None:
     context.pcmk_lib_dir = os.path.dirname(context.cib_dir)
     context.cores_dir_list = [os.path.join(context.pcmk_lib_dir, "cores")]
     context.cores_dir_list.extend([constants.COROSYNC_LIB] if os.path.isdir(constants.COROSYNC_LIB) else [])
+
+
+def load_context_trace_dir_list(context: Context) -> None:
+    # since the "trace_dir" attribute been removed from cib after untrace
+    # need to parse crmsh log file to extract custom trace ra log directory on each node
+    log_contents = ""
+    cmd = f"grep 'INFO: Trace for .* is written to ' {log.CRMSH_LOG_FILE}*|grep -v 'collect'"
+    for node in context.node_list:
+        shell = context.passwordless_shell_for_nodes.get(node)
+        if shell is not None:
+            ret = shell.subprocess_run_without_input(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        else:
+            # This is a last effort when passwordless ssh is not available
+            cmd = cmd.replace('"', '\\"')
+            ret = _interactive_ssh_run_as_root(node, context.ssh_user, cmd)
+        if ret.returncode == 0:
+            log_contents += ret.stdout.decode('utf-8')
+    context.trace_dir_list = list(set(re.findall("written to (.*)/.*", log_contents)))
+
+
+def _interactive_ssh_run_as_root(host: str, ssh_user: str, cmd: str):
+    # cmd MUST be escaped to make sure it works as an arugment of ssh command
+    target = f"{ssh_user}@{host}" if ssh_user else host
+    logger.info('Creating ssh connection to %s...', target)
+    cmd = 'ssh {} {} "{}{}"'.format(
+        constants.SSH_OPTS,
+        target,
+        '' if ssh_user is None or ssh_user == 'root' else 'sudo ',
+        cmd,
+    )
+    shell = crmsh.sh.LocalShell()
+    return shell.su_subprocess_run(None, cmd, tty=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def adjust_verbosity(context: Context) -> None:
@@ -490,6 +503,7 @@ def run_impl() -> None:
         push_data(ctx)
     else:
         find_ssh_user(ctx)
+        load_context_trace_dir_list(ctx)
         collect_for_nodes(ctx)
         process_results(ctx)
 
