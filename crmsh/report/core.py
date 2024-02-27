@@ -13,10 +13,12 @@ import json
 import ast
 import typing
 from inspect import getmembers, isfunction
+from io import StringIO
 from typing import List
 
 import crmsh.sh
 import crmsh.report.sh
+import crmsh.user_of_host
 from crmsh import utils as crmutils
 from crmsh import config, log, tmpfiles, ui_cluster
 from crmsh.sh import ShellUtils
@@ -381,13 +383,20 @@ def find_ssh_user(context: Context) -> None:
     Finds the SSH user for passwordless SSH access to nodes in the context's node_list
     """
     cluster_shell = crmsh.sh.cluster_shell()
+    user_of_host = crmsh.user_of_host.UserOfHost.instance()
     for n in context.node_list:
         ret = crmsh.report.sh.Shell.find_shell(cluster_shell, n, context.ssh_user)
-        if ret is None:
-            logger.warning("passwordless ssh to node %s does not work", n)
-        else:
+        if ret is not None:
             logger.debug("passwordless ssh to %s is OK", n)
             context.passwordless_shell_for_nodes[n] = ret
+        elif user_of_host.use_ssh_agent() and 'SSH_AUTH_SOCK' not in os.environ:
+            with StringIO() as buf:
+                buf.write('Environment variable SSH_AUTH_SOCK does not exist.')
+                if 'SUDO_USER' in os.environ:
+                    buf.write(' Please check whether ssh-agent is available and consider using "sudo --preserve-env=SSH_AUTH_SOCK".')
+                logger.warning('%s', buf.getvalue())
+        else:
+            logger.warning("passwordless ssh to node %s does not work", n)
 
 
 def load_from_crmsh_config(context: Context) -> None:
