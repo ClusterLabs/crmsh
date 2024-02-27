@@ -22,6 +22,7 @@ import argparse
 import random
 import string
 import grp
+import functools
 from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
@@ -86,6 +87,7 @@ def memoize(function):
     "Decorator to invoke a function once only for any argument"
     memoized = {}
 
+    @functools.wraps(function)
     def inner(*args):
         if args in memoized:
             return memoized[args]
