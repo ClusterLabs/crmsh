@@ -22,10 +22,12 @@ import argparse
 import random
 import string
 import grp
+import functools
 from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from lxml import etree
+from packaging import version
 
 import crmsh.parallax
 from . import corosync
@@ -34,7 +36,6 @@ from . import userdir
 from . import constants
 from . import options
 from . import term
-from distutils.version import LooseVersion
 from .constants import SSH_OPTION
 from . import log
 from .prun import prun
@@ -86,6 +87,7 @@ def memoize(function):
     "Decorator to invoke a function once only for any argument"
     memoized = {}
 
+    @functools.wraps(function)
     def inner(*args):
         if args in memoized:
             return memoized[args]
@@ -1825,8 +1827,18 @@ def get_cib_attributes(cib_f, tag, attr_l, dflt_l):
     return val_l
 
 
-def is_larger_than_min_version(version, min_version):
-    return LooseVersion(version) >= LooseVersion(min_version)
+def is_larger_than_min_version(this_version, min_version):
+    """
+    Compare two version strings
+    """
+    version_re = re.compile(version.VERSION_PATTERN, re.VERBOSE | re.IGNORECASE)
+    match_this_version = version_re.search(this_version)
+    if not match_this_version:
+        raise ValueError(f"Invalid version string: {this_version}")
+    match_min_version = version_re.search(min_version)
+    if not match_min_version:
+        raise ValueError(f"Invalid version string: {min_version}")
+    return version.parse(match_this_version.group(0)) >= version.parse(match_min_version.group(0))
 
 
 def is_min_pcmk_ver(min_ver, cib_f=None):

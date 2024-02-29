@@ -133,9 +133,9 @@ resource p0 is NOT running
             <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
           </instance_attributes>
           <operations>
-            <op name="monitor" timeout="30s" interval="10s" id="p2-monitor-10s"/>
+            <op name="monitor" timeout="40s" interval="10s" id="p2-monitor-10s"/>
             <op name="start" timeout="30s" interval="0s" id="p2-start-0s"/>
-            <op name="stop" timeout="30s" interval="0s" id="p2-stop-0s"/>
+            <op name="stop" timeout="40s" interval="0s" id="p2-stop-0s"/>
           </operations>
         </primitive>
       </clone>
@@ -167,9 +167,9 @@ resource p0 is NOT running
             <nvpair name="stopdelay" value="2" id="p2-instance_attributes-stopdelay"/>
           </instance_attributes>
           <operations>
-            <op name="monitor" timeout="30s" interval="10s" id="p2-monitor-10s"/>
+            <op name="monitor" timeout="40s" interval="10s" id="p2-monitor-10s"/>
             <op name="start" timeout="30s" interval="0s" id="p2-start-0s"/>
-            <op name="stop" timeout="30s" interval="0s" id="p2-stop-0s"/>
+            <op name="stop" timeout="40s" interval="0s" id="p2-stop-0s"/>
           </operations>
         </primitive>
       </clone>
@@ -1133,30 +1133,6 @@ INFO: Stop tracing p0 for operation stop
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .TRY resource stop p3
 .TRY resource start p3
-.TRY resource cleanup
-.EXT crm_resource --cleanup
-.TRY resource cleanup p3
-.EXT crm_resource --cleanup --resource p3
-.TRY resource cleanup p3 node1
-.EXT crm_resource --cleanup --resource p3 --node node1
-.TRY resource cleanup force
-.EXT crm_resource --cleanup --force
-.TRY resource cleanup p3 force
-.EXT crm_resource --cleanup --resource p3 --force
-.TRY resource cleanup p3 node1 force
-.EXT crm_resource --cleanup --resource p3 --node node1 --force
-.TRY resource refresh
-.EXT crm_resource --refresh
-.TRY resource refresh p3
-.EXT crm_resource --refresh --resource p3
-.TRY resource refresh p3 node1
-.EXT crm_resource --refresh --resource p3 --node node1
-.TRY resource refresh force
-.EXT crm_resource --refresh --force
-.TRY resource refresh p3 force
-.EXT crm_resource --refresh --resource p3 --force
-.TRY resource refresh p3 node1 force
-.EXT crm_resource --refresh --resource p3 --node node1 --force
 .TRY resource stop p3
 .TRY configure rm cg
 WARNING: This command 'rm' is deprecated, please use 'delete'

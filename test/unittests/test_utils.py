@@ -7,7 +7,6 @@ from __future__ import unicode_literals
 import os
 import socket
 import re
-import imp
 import subprocess
 import unittest
 import pytest
@@ -19,12 +18,6 @@ import crmsh.utils
 from crmsh import utils, config, tmpfiles, constants, parallax
 
 logging.basicConfig(level=logging.DEBUG)
-
-def setup_function():
-    utils._ip_for_cloud = None
-    # Mock memoize method and reload the module under test later with imp
-    mock.patch('crmsh.utils.memoize', lambda x: x).start()
-    imp.reload(utils)
 
 
 @mock.patch("crmsh.utils.get_stdout_stderr")
@@ -547,7 +540,7 @@ def test_detect_cloud_no_cmd(mock_is_program):
 def test_detect_cloud_aws(mock_is_program, mock_aws):
     mock_is_program.return_value = True
     mock_aws.return_value = True
-    assert utils.detect_cloud() == constants.CLOUD_AWS
+    assert utils.detect_cloud.__wrapped__() == constants.CLOUD_AWS
     mock_is_program.assert_called_once_with("dmidecode")
     mock_aws.assert_called_once_with()
 
@@ -558,7 +551,7 @@ def test_detect_cloud_azure(mock_is_program, mock_aws, mock_azure):
     mock_is_program.return_value = True
     mock_aws.return_value = False
     mock_azure.return_value = True
-    assert utils.detect_cloud() == constants.CLOUD_AZURE
+    assert utils.detect_cloud.__wrapped__() == constants.CLOUD_AZURE
     mock_is_program.assert_called_once_with("dmidecode")
     mock_aws.assert_called_once_with()
     mock_azure.assert_called_once_with()
@@ -572,7 +565,7 @@ def test_detect_cloud_gcp(mock_is_program, mock_aws, mock_azure, mock_gcp):
     mock_aws.return_value = False
     mock_azure.return_value = False
     mock_gcp.return_value = True
-    assert utils.detect_cloud() == constants.CLOUD_GCP
+    assert utils.detect_cloud.__wrapped__() == constants.CLOUD_GCP
     mock_is_program.assert_called_once_with("dmidecode")
     mock_aws.assert_called_once_with()
     mock_azure.assert_called_once_with()
@@ -1646,6 +1639,15 @@ def test_get_systemd_timeout_start_in_sec():
     assert res == 91
 
 
+def test_is_larger_than_min_version():
+    assert utils.is_larger_than_min_version("pacemaker-3.7", "pacemaker-3.1") is True
+    assert utils.is_larger_than_min_version("pacemaker-3.0", "pacemaker-3.0") is True
+    assert utils.is_larger_than_min_version("pacemaker-3.0", "pacemaker-3.1") is False
+    with pytest.raises(ValueError) as err:
+        utils.is_larger_than_min_version("wrong-format", "pacemaker-3.7")
+    assert str(err.value) == "Invalid version string: wrong-format"
+
+
 @mock.patch('crmsh.utils.is_larger_than_min_version')
 @mock.patch('crmsh.cibconfig.cib_factory')
 def test_is_ocf_1_1_cib_schema_detected(mock_cib, mock_larger):
@@ -1672,6 +1674,7 @@ def test_handle_role_for_ocf_1_1(mock_support, mock_warn):
 def test_handle_role_for_ocf_1_1_convert_new(mock_support, mock_info):
     config.core.OCF_1_1_SUPPORT = True
     mock_support.return_value = True
+    utils.auto_convert_role = True
     assert utils.handle_role_for_ocf_1_1("Master") == "Promoted"
     mock_support.assert_called_once_with()
     mock_info.assert_called_once_with('Convert deprecated "%s" to "%s"', "Master", "Promoted")

@@ -39,8 +39,8 @@ primitive st stonith:ssh \
 	op stop timeout=15 interval=0s
 primitive st2 stonith:ssh \
 	params hostlist="node1 node2" \
-	op monitor timeout=20 interval=3600 \
-	op start timeout=20 interval=0s \
+	op monitor timeout=20s interval=3600 \
+	op start timeout=20s interval=0s \
 	op stop timeout=15 interval=0s
 bundle bundle-test1 \
 	docker image=test \

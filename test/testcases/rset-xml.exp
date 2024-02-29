@@ -12,7 +12,7 @@
         </instance_attributes>
         <operations>
           <op name="start" timeout="60s" interval="0s" id="st-start-0s"/>
-          <op name="monitor" timeout="20" interval="3600" id="st-monitor-3600"/>
+          <op name="monitor" timeout="20s" interval="3600" id="st-monitor-3600"/>
           <op name="stop" timeout="15" interval="0s" id="st-stop-0s"/>
         </operations>
       </primitive>
