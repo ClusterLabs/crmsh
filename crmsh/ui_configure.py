@@ -343,7 +343,9 @@ def primitive_complete_complex(args):
 
 def container_helptxt(params, helptxt, topic):
     for item in reversed(params):
-        if item in ["storage", "network", "docker", "rkt"]:
+        if item in constants.container_type:
+            return helptxt["container"][topic] + "\n"
+        if item in ("storage", "network"):
             return helptxt[item][topic] + "\n"
         if item == "port-mapping":
             return helptxt["network"][item][topic] + "\n"
@@ -452,7 +454,6 @@ def container_complete_complex(args):
     '''
     container_options_required = ["image"]
     completing = args[-1]
-    container_type = args[2]
 
     completers_set = {
         "network": _container_network_completer,
@@ -470,7 +471,7 @@ def container_complete_complex(args):
             CompletionHelp.help(topic, container_helptxt(args, constants.container_helptxt, topic), args)
         return []
 
-    container_options = utils.filter_keys(constants.container_helptxt[container_type].keys(), args)
+    container_options = utils.filter_keys(constants.container_helptxt["container"].keys(), args)
 
     # required options must be completed
     for s in container_options_required:
@@ -648,14 +649,23 @@ class CibConfig(command.UI):
                 context.fatal_error("Operation \"{}\" not found for resource {}".format(op_type, obj_id))
             if len(op_res) > 1:
                 context.fatal_error("Should specify interval of {}".format(op_type))
+            if name in ('interval', 'timeout'):
+                value = utils.add_time_unit_if_needed(value)
+            if name == 'interval':
+                op_res[0].set('id', f'{obj_id}-{op_type}-{value}')
             op_res[0].set(name, value)
 
         # Use case for: set id.op_type.interval.name value
         if len(other_path_list) == 3:
             op_type, iv, name = other_path_list
-            op_res = rsc.node.xpath(".//operations/op[@id='{}-{}-{}']".format(obj_id, op_type, iv))
+            iv = iv[:-1] if utils.time_value_with_unit(iv) else iv
+            # Search for IDs both with and without the associated time unit
+            op_res = rsc.node.xpath(f".//operations/op[@id='{obj_id}-{op_type}-{iv}' or @id='{obj_id}-{op_type}-{iv}s']")
             if not op_res:
-                context.fatal_error("Operation \"{}\" interval \"{}\" not found for resource {}".format(op_type, iv, obj_id))
+                context.fatal_error(f"Operation \"{op_type}\" interval \"{iv}s\" not found for resource {obj_id}")
+            if name == 'interval':
+                value = utils.add_time_unit_if_needed(value)
+                op_res[0].set('id', f'{obj_id}-{op_type}-{value}')
             op_res[0].set(name, value)
 
         rsc.set_updated()
@@ -904,8 +914,7 @@ class CibConfig(command.UI):
         rc1 = True
         if replace and not force:
             rc1 = cib_factory.is_current_cib_equal()
-        rc2 = cib_factory.has_no_primitives() or \
-            self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
+        rc2 = self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
         if rc1 and rc2:
             return cib_factory.commit(replace=replace)
         if force or config.core.force:

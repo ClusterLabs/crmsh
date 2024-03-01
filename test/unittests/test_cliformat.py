@@ -125,9 +125,9 @@ def test_idresolve():
 def test_ordering():
     xml = """<primitive id="dummy" class="ocf" provider="pacemaker" type="Dummy"> \
   <operations> \
-    <op name="start" timeout="60" interval="0" id="dummy-start-0"/> \
-    <op name="stop" timeout="60" interval="0" id="dummy-stop-0"/> \
-    <op name="monitor" interval="60" timeout="30" id="dummy-monitor-60"/> \
+    <op name="start" timeout="60s" interval="0s" id="dummy-start-0s"/> \
+    <op name="stop" timeout="60s" interval="0s" id="dummy-stop-0s"/> \
+    <op name="monitor" interval="60s" timeout="30s" id="dummy-monitor-60s"/> \
   </operations> \
   <meta_attributes id="dummy-meta_attributes"> \
     <nvpair id="dummy-meta_attributes-target-role" name="target-role"
@@ -139,7 +139,7 @@ value="Stopped"/> \
     assert_is_not_none(obj)
     data = obj.repr_cli(format_mode=-1)
     print(data)
-    exp = 'primitive dummy ocf:pacemaker:Dummy op start timeout=60 interval=0 op stop timeout=60 interval=0 op monitor interval=60 timeout=30 meta target-role=Stopped'
+    exp = 'primitive dummy ocf:pacemaker:Dummy op start timeout=60s interval=0s op stop timeout=60s interval=0s op monitor interval=60s timeout=30s meta target-role=Stopped'
     assert exp == data
     assert obj.cli_use_validate()
 
@@ -151,9 +151,9 @@ def test_ordering2():
 value="Stopped"/> \
   </meta_attributes> \
   <operations> \
-    <op name="start" timeout="60" interval="0" id="dummy2-start-0"/> \
-    <op name="stop" timeout="60" interval="0" id="dummy2-stop-0"/> \
-    <op name="monitor" interval="60" timeout="30" id="dummy2-monitor-60"/> \
+    <op name="start" timeout="60s" interval="0s" id="dummy2-start-0s"/> \
+    <op name="stop" timeout="60s" interval="0s" id="dummy2-stop-0s"/> \
+    <op name="monitor" interval="60s" timeout="30s" id="dummy2-monitor-60s"/> \
   </operations> \
 </primitive>"""
     data = etree.fromstring(xml)
@@ -162,8 +162,8 @@ value="Stopped"/> \
     data = obj.repr_cli(format_mode=-1)
     print(data)
     exp = 'primitive dummy2 ocf:pacemaker:Dummy meta target-role=Stopped ' \
-          'op start timeout=60 interval=0 op stop timeout=60 interval=0 ' \
-          'op monitor interval=60 timeout=30'
+          'op start timeout=60s interval=0s op stop timeout=60s interval=0s ' \
+          'op monitor interval=60s timeout=30s'
     assert exp == data
     assert obj.cli_use_validate()
 
@@ -235,7 +235,7 @@ def test_param_rules():
 
 def test_operation_rules():
     roundtrip('primitive test Dummy ' +
-              'op start interval=0 '
+              'op start interval=0s '
               'op_params 2: rule #uname eq node1 fake=fake ' +
               'op_params 1: fake=real ' +
               'op_meta 2: rule #ra-version version:gt 1.0 timeout=120s ' +

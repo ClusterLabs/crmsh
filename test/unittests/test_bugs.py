@@ -322,7 +322,7 @@ def test_pengine_test():
           </rule>
         </instance_attributes>
         <operations>
-          <op id="rsc1-monitor-10" interval="10" name="monitor"/>
+          <op id="rsc1-monitor-10s" interval="10s" name="monitor"/>
         </operations>
       </primitive>'''
     data = etree.fromstring(xml)
@@ -330,7 +330,7 @@ def test_pengine_test():
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
     print("OUTPUT:", data)
-    exp = 'primitive rsc1 ocf:pacemaker:Dummy params rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" op monitor interval=10'
+    exp = 'primitive rsc1 ocf:pacemaker:Dummy params rule 0: #cluster-name eq clusterA state="/var/run/Dummy-rsc1-clusterA" params rule 0: #cluster-name eq clusterB state="/var/run/Dummy-rsc1-clusterB" op monitor interval=10s'
     assert data == exp
     assert obj.cli_use_validate()
 
@@ -349,7 +349,7 @@ def test_tagset():
 def test_op_role():
     xml = '''<primitive class="ocf" id="rsc2" provider="pacemaker" type="Dummy">
         <operations>
-          <op id="rsc2-monitor-10" interval="10" name="monitor" role="Stopped"/>
+          <op id="rsc2-monitor-10s" interval="10s" name="monitor" role="Stopped"/>
         </operations>
       </primitive>'''
     data = etree.fromstring(xml)
@@ -357,7 +357,7 @@ def test_op_role():
     assert obj is not None
     data = obj.repr_cli(format_mode=-1)
     print("OUTPUT:", data)
-    exp = 'primitive rsc2 ocf:pacemaker:Dummy op monitor interval=10 role=Stopped'
+    exp = 'primitive rsc2 ocf:pacemaker:Dummy op monitor interval=10s role=Stopped'
     assert data == exp
     assert obj.cli_use_validate()
 

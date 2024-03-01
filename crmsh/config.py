@@ -240,6 +240,7 @@ DEFAULTS = {
         'pager': opt_program('PAGER', ('less', 'more', 'pg')),
         'user': opt_string(''),
         'hosts': opt_list([]), # 'alice@host1, bob@host2'
+        'no_generating_ssh_key': opt_boolean('no'),
         'skill_level': opt_choice('expert', ('operator', 'administrator', 'expert')),
         'sort_elements': opt_boolean('yes'),
         'check_frequency': opt_choice('always', ('always', 'on-verify', 'never')),
@@ -295,8 +296,8 @@ DEFAULTS = {
         'from_time': opt_string('-12H'),
         'compress': opt_boolean('yes'),
         'speed_up': opt_boolean('no'),
-        'collect_extra_logs': opt_string('/var/log/messages /var/log/pacemaker/pacemaker.log \
-                /var/log/pacemaker.log /var/log/crmsh/crmsh.log /etc/crm/profiles.yml /etc/crm/crm.conf'),
+        'collect_extra_logs': opt_string('/var/log/messages \
+                /var/log/crmsh/crmsh.log /etc/crm/profiles.yml /etc/crm/crm.conf'),
         'remove_exist_dest': opt_boolean('no'),
         'single_node': opt_boolean('no'),
         'sanitize_rule': opt_string('passw.*'),

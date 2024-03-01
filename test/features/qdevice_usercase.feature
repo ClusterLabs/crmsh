@@ -83,3 +83,5 @@ Feature: Verify usercase master survive when split-brain
     Then    Expected "Quorate:          No" in stdout
     And     Show cluster status on "hanode1"
     And     Show cluster status on "hanode2"
+    When    Try "crm corosync status fs" on "hanode1"
+    Then    Expected "Wrong type "fs" to query status" in stderr

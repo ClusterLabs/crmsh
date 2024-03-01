@@ -13,8 +13,9 @@ from . import config
 from . import options
 from . import userdir
 from . import utils
+from .sh import ShellUtils
 from .utils import stdout2list, is_program, is_process, to_ascii
-from .utils import os_types_list, get_stdout
+from .utils import os_types_list
 from .utils import crm_msec, crm_time_cmp
 from . import log
 
@@ -37,7 +38,7 @@ def crm_resource(opts):
 
 @utils.memoize
 def can_use_crm_resource():
-    _rc, s = get_stdout("crm_resource --list-ocf-providers", stderr_on=False)
+    _rc, s = ShellUtils().get_stdout("crm_resource --list-ocf-providers", stderr_on=False)
     return s != ""
 
 

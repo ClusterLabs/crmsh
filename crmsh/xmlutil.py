@@ -8,15 +8,16 @@ from lxml import etree, doctestcompare
 import copy
 import bz2
 from collections import defaultdict
+from tempfile import mktemp
 
-from . import config
+from . import config, sh
 from . import options
 from . import schema
 from . import constants
 from . import userdir
-from tempfile import mktemp
+from .sh import ShellUtils
 from .utils import add_sudo, str2file, str2tmp, get_boolean, handle_role_for_ocf_1_1, copy_local_file, rmfile
-from .utils import get_stdout, get_stdout_or_raise_error, stdout2list, crm_msec, crm_time_cmp
+from .utils import stdout2list, crm_msec, crm_time_cmp
 from .utils import olist, get_cib_in_use, get_tempdir, to_ascii, is_boolean_true
 from . import log
 
@@ -293,7 +294,7 @@ class RscState(object):
         if not is_live_cib():
             return False
         test_id = self.rsc_clone(ident) or ident
-        rc, outp = get_stdout(self.rsc_status % test_id, stderr_on=False)
+        rc, outp = ShellUtils().get_stdout(self.rsc_status % test_id, stderr_on=False)
         return outp.find("running") > 0 and outp.find("NOT") == -1
 
     def is_group(self, ident):
@@ -1521,7 +1522,7 @@ class CrmMonXmlParser(object):
         """
         Load xml output of crm_mon
         """
-        output = get_stdout_or_raise_error(constants.CRM_MON_XML_OUTPUT, remote=self.peer, no_raise=True)
+        _, output, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.peer, constants.CRM_MON_XML_OUTPUT)
         return text2elem(output)
 
     def is_node_online(self, node):

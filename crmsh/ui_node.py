@@ -17,7 +17,7 @@ from . import xmlutil
 from .cliformat import cli_nvpairs, nvpairs2list
 from . import term
 from .cibconfig import cib_factory
-from .ui_resource import rm_meta_attribute
+from .sh import ShellUtils
 from . import log
 
 
@@ -244,14 +244,11 @@ keep the node in standby after reboot. The life time defaults to
         context.fatal_error("Should either use --all or specific node(s)")
 
     # return local node
-    if not options.all and not args:
+    if (not options.all and not args) or (len(args) == 1 and args[0] == utils.this_node()):
         return [utils.this_node()]
     member_list = utils.list_cluster_nodes()
     if not member_list:
         context.fatal_error("Cannot get the node list from cluster")
-    for node in args:
-        if node not in member_list:
-            context.fatal_error("Node \"{}\" is not a cluster node".format(node))
 
     node_list = member_list if options.all else args
     for node in node_list:
@@ -335,7 +332,9 @@ class NodeMgmt(command.UI):
             xml = find(uname, cfg_nodes)
             state = find(uname, node_states)
             if xml is not None or state is not None:
-                is_offline = state is not None and state.get("crmd") == "offline"
+                is_offline = state is not None and \
+                    (state.get("crmd") == "offline" or \
+                        (state.get("crmd").isdigit() and int(state.get("crmd")) == 0))
                 print_node(*unpack_node_xmldata(xml if xml is not None else state, is_offline))
 
         if node is not None:
@@ -501,13 +500,14 @@ class NodeMgmt(command.UI):
             cib_elem = xmlutil.cibdump2elem()
             if cib_elem is None:
                 return False
-            if cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node) == ["online"]:
+            crmd = cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node)
+            if crmd == ["online"] or (crmd[0].isdigit() and int(crmd[0]) != 0):
                 return utils.ext_cmd(self.node_cleanup_resources % node) == 0
-            elif cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node) == ["true"]:
+            in_ccm = cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node)
+            if in_ccm == ["true"] or (in_ccm[0].isdigit() and int(in_ccm[0]) != 0):
                 logger.warning("Node is offline according to Pacemaker, but online according to corosync. First shut down node '%s'", node)
                 return False
-            else:
-                return utils.ext_cmd(self.node_clear_state_118 % node) == 0
+            return utils.ext_cmd(self.node_clear_state_118 % node) == 0
         else:
             return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
                 utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
@@ -516,7 +516,7 @@ class NodeMgmt(command.UI):
     def call_delnode(cls, node):
         "Remove node (how depends on cluster stack)"
         rc = True
-        ec, s = utils.get_stdout("%s -p" % cls.crm_node)
+        ec, s = ShellUtils().get_stdout("%s -p" % cls.crm_node)
         if not s:
             logger.error('%s -p could not list any nodes (rc=%d)', cls.crm_node, ec)
             rc = False
@@ -535,7 +535,7 @@ class NodeMgmt(command.UI):
         if ec != 0:
             node_xpath = "//nodes/node[@uname='{}']".format(node)
             cmd = 'cibadmin --delete-all --force --xpath "{}"'.format(node_xpath)
-            rc, _, err = utils.get_stdout_stderr(cmd)
+            rc, _, err = ShellUtils().get_stdout_stderr(cmd)
             if rc != 0:
                 logger.error('"%s" failed, rc=%d, %s', cmd, rc, err)
                 return False

@@ -203,7 +203,7 @@ class TestUtils(TestCase):
 
     @mock.patch('crmsh.crash_test.utils.crmshutils.this_node')
     @mock.patch('crmsh.crash_test.utils.msg_error')
-    @mock.patch('crmsh.crash_test.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_this_node_false(self, mock_run, mock_error, mock_this_node):
         mock_run.return_value = (1, None, "error data")
         mock_this_node.return_value = "node1"
@@ -215,7 +215,7 @@ class TestUtils(TestCase):
         mock_error.assert_called_once_with("error data")
         mock_this_node.assert_called_once_with()
     
-    @mock.patch('crmsh.crash_test.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_this_node(self, mock_run):
         mock_run.return_value = (0, "data", None)
         res = utils.this_node()
@@ -227,7 +227,7 @@ class TestUtils(TestCase):
         utils.str_to_datetime("Mon Nov  2 15:37:11 2020", "%a %b %d %H:%M:%S %Y")
         mock_datetime.strptime.assert_called_once_with("Mon Nov  2 15:37:11 2020", "%a %b %d %H:%M:%S %Y")
 
-    @mock.patch('crmsh.crash_test.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_corosync_port_list(self, mock_run):
         output = """
 totem.interface.0.bindnetaddr (str) = 10.10.10.121
@@ -335,7 +335,7 @@ totem.interface.1.ttl (u8) = 1
             ])
 
     @mock.patch('crmsh.crash_test.utils.msg_error')
-    @mock.patch('crmsh.crash_test.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_check_node_status_error_cmd(self, mock_run, mock_error):
         mock_run.return_value = (1, None, "error")
         res = utils.check_node_status("node1", "member")
@@ -344,7 +344,7 @@ totem.interface.1.ttl (u8) = 1
         mock_error.assert_called_once_with("error")
 
     @mock.patch('crmsh.crash_test.utils.msg_error')
-    @mock.patch('crmsh.crash_test.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_check_node_status(self, mock_run, mock_error):
         output = """
 1084783297 15sp2-1 member
@@ -363,14 +363,14 @@ totem.interface.1.ttl (u8) = 1
             ])
         mock_error.assert_not_called()
 
-    @mock.patch('crmsh.crash_test.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_online_nodes_empty(self, mock_run):
         mock_run.return_value = (0, "data", None)
         res = utils.online_nodes()
         self.assertEqual(res, [])
         mock_run.assert_called_once_with("crm_mon -1")
 
-    @mock.patch('crmsh.crash_test.utils.crmshutils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_online_nodes(self, mock_run):
         output = """
 Node List:
@@ -412,7 +412,7 @@ Node List:
 
     @classmethod
     @mock.patch('crmsh.crash_test.utils.msg_error')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('os.path.exists')
     def test_is_valid_sbd_cmd_error(cls, mock_os_path_exists,
                                     mock_sbd_check_header, mock_msg_err):
@@ -430,7 +430,7 @@ Node List:
 
     @classmethod
     @mock.patch('crmsh.crash_test.utils.msg_error')
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('os.path.exists')
     def test_is_valid_sbd_not_sbd(cls, mock_os_path_exists,
                                   mock_sbd_check_header, mock_msg_err):
@@ -452,7 +452,7 @@ sbd failed; please check the logs.
         mock_msg_err.assert_called_once_with(err_output)
 
     @classmethod
-    @mock.patch('crmsh.utils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('os.path.exists')
     def test_is_valid_sbd_is_sbd(cls, mock_os_path_exists,
                                  mock_sbd_check_header):

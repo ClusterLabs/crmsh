@@ -1,6 +1,5 @@
 import re
 import os
-import sys
 
 from crmsh import utils as crmshutils
 from crmsh import bootstrap as crmshboot
@@ -9,6 +8,8 @@ from crmsh import completers
 from . import utils
 from . import task
 from . import config
+from ..service_manager import ServiceManager
+from ..sh import ShellUtils
 
 
 def fix(context):
@@ -122,10 +123,11 @@ def check_time_service():
     """
     task_inst = task.TaskCheck("Checking time service")
     with task_inst.run():
+        service_manager = ServiceManager()
         timekeepers = ('chronyd.service', 'ntp.service', 'ntpd.service')
         timekeeper = None
         for tk in timekeepers:
-            if crmshutils.service_is_available(tk):
+            if service_manager.service_is_available(tk):
                 timekeeper = tk
                 break
         else:
@@ -133,11 +135,11 @@ def check_time_service():
             return
 
         task_inst.info("{} is available".format(timekeeper))
-        if crmshutils.service_is_enabled(timekeeper):
+        if service_manager.service_is_enabled(timekeeper):
             task_inst.info("{} is enabled".format(timekeeper))
         else:
             task_inst.warn("{} is disabled".format(timekeeper))
-        if crmshutils.service_is_active(timekeeper):
+        if service_manager.service_is_active(timekeeper):
             task_inst.info("{} is active".format(timekeeper))
         else:
             task_inst.warn("{} is not active".format(timekeeper))
@@ -153,7 +155,7 @@ def check_port_open(task, firewall_type):
         return
 
     if firewall_type == "firewalld":
-        rc, out, err = crmshutils.get_stdout_stderr('firewall-cmd --list-port')
+        rc, out, err = ShellUtils().get_stdout_stderr('firewall-cmd --list-port')
         if rc != 0:
             task.error(err)
             return
@@ -176,7 +178,7 @@ def check_firewall():
         for item in ("firewalld", "SuSEfirewall2"):
             if crmshutils.package_is_installed(item):
                 task_inst.info("{}.service is available".format(item))
-                if crmshutils.service_is_active(item):
+                if ServiceManager().service_is_active(item):
                     task_inst.info("{}.service is active".format(item))
                     check_port_open(task_inst, item)
                 else:
@@ -204,16 +206,17 @@ def check_cluster_service(quiet=False):
     """
     task_inst = task.TaskCheck("Checking cluster service", quiet=quiet)
     with task_inst.run():
-        if crmshutils.service_is_enabled("pacemaker"):
+        service_manager = ServiceManager()
+        if service_manager.service_is_enabled("pacemaker"):
             task_inst.info("pacemaker.service is enabled")
         else:
             task_inst.warn("pacemaker.service is disabled")
 
-        if crmshutils.service_is_enabled("corosync"):
+        if service_manager.service_is_enabled("corosync"):
             task_inst.warn("corosync.service is enabled")
 
         for s in ("corosync", "pacemaker"):
-            if crmshutils.service_is_active(s):
+            if service_manager.service_is_active(s):
                 task_inst.info("{}.service is running".format(s))
             else:
                 task_inst.error("{}.service is not running!".format(s))
@@ -233,7 +236,7 @@ def check_fencing():
             return
 
         task_inst.info("stonith is enabled")
-        rc, outp, _ = crmshutils.get_stdout_stderr("crm_mon -r1 | grep '(stonith:.*):'")
+        rc, outp, _ = ShellUtils().get_stdout_stderr("crm_mon -r1 | grep '(stonith:.*):'")
         if rc != 0:
             task_inst.warn("No stonith resource configured!")
             return
@@ -250,7 +253,7 @@ def check_fencing():
             task_inst.warn(state_msg)
 
         if re.search(r'sbd$', res_agent):
-            if crmshutils.service_is_active("sbd"):
+            if ServiceManager().service_is_active("sbd"):
                 task_inst.info("sbd service is running")
             else:
                 task_inst.warn("sbd service is not running!")
@@ -265,7 +268,7 @@ def check_nodes():
     """
     task_inst = task.TaskCheck("Checking nodes")
     with task_inst.run():
-        rc, outp, errp = crmshutils.get_stdout_stderr("crm_mon -1")
+        rc, outp, errp = ShellUtils().get_stdout_stderr("crm_mon -1")
         if rc != 0:
             task_inst.error("run \"crm_mon -1\" error: {}".format(errp))
             return

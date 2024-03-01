@@ -1,5 +1,5 @@
 :man source:   crm
-:man version:  4.0.0
+:man version:  4.6.0
 :man manual:   crmsh documentation
 
 crm(8)
@@ -5008,34 +5008,9 @@ wdiff 2066 2067
 wdiff pe-input-2080.bz2 live status
 ...............
 
-[[cmdhelp_root_report,Create cluster status report]]
+[[cmdhelp_root_report,Create cluster status report,From Code]]
 === `report`
-
-Interface to a tool for creating a cluster report. A report is an
-archive containing log files, configuration files, system information
-and other relevant data for a given time period. This is a useful tool
-for collecting data to attach to bug reports, or for detecting the
-root cause of errors resulting in resource failover, for example.
-
-See `crmsh_crm_report(8)` for more details on arguments,
-or call `crm report -h`
-
-Usage:
-...............
-report -f {time|"cts:"testnum} [-t time] [-u user] [-l file]
-       [-n nodes] [-E files] [-p patt] [-L patt] [-e prog]
-       [-MSDZAVsvhd] [dest]
-...............
-
-Examples:
-...............
-report -f 2pm report_1
-report -f "2007/9/5 12:30" -t "2007/9/5 14:00" report_2
-report -f 1:00 -t 3:00 -l /var/log/cluster/ha-debug report_3
-report -f "09sep07 2:00" -u hbadmin report_4
-report -f 18:00 -p "usern.*" -p "admin.*" report_5
-report -f cts:133 ctstest_133
-...............
+See "crm help report" or "crm report --help"
 
 === `end` (`cd`, `up`)
 

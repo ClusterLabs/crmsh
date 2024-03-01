@@ -11,6 +11,7 @@ from . import xmlutil
 from . import ui_utils
 from . import options
 from .cibconfig import cib_factory
+from .sh import ShellUtils
 from . import log
 
 
@@ -508,7 +509,7 @@ class RscMgmt(command.UI):
         if cmd == "set":
             # query the current failcount status
             query_cmd = "cibadmin -Ql --xpath '/cib/status/node_state[@id='{}']'".format(nodeid)
-            rc, out, err = utils.get_stdout_stderr(query_cmd)
+            rc, out, err = ShellUtils().get_stdout_stderr(query_cmd)
             if rc != 0:
                 context.fatal_error(err)
 

@@ -12,7 +12,7 @@ from .ra import disambiguate_ra_type, ra_type_validate
 from . import schema
 from .utils import keyword_cmp, verify_boolean, lines2cli
 from .utils import get_boolean, olist, canonical_boolean
-from .utils import handle_role_for_ocf_1_1, compatible_role
+from .utils import handle_role_for_ocf_1_1, compatible_role, add_time_unit_if_needed
 from . import xmlutil
 from . import log
 
@@ -629,7 +629,7 @@ class BaseParser(object):
         for op in oplist:
             del name_map[op]
         bundle_list = olist([op for op in name_map if op.lower()
-                            in ('docker', 'rkt', 'network', 'port-mapping', 'storage', 'primitive')])
+                            in ('docker', 'podman', 'rkt', 'network', 'port-mapping', 'storage', 'primitive')])
         for bl in bundle_list:
             del name_map[bl]
         initial = True
@@ -700,9 +700,9 @@ class BaseParser(object):
                         constants.DEFAULT_INTERVAL_IN_ACTION
                 adv_timeout = extract_advised_value(action_advised_attr_dict, action, 'timeout', op_node.get('role'))
                 if op_node.get('interval') is None:
-                    op_node.set('interval', adv_interval)
+                    op_node.set('interval', add_time_unit_if_needed(adv_interval))
                 if op_node.get('timeout') is None and adv_timeout:
-                    op_node.set('timeout', adv_timeout)
+                    op_node.set('timeout', add_time_unit_if_needed(adv_timeout))
                 configured_action_list.append(action)
 
         for action in action_advised_attr_dict:
@@ -717,15 +717,22 @@ class BaseParser(object):
                     for k, v in v_dict.items():
                         # set normal attributes
                         if k in constants.ADVISED_KEY_LIST:
+                            if k in ('interval', 'timeout'):
+                                v = add_time_unit_if_needed(v)
                             op_node.set(k, handle_role_for_ocf_1_1(v))
                     operations_node.append(op_node)
             else:
+                for k, v in value.items():
+                    if k in ('interval', 'timeout'):
+                        v = add_time_unit_if_needed(v)
+                        value.update({k: v})
                 op_node = xmlutil.new('op', name=action, **value)
                 operations_node.append(op_node)
 
         out.append(operations_node)
 
     def match_container(self, out, _type):
+        bundle_id = out.get('id')
         container_node = None
         self.match(_type)
         all_attrs = self.match_nvpairs(minpairs=0, terminator=['network', 'storage', 'meta', 'primitive'])
@@ -738,15 +745,23 @@ class BaseParser(object):
                 container_node = exist_node
 
             child_flag = False
+            index = 0
             for nvp in all_attrs:
-                if nvp.get('name') in ['port-mapping', 'storage-mapping']:
-                    inst_attrs = xmlutil.child(container_node, nvp.get('name'))
+                name = nvp.get('name')
+                if name in ('port-mapping', 'storage-mapping'):
+                    index += 1
+                    inst_attrs = xmlutil.child(container_node, name)
+                    # set meaningful id for port-mapping and storage-mapping
+                    # when the bundle is newly created
+                    if self.complete_advised:
+                        id_str = f"{bundle_id}_{name.replace('-', '_')}_{index}"
+                        inst_attrs.set('id', id_str)
                     child_flag = True
                     continue
                 if child_flag:
-                    inst_attrs.set(nvp.get('name'), nvp.get('value'))
+                    inst_attrs.set(name, nvp.get('value'))
                 else:
-                    container_node.set(nvp.get('name'), nvp.get('value'))
+                    container_node.set(name, nvp.get('value'))
             out.append(container_node)
 
         else:
@@ -774,10 +789,14 @@ class BaseParser(object):
         valid_attrs = validator.op_attributes()
         inst_attrs = None
         for nvp in all_attrs:
-            if nvp.get('name') in valid_attrs:
+            name = nvp.get('name')
+            if name in valid_attrs:
                 if inst_attrs is not None:
-                    self.err("Attribute order error: {} must appear before any instance attribute".format(nvp.get('name')))
-                node.set(nvp.get('name'), nvp.get('value'))
+                    self.err(f"Attribute order error: {name} must appear before any instance attribute")
+                value = nvp.get('value')
+                if name in ('interval', 'timeout'):
+                    value = add_time_unit_if_needed(value)
+                node.set(name, value)
             else:
                 if inst_attrs is None:
                     inst_attrs = xmlutil.child(node, 'instance_attributes')
@@ -959,6 +978,7 @@ class ResourceParser(BaseParser):
         out.set('id', self.match_identifier())
         xmlutil.maybe_set(out, 'description', self.try_match_description())
         self.match_arguments(out, {'docker': 'docker',
+                                   'podman': 'podman',
                                    'rkt': 'rkt',
                                    'network': 'network',
                                    'port-mapping': 'port-mapping',

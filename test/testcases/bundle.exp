@@ -28,7 +28,7 @@ node node2 \
        utilization cpu=4
 primitive dummy Dummy \
 	meta target-role=Stopped \
-	op monitor interval=10 timeout=20s \
+	op monitor interval=10s timeout=20s \
 	op start timeout=20s interval=0s \
 	op stop timeout=20s interval=0s
 primitive st stonith:ssh \
@@ -36,16 +36,18 @@ primitive st stonith:ssh \
 	meta target-role=Started requires=nothing \
 	op start timeout=60s interval=0s \
 	op monitor interval=60m timeout=60s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 primitive st2 stonith:ssh \
 	params hostlist="node1 node2" \
-	op monitor timeout=20s interval=3600 \
+	op monitor timeout=20s interval=3600s \
 	op start timeout=20s interval=0s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 bundle bundle-test1 \
 	docker image=test \
-	network ip-range-start=10.10.10.123 port-mapping id=port1 port=80 \
-	storage storage-mapping id=storage1 target-dir=test source-dir=test \
+	network ip-range-start=10.10.10.123 \
+		port-mapping port=80 \
+	storage \
+		storage-mapping target-dir=test source-dir=test \
 	meta target-role=Stopped
 bundle bundle-test2 \
 	docker image=test \
