@@ -2119,10 +2119,7 @@ def bootstrap_init(context):
     if stage is None:
         stage = ""
 
-    # vgfs stage requires running cluster, everything else requires inactive cluster,
-    # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
-    # just in case this breaks ha-cluster-join on another node).
-    if stage in ("vgfs", "admin", "qdevice", "ocfs2"):
+    if stage in ("admin", "qdevice", "ocfs2"):
         if not _context.cluster_is_running:
             utils.fatal("Cluster is inactive - can't run %s stage" % (stage))
     elif stage == "":
