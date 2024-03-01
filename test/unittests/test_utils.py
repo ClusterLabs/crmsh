@@ -732,18 +732,20 @@ class TestInterfacesInfo(unittest.TestCase):
         res = self.interfaces_info_fake.nic_first_ip("eth0")
         self.assertEqual(res, "10.10.10.1")
 
-    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
+    @mock.patch('crmsh.sh.cluster_shell')
     def test_get_default_nic_from_route(self, mock_run):
         output = """default via 192.168.122.1 dev eth8 proto dhcp 
         10.10.10.0/24 dev eth1 proto kernel scope link src 10.10.10.51 
         20.20.20.0/24 dev eth2 proto kernel scope link src 20.20.20.51 
         192.168.122.0/24 dev eth8 proto kernel scope link src 192.168.122.120"""
-        mock_run.return_value = output
+        mock_run_inst = mock.Mock()
+        mock_run.return_value = mock_run_inst
+        mock_run_inst.get_stdout_or_raise_error.return_value = output
 
         res = self.interfaces_info.get_default_nic_from_route()
         self.assertEqual(res, "eth8")
 
-        mock_run.assert_called_once_with("ip -o route show")
+        mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("ip -o route show")
 
 
 @mock.patch("crmsh.utils.get_nodeid_from_name")
