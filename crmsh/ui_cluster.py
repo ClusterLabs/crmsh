@@ -348,8 +348,6 @@ Stage can be one of:
     sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
     ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
-    vgfs        Create volume group and filesystem (ocfs2 template only,
-                    requires -o <dev>) NOTE: this stage is an alias of ocfs2 stage
     admin       Create administration virtual IP (optional)
     qdevice     Configure qdevice and qnetd
 
@@ -459,9 +457,6 @@ Examples:
         stage = ""
         if len(args):
             stage = args[0]
-        if stage == "vgfs":
-            stage = "ocfs2"
-            logger.warning("vgfs stage was deprecated and is an alias of ocfs2 stage now")
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
 
