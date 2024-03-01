@@ -20,7 +20,6 @@ jobs:
     uses: ./.github/workflows/crmsh-ci.yml
 
   delivery:
-    if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'master'
     needs: integration
     runs-on: ubuntu-20.04
     timeout-minutes: 10
@@ -38,7 +37,6 @@ jobs:
           /bin/bash -c "cp -r /package ~/package && cd ~/package && /scripts/upload.sh"
 
   submit:
-    if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'master'
     needs: delivery
     runs-on: ubuntu-20.04
     timeout-minutes: 10
