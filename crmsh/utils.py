@@ -2443,9 +2443,7 @@ class InterfacesInfo(object):
         """
         #TODO what if user only has ipv6 route?
         cmd = "ip -o route show"
-        rc, out, err = ShellUtils().get_stdout_stderr(cmd)
-        if rc != 0:
-            raise ValueError(err)
+        out = sh.cluster_shell().get_stdout_or_raise_error(cmd)
         res = re.search(r'^default via .* dev (.*?) ', out)
         return res.group(1) if res else self.nic_list[0]
 

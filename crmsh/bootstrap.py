@@ -1739,8 +1739,6 @@ def swap_public_ssh_key_for_secondary_user(shell: sh.ClusterShell, host: str, us
     authorized_key_manager.add(None, user, remote_keys[0])
     authorized_key_manager.add(host, user, local_key)
 
-    change_user_shell('hacluster', seed_host)
-
 
 def swap_public_ssh_key(
         remote_node,
@@ -1984,7 +1982,7 @@ def join_cluster(seed_host, remote_user):
     Cluster configuration for joining node.
     """
     is_qdevice_configured = corosync.is_qdevice_configured()
-    if is_qdevice_configured and not utils.service_is_available("corosync-qdevice.service"):
+    if is_qdevice_configured and not ServiceManager().service_is_available("corosync-qdevice.service"):
         utils.fatal("corosync-qdevice.service is not available")
 
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
