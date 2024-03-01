@@ -29,7 +29,7 @@ Feature: Use "crm configure set" to update attributes and operations
     When    Try "crm configure set d.name value"
     Then    Except "ERROR: configure.set: Attribute not found: d.name"
     When    Try "crm configure set d.monitor.100.timeout 10"
-    Then    Except "ERROR: configure.set: Operation "monitor" interval "100" not found for resource d"
+    Then    Except "ERROR: configure.set: Operation "monitor" interval "100s" not found for resource d"
     When    Try "crm configure set s.monitor.interval 20"
     Then    Except "ERROR: configure.set: Should specify interval of monitor"
 
@@ -43,6 +43,25 @@ Feature: Use "crm configure set" to update attributes and operations
     When    Run "crm configure set s.monitor.5s.interval 20s" on "hanode1"
     And     Run "crm configure show s" on "hanode1"
     Then    Expected "interval=20s" in stdout
+    When    Run "crm configure set s.monitor.20s.interval 60s" on "hanode1"
+    And     Run "crm configure show s" on "hanode1"
+    Then    Expected "interval=60s" in stdout
+    When    Run "crm configure set s.monitor.60.interval 50" on "hanode1"
+    And     Run "crm configure show s" on "hanode1"
+    Then    Expected "interval=50s" in stdout
+
+    When    Run "crm configure primitive d2 Dummy op monitor interval=10 timeout=20 op start timeout=66" on "hanode1"
+    And     Run "crm configure show d2" on "hanode1"
+    Then    Expected "monitor interval=10s timeout=20s" in stdout
+    When    Run "crm configure show d2" on "hanode1"
+    Then    Expected "start timeout=66s" in stdout
+    When    Run "crm configure set d2.monitor.interval 33" on "hanode1"
+    And     Run "crm configure show d2" on "hanode1"
+    Then    Expected "interval=33s" in stdout
+    When    Run "crm configure set d2.monitor.33s.interval 50" on "hanode1"
+    And     Run "crm configure show d2" on "hanode1"
+    Then    Expected "interval=50s" in stdout
+
     When    Run "crm configure set op-options.timeout 101" on "hanode1"
     And     Run "crm configure show op-options" on "hanode1"
     Then    Expected "timeout=101" in stdout

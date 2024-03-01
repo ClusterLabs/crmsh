@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from crmsh import utils as crmshutils
 from . import config
 from crmsh import log
+from crmsh.sh import ShellUtils
 
 
 logger = log.setup_logger(__name__)
@@ -129,7 +130,7 @@ def check_node_status(node, state):
     """
     Check whether the node has expected state
     """
-    rc, stdout, stderr = crmshutils.get_stdout_stderr('crm_node -l')
+    rc, stdout, stderr = ShellUtils().get_stdout_stderr('crm_node -l')
     if rc != 0:
         msg_error(stderr)
         return False
@@ -143,7 +144,7 @@ def online_nodes():
     """
     Get online node list
     """
-    rc, stdout, stderr = crmshutils.get_stdout_stderr('crm_mon -1')
+    rc, stdout, stderr = ShellUtils().get_stdout_stderr('crm_mon -1')
     if rc == 0 and stdout:
         res = re.search(r'Online:\s+\[\s(.*)\s\]', stdout)
         if res:
@@ -167,7 +168,7 @@ def this_node():
     Try to get the node name from crm_node command
     If failed, use its hostname
     """
-    rc, stdout, stderr = crmshutils.get_stdout_stderr("crm_node --name")
+    rc, stdout, stderr = ShellUtils().get_stdout_stderr("crm_node --name")
     if rc != 0:
         msg_error(stderr)
         return crmshutils.this_node()
@@ -183,7 +184,7 @@ def corosync_port_list():
     Get corosync ports using corosync-cmapctl
     """
     ports = []
-    rc, out, _ = crmshutils.get_stdout_stderr("corosync-cmapctl totem.interface")
+    rc, out, _ = ShellUtils().get_stdout_stderr("corosync-cmapctl totem.interface")
     if rc == 0 and out:
         ports = re.findall(r'(?:mcastport.*) ([0-9]+)', out)
     return ports
@@ -251,7 +252,7 @@ def is_valid_sbd(dev):
     if not os.path.exists(dev):
         return False
 
-    rc, out, err = crmshutils.get_stdout_stderr(config.SBD_CHECK_CMD.format(dev=dev))
+    rc, out, err = ShellUtils().get_stdout_stderr(config.SBD_CHECK_CMD.format(dev=dev))
     if rc != 0 and err:
         msg_error(err)
         return False

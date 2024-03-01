@@ -12,8 +12,8 @@ class TestCrmMonXmlParser(unittest.TestCase):
     """
     Unitary tests for crmsh.xmlutil.CrmMonXmlParser
     """
-    @mock.patch('crmsh.xmlutil.get_stdout_or_raise_error')
-    def setUp(self, mock_run):
+    @mock.patch('crmsh.sh.cluster_shell')
+    def setUp(self, mock_cluster_shell):
         """
         Test setUp.
         """
@@ -33,17 +33,8 @@ class TestCrmMonXmlParser(unittest.TestCase):
   </resources>
 </data>
         '''
-        mock_run.return_value = data
+        mock_cluster_shell().get_rc_stdout_stderr_without_input.return_value = (0, data, '')
         self.parser_inst = xmlutil.CrmMonXmlParser()
-
-    @mock.patch('crmsh.xmlutil.text2elem')
-    @mock.patch('crmsh.xmlutil.get_stdout_or_raise_error')
-    def test_load(self, mock_run, mock_text2elem):
-        mock_run.return_value = "data"
-        mock_text2elem.return_value = mock.Mock()
-        self.parser_inst._load()
-        mock_run.assert_called_once_with(constants.CRM_MON_XML_OUTPUT, remote=None, no_raise=True)
-        mock_text2elem.assert_called_once_with("data")
 
     def test_is_node_online(self):
         assert self.parser_inst.is_node_online("tbw-1") is True

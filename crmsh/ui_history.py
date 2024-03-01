@@ -15,6 +15,7 @@ from . import ui_utils
 from . import xmlutil
 from . import options
 from .cibconfig import mkset_obj, cib_factory
+from .sh import ShellUtils
 from . import history
 from . import cmd_status
 from . import log
@@ -440,7 +441,7 @@ class History(command.UI):
             f2 = utils.str2tmp(s2)
             try:
                 if f1 and f2:
-                    _, s = utils.get_stdout(cmd.format(f1=f1, f2=f2))
+                    _, s = ShellUtils().get_stdout(cmd.format(f1=f1, f2=f2))
             finally:
                 for f in (f1, f2):
                     try:

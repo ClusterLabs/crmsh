@@ -2,7 +2,7 @@
 # See COPYING for license information.
 
 import re
-from . import utils
+from .sh import ShellUtils
 from . import log
 
 
@@ -20,7 +20,7 @@ def _prettify(line, indent=0):
 
 
 def verify(cib):
-    rc, _, stderr = utils.get_stdout_stderr(cib_verify, cib.encode('utf-8'))
+    rc, _, stderr = ShellUtils().get_stdout_stderr(cib_verify, cib.encode('utf-8'))
     for i, line in enumerate(line for line in stderr.split('\n') if line):
         if i == 0:
             if "warning:" in line:

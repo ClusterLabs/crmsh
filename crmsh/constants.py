@@ -348,14 +348,14 @@ extra_cluster_properties = ("dc-version",
                             "cluster-name")
 pcmk_version = ""  # set later
 
-container_type = ["docker", "rkt"]
+container_type = ("docker", "podman", "rkt")
 container_helptxt = {
-    "docker": {
+    "container": {
         "image": """image:(string)
-    Docker image tag(required)""",
+    Container image tag(required)""",
 
         "replicas": """replicas:(integer)
-    Default:Value of masters if that is positive, else 1
+    Default:Value of promoted-max if that is positive, else 1
     A positive integer specifying the number of container instances to launch""",
 
         "replicas-per-host": """replicas-per-host:(integer)
@@ -363,11 +363,11 @@ container_helptxt = {
     A positive integer specifying the number of container instances allowed to
     run on a single node""",
 
-        "masters": """masters:(integer)
+        "promoted-max": """promoted-max:(integer)
     Default:0
     A non-negative integer that, if positive, indicates that the containerized
-    service should be treated as a multistate service, with this many replicas
-    allowed to run the service in the master role""",
+    service should be treated as a promotable service, with this many replicas
+    allowed to run the service in the promoted role""",
 
         "run-command": """run-command:(string)
     Default:/usr/sbin/pacemaker_remoted if bundle contains a primitive, otherwise none
@@ -376,10 +376,15 @@ container_helptxt = {
     (but could, for example, be a script that does other stuff, too).""",
 
         "options": """options:(string)
-    Extra command-line options to pass to docker run"""
+    Extra command-line options to pass to the 'docker run', 'podman run' or 'rkt run' command"""
     },
 
     "network": {
+        "add-host": """add-host:(string)
+    Default:True
+    If True, and ip-range-start is specified, Pacemake will automatically ensure that
+    /etc/hosts inside the containers has entries for each replica name and its assigned IP.""",
+
         "ip-range-start": """ip-range-start:(IPv4 address)
     If specified, Pacemaker will create an implicit ocf:heartbeat:IPaddr2 resource
     for each container instance, starting with this IP address, using up to replicas
@@ -441,44 +446,15 @@ container_helptxt = {
         "source-dir-root": """source-dir-root:(string)
     The start of a path on the host’s filesystem that will be mapped into the container,
     using a different subdirectory on the host for each container instance. The subdirectory
-    will be named the same as the bundle host name, as described in the note for ip-range-start.
-    Exactly one of source-dir and source-dir-root must be specified in a storage-mapping.""",
+    will be named the same as the replica name. Exactly one of source-dir and source-dir-root
+    must be specified in a storage-mapping.""",
 
            "target-dir": """target-dir:(string)
     The path name within the container where the host storage will be mapped (required)""",
 
             "options": """options:(string)
-    File system mount options to use when mapping the storage"""
+    A comma-separated list of file system mount options to use when mapping the storage"""
     },
-
-    "rkt": {
-        "image": """image:(string)
-    Container image tag (required)""",
-
-        "replicas": """replicas:(integer)
-    Default:Value of masters if that is positive, else 1
-    A positive integer specifying the number of container instances to launch""",
-
-        "replicas-per-host": """replicas-per-host:(interval)
-    Default:1
-    A positive integer specifying the number of container instances allowed to
-    run on a single node""",
-
-        "masters": """masters:(integer)
-    Default:0
-    A non-negative integer that, if positive, indicates that the containerized
-    service should be treated as a multistate service, with this many replicas
-    allowed to run the service in the master role""",
-
-        "run-command": """run-command:(string)
-    Default:/usr/sbin/pacemaker_remoted if bundle contains a primitive, otherwise none
-    This command will be run inside the container when launching it ("PID 1").
-    If the bundle contains a primitive, this command must start pacemaker_remoted
-    (but could, for example, be a script that does other stuff, too).""",
-
-        "options": """options:(string)
-    Extra command-line options to pass to rkt run"""
-    }
 }
 
 

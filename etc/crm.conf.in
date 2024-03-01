@@ -75,6 +75,7 @@ ocf_root = @OCF_ROOT_DIR@
 ; [report]
 ; from_time = -12H
 ; compress = yes
+; compress_prog = gzip
 ; speed_up = no
 ; collect_extra_logs = /var/log/messages /var/log/pacemaker.log
 ; remove_exist_dest = no

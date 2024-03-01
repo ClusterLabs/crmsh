@@ -10,11 +10,12 @@ import re
 import socket
 import typing
 
-from . import utils
+from . import utils, sh
 from . import tmpfiles
 from . import parallax
 from . import log
 from . import conf_parser
+from .sh import ShellUtils
 
 
 logger = log.setup_logger(__name__)
@@ -72,11 +73,7 @@ def check_tools():
 
 
 def cfgtool(*args):
-    return utils.get_stdout(['corosync-cfgtool'] + list(args), shell=False)
-
-
-def quorumtool(*args):
-    return utils.get_stdout(['corosync-quorumtool'] + list(args), shell=False)
+    return ShellUtils().get_stdout(['corosync-cfgtool'] + list(args), shell=False)
 
 
 def query_status(status_type):
@@ -101,7 +98,7 @@ def query_ring_status():
     """
     Query corosync ring status
     """
-    rc, out, err = utils.get_stdout_stderr("corosync-cfgtool -s")
+    rc, out, err = ShellUtils().get_stdout_stderr("corosync-cfgtool -s")
     if rc != 0 and err:
         raise ValueError(err)
     if out:
@@ -114,7 +111,7 @@ def query_quorum_status():
 
     """
     utils.print_cluster_nodes()
-    rc, out, err = utils.get_stdout_stderr("corosync-quorumtool -s")
+    rc, out, err = ShellUtils().get_stdout_stderr("corosync-quorumtool -s")
     if rc != 0 and err:
         raise ValueError(err)
     # If the return code of corosync-quorumtool is 2,
@@ -130,7 +127,7 @@ def query_qdevice_status():
     if not is_qdevice_configured():
         raise ValueError("QDevice/QNetd not configured!")
     cmd = "corosync-qdevice-tool -sv"
-    out = utils.get_stdout_or_raise_error(cmd)
+    out = sh.cluster_shell().get_stdout_or_raise_error(cmd)
     utils.print_cluster_nodes()
     print(out)
 
@@ -300,7 +297,7 @@ def get_corosync_value(key):
     Get corosync configuration value from corosync-cmapctl or corosync.conf
     """
     try:
-        out = utils.get_stdout_or_raise_error("corosync-cmapctl {}".format(key))
+        out = sh.cluster_shell().get_stdout_or_raise_error("corosync-cmapctl {}".format(key))
         res = re.search(r'{}\s+.*=\s+(.*)'.format(key), out)
         return res.group(1) if res else None
     except ValueError:

@@ -1,5 +1,4 @@
 #!/bin/bash
-# vim: noexpandtab ts=4 sw=4 sts=4
 DOCKER_IMAGE=${DOCKER_IMAGE:-"liangxin1300/alpha"}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
@@ -234,6 +233,8 @@ deploy_ha_node() {
 	  if [ "$NORMAL_USER_FLAG" -eq 1 ];then
 		set_sshd_config_like_in_azure $node_name
           fi
+	  docker_exec $node_name "sed -i 's/; \[report\]/[report]/' /etc/crm/crm.conf"
+	  docker_exec $node_name "sed -i 's/; compress_prog = .*$/compress_prog = bzip2/g' /etc/crm/crm.conf"
 	else
 	  docker_exec $node_name "useradd -m -s /bin/bash alice 2>/dev/null"
 	  docker_exec $node_name "echo \"alice ALL=(ALL) NOPASSWD:ALL\" > /etc/sudoers.d/alice"

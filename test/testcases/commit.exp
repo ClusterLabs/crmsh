@@ -77,7 +77,7 @@ primitive st stonith:null \
 	meta yoyo-meta="yoyo 2" requires=nothing \
 	op monitor interval=60m timeout=20s \
 	op start timeout=20s interval=0s \
-	op stop timeout=15 interval=0s
+	op stop timeout=15s interval=0s
 group g1 d1 p2
 group g2 d3
 colocation cl1 inf: g1 p3

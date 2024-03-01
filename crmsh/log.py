@@ -6,13 +6,71 @@ import socket
 import shutil
 import logging
 import logging.config
+import typing
 from contextlib import contextmanager
 
 from . import options
 from . import constants
 
-
+DEBUG2 = logging.DEBUG + 5
 CRMSH_LOG_FILE = "/var/log/crmsh/crmsh.log"
+
+
+class DEBUG2Logger(logging.Logger):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def debug2(self, msg, *args, **kwargs):
+        if self.isEnabledFor(DEBUG2):
+            self._log(DEBUG2, msg, args, **kwargs)
+
+
+class NumberedLoggerInterface(DEBUG2Logger):
+    """
+    Interface to prepend a number to the message, used for regression test. When this class is used directly, no numbers are prepend.
+    """
+    lineno = -1
+
+    @classmethod
+    def reset_lineno(cls, to=0):
+        pass
+
+    @classmethod
+    def incr_lineno(cls):
+        pass
+
+
+class NumberedLogger(NumberedLoggerInterface):
+    """
+    Prepend a number to the message, used for regression test
+    """
+    lineno = -1
+
+    def _log( self, level, msg, args, **kwargs):
+        if NumberedLogger.lineno > 0:
+            msg = f'{self.lineno}: {msg}'
+        super()._log(level, msg, args, **kwargs)
+
+    @classmethod
+    def reset_lineno(cls, to=0):
+        cls.lineno = to
+
+    @classmethod
+    def incr_lineno(cls):
+        cls.lineno += 1
+
+    if (sys.version_info.major, sys.version_info.minor) > (3, 6):
+        def findCaller(self, stack_info=False, stacklevel=1):
+            return super().findCaller(stack_info, stacklevel+1)
+    else:
+        def findCaller(self, stack_info=False):
+            if stack_info:
+                return super().findCaller(stack_info)
+            else:
+                f = sys._getframe(4)
+                co = f.f_code
+                sinfo = None
+                return co.co_filename, f.f_lineno, co.co_name, sinfo
 
 
 class ConsoleCustomHandler(logging.StreamHandler):
@@ -33,59 +91,75 @@ class ConsoleCustomHandler(logging.StreamHandler):
         stream.write(self.terminator)
 
 
-class ConsoleCustomFormatter(logging.Formatter):
-    """
-    A custom formatter for console
+class NoBacktraceFormatter(logging.Formatter):
+    """Suppress backtrace unless option debug is set."""
+    def format(self, record):
+        """
+        Format the specified record as text.
 
-    Wrap levelname with colors
-    Wrap message with line number which is used for regression test
-    """
+        The record's attribute dictionary is used as the operand to a
+        string formatting operation which yields the returned string.
+        Before formatting the dictionary, a couple of preparatory steps
+        are carried out. The message attribute of the record is computed
+        using LogRecord.getMessage(). If the formatting string uses the
+        time (as determined by a call to usesTime(), formatTime() is
+        called to format the event time. If there is exception information,
+        it is formatted using formatException() and appended to the message.
+        """
+        if record.exc_info or record.stack_info:
+            from crmsh import config
+            if config.core.debug:
+                return super().format(record)
+            else:
+                record.message = record.getMessage()
+                if self.usesTime():
+                    record.asctime = self.formatTime(record, self.datefmt)
+            return self.formatMessage(record)
+        else:
+            return super().format(record)
+
+
+class ConsoleColoredFormatter(NoBacktraceFormatter):
+    """Print levelname with colors and suppress backtrace."""
     COLORS = {
-        "WARNING": constants.YELLOW,
-        "INFO": constants.GREEN,
-        "ERROR": constants.RED
+        logging.WARNING: constants.YELLOW,
+        logging.INFO: constants.GREEN,
+        logging.ERROR: constants.RED
     }
     FORMAT = "%(levelname)s: %(message)s"
 
-    def __init__(self, lineno=-1, fmt=None):
-        self.lineno = lineno
-        if fmt:
-            super().__init__(fmt=fmt)
-        else:
-            super().__init__(fmt=self.FORMAT)
+    def __init__(self, fmt=None):
+        super().__init__(fmt)
+        if not fmt:
+            fmt = self.FORMAT
+        self._colored_formatter: typing.Mapping[int, logging.Formatter] = {
+            level: NoBacktraceFormatter(fmt.replace('%(levelname)s', f'{color}%(levelname)s{constants.END}'))
+            for level, color in self.COLORS.items()
+        }
 
     def format(self, record):
-        levelname = record.levelname
-        # wrap with colors
-        if levelname in self.COLORS and not options.regression_tests:
-            record.levelname = self.COLORS[levelname] + levelname + constants.END
-        # wrap with line number
-        if self.lineno > 0:
-            msg = record.msg
-            record.msg = "{}: {}".format(self.lineno, msg)
-            record.levelname = levelname
-        return super().format(record)
+        colored_formatter = self._colored_formatter.get(record.levelno)
+        if colored_formatter is not None:
+            return colored_formatter.format(record)
+        else:
+            return super().format(record)
 
 
-class ConsoleReportFormatter(ConsoleCustomFormatter):
-    """
-    Custom formatter for crm report
-    """
-    FORMAT_REPORT = "{}: %(levelname)s: %(message)s".format(socket.gethostname())
+class LeveledFormatter(logging.Formatter):
+    """Format log according to log level."""
+    def __init__(self, base_formatter_factory, default_fmt: str = None, level_fmt: typing.Mapping[int, str] = None):
+        super().__init__()
+        self.default_formatter = base_formatter_factory(default_fmt)
+        self.level_formatter = {
+            level: base_formatter_factory(fmt)
+            for level, fmt in level_fmt.items()
+        }
 
-    def __init__(self):
-        super().__init__(fmt=self.FORMAT_REPORT)
-
-
-class FileCustomFormatter(logging.Formatter):
-    """
-    A custom formatter for file
-    """
-    FORMAT = "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname())
-    DATEFMT = "%b %d %H:%M:%S"
-
-    def __init__(self):
-        super().__init__(fmt=self.FORMAT, datefmt=self.DATEFMT)
+    def format(self, record):
+        formatter = self.level_formatter.get(record.levelno)
+        if formatter is None:
+            formatter = self.default_formatter
+        return formatter.format(record)
 
 
 class DebugCustomFilter(logging.Filter):
@@ -93,10 +167,22 @@ class DebugCustomFilter(logging.Filter):
     A custom filter for debug message
     """
     def filter(self, record):
-        from .config import core, report
-        if record.levelname == "DEBUG":
-            return core.debug or int(report.verbosity) >= 1
-        if record.levelname == "DEBUG2":
+        from .config import core
+        if record.levelno == logging.DEBUG:
+            return core.debug
+        else:
+            return True
+
+
+class ReportDebugCustomFilter(logging.Filter):
+    """
+    A custom filter for crm report debug message
+    """
+    def filter(self, record):
+        from .config import report
+        if record.levelno == logging.DEBUG:
+            return int(report.verbosity) >= 1
+        if record.levelno == DEBUG2:
             return int(report.verbosity) > 1
         else:
             return True
@@ -125,18 +211,32 @@ LOGGING_CFG = {
     "disable_existing_loggers": "False",
     "formatters": {
         "console_report": {
-            "()": ConsoleReportFormatter
+            "()": LeveledFormatter,
+            "base_formatter_factory": ConsoleColoredFormatter,
+            "default_fmt": "{}: %(levelname)s: %(message)s".format(socket.gethostname()),
+            "level_fmt": {
+                DEBUG2: "{}: %(levelname)s: %(funcName)s: %(message)s".format(socket.gethostname()),
+            },
         },
         "console": {
-            "()": ConsoleCustomFormatter
+            "()": LeveledFormatter,
+            "base_formatter_factory": ConsoleColoredFormatter,
+            "default_fmt": "%(levelname)s: %(message)s",
+            "level_fmt": {
+                DEBUG2: "%(levelname)s: %(funcName)s %(message)s",
+            },
         },
         "file": {
-            "()": FileCustomFormatter
+            "format": "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
+            "datefmt": "%b %d %H:%M:%S",
         }
     },
     "filters": {
         "filter": {
             "()": DebugCustomFilter
+        },
+        "filter_report": {
+            "()": ReportDebugCustomFilter
         },
     },
     "handlers": {
@@ -146,7 +246,7 @@ LOGGING_CFG = {
         "console_report": {
             "()": ConsoleCustomHandler,
             "formatter": "console_report",
-            "filters": ["filter"]
+            "filters": ["filter_report"]
         },
         "console": {
             "()": ConsoleCustomHandler,
@@ -186,28 +286,43 @@ LOGGING_CFG = {
 }
 
 
+NO_COLOR_FORMATTERS = {
+    "console_report": {
+        "()": LeveledFormatter,
+        "base_formatter_factory": logging.Formatter,
+        "default_fmt": "{}: %(levelname)s: %(message)s".format(socket.gethostname()),
+        "level_fmt": {
+            DEBUG2: "{}: %(levelname)s: %(funcName)s: %(message)s".format(socket.gethostname()),
+        },
+    },
+    "console": {
+        "()": LeveledFormatter,
+        "base_formatter_factory": logging.Formatter,
+        "default_fmt": "%(levelname)s: %(message)s",
+        "level_fmt": {
+            DEBUG2: "%(levelname)s: %(funcName)s %(message)s",
+        },
+    },
+    "file": {
+        "format": "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
+        "datefmt": "%b %d %H:%M:%S",
+    }
+}
+
+
 class LoggerUtils(object):
     """
     A class to keep/update some attributes related with logger
     Also has methods related with handler and formatter
     And a set of wrapped log message for specific scenarios
     """
-    def __init__(self, logger):
+    def __init__(self, logger: NumberedLogger):
         """
         Init function
         """
         self.logger = logger
         # used in regression test
-        self.lineno = 0
         self.__save_lineno = 0
-
-    def set_debug2_level(self):
-        """
-        Create DEBUG2 level for verbosity
-        """
-        logging.DEBUG2 = logging.DEBUG + 5
-        logging.addLevelName(logging.DEBUG2, "DEBUG2")
-        self.logger.debug2 = lambda msg, *args: self.logger._log(logging.DEBUG2, msg, args)
 
     def get_handler(self, _type):
         """
@@ -226,39 +341,17 @@ class LoggerUtils(object):
         console_handler = self.get_handler("console")
         console_handler.setLevel(logging.WARNING)
 
-    def set_console_formatter(self, lineno):
-        """
-        Pass line number to ConsoleCustomFormatter
-        """
-        console_handler = self.get_handler("console")
-        console_handler.setFormatter(ConsoleCustomFormatter(lineno=lineno))
-
     def reset_lineno(self, to=0):
         """
         Reset line number
         """
-        self.lineno = to
-        self.set_console_formatter(to)
+        self.logger.reset_lineno(to)
 
     def incr_lineno(self):
         """
         Increase line number
         """
-        self.lineno += 1
-        self.set_console_formatter(self.lineno)
-
-    @contextmanager
-    def suppress_new_line(self):
-        """
-        Supress new line in console
-        """
-        console_handler = self.get_handler("console")
-        try:
-            console_handler.terminator = ""
-            yield
-        finally:
-            sys.stdout.flush()
-            console_handler.terminator = "\n"
+        self.logger.incr_lineno()
 
     @contextmanager
     def only_file(self):
@@ -312,11 +405,11 @@ class LoggerUtils(object):
         Mark the line number in the log record
         """
         try:
-            self.__save_lineno = self.lineno
+            self.__save_lineno = self.logger.lineno
             self.reset_lineno()
             yield
         finally:
-            self.reset_lineno(self.__save_lineno)
+            self.logger.reset_lineno(self.__save_lineno)
 
     @contextmanager
     def status_long(self, msg):
@@ -451,7 +544,14 @@ def setup_logging(only_help=False):
     except (PermissionError, FileNotFoundError) as e:
         print('{}WARNING:{} Failed to open log file: {}'.format(constants.YELLOW, constants.END, e), file=sys.stderr)
         LOGGING_CFG["handlers"]["file"] = {'class': 'logging.NullHandler'}
-    logging.config.dictConfig(LOGGING_CFG)
+    logging.addLevelName(DEBUG2, "DEBUG2")
+    if os.environ.get('CRMSH_REGRESSION_TEST'):
+        logging.setLoggerClass(NumberedLogger)
+        LOGGING_CFG['formatters'] = NO_COLOR_FORMATTERS
+        logging.config.dictConfig(LOGGING_CFG)
+    else:
+        logging.setLoggerClass(NumberedLoggerInterface)
+        logging.config.dictConfig(LOGGING_CFG)
 
 
 def setup_logger(name):
@@ -471,6 +571,4 @@ def setup_report_logger(name):
     Get the logger for crm report
     """
     logger = setup_logger(name)
-    logger_utils = LoggerUtils(logger)
-    logger_utils.set_debug2_level()
     return logger

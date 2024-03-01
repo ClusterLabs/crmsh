@@ -16,7 +16,24 @@ Feature: crm report functional test for verifying bugs
     And     Show cluster status on "hanode1"
 
   @clean
+  Scenario: Verify crm report handle files contain non-utf-8 characters (bsc#1130715)
+    When    Run "echo 'abc#$%%^' | iconv -f UTF-8 -t UTF-16 > /opt/text_non_utf8" on "hanode1"
+    Then    This file "/opt/text_non_utf8" will trigger UnicodeDecodeError exception
+    When    Run "crm report -E /opt/text_non_utf8 report1" on "hanode1"
+    Then    File "text_non_utf8" in "report1.tar.bz2"
+    When    Run "rm -f report1.tar.bz2" on "hanode1"
+
+  @clean
+  Scenario: Compressed file ended before the end-of-stream marker was reached (bsc#1206606)
+    When    Run "touch /var/log/pacemaker/pacemaker.log-20221220.xz" on "hanode1"
+    When    Try "crm report report1" on "hanode1"
+    Then    File "pacemaker.log" in "report1.tar.bz2"
+    And     Expected "When reading file "/var/log/pacemaker/pacemaker.log-20221220.xz": Compressed file ended before the end-of-stream marker was reached" in stderr
+    When    Run "rm -f report1.tar.bz2" on "hanode1"
+
+  @clean
   Scenario: Include archived logs(bsc#1148873)
+    # For syslog
     When    Write multi lines to file "/var/log/log1" on "hanode1"
       """
       Sep 08 08:36:34 node1 log message line1
@@ -24,11 +41,15 @@ Feature: crm report functional test for verifying bugs
       Sep 08 08:37:02 node1 log message line3
       """
     And     Run "xz /var/log/log1" on "hanode1"
+    # bsc#1218491, unable to gather log files that are in the syslog format
+    And     Run "touch -m -t 202201010000 /var/log/log1.xz" on "hanode1"
     When    Write multi lines to file "/var/log/log1" on "hanode1"
       """
       Sep 08 09:37:02 node1 log message line4
       Sep 08 09:37:12 node1 log message line5
       """
+    # bsc#1218491, unable to gather log files that are in the syslog format
+    And     Run "touch -m -t 202201010001 /var/log/log1" on "hanode1"
     And     Run "crm report -f 20200901 -E /var/log/log1 report1" on "hanode1"
     Then    File "log1" in "report1.tar.bz2"
     When    Run "tar jxf report1.tar.bz2" on "hanode1"
@@ -40,6 +61,33 @@ Feature: crm report functional test for verifying bugs
       Sep 08 08:37:02 node1 log message line3
       Sep 08 09:37:02 node1 log message line4
       Sep 08 09:37:12 node1 log message line5
+      """
+    When    Run "rm -rf report1.tar.gz report1" on "hanode1"
+
+    # For rfc5424
+    When    Write multi lines to file "/var/log/log2" on "hanode1"
+      """
+      2022-09-08T14:24:36.003Z mymachine.example.com myapp - ID47
+      2022-09-08T14:25:15.003Z mymachine.example.com myapp - ID48
+      2022-09-08T14:26:15.003Z mymachine.example.com myapp - ID49
+      """
+    And     Run "xz /var/log/log2" on "hanode1"
+    When    Write multi lines to file "/var/log/log2" on "hanode1"
+      """
+      2022-09-08T14:27:15.003Z mymachine.example.com myapp - ID50
+      2022-09-08T14:28:15.003Z mymachine.example.com myapp - ID51
+      """
+    And     Run "crm report -f 20200901 -E /var/log/log2 report1" on "hanode1"
+    Then    File "log2" in "report1.tar.bz2"
+    When    Run "tar jxf report1.tar.bz2" on "hanode1"
+    And     Run "cat report1/hanode1/log2" on "hanode1"
+    Then    Expected multiple lines in output
+      """
+      2022-09-08T14:24:36.003Z mymachine.example.com myapp - ID47
+      2022-09-08T14:25:15.003Z mymachine.example.com myapp - ID48
+      2022-09-08T14:26:15.003Z mymachine.example.com myapp - ID49
+      2022-09-08T14:27:15.003Z mymachine.example.com myapp - ID50
+      2022-09-08T14:28:15.003Z mymachine.example.com myapp - ID51
       """
     When    Run "rm -rf report1.tar.gz report1" on "hanode1"
 
@@ -105,6 +153,15 @@ Feature: crm report functional test for verifying bugs
     Then    Expected return code is "1"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"
 
+    # bsc#1220022 with special characters
+    When    Run "crm node utilization hanode2 set password "xin!(liang8e"" on "hanode1"
+    When    Run "crm report report" on "hanode1"
+    When    Run "tar jxf report.tar.bz2" on "hanode1"
+    And     Try "grep -F -R 'xin!(liang8e' report"
+    # No password here
+    Then    Expected return code is "1"
+    When    Run "rm -rf report.tar.bz2 report" on "hanode1"
+    
     # disable sanitize
     When    Run "sed -i 's/; \[report\]/[report]/' /etc/crm/crm.conf" on "hanode1"
     And     Run "sed -i 's/sanitize_rule = .*$/sanitize_rule = /g' /etc/crm/crm.conf" on "hanode1"
@@ -114,47 +171,3 @@ Feature: crm report functional test for verifying bugs
     # found password
     Then    Expected return code is "0"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"
-
-  @clean
-  Scenario: crm report collect trace ra log
-    When    Run "crm configure primitive d Dummy" on "hanode1"
-    And     Run "crm configure primitive d2 Dummy" on "hanode1"
-    Then    Resource "d" is started on "hanode1"
-    And     Resource "d2" is started on "hanode2"
-    When    Run "crm resource trace d monitor" on "hanode1"
-    Then    Expected "Trace for d:monitor is written to /var/lib/heartbeat/trace_ra/Dummy" in stdout
-    When    Wait "10" seconds
-    And     Run "crm resource untrace d" on "hanode1"
-    And     Run "crm resource trace d2 monitor /trace_d" on "hanode1"
-    Then    Expected "Trace for d2:monitor is written to /trace_d/Dummy" in stdout
-    When    Wait "10" seconds
-    And     Run "crm resource untrace d2" on "hanode1"
-    And     Run "crm report report" on "hanode1"
-    Then    Directory "trace_ra" in "report.tar.bz2"
-    And     Directory "trace_d" in "report.tar.bz2"
-    When    Run "rm -rf report.tar.bz2 report" on "hanode1"
-
-  @clean
-  Scenario: Run script
-    When    Run "crm script run health" on "hanode1"
-    When    Run "crm script run virtual-ip id=vip_x ip=@vip.0" on "hanode1"
-    Then    Resource "vip_x" type "IPaddr2" is "Started"
-
-  @clean
-  Scenario: Run history
-    When    Run "crm history info" on "hanode1"
-    When    Run "crm history refresh" on "hanode1"
-    When    Try "crm history peinputs|grep "pengine/pe-input-0""
-    Then    Expected return code is "0"
-    When    Try "crm history info|grep "Nodes: hanode1 hanode2""
-    Then    Expected return code is "0"
-    When    Run "crm configure primitive d100 Dummy" on "hanode1"
-    When    Run "crm history refresh force" on "hanode1"
-    When    Try "crm history info|grep "Resources: d100""
-    Then    Expected return code is "0"
-    Given   Cluster service is "stopped" on "hanode3"
-    When    Run "crm cluster join -c hanode1 -y" on "hanode3"
-    Then    Cluster service is "started" on "hanode3"
-    When    Run "crm history refresh force" on "hanode1"
-    When    Try "crm history info|grep "Nodes: hanode1 hanode2 hanode3""
-    Then    Expected return code is "0"

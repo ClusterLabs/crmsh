@@ -9,12 +9,13 @@ import glob
 import configparser
 
 from . import config
-from . import constants
 from . import userdir
 from . import logtime
 from . import logparser
 from . import utils
 from . import log
+from .sh import ShellUtils
+from crmsh.report import core
 
 
 logger = log.setup_logger(__name__)
@@ -106,7 +107,11 @@ def mkarchive(idir):
     if not home:
         logger.error("no home directory, nowhere to pack report")
         return False
-    archive = '%s.tar.bz2' % os.path.join(home, os.path.basename(idir))
+    _, ext = core.pick_first_compress()
+    if not ext:
+        return False
+    name = os.path.join(home, os.path.basename(idir))
+    archive = f'{name}.tar{ext}'
     cmd = "tar -C '%s/..' -cj -f '%s' %s" % \
         (idir, archive, os.path.basename(idir))
     if utils.pipe_cmd_nosudo(cmd) != 0:
@@ -222,7 +227,7 @@ class Report(object):
                 self.error(msg)
                 return None
         try:
-            rc, tf_loc = utils.get_stdout("tar -t%s < %s 2> /dev/null | head -1" % (tar_unpack_option, utils.quote(bfname)))
+            rc, tf_loc = ShellUtils().get_stdout("tar -t%s < %s 2> /dev/null | head -1" % (tar_unpack_option, utils.quote(bfname)))
             if os.path.abspath(tf_loc) != os.path.abspath(loc):
                 logger.debug("top directory in tarball: %s, doesn't match the tarball name: %s", tf_loc, loc)
                 loc = os.path.join(os.path.dirname(loc), tf_loc)
@@ -464,7 +469,10 @@ class Report(object):
         if not utils.is_path_sane(d):
             return None
         utils.rmdir_r(d)
-        tarball = "%s.tar.bz2" % d
+        _, ext = core.pick_first_compress()
+        if not ext:
+            return None
+        tarball = f"{d}.tar{ext}"
         to_option = ""
         if self.to_dt:
             to_option = "-t '%s'" % logtime.human_date(self.to_dt)
@@ -477,7 +485,7 @@ class Report(object):
                 "-v" if config.core.debug else "", self.from_dt.ctime(),
                 to_option, nodes_option, str(config.core.report_tool_options), d)
         logger.debug("Running command: {}".format(cmd))
-        rc, out, err = utils.get_stdout_stderr(cmd)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd)
         if rc != 0:
             if err:
                 print(err)

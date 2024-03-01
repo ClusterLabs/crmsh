@@ -23,6 +23,9 @@ import random
 import string
 import grp
 import functools
+import gzip
+import bz2
+import lzma
 from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
@@ -30,8 +33,8 @@ from lxml import etree
 from packaging import version
 
 import crmsh.parallax
-from . import corosync
-from . import config
+import crmsh.user_of_host
+from . import config, sh, corosync
 from . import userdir
 from . import constants
 from . import options
@@ -39,6 +42,8 @@ from . import term
 from .constants import SSH_OPTION
 from . import log
 from .prun import prun
+from .sh import ShellUtils
+from .service_manager import ServiceManager
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -110,112 +115,14 @@ getuser = userdir.getuser
 gethomedir = userdir.gethomedir
 
 
-class UserOfHost:
-    class UserNotFoundError(Exception):
-        pass
-
-    @staticmethod
-    def instance():
-        return _user_of_host_instance
-
-    def __init__(self):
-        self._user_cache = dict()
-        self._user_pair_cache = dict()
-
-    def user_of(self, host):
-        cached = self._user_cache.get(host)
-        if cached is None:
-            ret = self._get_user_of_host_from_config(host)
-            if ret is None:
-                raise self.UserNotFoundError
-            else:
-                self._user_cache[host] = ret
-                return ret
-        else:
-            return cached
-
-    def user_pair_for_ssh(self, host: str) -> typing.Tuple[str, str]:
-        """Return (local_user, remote_user) pair for ssh connection"""
-        local_user = None
-        remote_user = None
-        try:
-            local_user = self.user_of(this_node())
-            remote_user = self.user_of(host)
-            return local_user, remote_user
-        except self.UserNotFoundError:
-            cached = self._user_pair_cache.get(host)
-            if cached is None:
-                if local_user is not None:
-                    ret = local_user, local_user
-                    self._user_pair_cache[host] = ret
-                    return ret
-                else:
-                    ret = self._guess_user_for_ssh(host)
-                    if ret is None:
-                        raise self.UserNotFoundError
-                    else:
-                        self._user_pair_cache[host] = ret
-                        return ret
-            else:
-                return cached
-
-
-    @staticmethod
-    def _get_user_of_host_from_config(host):
-        try:
-            canonical, aliases, _ = socket.gethostbyaddr(host)
-            aliases = set(aliases)
-            aliases.add(canonical)
-            aliases.add(host)
-        except (socket.herror, socket.gaierror):
-            aliases = {host}
-        hosts = config.get_option('core', 'hosts')
-        if hosts == ['']:
-            return None
-        for item in hosts:
-            if item.find('@') != -1:
-                user, node = item.split('@')
-            else:
-                user = userdir.getuser()
-                node = item
-            if node in aliases:
-                return user
-        logger.debug('Failed to get the user of host %s (aliases: %s). Known hosts are %s', host, aliases, hosts)
-        return None
-
-    @staticmethod
-    def _guess_user_for_ssh(host: str) -> typing.Tuple[str, str]:
-        args = ['ssh']
-        args.extend(constants.SSH_OPTION_ARGS)
-        if userdir.get_sudoer():
-            args.extend(['-o', 'BatchMode=yes', host, 'sudo', 'true'])
-        else:
-            args.extend(['-o', 'BatchMode=yes', host, 'true'])
-        rc = subprocess.call(
-            args,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if rc == 0:
-            user = userdir.getuser()
-            return user, user
-        else:
-            return None
-
-
-
-_user_of_host_instance = UserOfHost()
-
-
 def user_of(host):
-    return _user_of_host_instance.user_of(host)
+    return crmsh.user_of_host.instance().user_of(host)
 
 
 def user_pair_for_ssh(host):
     try:
-        return _user_of_host_instance.user_pair_for_ssh(host)
-    except UserOfHost.UserNotFoundError:
+        return crmsh.user_of_host.instance().user_pair_for_ssh(host)
+    except crmsh.user_of_host.UserNotFoundError:
         raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
 
 
@@ -223,7 +130,7 @@ def ssh_copy_id_no_raise(local_user, remote_user, remote_node):
     if check_ssh_passwd_need(local_user, remote_user, remote_node):
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
         cmd = "ssh-copy-id -i ~/.ssh/id_rsa.pub '{}@{}' &> /dev/null".format(remote_user, remote_node)
-        result = su_subprocess_run(local_user, cmd, tty=True)
+        result = sh.LocalShell().su_subprocess_run(local_user, cmd, tty=True)
         return result.returncode
     else:
         return 0
@@ -545,7 +452,7 @@ def chown(path, user, group):
         os.chown(path, uid, gid)
     except os.error as err:
         cmd = "sudo chown {}:{} {}".format(user, group, path)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             fatal("Failed to chown {}: {}".format(path, err))
 
@@ -555,15 +462,15 @@ def chmod(path, mod):
         os.chmod(path, mod)
     except os.error as err:
         cmd = "sudo chmod {} {}".format(format(mod,'o'), path)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             fatal("Failed to chmod {}: {}".format(path, err))
 
 
 def touch(file_name):
-    rc, out, err = get_stdout_stderr("touch " + file_name, no_reg=True)
+    rc, out, err = ShellUtils().get_stdout_stderr("touch " + file_name, no_reg=True)
     if rc != 0:
-        rc, out, err = get_stdout_stderr("sudo touch " + file_name, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr("sudo touch " + file_name, no_reg=True)
         if rc != 0:
             fatal("Failed create file {}: {}".format(file_name, err))
 
@@ -574,11 +481,11 @@ def copy_local_file(src, dest):
     except os.error as err:
         if err.errno not in (errno.EPERM, errno.EACCES):
             raise
-        rc, out, err = get_stdout_stderr("sudo cp {} {}".format(src, dest), no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr("sudo cp {} {}".format(src, dest), no_reg=True)
         if rc != 0:
             fatal("Failed to copy file from {} to {}: {}".format(src, dest, err))
         cmd = "sudo chown {}:{} {}".format(userdir.getuser(), "haclient", dest)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             fatal("Failed to chown {}: {}".format(dest, err))
 
@@ -592,7 +499,7 @@ def rmfile(path, ignore_errors=False):
         os.remove(path)
     except os.error as err:
         if err.errno in (errno.EPERM, errno.EACCES):
-            rc, out, err = get_stdout_stderr("sudo rm " + path, no_reg=True)
+            rc, out, err = ShellUtils().get_stdout_stderr("sudo rm " + path, no_reg=True)
             if rc != 0 and not ignore_errors:
                 fatal("Failed to remove {}: {}".format(path, err))
         elif not ignore_errors:
@@ -761,7 +668,7 @@ def str2file(s, fname, mod=0o644):
         escaped = s.translate(str.maketrans({'"':  r'\"'})) # other symbols are already escaped
         cmd = 'printf "{}" | sudo tee {} >/dev/null'.format(escaped, fname)
         cmd += ' && sudo chmod {} {}'.format(format(mod,'o'), fname)
-        rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             #raise ValueError("Failed to write to {}: {}".format(s, err)) # fatal?
             logger.error(err)
@@ -773,15 +680,16 @@ def write_remote_file(text, tofile, user, remote):
 {text}
 EOF
 '''
-    result = subprocess_run_auto_ssh_no_input(
-        shell_script,
+    result = sh.cluster_shell().subprocess_run_without_input(
         remote,
         user,
+        shell_script,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
     )
     if result.returncode != 0:
         raise ValueError("Failed to write to {}@{}/{}: {}".format(user, remote, tofile, result.stdout.decode('utf-8')))
+
 
 def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path):
     """
@@ -795,7 +703,7 @@ def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path)
     rc, out, err = get_stdout_stderr_as_local_sudoer(cmd)
     # If failed, try the hard way
     if rc != 0:
-        rc, out, err = get_stdout_stderr_auto_ssh_no_input(remote_node, 'cat {}'.format(remote_text_file))
+        rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote_node, 'cat {}'.format(remote_text_file))
         if rc != 0:
             raise ValueError("Failed to read {}@{}/{}: {}".format(remote_user, remote_node, remote_text_file, err))
         full_path = os.path.join(local_path, os.path.basename(remote_text_file))
@@ -814,17 +722,6 @@ def file2str(fname, noerr=True):
     s = f.readline()
     f.close()
     return s.strip()
-
-
-def file2list(fname):
-    '''
-    Read a file into a list (newlines dropped).
-    '''
-    try:
-        return open(fname).read().split('\n')
-    except IOError as msg:
-        logger.error(msg)
-        return None
 
 
 def safe_open_w(fname):
@@ -1010,7 +907,7 @@ def mkdirs_owned(dirs, mode=0o777, uid=-1, gid=-1):
                 uid = userdir.getuser()
             cmd += " && sudo chown {} {}".format(uid, dirs)
             cmd += " && sudo chgrp {} {}".format(gid, dirs)
-            rc, out, err = get_stdout_stderr(cmd, no_reg=True)
+            rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
             if rc != 0:
                 fatal("Failed to create {}: {}".format(' '.join(dirs), err))
             return
@@ -1033,95 +930,12 @@ def pipe_cmd_nosudo(cmd):
     return rc
 
 
-def run_cmd_on_remote(cmd, remote_addr, prompt_msg=None):
-    """
-    Run a cmd on remote node
-    return (rc, stdout, err_msg)
-    """
-    result = subprocess_run_auto_ssh_no_input(
-        cmd, remote_addr,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    return result.returncode, result.stdout.decode('utf-8'), result.stderr.decode('utf-8')
-
-
-def get_stdout(cmd, input_s=None, stderr_on=True, shell=True, raw=False):
-    '''
-    Run a cmd, return stdout output.
-    Optional input string "input_s".
-    stderr_on controls whether to show output which comes on stderr.
-    '''
-    if stderr_on:
-        stderr = None
-    else:
-        stderr = subprocess.PIPE
-    if options.regression_tests:
-        print(".EXT", cmd)
-    proc = subprocess.Popen(cmd,
-                            shell=shell,
-                            stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE,
-                            stderr=stderr)
-    stdout_data, stderr_data = proc.communicate(input_s)
-    if raw:
-        return proc.returncode, stdout_data
-    return proc.returncode, to_ascii(stdout_data).strip()
-
-
-def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False, no_reg=False):
-    '''
-    Run a cmd, return (rc, stdout, stderr)
-    '''
-    if options.regression_tests and not no_reg:
-        print(".EXT", cmd)
-    proc = subprocess.Popen(cmd,
-                            shell=shell,
-                            stdin=input_s and subprocess.PIPE or None,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    stdout_data, stderr_data = proc.communicate(input_s)
-    if raw:
-        return proc.returncode, stdout_data, stderr_data
-    return proc.returncode, to_ascii(stdout_data).strip(), to_ascii(stderr_data).strip()
-
-
-def su_get_stdout_stderr(user, cmd, input_s=None, raw=False):
-    if user == userdir.getuser():
-        args = ['/bin/sh', '-c', cmd]
-    elif 0 == os.geteuid():
-        args = ['su', user, '--login', '-c', cmd]
-    else:
-        raise AssertionError('trying to run su as a non-root user')
-    result = subprocess.run(
-        args,
-        input=input_s.encode('utf-8') if (input_s is not None and not raw) else input_s,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    if raw:
-        return result.returncode, result.stdout, result.stderr
-    return result.returncode, to_ascii(result.stdout).strip(), to_ascii(result.stderr).strip()
-
-
-def get_stdout_stderr_as_local_sudoer(cmd, input_s=None, raw=False):
+def get_stdout_stderr_as_local_sudoer(cmd, input_s=None):
     try:
         user = user_of(this_node())
-    except UserOfHost.UserNotFoundError:
+    except crmsh.user_of_host.UserNotFoundError:
         user = 'root'
-    return su_get_stdout_stderr(user, cmd, input_s, raw)
-
-
-def get_stdout_stderr_auto_ssh_no_input(host, cmd, raw=False):
-    result = subprocess_run_auto_ssh_no_input(
-        cmd,
-        host,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    if raw:
-        return result.returncode, result.stdout, result.stderr
-    return result.returncode, to_ascii(result.stdout).strip(), to_ascii(result.stderr).strip()
+    return sh.LocalShell().get_rc_stdout_stderr(user, cmd, input_s)
 
 
 def stdout2list(cmd, stderr_on=True, shell=True):
@@ -1129,7 +943,7 @@ def stdout2list(cmd, stderr_on=True, shell=True):
     Run a cmd, fetch output, return it as a list of lines.
     stderr_on controls whether to show output which comes on stderr.
     '''
-    rc, s = get_stdout(add_sudo(cmd), stderr_on=stderr_on, shell=shell)
+    rc, s = ShellUtils().get_stdout(add_sudo(cmd), stderr_on=stderr_on, shell=shell)
     if not s:
         return rc, []
     return rc, s.split('\n')
@@ -1145,14 +959,14 @@ def append_file(dest, src):
         return False
 
 
-def get_dc():
+def get_dc(peer=None):
     cmd = "crmadmin -D -t 1"
-    rc, s, _ = get_stdout_stderr(add_sudo(cmd))
-    if rc != 0:
+    _, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
+    if not out:
         return None
-    if not s.startswith("Designated"):
+    if not out.startswith("Designated"):
         return None
-    return s.split()[-1]
+    return out.split()[-1]
 
 
 def wait4dc(what="", show_progress=True):
@@ -1183,7 +997,7 @@ def wait4dc(what="", show_progress=True):
         logger.warning("can't find DC")
         return False
     cmd = "crm_attribute -Gq -t crm_config -n crmd-transition-delay 2> /dev/null"
-    delay = get_stdout(add_sudo(cmd))[1]
+    delay = ShellUtils().get_stdout(add_sudo(cmd))[1]
     if delay:
         delaymsec = crm_msec(delay)
         if delaymsec > 0:
@@ -1200,7 +1014,7 @@ def wait4dc(what="", show_progress=True):
             logger.warning("DC lost during wait")
             return False
         cmd = "crmadmin -S %s" % dc
-        rc, s = get_stdout(add_sudo(cmd))
+        rc, s = ShellUtils().get_stdout(add_sudo(cmd))
         if rc != 0:
             logger.error("Exit code of command {} is {}".format(cmd, rc))
             return False
@@ -1248,7 +1062,7 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     if options.regression_tests:
         ptest = ">/dev/null %s" % ptest
     logger.debug("invoke: %s", ptest)
-    rc, s = get_stdout(ptest, input_s=graph_s)
+    rc, s = ShellUtils().get_stdout(ptest, input_s=graph_s)
     if rc != 0:
         logger.debug("'%s' exited with (rc=%d)", ptest, rc)
         if actions and rc == 1:
@@ -1341,13 +1155,6 @@ def shortdate(ts):
     if ts is not None:
         return time.strftime("%F", time.localtime(ts))
     return time.strftime("%F", time.localtime(0))
-
-
-def sort_by_mtime(l):
-    'Sort a (small) list of files by time mod.'
-    l2 = [(os.stat(x).st_mtime, x) for x in l]
-    l2.sort()
-    return [x[1] for x in l2]
 
 
 def file_find_by_name(root, filename):
@@ -1760,7 +1567,7 @@ def load_graphviz_file(ini_f):
 
 def get_pcmk_version():
     cmd = "/usr/sbin/pacemakerd --version"
-    out = get_stdout_or_raise_error(cmd)
+    out = sh.cluster_shell().get_stdout_or_raise_error(cmd)
     version = out.split()[1]
     logger.debug("Found pacemaker version: %s", version)
     return version
@@ -1858,20 +1665,6 @@ def is_larger_than_pcmk_118(cib_f=None):
     return is_min_pcmk_ver("1.1.8", cib_f=cib_f)
 
 
-@memoize
-def cibadmin_features():
-    '''
-    # usage example:
-    if 'corosync-plugin' in cibadmin_features()
-    '''
-    rc, outp = get_stdout(['cibadmin', '-!'], shell=False)
-    if rc == 0:
-        m = re.match(r'Pacemaker\s(\S+)\s\(Build: ([^\)]+)\):\s(.*)', outp.strip())
-        if m and len(m.groups()) > 2:
-            return m.group(3).split()
-    return []
-
-
 # quote function from python module shlex.py in python 3.3
 
 _find_unsafe = re.compile(r'[^\w@%+=:,./-]').search
@@ -1938,29 +1731,23 @@ def fetch_lifetime_opt(args, iso8601=True):
     return None
 
 
-def resolve_hostnames(hostnames):
-    '''
-    Tries to resolve the given list of hostnames.
-    returns (ok, failed-hostname)
-    ok: True if all hostnames resolved
-    failed-hostname: First failed hostname resolution
-    '''
-    import socket
-    for node in hostnames:
-        try:
-            socket.gethostbyname(node)
-        except socket.error:
-            return False, node
-    return True, None
-
-
 def print_cluster_nodes():
     """
     Print the output of crm_node -l
     """
-    rc, out, _ = get_stdout_stderr("crm_node -l")
+    rc, out, _ = ShellUtils().get_stdout_stderr("crm_node -l")
     if rc == 0 and out:
         print("{}\n".format(out))
+
+
+def get_address_list_from_corosync_conf():
+    """
+    Return a list of addresses configured in corosync.conf
+    """
+    from . import corosync
+    if not os.path.exists(corosync.conf()):
+        return []
+    return corosync.get_values("nodelist.node.ring0_addr")
 
 
 def list_cluster_nodes(no_reg=False):
@@ -1969,7 +1756,7 @@ def list_cluster_nodes(no_reg=False):
     '''
     from . import xmlutil
     cib = None
-    rc, out, err = get_stdout_stderr(constants.CIB_QUERY, no_reg=no_reg)
+    rc, out, err = ShellUtils().get_stdout_stderr(constants.CIB_QUERY, no_reg=no_reg)
     # When cluster service running
     if rc == 0:
         cib = etree.fromstring(out)
@@ -1977,17 +1764,18 @@ def list_cluster_nodes(no_reg=False):
     else:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         if not os.path.isfile(cib_path):
-            return None
+            return get_address_list_from_corosync_conf()
         cib = xmlutil.file2cib_elem(cib_path)
     if cib is None:
-        return None
+        return get_address_list_from_corosync_conf()
 
     node_list = []
     for node in cib.xpath(constants.XML_NODE_PATH):
         name = node.get('uname') or node.get('id')
+        # exclude remote node
         if node.get('type') == 'remote':
-            srv = cib.xpath("//primitive[@id='%s']/instance_attributes/nvpair[@name='server']" % (name))
-            if srv:
+            xpath = f"//primitive[@provider='pacemaker' and @type='remote']/instance_attributes/nvpair[@name='server' and @value='{name}']"
+            if cib.xpath(xpath):
                 continue
         node_list.append(name)
     return node_list
@@ -2019,7 +1807,7 @@ def list_cluster_nodes_except_me():
 def service_info(name):
     p = is_program('systemctl')
     if p:
-        rc, outp = get_stdout([p, 'show',
+        rc, outp = ShellUtils().get_stdout([p, 'show',
                                '-p', 'UnitFileState',
                                '-p', 'ActiveState',
                                '-p', 'SubState',
@@ -2037,7 +1825,7 @@ def service_info(name):
 def running_on(resource):
     "returns list of node names where the given resource is running"
     rsc_locate = "crm_resource --resource '%s' --locate"
-    rc, out, err = get_stdout_stderr(rsc_locate % (resource))
+    rc, out, err = ShellUtils().get_stdout_stderr(rsc_locate % (resource))
     if rc != 0:
         return []
     nodes = []
@@ -2130,7 +1918,7 @@ def remote_diff_this(local_path, nodes, this_node):
         if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
         path = result
-        _, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
+        _, s = ShellUtils().get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
                           (host, this_node, path, local_path))
         page_string(s)
 
@@ -2142,7 +1930,7 @@ def remote_diff(local_path, nodes):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
     h1, r1 = by_host[0]
     h2, r2 = by_host[1]
-    _, s = get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
+    _, s = ShellUtils().get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
                       (h1, h2, r1[3], r2[3]))
     page_string(s)
 
@@ -2230,10 +2018,11 @@ def detect_aws():
     """
     Detect if in AWS
     """
+    shell = sh.cluster_shell()
     # will match on xen instances
-    xen_test = get_stdout_or_raise_error("dmidecode -s system-version").lower()
+    xen_test = shell.get_stdout_or_raise_error("dmidecode -s system-version").lower()
     # will match on nitro/kvm instances
-    kvm_test = get_stdout_or_raise_error("dmidecode -s system-manufacturer").lower()
+    kvm_test = shell.get_stdout_or_raise_error("dmidecode -s system-manufacturer").lower()
     if "amazon" in xen_test or "amazon" in kvm_test:
         return True
     return False
@@ -2248,8 +2037,9 @@ def detect_azure():
     # might return American Megatrends Inc. instead of Microsoft Corporation in Azure.
     # The better way is to check the result of dmidecode -s chassis-asset-tag is
     # 7783-7084-3265-9085-8269-3286-77, aka. the ascii code of MSFT AZURE VM
-    system_manufacturer = get_stdout_or_raise_error("dmidecode -s system-manufacturer")
-    chassis_asset_tag = get_stdout_or_raise_error("dmidecode -s chassis-asset-tag")
+    shell = sh.cluster_shell()
+    system_manufacturer = shell.get_stdout_or_raise_error("dmidecode -s system-manufacturer")
+    chassis_asset_tag = shell.get_stdout_or_raise_error("dmidecode -s chassis-asset-tag")
     if "microsoft corporation" in system_manufacturer.lower() or \
             ''.join([chr(int(n)) for n in re.findall("\d\d", chassis_asset_tag)]) == "MSFT AZURE VM":
         # To detect azure we also need to make an API request
@@ -2265,7 +2055,7 @@ def detect_gcp():
     """
     Detect if in GCP
     """
-    bios_vendor = get_stdout_or_raise_error("dmidecode -s bios-vendor")
+    bios_vendor = sh.cluster_shell().get_stdout_or_raise_error("dmidecode -s bios-vendor")
     if "Google" in bios_vendor:
         # To detect GCP we also need to make an API request
         result = _cloud_metadata_request(
@@ -2313,37 +2103,21 @@ def debug_timestamp():
     return datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
 
 
-def get_member_iplist():
-    rc, out, err= get_stdout_stderr("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
-    if rc != 0:
-        logger.debug(err)
-        return None
-
-    ip_list = []
-    for line in out.split('\n'):
-        match = re.search(r'ip\((.*?)\)', line)
-        if match:
-            ip_list.append(match.group(1))
-    return ip_list
-
-
-def get_iplist_corosync_using():
-    """
-    Get ip list used by corosync
-    """
-    rc, out, err = get_stdout_stderr("corosync-cfgtool -s")
-    if rc != 0:
-        raise ValueError(err)
-    return re.findall(r'id\s*=\s*(.*)', out)
-
 def check_ssh_passwd_need(local_user, remote_user, host):
     """
     Check whether access to host need password
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-    ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
-    rc, _, _ = su_get_stdout_stderr(local_user, ssh_cmd)
+    ssh_cmd = "{} ssh {} -T -o Batchmode=yes {}@{} true".format(get_ssh_agent_str(), ssh_options, remote_user, host)
+    rc, _ = sh.LocalShell().get_rc_and_error(local_user, ssh_cmd)
     return rc != 0
+
+
+def get_ssh_agent_str():
+    ssh_agent_str = ""
+    if crmsh.user_of_host.instance().use_ssh_agent():
+        ssh_agent_str = f"SSH_AUTH_SOCK={os.environ.get('SSH_AUTH_SOCK')}"
+    return ssh_agent_str
 
 
 def check_port_open(ip, port):
@@ -2363,7 +2137,7 @@ def valid_port(port):
 
 def get_nodeinfo_from_cmaptool():
     nodeid_ip_dict = {}
-    rc, out = get_stdout("corosync-cmapctl -b runtime.members")
+    rc, out = ShellUtils().get_stdout("corosync-cmapctl -b runtime.members")
     if rc != 0:
         return nodeid_ip_dict
 
@@ -2392,8 +2166,7 @@ def get_iplist_from_name(name):
 
 
 def valid_nodeid(nodeid):
-    from . import bootstrap
-    if not service_is_active('corosync.service'):
+    if not ServiceManager().service_is_active('corosync.service'):
         return False
 
     for _id, _ in get_nodeinfo_from_cmaptool().items():
@@ -2403,7 +2176,7 @@ def valid_nodeid(nodeid):
 
 
 def get_nodeid_from_name(name):
-    rc, out = get_stdout('crm_node -l')
+    rc, out = ShellUtils().get_stdout('crm_node -l')
     if rc != 0:
         return None
     res = re.search(r'^([0-9]+) {} '.format(name), out, re.M)
@@ -2413,14 +2186,14 @@ def get_nodeid_from_name(name):
         return None
 
 
-def check_space_option_value(options):
+def check_empty_option_value(options):
     if not isinstance(options, argparse.Namespace):
         raise ValueError("Expected type of \"options\" is \"argparse.Namespace\", not \"{}\"".format(type(options)))
 
     for opt in vars(options):
         value = getattr(options, opt)
         if isinstance(value, str) and len(value.strip()) == 0:
-            raise ValueError("Space value not allowed for dest \"{}\"".format(opt))
+            raise ValueError("Empty value not allowed for dest \"{}\"".format(opt))
 
 
 class IP(object):
@@ -2463,6 +2236,13 @@ class IP(object):
         """
         return cls(addr).version == 6
 
+    @property
+    def is_loopback(self):
+        """
+        Check whether the address is loopback address
+        """
+        return self.ip_address.is_loopback
+
     @classmethod
     def is_valid_ip(cls, addr):
         """
@@ -2475,20 +2255,6 @@ class IP(object):
             return False
         else:
             return True
-
-    @property
-    def is_loopback(self):
-        """
-        Check whether the address is loopback address
-        """
-        return self.ip_address.is_loopback
-
-    @property
-    def is_link_local(self):
-        """
-        Check whether the address is link-local address
-        """
-        return self.ip_address.is_link_local
 
 
 class Interface(IP):
@@ -2524,12 +2290,6 @@ class Interface(IP):
         """
         return str(self.ip_interface.network.network_address)
 
-    def ip_in_network(self, addr):
-        """
-        Check whether the addr in the network
-        """
-        return IP(addr).ip_address in self.ip_interface.network
-
 
 class InterfacesInfo(object):
     """
@@ -2558,7 +2318,7 @@ class InterfacesInfo(object):
         IMPORTANT: This is the method that populates the data, should always be called after initialize
         """
         cmd = "ip -{} -o addr show".format(self.ip_version)
-        rc, out, err = get_stdout_stderr(cmd)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd)
         if rc != 0:
             raise ValueError(err)
 
@@ -2683,21 +2443,9 @@ class InterfacesInfo(object):
         """
         #TODO what if user only has ipv6 route?
         cmd = "ip -o route show"
-        out = get_stdout_or_raise_error(cmd)
+        out = sh.cluster_shell().get_stdout_or_raise_error(cmd)
         res = re.search(r'^default via .* dev (.*?) ', out)
         return res.group(1) if res else self.nic_list[0]
-
-    @classmethod
-    def ip_in_network(cls, addr):
-        """
-        Check whether given address was in one of local networks
-        """
-        cls_inst = cls(IP.is_ipv6(addr))
-        cls_inst.get_interfaces_info()
-        for interface_inst in cls_inst.interface_list:
-            if interface_inst.ip_in_network(addr):
-                return True
-        return False
 
 
 def check_file_content_included(source_file, target_file, remote=None, source_local=False):
@@ -2709,10 +2457,11 @@ def check_file_content_included(source_file, target_file, remote=None, source_lo
     if not detect_file(target_file, remote=remote):
         return False
 
+    shell = sh.cluster_shell()
     cmd = "cat {}".format(target_file)
-    target_data = get_stdout_or_raise_error(cmd, remote=remote)
+    target_data = shell.get_stdout_or_raise_error(cmd, host=remote)
     cmd = "cat {}".format(source_file)
-    source_data = get_stdout_or_raise_error(cmd, remote=None if source_local else remote)
+    source_data = shell.get_stdout_or_raise_error(cmd, host=None if source_local else remote)
     return source_data in target_data
 
 def check_text_included(text, target_file, remote=None):
@@ -2721,115 +2470,8 @@ def check_text_included(text, target_file, remote=None):
         return False
 
     cmd = "cat {}".format(target_file)
-    target_data = get_stdout_or_raise_error(cmd, remote=remote)
+    target_data = sh.cluster_shell().get_stdout_or_raise_error(cmd, remote)
     return text in target_data
-
-
-class ServiceManager(object):
-    """
-    Class to manage systemctl services
-    """
-    @classmethod
-    def service_is_available(cls, name, remote_addr=None):
-        """
-        Check whether service is available
-        """
-        return 0 == cls._run_on_single_host("systemctl list-unit-files '{}'".format(name), remote_addr)
-
-    @classmethod
-    def service_is_enabled(cls, name, remote_addr=None):
-        """
-        Check whether service is enabled
-        """
-        return 0 == cls._run_on_single_host("systemctl is-enabled '{}'".format(name), remote_addr)
-
-    @classmethod
-    def service_is_active(cls, name, remote_addr=None):
-        """
-        Check whether service is active
-        """
-        return 0 == cls._run_on_single_host("systemctl is-active '{}'".format(name), remote_addr)
-
-    @classmethod
-    def start_service(cls, name, enable=False, remote_addr=None, node_list=[]):
-        """
-        Start service
-        Return success node list
-        """
-        if enable:
-            cmd = "systemctl enable --now '{}'".format(name)
-        else:
-            cmd = "systemctl start '{}'".format(name)
-        return cls._call(remote_addr, node_list, cmd)
-
-    @staticmethod
-    def _call(remote_addr: str, node_list: typing.List[str], cmd: str) -> typing.List[str]:
-        assert not (bool(remote_addr) and bool(node_list))
-        if len(node_list) == 1:
-            remote_addr = node_list[0]
-            node_list = list()
-        if node_list:
-            results = ServiceManager._call_with_parallax(cmd, node_list)
-            return [host for host, result in results.items() if isinstance(result, tuple) and result[0] == 0]
-        else:
-            rc = ServiceManager._run_on_single_host(cmd, remote_addr)
-            if rc == 0:
-                return [remote_addr]
-            else:
-                return list()
-
-    @staticmethod
-    def _run_on_single_host(cmd, host):
-        rc, _, _ = get_stdout_stderr_auto_ssh_no_input(host, cmd)
-        if rc == 255:
-            raise ValueError("Failed to run command on host {}: {}".format(host, cmd))
-        return rc
-
-    @staticmethod
-    def _call_with_parallax(cmd, host_list):
-        ret = crmsh.parallax.parallax_run(host_list, cmd)
-        if ret is crmsh.parallax.Error:
-            raise ret
-        return ret
-
-    @classmethod
-    def stop_service(cls, name, disable=False, remote_addr=None, node_list=[]):
-        """
-        Stop service
-        Return success node list
-        """
-        if disable:
-            cmd = "systemctl disable --now '{}'".format(name)
-        else:
-            cmd = "systemctl stop '{}'".format(name)
-        return cls._call(remote_addr, node_list, cmd)
-
-    @classmethod
-    def enable_service(cls, name, remote_addr=None, node_list=[]):
-        """
-        Enable service
-        Return success node list
-        """
-        cmd = "systemctl enable '{}'".format(name)
-        return cls._call(remote_addr, node_list, cmd)
-
-    @classmethod
-    def disable_service(cls, name, remote_addr=None, node_list=[]):
-        """
-        Disable service
-        Return success node list
-        """
-        cmd = "systemctl disable '{}'".format(name)
-        return cls._call(remote_addr, node_list, cmd)
-
-
-service_is_available = ServiceManager.service_is_available
-service_is_enabled = ServiceManager.service_is_enabled
-service_is_active = ServiceManager.service_is_active
-start_service = ServiceManager.start_service
-stop_service = ServiceManager.stop_service
-enable_service = ServiceManager.enable_service
-disable_service = ServiceManager.disable_service
 
 
 def package_is_installed(pkg, remote_addr=None):
@@ -2839,10 +2481,10 @@ def package_is_installed(pkg, remote_addr=None):
     cmd = "rpm -q --quiet {}".format(pkg)
     if remote_addr:
         # check on remote
-        rc, _, _ = get_stdout_stderr_auto_ssh_no_input(remote_addr, cmd)
+        rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote_addr, cmd)
     else:
         # check on local
-        rc, _ = get_stdout(cmd)
+        rc, _ = ShellUtils().get_stdout(cmd)
     return rc == 0
 
 
@@ -2850,7 +2492,7 @@ def ping_node(node):
     """
     Check if the remote node is reachable
     """
-    rc, _, err = get_stdout_stderr("ping -c 1 {}".format(node))
+    rc, _, err = ShellUtils().get_stdout_stderr("ping -c 1 {}".format(node))
     if rc != 0:
         raise ValueError("host \"{}\" is unreachable: {}".format(node, err))
 
@@ -2862,93 +2504,11 @@ def calculate_quorate_status(expected_votes, actual_votes):
     return int(actual_votes)/int(expected_votes) > 0.5
 
 
-def get_stdout_or_raise_error(cmd, remote=None, success_val_list=[0], no_raise=False):
-    """
-    Common function to get stdout from cmd or raise exception
-    """
-    if remote is None:
-        result = subprocess.run(
-            ['/bin/sh'],
-            input=cmd.encode('utf-8'),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE,
-        )
-    else:
-        result = subprocess_run_auto_ssh_no_input(
-            cmd, remote,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE,
-        )
-    if no_raise or result.returncode in success_val_list:
-        return result.stdout.decode('utf-8').strip('\n')
-    else:
-        if remote is None:
-            raise ValueError("Failed to run '{}': {}".format(cmd, result.stderr.decode('utf-8')))
-        else:
-            raise ValueError("Failed to run command on remote host {}: '{}': {}".format(remote, cmd, result.stderr.decode('utf-8')))
-
-
-def subprocess_run_auto_ssh_no_input(cmd, remote=None, user=None, **kwargs):
-    assert 'input' not in kwargs and 'stdin' not in kwargs
-    if remote is None or remote == this_node():
-        if user is None:
-            args = ['/bin/sh']
-        else:
-            args = ['sudo', '-H', '-u', user, '/bin/sh']
-        return subprocess.run(
-            args,
-            input=cmd.encode('utf-8'),
-            **kwargs,
-        )
-    else:
-        local_user, remote_user = user_pair_for_ssh(remote)
-        if user is None:
-            user = 'root'
-        return su_subprocess_run(
-            local_user,
-            'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_user, remote, user),
-            input=cmd.encode('utf-8'),
-            **kwargs,
-        )
-
-
-def su_get_stdout_or_raise_error(cmd, user, success_values={0}, no_raise=False):
-    """run a command as a non-root user on local host"""
-    if user == userdir.getuser():
-        args = ['/bin/sh', '-c', cmd]
-    elif 0 == os.geteuid():
-        args = ['su', user, '-c', cmd]
-    else:
-        raise AssertionError('trying to run su as a non-root user')
-    result = subprocess.run(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL if no_raise else subprocess.PIPE
-    )
-    if no_raise or result.returncode in success_values:
-        return result.stdout
-    else:
-        raise ValueError("Failed to run su {} -c '{}': {}".format(user, cmd, result.stderr))
-
-
-def su_subprocess_run(user: str, cmd: str, tty=False, **kwargs):
-    if user == userdir.getuser():
-        args = ['/bin/sh', '-c', cmd]
-    elif 0 == os.geteuid():
-        if tty:
-            args = ['su', user, '--pty', '--login', '-c', cmd]
-        else:
-            args = ['su', user, '--login', '-c', cmd]
-    else:
-        raise AssertionError('trying to run su as a non-root user')
-    return subprocess.run(args, **kwargs)
-
-
 def get_quorum_votes_dict(remote=None):
     """
     Return a dictionary which contain expect votes and total votes
     """
-    out = get_stdout_or_raise_error("corosync-quorumtool -s", remote=remote, success_val_list=[0, 2])
+    out = sh.cluster_shell().get_stdout_or_raise_error("corosync-quorumtool -s", remote, success_exit_status={0, 2})
     return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
 
 
@@ -2956,7 +2516,7 @@ def check_all_nodes_reachable():
     """
     Check if all cluster nodes are reachable
     """
-    out = get_stdout_or_raise_error("crm_node -l")
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l")
     for node in re.findall("\d+ (.*) \w+", out):
         ping_node(node)
 
@@ -2984,7 +2544,7 @@ def has_stonith_running():
     Check if any stonith device registered
     """
     from . import sbd
-    out = get_stdout_or_raise_error("stonith_admin -L")
+    out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
     has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
     using_diskless_sbd = sbd.SBDManager.is_using_diskless_sbd()
     return has_stonith_device or using_diskless_sbd
@@ -2994,7 +2554,7 @@ def has_disk_mounted(dev):
     """
     Check if device already mounted
     """
-    out = get_stdout_or_raise_error("mount")
+    out = sh.cluster_shell().get_stdout_or_raise_error("mount")
     return re.search("\n{} on ".format(dev), out) is not None
 
 
@@ -3002,7 +2562,7 @@ def has_mount_point_used(directory):
     """
     Check if mount directory already mounted
     """
-    out = get_stdout_or_raise_error("mount")
+    out = sh.cluster_shell().get_stdout_or_raise_error("mount")
     return re.search(" on {}".format(directory), out) is not None
 
 
@@ -3037,7 +2597,7 @@ def get_all_vg_name():
     """
     Get all available VGs
     """
-    out = get_stdout_or_raise_error("vgdisplay")
+    out = sh.cluster_shell().get_stdout_or_raise_error("vgdisplay")
     return re.findall("VG Name\s+(.*)", out)
 
 
@@ -3045,7 +2605,7 @@ def get_pe_number(vg_id):
     """
     Get pe number
     """
-    output = get_stdout_or_raise_error("vgdisplay {}".format(vg_id))
+    output = sh.cluster_shell().get_stdout_or_raise_error("vgdisplay {}".format(vg_id))
     res = re.search("Total PE\s+(\d+)", output)
     if not res:
         raise ValueError("Cannot find PE on VG({})".format(vg_id))
@@ -3071,7 +2631,7 @@ def get_dev_uuid_2(dev, peer=None):
     """
     Get UUID of device using blkid
     """
-    out = get_stdout_or_raise_error("blkid {}".format(dev), remote=peer)
+    out = sh.cluster_shell().get_stdout_or_raise_error("blkid {}".format(dev), peer)
     res = re.search("UUID=\"(.*?)\"", out)
     return res.group(1) if res else None
 
@@ -3088,7 +2648,7 @@ def get_dev_info(dev, *_type, peer=None):
     Get device info using lsblk
     """
     cmd = "lsblk -fno {} {}".format(','.join(_type), dev)
-    return get_stdout_or_raise_error(cmd, remote=peer)
+    return sh.cluster_shell().get_stdout_or_raise_error(cmd, peer)
 
 
 def is_dev_used_for_lvm(dev, peer=None):
@@ -3126,14 +2686,14 @@ def append_res_to_group(group_id, res_id):
     Append resource to exist group
     """
     cmd = "crm configure modgroup {} add {}".format(group_id, res_id)
-    get_stdout_or_raise_error(cmd)
+    sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
 def get_qdevice_sync_timeout():
     """
     Get qdevice sync_timeout
     """
-    out = get_stdout_or_raise_error("crm corosync status qdevice")
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm corosync status qdevice")
     res = re.search("Sync HB interval:\s+(\d+)ms", out)
     if not res:
         raise ValueError("Cannot find qdevice sync timeout")
@@ -3144,7 +2704,7 @@ def detect_virt():
     """
     Detect if running in virt environment
     """
-    rc, _, _ = get_stdout_stderr("systemd-detect-virt")
+    rc, _, _ = ShellUtils().get_stdout_stderr("systemd-detect-virt")
     return rc == 0
 
 
@@ -3160,51 +2720,67 @@ def is_standby(node):
     """
     Check if the node is already standby
     """
-    out = get_stdout_or_raise_error("crm_mon -1")
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1")
     return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
 
 
-def get_dlm_option_dict():
+def get_dlm_option_dict(peer=None):
     """
     Get dlm config option dictionary
     """
-    out = get_stdout_or_raise_error("dlm_tool dump_config")
+    out = sh.cluster_shell().get_stdout_or_raise_error("dlm_tool dump_config", peer)
     return dict(re.findall("(\w+)=(\w+)", out))
 
 
-def set_dlm_option(**kargs):
+def set_dlm_option(peer=None, **kargs):
     """
     Set dlm option
     """
-    dlm_option_dict = get_dlm_option_dict()
+    shell = sh.cluster_shell()
+    dlm_option_dict = get_dlm_option_dict(peer=peer)
     for option, value in kargs.items():
         if option not in dlm_option_dict:
-            raise ValueError('"{}" is not dlm config option'.format(option))
+            raise ValueError(f'"{option}" is not dlm config option')
         if dlm_option_dict[option] != value:
-            get_stdout_or_raise_error('dlm_tool set_config "{}={}"'.format(option, value))
+            shell.get_stdout_or_raise_error(f'dlm_tool set_config "{option}={value}"', peer)
 
 
-def is_dlm_running():
+def is_dlm_running(peer=None):
     """
     Check if dlm ra controld is running
     """
-    from . import xmlutil
-    return xmlutil.CrmMonXmlParser().is_resource_started(constants.DLM_CONTROLD_RA)
+    return is_resource_running(constants.DLM_CONTROLD_RA, peer=peer)
 
 
-def is_dlm_configured():
+def has_resource_configured(ra_type, peer=None):
+    """
+    Check if the RA configured
+    """
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1rR", peer)
+    return re.search(ra_type, out) is not None
+
+
+def is_resource_running(ra_type, peer=None):
+    """
+    Check if the RA running
+    """
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1rR", peer)
+    patt = f"\({ra_type}\):\s*Started"
+    return re.search(patt, out) is not None
+
+
+def is_dlm_configured(peer=None):
     """
     Check if dlm configured
     """
-    from . import xmlutil
-    return xmlutil.CrmMonXmlParser().is_resource_configured(constants.DLM_CONTROLD_RA)
+    return has_resource_configured(constants.DLM_CONTROLD_RA, peer=peer)
 
 
-def is_quorate():
+def is_quorate(peer=None):
     """
     Check if cluster is quorated
     """
-    out = get_stdout_or_raise_error("corosync-quorumtool -s", success_val_list=[0, 2])
+    out = sh.cluster_shell().get_stdout_or_raise_error("corosync-quorumtool -s", peer, success_exit_status={0, 2})
     res = re.search(r'Quorate:\s+(.*)', out)
     if res:
         return res.group(1) == "Yes"
@@ -3225,12 +2801,12 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
     """
     Get value of pcmk_delay_max
     """
-    if service_is_active("pacemaker.service") and two_node_without_qdevice:
+    if ServiceManager().service_is_active("pacemaker.service") and two_node_without_qdevice:
         return constants.PCMK_DELAY_MAX
     return 0
 
 
-def get_property(name, property_type="crm_config"):
+def get_property(name, property_type="crm_config", peer=None):
     """
     Get cluster properties
 
@@ -3241,7 +2817,7 @@ def get_property(name, property_type="crm_config"):
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
     else:
         cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
-    rc, stdout, _ = get_stdout_stderr(cmd)
+    rc, stdout, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return stdout if rc == 0 else None
 
 
@@ -3273,7 +2849,7 @@ def set_property(property_name, property_value, property_type="crm_config", cond
         logger.warning("\"{}\" in {} is set to {}, it was {}".format(property_name, property_type, property_value, origin_value))
     property_sub_cmd = "property" if property_type == "crm_config" else property_type
     cmd = "crm configure {} {}={}".format(property_sub_cmd, property_name, property_value)
-    get_stdout_or_raise_error(cmd)
+    sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
 def get_systemd_timeout_start_in_sec(time_res):
@@ -3345,7 +2921,7 @@ def diff_and_patch(orig_cib_str, current_cib_str):
     tmpfiles.add(current_cib_file)
 
     cmd = "crm_diff -u -o '{}' -n '{}'".format(orig_cib_file, current_cib_file)
-    rc, cib_diff, err = get_stdout_stderr(cmd)
+    rc, cib_diff, err = ShellUtils().get_stdout_stderr(cmd)
     if rc == 0: # no difference
         return True
     if err:
@@ -3359,20 +2935,6 @@ def diff_and_patch(orig_cib_str, current_cib_str):
     return True
 
 
-def read_from_file(infile):
-    """
-    Read data from file in a save way, to avoid UnicodeDecodeError
-    """
-    data = None
-    with open(infile, 'rt', encoding='utf-8', errors='replace') as f:
-        data = f.read()
-    return to_ascii(data)
-
-
-def has_dup_value(_list):
-    return _list and len(_list) != len(set(_list))
-
-
 def detect_file(_file, remote=None):
     """
     Detect if file exists, support both local and remote
@@ -3383,12 +2945,12 @@ def detect_file(_file, remote=None):
     else:
         # FIXME
         cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user_of(remote), remote, _file)
-    code, _, _ = get_stdout_stderr(cmd)
+    code, _, _ = ShellUtils().get_stdout_stderr(cmd)
     rc = code == 0
     return rc
 
 
-def check_function_with_timeout(check_function, wait_timeout=30, interval=1):
+def check_function_with_timeout(check_function, wait_timeout=30, interval=1, *args, **kwargs):
     """
     Run check_function in a loop
     Return when check_function is true
@@ -3397,7 +2959,7 @@ def check_function_with_timeout(check_function, wait_timeout=30, interval=1):
     current_time = int(time.time())
     timeout = current_time + wait_timeout
     while current_time <= timeout:
-        if check_function():
+        if check_function(*args, **kwargs):
             return
         time.sleep(interval)
         current_time = int(time.time())
@@ -3409,7 +2971,7 @@ def fetch_cluster_node_list_from_node(init_node):
     Fetch cluster member list from one known cluster node
     """
     cluster_nodes_list = []
-    out = get_stdout_or_raise_error("crm_node -l", remote=init_node)
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l", init_node)
     for line in out.splitlines():
         # Parse line in format: <id> <nodename> <state>, and collect the nodename.
         tokens = line.split()
@@ -3428,7 +2990,7 @@ def has_sudo_access():
     """
     Check if current user has sudo access
     """
-    rc, _, _ = get_stdout_stderr("sudo -S -k -n id -u")
+    rc, _, _ = ShellUtils().get_stdout_stderr("sudo -S -k -n id -u")
     return rc == 0
 
 
@@ -3474,9 +3036,14 @@ class HostUserConfig:
     """
     def __init__(self):
         self._hosts_users = dict()
+        self._no_generating_ssh_key = False
         self.load()
 
     def load(self):
+        self._load_hosts_users()
+        self._load_no_generating_ssh_key()
+
+    def _load_hosts_users(self):
         users = list()
         hosts = list()
         li = config.get_option('core', 'hosts')
@@ -3491,13 +3058,16 @@ class HostUserConfig:
             hosts.append(parts[1])
         self._hosts_users = {host: user for user, host in zip(users, hosts)}
 
+    def _load_no_generating_ssh_key(self):
+        self._no_generating_ssh_key = config.get_option('core', 'no_generating_ssh_key')
+
     def save_local(self):
         value = [f'{user}@{host}' for host, user in sorted(self._hosts_users.items(), key=lambda x: x[0])]
         config.set_option('core', 'hosts', value)
+        config.set_option('core', 'no_generating_ssh_key', self._no_generating_ssh_key)
         debug_on = config.get_option('core', 'debug')
         if debug_on:
             config.set_option('core', 'debug', 'false')
-        # TODO: it is saved in ~root/.config/crm/crm.conf, is it as suitable path?
         config.save()
         if debug_on:
             config.set_option('core', 'debug', 'true')
@@ -3506,6 +3076,13 @@ class HostUserConfig:
         self.save_local()
         value = [f'{user}@{host}' for host, user in sorted(self._hosts_users.items(), key=lambda x: x[0])]
         crmsh.parallax.parallax_call(remote_hosts, "crm options set core.hosts '{}'".format(', '.join(value)))
+        crmsh.parallax.parallax_call(remote_hosts, "crm options set core.no_generating_ssh_key '{}'".format(
+            'yes' if self._no_generating_ssh_key else 'no'
+        ))
+
+    def clear(self):
+        self._hosts_users = dict()
+        self._no_generating_ssh_key = False
 
     def get(self, host):
         return self._hosts_users[host]
@@ -3513,6 +3090,11 @@ class HostUserConfig:
     def add(self, user, host):
         self._hosts_users[host] = user
 
+    def set_no_generating_ssh_key(self, value: bool):
+        self._no_generating_ssh_key = value
+
+    def get_no_generating_ssh_key(self) -> bool:
+        return self._no_generating_ssh_key
 
 def parse_user_at_host(s: str):
     i = s.find('@')
@@ -3520,4 +3102,50 @@ def parse_user_at_host(s: str):
         return None, s
     else:
         return s[:i], s[i+1:]
+
+
+def file_is_empty(file: str) -> bool:
+    return os.stat(file).st_size == 0
+
+
+def get_open_method(infile):
+    """
+    Get the appropriate file open method based on the file extension
+    """
+    file_type_open_dict = {
+        "gz": gzip.open,
+        "bz2": bz2.open,
+        "xz": lzma.open
+    }
+    file_ext = infile.split('.')[-1]
+    return file_type_open_dict.get(file_ext, open)
+
+
+def read_from_file(infile: str) -> str:
+    """
+    Read content from a file
+    """
+    _open = get_open_method(infile)
+    try:
+        with _open(infile, 'rt', encoding='utf-8', errors='replace') as f:
+            data = f.read()
+    except Exception as err:
+        logger.error("When reading file \"%s\": %s", infile, str(err))
+        return ""
+
+    return data
+
+
+def add_time_unit_if_needed(time_value):
+    """
+    Add time unit if needed
+    """
+    return "{}s".format(time_value) if not time_value_with_unit(time_value) else time_value
+
+
+def time_value_with_unit(time_value):
+    """
+    Check if the time value contains unit
+    """
+    return re.search(r'^\d+[a-z]+$', time_value) is not None
 # vim:ts=4:sw=4:et:

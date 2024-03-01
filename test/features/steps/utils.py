@@ -5,6 +5,7 @@ import glob
 import re
 import socket
 from crmsh import utils, userdir
+from crmsh.sh import ShellUtils
 import behave_agent
 
 
@@ -12,7 +13,7 @@ COLOR_MODE = r'\x1b\[[0-9]+m'
 
 
 def get_file_type(file_path):
-    rc, out, _ = utils.get_stdout_stderr("file {}".format(file_path))
+    rc, out, _ = ShellUtils().get_stdout_stderr("file {}".format(file_path))
     if re.search(r'{}: bzip2'.format(file_path), out):
         return "bzip2"
     if re.search(r'{}: directory'.format(file_path), out):
@@ -54,7 +55,7 @@ def _wrap_cmd_non_root(cmd):
     else:
         return cmd
     if re.search('cluster (:?join|geo_join|geo_init_arbitrator)', cmd) and "@" not in cmd:
-        cmd = re.sub(r'''((?:-c|-N|--qnetd-hostname|--cluster-node)(?:\s+|=)['"]?)(\S{2,}['"]?)''', f'\\1{user}@\\2', cmd)
+        cmd = re.sub(r'''((?:-c|-N|--qnetd-hostname|--cluster-node|--arbitrator)(?:\s+|=)['"]?)(\S{2,}['"]?)''', f'\\1{user}@\\2', cmd)
     elif "cluster init" in cmd and ("-N" in cmd or "--qnetd-hostname" in cmd) and "@" not in cmd:
         cmd = re.sub(r'''((?:-c|-N|--qnetd-hostname|--cluster-node)(?:\s+|=)['"]?)(\S{2,}['"]?)''', f'\\1{user}@\\2', cmd)
     elif "cluster init" in cmd and "--node" in cmd and "@" not in cmd:
@@ -68,7 +69,7 @@ def _wrap_cmd_non_root(cmd):
 
 def run_command(context, cmd, exit_on_fail=True):
     cmd = _wrap_cmd_non_root(cmd)
-    rc, out, err = utils.get_stdout_stderr(cmd)
+    rc, out, err = ShellUtils().get_stdout_stderr(cmd)
     context.return_code = rc
     if out:
         out = re.sub(COLOR_MODE, '', out)
@@ -135,13 +136,13 @@ def check_cluster_state(context, state, addr):
 
 
 def is_unclean(node):
-    rc, out, err = utils.get_stdout_stderr("crm_mon -1")
+    rc, out, err = ShellUtils().get_stdout_stderr("crm_mon -1")
     return "{}: UNCLEAN".format(node) in out
 
 
 def online(context, nodelist):
     rc = True
-    _, out = utils.get_stdout("sudo crm_node -l")
+    _, out = ShellUtils().get_stdout("sudo crm_node -l")
     for node in nodelist.split():
         node_info = "{} member".format(node)
         if not node_info in out:

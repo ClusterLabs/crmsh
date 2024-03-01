@@ -6,7 +6,11 @@ import pwd
 import hashlib
 import platform
 import crm_script
-from crmsh.report import utillib
+
+import crmsh.log
+crmsh.log.setup_logging()
+from crmsh.report import utils
+
 data = crm_script.get_input()
 
 PACKAGES = ['booth', 'cluster-glue', 'corosync', 'crmsh', 'csync2', 'drbd',
@@ -34,7 +38,7 @@ def sys_info():
     # the number of currently running processes and the total number of
     # processes. The last column displays the last process ID used.
     system, node, release, version, machine, processor = platform.uname()
-    distname = utillib.get_distro_info()
+    distname = utils.get_distro_info()
     hostname = os.uname()[1]
 
     uptime = open('/proc/uptime').read().split()
