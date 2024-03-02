@@ -117,7 +117,7 @@ provided by `crmsh`. This command has quite a few options for
 setting up the cluster, but we will use a fairly basic configuration.
 
 ........
-crm cluster init --name demo-cluster --nodes "alice bob"
+crm cluster init --name demo-cluster --node "alice bob"
 ........
 
 The initialization tool will now ask a series of questions about the
