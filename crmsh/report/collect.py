@@ -329,8 +329,26 @@ def dump_runtime_state(workdir: str) -> None:
     Dump runtime state files
     """
     cluster_shell_inst = sh.cluster_shell()
+
+    # Dump the output of 'crm_mon' command with multiple options
+    out = ""
+    for option, desc in [
+        ("-r1", "inactive resources"),
+        ("-n1", "resources grouped by node"),
+        ("-rf1", "resource fail counts"),
+        ("-rnt1", "resource operation history with timing details"),
+    ]:
+        cmd = f"crm_mon {option}"
+        out += f"\n#### Display cluster state and {desc}: {cmd} ####\n"
+        out += cluster_shell_inst.get_stdout_or_raise_error(cmd)
+        out += "\n\n"
+
+    target_f = os.path.join(workdir, constants.CRM_MON_F)
+    crmutils.str2file(out, target_f)
+    logger.debug(f"Dump crm_mon state into {utils.real_path(target_f)}")
+
+    # Dump other runtime state files
     for cmd, f, desc in [
-        ("crm_mon -1", constants.CRM_MON_F, "cluster state"),
         ("cibadmin -Ql", constants.CIB_F, "CIB contents"),
         ("crm_node -p", constants.MEMBERSHIP_F, "members of this partition")
     ]:
