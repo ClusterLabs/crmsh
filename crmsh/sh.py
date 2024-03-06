@@ -15,7 +15,7 @@ There many variant of the methods to allow fine-gain control of parameter passin
    configurations.
 4. ShellUtils runs command on local host as current user. It is a simple wrapper around subprocess module.
 
-The LocalShell and SshShell is expected to be used in ssh bootstrap. Once the ssh bootstrap finishes, AuthShell should
+The LocalShell and SSHShell is expected to be used in ssh bootstrap. Once the ssh bootstrap finishes, ClusterShell should
 be used.
 """
 import logging
