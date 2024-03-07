@@ -779,7 +779,9 @@ def ext_cmd(cmd, shell=True):
     if options.regression_tests:
         print(".EXT", cmd)
     logger.debug("invoke: %s", cmd)
-    return subprocess.call(cmd, shell=shell)
+    env = os.environ.copy()
+    env["COLORTERM"] = constants.TERMINAL_MAX_WIDTH
+    return subprocess.call(cmd, shell=shell, env=env)
 
 
 def ext_cmd_nosudo(cmd, shell=True):
