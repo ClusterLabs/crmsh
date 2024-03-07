@@ -434,7 +434,7 @@ Examples:
                                    help="Configure corosync use IPv6")
 
         qdevice_group = parser.add_argument_group("QDevice configuration", re.sub('  ', '', constants.QDEVICE_HELP_INFO) + "\n\nOptions for configuring QDevice and QNetd.")
-        qdevice_group.add_argument("--qnetd-hostname", dest="qnetd_addr", metavar="[USER@]HOST",
+        qdevice_group.add_argument("--qnetd-hostname", dest="qnetd_addr_input", metavar="[USER@]HOST",
                                    help="User and host of the QNetd server. The host can be specified in either hostname or IP address.")
         qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int, default=5403,
                                    help="TCP PORT of QNetd server (default:5403)")
@@ -472,7 +472,7 @@ Examples:
         if stage not in bootstrap.INIT_STAGES and stage != "":
             parser.error("Invalid stage (%s)" % (stage))
 
-        if options.qnetd_addr:
+        if options.qnetd_addr_input:
             if not ServiceManager().service_is_available("corosync-qdevice.service"):
                 utils.fatal("corosync-qdevice.service is not available")
             if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
