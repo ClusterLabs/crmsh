@@ -107,7 +107,7 @@ class Context(object):
         self.admin_ip = None
         self.ipv6 = None
         self.qdevice_inst = None
-        self.qnetd_addr = None
+        self.qnetd_addr_input = None
         self.qdevice_port = None
         self.qdevice_algo = None
         self.qdevice_tie_breaker = None
@@ -157,17 +157,11 @@ class Context(object):
         """
         Initialize qdevice instance
         """
-        if not self.qnetd_addr:
+        if not self.qnetd_addr_input:
             return
-        parts = self.qnetd_addr.split('@', 2)
-        if len(parts) == 2:
-            ssh_user = parts[0]
-            qnetd_host = parts[1]
-        else:
-            ssh_user = None
-            qnetd_host = self.qnetd_addr
+        ssh_user, qnetd_host = utils.parse_user_at_host(self.qnetd_addr_input)
         self.qdevice_inst = qdevice.QDevice(
-                qnetd_host,
+                qnetd_addr=qnetd_host,
                 port=self.qdevice_port,
                 algo=self.qdevice_algo,
                 tie_breaker=self.qdevice_tie_breaker,
@@ -1515,8 +1509,10 @@ def configure_qdevice_interactive():
             else:
                 return
 
-    qnetd_addr = prompt_for_string("HOST or IP of the QNetd server to be used",
-            valid_func=qdevice.QDevice.check_qnetd_addr)
+    qnetd_addr_input = prompt_for_string("HOST or IP of the QNetd server to be used")
+    ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
+    qdevice.QDevice.check_qnetd_addr(qnetd_host)
+    _context.qnetd_addr_input = qnetd_addr_input
     qdevice_port = prompt_for_string("TCP PORT of QNetd server", default=5403,
             valid_func=qdevice.QDevice.check_qdevice_port)
     qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
@@ -1530,14 +1526,6 @@ def configure_qdevice_interactive():
             allow_empty=True)
     qdevice_heuristics_mode = prompt_for_string("MODE of operation of heuristics (on/sync/off)", default="sync",
             valid_func=qdevice.QDevice.check_qdevice_heuristics_mode) if qdevice_heuristics else None
-
-    parts = qnetd_addr.split('@', 2)
-    if len(parts) == 2:
-        ssh_user = parts[0]
-        qnetd_host = parts[1]
-    else:
-        ssh_user = None
-        qnetd_host = qnetd_addr
 
     _context.qdevice_inst = qdevice.QDevice(
             qnetd_host,
@@ -1567,28 +1555,7 @@ def init_qdevice():
         if not ServiceManager().service_is_available("corosync-qdevice.service", node):
             utils.fatal("corosync-qdevice.service is not available on {}".format(node))
     qdevice_inst = _context.qdevice_inst
-    qnetd_addr = qdevice_inst.qnetd_addr
-    local_user = None
-    ssh_user = None
-    if qdevice_inst.ssh_user is not None:
-        # if the remote user is specified explicitly, use it
-        ssh_user = qdevice_inst.ssh_user
-        try:
-            local_user = UserOfHost.instance().user_of(utils.this_node())
-        except UserNotFoundError:
-            local_user = ssh_user
-    else:
-        try:
-            # if ssh session has ready been available, use that
-            local_user, ssh_user = UserOfHost.instance().user_pair_for_ssh(qnetd_addr)
-        except UserNotFoundError:
-            pass
-    if ssh_user is None:
-        try:
-            local_user = UserOfHost.instance().user_of(utils.this_node())
-        except UserNotFoundError:
-            local_user = userdir.getuser()
-        ssh_user = local_user
+    local_user, ssh_user, qnetd_addr = _select_user_pair_for_ssh_for_secondary_components(_context.qnetd_addr_input)
     # Configure ssh passwordless to qnetd if detect password is needed
     if UserOfHost.instance().use_ssh_agent():
         logger.info("Adding public keys to authorized_keys for user root...")
