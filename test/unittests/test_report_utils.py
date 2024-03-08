@@ -805,7 +805,8 @@ pacemaker-schedulerd[5677]:  error: Resource"""
 
     def test_findln_by_timestamp(self):
         target_time = "Apr 03 13:10"
-        target_time_stamp = crmutils.parse_to_timestamp(target_time+' 2023')
+        this_year = datetime.datetime.now().year
+        target_time_stamp = crmutils.parse_to_timestamp(target_time+' '+str(this_year))
         with open('pacemaker.log') as f:
             data = f.read()
         constants.STAMP_TYPE = utils.determin_log_format(data)
@@ -817,7 +818,7 @@ pacemaker-schedulerd[5677]:  error: Resource"""
         assert result_pre_line_stamp < target_time_stamp
 
         target_time = "Apr 03 11:01:19"
-        target_time_stamp = crmutils.parse_to_timestamp(target_time+' 2023')
+        target_time_stamp = crmutils.parse_to_timestamp(target_time+' '+str(this_year))
         result_line = utils.findln_by_timestamp(data, target_time_stamp, pacemaker_file_path)
         result_time = ' '.join(data.split('\n')[result_line-1].split()[:3])
         self.assertEqual(result_time, target_time)
