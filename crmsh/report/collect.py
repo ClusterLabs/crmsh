@@ -504,3 +504,21 @@ def collect_sys_info(context: core.Context) -> None:
     _file = os.path.join(context.work_dir, constants.SYSINFO_F)
     crmutils.str2file(out_string, _file)
     logger.debug(f"Dump packages and platform info into {utils.real_path(_file)}")
+
+
+def collect_qdevice_info(context: core.Context) -> None:
+    """
+    Collect quorum/qdevice/qnetd information
+    """
+    out_string = f"##### Quorum status #####\n"
+    out_string += corosync.query_quorum_status() + "\n"
+
+    if ServiceManager().service_is_active("corosync-qdevice.service"):
+        out_string += f"\n##### Qdevice status #####\n"
+        out_string += corosync.query_qdevice_status() + "\n"
+        out_string += f"\n##### Qnetd status #####\n"
+        out_string += corosync.query_qnetd_status() + "\n"
+
+    _file = os.path.join(context.work_dir, constants.QDEVICE_F)
+    crmutils.str2file(out_string, _file)
+    logger.debug(f"Dump quorum/qdevice/qnetd information into {utils.real_path(_file)}")
