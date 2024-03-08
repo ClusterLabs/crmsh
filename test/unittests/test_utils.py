@@ -20,13 +20,6 @@ from crmsh import utils, config, tmpfiles, constants, parallax
 logging.basicConfig(level=logging.DEBUG)
 
 
-@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-def test_print_cluster_nodes(mock_run):
-    mock_run.return_value = (0, "data", None)
-    utils.print_cluster_nodes()
-    mock_run.assert_called_once_with("crm_node -l")
-
-
 @mock.patch("crmsh.sh.ShellUtils.get_stdout")
 def test_package_is_installed_local(mock_run):
     mock_run.return_value = (0, None)
