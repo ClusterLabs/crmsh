@@ -1767,8 +1767,8 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     if not ssh_public_keys:
         local_shell.get_stdout_or_raise_error(
             local_user,
-            "ssh {} {}@{} sudo crm cluster init -i {} ssh_remote".format(
-                SSH_OPTION, seed_user, seed_host, _context.default_nic_list[0],
+            "ssh {} {}@{} sudo crm cluster init ssh_remote".format(
+                SSH_OPTION, seed_user, seed_host
             ),
         )
     user_by_host = utils.HostUserConfig()
@@ -1882,7 +1882,7 @@ def join_csync2(seed_host, remote_user):
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
     shell = sh.cluster_shell()
-    cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
+    cmd = "crm cluster init csync2_remote {}".format(utils.this_node())
     shell.get_stdout_or_raise_error(cmd, seed_host)
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the

@@ -604,7 +604,7 @@ class TestBootstrap(unittest.TestCase):
         mock_swap.assert_called_once_with("node1", "bob", "alice", "bob", "alice", add=True)
         mock_invoke.assert_called_once_with(
             "bob",
-            "ssh {} alice@node1 sudo crm cluster init -i eth1 ssh_remote".format(constants.SSH_OPTION),
+            "ssh {} alice@node1 sudo crm cluster init ssh_remote".format(constants.SSH_OPTION),
         )
         mock_swap_2.assert_called_once()
         args, kwargs = mock_swap_2.call_args
