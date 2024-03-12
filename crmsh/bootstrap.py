@@ -827,18 +827,19 @@ def _parse_user_at_host(s: str, default_user: str) -> typing.Tuple[str, str]:
     return user, host
 
 
+def _keys_from_ssh_agent() -> typing.List[ssh_key.Key]:
+    try:
+        keys = ssh_key.AgentClient().list()
+        logger.info("Using public keys from ssh-agent...")
+    except Error:
+        logger.error("Cannot get a public key from ssh-agent.")
+        raise
+    return keys
+
+
 def init_ssh():
     user_host_list = [_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list]
-    if _context.use_ssh_agent:
-        try:
-            ssh_agent = ssh_key.AgentClient()
-            keys = ssh_agent.list()
-            logger.info("Using public keys from ssh-agent...")
-        except ssh_key.Error:
-            logger.error("Cannot get a public key from ssh-agent.")
-            raise
-    else:
-        keys = list()
+    keys = _keys_from_ssh_agent() if _context.use_ssh_agent else list()
     init_ssh_impl(_context.current_user, keys, user_host_list)
     if user_host_list:
         service_manager = ServiceManager()
@@ -1613,17 +1614,7 @@ def join_ssh(seed_host, seed_user):
     if not seed_host:
         utils.fatal("No existing IP/hostname specified (use -c option)")
     local_user = _context.current_user
-
-    if _context.use_ssh_agent:
-        try:
-            ssh_agent = ssh_key.AgentClient()
-            keys = ssh_agent.list()
-            logger.info("Using public keys from ssh-agent...")
-        except ssh_key.Error:
-            logger.error("Cannot get a public key from ssh-agent.")
-            raise
-    else:
-        keys = list()
+    keys = _keys_from_ssh_agent() if _context.use_ssh_agent else list()
     return join_ssh_impl(local_user, seed_host, seed_user, keys)
 
 
@@ -2615,13 +2606,7 @@ def bootstrap_join_geo(context):
     if not sh.cluster_shell().can_run_as(node, 'root'):
         local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
         if context.use_ssh_agent:
-            try:
-                ssh_agent = ssh_key.AgentClient()
-                keys = ssh_agent.list()
-                logger.info("Using public keys from ssh-agent...")
-            except ssh_key.Error:
-                logger.error("Cannot get a public key from ssh-agent.")
-                raise
+            keys = _keys_from_ssh_agent()
             local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
             join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
         else:
@@ -2657,13 +2642,7 @@ def bootstrap_arbitrator(context):
     if not sh.cluster_shell().can_run_as(node, 'root'):
         local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
         if context.use_ssh_agent:
-            try:
-                ssh_agent = ssh_key.AgentClient()
-                keys = ssh_agent.list()
-                logger.info("Using public keys from ssh-agent...")
-            except ssh_key.Error:
-                logger.error("Cannot get a public key from ssh-agent.")
-                raise
+            keys = _keys_from_ssh_agent()
             local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
             join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
         else:
