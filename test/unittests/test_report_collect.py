@@ -548,12 +548,19 @@ id            0x19041a12
         ]
         mock_run_inst = mock.Mock()
         mock_run.return_value = mock_run_inst
-        mock_run_inst.get_stdout_or_raise_error.side_effect = ["crm_mon_data", "cib_data", "crm_node_data"]
+        mock_run_inst.get_stdout_or_raise_error.side_effect = [
+                "crm_mon_data_r1",
+                "crm_mon_data_n1",
+                "crm_mon_data_rf1",
+                "crm_mon_data_rnt1",
+                "cib_data",
+                "crm_node_data"
+                ]
         mock_get_dc.return_value = "node1"
         mock_this_node.return_value = "node1"
         collect.dump_runtime_state("/opt/workdir")
         mock_debug.assert_has_calls([
-            mock.call(f"Dump cluster state into {constants.CRM_MON_F}"),
+            mock.call(f"Dump crm_mon state into {constants.CRM_MON_F}"),
             mock.call(f"Dump CIB contents into {constants.CIB_F}"),
             mock.call(f"Dump members of this partition into {constants.MEMBERSHIP_F}"),
             mock.call(f"Current DC is node1; Touch file 'DC' in workdir")
