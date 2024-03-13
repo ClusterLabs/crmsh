@@ -802,24 +802,6 @@ def append(fromfile, tofile, remote=None):
     sh.cluster_shell().get_stdout_or_raise_error(cmd, host=remote)
 
 
-def append_unique(fromfile, tofile, user=None, remote=None, from_local=False):
-    """
-    Append unique content from fromfile to tofile
-    
-    if from_local and remote:
-        append local fromfile to remote tofile
-    elif remote:
-        append remote fromfile to remote tofile
-    if not remote:
-        append fromfile to tofile, locally
-    """
-    if not utils.check_file_content_included(fromfile, tofile, remote=remote, source_local=from_local):
-        if from_local and remote:
-            append_to_remote_file(fromfile, user, remote, tofile)
-        else:
-            append(fromfile, tofile, remote=remote)
-
-
 def _parse_user_at_host(s: str, default_user: str) -> typing.Tuple[str, str]:
     user, host = utils.parse_user_at_host(s)
     if user is None:
@@ -1135,13 +1117,6 @@ def import_ssh_key(local_user, remote_user, local_sudoer, remote_node, remote_su
             local_user,
             "sed -i '$a {}' '{}'".format(remote_key_content, local_authorized_file),
         )
-
-def append_to_remote_file(fromfile, user, remote_node, tofile):
-    """
-    Append content of fromfile to tofile on remote_node
-    """
-    cmd = "cat {} | ssh {} {}@{} 'cat >> {}'".format(fromfile, SSH_OPTION, user, remote_node, tofile)
-    sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
 def init_csync2():

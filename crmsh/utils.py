@@ -2448,22 +2448,6 @@ class InterfacesInfo(object):
         return res.group(1) if res else self.nic_list[0]
 
 
-def check_file_content_included(source_file, target_file, remote=None, source_local=False):
-    """
-    Check whether target_file includes contents of source_file
-    """
-    if not detect_file(source_file, remote=None if source_local else remote):
-        raise ValueError("File {} not exist".format(source_file))
-    if not detect_file(target_file, remote=remote):
-        return False
-
-    shell = sh.cluster_shell()
-    cmd = "cat {}".format(target_file)
-    target_data = shell.get_stdout_or_raise_error(cmd, host=remote)
-    cmd = "cat {}".format(source_file)
-    source_data = shell.get_stdout_or_raise_error(cmd, host=None if source_local else remote)
-    return source_data in target_data
-
 def check_text_included(text, target_file, remote=None):
     "Check whether target_file includes the text"
     if not detect_file(target_file, remote=remote):
