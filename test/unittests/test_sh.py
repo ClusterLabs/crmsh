@@ -13,8 +13,9 @@ class TestLocalShell(unittest.TestCase):
         self.local_shell.geteuid = mock.Mock(self.local_shell.geteuid)
         self.local_shell.hostname = mock.Mock(self.local_shell.hostname)
 
+    @mock.patch('os.environ')
     @mock.patch('subprocess.run')
-    def test_su_subprocess_run(self, mock_run: mock.MagicMock):
+    def test_su_subprocess_run(self, mock_run: mock.MagicMock, mock_environ: mock.MagicMock):
         self.local_shell.get_effective_user_name.return_value = 'root'
         self.local_shell.geteuid.return_value = 0
         self.local_shell.su_subprocess_run(
@@ -24,10 +25,12 @@ class TestLocalShell(unittest.TestCase):
         mock_run.assert_called_once_with(
             ['su', 'alice', '--login', '-s', '/bin/sh', '-c', 'foo'],
             input=b'bar',
+            env=mock_environ,
         )
 
+    @mock.patch('os.environ')
     @mock.patch('subprocess.run')
-    def test_su_subprocess_run_as_root(self, mock_run: mock.MagicMock):
+    def test_su_subprocess_run_as_root(self, mock_run: mock.MagicMock, mock_environ: mock.MagicMock):
         self.local_shell.get_effective_user_name.return_value = 'root'
         self.local_shell.geteuid.return_value = 0
         self.local_shell.su_subprocess_run(
@@ -37,6 +40,7 @@ class TestLocalShell(unittest.TestCase):
         mock_run.assert_called_once_with(
             ['/bin/sh', '-c', 'foo'],
             input=b'bar',
+            env=mock_environ,
         )
 
     @mock.patch('subprocess.run')
@@ -124,8 +128,9 @@ class TestSSHShell(unittest.TestCase):
             )
         self.ssh_shell.local_shell.su_subprocess_run.assert_not_called()
 
+    @mock.patch('os.environ')
     @mock.patch('subprocess.run')
-    def test_subprocess_run_without_input_local(self, mock_run):
+    def test_subprocess_run_without_input_local(self, mock_run, mock_environ: mock.MagicMock):
         self.ssh_shell.subprocess_run_without_input(
             'node1', 'bob',
             'foo',
@@ -138,6 +143,7 @@ class TestSSHShell(unittest.TestCase):
             input=b'foo',
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=mock_environ,
         )
 
 
