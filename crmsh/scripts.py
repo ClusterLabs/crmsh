@@ -1090,7 +1090,9 @@ def _check_control_persist():
         print((".EXT", cmd))
     cmd = subprocess.Popen(cmd,
                            stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
+                           stderr=subprocess.PIPE,
+                           env=os.environ,  # bsc#1205925
+                           )
     (out, err) = cmd.communicate()
     return "Bad configuration option" not in err
 
@@ -1158,7 +1160,11 @@ def _cleanup_local(workdir):
     if workdir and os.path.isdir(workdir):
         cleanscript = os.path.join(workdir, 'crm_clean.py')
         if os.path.isfile(cleanscript):
-            if subprocess.call([cleanscript, workdir], shell=False) != 0:
+            if subprocess.call(
+                    [cleanscript, workdir],
+                    shell=False,
+                    env=os.environ,  # bsc#1205925
+            ) != 0:
                 shutil.rmtree(workdir)
         else:
             shutil.rmtree(workdir)
