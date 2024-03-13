@@ -1,6 +1,6 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
+import os
 import sys
 import re
 # from: http://code.activestate.com/recipes/475116/
@@ -151,6 +151,7 @@ def init():
     from . import config
     if not _term_stream.isatty() and 'color-always' not in config.color.style:
         return
+    _ignore_environ()
     # Check the terminal type.  If we fail, then assume that the
     # terminal has no capabilities.
     try:
@@ -176,5 +177,13 @@ def render(template):
 def is_color(s):
     return hasattr(colors, s.upper())
 
+
+def _ignore_environ():
+    """Ignore environment variable COLUMNS and ROWS"""
+    # See https://bugzilla.suse.com/show_bug.cgi?id=1205925
+    # and https://gitlab.com/procps-ng/procps/-/blob/c415fc86452c933716053a50ab1777a343190dcc/src/ps/global.c#L279
+    for name in ["COLUMNS", "ROWS"]:
+        if name in os.environ:
+            del os.environ[name]
 
 # vim:ts=4:sw=4:et:
