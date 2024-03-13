@@ -242,13 +242,14 @@ _cib_in_use = ''
 
 
 def set_cib_in_use(name):
-    os.putenv(_cib_shadow, name)
+    os.environ[_cib_shadow] = name
     global _cib_in_use
     _cib_in_use = name
 
 
 def clear_cib_in_use():
-    os.unsetenv(_cib_shadow)
+    if _cib_shadow in os.environ:
+        del os.environ[_cib_shadow]
     global _cib_in_use
     _cib_in_use = ''
 
