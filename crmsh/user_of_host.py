@@ -1,4 +1,5 @@
 import logging
+import os
 import socket
 import subprocess
 import typing
@@ -107,6 +108,7 @@ class UserOfHost:
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=os.environ,  # bsc#1205925
         )
         if rc == 0:
             user = userdir.getuser()

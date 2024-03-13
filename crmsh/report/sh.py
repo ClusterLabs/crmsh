@@ -69,6 +69,7 @@ class Shell:
         return subprocess.run(
             args,
             input=cmd.encode('utf-8'),
+            env=os.environ,  # bsc#1205925
             **kwargs,
         )
 

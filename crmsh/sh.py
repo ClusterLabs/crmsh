@@ -150,12 +150,12 @@ class LocalShell:
             )
         if not self.additional_environ:
             logger.debug('su_subprocess_run: %s, %s', args, kwargs)
-            return subprocess.run(args, **kwargs)
+            env = os.environ    # bsc#1205925
         else:
             logger.debug('su_subprocess_run: %s, env=%s, %s', args, self.additional_environ, kwargs)
             env = dict(os.environ)
             env.update(self.additional_environ)
-            return subprocess.run(args, env=env, **kwargs)
+        return subprocess.run(args, env=env, **kwargs)
 
     def get_rc_stdout_stderr_raw(self, user: typing.Optional[str], cmd: str, input: typing.Optional[bytes] = None):
         result = self.su_subprocess_run(
@@ -268,6 +268,7 @@ class SSHShell:
             return subprocess.run(
                 args,
                 input=cmd.encode('utf-8'),
+                env=os.environ,     # bsc#1205925
                 **kwargs,
             )
         else:
@@ -317,6 +318,7 @@ class ClusterShell:
                 return subprocess.run(
                     ['/bin/sh'],
                     input=cmd.encode('utf-8'),
+                    env=os.environ,  # bsc#1205925
                     **kwargs,
                 )
             else:
@@ -436,6 +438,7 @@ class ShellUtils:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL if stderr_on else subprocess.PIPE,
+            env=os.environ,  # bsc#1205925
         )
         stdout_data, _ = proc.communicate(input_s)
         if raw:
@@ -457,7 +460,9 @@ class ShellUtils:
             shell=shell,
             stdin=input_s and subprocess.PIPE or None,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+            stderr=subprocess.PIPE,
+            env=os.environ,  # bsc#1205925
+        )
         # will raise subprocess.TimeoutExpired if set timeout
         stdout_data, stderr_data = proc.communicate(input_s, timeout=timeout)
         if raw:
@@ -489,3 +494,4 @@ class ClusterShellAdaptorForLocalShell(ClusterShell):
 
 def cluster_shell():
     return ClusterShell(LocalShell(), user_of_host.instance(), raise_ssh_error=True)
+
