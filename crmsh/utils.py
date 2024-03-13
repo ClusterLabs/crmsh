@@ -828,7 +828,9 @@ def get_stdout(cmd, input_s=None, stderr_on=True, shell=True, raw=False):
                             shell=shell,
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
-                            stderr=stderr)
+                            stderr=stderr,
+                            env=os.environ,  # bsc#1205925
+                            )
     stdout_data, stderr_data = proc.communicate(input_s)
     if raw:
         return proc.returncode, stdout_data
@@ -845,7 +847,9 @@ def get_stdout_stderr(cmd, input_s=None, shell=True, raw=False, no_reg=False):
                             shell=shell,
                             stdin=input_s and subprocess.PIPE or None,
                             stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+                            stderr=subprocess.PIPE,
+                            env=os.environ,  # bsc#1205925
+                            )
     stdout_data, stderr_data = proc.communicate(input_s)
     if raw:
         return proc.returncode, stdout_data, stderr_data
