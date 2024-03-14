@@ -105,12 +105,6 @@ def query_qnetd_status():
     if not qnetd_addr:
         raise ValueError("host for qnetd not configured!")
 
-    # Configure ssh passwordless to qnetd if detect password is needed
-    local_user, remote_user = utils.user_pair_for_ssh(qnetd_addr)
-    if utils.check_ssh_passwd_need(local_user, remote_user, qnetd_addr):
-        crmsh.bootstrap.configure_ssh_key(local_user)
-        utils.ssh_copy_id(local_user, remote_user, qnetd_addr)
-
     cmd = "corosync-qnetd-tool -lv -c {}".format(cluster_name)
     result = parallax.parallax_call([qnetd_addr], cmd)
     _, qnetd_result_stdout, _ = result[0][1]

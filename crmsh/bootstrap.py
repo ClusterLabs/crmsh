@@ -74,7 +74,7 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
-INIT_STAGES = ("ssh", "csync2", "csync2_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+INIT_STAGES = ("ssh", "csync2", "csync2_remote", "qnetd_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
 
 
 class Context(object):
@@ -1173,6 +1173,18 @@ def init_csync2_remote():
         _context.quiet = was_quiet
 
 
+def init_qnetd_remote():
+    """
+    Triggered by join_cluster, this function adds the joining node's key to the qnetd's authorized_keys
+    """
+    local_user, remote_user, join_node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
+    join_node_key_content = remote_public_key_from(remote_user, local_user, join_node, remote_user)
+    qnetd_host = corosync.get_value("quorum.device.net.host")
+    _, qnetd_user, qnetd_host = _select_user_pair_for_ssh_for_secondary_components(qnetd_host)
+    authorized_key_manager = ssh_key.AuthorizedKeyManager(sh.cluster_shell())
+    authorized_key_manager.add(qnetd_host, qnetd_user, ssh_key.InMemoryPublicKey(join_node_key_content))
+
+
 def init_corosync_auth():
     """
     Generate the corosync authkey
@@ -1604,6 +1616,14 @@ def init_qdevice():
                             args[i + 1] = f'{sudoer}@{qnetd_addr}'
                             msg += '\nOr, run "{}".'.format(' '.join(args))
             raise ValueError(msg)
+        else:
+            for node in cluster_node_list:
+                if node == utils.this_node():
+                    continue
+                local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
+                remote_key_content = remote_public_key_from(remote_user, local_user, node, remote_user)
+                ssh_key.AuthorizedKeyManager(sh.cluster_shell()).add(qnetd_addr, ssh_user, ssh_key.InMemoryPublicKey(remote_key_content))
+
     user_by_host = utils.HostUserConfig()
     user_by_host.add(local_user, utils.this_node())
     user_by_host.add(ssh_user, qnetd_addr)
@@ -2027,6 +2047,13 @@ def join_cluster(seed_host, remote_user):
     if is_qdevice_configured and not ServiceManager().service_is_available("corosync-qdevice.service"):
         utils.fatal("corosync-qdevice.service is not available")
 
+    shell = sh.cluster_shell()
+
+    if is_qdevice_configured and not _context.use_ssh_agent:
+        # trigger init_qnetd_remote on init node
+        cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
+        shell.get_stdout_or_raise_error(cmd, seed_host)
+
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
     # check if use IPv6
@@ -2050,7 +2077,6 @@ def join_cluster(seed_host, remote_user):
     # mountpoints for clustered filesystems.  Unfortunately we don't have
     # that yet, so the following crawling horror takes a punt on the seed
     # node being up, then asks it for a list of mountpoints...
-    shell = sh.cluster_shell()
     if seed_host:
         _rc, outp, _ = shell.get_rc_stdout_stderr_without_input(seed_host, "cibadmin -Q --xpath \"//primitive\"")
         if outp:
@@ -2352,7 +2378,7 @@ def bootstrap_init(context):
     elif stage == "":
         if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "csync2", "csync2_remote", "sbd", "ocfs2"):
+    elif stage not in ("ssh", "csync2", "csync2_remote", "qnetd_remote", "sbd", "ocfs2"):
         if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run %s stage" % (stage))
 
@@ -2360,15 +2386,15 @@ def bootstrap_init(context):
     _context.init_sbd_manager()
 
     # Need hostname resolution to work, want NTP (but don't block csync2_remote)
-    if stage not in ('csync2_remote',):
+    if stage not in ('csync2_remote', 'qnetd_remote'):
         check_tty()
         if not check_prereqs(stage):
             return
-    elif stage == 'csync2_remote':
+    else:
         args = _context.args
         logger_utils.log_only_to_file("args: {}".format(args))
         if len(args) != 2:
-            utils.fatal("Expected NODE argument to csync2_remote")
+            utils.fatal(f"Expected NODE argument to {stage} stage")
         _context.cluster_node = args[1]
 
     if stage and _context.cluster_is_running and \
