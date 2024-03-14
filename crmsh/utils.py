@@ -152,13 +152,14 @@ _cib_in_use = ''
 
 
 def set_cib_in_use(name):
-    os.putenv(_cib_shadow, name)
+    os.environ[_cib_shadow] = name
     global _cib_in_use
     _cib_in_use = name
 
 
 def clear_cib_in_use():
-    os.unsetenv(_cib_shadow)
+    if _cib_shadow in os.environ:
+        del os.environ[_cib_shadow]
     global _cib_in_use
     _cib_in_use = ''
 
@@ -525,7 +526,12 @@ def pipe_string(cmd, s):
     logger.debug("piping string to %s", cmd)
     if options.regression_tests:
         print(".EXT", cmd)
-    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE)
+    p = subprocess.Popen(
+        cmd,
+        shell=True,
+        stdin=subprocess.PIPE,
+        env=os.environ,  # bsc#1205925
+    )
     try:
         # communicate() expects encoded bytes
         if isinstance(s, str):
@@ -554,7 +560,9 @@ def filter_string(cmd, s, stderr_on=True, shell=True):
                          shell=shell,
                          stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE,
-                         stderr=stderr)
+                         stderr=stderr,
+                         env=os.environ,  # bsc#1205925
+                         )
     try:
         # bytes expected here
         if isinstance(s, str):
@@ -772,7 +780,9 @@ def show_dot_graph(dotfile, keep_file=False, desc="transition graph"):
     if options.regression_tests:
         print(".EXT", cmd)
     subprocess.Popen(cmd, shell=True, bufsize=0,
-                     stdin=None, stdout=None, stderr=None, close_fds=True)
+                     stdin=None, stdout=None, stderr=None, close_fds=True,
+                     env=os.environ,  # bsc#1205925
+                     )
     logger.info("starting %s to show %s", config.core.dotty, desc)
 
 
@@ -781,13 +791,21 @@ def ext_cmd(cmd, shell=True):
     if options.regression_tests:
         print(".EXT", cmd)
     logger.debug("invoke: %s", cmd)
-    return subprocess.call(cmd, shell=shell)
+    return subprocess.call(
+        cmd,
+        shell=shell,
+        env=os.environ,  # bsc#1205925
+    )
 
 
 def ext_cmd_nosudo(cmd, shell=True):
     if options.regression_tests:
         print(".EXT", cmd)
-    return subprocess.call(cmd, shell=shell)
+    return subprocess.call(
+        cmd,
+        shell=shell,
+        env=os.environ,  # bsc#1205925
+    )
 
 
 def rmdir_r(d):
@@ -920,7 +938,9 @@ def pipe_cmd_nosudo(cmd):
     proc = subprocess.Popen(cmd,
                             shell=True,
                             stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+                            stderr=subprocess.PIPE,
+                            env=os.environ,  # bsc#1205925
+                            )
     (outp, err_outp) = proc.communicate()
     proc.wait()
     rc = proc.returncode

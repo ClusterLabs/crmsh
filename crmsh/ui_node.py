@@ -1,7 +1,7 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import os
 import re
 import copy
 import subprocess
@@ -554,10 +554,13 @@ class NodeMgmt(command.UI):
         'usage: delete <node>'
         logger.warning('`crm node delete` is deprecated and will very likely be dropped in the near future. It is auto-replaced as `crm cluster remove -c {}`.'.format(node))
         if config.core.force:
-            rc = subprocess.call(['crm', 'cluster', 'remove', '-F', '-c', node])
+            args = ['crm', 'cluster', 'remove', '-F', '-c', node]
         else:
-            rc = subprocess.call(['crm', 'cluster', 'remove', '-c', node])
-        return rc == 0
+            args = ['crm', 'cluster', 'remove', '-c', node]
+        return 0 == subprocess.call(
+            args,
+            env=os.environ,  # bsc#1205925
+        )
 
     @command.wait
     @command.completers(compl.nodes, compl.choice(['set', 'delete', 'show']), _find_attr)

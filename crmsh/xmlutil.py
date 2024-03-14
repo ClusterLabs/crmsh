@@ -91,7 +91,11 @@ def sudocall(cmd):
     cmd = add_sudo(cmd)
     if options.regression_tests:
         print(".EXT", cmd)
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(
+        cmd, shell=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        env=os.environ,  # bsc#1205925
+    )
     try:
         outp, errp = p.communicate()
         p.wait()
