@@ -778,7 +778,11 @@ def get_command_info_timeout(cmd, timeout=5):
     # Python 101: How to timeout a subprocess
     def kill(process):
         process.kill()
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        env=os.environ,  # bsc#1205925
+    )
     my_timer = Timer(timeout, kill, [proc])
     try:
         my_timer.start()

@@ -1128,9 +1128,11 @@ def test_calculate_quorate_status():
 
 
 @mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("os.environ")
 @mock.patch("subprocess.run")
 def test_get_stdout_or_raise_error_local(
         mock_subprocess_run: mock.MagicMock,
+        mock_environ: mock.MagicMock,
         mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
 ):
     mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
@@ -1140,15 +1142,18 @@ def test_get_stdout_or_raise_error_local(
         input=b'foo',
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=mock_environ,
     )
     mock_subprocess_run_auto_ssh_no_input.assert_not_called()
     assert "bar" == out
 
 
 @mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("os.environ")
 @mock.patch("subprocess.run")
 def test_get_stdout_or_raise_error_local_failure(
         mock_subprocess_run: mock.MagicMock,
+        mock_environ: mock.MagicMock,
         mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
 ):
     mock_subprocess_run.return_value = mock.Mock(returncode=1, stdout=b'bar', stderr=b'err')
@@ -1163,15 +1168,18 @@ def test_get_stdout_or_raise_error_local_failure(
         input=b'foo',
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=mock_environ,
     )
     mock_subprocess_run_auto_ssh_no_input.assert_not_called()
     assert isinstance(exception, ValueError)
 
 
 @mock.patch("crmsh.utils.subprocess_run_auto_ssh_no_input")
+@mock.patch("os.environ")
 @mock.patch("subprocess.run")
 def test_get_stdout_or_raise_error_local_failure_no_raise(
         mock_subprocess_run: mock.MagicMock,
+        mock_environ: mock.MagicMock,
         mock_subprocess_run_auto_ssh_no_input: mock.MagicMock,
 ):
     mock_subprocess_run.return_value = mock.Mock(returncode=1, stdout=b'bar', stderr=b'err')
@@ -1182,6 +1190,7 @@ def test_get_stdout_or_raise_error_local_failure_no_raise(
         input=b'foo',
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
+        env=mock_environ,
     )
     mock_subprocess_run_auto_ssh_no_input.assert_not_called()
     assert "bar" == out
@@ -1206,22 +1215,38 @@ def test_get_stdout_or_raise_error_remote(
 
 
 class TestSubprocessRunUtils(unittest.TestCase):
+    @mock.patch("os.environ")
     @mock.patch("subprocess.run")
-    def test_subprocess_run_auto_ssh_no_input_local_no_su(self, mock_subprocess_run):
+    def test_subprocess_run_auto_ssh_no_input_local_no_su(
+            self,
+            mock_subprocess_run,
+            mock_environ: mock.MagicMock,
+        ):
         mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
         result = utils.subprocess_run_auto_ssh_no_input("foo", stderr=subprocess.DEVNULL)
-        mock_subprocess_run.assert_called_once_with(['/bin/sh'], input=b'foo', stderr=subprocess.DEVNULL)
+        mock_subprocess_run.assert_called_once_with(
+            ['/bin/sh'],
+            input=b'foo',
+            stderr=subprocess.DEVNULL,
+            env=mock_environ,
+        )
         self.assertEqual(0, result.returncode)
         self.assertEqual(b'bar', result.stdout)
 
+    @mock.patch("os.environ")
     @mock.patch("subprocess.run")
-    def test_subprocess_run_auto_ssh_no_input_local_su(self, mock_subprocess_run):
+    def test_subprocess_run_auto_ssh_no_input_local_su(
+            self,
+            mock_subprocess_run,
+            mock_environ: mock.MagicMock,
+        ):
         mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
         result = utils.subprocess_run_auto_ssh_no_input("foo", user="alice", stderr=subprocess.DEVNULL)
         mock_subprocess_run.assert_called_once_with(
             ['sudo', '-H', '-u', 'alice', '/bin/sh'],
             input=b'foo',
             stderr=subprocess.DEVNULL,
+            env=mock_environ,
         )
         self.assertEqual(0, result.returncode)
         self.assertEqual(b'bar', result.stdout)
@@ -1254,10 +1279,12 @@ class TestSubprocessRunUtils(unittest.TestCase):
 
     @mock.patch("os.geteuid")
     @mock.patch("crmsh.userdir.getuser")
+    @mock.patch("os.environ")
     @mock.patch("subprocess.run")
     def test_su_subprocess_run(
             self,
             mock_subprocess_run: mock.MagicMock,
+            mock_environ: mock.MagicMock,
             mock_get_user: mock.MagicMock,
             mock_geteuid: mock.MagicMock,
     ):
@@ -1266,7 +1293,8 @@ class TestSubprocessRunUtils(unittest.TestCase):
         mock_subprocess_run.return_value = mock.Mock(returncode=0, stdout=b'bar', stderr=b'')
         result = utils.su_subprocess_run('alice', 'foo')
         mock_subprocess_run.assert_called_once_with(
-            ['su', 'alice', '--login', '-c', 'foo']
+            ['su', 'alice', '--login', '-c', 'foo'],
+            env=mock_environ,
         )
         self.assertEqual(0, result.returncode)
         self.assertEqual(b'bar', result.stdout)
@@ -1287,10 +1315,12 @@ class TestSubprocessRunUtils(unittest.TestCase):
 
     @mock.patch("os.geteuid")
     @mock.patch("crmsh.userdir.getuser")
+    @mock.patch("os.environ")
     @mock.patch("subprocess.run")
     def test_su_subprocess_run_to_self(
             self,
             mock_subprocess_run: mock.MagicMock,
+            mock_environ: mock.MagicMock,
             mock_get_user: mock.MagicMock,
             mock_geteuid: mock.MagicMock,
     ):
@@ -1300,6 +1330,7 @@ class TestSubprocessRunUtils(unittest.TestCase):
         result = utils.su_subprocess_run('alice', 'foo')
         mock_subprocess_run.assert_called_once_with(
             ['/bin/sh', '-c', 'foo'],
+            env=mock_environ,
         )
         self.assertEqual(0, result.returncode)
         self.assertEqual(b'bar', result.stdout)
