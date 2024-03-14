@@ -553,18 +553,16 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key_for_secondary_user')
     @mock.patch('crmsh.bootstrap.change_user_shell')
-    @mock.patch('crmsh.sh.LocalShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
     @mock.patch('crmsh.utils.ssh_copy_id_no_raise')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
     def test_join_ssh(
             self,
-            mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_invoke, mock_change, mock_swap_2,
+            mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_change, mock_swap_2,
             mock_get_node_cononical_hostname,
     ):
-        bootstrap._context = mock.Mock(current_user="bob", default_nic_list=["eth1"], use_ssh_agent=False)
-        mock_invoke.return_value = ''
+        bootstrap._context = mock.Mock(current_user="bob", default_nic="eth1", use_ssh_agent=False)
         mock_swap.return_value = None
         mock_ssh_copy_id.return_value = 0
         mock_get_node_cononical_hostname.return_value='node1'
@@ -578,10 +576,6 @@ class TestBootstrap(unittest.TestCase):
             ])
         mock_ssh_copy_id.assert_called_once_with("bob", "alice", "node1")
         mock_swap.assert_called_once_with("node1", "bob", "alice", "bob", "alice", add=True)
-        mock_invoke.assert_called_once_with(
-            "bob",
-            "ssh {} alice@node1 sudo crm cluster init ssh_remote".format(constants.SSH_OPTION),
-        )
         mock_swap_2.assert_called_once()
         args, kwargs = mock_swap_2.call_args
         self.assertEqual(3, len(args))
@@ -777,45 +771,6 @@ class TestBootstrap(unittest.TestCase):
             mock.call('node2', "carol", "bob", "carol", "bob"),
             mock.call('node2', 'hacluster', 'hacluster', 'carol', 'bob', add=True)
             ])
-
-    @mock.patch('crmsh.userdir.getuser')
-    @mock.patch('crmsh.bootstrap.key_files')
-    @mock.patch('builtins.open')
-    @mock.patch('crmsh.bootstrap.append')
-    @mock.patch('os.path.join')
-    @mock.patch('os.path.exists')
-    def test_init_ssh_remote_no_sshkey(self, mock_exists, mock_join, mock_append, mock_open_file, mock_key_files, mock_getuser):
-        mock_getuser.return_value = "alice"
-        mock_key_files.return_value = {"private": "/home/alice/.ssh/id_rsa", "public": "/home/alice/.ssh/id_rsa.pub", "authorized": "/home/alice/.ssh/authorized_keys"}
-        mock_exists.side_effect = [False, True, False, False, False]
-        mock_join.side_effect = ["/home/alice/.ssh/id_rsa",
-                                 "/home/alice/.ssh/id_dsa",
-                                 "/home/alice/.ssh/id_ecdsa",
-                                 "/home/alice/.ssh/id_ed25519"]
-        mock_open_file.side_effect = [
-            mock.mock_open().return_value,
-            mock.mock_open(read_data="data1 data2").return_value,
-            mock.mock_open(read_data="data1111").return_value
-        ]
-
-        bootstrap.init_ssh_remote()
-
-        mock_getuser.assert_called_once_with()
-        mock_key_files.assert_called_once_with("alice")
-
-        mock_open_file.assert_has_calls([
-            mock.call("/home/alice/.ssh/authorized_keys", 'w'),
-            mock.call("/home/alice/.ssh/authorized_keys", "r+"),
-            mock.call("/home/alice/.ssh/id_rsa.pub")
-        ])
-        mock_exists.assert_has_calls([
-            mock.call("/home/alice/.ssh/authorized_keys"),
-            mock.call("/home/alice/.ssh/id_rsa"),
-            mock.call("/home/alice/.ssh/id_dsa"),
-            mock.call("/home/alice/.ssh/id_ecdsa"),
-            mock.call("/home/alice/.ssh/id_ed25519"),
-        ])
-        mock_append.assert_called_once_with("/home/alice/.ssh/id_rsa.pub", "/home/alice/.ssh/authorized_keys")
 
     @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')
     def test_get_node_canonical_hostname(self, mock_run):
