@@ -74,7 +74,7 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
-INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+INIT_STAGES = ("ssh", "csync2", "csync2_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
 
 
 class Context(object):
@@ -786,11 +786,6 @@ def start_pacemaker(node_list=[], enable_flag=False):
     return service_manager.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
-def append(fromfile, tofile, remote=None):
-    cmd = "cat {} >> {}".format(fromfile, tofile)
-    sh.cluster_shell().get_stdout_or_raise_error(cmd, host=remote)
-
-
 def _parse_user_at_host(s: str, default_user: str) -> typing.Tuple[str, str]:
     user, host = utils.parse_user_at_host(s)
     if user is None:
@@ -1049,28 +1044,6 @@ def generate_ssh_key_pair_on_remote(
     if result.returncode != 0:
         raise ValueError(codecs.decode(result.stderr, 'utf-8', 'replace'))
     return result.stdout.decode('utf-8').strip()
-
-
-def init_ssh_remote():
-    """
-    Called by ha-cluster-join
-    """
-    user = userdir.get_sudoer()
-    if user is None:
-        user = userdir.getuser()
-    _, _, authorized_keys_file = key_files(user).values()
-    if not os.path.exists(authorized_keys_file):
-        open(authorized_keys_file, 'w').close()
-    authkeys = open(authorized_keys_file, "r+")
-    authkeys_data = authkeys.read()
-    dirname = os.path.dirname(authorized_keys_file)
-    for key in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
-        fn = os.path.join(dirname, key)
-        if not os.path.exists(fn):
-            continue
-        keydata = open(fn + ".pub").read()
-        if keydata not in authkeys_data:
-            append(fn + ".pub", authorized_keys_file)
 
 
 def export_ssh_key_non_interactive(local_user_to_export, remote_user_to_swap, remote_node, local_sudoer, remote_sudoer):
@@ -1693,17 +1666,6 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
         # After this, login to remote_node is passwordless
         swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
 
-    # This makes sure the seed host has its own SSH keys in its own
-    # authorized_keys file (again, to help with the case where the
-    # user has done manual initial setup without the assistance of
-    # ha-cluster-init).
-    if not ssh_public_keys:
-        local_shell.get_stdout_or_raise_error(
-            local_user,
-            "ssh {} {}@{} sudo crm cluster init ssh_remote".format(
-                SSH_OPTION, seed_user, seed_host
-            ),
-        )
     user_by_host = utils.HostUserConfig()
     user_by_host.clear()
     user_by_host.add(seed_user, seed_host)
@@ -2390,15 +2352,15 @@ def bootstrap_init(context):
     elif stage == "":
         if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote", "sbd", "ocfs2"):
+    elif stage not in ("ssh", "csync2", "csync2_remote", "sbd", "ocfs2"):
         if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run %s stage" % (stage))
 
     _context.load_profiles()
     _context.init_sbd_manager()
 
-    # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
-    if stage not in ('ssh_remote', 'csync2_remote'):
+    # Need hostname resolution to work, want NTP (but don't block csync2_remote)
+    if stage not in ('csync2_remote',):
         check_tty()
         if not check_prereqs(stage):
             return
