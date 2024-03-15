@@ -1577,23 +1577,8 @@ def configure_qdevice_interactive():
             is_stage=_context.stage == "qdevice")
 
 
-def init_qdevice():
-    """
-    Setup qdevice and qnetd service
-    """
-    if not _context.qdevice_inst:
-        configure_qdevice_interactive()
-    # If don't want to config qdevice, return
-    if not _context.qdevice_inst:
-        ServiceManager().disable_service("corosync-qdevice.service")
-        return
-    logger.info("""Configure Qdevice/Qnetd:""")
-    cluster_node_list = utils.list_cluster_nodes()
-    for node in cluster_node_list:
-        if not ServiceManager().service_is_available("corosync-qdevice.service", node):
-            utils.fatal("corosync-qdevice.service is not available on {}".format(node))
-    qdevice_inst = _context.qdevice_inst
-    local_user, ssh_user, qnetd_addr = _select_user_pair_for_ssh_for_secondary_components(_context.qnetd_addr_input)
+def _setup_passwordless_ssh_for_qnetd(cluster_node_list: typing.List[str]):
+    local_user, qnetd_user, qnetd_addr = _select_user_pair_for_ssh_for_secondary_components(_context.qnetd_addr_input)
     # Configure ssh passwordless to qnetd if detect password is needed
     if UserOfHost.instance().use_ssh_agent():
         logger.info("Adding public keys to authorized_keys for user root...")
@@ -1601,13 +1586,12 @@ def init_qdevice():
             ssh_key.AuthorizedKeyManager(sh.SSHShell(
                 sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')}),
                 'root',
-            )).add(qnetd_addr, ssh_user, key)
-    elif utils.check_ssh_passwd_need(local_user, ssh_user, qnetd_addr):
-        configure_ssh_key(local_user)
-        if 0 != utils.ssh_copy_id_no_raise(local_user, ssh_user, qnetd_addr):
-            msg = f"Failed to login to {ssh_user}@{qnetd_addr}. Please check the credentials."
+            )).add(qnetd_addr, qnetd_user, key)
+    elif utils.check_ssh_passwd_need(local_user, qnetd_user, qnetd_addr):
+        if 0 != utils.ssh_copy_id_no_raise(local_user, qnetd_user, qnetd_addr):
+            msg = f"Failed to login to {qnetd_user}@{qnetd_addr}. Please check the credentials."
             sudoer = userdir.get_sudoer()
-            if sudoer and ssh_user != sudoer:
+            if sudoer and qnetd_user != sudoer:
                 args = ['sudo crm']
                 args += [x for x in sys.argv[1:]]
                 for i, arg in enumerate(args):
@@ -1617,27 +1601,47 @@ def init_qdevice():
                             msg += '\nOr, run "{}".'.format(' '.join(args))
             raise ValueError(msg)
         else:
+            cluster_shell = sh.cluster_shell()
+            # Add other nodes' public keys to qnetd's authorized_keys
             for node in cluster_node_list:
                 if node == utils.this_node():
                     continue
                 local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
                 remote_key_content = remote_public_key_from(remote_user, local_user, node, remote_user)
-                ssh_key.AuthorizedKeyManager(sh.cluster_shell()).add(qnetd_addr, ssh_user, ssh_key.InMemoryPublicKey(remote_key_content))
+                in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
+                ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
 
     user_by_host = utils.HostUserConfig()
     user_by_host.add(local_user, utils.this_node())
-    user_by_host.add(ssh_user, qnetd_addr)
+    user_by_host.add(qnetd_user, qnetd_addr)
     user_by_host.save_remote(cluster_node_list)
-    # Start qdevice service if qdevice already configured
+
+
+def init_qdevice():
+    """
+    Setup qdevice and qnetd service
+    """
+    if not _context.qdevice_inst:
+        configure_qdevice_interactive()
+    if not _context.qdevice_inst:
+        ServiceManager().disable_service("corosync-qdevice.service")
+        return
+
+    logger.info("""Configure Qdevice/Qnetd:""")
+    cluster_node_list = utils.list_cluster_nodes()
+    for node in cluster_node_list:
+        if not ServiceManager().service_is_available("corosync-qdevice.service", node):
+            utils.fatal("corosync-qdevice.service is not available on {}".format(node))
+
+    _setup_passwordless_ssh_for_qnetd(cluster_node_list)
+
+    qdevice_inst = _context.qdevice_inst
     if utils.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
         qdevice_inst.start_qdevice_service()
         return
     qdevice_inst.set_cluster_name()
-    # Validate qnetd node
     qdevice_inst.valid_qnetd()
-
     qdevice_inst.config_and_start_qdevice()
-
     if _context.stage == "qdevice":
         adjust_properties()
 
