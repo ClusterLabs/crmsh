@@ -914,6 +914,75 @@ class TestBootstrap(unittest.TestCase):
         mock_interfaces_inst.get_default_nic_list_from_route.assert_called_once_with()
         mock_interfaces_inst.get_default_ip_list.assert_called_once_with()
 
+    @mock.patch('crmsh.utils.HostUserConfig')
+    @mock.patch('crmsh.ssh_key.AuthorizedKeyManager')
+    @mock.patch('crmsh.sh.cluster_shell')
+    @mock.patch('crmsh.ssh_key.InMemoryPublicKey')
+    @mock.patch('crmsh.bootstrap.remote_public_key_from')
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.ssh_copy_id_no_raise')
+    @mock.patch('crmsh.utils.check_ssh_passwd_need')
+    @mock.patch('crmsh.bootstrap.UserOfHost.instance')
+    @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
+    def test_setup_passwordless_ssh_for_qnetd_add_keys(self, mock_select, mock_user_of_host, mock_check_passwd, mock_ssh_copy_id, mock_this_node, mock_remote_public_key_from, mock_in_memory_public_key, mock_cluster_shell, mock_authorized_key_manager, mock_host_user_config_class):
+        bootstrap._context = mock.Mock(qnetd_addr_input="user@qnetd-node")
+        mock_select.side_effect = [("bob", "bob", "qnetd-node"), ("bob", "bob", "node2")]
+        mock_user_of_host_instance = mock.Mock()
+        mock_user_of_host.return_value = mock_user_of_host_instance
+        mock_user_of_host_instance.use_ssh_agent.return_value = False
+        mock_check_passwd.return_value = True
+        mock_ssh_copy_id.return_value = 0
+        mock_this_node.return_value = "node1"
+        mock_remote_public_key_from.return_value = "public_key"
+        mock_in_memory_public_key.return_value = "public_key"
+        mock_authorized_key_manager_instance = mock.Mock()
+        mock_authorized_key_manager.return_value = mock_authorized_key_manager_instance
+        mock_host_user_config_instance = mock.Mock()
+        mock_host_user_config_class.return_value = mock_host_user_config_instance
+
+        bootstrap._setup_passwordless_ssh_for_qnetd(["node1", "node2"])
+
+        mock_select.assert_has_calls([
+            mock.call(bootstrap._context.qnetd_addr_input),
+            mock.call('node2')
+            ])
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.HostUserConfig')
+    @mock.patch('os.environ.get')
+    @mock.patch('crmsh.sh.SSHShell')
+    @mock.patch('crmsh.sh.LocalShell')
+    @mock.patch('crmsh.ssh_key.AuthorizedKeyManager')
+    @mock.patch('crmsh.ssh_key.AgentClient')
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.bootstrap.UserOfHost.instance')
+    @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
+    def test_setup_passwordless_ssh_for_qnetd_ssh_agent(self, mock_select, mock_user_of_host, mock_info, mock_agent, mock_authorized_key_manager, mock_local_shell, mock_ssh_shell, mock_get, mock_host_user_config_class, mock_this_node):
+        bootstrap._context = mock.Mock(qnetd_addr_input="user@qnetd-node")
+        mock_select.return_value = ("bob", "bob", "qnetd-node")
+        mock_user_of_host_instance = mock.Mock()
+        mock_user_of_host.return_value = mock_user_of_host_instance
+        mock_user_of_host_instance.use_ssh_agent.return_value = True
+        mock_agent_instance = mock.Mock()
+        mock_agent.return_value = mock_agent_instance
+        key_in_memory = mock.MagicMock(crmsh.ssh_key.InMemoryPublicKey)
+        mock_agent_instance.list.return_value = [key_in_memory]
+        mock_authorized_key_manager_instance = mock.Mock()
+        mock_authorized_key_manager.return_value = mock_authorized_key_manager_instance
+        mock_get.return_value = "/ssh-agent-path"
+        mock_local_shell_instance = mock.Mock()
+        mock_local_shell.return_value = mock_local_shell_instance
+        mock_ssh_shell_instance = mock.Mock()
+        mock_ssh_shell.return_value = mock_ssh_shell_instance
+        mock_this_node.return_value = "node1"
+        mock_host_uesr_config_instance = mock.Mock()
+        mock_host_user_config_class.return_value = mock_host_uesr_config_instance
+
+        bootstrap._setup_passwordless_ssh_for_qnetd(["node1", "node2"])
+
+        mock_info.assert_called_once_with("Adding public keys to authorized_keys for user root...")
+        mock_authorized_key_manager_instance.add.assert_called_once_with("qnetd-node", "bob", key_in_memory)
+
     @mock.patch('crmsh.service_manager.ServiceManager.disable_service')
     @mock.patch('logging.Logger.info')
     def test_init_qdevice_no_config(self, mock_status, mock_disable):
@@ -921,39 +990,6 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.init_qdevice()
         mock_status.assert_not_called()
         mock_disable.assert_called_once_with("corosync-qdevice.service")
-
-    @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
-    @mock.patch('crmsh.utils.HostUserConfig')
-    @mock.patch('crmsh.user_of_host.UserOfHost.instance')
-    @mock.patch('crmsh.utils.list_cluster_nodes')
-    @mock.patch('crmsh.utils.ssh_copy_id_no_raise')
-    @mock.patch('crmsh.bootstrap.configure_ssh_key')
-    @mock.patch('crmsh.utils.check_ssh_passwd_need')
-    @mock.patch('logging.Logger.info')
-    def test_init_qdevice_copy_ssh_key_failed(
-            self,
-            mock_status, mock_check_ssh_passwd_need,
-            mock_configure_ssh_key, mock_ssh_copy_id, mock_list_nodes, mock_user_of_host,
-            mock_host_user_config_class,
-            mock_select_user_pair_for_ssh,
-    ):
-        mock_list_nodes.return_value = []
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob")
-        mock_check_ssh_passwd_need.return_value = True
-        mock_ssh_copy_id.return_value = 255
-        mock_user_of_host.return_value = mock.MagicMock(crmsh.user_of_host.UserOfHost)
-        mock_user_of_host.return_value.use_ssh_agent.return_value = False
-        mock_select_user_pair_for_ssh.return_value = ("bob", "bob", 'qnetd-node')
-
-        with self.assertRaises(ValueError):
-            bootstrap.init_qdevice()
-
-        mock_status.assert_has_calls([
-            mock.call("Configure Qdevice/Qnetd:"),
-        ])
-        mock_check_ssh_passwd_need.assert_called_once_with("bob", "bob", "qnetd-node")
-        mock_configure_ssh_key.assert_called_once_with('bob')
-        mock_ssh_copy_id.assert_called_once_with('bob', 'bob', 'qnetd-node')
 
     @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
     @mock.patch('crmsh.utils.HostUserConfig')
