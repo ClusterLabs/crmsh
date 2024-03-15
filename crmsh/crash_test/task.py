@@ -553,8 +553,8 @@ class TaskFixSBD(Task):
         self.description = "Replace SBD_DEVICE with candidate {}".format(self.new)
         self.conf = config.SBD_CONF
         super(self.__class__, self).__init__(self.description, flush=True)
-        self.bak = tempfile.mkstemp()[1]
-        self.edit = tempfile.mkstemp()[1]
+        self.bakfd, self.bak = tempfile.mkstemp()
+        self.editfd, self.edit = tempfile.mkstemp()
         self.force = force
 
         sbd_options = crmshutils.parse_sysconfig(self.conf)
@@ -619,7 +619,13 @@ New SBD device:      {}
             shutil.copymode(self.conf, self.edit)
             os.remove(self.conf)
             shutil.move(self.edit, self.conf)
+            if self.editfd:
+                os.close(self.editfd)
+                self.editfd = None
             os.remove(self.bak)
+            if self.bakfd:
+                os.close(self.bakfd)
+                self.bakfd = None
             self.bak = None
         except:
             raise TaskError("Fail to modify file {}".format(self.conf))
