@@ -74,7 +74,7 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
-INIT_STAGES = ("ssh", "ssh_remote", "csync2", "csync2_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+INIT_STAGES = ("ssh", "csync2", "csync2_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
 
 
 class Context(object):
@@ -107,7 +107,7 @@ class Context(object):
         self.admin_ip = None
         self.ipv6 = None
         self.qdevice_inst = None
-        self.qnetd_addr = None
+        self.qnetd_addr_input = None
         self.qdevice_port = None
         self.qdevice_algo = None
         self.qdevice_tie_breaker = None
@@ -157,17 +157,11 @@ class Context(object):
         """
         Initialize qdevice instance
         """
-        if not self.qnetd_addr:
+        if not self.qnetd_addr_input:
             return
-        parts = self.qnetd_addr.split('@', 2)
-        if len(parts) == 2:
-            ssh_user = parts[0]
-            qnetd_host = parts[1]
-        else:
-            ssh_user = None
-            qnetd_host = self.qnetd_addr
+        ssh_user, qnetd_host = utils.parse_user_at_host(self.qnetd_addr_input)
         self.qdevice_inst = qdevice.QDevice(
-                qnetd_host,
+                qnetd_addr=qnetd_host,
                 port=self.qdevice_port,
                 algo=self.qdevice_algo,
                 tie_breaker=self.qdevice_tie_breaker,
@@ -803,29 +797,6 @@ def start_pacemaker(node_list=[], enable_flag=False):
     return service_manager.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
-def append(fromfile, tofile, remote=None):
-    cmd = "cat {} >> {}".format(fromfile, tofile)
-    sh.cluster_shell().get_stdout_or_raise_error(cmd, host=remote)
-
-
-def append_unique(fromfile, tofile, user=None, remote=None, from_local=False):
-    """
-    Append unique content from fromfile to tofile
-    
-    if from_local and remote:
-        append local fromfile to remote tofile
-    elif remote:
-        append remote fromfile to remote tofile
-    if not remote:
-        append fromfile to tofile, locally
-    """
-    if not utils.check_file_content_included(fromfile, tofile, remote=remote, source_local=from_local):
-        if from_local and remote:
-            append_to_remote_file(fromfile, user, remote, tofile)
-        else:
-            append(fromfile, tofile, remote=remote)
-
-
 def _parse_user_at_host(s: str, default_user: str) -> typing.Tuple[str, str]:
     user, host = utils.parse_user_at_host(s)
     if user is None:
@@ -833,18 +804,19 @@ def _parse_user_at_host(s: str, default_user: str) -> typing.Tuple[str, str]:
     return user, host
 
 
+def _keys_from_ssh_agent() -> typing.List[ssh_key.Key]:
+    try:
+        keys = ssh_key.AgentClient().list()
+        logger.info("Using public keys from ssh-agent...")
+    except Error:
+        logger.error("Cannot get a public key from ssh-agent.")
+        raise
+    return keys
+
+
 def init_ssh():
     user_host_list = [_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list]
-    if _context.use_ssh_agent:
-        try:
-            ssh_agent = ssh_key.AgentClient()
-            keys = ssh_agent.list()
-            logger.info("Using public keys from ssh-agent...")
-        except ssh_key.Error:
-            logger.error("Cannot get a public key from ssh-agent.")
-            raise
-    else:
-        keys = list()
+    keys = _keys_from_ssh_agent() if _context.use_ssh_agent else list()
     init_ssh_impl(_context.current_user, keys, user_host_list)
     if user_host_list:
         service_manager = ServiceManager()
@@ -1084,28 +1056,6 @@ def generate_ssh_key_pair_on_remote(
     return result.stdout.decode('utf-8').strip()
 
 
-def init_ssh_remote():
-    """
-    Called by ha-cluster-join
-    """
-    user = userdir.get_sudoer()
-    if user is None:
-        user = userdir.getuser()
-    _, _, authorized_keys_file = key_files(user).values()
-    if not os.path.exists(authorized_keys_file):
-        open(authorized_keys_file, 'w').close()
-    authkeys = open(authorized_keys_file, "r+")
-    authkeys_data = authkeys.read()
-    dirname = os.path.dirname(authorized_keys_file)
-    for key in ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"):
-        fn = os.path.join(dirname, key)
-        if not os.path.exists(fn):
-            continue
-        keydata = open(fn + ".pub").read()
-        if keydata not in authkeys_data:
-            append(fn + ".pub", authorized_keys_file)
-
-
 def export_ssh_key_non_interactive(local_user_to_export, remote_user_to_swap, remote_node, local_sudoer, remote_sudoer):
     """Copy ssh key from local to remote's authorized_keys. Require a configured non-interactive ssh authentication."""
     # ssh-copy-id will prompt for the password of the destination user
@@ -1140,13 +1090,6 @@ def import_ssh_key(local_user, remote_user, local_sudoer, remote_node, remote_su
             local_user,
             "sed -i '$a {}' '{}'".format(remote_key_content, local_authorized_file),
         )
-
-def append_to_remote_file(fromfile, user, remote_node, tofile):
-    """
-    Append content of fromfile to tofile on remote_node
-    """
-    cmd = "cat {} | ssh {} {}@{} 'cat >> {}'".format(fromfile, SSH_OPTION, user, remote_node, tofile)
-    sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
 def init_csync2():
@@ -1515,8 +1458,10 @@ def configure_qdevice_interactive():
             else:
                 return
 
-    qnetd_addr = prompt_for_string("HOST or IP of the QNetd server to be used",
-            valid_func=qdevice.QDevice.check_qnetd_addr)
+    qnetd_addr_input = prompt_for_string("HOST or IP of the QNetd server to be used")
+    ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
+    qdevice.QDevice.check_qnetd_addr(qnetd_host)
+    _context.qnetd_addr_input = qnetd_addr_input
     qdevice_port = prompt_for_string("TCP PORT of QNetd server", default=5403,
             valid_func=qdevice.QDevice.check_qdevice_port)
     qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
@@ -1530,14 +1475,6 @@ def configure_qdevice_interactive():
             allow_empty=True)
     qdevice_heuristics_mode = prompt_for_string("MODE of operation of heuristics (on/sync/off)", default="sync",
             valid_func=qdevice.QDevice.check_qdevice_heuristics_mode) if qdevice_heuristics else None
-
-    parts = qnetd_addr.split('@', 2)
-    if len(parts) == 2:
-        ssh_user = parts[0]
-        qnetd_host = parts[1]
-    else:
-        ssh_user = None
-        qnetd_host = qnetd_addr
 
     _context.qdevice_inst = qdevice.QDevice(
             qnetd_host,
@@ -1567,28 +1504,7 @@ def init_qdevice():
         if not ServiceManager().service_is_available("corosync-qdevice.service", node):
             utils.fatal("corosync-qdevice.service is not available on {}".format(node))
     qdevice_inst = _context.qdevice_inst
-    qnetd_addr = qdevice_inst.qnetd_addr
-    local_user = None
-    ssh_user = None
-    if qdevice_inst.ssh_user is not None:
-        # if the remote user is specified explicitly, use it
-        ssh_user = qdevice_inst.ssh_user
-        try:
-            local_user = UserOfHost.instance().user_of(utils.this_node())
-        except UserNotFoundError:
-            local_user = ssh_user
-    else:
-        try:
-            # if ssh session has ready been available, use that
-            local_user, ssh_user = UserOfHost.instance().user_pair_for_ssh(qnetd_addr)
-        except UserNotFoundError:
-            pass
-    if ssh_user is None:
-        try:
-            local_user = UserOfHost.instance().user_of(utils.this_node())
-        except UserNotFoundError:
-            local_user = userdir.getuser()
-        ssh_user = local_user
+    local_user, ssh_user, qnetd_addr = _select_user_pair_for_ssh_for_secondary_components(_context.qnetd_addr_input)
     # Configure ssh passwordless to qnetd if detect password is needed
     if UserOfHost.instance().use_ssh_agent():
         logger.info("Adding public keys to authorized_keys for user root...")
@@ -1646,17 +1562,7 @@ def join_ssh(seed_host, seed_user):
     if not seed_host:
         utils.fatal("No existing IP/hostname specified (use -c option)")
     local_user = _context.current_user
-
-    if _context.use_ssh_agent:
-        try:
-            ssh_agent = ssh_key.AgentClient()
-            keys = ssh_agent.list()
-            logger.info("Using public keys from ssh-agent...")
-        except ssh_key.Error:
-            logger.error("Cannot get a public key from ssh-agent.")
-            raise
-    else:
-        keys = list()
+    keys = _keys_from_ssh_agent() if _context.use_ssh_agent else list()
     return join_ssh_impl(local_user, seed_host, seed_user, keys)
 
 
@@ -1683,17 +1589,6 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
         # After this, login to remote_node is passwordless
         swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
 
-    # This makes sure the seed host has its own SSH keys in its own
-    # authorized_keys file (again, to help with the case where the
-    # user has done manual initial setup without the assistance of
-    # ha-cluster-init).
-    if not ssh_public_keys:
-        local_shell.get_stdout_or_raise_error(
-            local_user,
-            "ssh {} {}@{} sudo crm cluster init ssh_remote".format(
-                SSH_OPTION, seed_user, seed_host
-            ),
-        )
     user_by_host = utils.HostUserConfig()
     user_by_host.clear()
     user_by_host.add(seed_user, seed_host)
@@ -2186,24 +2081,21 @@ def bootstrap_init(context):
     if stage is None:
         stage = ""
 
-    # vgfs stage requires running cluster, everything else requires inactive cluster,
-    # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
-    # just in case this breaks ha-cluster-join on another node).
-    if stage in ("vgfs", "admin", "qdevice", "ocfs2"):
+    if stage in ("admin", "qdevice", "ocfs2"):
         if not _context.cluster_is_running:
             utils.fatal("Cluster is inactive - can't run %s stage" % (stage))
     elif stage == "":
         if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "ssh_remote", "csync2", "csync2_remote", "sbd", "ocfs2"):
+    elif stage not in ("ssh", "csync2", "csync2_remote", "sbd", "ocfs2"):
         if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run %s stage" % (stage))
 
     _context.load_profiles()
     _context.init_sbd_manager()
 
-    # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
-    if stage not in ('ssh_remote', 'csync2_remote'):
+    # Need hostname resolution to work, want NTP (but don't block csync2_remote)
+    if stage not in ('csync2_remote',):
         check_tty()
         if not check_prereqs(stage):
             return
@@ -2648,13 +2540,7 @@ def bootstrap_join_geo(context):
     if not sh.cluster_shell().can_run_as(node, 'root'):
         local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
         if context.use_ssh_agent:
-            try:
-                ssh_agent = ssh_key.AgentClient()
-                keys = ssh_agent.list()
-                logger.info("Using public keys from ssh-agent...")
-            except ssh_key.Error:
-                logger.error("Cannot get a public key from ssh-agent.")
-                raise
+            keys = _keys_from_ssh_agent()
             local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
             join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
         else:
@@ -2690,13 +2576,7 @@ def bootstrap_arbitrator(context):
     if not sh.cluster_shell().can_run_as(node, 'root'):
         local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
         if context.use_ssh_agent:
-            try:
-                ssh_agent = ssh_key.AgentClient()
-                keys = ssh_agent.list()
-                logger.info("Using public keys from ssh-agent...")
-            except ssh_key.Error:
-                logger.error("Cannot get a public key from ssh-agent.")
-                raise
+            keys = _keys_from_ssh_agent()
             local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
             join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
         else:

@@ -154,8 +154,6 @@ Stage can be one of:
     sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
     ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
-    vgfs        Create volume group and filesystem (ocfs2 template only,
-                    requires -o <dev>) NOTE: this stage is an alias of ocfs2 stage
     admin       Create administration virtual IP (optional)
     qdevice     Configure qdevice and qnetd
 
