@@ -30,6 +30,12 @@ Feature: ssh-agent support
     And     Run "test x3 == x$(sudo awk 'END {print NR}' ~hacluster/.ssh/authorized_keys)" OK
     And     Run "grep -E 'hosts = (root|alice)@hanode1' /root/.config/crm/crm.conf" OK on "hanode1,hanode2,hanode3"
 
+  # This test is not applicable for non-root user, since the root ssh key pair exists
+  @skip_non_root
+  Scenario: Verify expected error message when SSH_AUTH_SOCK is not set
+    When    Try "crm cluster remove hanode3 -y" on "hanode1"
+    Then    Expected "Environment variable SSH_AUTH_SOCK does not exist" in stderr
+
   Scenario: Skip creating ssh key pairs with --use-ssh-agent and use -N
     Given   Run "crm cluster stop" OK on "hanode1,hanode2,hanode3"
     When    Run "SSH_AUTH_SOCK=/tmp/ssh-auth-sock crm cluster init --use-ssh-agent -y -N hanode2 -N hanode3" on "hanode1"
