@@ -72,6 +72,7 @@ class NonInteractiveSSHAuthorizationError(AuthorizationError):
         ret = super().diagnose()
         if not ret:
             return 'Please configure passwordless authentication with "crm cluster init ssh" and "crm cluster join ssh"'
+        return ret
 
 
 class CommandFailure(Error):
