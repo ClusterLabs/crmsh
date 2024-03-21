@@ -36,6 +36,11 @@ Feature: ssh-agent support
     When    Try "crm cluster remove hanode3 -y" on "hanode1"
     Then    Expected "Environment variable SSH_AUTH_SOCK does not exist" in stderr
 
+  Scenario: Give a warning when detected SSH_AUTH_SOCK but not using --use-ssh-agent
+    Given   Run "crm cluster stop" OK on "hanode1,hanode2,hanode3"
+    When    Try "SSH_AUTH_SOCK=/tmp/ssh-auth-sock crm cluster init -y" on "hanode1"
+    Then    Expected "$SSH_AUTH_SOCK is detected. As a tip, using the --use-ssh-agent option could avoid generate local root ssh keys on cluster nodes" in stderr
+
   Scenario: Skip creating ssh key pairs with --use-ssh-agent and use -N
     Given   Run "crm cluster stop" OK on "hanode1,hanode2,hanode3"
     When    Run "SSH_AUTH_SOCK=/tmp/ssh-auth-sock crm cluster init --use-ssh-agent -y -N hanode2 -N hanode3" on "hanode1"
