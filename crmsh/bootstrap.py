@@ -143,7 +143,7 @@ class Context(object):
                 COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
                 "/var/lib/csync2/*", "~/.config/crm/*"]
-        self.use_ssh_agent = False
+        self.use_ssh_agent = None
 
     @classmethod
     def set_context(cls, options):
@@ -587,6 +587,11 @@ def check_prereqs(stage):
         warned = True
     elif not service_manager.service_is_enabled(timekeeper):
         logger.warning("{} is not configured to start at system boot.".format(timekeeper))
+        warned = True
+
+    if _context.use_ssh_agent == False and 'SSH_AUTH_SOCK' in os.environ:
+        msg = "$SSH_AUTH_SOCK is detected. As a tip, using the --use-ssh-agent option could avoid generate local root ssh keys on cluster nodes."
+        logger.warning(msg)
         warned = True
 
     if warned:
