@@ -2411,7 +2411,7 @@ class CibDiff(object):
             rc, mk, upd, rm = calc_sets(s, existing)
             if not rc:
                 return rc
-            rc = cib_factory.set_update(e, mk, upd, rm, upd_type=mode, method=method)
+            rc = factory.set_update(e, mk, upd, rm, upd_type=mode, method=method)
             if not rc:
                 return rc
         return rc

@@ -1211,38 +1211,6 @@ def is_int(s):
         return False
 
 
-def is_process(s):
-    """
-    Returns true if argument is the name of a running process.
-
-    s: process name
-    returns Boolean
-    """
-    from os.path import join, basename
-    # find pids of running processes
-    pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
-    for pid in pids:
-        try:
-            cmdline = open(join('/proc', pid, 'cmdline'), 'rb').read()
-            procname = basename(to_ascii(cmdline).replace('\x00', ' ').split(' ')[0])
-            if procname == s:
-                return True
-        except EnvironmentError:
-            # a process may have died since we got the list of pids
-            pass
-    return False
-
-
-def print_stacktrace():
-    """
-    Print the stack at the site of call
-    """
-    import traceback
-    import inspect
-    sf = inspect.currentframe().f_back.f_back
-    traceback.print_stack(sf)
-
-
 def edit_file(fname):
     'Edit a file.'
     if not fname:
@@ -1384,17 +1352,6 @@ def multicolumn(l):
                 s = "%s%-*s" % (s, col_len, l[j])
         if s:
             print(s)
-
-
-def cli_replace_attr(pl, name, new_val):
-    for i, attr in enumerate(pl):
-        if attr[0] == name:
-            attr[1] = new_val
-            return
-
-
-def cli_append_attr(pl, name, val):
-    pl.append([name, val])
 
 
 def lines2cli(s):

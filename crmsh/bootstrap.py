@@ -13,7 +13,6 @@ import codecs
 import os
 import subprocess
 import sys
-import random
 import re
 import tempfile
 import time
@@ -30,7 +29,7 @@ from . import config, constants, ssh_key, sh
 from . import upgradeutil
 from . import utils
 from . import xmlutil
-from .cibconfig import mkset_obj, cib_factory
+from .cibconfig import cib_factory
 from . import corosync
 from . import tmpfiles
 from . import lock
@@ -102,8 +101,6 @@ class Context(object):
         self.user_at_node_list = []
         self.node_list_in_cluster = []
         self.current_user = None
-        self.unicast = None
-        self.multicast = None
         self.admin_ip = None
         self.ipv6 = None
         self.qdevice_inst = None
@@ -130,7 +127,6 @@ class Context(object):
         self.args = None
         self.ui_context = None
         self.interfaces_inst = None
-        self.with_other_user = True
         self.cluster_is_running = None
         self.cloud_type = None
         self.is_s390 = False
@@ -235,7 +231,6 @@ class Context(object):
         if self.user_at_node_list and self.stage:
             utils.fatal("Can't use -N/--nodes option and stage({}) together".format(self.stage))
         me = utils.this_node()
-        was_localhost_already = False
         li = [utils.parse_user_at_host(x) for x in self.user_at_node_list]
         for user in (user for user, node in li if node == me and user is not None and user != self.current_user):
             utils.fatal(f"Overriding current user '{self.current_user}' by '{user}'. Ouch, don't do it.")
@@ -997,7 +992,6 @@ def change_user_shell(user, remote=None):
         if _context is not None and not _context.yes_to_all:
             logger.info(message)
             if not confirm("Continue?"):
-                _context.with_other_user = False
                 return
         cmd = f"usermod -s /bin/bash {user}"
         sh.cluster_shell().get_stdout_or_raise_error(cmd, remote)

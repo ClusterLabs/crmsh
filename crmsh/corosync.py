@@ -7,7 +7,6 @@ configuration file, and also the corosync-* utilities.
 
 import os
 import re
-import socket
 import typing
 
 from . import utils, sh
