@@ -16,8 +16,7 @@ logger = log.setup_logger(__name__)
 
 def _push_completer(args):
     try:
-        n = utils.list_cluster_nodes()
-        n.remove(utils.this_node())
+        n = utils.list_cluster_nodes_except_me()
         if args[-1] in n:
             # continue complete
             return [args[-1]]
@@ -88,8 +87,7 @@ class Corosync(command.UI):
         all other cluster nodes.
         '''
         if not nodes:
-            nodes = utils.list_cluster_nodes()
-            nodes.remove(utils.this_node())
+            nodes = utils.list_cluster_nodes_except_me()
         return corosync.push_configuration(nodes)
 
     @command.skill_level('administrator')

@@ -612,7 +612,7 @@ the config.core.force option.""",
         nodes = utils.list_cluster_nodes()
         corosync.set_value('totem.cluster_name', new_name)
         if len(nodes) > 1:
-            nodes.remove(utils.this_node())
+            nodes = utils.remove_local_from_node_list(nodes)
             context.info("Copy cluster config file to \"{}\"".format(' '.join(nodes)))
             corosync.push_configuration(nodes)
 

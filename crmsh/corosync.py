@@ -406,13 +406,13 @@ def diff_configuration(nodes, checksum=False):
     local_path = conf()
     this_node = utils.this_node()
     nodes = list(nodes)
+    nodes_except_me = utils.remove_local_from_node_list(nodes)
     if checksum:
         utils.remote_checksum(local_path, nodes, this_node)
     elif len(nodes) == 1:
         utils.remote_diff_this(local_path, nodes, this_node)
-    elif this_node in nodes:
-        nodes.remove(this_node)
-        utils.remote_diff_this(local_path, nodes, this_node)
+    elif nodes != nodes_except_me:
+        utils.remote_diff_this(local_path, nodes_except_me, this_node)
     elif nodes:
         utils.remote_diff(local_path, nodes)
 
