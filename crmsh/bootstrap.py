@@ -797,7 +797,7 @@ def _keys_from_ssh_agent() -> typing.List[ssh_key.Key]:
     try:
         keys = ssh_key.AgentClient().list()
         logger.info("Using public keys from ssh-agent...")
-    except Error:
+    except ssh_key.Error:
         logger.error("Cannot get a public key from ssh-agent.")
         raise
     return keys
