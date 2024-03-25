@@ -351,7 +351,7 @@ jobs:
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v3
-    - name: functional test for user access
+    - name: functional test for ssh agent
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
