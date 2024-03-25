@@ -375,6 +375,8 @@ class NodeMgmt(command.UI):
             xml_query_path_oppsite = constants.XML_NODE_QUERY_STANDBY_PATH
 
         cib = xmlutil.cibdump2elem()
+        if cib is None:
+            return False
         # IMPORTANT:
         # Do NOT call cibdump2elem twice, or you risk a race where the
         # resulting diff will contain more changes than the values for
@@ -433,6 +435,8 @@ class NodeMgmt(command.UI):
             return
 
         cib = xmlutil.cibdump2elem()
+        if cib is None:
+            return False
         # IMPORTANT: Do NOT call cibdump2elem twice, or you risk a race.
         # Really use the same xml as "original" and basis for the changes.
         # Thus the "deepcopy" here; see also do_standby().
