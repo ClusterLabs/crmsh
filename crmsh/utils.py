@@ -1818,9 +1818,22 @@ def list_cluster_nodes_except_me():
     node_list = list_cluster_nodes()
     if not node_list:
         raise ValueError("Failed to get node list from cluster")
+    return remove_local_from_node_list(node_list)
+
+
+def remove_local_from_node_list(node_list: typing.List[str]) -> typing.List[str]:
+    """
+    Remove local node from node list
+    Consider both hostname and IP address cases
+    """
     me = this_node()
-    if me in node_list:
+    if me in node_list[:]:
         node_list.remove(me)
+    else:
+        local_ip_list = [info[4][0] for info in socket.getaddrinfo(me, None)]
+        for ip in local_ip_list:
+            if ip in node_list:
+                node_list.remove(ip)
     return node_list
 
 
