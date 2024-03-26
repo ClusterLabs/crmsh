@@ -143,10 +143,7 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
     def fix_cluster(self, nodes: typing.Iterable[str], ask: typing.Callable[[str], None]) -> None:
         import crmsh.bootstrap  # import bootstrap lazily here to avoid circular dependency
         logger.debug("setup passwordless ssh authentication for user hacluster")
-        local_node = crmsh.utils.this_node()
-        remote_nodes = set(nodes)
-        remote_nodes.remove(local_node)
-        remote_nodes = list(remote_nodes)
+        remote_nodes = crmsh.utils.remove_local_from_node_list(list(nodes))
         crmsh.parallax.parallax_run(
             nodes,
             'chown hacluster: ~hacluster/.ssh/authorized_keys && chmod 0600 ~hacluster/.ssh/authorized_keys',
