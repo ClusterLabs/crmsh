@@ -35,3 +35,12 @@ Feature: healthcheck detect and fix problems in a crmsh deployment
     Then    File "~hacluster/crmsh/upgrade_seq" exists on "hanode1"
     When    Run "crm cluster status" on "hanode1"
     Then    File "/var/lib/crmsh/upgrade_seq" exists on "hanode1"
+
+  @clean
+  Scenario: Start cluster service when cib file and upgrade_seq file are missing
+    # related issue: https://github.com/ClusterLabs/crmsh/issues/1368
+    When    Run "crm cluster stop --all" on "hanode1"
+    When    Run "rm -f /var/lib/pacemaker/cib/cib*" on "hanode1"
+    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode1"
+    And     Run "crm cluster start" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
