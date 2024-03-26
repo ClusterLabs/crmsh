@@ -14,7 +14,7 @@ from . import options
 from . import userdir
 from . import utils
 from .sh import ShellUtils
-from .utils import stdout2list, is_program, is_process, to_ascii
+from .utils import stdout2list, is_program, to_ascii
 from .utils import os_types_list
 from .utils import crm_msec, crm_time_cmp
 from . import log

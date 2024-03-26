@@ -1,6 +1,5 @@
 import os
 import re
-import shutil
 from . import utils, sh
 from . import bootstrap
 from .bootstrap import SYSCONFIG_SBD, SBD_SYSTEMD_DELAY_START_DIR

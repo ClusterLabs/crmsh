@@ -2,13 +2,11 @@ import os
 import re
 import socket
 import functools
-import subprocess
-import tempfile
 import typing
 from enum import Enum
 
 import crmsh.parallax
-from . import constants, sh
+from . import sh
 from . import utils
 from . import parallax
 from . import corosync
