@@ -237,7 +237,7 @@ keep the node in standby after reboot. The life time defaults to
     options, args = parser.parse_known_args(args)
     if options.help:
         parser.print_help()
-        raise utils.TerminateSubCommand
+        raise utils.TerminateSubCommand(success=True)
     if options is None or args is None:
         raise utils.TerminateSubCommand
     if options.all and args:
