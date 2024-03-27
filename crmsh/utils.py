@@ -1258,23 +1258,21 @@ def edit_file_ext(fname, template=''):
     Raises IOError on any error.
     '''
     if not os.path.isfile(fname):
-        s = template
+        data = template
     else:
-        s = open(fname).read()
-    filehash = hash(s)
-    tmpfile = str2tmp(s)
+        data = read_from_file(fname)
+    filehash = hash(data)
+    tmpfile = str2tmp(data)
     try:
-        try:
-            if edit_file(tmpfile) != 0:
-                return
-            s = open(tmpfile, 'r').read()
-            if hash(s) == filehash:  # file unchanged
-                return
-            f2 = open(fname, 'w')
-            f2.write(s)
-            f2.close()
-        finally:
-            os.unlink(tmpfile)
+        if edit_file(tmpfile) != 0:
+            raise OSError(f"Cannot edit file \"{fname}\"")
+        data_changed = read_from_file(tmpfile)
+        if hash(data_changed) == filehash:  # file unchanged
+            return 0
+        with open(fname, 'w') as f:
+            f.write(data_changed)
+        os.unlink(tmpfile)
+        return 1
     except OSError as e:
         raise IOError(e)
 

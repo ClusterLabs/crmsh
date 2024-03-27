@@ -140,6 +140,19 @@ jobs:
         $DOCKER_SCRIPT $index
     - uses: codecov/codecov-action@v3
 
+  functional_test_corosync_ui:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v3
+    - name: functional test for crm corosync subcommand
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        index=`$GET_INDEX_OF corosync_ui`
+        $DOCKER_SCRIPT $index
+    - uses: codecov/codecov-action@v3
+
   functional_test_bootstrap_options_non_root:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
