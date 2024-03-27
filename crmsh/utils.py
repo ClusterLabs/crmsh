@@ -53,6 +53,8 @@ class TerminateSubCommand(Exception):
     """
     This is an exception to jump out of subcommand when meeting errors while staying interactive shell
     """
+    def __init__(self, success=False):
+        self.success = success
 
 
 def to_ascii(input_str):
