@@ -25,17 +25,19 @@ from . import constants
 
 
 from . import log
+from .utils import TerminateSubCommand
+
 logger = log.setup_logger(__name__)
 
 
 def parse_options(parser, args):
     try:
         options, args = parser.parse_known_args(list(args))
-    except:
+    except Exception:
         return None, None
     if hasattr(options, 'help') and options.help:
         parser.print_help()
-        return None, None
+        raise TerminateSubCommand(success=True)
     utils.check_empty_option_value(options)
     return options, args
 

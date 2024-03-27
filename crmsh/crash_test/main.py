@@ -168,7 +168,7 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
     args = parser.parse_args()
     if args.help or len(sys.argv) == 1:
         parser.print_help()
-        raise crmshutils.TerminateSubCommand
+        raise crmshutils.TerminateSubCommand(success=True)
 
     for arg in vars(args):
         setattr(context, arg, getattr(args, arg))
