@@ -1510,29 +1510,30 @@ def _setup_passwordless_ssh_for_qnetd(cluster_node_list: typing.List[str]):
                 sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')}),
                 'root',
             )).add(qnetd_addr, qnetd_user, key)
-    elif utils.check_ssh_passwd_need(local_user, qnetd_user, qnetd_addr):
-        if 0 != utils.ssh_copy_id_no_raise(local_user, qnetd_user, qnetd_addr):
-            msg = f"Failed to login to {qnetd_user}@{qnetd_addr}. Please check the credentials."
-            sudoer = userdir.get_sudoer()
-            if sudoer and qnetd_user != sudoer:
-                args = ['sudo crm']
-                args += [x for x in sys.argv[1:]]
-                for i, arg in enumerate(args):
-                    if arg == '--qnetd-hostname' and i + 1 < len(args):
-                        if '@' not in args[i + 1]:
-                            args[i + 1] = f'{sudoer}@{qnetd_addr}'
-                            msg += '\nOr, run "{}".'.format(' '.join(args))
-            raise ValueError(msg)
-        else:
-            cluster_shell = sh.cluster_shell()
-            # Add other nodes' public keys to qnetd's authorized_keys
-            for node in cluster_node_list:
-                if node == utils.this_node():
-                    continue
-                local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
-                remote_key_content = remote_public_key_from(remote_user, local_user, node, remote_user)
-                in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
-                ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
+    else:
+        if utils.check_ssh_passwd_need(local_user, qnetd_user, qnetd_addr):
+            if 0 != utils.ssh_copy_id_no_raise(local_user, qnetd_user, qnetd_addr):
+                msg = f"Failed to login to {qnetd_user}@{qnetd_addr}. Please check the credentials."
+                sudoer = userdir.get_sudoer()
+                if sudoer and qnetd_user != sudoer:
+                    args = ['sudo crm']
+                    args += [x for x in sys.argv[1:]]
+                    for i, arg in enumerate(args):
+                        if arg == '--qnetd-hostname' and i + 1 < len(args):
+                            if '@' not in args[i + 1]:
+                                args[i + 1] = f'{sudoer}@{qnetd_addr}'
+                                msg += '\nOr, run "{}".'.format(' '.join(args))
+                raise ValueError(msg)
+
+        cluster_shell = sh.cluster_shell()
+        # Add other nodes' public keys to qnetd's authorized_keys
+        for node in cluster_node_list:
+            if node == utils.this_node():
+                continue
+            local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
+            remote_key_content = remote_public_key_from(remote_user, local_user, node, remote_user)
+            in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
+            ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
 
     user_by_host = utils.HostUserConfig()
     user_by_host.add(local_user, utils.this_node())
