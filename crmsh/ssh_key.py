@@ -74,7 +74,7 @@ class KeyFile(Key):
 
 class InMemoryPublicKey(Key):
     def __init__(self, content: str):
-        self.content = content
+        self.content = content.strip()
 
     def public_key(self) -> str:
         return self.content
