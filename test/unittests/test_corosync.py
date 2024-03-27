@@ -46,8 +46,12 @@ def test_query_status_exception():
     assert str(err.value) == "Wrong type \"test\" to query status"
 
 
+@mock.patch('crmsh.sh.cluster_shell')
 @mock.patch('crmsh.corosync.query_ring_status')
-def test_query_status(mock_ring_status):
+def test_query_status(mock_ring_status, mock_cluster_shell):
+    mock_cluster_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_cluster_shell_inst
+    mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
     corosync.query_status("ring")
     mock_ring_status.assert_called_once_with()
 
@@ -61,30 +65,40 @@ def test_query_qdevice_status_exception(mock_configured):
     mock_configured.assert_called_once_with()
 
 
-@mock.patch('crmsh.utils.print_cluster_nodes')
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.corosync.is_qdevice_configured')
-def test_query_qdevice_status(mock_configured, mock_run, mock_print):
+def test_query_qdevice_status(mock_configured, mock_run):
     mock_configured.return_value = True
     corosync.query_qdevice_status()
     mock_run.assert_called_once_with("corosync-qdevice-tool -sv")
-    mock_print.assert_called_once_with()
 
 
+@mock.patch('crmsh.sh.cluster_shell')
 @mock.patch("crmsh.corosync.query_ring_status")
-def test_query_status_ring(mock_ring_status):
+def test_query_status_ring(mock_ring_status, mock_cluster_shell):
+    mock_cluster_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_cluster_shell_inst
+    mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
     corosync.query_status("ring")
     mock_ring_status.assert_called_once_with()
 
 
+@mock.patch('crmsh.sh.cluster_shell')
 @mock.patch("crmsh.corosync.query_quorum_status")
-def test_query_status_quorum(mock_quorum_status):
+def test_query_status_quorum(mock_quorum_status, mock_cluster_shell):
+    mock_cluster_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_cluster_shell_inst
+    mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
     corosync.query_status("quorum")
     mock_quorum_status.assert_called_once_with()
 
 
+@mock.patch('crmsh.sh.cluster_shell')
 @mock.patch("crmsh.corosync.query_qnetd_status")
-def test_query_status_qnetd(mock_qnetd_status):
+def test_query_status_qnetd(mock_qnetd_status, mock_cluster_shell):
+    mock_cluster_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_cluster_shell_inst
+    mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
     corosync.query_status("qnetd")
     mock_qnetd_status.assert_called_once_with()
 
@@ -111,33 +125,27 @@ def test_query_ring_status(mock_run):
     mock_run.assert_called_once_with("corosync-cfgtool -s")
 
 
-@mock.patch("crmsh.utils.print_cluster_nodes")
 @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-def test_query_quorum_status_except(mock_run, mock_print_nodes):
+def test_query_quorum_status_except(mock_run):
     mock_run.return_value = (1, None, "error")
     with pytest.raises(ValueError) as err:
         corosync.query_quorum_status()
     assert str(err.value) == "error"
     mock_run.assert_called_once_with("corosync-quorumtool -s")
-    mock_print_nodes.assert_called_once_with()
 
 
-@mock.patch("crmsh.utils.print_cluster_nodes")
 @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-def test_query_quorum_status(mock_run, mock_print_nodes):
+def test_query_quorum_status(mock_run):
     mock_run.return_value = (0, "data", None)
     corosync.query_quorum_status()
     mock_run.assert_called_once_with("corosync-quorumtool -s")
-    mock_print_nodes.assert_called_once_with()
 
 
-@mock.patch("crmsh.utils.print_cluster_nodes")
 @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-def test_query_quorum_status_no_quorum(mock_run, mock_print_nodes):
+def test_query_quorum_status_no_quorum(mock_run):
     mock_run.return_value = (2, "no quorum", None)
     corosync.query_quorum_status()
     mock_run.assert_called_once_with("corosync-quorumtool -s")
-    mock_print_nodes.assert_called_once_with()
 
 
 @mock.patch("crmsh.corosync.is_qdevice_configured")
@@ -197,13 +205,11 @@ def test_query_qnetd_status_copy_id_failed(mock_qdevice_configured,
 
 
 @mock.patch('crmsh.utils.user_pair_for_ssh')
-@mock.patch("crmsh.utils.print_cluster_nodes")
 @mock.patch("crmsh.parallax.parallax_call")
 @mock.patch("crmsh.corosync.get_value")
 @mock.patch("crmsh.corosync.is_qdevice_configured")
 def test_query_qnetd_status_copy(mock_qdevice_configured, mock_get_value,
-        mock_parallax_call, mock_print_nodes,
-        mock_user_pair_for_ssh):
+        mock_parallax_call, mock_user_pair_for_ssh):
     mock_user_pair_for_ssh.return_value = "alice", "root"
     mock_qdevice_configured.return_value = True
     mock_get_value.side_effect = ["hacluster", "10.10.10.123"]
@@ -217,7 +223,6 @@ def test_query_qnetd_status_copy(mock_qdevice_configured, mock_get_value,
         mock.call("quorum.device.net.host")
         ])
     mock_parallax_call.assert_called_once_with(["10.10.10.123"], "corosync-qnetd-tool -lv -c hacluster")
-    mock_print_nodes.assert_called_once_with()
 
 
 @mock.patch('crmsh.corosync.get_corosync_value_dict')

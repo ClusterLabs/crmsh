@@ -591,3 +591,22 @@ id            0x19041a12
         mock_get_cmd_output.return_value = "data"
         collect.collect_corosync_blackbox(mock_ctx_inst)
         mock_debug.assert_called_once_with(f"Dump corosync blackbox info into {constants.COROSYNC_RECORDER_F}")
+
+    @mock.patch('logging.Logger.debug')
+    @mock.patch('crmsh.report.utils.real_path')
+    @mock.patch('crmsh.utils.str2file')
+    @mock.patch('crmsh.corosync.query_qnetd_status')
+    @mock.patch('crmsh.corosync.query_qdevice_status')
+    @mock.patch('crmsh.service_manager.ServiceManager')
+    @mock.patch('crmsh.corosync.query_quorum_status')
+    def test_collect_qdevice_info(self, mock_quorum, mock_service, mock_qdevice, mock_qnetd, mock_str2file, mock_real_path, mock_debug):
+        mock_ctx_inst = mock.Mock(work_dir="/opt/workdir")
+        mock_service_inst = mock.Mock()
+        mock_service.return_value = mock_service_inst
+        mock_service_inst.service_is_active.return_value = True
+        mock_quorum.return_value = "quorum_data"
+        mock_qdevice.return_value = "qdevice_data"
+        mock_qnetd.return_value = "qnetd_data"
+        mock_real_path.return_value = "/opt/workdir/qdevice.txt"
+        collect.collect_qdevice_info(mock_ctx_inst)
+        mock_debug.assert_called_once_with(f"Dump quorum/qdevice/qnetd information into {mock_real_path.return_value}")
