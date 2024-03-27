@@ -74,7 +74,7 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
-INIT_STAGES = ("ssh", "csync2", "csync2_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+INIT_STAGES = ("ssh", "csync2", "csync2_remote", "qnetd_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
 
 
 class Context(object):
@@ -808,7 +808,7 @@ def _keys_from_ssh_agent() -> typing.List[ssh_key.Key]:
     try:
         keys = ssh_key.AgentClient().list()
         logger.info("Using public keys from ssh-agent...")
-    except Error:
+    except ssh_key.Error:
         logger.error("Cannot get a public key from ssh-agent.")
         raise
     return keys
@@ -1183,6 +1183,18 @@ def init_csync2_remote():
         _context.quiet = was_quiet
 
 
+def init_qnetd_remote():
+    """
+    Triggered by join_cluster, this function adds the joining node's key to the qnetd's authorized_keys
+    """
+    local_user, remote_user, join_node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
+    join_node_key_content = remote_public_key_from(remote_user, local_user, join_node, remote_user)
+    qnetd_host = corosync.get_value("quorum.device.net.host")
+    _, qnetd_user, qnetd_host = _select_user_pair_for_ssh_for_secondary_components(qnetd_host)
+    authorized_key_manager = ssh_key.AuthorizedKeyManager(sh.cluster_shell())
+    authorized_key_manager.add(qnetd_host, qnetd_user, ssh_key.InMemoryPublicKey(join_node_key_content))
+
+
 def init_corosync_auth():
     """
     Generate the corosync authkey
@@ -1488,23 +1500,8 @@ def configure_qdevice_interactive():
             is_stage=_context.stage == "qdevice")
 
 
-def init_qdevice():
-    """
-    Setup qdevice and qnetd service
-    """
-    if not _context.qdevice_inst:
-        configure_qdevice_interactive()
-    # If don't want to config qdevice, return
-    if not _context.qdevice_inst:
-        ServiceManager().disable_service("corosync-qdevice.service")
-        return
-    logger.info("""Configure Qdevice/Qnetd:""")
-    cluster_node_list = utils.list_cluster_nodes()
-    for node in cluster_node_list:
-        if not ServiceManager().service_is_available("corosync-qdevice.service", node):
-            utils.fatal("corosync-qdevice.service is not available on {}".format(node))
-    qdevice_inst = _context.qdevice_inst
-    local_user, ssh_user, qnetd_addr = _select_user_pair_for_ssh_for_secondary_components(_context.qnetd_addr_input)
+def _setup_passwordless_ssh_for_qnetd(cluster_node_list: typing.List[str]):
+    local_user, qnetd_user, qnetd_addr = _select_user_pair_for_ssh_for_secondary_components(_context.qnetd_addr_input)
     # Configure ssh passwordless to qnetd if detect password is needed
     if UserOfHost.instance().use_ssh_agent():
         logger.info("Adding public keys to authorized_keys for user root...")
@@ -1512,35 +1509,63 @@ def init_qdevice():
             ssh_key.AuthorizedKeyManager(sh.SSHShell(
                 sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')}),
                 'root',
-            )).add(qnetd_addr, ssh_user, key)
-    elif utils.check_ssh_passwd_need(local_user, ssh_user, qnetd_addr):
-        configure_ssh_key(local_user)
-        if 0 != utils.ssh_copy_id_no_raise(local_user, ssh_user, qnetd_addr):
-            msg = f"Failed to login to {ssh_user}@{qnetd_addr}. Please check the credentials."
-            sudoer = userdir.get_sudoer()
-            if sudoer and ssh_user != sudoer:
-                args = ['sudo crm']
-                args += [x for x in sys.argv[1:]]
-                for i, arg in enumerate(args):
-                    if arg == '--qnetd-hostname' and i + 1 < len(args):
-                        if '@' not in args[i + 1]:
-                            args[i + 1] = f'{sudoer}@{qnetd_addr}'
-                            msg += '\nOr, run "{}".'.format(' '.join(args))
-            raise ValueError(msg)
+            )).add(qnetd_addr, qnetd_user, key)
+    else:
+        if utils.check_ssh_passwd_need(local_user, qnetd_user, qnetd_addr):
+            if 0 != utils.ssh_copy_id_no_raise(local_user, qnetd_user, qnetd_addr):
+                msg = f"Failed to login to {qnetd_user}@{qnetd_addr}. Please check the credentials."
+                sudoer = userdir.get_sudoer()
+                if sudoer and qnetd_user != sudoer:
+                    args = ['sudo crm']
+                    args += [x for x in sys.argv[1:]]
+                    for i, arg in enumerate(args):
+                        if arg == '--qnetd-hostname' and i + 1 < len(args):
+                            if '@' not in args[i + 1]:
+                                args[i + 1] = f'{sudoer}@{qnetd_addr}'
+                                msg += '\nOr, run "{}".'.format(' '.join(args))
+                raise ValueError(msg)
+
+        cluster_shell = sh.cluster_shell()
+        # Add other nodes' public keys to qnetd's authorized_keys
+        for node in cluster_node_list:
+            if node == utils.this_node():
+                continue
+            local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
+            remote_key_content = remote_public_key_from(remote_user, local_user, node, remote_user)
+            in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
+            ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
+
     user_by_host = utils.HostUserConfig()
     user_by_host.add(local_user, utils.this_node())
-    user_by_host.add(ssh_user, qnetd_addr)
+    user_by_host.add(qnetd_user, qnetd_addr)
     user_by_host.save_remote(cluster_node_list)
-    # Start qdevice service if qdevice already configured
+
+
+def init_qdevice():
+    """
+    Setup qdevice and qnetd service
+    """
+    if not _context.qdevice_inst:
+        configure_qdevice_interactive()
+    if not _context.qdevice_inst:
+        ServiceManager().disable_service("corosync-qdevice.service")
+        return
+
+    logger.info("""Configure Qdevice/Qnetd:""")
+    cluster_node_list = utils.list_cluster_nodes()
+    for node in cluster_node_list:
+        if not ServiceManager().service_is_available("corosync-qdevice.service", node):
+            utils.fatal("corosync-qdevice.service is not available on {}".format(node))
+
+    _setup_passwordless_ssh_for_qnetd(cluster_node_list)
+
+    qdevice_inst = _context.qdevice_inst
     if corosync.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
         qdevice_inst.start_qdevice_service()
         return
     qdevice_inst.set_cluster_name()
-    # Validate qnetd node
     qdevice_inst.valid_qnetd()
-
     qdevice_inst.config_and_start_qdevice()
-
     if _context.stage == "qdevice":
         adjust_properties()
 
@@ -1880,6 +1905,13 @@ def join_cluster(seed_host, remote_user):
     if is_qdevice_configured and not ServiceManager().service_is_available("corosync-qdevice.service"):
         utils.fatal("corosync-qdevice.service is not available")
 
+    shell = sh.cluster_shell()
+
+    if is_qdevice_configured and not _context.use_ssh_agent:
+        # trigger init_qnetd_remote on init node
+        cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
+        shell.get_stdout_or_raise_error(cmd, seed_host)
+
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
     # check if use IPv6
@@ -1917,7 +1949,7 @@ def join_cluster(seed_host, remote_user):
     except corosync.IPAlreadyConfiguredError as e:
         logger.warning(e)
     sync_file(corosync.conf())
-    sh.cluster_shell().get_stdout_or_raise_error('sudo corosync-cfgtool -R', seed_host)
+    shell.get_stdout_or_raise_error('sudo corosync-cfgtool -R', seed_host)
 
     _context.sbd_manager.join_sbd(remote_user, seed_host)
 
@@ -2087,7 +2119,7 @@ def bootstrap_init(context):
     elif stage == "":
         if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "csync2", "csync2_remote", "sbd", "ocfs2"):
+    elif stage not in ("ssh", "csync2", "csync2_remote", "qnetd_remote", "sbd", "ocfs2"):
         if _context.cluster_is_running:
             utils.fatal("Cluster is currently active - can't run %s stage" % (stage))
 
@@ -2095,15 +2127,15 @@ def bootstrap_init(context):
     _context.init_sbd_manager()
 
     # Need hostname resolution to work, want NTP (but don't block csync2_remote)
-    if stage not in ('csync2_remote',):
+    if stage not in ('csync2_remote', 'qnetd_remote'):
         check_tty()
         if not check_prereqs(stage):
             return
-    elif stage == 'csync2_remote':
+    else:
         args = _context.args
         logger_utils.log_only_to_file("args: {}".format(args))
         if len(args) != 2:
-            utils.fatal("Expected NODE argument to csync2_remote")
+            utils.fatal(f"Expected NODE argument to {stage} stage")
         _context.cluster_node = args[1]
 
     if stage and _context.cluster_is_running and \
