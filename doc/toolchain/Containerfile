@@ -1,0 +1,14 @@
+FROM docker.io/alpine:3.19.0
+
+RUN apk add --no-cache \
+    py3-lxml \
+    py3-yaml \
+    py3-dateutil
+RUN apk add --no-cache \
+    bash \
+    make
+
+env PYTHONPATH=/opt/crmsh
+env PATH=/opt/crmsh/bin:/opt/crmsh/doc/toolchain/bin:"${PATH}"
+
+CMD cd /opt/crmsh/doc && make
