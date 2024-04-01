@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+
+import re
+import shlex
+import sys
+import typing
+
+
+RE_FROM_CODE = re.compile(r'^\[\[([^,]+),[^,]*,From Code]]$')
+RE_TAG = re.compile('^cmdhelp_(.*)$')
+
+TAG_EXCLUDES = {
+    'cmdhelp_node_online',
+    'cmdhelp_node_standby',
+    'cmdhelp_root_report',
+}
+
+
+def main(stdin, stdout):
+    tags = list()
+    for line in stdin:
+        found = RE_FROM_CODE.match(line)
+        if found:
+            tag = found.group(1)
+            if tag in TAG_EXCLUDES:
+                continue
+            command = extract_command(tag)
+            tags.append(tag)
+            stdout.write(tag)
+            stdout.write('.txt:\n\t')
+            stdout.write(shlex.join(command))
+            stdout.write(' > "$@"\n\n')
+    end(tags, stdout)
+
+
+def extract_command(tag: str) -> typing.Sequence[str]:
+    found = RE_TAG.match(tag)
+    if not found:
+        raise RuntimeError(f'Invalid tag {tag}')
+    args = ['crm']
+    args.extend(found.group(1).split('_', 1))
+    args.append('--help-without-redirect')
+    return args
+
+
+def end(tags: typing.Sequence[str], stdout):
+    stdout.write(
+        '%.adoc: %.txt\n\thelp2adoc "$<"\n\n'
+    )
+    stdout.write(
+        '.PHONY: clean all\n\nclean:\n\t$RM *.txt *.adoc\n\nall: '
+    )
+    for tag in tags:
+        stdout.write(tag)
+        stdout.write('.adoc ')
+    stdout.write('\n\n')
+
+
+
+if __name__ == '__main__':
+    main(sys.stdin, sys.stdout)
