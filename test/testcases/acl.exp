@@ -22,9 +22,7 @@
 .INP: acl_target cyrus cyrus-role
 .INP: _test
 .INP: verify
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: show
 node node1
 primitive d0 ocf:pacemaker:Dummy \
