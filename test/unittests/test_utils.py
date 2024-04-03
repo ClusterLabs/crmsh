@@ -1202,43 +1202,26 @@ Quorate:          Yes
     mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-quorumtool -s", None, success_exit_status={0, 2})
 
 
-@mock.patch('crmsh.utils.get_address_list_from_corosync_conf')
 @mock.patch('crmsh.utils.etree.fromstring')
 @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-def test_list_cluster_nodes_none(mock_run, mock_etree, mock_corosync):
+def test_list_cluster_nodes_none(mock_run, mock_etree):
     mock_run.return_value = (0, "data", None)
     mock_etree.return_value = None
-    mock_corosync.return_value = ["node1", "node2"]
     res = utils.list_cluster_nodes()
-    assert res == ["node1", "node2"]
+    assert res is None
     mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=False)
     mock_etree.assert_called_once_with("data")
 
 
-@mock.patch('crmsh.utils.get_address_list_from_corosync_conf')
-@mock.patch('crmsh.utils.etree.fromstring')
-@mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-def test_list_cluster_nodes_none_no_reg(mock_run, mock_etree, mock_corosync):
-    mock_run.return_value = (0, "data", None)
-    mock_etree.return_value = None
-    mock_corosync.return_value = ["node1", "node2"]
-    res = utils.list_cluster_nodes(no_reg=True)
-    assert res == ["node1", "node2"]
-    mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=True)
-    mock_etree.assert_called_once_with("data")
-
-
-@mock.patch('crmsh.utils.get_address_list_from_corosync_conf')
 @mock.patch('os.path.isfile')
 @mock.patch('os.getenv')
 @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-def test_list_cluster_nodes_cib_not_exist(mock_run, mock_env, mock_isfile, mock_corosync):
+def test_list_cluster_nodes_cib_not_exist(mock_run, mock_env, mock_isfile):
     mock_run.return_value = (1, None, None)
     mock_env.return_value = constants.CIB_RAW_FILE
     mock_isfile.return_value = False
-    mock_corosync.return_value = ["node1", "node2"]
     res = utils.list_cluster_nodes()
-    assert res == ["node1", "node2"]
+    assert res is None
     mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=False)
     mock_env.assert_called_once_with("CIB_file", constants.CIB_RAW_FILE)
     mock_isfile.assert_called_once_with(constants.CIB_RAW_FILE)

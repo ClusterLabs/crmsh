@@ -151,6 +151,9 @@ Feature: Regression test for bootstrap bugs
     Then    Cluster service is "started" on "hanode1"
     Then    Cluster service is "started" on "hanode2"
 
+    When    Try "crm cluster start xxx"
+    Then    Except "ERROR: cluster.start: Node 'xxx' is not a member of the cluster"
+
   @clean
   Scenario: Can't stop all nodes' cluster service when local node's service is down(bsc#1213889)
     Given   Cluster service is "stopped" on "hanode1"

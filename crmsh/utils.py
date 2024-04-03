@@ -1812,10 +1812,10 @@ def list_cluster_nodes(no_reg=False):
     else:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         if not os.path.isfile(cib_path):
-            return get_address_list_from_corosync_conf()
+            return None
         cib = xmlutil.file2cib_elem(cib_path)
     if cib is None:
-        return get_address_list_from_corosync_conf()
+        return None
 
     node_list = []
     for node in cib.xpath(constants.XML_NODE_PATH):
