@@ -337,7 +337,7 @@ meta_progs = ("crmd", "pengine", "stonithd", "cib")
 meta_progs_20 = ("pacemaker-controld", "pacemaker-schedulerd", "pacemaker-fenced", "pacemaker-based")
 
 # elide these properties from tab completion
-crmd_metadata_do_not_complete = ("dc-version",
+controld_metadata_do_not_complete = ("dc-version",
                                  "cluster-infrastructure",
                                  "crmd-integration-timeout",
                                  "crmd-finalization-timeout",
