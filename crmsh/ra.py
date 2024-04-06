@@ -198,7 +198,7 @@ def get_pe_meta():
 @utils.memoize
 def get_crmd_meta():
     return RAInfo(utils.pacemaker_controld(), "metadata",
-                  exclude_from_completion=constants.crmd_metadata_do_not_complete)
+                  exclude_from_completion=constants.controld_metadata_do_not_complete)
 
 
 @utils.memoize
@@ -213,6 +213,13 @@ def get_cib_meta():
 
 @utils.memoize
 def get_properties_meta():
+    cluster_option_meta = utils.get_cluster_option_metadata()
+    if cluster_option_meta:
+        return RAInfo("cluster_option", None,
+                      exclude_from_completion=constants.controld_metadata_do_not_complete,
+                      meta_string=cluster_option_meta)
+    # get_xxx_meta() is a legacy code to get the metadata of the pacemaker daemons, 
+    # which will be dropped when we fully adopt to crmsh-5.x with pacemaker 3.x.
     meta = copy.deepcopy(get_crmd_meta())
     meta.add_ra_params(get_pe_meta())
     meta.add_ra_params(get_cib_meta())
@@ -268,7 +275,7 @@ class RAInfo(object):
     skip_ops = ("meta-data", "validate-all")
     skip_op_attr = ("name",)
 
-    def __init__(self, ra_class, ra_type, ra_provider="heartbeat", exclude_from_completion=None):
+    def __init__(self, ra_class, ra_type, ra_provider="heartbeat", exclude_from_completion=None, meta_string=None):
         self.excluded_from_completion = exclude_from_completion or []
         self.ra_class = ra_class
         self.ra_type = ra_type
@@ -277,6 +284,7 @@ class RAInfo(object):
             self.ra_provider = "heartbeat"
         self.ra_elem = None
         self.broken_ra = False
+        self.meta_string = meta_string
 
     def __str__(self):
         return "%s:%s:%s" % (self.ra_class, self.ra_provider, self.ra_type) \
@@ -646,8 +654,8 @@ class RAInfo(object):
         sid = "ra_meta-%s" % self
         if cache.is_cached(sid):
             return cache.retrieve(sid)
-        if self.ra_class in constants.meta_progs:
-            l = prog_meta(self.ra_class)
+        if self.meta_string:
+            l = self.meta_string.split('\n')
         elif self.ra_class in constants.meta_progs_20:
             l = prog_meta(self.ra_class)
         else:
@@ -659,6 +667,8 @@ class RAInfo(object):
         except Exception:
             self.error("Cannot parse meta-data XML")
             return None
+        if xml.tag == "pacemaker-result":
+            xml = xml.xpath("//resource-agent")[0]
         self.debug("read and cached meta-data")
         return cache.store(sid, xml)
 
