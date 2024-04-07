@@ -730,9 +730,22 @@ class RAInfo(object):
             return ""
         l = [head]
         longdesc = get_nodes_text(n, "longdesc")
+        select_values = self.get_selecte_value_list(n)
         if longdesc:
-            l.append(self.ra_tab + longdesc.replace("\n", "\n" + self.ra_tab) + '\n')
+            l.append(self.ra_tab + longdesc.replace("\n", "\n" + self.ra_tab))
+        if select_values:
+            l.append(self.ra_tab + "Allowed values: " + ', '.join(select_values))
+        l.append('')
         return '\n'.join(l)
+
+    def get_selecte_value_list(self, node):
+        """
+        Get the list of select values from the node
+        """
+        content = node.find("content")
+        if content is None:
+            return []
+        return [x.get("value") for x in content.findall("option")]
 
     def meta_parameter(self, param):
         if self.mk_ra_node() is None:
