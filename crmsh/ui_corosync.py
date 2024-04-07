@@ -9,6 +9,7 @@ from . import corosync
 from . import parallax
 from . import bootstrap
 from . import log
+from . import constants
 from .service_manager import ServiceManager
 
 logger = log.setup_logger(__name__)
@@ -57,7 +58,7 @@ class Corosync(command.UI):
     def requires(self):
         return corosync.check_tools()
 
-    @command.completers(completers.choice(['ring', 'quorum', 'qdevice', 'qnetd']))
+    @command.completers(completers.choice(constants.COROSYNC_STATUS_TYPES))
     def do_status(self, context, status_type="ring"):
         '''
         Quick cluster health status. Corosync status or QNetd status
