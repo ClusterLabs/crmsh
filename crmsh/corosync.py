@@ -48,7 +48,9 @@ def query_status(status_type):
             "qnetd": query_qnetd_status
             }
     if status_type in status_func_dict:
-        status_func_dict[status_type]()
+        out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l")
+        print(f"{out}\n")
+        print(status_func_dict[status_type]())
     else:
         raise ValueError("Wrong type \"{}\" to query status".format(status_type))
 
@@ -60,8 +62,7 @@ def query_ring_status():
     rc, out, err = ShellUtils().get_stdout_stderr("corosync-cfgtool -s")
     if rc != 0 and err:
         raise ValueError(err)
-    if out:
-        print(out)
+    return out
 
 
 def query_quorum_status():
@@ -69,14 +70,13 @@ def query_quorum_status():
     Query corosync quorum status
 
     """
-    utils.print_cluster_nodes()
     rc, out, err = ShellUtils().get_stdout_stderr("corosync-quorumtool -s")
     if rc != 0 and err:
         raise ValueError(err)
     # If the return code of corosync-quorumtool is 2,
     # that means no problem appeared but node is not quorate
     if rc in [0, 2] and out:
-        print(out)
+        return out
 
 
 def query_qdevice_status():
@@ -87,8 +87,7 @@ def query_qdevice_status():
         raise ValueError("QDevice/QNetd not configured!")
     cmd = "corosync-qdevice-tool -sv"
     out = sh.cluster_shell().get_stdout_or_raise_error(cmd)
-    utils.print_cluster_nodes()
-    print(out)
+    return out
 
 
 def query_qnetd_status():
@@ -109,8 +108,7 @@ def query_qnetd_status():
     result = parallax.parallax_call([qnetd_addr], cmd)
     _, qnetd_result_stdout, _ = result[0][1]
     if qnetd_result_stdout:
-        utils.print_cluster_nodes()
-        print(utils.to_ascii(qnetd_result_stdout))
+        return utils.to_ascii(qnetd_result_stdout)
 
 
 def add_nodelist_from_cmaptool():

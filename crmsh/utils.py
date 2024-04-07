@@ -1779,15 +1779,6 @@ def list_corosync_nodes():
         return []
 
 
-def print_cluster_nodes():
-    """
-    Print the output of crm_node -l
-    """
-    rc, out, _ = ShellUtils().get_stdout_stderr("crm_node -l")
-    if rc == 0 and out:
-        print("{}\n".format(out))
-
-
 def get_address_list_from_corosync_conf():
     """
     Return a list of addresses configured in corosync.conf
