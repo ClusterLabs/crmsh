@@ -1,12 +1,14 @@
 FROM docker.io/alpine:3.19.0
 
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
 RUN apk add --no-cache \
     py3-lxml \
     py3-yaml \
-    py3-dateutil
-RUN apk add --no-cache \
+    py3-dateutil\
     bash \
-    make
+    make \
+    asciidoctor
+
 
 env PYTHONPATH=/opt/crmsh
 env PATH=/opt/crmsh/bin:/opt/crmsh/doc/toolchain/bin:"${PATH}"
