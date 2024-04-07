@@ -1,6 +1,6 @@
 .PHONY: all clean subdirs
 
-all: subdirs generated-sources/crm.8.adoc
+all: subdirs crm.8.html
 
 generated-sources:
 	mkdir -p $@
@@ -14,5 +14,11 @@ subdirs: generated-sources/Makefile
 generated-sources/crm.8.adoc: crm.8.adoc generated-sources
 	adocxt gen-include < $< > $@
 
+generated-sources/profiles.adoc: profiles.adoc generated-sources
+	cp $< $@
+
+crm.8.html: generated-sources/crm.8.adoc generated-sources/profiles.adoc subdirs
+	asciidoctor $<
+
 clean:
-	$(RM) -r generated-sources
+	$(RM) -r generated-sources crm.8.html
