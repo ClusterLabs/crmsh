@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Output a combined news.adoc document
 Also write an Atom feed document
@@ -63,7 +63,7 @@ class Entry(object):
             raise ValueError("Missing date")
 
     def atom_id(self):
-        return root_id + '::' + hashlib.sha1(self.filename).hexdigest()
+        return root_id + '::' + hashlib.sha1(self.filename.encode('utf-8')).hexdigest()
 
     def atom_date(self):
         return self.date.replace(' ', 'T') + ':00' + time.tzname[0]
