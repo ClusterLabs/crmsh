@@ -171,3 +171,8 @@ Feature: Use "crm configure set" to update attributes and operations
       INFO: Testing on hanode1: d vip
       INFO: Testing on hanode2: d vip
       """
+
+  @clean
+  Scenario: Run ra info cluster
+    When    Run "crm ra info cluster" on "hanode1"
+    Then    Expected "Pacemaker cluster options" in stdout
