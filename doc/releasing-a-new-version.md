@@ -117,6 +117,11 @@ can be installed by running `python setup.py install` in the
 **Note: ansiclr seems to be broken at the moment. Just ignore
 it. Everything should still work except some highlighting.**
 
+A container image suitable for building the website can be built using
+`toolchain/Containerfile`:
+
+    cd toolchain && podman build -t local/crmsh-doc-builder .
+
 To create the news update, copy a previous update (found in
 `/doc/website-v1/news`), rename it to an appropriate name based on the
 current date, and replace the contents based on the announcement
@@ -125,14 +130,26 @@ email.
 Remember to update the title, author and date information at the top
 of the news entry, to ensure that it appears correctly on the site.
 
+To add the manpage of new version to the website, run
+
+    podman run --rm -ti -v <crmsh repo root dir>:/opt/crmsh local/crmsh-doc-builder:latest make clean all
+
+Copy `generated-sources/crm.8.aio.adoc` to `website-v1/man-x.x.adoc` and update
+
+   * website-v1/Makefile
+   * website-v1/documentation.adoc
+   * website-v1/index.adoc
+
+to include the new file and create links to it.
+
 To generate the site including the new entry, run
 
-    make
+    podman run --rm -ti -v <crmsh repo root dir>:/opt/crmsh local/crmsh-doc-builder:latest make website
 
 The new site should now sit in `/doc/website-v1/gen`. To update the
 site, using rsync should work:
 
-    rsync -Pavz doc/website-v1/gen/ <path-to-website-checkout>/crmsh.github.io/
+    rsync -av --delete --exclude='.*' doc/website-v1/gen/ <path-to-website-checkout>/crmsh.github.io/
 
 5. Update `network:ha-clustering:Factory`
 
