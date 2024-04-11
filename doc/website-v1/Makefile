@@ -2,7 +2,7 @@ ASCIIDOC := asciidoc
 CRMCONF := crm.conf
 SRC := faq.adoc documentation.adoc development.adoc installation.adoc \
 	configuration.adoc about.adoc rsctest-guide.adoc download.adoc \
-	history-guide.adoc start-guide.adoc man-1.2.adoc scripts.adoc man-2.0.adoc man-3.adoc man-4.3.adoc
+	history-guide.adoc start-guide.adoc man-1.2.adoc scripts.adoc man-2.0.adoc man-3.adoc man-4.3.adoc man-4.6.adoc
 HISTORY_LISTINGS = include/history-guide/nfs-probe-err.typescript \
 	include/history-guide/sample-cluster.conf.crm \
 	include/history-guide/status-probe-fail.typescript \
@@ -71,7 +71,7 @@ gen/%/index.html: %.adoc $(CRMCONF)
 
 gen/history-guide/index.html: $(HISTORY_LISTINGS)
 
-gen/man/index.html: ../crm.8.adoc $(CRMCONF)
+gen/man/index.html: ../generated-sources/crm.8.adoc $(CRMCONF)
 	@mkdir -p $(dir $@)
 	@$(ASCIIDOC) --unsafe -b html5 -f $(CRMCONF) -o $@ $<
 	@python ./postprocess.py -o $@ $<

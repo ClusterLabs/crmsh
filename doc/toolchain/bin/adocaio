@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+"""Preprocessor for include:: directive"""
+
+
+import os.path
+import re
+import sys
+
+
+RE_INCLUDE_DIRECTIVE = re.compile('^include::(.*)\\[]\\s*$')
+
+
+def all_in_one(path: str, out):
+    dir = os.path.dirname(os.path.abspath(path))
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            found = RE_INCLUDE_DIRECTIVE.match(line)
+            if not found:
+                out.write(line)
+            else:
+                included_filepath = f'{dir}/{found.group(1)}'
+                all_in_one(included_filepath, out)
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(f'usage: {sys.argv[0]} [infile]')
+        sys.exit(1)
+    all_in_one(sys.argv[1], sys.stdout)
+
+
+if __name__ == '__main__':
+    main()

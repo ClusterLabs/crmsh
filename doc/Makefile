@@ -1,6 +1,6 @@
-.PHONY: all clean subdirs
+.PHONY: all clean subdirs website website-clean
 
-all: subdirs crm.8.html
+all: crm.8.html generated-sources/crm.8.aio.adoc
 
 generated-sources:
 	mkdir -p $@
@@ -11,14 +11,23 @@ generated-sources/Makefile: crm.8.adoc generated-sources
 subdirs: generated-sources/Makefile
 	$(MAKE) -C generated-sources all
 
-generated-sources/crm.8.adoc: crm.8.adoc generated-sources
+generated-sources/crm.8.adoc: crm.8.adoc subdirs
 	adocxt gen-include < $< > $@
+
+generated-sources/crm.8.aio.adoc: generated-sources/crm.8.adoc generated-sources/profiles.adoc
+	adocaio $< > $@
 
 generated-sources/profiles.adoc: profiles.adoc generated-sources
 	cp $< $@
 
-crm.8.html: generated-sources/crm.8.adoc generated-sources/profiles.adoc subdirs
+crm.8.html: generated-sources/crm.8.aio.adoc
 	asciidoctor $<
 
-clean:
+website: generated-sources/crm.8.adoc
+	$(MAKE) -C website-v1 all
+
+website-clean:
+	$(MAKE) -C website-v1 clean
+
+clean:	website-clean
 	$(RM) -r generated-sources crm.8.html

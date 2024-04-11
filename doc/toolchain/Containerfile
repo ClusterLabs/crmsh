@@ -7,10 +7,12 @@ RUN apk add --no-cache \
     py3-dateutil\
     bash \
     make \
-    asciidoctor
+    asciidoctor \
+    asciidoc
 
 
 env PYTHONPATH=/opt/crmsh
 env PATH=/opt/crmsh/bin:/opt/crmsh/doc/toolchain/bin:"${PATH}"
 
-CMD cd /opt/crmsh/doc && make
+WORKDIR /opt/crmsh/doc
+CMD make
