@@ -550,6 +550,7 @@ class TestBootstrap(unittest.TestCase):
             bootstrap.join_ssh(None, None)
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
+    @mock.patch('crmsh.bootstrap.detect_cluster_service_on_node')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key_for_secondary_user')
     @mock.patch('crmsh.bootstrap.change_user_shell')
@@ -561,6 +562,7 @@ class TestBootstrap(unittest.TestCase):
             self,
             mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_change, mock_swap_2,
             mock_get_node_cononical_hostname,
+            mock_detect_cluster_service_on_node
     ):
         bootstrap._context = mock.Mock(current_user="bob", default_nic="eth1", use_ssh_agent=False)
         mock_swap.return_value = None
