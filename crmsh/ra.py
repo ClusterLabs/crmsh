@@ -51,7 +51,7 @@ def ra_classes():
     if can_use_crm_resource():
         l = crm_resource("--list-standards")
     else:
-        l = ["heartbeat", "lsb", "nagios", "ocf", "stonith", "systemd"]
+        l = ["heartbeat", "lsb", "ocf", "stonith", "systemd"]
     l.sort()
     return cache.store("ra_classes", l)
 
@@ -125,9 +125,6 @@ def os_types(ra_class):
         l = os_types_list("/etc/init.d/*")
     elif ra_class == "stonith":
         l = stonith_types()
-    elif ra_class == "nagios":
-        l = [x.replace("check_", "")
-             for x in os_types_list("%s/check_*" % config.path.nagios_plugins)]
     elif ra_class == "systemd":
         l = systemd_types()
     l = list(set(l))
@@ -184,9 +181,6 @@ def ra_meta(ra_class, ra_type, ra_provider):
                 _rc, l = stdout2list("/usr/sbin/%s -o metadata" % ra_type)
             else:
                 _rc, l = stdout2list("stonith -m -t %s" % ra_type)
-        elif ra_class == "nagios":
-            _rc, l = stdout2list("%s/check_%s --metadata" %
-                                 (config.path.nagios_plugins, ra_type))
         return l
 
 
