@@ -571,7 +571,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.start_service')
     def test_join_ssh(self, mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_invoke, mock_change):
-        bootstrap._context = mock.Mock(current_user="bob", user_list=["alice"], node_list=['node1'], default_nic_list=["eth1"])
+        bootstrap._context = mock.Mock(current_user="bob", user_list=["alice"], node_list=['node1'])
         mock_invoke.return_value = ''
         mock_swap.return_value = None
         mock_ssh_copy_id.return_value = 0
@@ -589,7 +589,7 @@ class TestBootstrap(unittest.TestCase):
                 mock.call("node1", "hacluster", "hacluster", "bob", "alice", add=True),
         ])
         mock_invoke.assert_called_once_with(
-            "ssh {} alice@node1 sudo crm cluster init -i eth1 ssh_remote".format(constants.SSH_OPTION),
+            "ssh {} alice@node1 sudo crm cluster init ssh_remote".format(constants.SSH_OPTION),
             "bob",
         )
 
