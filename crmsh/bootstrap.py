@@ -1702,6 +1702,7 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     user_by_host.add(local_user, utils.this_node())
     user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
     user_by_host.save_local()
+    detect_cluster_service_on_node(seed_host)
     user_by_host.add(seed_user, get_node_canonical_hostname(seed_host))
     user_by_host.save_local()
 
@@ -2468,6 +2469,17 @@ def bootstrap_add(context):
         print(out)
 
 
+def detect_cluster_service_on_node(peer_node):
+    service_manager = ServiceManager()
+    for _ in range(REJOIN_COUNT):
+        if service_manager.service_is_active("pacemaker.service", peer_node):
+            break
+        logger.warning("Cluster is inactive on %s. Retry in %d seconds", peer_node, REJOIN_INTERVAL)
+        sleep(REJOIN_INTERVAL)
+    else:
+        utils.fatal("Cluster is inactive on {}".format(peer_node))
+
+
 def bootstrap_join(context):
     """
     Join cluster process
@@ -2506,24 +2518,13 @@ def bootstrap_join(context):
         init_upgradeutil()
         remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
         utils.ping_node(cluster_node)
-
         join_ssh(cluster_node, remote_user)
         remote_user = utils.user_of(cluster_node)
-
-        service_manager = ServiceManager()
-        n = 0
-        while n < REJOIN_COUNT:
-            if service_manager.service_is_active("pacemaker.service", cluster_node):
-                break
-            n += 1
-            logger.warning("Cluster is inactive on %s. Retry in %d seconds", cluster_node, REJOIN_INTERVAL)
-            sleep(REJOIN_INTERVAL)
-        else:
-            utils.fatal("Cluster is inactive on {}".format(cluster_node))
 
         lock_inst = lock.RemoteLock(cluster_node)
         try:
             with lock_inst.lock():
+                service_manager = ServiceManager()
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node, remote_user)
                 join_remote_auth(cluster_node, remote_user)
