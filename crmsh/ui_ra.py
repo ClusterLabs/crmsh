@@ -108,13 +108,17 @@ class RA(command.UI):
         "usage: info [<class>:[<provider>:]]<type>"
         if len(args) == 0:
             context.fatal_error("Expected [<class>:[<provider>:]]<type>")
-        elif len(args) > 1:  # obsolete syntax
+        if args[0] == "cluster":
+            meta_string = utils.get_cluster_option_metadata(show_xml=False)
+            if not meta_string:
+                context.fatal_error("No metadata found for cluster option (supports since pacemaker 2.1.8)")
+            utils.page_string(meta_string)
+            return True
+        if len(args) > 1:  # obsolete syntax
             if len(args) < 3:
                 ra_type, ra_class, ra_provider = args[0], args[1], "heartbeat"
             else:
                 ra_type, ra_class, ra_provider = args[0], args[1], args[2]
-        elif args[0] in constants.meta_progs:
-            ra_class, ra_provider, ra_type = args[0], None, None
         elif args[0] in constants.meta_progs_20:
             ra_class, ra_provider, ra_type = args[0], None, None
         else:

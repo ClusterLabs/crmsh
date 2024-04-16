@@ -1537,9 +1537,8 @@ classes
 
 Show the meta-data of a resource agent type. This is where users
 can find information on how to use a resource agent. It is also
-possible to get information from some programs: `pengine`,
-`crmd`, `cib`, and `stonithd`. Just specify the program name
-instead of an RA.
+possible to use the `pacemaker-fenced` type to get the corresponding
+meta-data information.
 
 Usage:
 ...............
@@ -1551,7 +1550,7 @@ Example:
 info apache
 info ocf:pacemaker:Dummy
 info stonith:ipmilan
-info pengine
+info pacemaker-fenced
 ...............
 
 [[cmdhelp_ra_list,list RA for a class (and provider)]]
@@ -3484,8 +3483,7 @@ primitive A ocf:pacemaker:Dummy \
 
 Set cluster configuration properties. To list the
 available cluster configuration properties, use the
-<<cmdhelp_ra_info,`ra info`>> command with +pengine+, +crmd+,
-+cib+ and +stonithd+ as arguments.
+<<cmdhelp_ra_info,`ra info`>> command with +cluster+ as arguments.
 When setting the +maintenance-mode+ property, it will
 inform the user if there are nodes or resources that
 have the +maintenance+ property.

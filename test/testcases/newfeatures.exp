@@ -75,7 +75,5 @@ alert notify_9 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
 	to 192.168.40.9
 .INP: _test
 .INP: verify
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: commit
