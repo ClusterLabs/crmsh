@@ -345,10 +345,10 @@ def profile_run(context, user_args):
 
 def run():
     try:
+        envsetup()
         if len(sys.argv) >= 2 and sys.argv[1] == '--compgen':
             compgen()
             return 0
-        envsetup()
         userdir.mv_user_files()
 
         ui = ui_root.Root()
