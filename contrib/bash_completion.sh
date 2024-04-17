@@ -149,7 +149,7 @@ __crmcompadd ()
 	for x in $1; do
 		if [[ "$x" == "$3"* ]]; then
                     if [[ "$x" =~ .*(=|:)$ ]];then
-                        if [[ "$x" =~ ^id=$ ]];then
+                        if [[ "$x" =~ ^id=$ ]] && [ "$x" == "$3" ];then
                             :
                         else
 			    COMPREPLY[i++]="$2$x"
