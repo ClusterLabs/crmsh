@@ -47,6 +47,7 @@ from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import NodeMgmt
 from .user_of_host import UserOfHost, UserNotFoundError
+import crmsh.healthcheck
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -1740,6 +1741,9 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     change_user_shell('hacluster')
     swap_public_ssh_key_for_secondary_user(sh.cluster_shell(), seed_host, 'hacluster')
 
+    if _context.stage:
+        setup_passwordless_with_other_nodes(seed_host, seed_user)
+
 
 def join_ssh_with_ssh_agent(
         local_shell: sh.LocalShell,
@@ -2397,6 +2401,64 @@ def decrease_expected_votes():
     corosync.set_value("quorum.expected_votes", str(new_quorum))
 
 
+def ssh_stage_finished():
+    """
+    Dectect if the ssh stage is finished
+    """
+    feature_check = crmsh.healthcheck.PasswordlessHaclusterAuthenticationFeature()
+    return feature_check.check_quick() and feature_check.check_local([utils.this_node()])
+
+
+def csync2_stage_finished():
+    """
+    Dectect if the csync2 stage is finished
+    """
+    return ServiceManager().service_is_active(CSYNC2_SERVICE)
+
+
+def corosync_stage_finished():
+    """
+    Dectect if the corosync stage is finished
+    """
+    return os.path.exists(corosync.conf())
+
+
+INIT_STAGE_CHECKER = {
+        # stage: (function, is_internal)
+        "ssh": (ssh_stage_finished, False),
+        "csync2": (csync2_stage_finished, False),
+        "corosync": (corosync_stage_finished, False),
+        "remote_auth": (init_remote_auth, True),
+        "sbd": (lambda: True, False),
+        "upgradeutil": (init_upgradeutil, True),
+        "cluster": (is_online, False)
+}
+
+
+JOIN_STAGE_CHECKER = {
+        # stage: (function, is_internal)
+        "ssh": (ssh_stage_finished, False),
+        "csync2": (csync2_stage_finished, False),
+        "ssh_merge": (lambda: True, False),
+        "cluster": (is_online, False)
+}
+
+
+def check_stage_dependency(stage):
+    stage_checker = INIT_STAGE_CHECKER if _context.type == "init" else JOIN_STAGE_CHECKER
+    if stage not in stage_checker:
+        return
+    stage_order = list(stage_checker.keys())
+    for stage_name in stage_order:
+        if stage == stage_name:
+            break
+        func, is_internal = stage_checker[stage_name]
+        if is_internal:
+            func()
+        elif not func():
+            utils.fatal(f"Please run '{stage_name}' stage first")
+
+
 def bootstrap_init(context):
     """
     Init cluster process
@@ -2429,6 +2491,7 @@ def bootstrap_init(context):
         _context.node_list_in_cluster = [utils.this_node()]
 
     if stage != "":
+        check_stage_dependency(stage)
         globals()["init_" + stage]()
     else:
         init_ssh()
@@ -2510,6 +2573,8 @@ def bootstrap_join(context):
 
     if _context.stage != "":
         remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
+        init_upgradeutil()
+        check_stage_dependency(_context.stage)
         globals()["join_" + _context.stage](cluster_node, remote_user)
     else:
         if not _context.yes_to_all and _context.cluster_node is None:
