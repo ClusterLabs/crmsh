@@ -329,12 +329,6 @@ class Cluster(command.UI):
         '''
         Initialize a cluster.
         '''
-        def looks_like_hostnames(lst):
-            sectionlist = bootstrap.INIT_STAGES
-            return all(not (l.startswith('-') or l in sectionlist) for l in lst)
-        if len(args) > 0:
-            if '--dry-run' in args or looks_like_hostnames(args):
-                args = ['--yes', '--nodes'] + [arg for arg in args if arg != '--dry-run']
         parser = ArgumentParser(description="""
 Initialize a cluster from scratch. This command configures
 a complete cluster, and can also add additional cluster

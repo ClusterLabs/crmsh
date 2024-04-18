@@ -595,7 +595,7 @@ def my_hostname_resolves():
         return False
 
 
-def check_prereqs(stage):
+def check_prereqs():
     warned = False
 
     if not my_hostname_resolves():
@@ -2149,17 +2149,16 @@ def bootstrap_init(context):
     _context.load_profiles()
     _context.init_sbd_manager()
 
-    # Need hostname resolution to work, want NTP (but don't block csync2_remote)
-    if stage not in ('csync2_remote', 'qnetd_remote'):
-        check_tty()
-        if not check_prereqs(stage):
-            return
-    else:
+    if stage in ('csync2_remote', 'qnetd_remote'):
         args = _context.args
-        logger_utils.log_only_to_file("args: {}".format(args))
+        logger_utils.log_only_to_file(f"args: {args}")
         if len(args) != 2:
-            utils.fatal(f"Expected NODE argument to {stage} stage")
+            utils.fatal(f"Expected NODE argument for '{stage}' stage")
         _context.cluster_node = args[1]
+    else:
+        check_tty()
+        if not check_prereqs():
+            return
 
     if stage and _context.cluster_is_running and \
             not ServiceManager(shell=sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active(CSYNC2_SERVICE):
@@ -2245,7 +2244,7 @@ def bootstrap_join(context):
 
     check_tty()
 
-    if not check_prereqs("join"):
+    if not check_prereqs():
         return
 
     if _context.stage != "":
