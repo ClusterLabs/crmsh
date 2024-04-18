@@ -42,6 +42,15 @@ Feature: crmsh bootstrap process - options
     Then    Expected "Can't use -N/--nodes option and stage(sbd) together" in stderr
 
   @clean
+  Scenario: Stage validation
+    When    Try "crm cluster init fdsf -y" on "hanode1"
+    Then    Expected "Invalid stage: fdsf(available stages: ssh, csync2, corosync, sbd, cluster, ocfs2, admin, qdevice)" in stderr
+    When    Try "crm cluster join fdsf -y" on "hanode1"
+    Then    Expected "Invalid stage: fdsf(available stages: ssh, csync2, ssh_merge, cluster)" in stderr
+    When    Try "crm cluster join ssh -y" on "hanode1"
+    Then    Expected "Can't use stage(ssh) without specifying cluster node" in stderr
+
+  @clean
   Scenario: Init whole cluster service on node "hanode1" using "--node" option
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
@@ -50,6 +59,9 @@ Feature: crmsh bootstrap process - options
     And     Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
     And     Show cluster status on "hanode1"
+
+    When    Try "crm cluster init cluster -y" on "hanode1"
+    Then    Expected "Cluster is active, can't run 'cluster' stage" in stderr
 
   @clean
   Scenario: Bind specific network interface using "-i" option
@@ -95,6 +107,9 @@ Feature: crmsh bootstrap process - options
     And     Cluster name is "hatest"
     And     Cluster virtual IP is "@vip.0"
     And     Show cluster status on "hanode1"
+
+    When    Try "crm cluster init cluster -y" on "hanode1"
+    Then    Expected "Cluster is active, can't run 'cluster' stage" in stderr
 
   @clean
   Scenario: Init cluster service with udpu using "-u" option
