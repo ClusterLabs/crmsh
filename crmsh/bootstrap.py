@@ -2527,7 +2527,6 @@ def bootstrap_join(context):
                 service_manager = ServiceManager()
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node, remote_user)
-                join_remote_auth(cluster_node, remote_user)
                 _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
                 if _context.skip_csync2:
                     service_manager.stop_service(CSYNC2_SERVICE, disable=True)
@@ -2555,14 +2554,6 @@ def join_ocfs2(peer_host, peer_user):
     """
     ocfs2_inst = ocfs2.OCFS2Manager(_context)
     ocfs2_inst.join_ocfs2(peer_host)
-
-
-def join_remote_auth(node, user):
-    if os.path.exists(PCMK_REMOTE_AUTH):
-        utils.rmfile(PCMK_REMOTE_AUTH)
-    pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
-    utils.mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
-    utils.touch(PCMK_REMOTE_AUTH)
 
 
 def remove_qdevice():
