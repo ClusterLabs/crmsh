@@ -471,8 +471,6 @@ Examples:
         if stage == "vgfs":
             stage = "ocfs2"
             logger.warning("vgfs stage was deprecated and is an alias of ocfs2 stage now")
-        if stage not in bootstrap.INIT_STAGES and stage != "":
-            parser.error("Invalid stage (%s)" % (stage))
 
         if options.qnetd_addr_input:
             if not ServiceManager().service_is_available("corosync-qdevice.service"):
@@ -547,12 +545,11 @@ Examples:
         stage = ""
         if len(args) == 1:
             stage = args[0]
-        if stage not in ("ssh", "csync2", "ssh_merge", "cluster", ""):
-            parser.error("Invalid stage (%s)" % (stage))
 
         join_context = bootstrap.Context.set_context(options)
         join_context.ui_context = context
         join_context.stage = stage
+        join_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         join_context.type = "join"
         join_context.validate_option()
 
