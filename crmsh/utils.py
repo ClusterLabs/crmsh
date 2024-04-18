@@ -477,14 +477,6 @@ def chmod(path, mod):
             fatal("Failed to chmod {}: {}".format(path, err))
 
 
-def touch(file_name):
-    rc, out, err = ShellUtils().get_stdout_stderr("touch " + file_name, no_reg=True)
-    if rc != 0:
-        rc, out, err = ShellUtils().get_stdout_stderr("sudo touch " + file_name, no_reg=True)
-        if rc != 0:
-            fatal("Failed create file {}: {}".format(file_name, err))
-
-
 def copy_local_file(src, dest):
     try:
         shutil.copyfile(src, dest)
