@@ -74,7 +74,11 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
-INIT_STAGES = ("ssh", "csync2", "csync2_remote", "qnetd_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+
+INIT_STAGES_EXTERNAL = ("ssh", "csync2", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote", "remote_auth")
+INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
+JOIN_STAGES_EXTERNAL = ("ssh", "csync2", "ssh_merge", "cluster")
 
 
 class Context(object):
@@ -247,7 +251,7 @@ class Context(object):
         """
         Validate cluster_node on join side
         """
-        if self.cluster_node and self.type == 'join':
+        if self.type == "join" and self.cluster_node:
             user, node = _parse_user_at_host(self.cluster_node, None)
             try:
                 # self.cluster_node might be hostname or IP address
@@ -255,7 +259,32 @@ class Context(object):
                 if utils.InterfacesInfo.ip_in_local(ip_addr):
                     utils.fatal("Please specify peer node's hostname or IP address")
             except socket.gaierror as err:
-                utils.fatal("\"{}\": {}".format(node, err))
+                utils.fatal(f"\"{node}\": {err}")
+
+    def _validate_stage(self):
+        """
+        Validate stage argument
+        """
+        if not self.stage:
+            if self.cluster_is_running:
+                utils.fatal("Cluster is already running!")
+            return
+
+        if self.type == "init":
+            if self.stage not in INIT_STAGES_ALL:
+                utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(INIT_STAGES_EXTERNAL)})")
+            if self.stage in ("admin", "qdevice", "ocfs2") and not self.cluster_is_running:
+                utils.fatal(f"Cluster is inactive, can't run '{self.stage}' stage")
+            if self.stage in ("corosync", "cluster") and self.cluster_is_running:
+                utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
+
+        elif self.type == "join":
+            if self.stage not in JOIN_STAGES_EXTERNAL:
+                utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(JOIN_STAGES_EXTERNAL)})")
+            if self.stage and self.cluster_node is None:
+                utils.fatal(f"Can't use stage({self.stage}) without specifying cluster node")
+            if self.stage in ("cluster", ) and self.cluster_is_running:
+                utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
 
     def validate_option(self):
         """
@@ -269,6 +298,7 @@ class Context(object):
             self.skip_csync2 = utils.get_boolean(os.getenv("SKIP_CSYNC2_SYNC"))
         if self.skip_csync2 and self.stage:
             utils.fatal("-x option or SKIP_CSYNC2_SYNC can't be used with any stage")
+        self._validate_stage()
         self._validate_network_options()
         self._validate_cluster_node()
         self._validate_nodes_option()
@@ -2112,22 +2142,9 @@ def bootstrap_init(context):
     """
     global _context
     _context = context
+    stage = _context.stage
 
     init()
-
-    stage = _context.stage
-    if stage is None:
-        stage = ""
-
-    if stage in ("admin", "qdevice", "ocfs2"):
-        if not _context.cluster_is_running:
-            utils.fatal("Cluster is inactive - can't run %s stage" % (stage))
-    elif stage == "":
-        if _context.cluster_is_running:
-            utils.fatal("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "csync2", "csync2_remote", "qnetd_remote", "sbd", "ocfs2"):
-        if _context.cluster_is_running:
-            utils.fatal("Cluster is currently active - can't run %s stage" % (stage))
 
     _context.load_profiles()
     _context.init_sbd_manager()
@@ -2227,10 +2244,6 @@ def bootstrap_join(context):
     _context.init_sbd_manager()
 
     check_tty()
-
-    corosync_active = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("corosync.service")
-    if corosync_active and _context.stage != "ssh":
-        utils.fatal("Abort: Cluster is currently active. Run this command on a node joining the cluster.")
 
     if not check_prereqs("join"):
         return
