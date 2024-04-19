@@ -564,7 +564,7 @@ class TestBootstrap(unittest.TestCase):
             mock_get_node_cononical_hostname,
             mock_detect_cluster_service_on_node
     ):
-        bootstrap._context = mock.Mock(current_user="bob", default_nic="eth1", use_ssh_agent=False)
+        bootstrap._context = mock.Mock(current_user="bob", default_nic="eth1", use_ssh_agent=False, stage=None)
         mock_swap.return_value = None
         mock_ssh_copy_id.return_value = 0
         mock_get_node_cononical_hostname.return_value='node1'
