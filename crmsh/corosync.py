@@ -262,13 +262,12 @@ def add_node_config(ip_list: typing.List[str]) -> None:
     """
     find_configured_ip(ip_list)
     inst = conf_parser.ConfParser()
-    inst.convert2dict()
     node_index = len(inst.get_all("nodelist.node"))
     for i, addr in enumerate(ip_list):
         inst.set("nodelist.node.ring{}_addr".format(i), addr, node_index)
     inst.set("nodelist.node.name", utils.this_node(), node_index)
     inst.set("nodelist.node.nodeid", get_free_nodeid(), node_index)
-    utils.str2file(inst.convert2string(), conf())
+    inst.save()
 
 
 def del_node(addr: str) -> None:
@@ -276,11 +275,10 @@ def del_node(addr: str) -> None:
     Remove node from corosync
     '''
     inst = conf_parser.ConfParser()
-    inst.convert2dict()
     name_list = inst.get_all("nodelist.node.ring0_addr")
     index = name_list.index(addr)
     inst.remove("nodelist.node", index)
-    utils.str2file(inst.convert2string(), conf())
+    inst.save()
 
 
 def get_corosync_value(key):

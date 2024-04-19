@@ -585,7 +585,6 @@ class QDevice(object):
         Write qdevice attributes to config file
         """
         inst = conf_parser.ConfParser()
-        inst.convert2dict()
         qdevice_config_dict = {
                 "model": "net",
                 "net": {
@@ -607,7 +606,7 @@ class QDevice(object):
                 exec_name = "exec_{}{}".format(cmd_name, i)
                 heuristics_dict[exec_name] = cmd
             inst.set("quorum.device.heuristics", heuristics_dict)
-        utils.str2file(inst.convert2string(), corosync.conf())
+        inst.save()
 
     @staticmethod
     def remove_qdevice_config():
@@ -615,9 +614,8 @@ class QDevice(object):
         Remove configuration of qdevice
         """
         inst = conf_parser.ConfParser()
-        inst.convert2dict()
         inst.remove("quorum.device")
-        utils.str2file(inst.convert2string(), corosync.conf())
+        inst.save()
 
     @staticmethod
     def remove_qdevice_db(addr_list=[]):

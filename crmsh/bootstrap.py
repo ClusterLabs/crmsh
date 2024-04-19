@@ -1377,7 +1377,6 @@ def config_corosync_conf() -> None:
     if _context.yes_to_all:
         logger.info(f"Configuring corosync({_context.transport})")
     inst = conf_parser.ConfParser(config_data=conf_parser.COROSYNC_CONF_TEMPLATE)
-    inst.convert2dict()
 
     if _context.ipv6:
         inst.set("totem.ip_version", "ipv6")
@@ -1389,7 +1388,7 @@ def config_corosync_conf() -> None:
     inst.set("nodelist.node.name", utils.this_node())
     inst.set("nodelist.node.nodeid", "1")
 
-    utils.str2file(inst.convert2string(), corosync.conf())
+    inst.save(corosync.conf())
 
 
 def init_corosync() -> None:
