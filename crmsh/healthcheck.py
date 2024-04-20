@@ -7,6 +7,7 @@ import subprocess
 import sys
 import typing
 
+import crmsh.constants
 import crmsh.parallax
 import crmsh.utils
 
@@ -132,7 +133,7 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
         try:
             for node in nodes:
                 subprocess.check_call(
-                    ['sudo', 'su', '-', 'hacluster', '-c', 'ssh hacluster@{} true'.format(node)],
+                    ['sudo', 'su', '-', 'hacluster', '-c', 'ssh {} hacluster@{} true'.format(crmsh.constants.SSH_OPTION, node)],
                     stdin=subprocess.DEVNULL,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
