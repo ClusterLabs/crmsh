@@ -121,8 +121,8 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
     def check_quick(self) -> bool:
         for key_type in self.KEY_TYPES:
             try:
-                os.stat('{}/{}'.format(self.SSH_DIR, key_type))
-                os.stat('{}/{}.pub'.format(self.SSH_DIR, key_type))
+                os.stat('{}/id_{}'.format(self.SSH_DIR, key_type))
+                os.stat('{}/id_{}.pub'.format(self.SSH_DIR, key_type))
                 return True
             except FileNotFoundError:
                 pass
