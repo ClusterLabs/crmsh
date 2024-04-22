@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # create a table of contents for pages that need it
 
 import sys
@@ -6,6 +6,7 @@ import re
 import argparse
 
 TOC_PAGES = ['man/index.html',
+             'man-4.6/index.html',
              'man-4.3/index.html',
              'man-3/index.html',
              'man-2.0/index.html',
@@ -48,7 +49,7 @@ def read_toc_data(infile, debug):
 def generate_toc(infile, outfile, debug):
 
     if debug:
-        print "Infile:", infile
+        print(f"Infile: {infile}")
     toc = read_toc_data(infile, debug)
     '''
     toc_data = []
@@ -73,11 +74,11 @@ def generate_toc(infile, outfile, debug):
     # Write TOC to outfile
     if outfile:
         if debug:
-            print "Writing TOC:"
-            print "----"
-            print toc
-            print "----"
-            print "Outfile:", outfile
+            print("Writing TOC:")
+            print("----")
+            print(toc)
+            print("----")
+            print(f"Outfile: {outfile}")
         fil = open(outfile)
         f = fil.readlines()
         fil.close()
@@ -96,14 +97,14 @@ def generate_v2(page, debug):
         m = section.match(line)
         if m:
             if debug:
-                print "toc_data: %s" % str(((m.group('depth'), m.group('text'), m.group('id'))))
+                print("toc_data: %s" % str(((m.group('depth'), m.group('text'), m.group('id')))))
             toc_data.append((m.group('depth'), m.group('text'), m.group('id')))
 
     toc = ''
     if len(toc_data) > 0:
         toc = '<div id="toc">\n'
         for depth, text, link in toc_data:
-            if depth >= 2 and link is not None:
+            if int(depth) >= 2 and link is not None:
                 toc += '<div class="toclevel%s"><a href="#%s">%s</a></div>\n' % (
                     int(depth) - 1, link, text)
         toc += '</div>\n'
@@ -126,7 +127,7 @@ def main():
     debug = args.debug
     outfile = args.output
     infile = args.input
-    print "+ %s -> %s" % (infile, outfile)
+    print("+ %s -> %s" % (infile, outfile))
     gen = False
     for tocpage in TOC_PAGES:
         if not gen and outfile.endswith(tocpage):

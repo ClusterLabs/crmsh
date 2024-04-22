@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
+export PYTHONPATH=$(readlink -f "${SCRIPT_DIR}"/../lib)
+python3 -m help2adoc.main "$@"
