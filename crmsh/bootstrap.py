@@ -1702,8 +1702,8 @@ def join_ssh(seed_host, seed_user):
     # user has done manual initial setup without the assistance of
     # ha-cluster-init).
     utils.su_get_stdout_or_raise_error(
-        "ssh {} {}@{} sudo crm cluster init -i {} ssh_remote".format(
-            SSH_OPTION, seed_user, seed_host, _context.default_nic_list[0],
+        "ssh {} {}@{} sudo crm cluster init ssh_remote".format(
+            SSH_OPTION, seed_user, seed_host
         ),
         local_user,
     )
@@ -1786,7 +1786,7 @@ def join_csync2(seed_host, remote_user):
 
     # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
     # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-    cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
+    cmd = "crm cluster init csync2_remote {}".format(utils.this_node())
     utils.get_stdout_or_raise_error(cmd, seed_host)
 
     # This is necessary if syncing /etc/hosts (to ensure everyone's got the
