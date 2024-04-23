@@ -110,7 +110,7 @@ Feature: corosync qdevice/qnetd options validate
   Scenario: Run qdevice stage on inactive cluster node
     Given   Cluster service is "stopped" on "hanode1"
     When    Try "crm cluster init qdevice --qnetd-hostname=qnetd-node"
-    Then    Except "ERROR: cluster.init: Cluster is inactive - can't run qdevice stage"
+    Then    Except "ERROR: cluster.init: Cluster is inactive, can't run 'qdevice' stage"
 
   @clean
   Scenario: Run qdevice stage but miss "--qnetd-hostname" option
