@@ -478,11 +478,6 @@ def drop_attr_defaults(node, ts=0):
         pass
 
 
-def nameandid(e, level):
-    if e.tag:
-        print(level*' ', e.tag, e.get("id"), e.get("name"))
-
-
 def xmltraverse(e, fun, ts=0):
     for c in e.iterchildren():
         fun(c, ts)
