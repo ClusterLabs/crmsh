@@ -14,7 +14,6 @@ from . import xmlutil
 from . import bootstrap
 from . import lock
 from . import log
-from . import conf_parser
 from .service_manager import ServiceManager
 
 
@@ -584,7 +583,7 @@ class QDevice(object):
         """
         Write qdevice attributes to config file
         """
-        inst = conf_parser.ConfParser()
+        inst = corosync.ConfParser()
         qdevice_config_dict = {
                 "model": "net",
                 "net": {
@@ -613,7 +612,7 @@ class QDevice(object):
         """
         Remove configuration of qdevice
         """
-        inst = conf_parser.ConfParser()
+        inst = corosync.ConfParser()
         inst.remove("quorum.device")
         inst.save()
 

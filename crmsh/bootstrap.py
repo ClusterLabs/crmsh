@@ -43,7 +43,6 @@ from . import log
 from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import NodeMgmt
-from . import conf_parser
 from .user_of_host import UserOfHost, UserNotFoundError
 import crmsh.healthcheck
 
@@ -1376,7 +1375,7 @@ def config_corosync_conf() -> None:
     """
     if _context.yes_to_all:
         logger.info(f"Configuring corosync({_context.transport})")
-    inst = conf_parser.ConfParser(config_data=conf_parser.COROSYNC_CONF_TEMPLATE)
+    inst = corosync.ConfParser(config_data=corosync.COROSYNC_CONF_TEMPLATE)
 
     if _context.ipv6:
         inst.set("totem.ip_version", "ipv6")
@@ -2153,7 +2152,7 @@ def corosync_stage_finished():
     Dectect if the corosync stage is finished
     """
     try:
-        conf_parser.ConfParser.verify_config_file()
+        corosync.ConfParser()
     except ValueError as e:
         logger.error(e)
         return False

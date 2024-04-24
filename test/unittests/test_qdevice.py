@@ -949,7 +949,7 @@ Membership information
             mock.call(crq_cmd, "qnetd-node")])
 
     @mock.patch('crmsh.corosync.conf')
-    @mock.patch('crmsh.conf_parser.ConfParser')
+    @mock.patch('crmsh.corosync.ConfParser')
     def test_remove_qdevice_config(self, mock_parser, mock_conf):
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
