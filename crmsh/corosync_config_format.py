@@ -176,6 +176,22 @@ class DomQuery:
                 return result
         return [node]
 
+    def enumerate_all_paths(self):
+        queue = [(self._dom, tuple())]
+        result = set()
+        while queue:
+            node, path = queue.pop(0)
+            match node:
+                case dict(_):
+                    for key, value in node.items():
+                        queue.append((value, (*path, key)))
+                case list(_) as li:
+                    for item in li:
+                        queue.append((item, path))
+                case _:
+                    result.add(path)
+        return ['.'.join(item) for item in result]
+
     def remove(self, path, index=0):
         path = path.split('.')
         node = self.get(path[:-1], index)  # get parent node

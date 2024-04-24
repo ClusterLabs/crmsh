@@ -14,6 +14,7 @@ from . import tmpfiles
 from . import parallax
 from . import log
 from . import conf_parser
+from . import corosync_config_format
 from .sh import ShellUtils
 
 
@@ -315,3 +316,9 @@ def token_and_consensus_timeout():
     """
     _dict = get_corosync_value_dict()
     return _dict["token"] + _dict["consensus"]
+
+
+def get_all_paths():
+    with open(conf(), 'r', encoding='utf-8') as f:
+        dom = corosync_config_format.DomParser(f).dom()
+        return corosync_config_format.DomQuery(dom).enumerate_all_paths()

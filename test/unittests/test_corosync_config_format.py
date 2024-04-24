@@ -137,6 +137,17 @@ class TestDomQueryGetAll(TestCase):
             DomQuery(self.dom).get_all('vector.scalar.foo')
 
 
+class TestDomQueryEnumerate(TestCase):
+    def setUp(self) -> None:
+        self.dom = {'scalar': {'scalar': 'value'}, 'vector': [{'scalar': 'value1'}, {'scalar': 'value2'}]}
+
+    def test_enumerate_all_path(self):
+        self.assertSetEqual(
+            {'scalar.scalar', 'vector.scalar'},
+            set(DomQuery(self.dom).enumerate_all_paths()),
+        )
+
+
 class TestDomQueryRemove(TestCase):
     def setUp(self) -> None:
         self.dom = {'scalar': {'scalar': 'value'}, 'vector': [{'scalar': 'value1'}, {'scalar': 'value2'}]}
