@@ -49,6 +49,17 @@ foo {
                 '''))
 
 
+class TestDomParserWithUnusedFeature(TestCase):
+    def test_list_of_scalar(self):
+        dom = DomParser(StringIO('''
+# list of scalar is not used in corosync.conf
+foo: a
+foo: b
+foo: c
+        ''')).dom()
+        self.assertDictEqual({'foo': ['a', 'b', 'c']}, dom)
+
+
 class TestDomQueryGet(TestCase):
     def setUp(self) -> None:
         self.dom = {'scalar': {'scalar': 'value'}, 'vector': [{'scalar': 'value1'}, {'scalar': 'value2'}]}
@@ -146,14 +157,22 @@ class TestDomQueryRemove(TestCase):
         DomQuery(self.dom).remove('vector.scalar', 1)
         self.assertListEqual([{'scalar': 'value1'}, dict()], self.dom['vector'])
 
+    def test_remove_out_of_range_from_vector(self):
+        with self.assertRaises(IndexError):
+            DomQuery(self.dom).remove('vector.scalar', 2)
+
+    def test_remove_nonexistence(self):
+        with self.assertRaises(KeyError):
+            DomQuery(self.dom).remove('nonexistence')
+        with self.assertRaises(KeyError):
+            DomQuery(self.dom).remove('scalar.scalar.nonexistence')
+
 
 class TestDomSerializer(TestCase):
-    def setUp(self) -> None:
-        self.dom = {'scalar': {'scalar': 'value'}, 'vector': [{'scalar': 'value1'}, {'scalar': 'value2'}]}
-
     def test_serialize(self):
+        dom = {'scalar': {'scalar': 'value'}, 'vector': [{'scalar': 'value1'}, {'scalar': 'value2'}]}
         buf = StringIO()
-        DomSerializer(self.dom, buf)
+        DomSerializer(dom, buf)
         self.assertEqual(
                 '''scalar {
 \tscalar: value
@@ -168,6 +187,32 @@ vector {
 
                 buf.getvalue()
         )
+
+    def test_serialize_scalar(self):
+        dom = 'foo'
+        buf = StringIO()
+        with self.assertRaises(TypeError):
+            DomSerializer(dom, buf)
+
+    def test_serialize_list(self):
+        dom = [{'foo': 'a'}, {'foo': 'b'}]
+        buf = StringIO()
+        with self.assertRaises(TypeError):
+            DomSerializer(dom, buf)
+
+    def test_serialize_list_of_list(self):
+        dom = {'foo': [['a'], ['b']]}
+        buf = StringIO()
+        with self.assertRaises(ValueError):
+            DomSerializer(dom, buf)
+
+
+class TestDomSerializerUnusedFeature(TestCase):
+    def test_serialize_list_of_scalar(self):
+        dom = {'foo': ['a', 'b']}
+        buf = StringIO()
+        DomSerializer(dom, buf)
+        self.assertEqual('foo: a\nfoo: b\n', buf.getvalue())
 
 
 class TestParseSerialize(TestCase):

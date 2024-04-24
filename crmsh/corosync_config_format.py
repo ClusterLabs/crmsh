@@ -200,9 +200,9 @@ class DomSerializer:
             case dict(_):
                 self.on_dict(node)
             case list(_):
-                self.on_list(node)
+                raise TypeError('invalid to serialize a list')
             case _:
-                self.on_value(node)
+                raise TypeError('invalid to serialize a scalar value')
 
     def on_dict(self, node):
         for key, value in node.items():
