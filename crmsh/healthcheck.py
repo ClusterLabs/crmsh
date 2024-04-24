@@ -7,6 +7,7 @@ import subprocess
 import sys
 import typing
 
+import crmsh.constants
 import crmsh.parallax
 import crmsh.utils
 
@@ -121,8 +122,8 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
     def check_quick(self) -> bool:
         for key_type in self.KEY_TYPES:
             try:
-                os.stat('{}/{}'.format(self.SSH_DIR, key_type))
-                os.stat('{}/{}.pub'.format(self.SSH_DIR, key_type))
+                os.stat('{}/id_{}'.format(self.SSH_DIR, key_type))
+                os.stat('{}/id_{}.pub'.format(self.SSH_DIR, key_type))
                 return True
             except FileNotFoundError:
                 pass
@@ -132,7 +133,7 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
         try:
             for node in nodes:
                 subprocess.check_call(
-                    ['sudo', 'su', '-', 'hacluster', '-c', 'ssh hacluster@{} true'.format(node)],
+                    ['sudo', 'su', '-', 'hacluster', '-c', 'ssh {} hacluster@{} true'.format(crmsh.constants.SSH_OPTION, node)],
                     stdin=subprocess.DEVNULL,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
