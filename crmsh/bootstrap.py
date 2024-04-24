@@ -47,6 +47,7 @@ from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import NodeMgmt
 from .user_of_host import UserOfHost, UserNotFoundError
+import crmsh.healthcheck
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
@@ -74,7 +75,11 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
-INIT_STAGES = ("ssh", "csync2", "csync2_remote", "qnetd_remote", "corosync", "remote_auth", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+
+INIT_STAGES_EXTERNAL = ("ssh", "csync2", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
+INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote", "remote_auth")
+INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
+JOIN_STAGES_EXTERNAL = ("ssh", "csync2", "ssh_merge", "cluster")
 
 
 class Context(object):
@@ -232,7 +237,7 @@ class Context(object):
         """
         Validate cluster_node on join side
         """
-        if self.cluster_node and self.type == 'join':
+        if self.type == "join" and self.cluster_node:
             user, node = _parse_user_at_host(self.cluster_node, None)
             try:
                 # self.cluster_node might be hostname or IP address
@@ -240,7 +245,32 @@ class Context(object):
                 if utils.InterfacesInfo.ip_in_local(ip_addr):
                     utils.fatal("Please specify peer node's hostname or IP address")
             except socket.gaierror as err:
-                utils.fatal("\"{}\": {}".format(node, err))
+                utils.fatal(f"\"{node}\": {err}")
+
+    def _validate_stage(self):
+        """
+        Validate stage argument
+        """
+        if not self.stage:
+            if self.cluster_is_running:
+                utils.fatal("Cluster is already running!")
+            return
+
+        if self.type == "init":
+            if self.stage not in INIT_STAGES_ALL:
+                utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(INIT_STAGES_EXTERNAL)})")
+            if self.stage in ("admin", "qdevice", "ocfs2") and not self.cluster_is_running:
+                utils.fatal(f"Cluster is inactive, can't run '{self.stage}' stage")
+            if self.stage in ("corosync", "cluster") and self.cluster_is_running:
+                utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
+
+        elif self.type == "join":
+            if self.stage not in JOIN_STAGES_EXTERNAL:
+                utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(JOIN_STAGES_EXTERNAL)})")
+            if self.stage and self.cluster_node is None:
+                utils.fatal(f"Can't use stage({self.stage}) without specifying cluster node")
+            if self.stage in ("cluster", ) and self.cluster_is_running:
+                utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
 
     def validate_option(self):
         """
@@ -263,6 +293,7 @@ class Context(object):
             self.skip_csync2 = utils.get_boolean(os.getenv("SKIP_CSYNC2_SYNC"))
         if self.skip_csync2 and self.stage:
             utils.fatal("-x option or SKIP_CSYNC2_SYNC can't be used with any stage")
+        self._validate_stage()
         self._validate_cluster_node()
         self._validate_nodes_option()
         self._validate_sbd_option()
@@ -553,7 +584,7 @@ def my_hostname_resolves():
         return False
 
 
-def check_prereqs(stage):
+def check_prereqs():
     warned = False
 
     if not my_hostname_resolves():
@@ -1710,6 +1741,9 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     change_user_shell('hacluster')
     swap_public_ssh_key_for_secondary_user(sh.cluster_shell(), seed_host, 'hacluster')
 
+    if _context.stage:
+        setup_passwordless_with_other_nodes(seed_host, seed_user)
+
 
 def join_ssh_with_ssh_agent(
         local_shell: sh.LocalShell,
@@ -2367,46 +2401,87 @@ def decrease_expected_votes():
     corosync.set_value("quorum.expected_votes", str(new_quorum))
 
 
+def ssh_stage_finished():
+    """
+    Dectect if the ssh stage is finished
+    """
+    feature_check = crmsh.healthcheck.PasswordlessHaclusterAuthenticationFeature()
+    return feature_check.check_quick() and feature_check.check_local([utils.this_node()])
+
+
+def csync2_stage_finished():
+    """
+    Dectect if the csync2 stage is finished
+    """
+    return ServiceManager().service_is_active(CSYNC2_SERVICE)
+
+
+def corosync_stage_finished():
+    """
+    Dectect if the corosync stage is finished
+    """
+    return os.path.exists(corosync.conf())
+
+
+INIT_STAGE_CHECKER = {
+        # stage: (function, is_internal)
+        "ssh": (ssh_stage_finished, False),
+        "csync2": (csync2_stage_finished, False),
+        "corosync": (corosync_stage_finished, False),
+        "remote_auth": (init_remote_auth, True),
+        "sbd": (lambda: True, False),
+        "upgradeutil": (init_upgradeutil, True),
+        "cluster": (is_online, False)
+}
+
+
+JOIN_STAGE_CHECKER = {
+        # stage: (function, is_internal)
+        "ssh": (ssh_stage_finished, False),
+        "csync2": (csync2_stage_finished, False),
+        "ssh_merge": (lambda: True, False),
+        "cluster": (is_online, False)
+}
+
+
+def check_stage_dependency(stage):
+    stage_checker = INIT_STAGE_CHECKER if _context.type == "init" else JOIN_STAGE_CHECKER
+    if stage not in stage_checker:
+        return
+    stage_order = list(stage_checker.keys())
+    for stage_name in stage_order:
+        if stage == stage_name:
+            break
+        func, is_internal = stage_checker[stage_name]
+        if is_internal:
+            func()
+        elif not func():
+            utils.fatal(f"Please run '{stage_name}' stage first")
+
+
 def bootstrap_init(context):
     """
     Init cluster process
     """
     global _context
     _context = context
+    stage = _context.stage
 
     init()
-
-    stage = _context.stage
-    if stage is None:
-        stage = ""
-
-    # vgfs stage requires running cluster, everything else requires inactive cluster,
-    # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
-    # just in case this breaks ha-cluster-join on another node).
-    if stage in ("vgfs", "admin", "qdevice", "ocfs2"):
-        if not _context.cluster_is_running:
-            utils.fatal("Cluster is inactive - can't run %s stage" % (stage))
-    elif stage == "":
-        if _context.cluster_is_running:
-            utils.fatal("Cluster is currently active - can't run")
-    elif stage not in ("ssh", "csync2", "csync2_remote", "qnetd_remote", "sbd", "ocfs2"):
-        if _context.cluster_is_running:
-            utils.fatal("Cluster is currently active - can't run %s stage" % (stage))
 
     _context.load_profiles()
     _context.init_sbd_manager()
 
-    # Need hostname resolution to work, want NTP (but don't block csync2_remote)
-    if stage not in ('csync2_remote', 'qnetd_remote'):
-        check_tty()
-        if not check_prereqs(stage):
-            return
-    else:
+    if stage in ('csync2_remote', 'qnetd_remote'):
         args = _context.args
-        logger_utils.log_only_to_file("args: {}".format(args))
+        logger_utils.log_only_to_file(f"args: {args}")
         if len(args) != 2:
-            utils.fatal(f"Expected NODE argument to {stage} stage")
+            utils.fatal(f"Expected NODE argument for '{stage}' stage")
         _context.cluster_node = args[1]
+    else:
+        check_tty()
+        if not check_prereqs():
+            return
 
     if stage and _context.cluster_is_running and \
             not ServiceManager(shell=sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active(CSYNC2_SERVICE):
@@ -2416,6 +2491,7 @@ def bootstrap_init(context):
         _context.node_list_in_cluster = [utils.this_node()]
 
     if stage != "":
+        check_stage_dependency(stage)
         globals()["init_" + stage]()
     else:
         init_ssh()
@@ -2492,15 +2568,13 @@ def bootstrap_join(context):
 
     check_tty()
 
-    corosync_active = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("corosync.service")
-    if corosync_active and _context.stage != "ssh":
-        utils.fatal("Abort: Cluster is currently active. Run this command on a node joining the cluster.")
-
-    if not check_prereqs("join"):
+    if not check_prereqs():
         return
 
     if _context.stage != "":
         remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
+        init_upgradeutil()
+        check_stage_dependency(_context.stage)
         globals()["join_" + _context.stage](cluster_node, remote_user)
     else:
         if not _context.yes_to_all and _context.cluster_node is None:
@@ -2527,7 +2601,6 @@ def bootstrap_join(context):
                 service_manager = ServiceManager()
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node, remote_user)
-                join_remote_auth(cluster_node, remote_user)
                 _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
                 if _context.skip_csync2:
                     service_manager.stop_service(CSYNC2_SERVICE, disable=True)
@@ -2555,14 +2628,6 @@ def join_ocfs2(peer_host, peer_user):
     """
     ocfs2_inst = ocfs2.OCFS2Manager(_context)
     ocfs2_inst.join_ocfs2(peer_host)
-
-
-def join_remote_auth(node, user):
-    if os.path.exists(PCMK_REMOTE_AUTH):
-        utils.rmfile(PCMK_REMOTE_AUTH)
-    pcmk_remote_dir = os.path.dirname(PCMK_REMOTE_AUTH)
-    utils.mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
-    utils.touch(PCMK_REMOTE_AUTH)
 
 
 def remove_qdevice():
