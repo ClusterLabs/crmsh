@@ -1351,9 +1351,9 @@ def join_ssh(seed_host):
     # authorized_keys file (again, to help with the case where the
     # user has done manual initial setup without the assistance of
     # ha-cluster-init).
-    rc, _, err = invoke("ssh {} root@{} crm cluster init -i {} ssh_remote".format(SSH_OPTION, seed_host, _context.default_nic_list[0]))
+    rc, _, err = invoke("ssh {} root@{} crm cluster init ssh_remote".format(SSH_OPTION, seed_host))
     if not rc:
-        utils.fatal("Can't invoke crm cluster init -i {} ssh_remote on {}: {}".format(_context.default_nic_list[0], seed_host, err))
+        utils.fatal("Can't invoke crm cluster init ssh_remote on {}: {}".format(seed_host, err))
 
 
 def swap_public_ssh_key(remote_node, user="root"):
@@ -1433,7 +1433,7 @@ def join_csync2(seed_host):
 
         # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
         # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-        cmd = "crm cluster init -i {} csync2_remote {}".format(_context.default_nic_list[0], utils.this_node())
+        cmd = "crm cluster init csync2_remote {}".format(utils.this_node())
         rc, _, err = invoke("ssh {} root@{} {}".format(SSH_OPTION, seed_host, cmd))
         if not rc:
             utils.fatal("Can't invoke \"{}\" on {}: {}".format(cmd, seed_host, err))

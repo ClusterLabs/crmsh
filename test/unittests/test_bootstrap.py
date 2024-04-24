@@ -458,8 +458,8 @@ class TestBootstrap(unittest.TestCase):
             mock.call("node1", "root"),
             mock.call("node1", "hacluster")
             ])
-        mock_invoke.assert_called_once_with("ssh {} root@node1 crm cluster init -i eth1 ssh_remote".format(constants.SSH_OPTION))
-        mock_error.assert_called_once_with("Can't invoke crm cluster init -i eth1 ssh_remote on node1: error")
+        mock_invoke.assert_called_once_with("ssh {} root@node1 crm cluster init ssh_remote".format(constants.SSH_OPTION))
+        mock_error.assert_called_once_with("Can't invoke crm cluster init ssh_remote on node1: error")
 
     def test_swap_public_ssh_key_return(self):
         bootstrap._context = mock.Mock(with_other_user=False)
