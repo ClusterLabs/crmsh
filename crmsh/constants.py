@@ -516,4 +516,5 @@ Allowed value is nic name or IP address.
 If a nic name is provided, the first IP of that nic will be used. 
 Use multiple -i for more links. Note: Only one link is allowed for the non knet transport type
 """
+NON_FUNCTIONAL_COMMANDS = ('help', 'cd', 'ls', 'quit', 'up')
 # vim:ts=4:sw=4:et:
