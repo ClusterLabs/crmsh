@@ -949,27 +949,15 @@ Membership information
             mock.call(crq_cmd, "qnetd-node")])
 
     @mock.patch('crmsh.corosync.conf')
-    @mock.patch('crmsh.utils.str2file')
-    @mock.patch('crmsh.conf_parser.ConfParser')
-    def test_write_qdevice_config(self, mock_parser, mock_str2file, mock_conf):
-        mock_parser_inst = mock.Mock()
-        mock_parser.return_value = mock_parser_inst
-        mock_parser_inst.convert2string.return_value = "data"
-        mock_conf.return_value = "corosync.conf"
-        self.qdevice_with_invalid_cmds_relative_path.write_qdevice_config()
-        mock_str2file.assert_called_once_with("data", "corosync.conf")
-
-    @mock.patch('crmsh.corosync.conf')
-    @mock.patch('crmsh.utils.str2file')
-    @mock.patch('crmsh.conf_parser.ConfParser')
-    def test_remove_qdevice_config(self, mock_parser, mock_str2file, mock_conf):
+    @mock.patch('crmsh.corosync.ConfParser')
+    def test_remove_qdevice_config(self, mock_parser, mock_conf):
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
         mock_parser_inst.convert2string.return_value = "data"
         mock_conf.return_value = "corosync.conf"
         self.qdevice_with_invalid_cmds_relative_path.remove_qdevice_config()
-        mock_str2file.assert_called_once_with("data", "corosync.conf")
         mock_parser_inst.remove.assert_called_once_with("quorum.device")
+        mock_parser_inst.save.assert_called_once()
 
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('crmsh.bootstrap.sync_file')

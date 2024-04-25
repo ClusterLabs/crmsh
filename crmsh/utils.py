@@ -655,12 +655,10 @@ def open_atomic(filepath, mode="r", buffering=-1, fsync=False, encoding=None):
 
     with create_tempfile(dir=os.path.dirname(os.path.abspath(filepath))) as tmppath:
         with open(tmppath, mode, buffering, encoding=encoding) as file:
-            try:
-                yield file
-            finally:
-                if fsync:
-                    file.flush()
-                    os.fsync(file.fileno())
+            yield file
+            if fsync:
+                file.flush()
+                os.fsync(file.fileno())
         os.rename(tmppath, filepath)
 
 
