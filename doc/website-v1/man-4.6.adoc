@@ -2479,9 +2479,20 @@ maintenance [<node>]
 
 [[cmdhelp_node_online,set node online,From Code]]
 ==== `online`
-See "crm node help online" or "crm node online --help"
+Usage:
 
-[[cmdhelp_node_ready,put node into ready mode]]
+ online [--all | <node>... ]
+
+Specify node(s) on which to online node. If no nodes are specified, online node on the local node. If --all is specified, online node on all nodes.
+
+Options:
+
+* `+++-h, --help+++`: Show this help message
+
+* `+++--all+++`: To online node on all nodes
+
+
+
 ==== `ready`
 
 Set the node's maintenance status to `off`. The node should be
@@ -2523,9 +2534,22 @@ show [<node>]
 
 [[cmdhelp_node_standby,put node into standby,From Code]]
 ==== `standby`
-See "crm node help standby" or "crm node standby --help"
+Usage:
 
-[[cmdhelp_node_status-attr,manage status attributes]]
+ standby [--all | <node>... ] [lifetime]
+
+Specify node(s) on which to standby node. If no nodes are specified, standby node on the local node. If --all is specified, standby node on all nodes.
+
+Additionally, you may specify a lifetime for the standby---if set to "reboot", the node will be back online once it reboots. "forever" will keep the node in standby after reboot. The life time defaults to "forever".
+
+Options:
+
+* `+++-h, --help+++`: Show this help message
+
+* `+++--all+++`: To standby node on all nodes
+
+
+
 ==== `status-attr`
 
 Edit node attributes which are in the CIB status section, i.e.,
