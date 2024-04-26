@@ -9,14 +9,12 @@ PACKAGES = ['booth', 'cluster-glue', 'corosync', 'crmsh', 'csync2', 'drbd',
             'fence-agents', 'gfs2', 'gfs2-utils', 'hawk', 'ocfs2',
             'ocfs2-tools', 'pacemaker', 'pacemaker-mgmt',
             'resource-agents', 'sbd']
-SERVICES = ['sshd', 'ntp', 'corosync', 'pacemaker', 'hawk', 'SuSEfirewall2_init']
+SERVICES = ['sshd', 'ntp', 'corosync', 'pacemaker', 'hawk']
 SSH_KEY = os.path.expanduser('~/.ssh/id_rsa')
 CSYNC2_KEY = '/etc/csync2/key_hagroup'
 CSYNC2_CFG = '/etc/csync2/csync2.cfg'
 COROSYNC_CONF = '/etc/corosync/corosync.conf'
 SYSCONFIG_SBD = '/etc/sysconfig/sbd'
-SYSCONFIG_FW = '/etc/sysconfig/SuSEfirewall2'
-SYSCONFIG_FW_CLUSTER = '/etc/sysconfig/SuSEfirewall2.d/services/cluster'
 
 
 def rpm_info():
@@ -85,8 +83,6 @@ def files_info():
             'csync2_cfg': check(CSYNC2_CFG),
             'corosync_conf': check(COROSYNC_CONF),
             'sysconfig_sbd': check(SYSCONFIG_SBD),
-            'sysconfig_fw': check(SYSCONFIG_FW),
-            'sysconfig_fw_cluster': check(SYSCONFIG_FW_CLUSTER),
             }
 
 
@@ -206,46 +202,8 @@ UDP="%(udp)s"
         rc, out, err = crm_script.call(['crm', 'corosync', 'get', 'totem.interface.mcastport'])
         if rc == 0:
             corosync_mcastport = out.strip()
-    FW = '/etc/sysconfig/SuSEfirewall2'
-    FW_CLUSTER = '/etc/sysconfig/SuSEfirewall2.d/services/cluster'
 
     tcp_ports = '30865 5560 7630 21064'
     udp_ports = '%s %s' % (corosync_mcastport, int(corosync_mcastport) - 1)
-
-    if is_service_enabled('SuSEfirewall2'):
-        if os.path.isfile(FW_CLUSTER):
-            tmpl = open(FW_CLUSTER).read()
-            tmpl = re.sub(r'^TCP="(.*)"', 'TCP="%s"' % (tcp_ports), tmpl, flags=re.M)
-            tmpl = re.sub(r'^UDP="(.*)"', 'UDP="%s"' % (udp_ports), tmpl, flags=re.M)
-            with open(FW_CLUSTER, 'w') as f:
-                f.write(tmpl)
-        elif os.path.isdir(os.path.dirname(FW_CLUSTER)):
-            with open(FW_CLUSTER, 'w') as fwc:
-                fwc.write(_SUSE_FW_TEMPLATE % {'tcp': tcp_ports,
-                                               'udp': udp_ports})
-        else:
-            # neither the cluster file nor the services
-            # directory exists
-            crm_script.exit_fail("SUSE firewall is configured but %s does not exist" %
-                                 os.path.dirname(FW_CLUSTER))
-
-        # add cluster to FW_CONFIGURATIONS_EXT
-        if os.path.isfile(FW):
-            txt = open(FW).read()
-            m = re.search(r'^FW_CONFIGURATIONS_EXT="(.*)"', txt, re.M)
-            if m:
-                services = m.group(1).split()
-                if 'cluster' not in services:
-                    services.append('cluster')
-                txt = re.sub(r'^FW_CONFIGURATIONS_EXT="(.*)"',
-                             r'FW_CONFIGURATIONS_EXT="%s"' % (' '.join(services)),
-                             txt,
-                             flags=re.M)
-            else:
-                txt += '\nFW_CONFIGURATIONS_EXT="cluster"'
-            with open(FW, 'w') as fw:
-                fw.write(txt)
-        if is_service_active('SuSEfirewall2'):
-            crm_script.service('SuSEfirewall2', 'restart')
 
     # TODO: other platforms
