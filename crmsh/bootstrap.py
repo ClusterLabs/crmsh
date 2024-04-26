@@ -696,7 +696,11 @@ def firewall_open_basic_ports():
     """
     Open ports for csync2, hawk & dlm respectively
     """
-    configure_firewall(tcp=["30865", "7630", "21064"])
+    configure_firewall(tcp=[
+        constants.CSYNC2_PORT,
+        constants.HAWK_PORT,
+        constants.DLM_PORT
+        ])
 
 
 def firewall_open_corosync_ports():
@@ -711,7 +715,7 @@ def firewall_open_corosync_ports():
     Also open QNetd/QDevice port if configured.
     """
     # all mcastports defined in corosync config
-    udp = corosync.get_values("totem.interface.mcastport")
+    udp = corosync.get_values("totem.interface.mcastport") or [constants.COROSYNC_PORT]
     udp.extend([str(int(p) - 1) for p in udp])
 
     tcp = corosync.get_values("totem.quorum.device.net.port")
@@ -724,8 +728,7 @@ def init_cluster_local():
     if ServiceManager().service_is_active("corosync.service"):
         utils.fatal("corosync service is running!")
 
-    # FIXME This is temporarily commentted out since issue from new corosync parser
-    #firewall_open_corosync_ports()
+    firewall_open_corosync_ports()
 
     # reset password, but only if it's not already set
     # (We still need the hacluster for the hawk).

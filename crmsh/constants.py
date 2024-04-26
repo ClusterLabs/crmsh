@@ -520,4 +520,9 @@ Use multiple -i for more links. Note: Only one link is allowed for the non knet 
 NON_FUNCTIONAL_COMMANDS = {'help', 'cd', 'ls', 'quit', 'up'}
 NON_FUNCTIONAL_OPTIONS = {'--help', '--help-without-redirect'}
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
+
+COROSYNC_PORT = 5405
+CSYNC2_PORT = 30865
+HAWK_PORT = 7630
+DLM_PORT = 21064
 # vim:ts=4:sw=4:et:
