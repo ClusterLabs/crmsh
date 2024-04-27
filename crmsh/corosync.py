@@ -389,7 +389,10 @@ class ConfParser(object):
         """
         Returns all values matching path
         """
-        return self._dom_query.get_all(path)
+        try:
+            return self._dom_query.get_all(path)
+        except KeyError:
+            return list()
 
     def remove(self, path, index=0):
         try:
