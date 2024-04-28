@@ -92,8 +92,11 @@ class Context(object):
         except (ValueError, IOError) as e:
             logger.error("%s: %s", self.get_qualified_name(), e, exc_info=e)
             rv = False
-        except utils.TerminateSubCommand:
-            return False
+        except utils.TerminateSubCommand as terminate:
+            if terminate.success:
+                rv = True
+            else:
+                return False
         if cmd or (rv is False):
             rv = self._back_out() and rv
 
