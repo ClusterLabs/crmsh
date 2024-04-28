@@ -13,8 +13,6 @@ RE_SECTION_TITLE = re.compile('^=')
 RE_FROM_CODE_OR_SECTION_TITLE=re.compile(r'^(?:\[\[([^,]+),[^,]*,From Code]]$|=)')
 
 TAG_EXCLUDES = {
-    'cmdhelp_node_online',
-    'cmdhelp_node_standby',
     'cmdhelp_root_report',
 }
 

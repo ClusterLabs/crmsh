@@ -82,7 +82,8 @@ class Context(object):
                     cmd = True
                     break
             if cmd:
-                if self.command_name not in constants.NON_FUNCTIONAL_COMMANDS:
+                if self.command_name not in constants.NON_FUNCTIONAL_COMMANDS\
+                        and all(arg not in constants.NON_FUNCTIONAL_OPTIONS for arg in self.command_args):
                     entry = self.current_level()
                     if 'requires' in dir(entry) and not entry.requires():
                         self.fatal_error("Missing requirements")
