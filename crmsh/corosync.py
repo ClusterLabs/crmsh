@@ -338,6 +338,18 @@ def get_all_paths():
     return ConfParser().dom_query().enumerate_all_paths()
 
 
+def is_valid_corosync_conf(config_file=None) -> bool:
+    """
+    Check if corosync.conf is valid
+    """
+    try:
+        ConfParser(config_file=config_file)
+    except ValueError as e:
+        logger.error("Invalid %s: %s", config_file or conf(), e)
+        return False
+    return True
+
+
 class ConfParser(object):
     """
     Class to parse config file which format like corosync.conf
@@ -357,7 +369,7 @@ class ConfParser(object):
             try:
                 with open(self._config_file, 'r', encoding='utf-8') as f:
                     self._dom = corosync_config_format.DomParser(f).dom()
-            except OSError as e:
+            except (OSError, corosync_config_format.ParserException) as e:
                 raise ValueError(str(e)) from None
 
         self._dom_query = corosync_config_format.DomQuery(self._dom)
