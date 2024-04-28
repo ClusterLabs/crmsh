@@ -146,7 +146,13 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
         logger.debug("setup passwordless ssh authentication for user hacluster")
         local_node = crmsh.utils.this_node()
         remote_nodes = set(nodes)
-        remote_nodes.remove(local_node)
+        try:
+            remote_nodes.remove(local_node)
+        except KeyError:
+            # bsc#1223438: local nodename not in cib
+            # init_ssh_impl should work even if the local node is included in user_node_list
+            # although this is not a designed usage
+            logger.warning("local node %s is not found in cluster node list %s", local_node, remote_nodes)
         remote_nodes = list(remote_nodes)
         crmsh.parallax.parallax_run(
             nodes,
