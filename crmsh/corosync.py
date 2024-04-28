@@ -357,8 +357,8 @@ class ConfParser(object):
             try:
                 with open(self._config_file, 'r', encoding='utf-8') as f:
                     self._dom = corosync_config_format.DomParser(f).dom()
-            except OSError:
-                self._dom = dict()
+            except OSError as e:
+                raise ValueError(str(e)) from None
 
         self._dom_query = corosync_config_format.DomQuery(self._dom)
 
