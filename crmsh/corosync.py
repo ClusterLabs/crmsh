@@ -357,8 +357,8 @@ class ConfParser(object):
             try:
                 with open(self._config_file, 'r', encoding='utf-8') as f:
                     self._dom = corosync_config_format.DomParser(f).dom()
-            except OSError as e:
-                raise ValueError(str(e)) from None
+            except OSError:
+                self._dom = dict()
 
         self._dom_query = corosync_config_format.DomQuery(self._dom)
 
@@ -389,7 +389,10 @@ class ConfParser(object):
         """
         Returns all values matching path
         """
-        return self._dom_query.get_all(path)
+        try:
+            return self._dom_query.get_all(path)
+        except KeyError:
+            return list()
 
     def remove(self, path, index=0):
         try:
