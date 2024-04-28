@@ -172,6 +172,7 @@ class Cluster(command.UI):
         '''
         Starts the cluster stack on all nodes or specific node(s)
         '''
+        node_list = parse_option_for_nodes(context, *args)
         service_check_list = ["pacemaker.service"]
         start_qdevice = False
         if corosync.is_qdevice_configured():
@@ -179,7 +180,6 @@ class Cluster(command.UI):
             service_check_list.append("corosync-qdevice.service")
 
         service_manager = ServiceManager()
-        node_list = parse_option_for_nodes(context, *args)
         for node in node_list[:]:
             if all([service_manager.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
                 logger.info("The cluster stack already started on {}".format(node))
