@@ -2151,12 +2151,7 @@ def corosync_stage_finished():
     """
     Dectect if the corosync stage is finished
     """
-    try:
-        corosync.ConfParser()
-    except ValueError as e:
-        logger.error(e)
-        return False
-    return True
+    return corosync.is_valid_corosync_conf()
 
 
 INIT_STAGE_CHECKER = {
