@@ -1372,11 +1372,11 @@ show
 [[cmdhelp_corosync_status,Display the corosync status]]
 ==== `status`
 
-Displays the corosync ring status(default), also can display quorum/qdevice/qnetd status.
+Displays the corosync ring status(default), also can display quorum/qdevice/qnetd/cpg status.
 
 Usage:
 .........
-status [ring|quorum|qdevice|qnetd]
+status [ring|quorum|qdevice|qnetd|cpg]
 .........
 
 [[cmdhelp_cib,CIB shadow management]]

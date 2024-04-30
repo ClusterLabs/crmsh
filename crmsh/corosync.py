@@ -96,13 +96,14 @@ def query_status(status_type):
     """
     Query status of corosync
 
-    Possible types could be ring/quorum/qdevice/qnetd
+    Possible types could be ring/quorum/qdevice/qnetd/cpg
     """
     status_func_dict = {
             "ring": query_ring_status,
             "quorum": query_quorum_status,
             "qdevice": query_qdevice_status,
-            "qnetd": query_qnetd_status
+            "qnetd": query_qnetd_status,
+            "cpg": query_cpg_status
             }
     if status_type in status_func_dict:
         out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l")
@@ -166,6 +167,14 @@ def query_qnetd_status():
     _, qnetd_result_stdout, _ = result[0][1]
     if qnetd_result_stdout:
         return utils.to_ascii(qnetd_result_stdout)
+
+
+def query_cpg_status():
+    """
+    Query corosync cpg status
+    """
+    cmd = "corosync-cpgtool -e"
+    return sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
 def push_configuration(nodes):
