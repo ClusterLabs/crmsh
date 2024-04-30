@@ -10,7 +10,7 @@ import typing
 RE_FROM_CODE = re.compile(r'^\[\[([^,]+),[^,]*,From Code]]$')
 RE_TAG = re.compile('^cmdhelp_(.*)$')
 RE_SECTION_TITLE = re.compile('^=')
-RE_FROM_CODE_OR_SECTION_TITLE=re.compile(r'^(?:\[\[([^,]+),[^,]*,From Code]]$|=)')
+RE_ANCHOR_OR_SECTION_TITLE=re.compile(r'^(?:\[\[.*]]$|=)')
 
 TAG_EXCLUDES = {
     'cmdhelp_root_report',
@@ -86,7 +86,7 @@ def generate_include(stdin, stdout):
                             break
                         case _:
                             # waiting for next section
-                            found = RE_FROM_CODE_OR_SECTION_TITLE.match(line)
+                            found = RE_ANCHOR_OR_SECTION_TITLE.match(line)
                             if found:
                                 tag = None
                                 section_title = None
