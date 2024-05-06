@@ -51,7 +51,6 @@ ocf_root = @OCF_ROOT_DIR@
 ; pe_state_dir = <detected>
 ; heartbeat_dir = <detected>
 ; hb_delnode = /usr/share/heartbeat/hb_delnode
-; nagios_plugins = /usr/lib/nagios/plugins
 
 ; [color]
 ; style = color
