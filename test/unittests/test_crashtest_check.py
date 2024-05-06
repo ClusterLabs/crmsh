@@ -164,10 +164,7 @@ class TestCheck(TestCase):
         check.check_firewall()
 
         mock_task.assert_called_once_with("Checking firewall")
-        mock_installed.assert_has_calls([
-            mock.call("firewalld"),
-            mock.call("SuSEfirewall2")
-            ])
+        mock_installed.assert_called_once_with("firewalld")
         mock_task_inst.warn.assert_called_once_with("Failed to detect firewall")
 
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')

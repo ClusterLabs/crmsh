@@ -59,8 +59,6 @@ PROFILES_FILE = "/etc/crm/profiles.yml"
 SYSCONFIG_SBD = "/etc/sysconfig/sbd"
 SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_NFS = "/etc/sysconfig/nfs"
-SYSCONFIG_FW = "/etc/sysconfig/SuSEfirewall2"
-SYSCONFIG_FW_CLUSTER = "/etc/sysconfig/SuSEfirewall2.d/services/cluster"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service", CSYNC2_SERVICE]
@@ -659,35 +657,6 @@ def configure_firewall(tcp=None, udp=None):
     if udp is None:
         udp = []
 
-    def init_firewall_suse(tcp, udp):
-        if os.path.exists(SYSCONFIG_FW_CLUSTER):
-            cluster = utils.parse_sysconfig(SYSCONFIG_FW_CLUSTER)
-            tcpcurr = set(cluster.get("TCP", "").split())
-            tcpcurr.update(tcp)
-            tcp = list(tcpcurr)
-            udpcurr = set(cluster.get("UDP", "").split())
-            udpcurr.update(udp)
-            udp = list(udpcurr)
-
-        utils.sysconfig_set(SYSCONFIG_FW_CLUSTER, TCP=" ".join(tcp), UDP=" ".join(udp))
-
-        ext = ""
-        if os.path.exists(SYSCONFIG_FW):
-            fw = utils.parse_sysconfig(SYSCONFIG_FW)
-            ext = fw.get("FW_CONFIGURATIONS_EXT", "")
-            if "cluster" not in ext.split():
-                ext = ext + " cluster"
-        utils.sysconfig_set(SYSCONFIG_FW, FW_CONFIGURATIONS_EXT=ext)
-
-        # No need to do anything else if the firewall is inactive
-        if not ServiceManager().service_is_active("SuSEfirewall2"):
-            return
-
-        # Firewall is active, either restart or complain if we couldn't tweak it
-        logger.info("Restarting firewall (tcp={}, udp={})".format(" ".join(tcp), " ".join(udp)))
-        if not invokerc("rcSuSEfirewall2 restart"):
-            utils.fatal("Failed to restart firewall (SuSEfirewall2)")
-
     def init_firewall_firewalld(tcp, udp):
         has_firewalld = ServiceManager().service_is_active("firewalld")
         cmdbase = 'firewall-cmd --zone=public --permanent ' if has_firewalld else 'firewall-offline-cmd --zone=public '
@@ -719,8 +688,6 @@ def configure_firewall(tcp=None, udp=None):
 
     if utils.package_is_installed("firewalld"):
         init_firewall_firewalld(tcp, udp)
-    elif utils.package_is_installed("SuSEfirewall2"):
-        init_firewall_suse(tcp, udp)
     elif utils.package_is_installed("ufw"):
         init_firewall_ufw(tcp, udp)
 
@@ -729,7 +696,11 @@ def firewall_open_basic_ports():
     """
     Open ports for csync2, hawk & dlm respectively
     """
-    configure_firewall(tcp=["30865", "7630", "21064"])
+    configure_firewall(tcp=[
+        constants.CSYNC2_PORT,
+        constants.HAWK_PORT,
+        constants.DLM_PORT
+        ])
 
 
 def firewall_open_corosync_ports():
@@ -744,7 +715,7 @@ def firewall_open_corosync_ports():
     Also open QNetd/QDevice port if configured.
     """
     # all mcastports defined in corosync config
-    udp = corosync.get_values("totem.interface.mcastport")
+    udp = corosync.get_values("totem.interface.mcastport") or [constants.COROSYNC_PORT]
     udp.extend([str(int(p) - 1) for p in udp])
 
     tcp = corosync.get_values("totem.quorum.device.net.port")
@@ -757,8 +728,7 @@ def init_cluster_local():
     if ServiceManager().service_is_active("corosync.service"):
         utils.fatal("corosync service is running!")
 
-    # FIXME This is temporarily commentted out since issue from new corosync parser
-    #firewall_open_corosync_ports()
+    firewall_open_corosync_ports()
 
     # reset password, but only if it's not already set
     # (We still need the hacluster for the hawk).

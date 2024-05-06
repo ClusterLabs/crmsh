@@ -164,9 +164,6 @@ def check_port_open(task, firewall_type):
                 task.info("UDP port {} is opened in firewalld".format(p))
             else:
                 task.error("UDP port {} should open in firewalld".format(p))
-    elif firewall_type == "SuSEfirewall2":
-        #TODO
-        pass
 
 
 def check_firewall():
@@ -175,7 +172,7 @@ def check_firewall():
     """
     task_inst = task.TaskCheck("Checking firewall")
     with task_inst.run():
-        for item in ("firewalld", "SuSEfirewall2"):
+        for item in ("firewalld", ):
             if crmshutils.package_is_installed(item):
                 task_inst.info("{}.service is available".format(item))
                 if ServiceManager().service_is_active(item):
