@@ -231,7 +231,7 @@ class DomSerializer:
                     self.on_dict(value)
                     del self._path_stack[-1]
                     self.__write_indent(len(self._path_stack))
-                    self._ofile.write('}\n')
+                    self._ofile.write('}\n\n')
                 case list(_):
                     self._path_stack.append(key)
                     self.on_list(value)
@@ -253,7 +253,7 @@ class DomSerializer:
                     self._ofile.write(' {\n')
                     self.on_dict(item)
                     self.__write_indent(len(self._path_stack) - 1)
-                    self._ofile.write('}\n')
+                    self._ofile.write('}\n\n')
                 case list(_):
                     raise ValueError('list of list is invalid')
                 case _:
