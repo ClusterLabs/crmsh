@@ -8,12 +8,13 @@ import typing
 
 
 logger = logging.getLogger(__name__)
+COMMENT_PREFIX = '#comment'
 
 
 class Parser:
     """SAX-style parser for the configuration of corosync"""
 
-    _SPLIT_RE = re.compile('\\s*({|:|})\\s*')
+    _SPLIT_RE = re.compile('\\s*(#|{|:|})\\s*')
 
     def __init__(self, ifile):
         """Parse data form a file-like object."""
@@ -34,14 +35,15 @@ class Parser:
             line = line.strip()
             if not line:
                 continue
-            if line[0] == '#':
-                continue
             try:
                 tokens = self._tokenize(line)
             except ValueError as e:
                 raise MalformedLineException(lineno, line)
             logger.debug('tokens: %s', tokens)
-            if tokens[1] == '{':
+            if tokens[1] == '#':
+                fake_key = f'{COMMENT_PREFIX}_{lineno}'
+                self.on_key_value(fake_key, tokens[2])
+            elif tokens[1] == '{':
                 if not tokens[0] or tokens[2]:
                     raise MalformedLineException(lineno, line)
                 self.__section_stack.append(tokens[0])
@@ -238,8 +240,11 @@ class DomSerializer:
                     del self._path_stack[-1]
                 case _:
                     self.__write_indent(len(self._path_stack))
-                    self._ofile.write(key)
-                    self._ofile.write(': ')
+                    if key.startswith(COMMENT_PREFIX):
+                        self._ofile.write('# ')
+                    else:
+                        self._ofile.write(key)
+                        self._ofile.write(': ')
                     self.on_value(value)
                     self._ofile.write('\n')
 
