@@ -3352,11 +3352,12 @@ def set_property(property_name, property_value, property_type="crm_config", cond
     origin_value = get_property(property_name, property_type)
     if origin_value and str(origin_value) == str(property_value):
         return
-    if conditional:
-        if crm_msec(origin_value) >= crm_msec(property_value):
-            return
+    if conditional and crm_msec(origin_value) >= crm_msec(property_value):
+        return
+    if not origin_value and property_value:
+        logger.info("Set property \"%s\" in %s to %s", property_name, property_type, property_value)
     if origin_value and str(origin_value) != str(property_value):
-        logger.warning("\"{}\" in {} is set to {}, it was {}".format(property_name, property_type, property_value, origin_value))
+        logger.warning("\"%s\" in %s is set to %s, it was %s", property_name, property_type, property_value, origin_value)
     property_sub_cmd = "property" if property_type == "crm_config" else property_type
     cmd = "crm configure {} {}={}".format(property_sub_cmd, property_name, property_value)
     get_stdout_or_raise_error(cmd)
