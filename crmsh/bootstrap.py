@@ -1923,8 +1923,10 @@ def join_cluster(seed_host, remote_user):
 
     link_number = corosync.get_link_number()
     join_link_number = len(_context.default_ip_list)
-    if link_number != join_link_number:
-        utils.fatal(f"knet transport of all cluster nodes need {link_number} links via '-i' options, but provided {join_link_number}")
+    # the join link number can't be greater than the peer's link number
+    # or less than the peer's link number if -y is set
+    if join_link_number > link_number or (_context.yes_to_all and join_link_number < link_number):
+        utils.fatal(f"Node {seed_host} has {link_number} links, but provided {join_link_number}")
 
     detect_mountpoint(seed_host)
 
