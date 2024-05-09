@@ -1733,7 +1733,7 @@ def test_set_property(mock_get, mock_run, mock_warn):
     mock_get.return_value = "start"
     utils.set_property("no-quorum-policy", "stop")
     mock_run.assert_called_once_with("crm configure property no-quorum-policy=stop")
-    mock_warn.assert_called_once_with('"no-quorum-policy" in crm_config is set to stop, it was start')
+    mock_warn.assert_called_once_with('"%s" in %s is set to %s, it was %s', 'no-quorum-policy', 'crm_config', 'stop', 'start')
 
 
 @mock.patch('crmsh.utils.get_property')
