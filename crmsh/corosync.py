@@ -367,9 +367,8 @@ class ConfParser(object):
     """
     COROSYNC_KNOWN_SEC_NAMES_WITH_LIST = {("totem", "interface"), ("nodelist", "node")}
 
-    def __init__(self, config_file=None, config_data=None, sec_names_with_list=()):
+    def __init__(self, config_file=None, config_data=None):
         self._config_file = config_file
-        self._sec_names_with_list = set(sec_names_with_list) if sec_names_with_list else self.COROSYNC_KNOWN_SEC_NAMES_WITH_LIST
         if config_data is not None:
             self._dom = corosync_config_format.DomParser(StringIO(config_data)).dom()
         else:
@@ -436,7 +435,7 @@ class ConfParser(object):
             else:
                 match node[key]:
                     case dict(_) as next_node:
-                        if index > 0 and path_stack in self._sec_names_with_list:
+                        if index > 0 and path_stack in self.COROSYNC_KNOWN_SEC_NAMES_WITH_LIST:
                             if index == 1:
                                 new_node = dict()
                                 node[key] = [next_node, new_node]
@@ -512,3 +511,16 @@ class ConfParser(object):
         inst = cls()
         inst.remove(path, index)
         inst.save()
+
+    @classmethod
+    def transform_dom_with_list_schema(cls, dom):
+        # ensure every multi-value section is populated as a list if existing
+        query = corosync_config_format.DomQuery(dom)
+        for item in cls.COROSYNC_KNOWN_SEC_NAMES_WITH_LIST:
+            try:
+                parent = query.get(item[:-1])
+                node = parent[item[-1]]
+                if not isinstance(node, list):
+                    parent[item[-1]] = [node]
+            except KeyError:
+                pass
