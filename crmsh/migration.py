@@ -4,6 +4,9 @@ import re
 import shutil
 import typing
 
+import lxml.etree
+
+from crmsh import constants
 from crmsh import corosync
 from crmsh import corosync_config_format
 from crmsh import service_manager
@@ -137,7 +140,43 @@ def migrate_rrp(dom):
             dom['totem']['link_mode'] = 'active'
     except KeyError:
         pass
-    # TODO: ensure node name
+    assert all('nodeid' in node for node in nodes)
+    if any('name' not in node for node in nodes):
+        populate_node_name(nodes)
+
+
+def populate_node_name(nodelist):
+    # cannot use utils.list_cluster_nodes, as pacemaker is not running
+    with open(constants.CIB_RAW_FILE, 'rb') as f:
+        cib = Cib(f)
+    cib_nodes = {node.node_id: node for node in cib.nodes()}
+    for node in nodelist:
+        node_id = int(node['nodeid'])
+        node['name'] = cib_nodes[node_id].uname
+
+
+class Cib:
+    class Node:
+        def __init__(self, node_id: int, uname: str):
+            self.node_id = node_id
+            self.uname = uname
+
+    def __init__(self, f: typing.IO):
+        self._dom = lxml.etree.parse(f)
+
+    def nodes(self):
+        result = list()
+        for element in self._dom.xpath(constants.XML_NODE_PATH):
+            if element.get('type') == 'remote':
+                xpath = f"//primitive[@provider='pacemaker' and @type='remote']/instance_attributes/nvpair[@name='server' and @value='{name}']"
+                if self._dom.xpath(xpath):
+                    continue
+            node_id = element.get('id')
+            uname = element.get('uname')
+            assert node_id
+            assert uname
+            result.append(Cib.Node(int(node_id), uname))
+        return result
 
 
 if __name__ == '__main__':
