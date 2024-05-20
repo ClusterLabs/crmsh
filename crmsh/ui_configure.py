@@ -238,9 +238,14 @@ def _prim_meta_completer(agent, args):
     completing = args[-1]
     if completing == 'meta':
         return ['meta']
+    if completing.endswith('='):
+        if len(completing) > 1 and options.interactive:
+            topic = completing[:-1]
+            CompletionHelp.help(topic, agent.meta_parameter(topic), args)
+        return []
     if '=' in completing:
         return []
-    return utils.filter_keys(constants.rsc_meta_attributes, args)
+    return utils.filter_keys(ra.get_resource_meta_list(), args)
 
 
 def _prim_op_completer(agent, args):
@@ -304,6 +309,11 @@ def _property_completer(args):
     return _prim_params_completer(agent, args)
 
 
+def _rsc_meta_completer(args):
+    agent = ra.get_resource_meta()
+    return _prim_meta_completer(agent, args)
+
+
 def primitive_complete_complex(args):
     '''
     This completer depends on the content of the line, i.e. on
@@ -334,6 +344,8 @@ def primitive_complete_complex(args):
     if last_keyw is None:
         return []
 
+    if last_keyw == 'meta':
+        agent = ra.get_resource_meta()
     complete_results = completers_set[last_keyw](agent, args)
     if len(args) > 4 and '=' in args[-1]:
         return complete_results + keywords
@@ -1125,7 +1137,7 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(_prim_meta_completer)
+    @command.completers_repeating(_rsc_meta_completer)
     def do_rsc_defaults(self, context, *args):
         "usage: rsc_defaults [$id=<set_id>] <option>=<value>"
         return self.__conf_object(context.get_command_name(), *args)

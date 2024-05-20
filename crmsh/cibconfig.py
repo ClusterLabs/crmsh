@@ -25,7 +25,7 @@ from . import cibstatus
 from . import crm_gv
 from . import ui_utils
 from . import userdir
-from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta, RAInfo
+from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta, RAInfo, get_resource_meta_list
 from .utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from .utils import ask, lines2cli, olist
 from .utils import page_string, str2tmp, ensure_sudo_readable
@@ -1571,7 +1571,7 @@ class CibPrimitive(CibObject):
         if self.node is None:  # eh?
             logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
-        rc3 = sanity_check_meta(self.obj_id, self.node, constants.rsc_meta_attributes)
+        rc3 = sanity_check_meta(self.obj_id, self.node, get_resource_meta_list())
         if self.obj_type == "primitive":
             r_node = reduce_primitive(self.node)
             if r_node is None:
@@ -1681,7 +1681,7 @@ class CibContainer(CibObject):
         if self.node is None:  # eh?
             logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
-        l = constants.rsc_meta_attributes
+        l = get_resource_meta_list()
         if self.obj_type == "clone":
             l += constants.clone_meta_attributes
         elif self.obj_type == "ms":
@@ -2045,7 +2045,7 @@ class CibProperty(CibObject):
         elif self.obj_type == "op_defaults":
             l = schema.get('attr', 'op', 'a')
         elif self.obj_type == "rsc_defaults":
-            l = constants.rsc_meta_attributes
+            l = get_resource_meta_list()
         rc = sanity_check_nvpairs(self.obj_id, self.node, l)
         return rc
 
