@@ -219,7 +219,7 @@ clear         locate        move          refresh       status        up
 constraints   ls            operations    restart       stop          utilization
 
 crm(live)configure# primitive fence-1 <TAB><TAB>
-lsb:      ocf:      service:  stonith:  systemd:
+ocf:      stonith:  systemd:
 
 crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
 apcmaster                external/ippower9258     fence_legacy
