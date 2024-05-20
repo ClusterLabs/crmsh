@@ -200,6 +200,6 @@ Feature: crmsh bootstrap process - options
     Then    Cluster service is "started" on "hanode1"
     When    Try "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "stopped" on "hanode2"
-    And     Except "knet transport of all cluster nodes need 2 links via '-i' options, but provided 1" in stderr
+    And     Except "Node hanode1 has 2 links, but provided 1" in stderr
     When    Run "crm cluster join -c hanode1 -i eth0 -i eth1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
