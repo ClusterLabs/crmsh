@@ -85,7 +85,7 @@ def configure_two_node(removing: bool = False, qdevice_adding: bool = False) -> 
 
 
 def conf():
-    return os.getenv('COROSYNC_MAIN_CONFIG_FILE', '/etc/corosync/corosync.conf')
+    return os.environ.get('COROSYNC_MAIN_CONFIG_FILE', '/etc/corosync/corosync.conf')
 
 
 def check_tools():
