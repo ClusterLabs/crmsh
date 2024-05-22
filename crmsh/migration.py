@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import shutil
+import tempfile
 import typing
 
 import lxml.etree
@@ -9,6 +10,7 @@ import lxml.etree
 from crmsh import constants
 from crmsh import corosync
 from crmsh import corosync_config_format
+from crmsh import parallax
 from crmsh import service_manager
 from crmsh import sh
 from crmsh import utils
@@ -93,23 +95,35 @@ def migrate_corosync_conf_impl(config):
     assert 'totem' in config
     corosync.ConfParser.transform_dom_with_list_schema(config)
     migrate_transport(config)
+    migrate_crypto(config)
     migrate_rrp(config)
-    # TODO: migrate from multicast to unicast
     # TODO: other migrations
 
 
 def migrate_transport(dom):
-    if dom['totem'].get('transport', None) == 'knet':
-        return
+    match dom['totem'].get('transport', None):
+        case 'knet':
+            return
+        case 'udpu':
+            migrate_udpu(dom)
+        case 'udp':
+            migrate_multicast(dom)
+        case _:
+            # corosync 2 defaults to "udp"
+            try:
+                dom['totem']['interface'][0]['bindnetaddr']
+            except KeyError:
+                # looks like a corosync 3 config
+                pass
+            if 'nodelist' not in dom:
+                migrate_multicast(dom)
+            else:
+                # looks like a corosync 3 config
+                pass
+
+
+def migrate_udpu(dom):
     dom['totem']['transport'] = 'knet'
-    dom['totem']['knet_compression_model'] = 'none'
-    try:
-        # corosync 3 change the default hash algorithm to sha256 when `secauth` is enabled
-        if dom['totem'].get('crypto_hash', None) == 'sha1':
-            dom['totem']['crypto_hash'] = 'sha256'
-            logger.info('Change totem.crypto_hash from "sha1" to "sha256".')
-    except KeyError:
-        dom['totem']['crypto_hash'] = 'sha256'
     if 'interface' in dom['totem']:
         for interface in dom['totem']['interface']:
             # remove udp-only items
@@ -123,6 +137,57 @@ def migrate_transport(dom):
     if 'quorum' in dom:
         dom['quorum'].pop('expected_votes', None)
     logger.info("Upgrade totem.transport to knet.")
+
+
+def migrate_multicast(dom):
+    dom['totem']['transport'] = 'knet'
+    for interface in dom['totem']['interface']:
+        # remove udp-only items
+        interface.pop('mcastaddr', None)
+        interface.pop('bindnetaddr', None)
+        interface.pop('broadcast', None)
+        interface.pop('ttl', None)
+        ringnumber = interface.pop('ringnumber', None)
+        if ringnumber is not None:
+            interface['linknumber'] = ringnumber
+    logger.info("Generating nodelist according to CIB...")
+    with open(constants.CIB_RAW_FILE, 'rb') as f:
+        cib = Cib(f)
+    cib_nodes = cib.nodes()
+    assert 'nodelist' not in dom
+    nodelist = list()
+    with tempfile.TemporaryDirectory(prefix='crmsh-migration-') as dir_name:
+        node_configs = {
+            x[0]: x[1]
+            for x in parallax.parallax_slurp([x.uname for x in cib_nodes], dir_name, corosync.conf())
+        }
+        for node in cib_nodes:
+            assert node.uname in node_configs
+            with open(node_configs[node.uname], 'r', encoding='utf-8') as f:
+                root = corosync_config_format.DomParser(f).dom()
+                corosync.ConfParser.transform_dom_with_list_schema(root)
+                interfaces = root['totem']['interface']
+                addresses = {f'ring{i}_addr': x['bindnetaddr'] for i, x in enumerate(interfaces)}
+                logger.info("Node %s: %s: %s", node.node_id, node.uname, addresses)
+                nodelist.append({
+                    'nodeid': node.node_id,
+                    'name': node.uname,
+                } | addresses)
+    dom['nodelist'] = {'node': nodelist}
+    if 'quorum' in dom:
+        dom['quorum'].pop('expected_votes', None)
+        logger.info("Unset quorum.expected_votes.")
+    logger.info("Upgrade totem.transport to knet.")
+
+
+def migrate_crypto(dom):
+    try:
+        # corosync 3 change the default hash algorithm to sha256 when `secauth` is enabled
+        if dom['totem'].get('crypto_hash', None) == 'sha1':
+            dom['totem']['crypto_hash'] = 'sha256'
+            logger.info('Upgrade totem.crypto_hash from "sha1" to "sha256".')
+    except KeyError:
+        dom['totem']['crypto_hash'] = 'sha256'
 
 
 def migrate_rrp(dom):
