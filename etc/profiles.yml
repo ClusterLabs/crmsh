@@ -23,7 +23,7 @@ default:
   sbd.watchdog_timeout: 15
 
 knet-default:
-  corosync.totem.crypto_hash: sha1
+  corosync.totem.crypto_hash: sha256
   corosync.totem.crypto_cipher: aes256
 
 microsoft-azure:
