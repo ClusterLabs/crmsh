@@ -8,6 +8,7 @@
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .INP: commit
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 WARNING: 7: st: unknown attribute 'yoyo-meta'
 .INP: node node1 	attributes mem=16G
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10

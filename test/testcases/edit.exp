@@ -202,6 +202,7 @@ rsc_defaults rsc_options: \
 op_defaults op-options: \
 	timeout=60s
 .INP: commit
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: _test
 .INP: verify

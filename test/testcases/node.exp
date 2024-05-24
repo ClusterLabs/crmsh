@@ -9,6 +9,7 @@ node1: member
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -25,6 +26,7 @@ node1: member
 </cib>
 
 .TRY configure group g0 p5
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1

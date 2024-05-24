@@ -62,6 +62,7 @@ clone cl-p5 p5 \
        meta interleave=true
 colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: commit
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: _test
 .INP: verify
 .INP: show
@@ -153,6 +154,7 @@ op_defaults op-options: \
 .INP: commit
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: _test
 .INP: verify
 .TRY Unknown properties
@@ -176,6 +178,7 @@ primitive st stonith:null \
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
 .INP: commit
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: _test
 .INP: verify
 .INP: property SAPHanaSR_2:     hana_ha1_site_iss_WDF1=cde     hana_ha1_site_bss_WDF1=abc
@@ -211,5 +214,6 @@ INFO: 6: pulling in template virtual-ip
 .EXT crm_resource --list-ocf-alternatives IPaddr
 .INP: up
 .INP: commit
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: _test
 .INP: verify

@@ -117,6 +117,7 @@ primitive st stonith:ssh \
 	op stop timeout=15s interval=0s
 location d1-pref d1 100: node1
 .INP: verify
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: # delete a group which is in a clone
 .INP: primitive d2 ocf:pacemaker:Dummy
 .INP: group g1 d2 d1
