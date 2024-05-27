@@ -484,6 +484,9 @@ class NodeMgmt(command.UI):
         'usage: fence <node>'
         if not utils.is_name_sane(node):
             return False
+        if not utils.has_stonith_running():
+            logger.error("fence command requires stonith device configured and running")
+            return False
         if not config.core.force and \
                 not utils.ask("Fencing %s will shut down the node and migrate any resources that are running on it! Do you want to fence %s?" % (node, node)):
             return False

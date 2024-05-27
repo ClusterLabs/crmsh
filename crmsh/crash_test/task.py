@@ -108,6 +108,9 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
             self.get_fence_info()
             if not self.fence_enabled:
                 raise TaskError("Require stonith enabled")
+            if not self.fence_configured:
+                raise TaskError("Require stonith device configured and running")
+
 
     def get_fence_info(self):
         """
@@ -115,6 +118,7 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
         """
         fence_info_inst = utils.FenceInfo()
         self.fence_enabled = fence_info_inst.fence_enabled
+        self.fence_configured = fence_info_inst.fence_configured
         self.fence_action = fence_info_inst.fence_action
         self.fence_timeout = fence_info_inst.fence_timeout
 
