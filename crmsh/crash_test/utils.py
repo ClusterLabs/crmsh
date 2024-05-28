@@ -111,6 +111,10 @@ class FenceInfo(object):
         return True
 
     @property
+    def fence_configured(self):
+        return crmshutils.has_stonith_running()
+
+    @property
     def fence_action(self):
         action_result = crmshutils.get_property("stonith-action")
         if action_result is None or action_result not in ["off", "poweroff", "reboot"]:
