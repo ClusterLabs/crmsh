@@ -1325,15 +1325,23 @@ def get_address_list() -> typing.List[str]:
     else:
         valid_func = Validation.valid_ucast_ip
 
+    if _context.yes_to_all or _context.nic_addr_list:
+        loop_count = len(_context.default_ip_list)
+    else:
+        # interative mode and without -i option specified
+        loop_count = min(Context.MAX_LINK_NUM, len(_context.interfaces_inst.nic_list))
+
     ringXaddr_list = []
-    loop_count = min(Context.MAX_LINK_NUM, len(_context.default_ip_list))
     for i in range(loop_count):
         addr = prompt_for_string("Address for ring{}".format(i),
                 default=pick_default_value(_context.default_ip_list, ringXaddr_list),
                 valid_func=valid_func,
                 prev_value=ringXaddr_list)
         ringXaddr_list.append(addr)
-        if i < (loop_count - 1) and not confirm("\nAdd another ring?"):
+        # only confirm when not the last loop and without -i option specified
+        if not _context.nic_addr_list and \
+                i < (loop_count - 1) and \
+                not confirm("\nAdd another ring?"):
             break
 
     return ringXaddr_list
@@ -1923,8 +1931,10 @@ def join_cluster(seed_host, remote_user):
 
     link_number = corosync.get_link_number()
     join_link_number = len(_context.default_ip_list)
-    if link_number != join_link_number:
-        utils.fatal(f"knet transport of all cluster nodes need {link_number} links via '-i' options, but provided {join_link_number}")
+    # the join link number can't be greater than the peer's link number
+    # or less than the peer's link number if -y is set
+    if join_link_number > link_number or (_context.yes_to_all and join_link_number < link_number):
+        utils.fatal(f"Node {seed_host} has {link_number} links, but provided {join_link_number}")
 
     detect_mountpoint(seed_host)
 

@@ -2332,7 +2332,7 @@ class InterfacesInfo(object):
                 self._input_nic_list.append(nic)
                 self._input_addr_list.append(item)
             else:
-                raise ValueError(f"Invalid value '{item}' for -i/--interface option")
+                raise ValueError(f"Invalid value '{item}' for -i/--interface option, should be {', '.join(self.nic_list)} or {', '.join(self.ip_list)}")
 
     @property
     def nic_list(self):
