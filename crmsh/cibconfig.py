@@ -687,7 +687,7 @@ def fix_node_ids(node, oldnode):
         }
 
     idless = set([
-        'operations', 'fencing-topology', 'network', 'docker', 'podman', 'rkt',
+        'operations', 'fencing-topology', 'network', 'docker', 'podman',
         'storage', 'select', 'select_attributes', 'select_fencing',
         'select_nodes', 'select_resources'
     ])
@@ -1717,7 +1717,6 @@ class CibBundle(CibObject):
         "meta_attributes": "meta",
         "docker": "docker",
         "podman": "podman",
-        "rkt": "rkt",
         "network": "network",
         "storage": "storage",
         "primitive": "primitive",

@@ -273,7 +273,7 @@ extra_cluster_properties = ("dc-version",
                             "cluster-name")
 pcmk_version = ""  # set later
 
-container_type = ("docker", "podman", "rkt")
+container_type = ("docker", "podman")
 container_helptxt = {
     "container": {
         "image": """image:(string)
@@ -301,7 +301,7 @@ container_helptxt = {
     (but could, for example, be a script that does other stuff, too).""",
 
         "options": """options:(string)
-    Extra command-line options to pass to the 'docker run', 'podman run' or 'rkt run' command"""
+    Extra command-line options to pass to the 'docker run' or 'podman run' command"""
     },
 
     "network": {

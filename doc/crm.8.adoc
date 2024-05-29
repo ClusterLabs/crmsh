@@ -2660,10 +2660,9 @@ A bundle is a single resource specifying the settings, networking
 requirements, and storage requirements for any number of containers
 generated from the same container image.
 
-Pacemaker bundles support Docker (since version 1.1.17) and rkt (since
-version 1.1.18) container technologies.
+Pacemaker bundles support Docker and Podman container technologies.
 
-A bundle must contain exactly one +docker+ or +rkt+ element.
+A bundle must contain exactly one +docker+ or +podman+ element.
 
 The bundle definition may contain a reference to a primitive
 resource which defining the resource running inside the
