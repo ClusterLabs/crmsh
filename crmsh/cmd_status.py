@@ -1,8 +1,9 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
 import re
+import shlex
+
 from . import clidisplay
 from . import utils
 
@@ -79,14 +80,12 @@ def crm_mon(opts=''):
         prog = utils.is_program("crm_mon")
         if not prog:
             raise IOError("crm_mon not available, check your installation")
-        _, out = utils.get_stdout("%s --help" % (prog))
+        _crm_mon = [prog, '-1']
+        _, out = utils.get_stdout([prog, '--help'], shell=False)
         if "--pending" in out:
-            _crm_mon = "%s -1 -j" % (prog)
-        else:
-            _crm_mon = "%s -1" % (prog)
+            _crm_mon.append('-j')
 
-    status_cmd = "%s %s" % (_crm_mon, opts)
-    return utils.get_stdout(utils.add_sudo(status_cmd))
+    return utils.get_stdout(_crm_mon + shlex.split(opts), shell=False)
 
 
 def cmd_status(args):
