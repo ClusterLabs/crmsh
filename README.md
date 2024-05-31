@@ -1,6 +1,6 @@
 # crmsh
 
-[![Build Status](https://github.com/ClusterLabs/crmsh/actions/workflows/crmsh-ci.yml/badge.svg)](https://github.com/ClusterLabs/crmsh/actions/workflows/crmsh-ci.yml)
+[![Build Status](https://github.com/ClusterLabs/crmsh/actions/workflows/crmsh-ci.yml/badge.svg)](https://github.com/ClusterLabs/crmsh/actions/workflows/crmsh-ci.yml)[![codecov](https://codecov.io/gh/ClusterLabs/crmsh/graph/badge.svg?token=16HW9ntzmz)](https://codecov.io/gh/ClusterLabs/crmsh)
 
 
 ## Introduction
