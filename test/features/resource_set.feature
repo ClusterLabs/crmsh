@@ -176,3 +176,14 @@ Feature: Use "crm configure set" to update attributes and operations
   Scenario: Run ra info cluster
     When    Run "crm ra info cluster" on "hanode1"
     Then    Expected "Pacemaker cluster options" in stdout
+
+  @clean
+  Scenario: Auto convert deprecated roles
+    When    Run "crm configure primitive stateful-1 ocf:pacemaker:Stateful op monitor role=Master interval=10s op monitor role=Slave interval=5s" on "hanode1"
+    Then    Expected multiple lines in output
+      """
+      INFO: Convert deprecated "Master" to "Promoted"
+      INFO: Convert deprecated "Slave" to "Unpromoted"
+      """
+    When    Run "crm configure clone promotable-1 stateful-1 meta promotable=true" on "hanode1"
+    Then    Run "sleep 2;crm resource status promotable-1|grep 'Promoted$'" OK
