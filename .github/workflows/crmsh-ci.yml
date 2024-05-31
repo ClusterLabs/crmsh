@@ -63,6 +63,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_crm_report_normal:
     runs-on: ubuntu-20.04
@@ -78,6 +79,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_bootstrap_bugs:
     runs-on: ubuntu-20.04
@@ -93,6 +95,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_bootstrap_bugs_non_root:
     runs-on: ubuntu-20.04
@@ -108,6 +111,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_bootstrap_common:
     runs-on: ubuntu-20.04
@@ -123,6 +127,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_bootstrap_common_non_root:
     runs-on: ubuntu-20.04
@@ -138,6 +143,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_bootstrap_options:
     runs-on: ubuntu-20.04
@@ -153,6 +159,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_bootstrap_options_non_root:
     runs-on: ubuntu-20.04
@@ -168,6 +175,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_qdevice_setup_remove:
     runs-on: ubuntu-20.04
@@ -183,6 +191,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_qdevice_setup_remove_non_root:
     runs-on: ubuntu-20.04
@@ -198,6 +207,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_qdevice_options:
     runs-on: ubuntu-20.04
@@ -213,6 +223,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_qdevice_validate:
     runs-on: ubuntu-20.04
@@ -228,6 +239,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_qdevice_validate_non_root:
     runs-on: ubuntu-20.04
@@ -243,6 +255,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_qdevice_user_case:
     runs-on: ubuntu-20.04
@@ -258,6 +271,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_resource_failcount:
     runs-on: ubuntu-20.04
@@ -273,6 +287,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_resource_set:
     runs-on: ubuntu-20.04
@@ -288,6 +303,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_resource_set_non_root:
     runs-on: ubuntu-20.04
@@ -303,6 +319,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_configure_sublevel:
     runs-on: ubuntu-20.04
@@ -318,6 +335,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_constraints_bugs:
     runs-on: ubuntu-20.04
@@ -333,6 +351,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_geo_cluster:
     runs-on: ubuntu-20.04
@@ -348,6 +367,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_healthcheck:
     runs-on: ubuntu-20.04
@@ -363,6 +383,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_cluster_api:
     runs-on: ubuntu-20.04
@@ -377,6 +398,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_user_access:
     runs-on: ubuntu-20.04
@@ -391,6 +413,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   functional_test_ssh_agent:
     runs-on: ubuntu-20.04
@@ -405,6 +428,7 @@ jobs:
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
 
   original_regression_test:
     runs-on: ubuntu-20.04
