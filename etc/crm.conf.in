@@ -50,7 +50,6 @@ ocf_root = @OCF_ROOT_DIR@
 ; crm_dtd_dir = <detected>
 ; pe_state_dir = <detected>
 ; heartbeat_dir = <detected>
-; hb_delnode = /usr/share/heartbeat/hb_delnode
 
 ; [color]
 ; style = color

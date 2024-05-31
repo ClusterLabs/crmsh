@@ -72,7 +72,6 @@ ocf_root = /usr/lib/ocf
 crm_dtd_dir = /usr/share/pacemaker
 pe_state_dir = /var/lib/pacemaker/pengine
 heartbeat_dir = /var/lib/heartbeat
-hb_delnode = /usr/share/heartbeat/hb_delnode
 
 [color]
 style = color
