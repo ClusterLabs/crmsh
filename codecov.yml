@@ -11,6 +11,7 @@ codecov:
     after_n_builds: 26
 comment:
   after_n_builds: 26
+  layout: "condensed_header, flags, files, condensed_footer"
 
 ignore:
   - "crmsh/report"
