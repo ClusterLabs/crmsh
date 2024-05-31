@@ -165,7 +165,7 @@
         <rule id-ref="l2-rule1"/>
       </rsc_location>
       <rsc_colocation id="c1" score="INFINITY" rsc="m6" with-rsc="m5"/>
-      <rsc_colocation id="c2" score="INFINITY" rsc="m5" rsc-role="Master" with-rsc="d1" with-rsc-role="Started"/>
+      <rsc_colocation id="c2" score="INFINITY" rsc="m5" rsc-role="Promoted" with-rsc="d1" with-rsc-role="Started"/>
       <rsc_order id="o1" kind="Mandatory" first="m5" then="m6"/>
       <rsc_order id="o2" kind="Optional" first="d1" first-action="start" then="m5" then-action="promote"/>
       <rsc_order id="o3" kind="Serialize" first="m5" then="m6"/>
@@ -181,7 +181,7 @@
         <resource_set id="ticket-C_master-0">
           <resource_ref id="m6"/>
         </resource_set>
-        <resource_set role="Master" id="ticket-C_master-1">
+        <resource_set role="Promoted" id="ticket-C_master-1">
           <resource_ref id="m5"/>
         </resource_set>
       </rsc_ticket>

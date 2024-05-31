@@ -52,6 +52,7 @@ INFO: 36: "collocation" is accepted as "colocation"
 .INP: collocation c2 inf: m5:Master d1:Started
 WARNING: 37: This command 'collocation' is deprecated, please use 'colocation'
 INFO: 37: "collocation" is accepted as "colocation"
+INFO: 37: Convert deprecated "Master" to "Promoted"
 .INP: order o1 Mandatory: m5 m6
 .INP: order o2 Optional: d1:start m5:promote
 .INP: order o3 Serialize: m5 m6
@@ -59,6 +60,7 @@ INFO: 37: "collocation" is accepted as "colocation"
 .INP: rsc_ticket ticket-A_m6 ticket-A: m6
 .INP: rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence
 .INP: rsc_ticket ticket-C_master ticket-C: m6 m5:Master loss-policy=fence
+INFO: 44: Convert deprecated "Master" to "Promoted"
 .INP: fencing_topology st st2
 .INP: property stonith-enabled=true
 .INP: property $id=cpset2 maintenance-mode=true
@@ -150,7 +152,7 @@ clone m7 d8 \
 	meta promoted-node-max=1
 tag t1 m5 m6
 colocation c1 inf: m6 m5
-colocation c2 inf: m5:Master d1:Started
+colocation c2 inf: m5:Promoted d1:Started
 location l1 g1 100: node1
 location l2 c \
 	rule $id=l2-rule1 100: #uname eq node1
@@ -173,7 +175,7 @@ order o4 Mandatory: m5 m6
 fencing_topology st st2
 rsc_ticket ticket-A_m6 ticket-A: m6
 rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence
-rsc_ticket ticket-C_master ticket-C: m6 m5:Master loss-policy=fence
+rsc_ticket ticket-C_master ticket-C: m6 m5:Promoted loss-policy=fence
 property cib-bootstrap-options: \
 	stonith-enabled=true
 property cpset2: \
