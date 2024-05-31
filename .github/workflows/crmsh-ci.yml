@@ -16,7 +16,7 @@ jobs:
   general_check:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: check data-manifest
       run: |
         ./update-data-manifest.sh
@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
     timeout-minutes: 5
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for crm_report bugs
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for crm_report normal
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for bootstrap bugs
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for bootstrap bugs, under non root user
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for bootstrap common
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -128,7 +128,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for bootstrap common, under non root user
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -143,7 +143,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for bootstrap options
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -158,7 +158,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for bootstrap options, under non root user
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -173,7 +173,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for qdevice setup and remove
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -188,7 +188,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for qdevice setup and remove, under non root user
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -203,7 +203,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for qdevice options
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -218,7 +218,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for qdevice validate
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -233,7 +233,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for qdevice validate, under non root user
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -248,7 +248,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for qdevice user case
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -263,7 +263,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for resource failcount
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -278,7 +278,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for resource set
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -293,7 +293,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for resource set, under non root user
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -308,7 +308,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for configure sublevel bugs
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -323,7 +323,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for constraints bugs
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -338,7 +338,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for geo cluster
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -353,7 +353,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for healthcheck
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -368,7 +368,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for cluster api
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -382,7 +382,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for user access
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -396,7 +396,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: functional test for ssh agent
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -410,7 +410,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: original regression test
       run:  |
         $DOCKER_SCRIPT `$GET_INDEX_OF "regression test"`
