@@ -7,7 +7,6 @@ coverage:
       default:
         threshold: 0.1%
 codecov: 
-  token: 16b01c29-3b23-4923-b33a-4d26a49d80c4
   notify:
     after_n_builds: 22
 comment:
