@@ -48,6 +48,10 @@ jobs:
     - name: Test with pytest in tox
       run: |
         tox -v -e${{ matrix.python-version }}
+    - uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: unit
 
   functional_test_crm_report_bugs:
     runs-on: ubuntu-20.04
