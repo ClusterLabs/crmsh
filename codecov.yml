@@ -8,9 +8,9 @@ coverage:
         threshold: 0.35%
 codecov: 
   notify:
-    after_n_builds: 23
+    after_n_builds: 27
 comment:
-  after_n_builds: 23
+  after_n_builds: 27
 
 ignore:
   - "crmsh/report"
