@@ -21,10 +21,10 @@ jobs:
 
   delivery:
     needs: integration
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: delivery process
       run: |
         docker pull "${CONTAINER_IMAGE}"
@@ -38,11 +38,11 @@ jobs:
 
   submit:
     needs: delivery
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     if: ${{ false }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: submit process
       run: |
         docker pull "${CONTAINER_IMAGE}"

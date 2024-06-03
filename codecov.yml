@@ -7,11 +7,11 @@ coverage:
       default:
         threshold: 0.35%
 codecov: 
-  token: 16b01c29-3b23-4923-b33a-4d26a49d80c4
   notify:
-    after_n_builds: 23
+    after_n_builds: 26
 comment:
-  after_n_builds: 23
+  after_n_builds: 26
+  layout: "condensed_header, flags, files, condensed_footer"
 
 ignore:
   - "crmsh/report"
