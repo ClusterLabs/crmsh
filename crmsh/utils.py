@@ -194,6 +194,15 @@ def get_cluster_option_metadata(show_xml=True) -> str:
     return None
 
 
+def get_resource_metadata(show_xml=True) -> str:
+    output_type = "xml" if show_xml else "text"
+    cmd = f"crm_resource --list-options=primitive --all --output-as={output_type}"
+    rc, out, _ = ShellUtils().get_stdout_stderr(cmd)
+    if rc == 0 and out:
+        return out
+    return None
+
+
 def pacemaker_20_daemon(new, old):
     "helper to discover renamed pacemaker daemons"
     if is_program(new):

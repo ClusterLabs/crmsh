@@ -228,6 +228,23 @@ def get_properties_list():
         return []
 
 
+@utils.memoize
+def get_resource_meta():
+    resource_meta = utils.get_resource_metadata()
+    if resource_meta:
+        return RAInfo("resource_meta", None, meta_string=resource_meta)
+    return None
+
+
+@utils.memoize
+def get_resource_meta_list():
+    try:
+        return list(get_resource_meta().params().keys())
+    # use legacy code to get the resource metadata list
+    except:
+        return constants.rsc_meta_attributes
+
+
 def prog_meta(prog):
     '''
     Do external program metadata.

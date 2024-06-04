@@ -19,6 +19,7 @@
 .INP: _test
 .INP: verify
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: show
 node node1 \
        attributes mem=16G

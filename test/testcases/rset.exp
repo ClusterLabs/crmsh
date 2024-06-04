@@ -40,6 +40,7 @@ colocation c3 inf: d3 d1
 order o1 Serialize: d1 d3
 .INP: _test
 .INP: verify
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: show
 node node1
 primitive d1 ocf:pacemaker:Dummy \

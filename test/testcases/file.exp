@@ -37,6 +37,7 @@ op_defaults op-options: \
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
+.EXT crm_resource --list-options=primitive --all --output-as=xml
 .EXT sed -i 's/60s/2m/' sample.txt
 .EXT sed -i '8a # comment' sample.txt
 .TRY Load update
