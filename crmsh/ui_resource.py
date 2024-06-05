@@ -257,7 +257,7 @@ class RscMgmt(command.UI):
         return True
 
     @command.alias('show', 'list')
-    @command.completers(compl.resources)
+    @command.completers_repeating(compl.resources)
     def do_status(self, context, *resources):
         "usage: status [<rsc> ...]"
         if len(resources) > 0:
@@ -303,7 +303,7 @@ class RscMgmt(command.UI):
         return rc
 
     @command.wait
-    @command.completers(compl.resources_stopped)
+    @command.completers_repeating(compl.resources)
     def do_start(self, context, *resources):
         "usage: start <rsc> [<rsc> ...]"
         if len(resources) == 0:
@@ -311,7 +311,7 @@ class RscMgmt(command.UI):
         return self._commit_meta_attrs(context, resources, "target-role", "Started")
 
     @command.wait
-    @command.completers(compl.resources_started)
+    @command.completers_repeating(compl.resources)
     def do_stop(self, context, *resources):
         "usage: stop <rsc> [<rsc> ...]"
         if len(resources) == 0:
@@ -319,7 +319,7 @@ class RscMgmt(command.UI):
         return self._commit_meta_attrs(context, resources, "target-role", "Stopped")
 
     @command.wait
-    @command.completers(compl.resources)
+    @command.completers_repeating(compl.resources)
     def do_restart(self, context, *resources):
         "usage: restart <rsc> [<rsc> ...]"
         logger.info("ordering %s to stop", ", ".join(resources))
@@ -351,7 +351,7 @@ class RscMgmt(command.UI):
         else:
             context.fatal_error("Need crm_simulate or ptest in path to display scores")
 
-    @command.completers(compl.resources)
+    @command.completers_repeating(compl.resources)
     def do_locate(self, context, *resources):
         "usage: locate <rsc> [<rsc> ...]"
         if len(resources) == 0:
