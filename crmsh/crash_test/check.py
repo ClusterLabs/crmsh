@@ -305,8 +305,8 @@ def check_resources():
     """
     task_inst = task.TaskCheck("Checking resources")
     with task_inst.run():
-        started_list = completers.resources_started()
-        stopped_list = completers.resources_stopped()
+        started_list = completers.resources(["stop"])
+        stopped_list = completers.resources(["start"])
         # TODO need suitable method to get failed resources list
         failed_list = []
         if started_list:

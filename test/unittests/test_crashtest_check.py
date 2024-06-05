@@ -463,16 +463,14 @@ Active Resources:
             mock.call("Node 15sp2-2 is UNCLEAN!")
             ])
 
-    @mock.patch('crmsh.crash_test.check.completers.resources_stopped')
-    @mock.patch('crmsh.crash_test.check.completers.resources_started')
+    @mock.patch('crmsh.crash_test.check.completers.resources')
     @mock.patch('crmsh.crash_test.task.TaskCheck')
-    def test_check_resources(self, mock_task, mock_started, mock_stopped):
+    def test_check_resources(self, mock_task, mock_resources):
         mock_task_inst = mock.Mock()
         mock_task.return_value = mock_task_inst
         mock_task_inst.run.return_value.__enter__ = mock.Mock()
         mock_task_inst.run.return_value.__exit__ = mock.Mock()
-        mock_started.return_value = ["r1", "r2"]
-        mock_stopped.return_value = ["r3", "r4"]
+        mock_resources.side_effect = [["r1", "r2"], ["r3", "r4"]]
 
         check.check_resources()
 

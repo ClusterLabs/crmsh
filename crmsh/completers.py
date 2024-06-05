@@ -50,21 +50,15 @@ def resources(args=None):
         return []
     nodes = xmlutil.get_interesting_nodes(cib_el, [])
     rsc_id_list = [x.get("id") for x in nodes if xmlutil.is_resource(x)]
-    if args and args[0] in ['promote', 'demote']:
-        return [item for item in rsc_id_list if xmlutil.RscState().is_ms_or_promotable_clone(item)]
-    if args and args[0] == "started":
-        return [item for item in rsc_id_list if xmlutil.RscState().is_running(item)]
-    if args and args[0] == "stopped":
-        return [item for item in rsc_id_list if not xmlutil.RscState().is_running(item)]
+    if args:
+        if args[0] in ('promote', 'demote'):
+            rsc_id_list = [item for item in rsc_id_list if xmlutil.RscState().is_ms_or_promotable_clone(item)]
+        elif args[0] == "start":
+            rsc_id_list = [item for item in rsc_id_list if not xmlutil.RscState().is_running(item)]
+        elif args[0] == "stop":
+            rsc_id_list = [item for item in rsc_id_list if xmlutil.RscState().is_running(item)]
+        rsc_id_list = [item for item in rsc_id_list if item not in args]
     return rsc_id_list
-
-
-def resources_started(args=None):
-    return resources(["started"])
-
-
-def resources_stopped(args=None):
-    return resources(["stopped"])
 
 
 def primitives(args):
