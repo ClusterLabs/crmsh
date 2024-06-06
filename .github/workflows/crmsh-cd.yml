@@ -11,8 +11,8 @@ env:
   CONTAINER_IMAGE: nyang23/obs-continuous-delivery:latest
   OBS_USER: ${{ secrets.OBS_USER }}
   OBS_PASS: ${{ secrets.OBS_PASS }}
-  OBS_PROJECT: ${{ secrets.OBS_PROJECT_CRMSH45 }}
-  TARGET_PROJECT: ${{ secrets.TARGET_PROJECT }}
+  OBS_PROJECT: network:ha-clustering:Stable
+  TARGET_PROJECT: network:ha-clustering:Factory
 
 jobs:
   integration:
