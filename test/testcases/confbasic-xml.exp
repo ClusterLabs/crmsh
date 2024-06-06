@@ -75,7 +75,7 @@
       <clone id="c">
         <meta_attributes id="c-meta_attributes">
           <nvpair name="clone-max" value="1" id="c-meta_attributes-clone-max"/>
-          <nvpair name="interleave" value="true" id="c-meta_attributes-interleave"/>
+          <nvpair id="c-meta_attributes-interleave" name="interleave" value="true"/>
         </meta_attributes>
         <primitive id="d3" class="ocf" provider="pacemaker" type="Dummy">
           <operations>
@@ -85,7 +85,11 @@
           </operations>
         </primitive>
       </clone>
-      <master id="m">
+      <clone id="m">
+        <meta_attributes id="m-meta_attributes">
+          <nvpair name="promotable" value="true" id="m-meta_attributes-promotable"/>
+          <nvpair id="m-meta_attributes-interleave" name="interleave" value="true"/>
+        </meta_attributes>
         <primitive id="d4" class="ocf" provider="pacemaker" type="Dummy">
           <operations>
             <op name="monitor" timeout="20s" interval="10s" id="d4-monitor-10s"/>
@@ -93,8 +97,12 @@
             <op name="stop" timeout="20s" interval="0s" id="d4-stop-0s"/>
           </operations>
         </primitive>
-      </master>
-      <master id="m5">
+      </clone>
+      <clone id="m5">
+        <meta_attributes id="m5-meta_attributes">
+          <nvpair name="promotable" value="true" id="m5-meta_attributes-promotable"/>
+          <nvpair id="m5-meta_attributes-interleave" name="interleave" value="true"/>
+        </meta_attributes>
         <primitive id="s5" class="ocf" provider="pacemaker" type="Stateful">
           <operations id-ref="d1-ops">
             <op name="monitor" timeout="20s" interval="10s" role="Promoted" id="s5-monitor-10s"/>
@@ -105,8 +113,12 @@
             <op name="demote" timeout="10s" interval="0s" id="s5-demote-0s"/>
           </operations>
         </primitive>
-      </master>
-      <master id="m6">
+      </clone>
+      <clone id="m6">
+        <meta_attributes id="m6-meta_attributes">
+          <nvpair name="promotable" value="true" id="m6-meta_attributes-promotable"/>
+          <nvpair id="m6-meta_attributes-interleave" name="interleave" value="true"/>
+        </meta_attributes>
         <primitive id="s6" class="ocf" provider="pacemaker" type="Stateful">
           <operations id-ref="d1-ops">
             <op name="monitor" timeout="20s" interval="10s" role="Promoted" id="s6-monitor-10s"/>
@@ -117,7 +129,7 @@
             <op name="demote" timeout="10s" interval="0s" id="s6-demote-0s"/>
           </operations>
         </primitive>
-      </master>
+      </clone>
     </resources>
     <constraints>
       <rsc_location id="l1" rsc="g1" score="100" node="node1"/>

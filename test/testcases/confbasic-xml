@@ -26,15 +26,13 @@ primitive d3 ocf:pacemaker:Dummy
 clone c d3 \
 	meta clone-max=1
 primitive d4 ocf:pacemaker:Dummy
-ms m d4
-delete m
-master m d4
+clone m d4 meta promotable=true
 primitive s5 ocf:pacemaker:Stateful \
 	operations $id-ref=d1-ops
 primitive s6 ocf:pacemaker:Stateful \
 	operations $id-ref=d1
-ms m5 s5
-ms m6 s6
+clone m5 s5 meta promotable=true
+clone m6 s6 meta promotable=true
 location l1 g1 100: node1
 location l2 c \
 	rule $id=l2-rule1 100: #uname eq node1
@@ -53,15 +51,15 @@ location l6 m5 \
 	rule $id-ref=l2-rule1
 location l7 m5 \
 	rule $id-ref=l2
-collocation c1 inf: m6 m5
-collocation c2 inf: m5:Master d1:Started
+colocation c1 inf: m6 m5
+colocation c2 inf: m5:Promoted d1:Started
 order o1 Mandatory: m5 m6
 order o2 Optional: d1:start m5:promote
 order o3 Serialize: m5 m6
 order o4 Mandatory: m5 m6
 rsc_ticket ticket-A_m6 ticket-A: m6
 rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence
-rsc_ticket ticket-C_master ticket-C: m6 m5:Master loss-policy=fence
+rsc_ticket ticket-C_master ticket-C: m6 m5:Promoted loss-policy=fence
 fencing_topology st st2
 property stonith-enabled=true
 property $id=cpset2 maintenance-mode=true
