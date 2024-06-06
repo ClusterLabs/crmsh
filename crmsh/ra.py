@@ -50,8 +50,9 @@ def ra_classes():
         return cache.retrieve("ra_classes")
     if can_use_crm_resource():
         l = crm_resource("--list-standards")
+        l = [x for x in l if x not in ("lsb", "service")]
     else:
-        l = ["heartbeat", "lsb", "ocf", "stonith", "systemd"]
+        l = ["ocf", "stonith", "systemd"]
     l.sort()
     return cache.store("ra_classes", l)
 
