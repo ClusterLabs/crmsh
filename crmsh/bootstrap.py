@@ -1378,6 +1378,11 @@ def init_corosync() -> None:
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
+    if _context.transport != 'knet':
+        logger.warning(
+            'Transport %s does not support encryption and message authentication. Corosync traffic will be in cleartext.',
+            _context.transport,
+        )
     config_corosync_conf()
     adjust_corosync_parameters_according_to_profiles()
 
