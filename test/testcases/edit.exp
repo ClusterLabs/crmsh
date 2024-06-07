@@ -70,11 +70,8 @@ op_defaults op-options: \
 .INP: filter "sed '/g2/s/d1/p1/;/g1/s/p1/d1/'"
 ERROR: 29: Cannot create group:g1: Child primitive:d1 already in group:g2
 .INP: filter "sed '/g1/s/d1/p1/;/g2/s/p1/d1/'"
-.INP: filter "sed '$alocation loc-d1 d1 rule $id=r1 -inf: not_defined webserver rule $id=r2 webserver: defined webserver'"
-.INP: filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
-.INP: filter "sed 's/ or mem number:lte 0//'" loc-d1
-.INP: filter "sed 's/not_defined webserver/& rule -inf: not_defined a2/'" loc-d1
-.INP: filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
+.INP: location loc-d1 d1 	rule -inf: not_defined webserver or 	mem number:lte 0 or 	not_defined a2
+.INP: location loc-d1-2 d1 	rule webserver: defined webserver
 .INP: modgroup g1 add d3
 .INP: modgroup g1 remove p1
 .INP: modgroup g1 add p1 after p2
@@ -191,8 +188,8 @@ clone c1 g1
 tag t-d45 d4 d5
 location l1 p3 100: node1
 location loc-d1 d1 \
-	rule -inf: not_defined webserver or mem number:lte 0 \
-	rule -inf: not_defined a2 \
+	rule -inf: not_defined webserver or mem number:lte 0 or not_defined a2
+location loc-d1-2 d1 \
 	rule webserver: defined webserver
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1
@@ -320,8 +317,8 @@ clone c1 g1
 tag t-d45 d4 d5
 location l1 p3 100: node1
 location loc-d1 d1 \
-	rule -inf: not_defined webserver or mem number:lte 0 \
-	rule -inf: not_defined a2 \
+	rule -inf: not_defined webserver or mem number:lte 0 or not_defined a2
+location loc-d1-2 d1 \
 	rule webserver: defined webserver
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1
@@ -427,8 +424,8 @@ clone c1 g1
 tag t-d45 d4 d5
 location l1 p3 100: node1
 location loc-d1 d1 \
-	rule -inf: not_defined webserver or mem number:lte 0 \
-	rule -inf: not_defined a2 \
+	rule -inf: not_defined webserver or mem number:lte 0 or not_defined a2
+location loc-d1-2 d1 \
 	rule webserver: defined webserver
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1

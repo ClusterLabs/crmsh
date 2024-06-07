@@ -155,18 +155,18 @@
           <expression operation="not_defined" attribute="pingd" id="l5-rule-expression"/>
           <expression operation="lte" attribute="pingd" value="0" id="l5-rule-expression-0"/>
         </rule>
-        <rule score="INFINITY" id="l5-rule-0">
-          <expression operation="eq" attribute="#uname" value="node1" id="l5-rule-0-expression"/>
-          <expression operation="gt" attribute="pingd" value="0" id="l5-rule-0-expression-0"/>
-        </rule>
-        <rule score="INFINITY" id="l5-rule-1">
-          <date_expression operation="lt" end="2009-05-26" id="l5-rule-1-expression"/>
-          <date_expression operation="in_range" start="2009-05-26" end="2009-07-26" id="l5-rule-1-expression-0"/>
-          <date_expression operation="in_range" start="2009-05-26" id="l5-rule-1-expression-1">
-            <duration years="2009" id="l5-rule-1-expression-1-duration"/>
+      </rsc_location>
+      <rsc_location id="l8" rsc="m5">
+        <rule score="INFINITY" id="l8-rule">
+          <expression operation="eq" attribute="#uname" value="node1" id="l8-rule-expression"/>
+          <expression operation="gt" attribute="pingd" value="0" id="l8-rule-expression-0"/>
+          <date_expression operation="lt" end="2009-05-26" id="l8-rule-expression-1"/>
+          <date_expression operation="in_range" start="2009-05-26" end="2009-07-26" id="l8-rule-expression-2"/>
+          <date_expression operation="in_range" start="2009-05-26" id="l8-rule-expression-3">
+            <duration years="2009" id="l8-rule-expression-3-duration"/>
           </date_expression>
-          <date_expression operation="date_spec" id="l5-rule-1-expression-2">
-            <date_spec years="2009" hours="09-17" id="l5-rule-1-expression-2-date_spec"/>
+          <date_expression operation="date_spec" id="l8-rule-expression-4">
+            <date_spec years="2009" hours="09-17" id="l8-rule-expression-4-date_spec"/>
           </date_expression>
         </rule>
       </rsc_location>
