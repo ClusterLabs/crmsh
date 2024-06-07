@@ -67,9 +67,9 @@ location l6 m5 \
 location l7 m5 \
 	rule $id-ref=l2
 colocation c1 inf: m6 m5
-colocation c2 inf: m5:Promoted d1:Started
+colocation c2 inf: m5:Promoted g1:Started
 order o1 Mandatory: m5 m6
-order o2 Optional: d1:start m5:promote
+order o2 Optional: g1:start m5:promote
 order o3 Serialize: m5 m6
 order o4 Mandatory: m5 m6
 rsc_ticket ticket-A_m6 ticket-A: m6
