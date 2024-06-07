@@ -6,7 +6,7 @@ INFO: 2: "sort_elements" is accepted as "sort-elements"
 .INP: up
 .INP: configure
 .INP: erase
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta requires=nothing 	op monitor interval=60m
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .INP: primitive p4 Dummy
@@ -30,7 +30,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 node node1
 primitive st stonith:null \
 	params hostlist=node1 \
-	meta description="some description here" requires=nothing \
+	meta requires=nothing \
 	op monitor interval=60m timeout=20s \
         op start timeout=20s interval=0s \
         op stop timeout=15s interval=0s
@@ -69,7 +69,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 node node1
 primitive st stonith:null \
 	params hostlist=node1 \
-	meta description="some description here" requires=nothing \
+	meta requires=nothing \
 	op monitor interval=60m timeout=20s \
         op start timeout=20s interval=0s \
         op stop timeout=15s interval=0s
@@ -163,7 +163,7 @@ op_defaults op-options: \
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: modified location:loc1 from g1 to gr2
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta requires=nothing 	op monitor interval=60m
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .INP: property SAPHanaSR:     hana_ha1_site_lss_WDF1=4
@@ -171,7 +171,7 @@ INFO: 2: modified location:loc1 from g1 to gr2
 node node1
 primitive st stonith:null \
 	params hostlist=node1 \
-	meta description="some description here" requires=nothing \
+	meta requires=nothing \
 	op monitor interval=60m timeout=20s \
         op start timeout=20s interval=0s \
         op stop timeout=15s interval=0s
@@ -186,7 +186,7 @@ property SAPHanaSR: \
 node node1
 primitive st stonith:null \
 	params hostlist=node1 \
-	meta description="some description here" requires=nothing \
+	meta requires=nothing \
 	op monitor interval=60m timeout=20s \
         op start timeout=20s interval=0s \
         op stop timeout=15s interval=0s
@@ -202,7 +202,7 @@ property SAPHanaSR_2: \
 .INP: configure
 .INP: erase
 .INP: node node1
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" requires=nothing 	op monitor interval=60m
+.INP: primitive st stonith:null 	params hostlist='node1' 	meta requires=nothing 	op monitor interval=60m
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .INP: template
