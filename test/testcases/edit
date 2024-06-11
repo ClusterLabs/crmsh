@@ -43,7 +43,6 @@ modgroup g1 add p1 after p2
 modgroup g1 remove p1
 modgroup g1 add p1 before p2
 modgroup g1 add p1
-modgroup g1 remove st
 modgroup g1 remove c1
 modgroup g1 remove nosuch
 modgroup g1 add c1
