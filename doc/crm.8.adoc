@@ -3264,25 +3264,6 @@ clone disk1 drbd1 \
 ...............
 ****************************
 
-.Note on `id-ref` usage
-****************************
-Instance or meta attributes (`params` and `meta`) may contain
-a reference to another set of attributes. In that case, no other
-attributes are allowed. Since attribute sets' ids, though they do
-exist, are not shown in the `crm`, it is also possible to
-reference an object instead of an attribute set. `crm` will
-automatically replace such a reference with the right id:
-
-...............
-crm(live)configure# primitive a2 www-2 meta $id-ref=a1
-crm(live)configure# show a2
-primitive a2 apache \
-    meta $id-ref=a1-meta_attributes
-    [...]
-...............
-It is advisable to give meaningful names to attribute sets which
-are going to be referenced.
-****************************
 
 [[cmdhelp_configure_node,define a cluster node]]
 ==== `node`
@@ -3470,6 +3451,26 @@ primitive A ocf:pacemaker:Dummy \
     op_meta 2: rule #ra-version version:gt 1.0 timeout=120s \
     op_meta 1: timeout=60s
 ...............
+
+.Note on `id-ref` usage
+****************************
+Instance or meta attributes (`params` and `meta`) may contain
+a reference to another set of attributes. In that case, no other
+attributes are allowed. Since attribute sets' ids, though they do
+exist, are not shown in the `crm`, it is also possible to
+reference an object instead of an attribute set. `crm` will
+automatically replace such a reference with the right id:
+
+...............
+crm(live)configure# primitive a2 www-2 meta $id-ref=a1
+crm(live)configure# show a2
+primitive a2 apache \
+    meta $id-ref=a1-meta_attributes
+    [...]
+...............
+It is advisable to give meaningful names to attribute sets which
+are going to be referenced.
+****************************
 
 [[cmdhelp_configure_property,set a cluster property]]
 ==== `property`
