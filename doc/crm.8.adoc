@@ -2531,7 +2531,6 @@ Commands for resources are:
 - `monitor`
 - `group`
 - `clone` (promotable clones)
-- `ms`/`master` (master-slave) (deprecated)
 
 In order to streamline large configurations, it is possible to
 define a template which can later be referenced in primitives:
@@ -2869,7 +2868,7 @@ edit [xml] changed
 ****************************
 The edit command sometimes cannot properly handle modifying
 element ids. In particular for elements which belong to group or
-ms resources. Group and ms resources themselves also cannot be
+promotable resources. Group and promotable resources themselves also cannot be
 renamed. Please use the `rename` command instead.
 ****************************
 
@@ -3231,58 +3230,6 @@ monitor apcfence 60m:60s
 Note that after executing the command, the monitor operation may
 be shown as part of the primitive definition.
 
-[[cmdhelp_configure_ms,define a master-slave resource (deprecated)]]
-==== `ms` (`master`)
-
-The `ms` command creates a master/slave resource type. It may contain a
-single primitive resource or one group of resources.
-
-Usage:
-...............
-ms <name> <rsc>
-  [description=<description>]
-  [meta attr_list]
-  [params attr_list]
-
-attr_list :: [$id=<id>] <attr>=<val> [<attr>=<val>...] | $id-ref=<id>
-...............
-Example:
-...............
-ms disk1 drbd1 \
-  meta notify=true globally-unique=false
-...............
-
-.Note on `ms` deprecated
-****************************
-From Pacemaker-2.0, the resource type referred to as "master/slave",
-"stateful", or "multi-state" is no longer a separate resource type,
-but a variation of clone now referred to as a "promotable clone".
-For backward compatibility, above configurations are also accepted.
-...............
-clone disk1 drbd1 \
-  meta promotable=true notify=true globally-unique=false
-...............
-****************************
-
-.Note on `id-ref` usage
-****************************
-Instance or meta attributes (`params` and `meta`) may contain
-a reference to another set of attributes. In that case, no other
-attributes are allowed. Since attribute sets' ids, though they do
-exist, are not shown in the `crm`, it is also possible to
-reference an object instead of an attribute set. `crm` will
-automatically replace such a reference with the right id:
-
-...............
-crm(live)configure# primitive a2 www-2 meta $id-ref=a1
-crm(live)configure# show a2
-primitive a2 apache \
-    meta $id-ref=a1-meta_attributes
-    [...]
-...............
-It is advisable to give meaningful names to attribute sets which
-are going to be referenced.
-****************************
 
 [[cmdhelp_configure_node,define a cluster node]]
 ==== `node`
@@ -3470,6 +3417,26 @@ primitive A ocf:pacemaker:Dummy \
     op_meta 2: rule #ra-version version:gt 1.0 timeout=120s \
     op_meta 1: timeout=60s
 ...............
+
+.Note on `id-ref` usage
+****************************
+Instance or meta attributes (`params` and `meta`) may contain
+a reference to another set of attributes. In that case, no other
+attributes are allowed. Since attribute sets' ids, though they do
+exist, are not shown in the `crm`, it is also possible to
+reference an object instead of an attribute set. `crm` will
+automatically replace such a reference with the right id:
+
+...............
+crm(live)configure# primitive a2 www-2 meta $id-ref=a1
+crm(live)configure# show a2
+primitive a2 apache \
+    meta $id-ref=a1-meta_attributes
+    [...]
+...............
+It is advisable to give meaningful names to attribute sets which
+are going to be referenced.
+****************************
 
 [[cmdhelp_configure_property,set a cluster property]]
 ==== `property`
@@ -3708,7 +3675,7 @@ The order of resources is significant: it is assumed that later
 resources depend on earlier ones.
 
 If a resource is multi-state, it is assumed that the role on
-which later resources depend is master.
+which later resources depend is Promoted.
 
 Tests are run sequentially to prevent running the same resource
 on two or more nodes. Tests are carried out only if none of the
@@ -3869,7 +3836,7 @@ show [xml] [<id>
            | obscure:<glob>
            ...]
 
-type :: node | primitive | group | clone | ms | rsc_template
+type :: node | primitive | group | clone | rsc_template
       | location | colocation | order
       | rsc_ticket
       | property | rsc_defaults | op_defaults
@@ -4789,7 +4756,7 @@ refresh [force]
 Show actions and any failures that happened on all specified
 resources on all nodes. Normally, one gives resource names as
 arguments, but it is also possible to use extended regular
-expressions. Note that neither groups nor clones or master/slave
+expressions. Note that neither groups nor clones or promotable clone
 names are ever logged. The resource command is going to expand
 all of these appropriately, so that clone instances or resources
 which are part of a group are shown.
