@@ -70,11 +70,8 @@ op_defaults op-options: \
 .INP: filter "sed '/g2/s/d1/p1/;/g1/s/p1/d1/'"
 ERROR: 29: Cannot create group:g1: Child primitive:d1 already in group:g2
 .INP: filter "sed '/g1/s/d1/p1/;/g2/s/p1/d1/'"
-.INP: filter "sed '$alocation loc-d1 d1 rule $id=r1 -inf: not_defined webserver rule $id=r2 webserver: defined webserver'"
-.INP: filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
-.INP: filter "sed 's/ or mem number:lte 0//'" loc-d1
-.INP: filter "sed 's/not_defined webserver/& rule -inf: not_defined a2/'" loc-d1
-.INP: filter "sed 's/not_defined webserver/& or mem number:lte 0/'" loc-d1
+.INP: location loc-d1 d1 	rule -inf: not_defined webserver or 	mem number:lte 0 or 	not_defined a2
+.INP: location loc-d1-2 d1 	rule webserver: defined webserver
 .INP: modgroup g1 add d3
 .INP: modgroup g1 remove p1
 .INP: modgroup g1 add p1 after p2
@@ -82,18 +79,8 @@ ERROR: 29: Cannot create group:g1: Child primitive:d1 already in group:g2
 .INP: modgroup g1 add p1 before p2
 .INP: modgroup g1 add p1
 ERROR: 1: syntax in group: child p1 listed more than once in group g1 parsing 'group g1 p1 p2 d3 p1'
-.INP: modgroup g1 remove st
-ERROR: 42: configure.modgroup: st is not member of g1
-Traceback (most recent call last):
-    rv = self.execute_command() is not False
-         ^^^^^^^^^^^^^^^^^^^^^^
-    rv = self.command_info.function(*arglist)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    context.fatal_error("%s is not member of %s" % (prim_id, group_id))
-    raise ValueError(msg)
-ValueError: st is not member of g1
 .INP: modgroup g1 remove c1
-ERROR: 43: configure.modgroup: c1 is not member of g1
+ERROR: 39: configure.modgroup: c1 is not member of g1
 Traceback (most recent call last):
     rv = self.execute_command() is not False
          ^^^^^^^^^^^^^^^^^^^^^^
@@ -103,7 +90,7 @@ Traceback (most recent call last):
     raise ValueError(msg)
 ValueError: c1 is not member of g1
 .INP: modgroup g1 remove nosuch
-ERROR: 44: configure.modgroup: nosuch is not member of g1
+ERROR: 40: configure.modgroup: nosuch is not member of g1
 Traceback (most recent call last):
     rv = self.execute_command() is not False
          ^^^^^^^^^^^^^^^^^^^^^^
@@ -113,9 +100,9 @@ Traceback (most recent call last):
     raise ValueError(msg)
 ValueError: nosuch is not member of g1
 .INP: modgroup g1 add c1
-ERROR: 45: a group may contain only primitives; c1 is clone
+ERROR: 41: a group may contain only primitives; c1 is clone
 .INP: modgroup g1 add nosuch
-ERROR: 46: g1 refers to missing object nosuch
+ERROR: 42: g1 refers to missing object nosuch
 .INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
 .INP: rsc_defaults $id="rsc_options" failure-timeout=10m
 .INP: filter "sed 's/2m/60s/'" op-options
@@ -191,8 +178,8 @@ clone c1 g1
 tag t-d45 d4 d5
 location l1 p3 100: node1
 location loc-d1 d1 \
-	rule -inf: not_defined webserver or mem number:lte 0 \
-	rule -inf: not_defined a2 \
+	rule -inf: not_defined webserver or mem number:lte 0 or not_defined a2
+location loc-d1-2 d1 \
 	rule webserver: defined webserver
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1
@@ -320,8 +307,8 @@ clone c1 g1
 tag t-d45 d4 d5
 location l1 p3 100: node1
 location loc-d1 d1 \
-	rule -inf: not_defined webserver or mem number:lte 0 \
-	rule -inf: not_defined a2 \
+	rule -inf: not_defined webserver or mem number:lte 0 or not_defined a2
+location loc-d1-2 d1 \
 	rule webserver: defined webserver
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1
@@ -331,8 +318,8 @@ rsc_defaults rsc_options: \
 op_defaults op-options: \
 	timeout=60s
 .INP: commit
-INFO: 89: apparently there is nothing to commit
-INFO: 89: try changing something first
+INFO: 85: apparently there is nothing to commit
+INFO: 85: try changing something first
 .INP: _test
 .INP: verify
 .INP: show
@@ -427,8 +414,8 @@ clone c1 g1
 tag t-d45 d4 d5
 location l1 p3 100: node1
 location loc-d1 d1 \
-	rule -inf: not_defined webserver or mem number:lte 0 \
-	rule -inf: not_defined a2 \
+	rule -inf: not_defined webserver or mem number:lte 0 or not_defined a2
+location loc-d1-2 d1 \
 	rule webserver: defined webserver
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1
@@ -438,5 +425,5 @@ rsc_defaults rsc_options: \
 op_defaults op-options: \
 	timeout=60s
 .INP: commit
-INFO: 93: apparently there is nothing to commit
-INFO: 93: try changing something first
+INFO: 89: apparently there is nothing to commit
+INFO: 89: try changing something first

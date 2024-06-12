@@ -75,7 +75,7 @@
       <clone id="c">
         <meta_attributes id="c-meta_attributes">
           <nvpair name="clone-max" value="1" id="c-meta_attributes-clone-max"/>
-          <nvpair name="interleave" value="true" id="c-meta_attributes-interleave"/>
+          <nvpair id="c-meta_attributes-interleave" name="interleave" value="true"/>
         </meta_attributes>
         <primitive id="d3" class="ocf" provider="pacemaker" type="Dummy">
           <operations>
@@ -85,7 +85,11 @@
           </operations>
         </primitive>
       </clone>
-      <master id="m">
+      <clone id="m">
+        <meta_attributes id="m-meta_attributes">
+          <nvpair name="promotable" value="true" id="m-meta_attributes-promotable"/>
+          <nvpair id="m-meta_attributes-interleave" name="interleave" value="true"/>
+        </meta_attributes>
         <primitive id="d4" class="ocf" provider="pacemaker" type="Dummy">
           <operations>
             <op name="monitor" timeout="20s" interval="10s" id="d4-monitor-10s"/>
@@ -93,8 +97,12 @@
             <op name="stop" timeout="20s" interval="0s" id="d4-stop-0s"/>
           </operations>
         </primitive>
-      </master>
-      <master id="m5">
+      </clone>
+      <clone id="m5">
+        <meta_attributes id="m5-meta_attributes">
+          <nvpair name="promotable" value="true" id="m5-meta_attributes-promotable"/>
+          <nvpair id="m5-meta_attributes-interleave" name="interleave" value="true"/>
+        </meta_attributes>
         <primitive id="s5" class="ocf" provider="pacemaker" type="Stateful">
           <operations id-ref="d1-ops">
             <op name="monitor" timeout="20s" interval="10s" role="Promoted" id="s5-monitor-10s"/>
@@ -105,8 +113,12 @@
             <op name="demote" timeout="10s" interval="0s" id="s5-demote-0s"/>
           </operations>
         </primitive>
-      </master>
-      <master id="m6">
+      </clone>
+      <clone id="m6">
+        <meta_attributes id="m6-meta_attributes">
+          <nvpair name="promotable" value="true" id="m6-meta_attributes-promotable"/>
+          <nvpair id="m6-meta_attributes-interleave" name="interleave" value="true"/>
+        </meta_attributes>
         <primitive id="s6" class="ocf" provider="pacemaker" type="Stateful">
           <operations id-ref="d1-ops">
             <op name="monitor" timeout="20s" interval="10s" role="Promoted" id="s6-monitor-10s"/>
@@ -117,7 +129,7 @@
             <op name="demote" timeout="10s" interval="0s" id="s6-demote-0s"/>
           </operations>
         </primitive>
-      </master>
+      </clone>
     </resources>
     <constraints>
       <rsc_location id="l1" rsc="g1" score="100" node="node1"/>
@@ -143,18 +155,18 @@
           <expression operation="not_defined" attribute="pingd" id="l5-rule-expression"/>
           <expression operation="lte" attribute="pingd" value="0" id="l5-rule-expression-0"/>
         </rule>
-        <rule score="INFINITY" id="l5-rule-0">
-          <expression operation="eq" attribute="#uname" value="node1" id="l5-rule-0-expression"/>
-          <expression operation="gt" attribute="pingd" value="0" id="l5-rule-0-expression-0"/>
-        </rule>
-        <rule score="INFINITY" id="l5-rule-1">
-          <date_expression operation="lt" end="2009-05-26" id="l5-rule-1-expression"/>
-          <date_expression operation="in_range" start="2009-05-26" end="2009-07-26" id="l5-rule-1-expression-0"/>
-          <date_expression operation="in_range" start="2009-05-26" id="l5-rule-1-expression-1">
-            <duration years="2009" id="l5-rule-1-expression-1-duration"/>
+      </rsc_location>
+      <rsc_location id="l8" rsc="m5">
+        <rule score="INFINITY" id="l8-rule">
+          <expression operation="eq" attribute="#uname" value="node1" id="l8-rule-expression"/>
+          <expression operation="gt" attribute="pingd" value="0" id="l8-rule-expression-0"/>
+          <date_expression operation="lt" end="2009-05-26" id="l8-rule-expression-1"/>
+          <date_expression operation="in_range" start="2009-05-26" end="2009-07-26" id="l8-rule-expression-2"/>
+          <date_expression operation="in_range" start="2009-05-26" id="l8-rule-expression-3">
+            <duration years="2009" id="l8-rule-expression-3-duration"/>
           </date_expression>
-          <date_expression operation="date_spec" id="l5-rule-1-expression-2">
-            <date_spec years="2009" hours="09-17" id="l5-rule-1-expression-2-date_spec"/>
+          <date_expression operation="date_spec" id="l8-rule-expression-4">
+            <date_spec years="2009" hours="09-17" id="l8-rule-expression-4-date_spec"/>
           </date_expression>
         </rule>
       </rsc_location>

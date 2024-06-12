@@ -50,7 +50,7 @@ resource stop p3
 resource start p3
 resource stop p3
 configure rm cg
-configure ms msg g
+configure clone msg g meta promotable=true
 resource scores
 %setenv showobj=
 configure primitive p5 Dummy

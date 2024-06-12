@@ -1141,8 +1141,7 @@ INFO: Stop tracing p0 for operation stop
 .TRY configure rm cg
 WARNING: This command 'rm' is deprecated, please use 'delete'
 INFO: "rm" is accepted as "delete"
-.TRY configure ms msg g
-WARNING: "ms" is deprecated. Please use "clone msg g meta promotable=true"
+.TRY configure clone msg g meta promotable=true
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .TRY resource scores
 .EXT crm_simulate -sUL
