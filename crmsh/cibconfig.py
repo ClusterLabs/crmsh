@@ -855,7 +855,7 @@ def parse_cli_to_xml(cli, oldnode=None):
     output: XML, obj_type, obj_id
     """
     node = None
-    complete = False
+    complete_advised = False
     comments = []
     if isinstance(cli, str):
         utils.auto_convert_role = False
@@ -863,13 +863,16 @@ def parse_cli_to_xml(cli, oldnode=None):
             node = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
         utils.auto_convert_role = True
-        complete = True
-        node = parse.parse(cli, comments=comments, ignore_empty=False, complete_advised=complete)
+        if len(cli) >= 3 and cli[0] == "primitive" and cli[2].startswith("@"):
+            complete_advised = False
+        else:
+            complete_advised = True
+        node = parse.parse(cli, comments=comments, ignore_empty=False, complete_advised=complete_advised)
     if node is False:
         return None, None, None
     elif node is None:
         return None, None, None
-    return postprocess_cli(node, oldnode, complete_advised=complete)
+    return postprocess_cli(node, oldnode, complete_advised=complete_advised)
 
 #
 # cib element classes (CibObject the parent class)
