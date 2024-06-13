@@ -824,7 +824,6 @@ duration|date_spec ::
          | weeks=<value>
          | years=<value>
          | weekyears=<value>
-         | moon=<value>
 ..............
 
 [[topics_Lifetime,Lifetime parameter format]]
@@ -3174,7 +3173,6 @@ duration|date_spec ::
          | weeks=<value>
          | years=<value>
          | weekyears=<value>
-         | moon=<value>
 ...............
 Examples:
 ...............
