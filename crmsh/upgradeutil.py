@@ -102,14 +102,24 @@ def _is_cluster_target_seq_consistent(nodes):
     except (prun.PRunError, crmsh.utils.UserOfHost.UserNotFoundError) as e:
         logger.debug("upgradeutil: get-seq failed: %s", e)
         raise _SkipUpgrade() from None
-    try:
-        return all(
-            CURRENT_UPGRADE_SEQ == _parse_upgrade_seq(result.stdout.strip()) if result.returncode == 0 else False
-            for result in results.values()
-        )
-    except ValueError as e:
-        logger.warning("Remote command '%s' returns unexpected output: %s", cmd, results, exc_info=e)
-        return False
+    ret = True
+    for node, result in results.items():
+        if result.returncode != 0:
+            logger.debug(
+                "upgradeutil: remote command '%s' fails on %s: rc=%s, stdout=%s, stderr=%s",
+                cmd, node, result.returncode, result.stdout, result.stderr,
+            )
+            raise _SkipUpgrade() from None
+        else:
+            try:
+                seq = _parse_upgrade_seq(result.stdout.strip())
+                if CURRENT_UPGRADE_SEQ != seq:
+                    ret = False
+                    logger.debug('seq %s from %s != %s', seq, node, CURRENT_UPGRADE_SEQ)
+            except ValueError as e:
+                ret = False
+                logger.warning("upgradeutil: remote command '%s' returns unexpected output: %s", cmd, results, exc_info=e)
+    return ret
 
 
 def _get_minimal_seq_in_cluster(nodes) -> typing.Tuple[int, int]:
