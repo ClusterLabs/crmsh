@@ -33,6 +33,7 @@ from . import ui_ra
 from . import ui_resource
 from . import ui_script
 from . import ui_site
+from . import ui_sbd
 
 
 class Root(command.UI):
@@ -148,6 +149,10 @@ level. Most commands are implemented using the crm_resource(8)
 program.
 ''')
     def do_resource(self):
+        pass
+
+    @command.level(ui_sbd.SBD)
+    def do_sbd(self):
         pass
 
     @command.level(ui_script.Script)

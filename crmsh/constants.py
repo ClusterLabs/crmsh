@@ -450,4 +450,7 @@ DLM_PORT = 21064
 HIDDEN_COMMANDS = {'ms'}
 
 NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
+
+PCMK_SERVICE = "pacemaker.service"
+SBD_SERVICE = "sbd.service"
 # vim:ts=4:sw=4:et:

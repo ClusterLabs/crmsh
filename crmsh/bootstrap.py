@@ -211,12 +211,15 @@ class Context(object):
         """
         Validate sbd options
         """
+        from .sbd import SBDUtils
         if self.sbd_devices and self.diskless_sbd:
             utils.fatal("Can't use -s and -S options together")
+        if self.sbd_devices:
+            SBDUtils.verify_sbd_device(self.sbd_devices)
         if self.stage == "sbd":
             if not self.sbd_devices and not self.diskless_sbd and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
-            if ServiceManager().service_is_active("sbd.service") and not config.core.force:
+            if ServiceManager().service_is_active(constants.SBD_SERVICE) and not config.core.force:
                 utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
             if self.cluster_is_running:
                 utils.check_all_nodes_reachable()
@@ -292,7 +295,7 @@ class Context(object):
 
     def init_sbd_manager(self):
         from .sbd import SBDManager
-        self.sbd_manager = SBDManager(self)
+        self.sbd_manager = SBDManager(bootstrap_context=self)
 
     def detect_platform(self):
         """
@@ -394,7 +397,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[
 
 
 def confirm(msg):
-    if _context.yes_to_all:
+    if config.core.force or (_context and _context.yes_to_all):
         return True
     disable_completion()
     rc = logger_utils.confirm(msg)
@@ -404,12 +407,12 @@ def confirm(msg):
 
 
 def disable_completion():
-    if _context.ui_context:
+    if _context and _context.ui_context:
         _context.ui_context.disable_completion()
 
 
 def enable_completion():
-    if _context.ui_context:
+    if _context and _context.ui_context:
         _context.ui_context.setup_readline()
 
 
@@ -767,7 +770,7 @@ def start_pacemaker(node_list=[], enable_flag=False):
     # not _context means not in init or join process
     if not _context and \
             utils.package_is_installed("sbd") and \
-            ServiceManager().service_is_enabled("sbd.service") and \
+            ServiceManager().service_is_enabled(constants.SBD_SERVICE) and \
             SBDTimeout.is_sbd_delay_start():
         target_dir = "/run/systemd/system/sbd.service.d/"
         cmd1 = "mkdir -p {}".format(target_dir)
@@ -1394,7 +1397,7 @@ def init_sbd():
     import crmsh.sbd
     if _context.stage == "sbd":
         crmsh.sbd.clean_up_existing_sbd_resource()
-    _context.sbd_manager.sbd_init()
+    _context.sbd_manager.init_and_deploy_sbd()
 
 
 def init_cluster():
@@ -1419,7 +1422,9 @@ op_defaults op-options: timeout=600 record-pending=true
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    _context.sbd_manager.configure_sbd_resource_and_properties()
+    if ServiceManager().service_is_enabled(constants.SBD_SERVICE):
+        _context.sbd_manager.configure_sbd()
+
 
 
 def init_admin():
@@ -2669,7 +2674,7 @@ def adjust_stonith_timeout():
     """
     Adjust stonith-timeout for sbd and other scenarios
     """
-    if ServiceManager().service_is_active("sbd.service"):
+    if ServiceManager().service_is_active(constants.SBD_SERVICE):
         from .sbd import SBDTimeout
         SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
     else:
@@ -2733,7 +2738,12 @@ def sync_file(path):
     """
     Sync files between cluster nodes
     """
-    if _context.skip_csync2:
+    if _context:
+        skip_csync2 = _context.skip_csync2
+    else:
+        skip_csync2 = not ServiceManager().service_is_active(CSYNC2_SERVICE)
+
+    if skip_csync2:
         utils.cluster_copy_file(path, nodes=_context.node_list_in_cluster, output=False)
     else:
         csync2_update(path)
