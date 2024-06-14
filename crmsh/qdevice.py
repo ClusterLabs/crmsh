@@ -612,15 +612,15 @@ class QDevice(object):
         """
         Adjust SBD_WATCHDOG_TIMEOUT when configuring qdevice and diskless SBD
         """
-        from .sbd import SBDManager, SBDTimeout
+        from .sbd import SBDManager, SBDTimeout, SBDUtils
         utils.check_all_nodes_reachable()
-        self.using_diskless_sbd = SBDManager.is_using_diskless_sbd()
+        self.using_diskless_sbd = SBDUtils.is_using_diskless_sbd()
         # add qdevice after diskless sbd started
         if self.using_diskless_sbd:
-            res = SBDManager.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
+            res = SBDUtils.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
             if not res or int(res) < SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
                 sbd_watchdog_timeout_qdevice = SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
-                SBDManager.update_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
+                SBDManager.update_sbd_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
                 utils.set_property("stonith-timeout", SBDTimeout.get_stonith_timeout())
 
     @qnetd_lock_for_same_cluster_name
