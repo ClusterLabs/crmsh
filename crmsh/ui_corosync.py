@@ -121,7 +121,11 @@ class Corosync(command.UI):
         '''
         cfg = corosync.conf()
         try:
-            utils.edit_file_ext(cfg, template='')
+            rc = utils.edit_file_ext(cfg, corosync.is_valid_corosync_conf)
+            if rc and len(utils.list_cluster_nodes()) > 1:
+                logger.warning(f"\"{cfg}\" has changed, should be synced with other nodes")
+                logger.info("Use \"crm corosync diff\" to show the difference")
+                logger.info("Use \"crm corosync push\" to sync")
         except IOError as e:
             context.fatal_error(str(e))
 
@@ -129,10 +133,9 @@ class Corosync(command.UI):
         '''
         Display the corosync configuration.
         '''
-        cfg = corosync.conf()
-        if not os.path.isfile(cfg):
-            context.fatal_error("No corosync configuration found on this node.")
-        utils.page_string(open(cfg).read())
+        if not corosync.is_valid_corosync_conf():
+            return False
+        utils.page_file(corosync.conf())
 
     def do_log(self, context):
         '''

@@ -1230,31 +1230,27 @@ def edit_file(fname):
     return ext_cmd_nosudo("%s %s" % (config.core.editor, fname))
 
 
-def edit_file_ext(fname, template=''):
+def edit_file_ext(fname: str, validator: typing.Callable[[typing.IO], bool] = None) -> bool:
     '''
     Edit a file via a temporary file.
     Raises IOError on any error.
+
+    returns True if the file was changed
     '''
-    if not os.path.isfile(fname):
-        s = template
-    else:
-        s = open(fname).read()
-    filehash = hash(s)
-    tmpfile = str2tmp(s)
-    try:
-        try:
-            if edit_file(tmpfile) != 0:
-                return
-            s = open(tmpfile, 'r').read()
-            if hash(s) == filehash:  # file unchanged
-                return
-            f2 = open(fname, 'w')
-            f2.write(s)
-            f2.close()
-        finally:
-            os.unlink(tmpfile)
-    except OSError as e:
-        raise IOError(e)
+    with create_tempfile() as tmpfile:
+        shutil.copyfile(fname, tmpfile)
+        if edit_file(tmpfile) != 0:
+            raise IOError(f"Cannot edit file \"{fname}\"")
+        changed_data = read_from_file(tmpfile)
+        source_data = read_from_file(fname)
+        if changed_data != source_data:
+            if validator and not validator(tmpfile):
+                return False
+            # The original file needs to be replaced atomically
+            str2file(changed_data, fname)
+            return True
+        else:
+            return False
 
 
 def need_pager(s, w, h):
