@@ -27,7 +27,7 @@ class Watchdog(object):
         return self._watchdog_device_name
 
     @staticmethod
-    def _verify_watchdog_device(dev, ignore_error=False):
+    def verify_watchdog_device(dev, ignore_error=False):
         """
         Use wdctl to verify watchdog device
         """
@@ -48,7 +48,7 @@ class Watchdog(object):
         invoke("systemctl restart systemd-modules-load")
 
     @staticmethod
-    def _get_watchdog_device_from_sbd_config():
+    def get_watchdog_device_from_sbd_config():
         """
         Try to get watchdog device name from sbd config file
         """
@@ -81,7 +81,7 @@ class Watchdog(object):
         Get watchdog device name which has driver_name
         """
         for device, driver in self._watchdog_info_dict.items():
-            if driver == driver_name and self._verify_watchdog_device(device):
+            if driver == driver_name and self.verify_watchdog_device(device):
                 return device
         return None
 
@@ -108,7 +108,7 @@ class Watchdog(object):
         Get first unused watchdog device name
         """
         for dev in self._watchdog_info_dict:
-            if self._verify_watchdog_device(dev, ignore_error=True):
+            if self.verify_watchdog_device(dev, ignore_error=True):
                 return dev
         return None
 
@@ -120,8 +120,8 @@ class Watchdog(object):
           3. Set the self._input as softdog
         """
         if not self._input:
-            dev = self._get_watchdog_device_from_sbd_config()
-            if dev and self._verify_watchdog_device(dev, ignore_error=True):
+            dev = self.get_watchdog_device_from_sbd_config()
+            if dev and self.verify_watchdog_device(dev, ignore_error=True):
                 self._input = dev
                 return
             first_unused = self._get_first_unused_device()
@@ -131,7 +131,7 @@ class Watchdog(object):
         """
         Is an unused watchdog device
         """
-        if dev in self._watchdog_info_dict and self._verify_watchdog_device(dev):
+        if dev in self._watchdog_info_dict and self.verify_watchdog_device(dev):
             return True
         return False
 
@@ -142,7 +142,7 @@ class Watchdog(object):
         """
         self._set_watchdog_info()
 
-        res = self._get_watchdog_device_from_sbd_config()
+        res = self.get_watchdog_device_from_sbd_config()
         if not res:
             utils.fatal("Failed to get watchdog device from {}".format(SYSCONFIG_SBD))
         self._input = res
@@ -177,3 +177,9 @@ class Watchdog(object):
         if res:
             self._watchdog_device_name = res
             return
+
+    @classmethod
+    def get_watchdog_device(cls, dev_or_driver=None):
+        w = cls(_input=dev_or_driver)
+        w.init_watchdog()
+        return w.watchdog_device_name
