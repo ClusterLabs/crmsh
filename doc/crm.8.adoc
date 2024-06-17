@@ -178,8 +178,8 @@ crm(live)# node standby node4
   clone conn pingd \
     meta globally-unique=false clone-max=2 clone-node-max=1
   location node_pref internal_www \
-    rule 50: #uname eq node1 \
-    rule pingd: defined pingd
+    rule 50: #uname eq node1 and \
+    defined pingd
   #
   # cluster properties
   #
@@ -794,6 +794,8 @@ Rule expressions can contain multiple expressions connected using the
 boolean operator `or` and `and`. The full syntax for rule expressions
 is listed below.
 
+Note: pacemaker has deprecated support for multiple top-level rules
+within a location constraint since version 2.1.8.
 ..............
 rules ::
   rule [id_spec] [$role=<role>] <score>: <expression>
@@ -824,7 +826,6 @@ duration|date_spec ::
          | weeks=<value>
          | years=<value>
          | weekyears=<value>
-         | moon=<value>
 ..............
 
 [[topics_Lifetime,Lifetime parameter format]]
@@ -3110,8 +3111,8 @@ load xml push smallcib.xml
 ==== `location`
 
 `location` defines the preference of nodes for the given
-resource. The location constraints consist of one or more rules
-which specify a score to be awarded if the rule matches.
+resource. The location constraints are defined by a single rule
+which specifies a score to be awarded if the rule matches.
 
 The resource referenced by the location constraint can be one of the
 following:
@@ -3133,9 +3134,12 @@ For more details on how to configure resource sets, see
 For more information on rule expressions, see
 <<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
 
+Note: pacemaker has deprecated support for multiple top-level rules
+within a location constraint since version 2.1.8.
+
 Usage:
 ...............
-location <id> <rsc> [<attributes>] {<node_pref>|<rules>}
+location <id> <rsc> [<attributes>] {<node_pref>|<rule>}
 
 rsc :: /<rsc-pattern>/
         | { resource_sets }
@@ -3145,9 +3149,8 @@ attributes :: role=<role> | resource-discovery=always|never|exclusive
 
 node_pref :: <score>: <node>
 
-rules ::
+rule ::
   rule [id_spec] [$role=<role>] <score>: <expression>
-  [rule [id_spec] [$role=<role>] <score>: <expression> ...]
 
 id_spec :: $id=<id> | $id-ref=<id>
 score :: <number> | <attribute> | [-]inf
@@ -3174,15 +3177,14 @@ duration|date_spec ::
          | weeks=<value>
          | years=<value>
          | weekyears=<value>
-         | moon=<value>
 ...............
 Examples:
 ...............
 location conn_1 internal_www 100: node1
 
 location conn_1 internal_www \
-  rule 50: #uname eq node1 \
-  rule pingd: defined pingd
+  rule 50: #uname eq node1 and \
+  defined pingd
 
 location conn_2 dummy_float \
   rule -inf: not_defined pingd or pingd number:lte 0
