@@ -390,6 +390,10 @@ class RAInfo(object):
                 "type": typ,
                 "default": default,
             }
+        items = list(d.items())
+        # Sort the dictionary by required and then alphabetically
+        items.sort(key=lambda item: (item[1]["required"] != '1', item[0]))
+        d = dict(items)
         return cache.store(ident, d)
 
     def actions(self):
