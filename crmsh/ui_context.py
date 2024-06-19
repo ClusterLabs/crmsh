@@ -229,7 +229,7 @@ class Context(object):
             ret = None
         # logging.debug("line:%s, text:%s, ret:%s, state:%s", repr(line), repr(text), ret, state)
         if not text or (ret and line.split()[-1].endswith(ret)):
-            if ret == "id=":
+            if ret.endswith('='):
                 return ret
             return ret + ' '
         return ret
