@@ -865,7 +865,10 @@ def disambiguate_ra_type(s):
     elif len(l) == 2:
         cl, tp = l
     else:
-        cl, tp = "ocf", l[0]
+        if l[0].startswith("fence_"):
+            cl, tp = "stonith", l[0]
+        else:
+            cl, tp = "ocf", l[0]
     pr = pick_provider(ra_providers(tp, cl)) if cl == 'ocf' else ''
     return cl, pr, tp
 
