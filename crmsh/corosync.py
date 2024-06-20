@@ -4,7 +4,9 @@
 Functions that abstract creating and editing the corosync.conf
 configuration file, and also the corosync-* utilities.
 '''
-
+import collections
+import dataclasses
+import itertools
 import os
 import re
 import typing
@@ -524,3 +526,116 @@ class ConfParser(object):
                     parent[item[-1]] = [node]
             except KeyError:
                 pass
+
+
+@dataclasses.dataclass
+class LinkNode:
+    nodeid: int
+    name: str
+    addr: str
+
+
+@dataclasses.dataclass
+class Link:
+    linknumber: int = -1
+    nodes: list[LinkNode] = dataclasses.field(default_factory=list)
+    mcastport: typing.Optional[int] = None
+    knet_link_priority: typing.Optional[int] = None
+    knet_ping_interval: typing.Optional[int] = None
+    knet_ping_timeout: typing.Optional[int] = None
+    knet_ping_precision: typing.Optional[int] = None
+    knet_pong_count: typing.Optional[int] = None
+    knet_transport: typing.Optional[str] = None
+    # UDP only
+    # bindnet_addr: typing.Optional[str] = None
+    # broadcast: typing.Optional[bool] = None
+    # mcastaddr: typing.Optional[str] = None
+    # ttl: typing.Optional[int] = None
+
+    def load_options(self, options: dict[str, str]):
+        for field in dataclasses.fields(self):
+            if field.name == 'nodes':
+                continue
+            self.__load_option(options, field)
+        return self
+
+    def __load_option(self, data: dict[str, str], field: dataclasses.Field):
+        try:
+            value = data[field.name]
+        except KeyError:
+            return
+        if value is None:
+            assert field.name not in {'linknumber', 'nodes'}
+            setattr(self, field.name, None)
+            return
+        if typing.get_origin(field.type) is typing.Union:   # Optional[A] is Union[A, NoneType]
+            match typing.get_args(field.type):
+                case type_arg, NoneType:
+                    tpe = type_arg
+                case _:
+                    assert False
+        else:
+            tpe = field.type
+        if tpe is not str:
+            value = tpe(value)
+        setattr(self, field.name, value)
+
+
+class LinkManager:
+    def __init__(self, config: dict):
+        self._config = config
+
+    @staticmethod
+    def load_config_file(path=None):
+        if not path:
+            path = conf()
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                dom = corosync_config_format.DomParser(f).dom()
+                ConfParser.transform_dom_with_list_schema(dom)
+                return LinkManager(dom)
+        except (OSError, corosync_config_format.ParserException) as e:
+            raise ValueError(str(e)) from None
+
+    def totem_transport(self):
+        try:
+            return self._config['totem']['transport']
+        except KeyError:
+            return 'knet'
+
+    def links(self) -> list[Link]:
+        """Returns a list of links, sorted ascending by linknumber.
+        The linknumber always starts from 0 and are continuous."""
+        assert self.totem_transport() == 'knet'
+        try:
+            nodelist = self._config['nodelist']['node']
+        except KeyError:
+            return list()
+        assert isinstance(nodelist, list)
+        assert nodelist
+        assert all('nodeid' in node for node in nodelist)
+        assert all('name' in node for node in nodelist)
+        ids = [int(node['nodeid']) for node in nodelist]
+        names = [node['name'] for node in nodelist]
+        links = list()
+        for i in itertools.count():
+            # enumerate ringX_addr for X = 0, 1, ...
+            # each ringX_addr is corresponding to a link
+            if f'ring{i}_addr' not in nodelist[0]:
+                break
+            # If the link exists, load the ringX_addr of all nodes on this link
+            addrs = [node[f'ring{i}_addr'] for node in nodelist]
+            assert len(addrs) == len(ids)   # both nodeid and ringX_address are required for every node
+            link_nodes = [LinkNode(*x) for x in zip(ids, names, addrs)]
+            link_nodes.sort(key=lambda node: node.nodeid)
+            link = Link()
+            link.linknumber = i
+            link.nodes = link_nodes
+            links.append(link)
+        try:
+            interfaces = self._config['totem']['interface']
+        except KeyError:
+            return links
+        assert isinstance(interfaces, list)
+        links_option_dict = {ln: x for ln, x in ((Link().load_options(x).linknumber, x) for x in interfaces)}
+        return [link.load_options(links_option_dict[i]) if i in links_option_dict else link for i, link in enumerate(links)]

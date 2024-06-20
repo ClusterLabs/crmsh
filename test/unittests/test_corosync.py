@@ -283,5 +283,106 @@ class TestConfigParserSet(unittest.TestCase):
             self.inst._raw_set('totem.interface.foo', 0, 3)
 
 
+class TestLinkLoadOptions(unittest.TestCase):
+    def test_load_int(self):
+        link = corosync.Link()
+        link.load_options({'mcastport': '1234'})
+        self.assertEqual(1234, link.mcastport)
+        self.assertIsNone(link.knet_link_priority)
+        self.assertIsNone(link.knet_transport)
+
+    def test_load_int_invalid(self):
+        link = corosync.Link()
+        with self.assertRaises(ValueError):
+            link.load_options({'mcastport': 'sctp'})
+
+    def test_load_str(self):
+        link = corosync.Link()
+        link.load_options({'knet_transport': 'sctp'})
+        self.assertIsNone(link.mcastport)
+        self.assertIsNone(link.knet_link_priority)
+        self.assertEqual('sctp', link.knet_transport)
+
+
+class TestLinkManagerGetTotemTransport(unittest.TestCase):
+    def test_get_value_from_config(self):
+        lm = corosync.LinkManager({'totem': {'transport': 'udpu'}})
+        self.assertEqual('udpu', lm.totem_transport())
+
+    def test_get_value_from_default(self):
+        lm = corosync.LinkManager({'totem': {'foo': 'bar'}})
+        self.assertEqual('knet', lm.totem_transport())
+
+
+class TestLinkManagerShowLinks(unittest.TestCase):
+    def test_non_knet(self):
+        lm = corosync.LinkManager({'totem': {'transport': 'udpu'}})
+        with self.assertRaises(AssertionError):
+            lm.links()
+
+    def test_link_without_options(self):
+        lm = corosync.LinkManager({
+            'totem': {
+                'interface': [{
+                    'linknumber': '0',
+                    'knet_link_priority': '1',
+                }, {
+                    'linknumber': '2',
+                    'knet_link_priority': '10',
+                    'knet_transport': 'sctp',
+                }]
+            },
+            'nodelist': {
+                'node': [{
+                    'nodeid': '1',
+                    'name': 'node1',
+                    'ring0_addr': '192.0.2.1',
+                    'ring1_addr': '192.0.2.101',
+                    'ring2_addr': '192.0.2.201',
+                }, {
+                    'nodeid': '3',
+                    'name': 'node3',
+                    'ring0_addr': '192.0.2.3',
+                    'ring1_addr': '192.0.2.103',
+                    'ring2_addr': '192.0.2.203',
+                }, {
+                    'nodeid': '2',
+                    'name': 'node2',
+                    'ring0_addr': '192.0.2.3',
+                    'ring1_addr': '192.0.2.102',
+                    'ring2_addr': '192.0.2.202',
+                }]
+            }
+        })
+        links = lm.links()
+        self.assertEqual(3, len(links))
+        self.assertEqual(1, links[1].linknumber)
+        self.assertEqual(3, len(links[1].nodes))
+        self.assertEqual(1, links[1].nodes[0].nodeid)
+        self.assertEqual(2, links[1].nodes[1].nodeid)
+        self.assertEqual(3, links[1].nodes[2].nodeid)
+        self.assertEqual(1, links[0].knet_link_priority)
+        self.assertIsNone(links[1].knet_link_priority)
+        self.assertEqual(10, links[2].knet_link_priority)
+        self.assertEqual('sctp', links[2].knet_transport)
+
+    def test_only_one_node(self):
+        lm = corosync.LinkManager({
+            'nodelist': {
+                'node': [{
+                    'nodeid': '1',
+                    'name': 'node1',
+                    'ring0_addr': '192.0.2.1',
+                }]
+            }
+        })
+        links = lm.links()
+        self.assertEqual(1, len(links))
+        self.assertEqual(0, links[0].linknumber)
+        self.assertEqual(1, len(links[0].nodes))
+        self.assertEqual(1, links[0].nodes[0].nodeid)
+        self.assertIsNone(links[0].knet_link_priority)
+
+
 if __name__ == '__main__':
     unittest.main()
