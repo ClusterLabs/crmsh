@@ -287,7 +287,6 @@ class NodeMgmt(command.UI):
                    shutdown="0"
        />'""")
     node_clear_state_118 = "stonith_admin --confirm %s"
-    hb_delnode = config.path.hb_delnode + " '%s'"
     crm_node = "crm_node"
     node_fence = "crm_attribute -t status -N '%s' -n terminate -v true"
     dc = "crmadmin -D"

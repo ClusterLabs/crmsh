@@ -9,15 +9,16 @@ from crmsh import utils as crmshutils
 from . import config
 from crmsh import log
 from crmsh.sh import ShellUtils
+from crmsh import constants
 
 
 logger = log.setup_logger(__name__)
 
 
-CRED = '\033[31m'
-CYELLOW = '\033[33m'
-CGREEN = '\033[32m'
-CEND = '\033[0m'
+CRED = constants.RED
+CYELLOW = constants.YELLOW
+CGREEN = constants.GREEN
+CEND = constants.END
 
 LEVEL = {
     "info": logging.INFO,

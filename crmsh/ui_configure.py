@@ -540,12 +540,6 @@ class CibConfig(command.UI):
     def do_showobjects(self, context):
         cib_factory.showobjects()
 
-    @command.name('_keywords')
-    @command.skill_level('administrator')
-    def do_keywords(self, context):
-        for k, v in sorted(iter(constants.keywords.items()), key=lambda v: v[0].lower()):
-            print("%-16s %s" % (k, v))
-
     @command.level(ui_ra.RA)
     def do_ra(self):
         pass
