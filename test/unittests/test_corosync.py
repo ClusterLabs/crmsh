@@ -3,6 +3,7 @@
 #
 # unit tests for parse.py
 
+import copy
 import os
 import unittest
 import pytest
@@ -378,6 +379,108 @@ class TestLinkManagerShowLinks(unittest.TestCase):
         self.assertEqual(1, len(links[0].nodes))
         self.assertEqual(1, links[0].nodes[0].nodeid)
         self.assertIsNone(links[0].knet_link_priority)
+
+
+class TestLinkManagerUpdateLink(unittest.TestCase):
+    ORIGINAL = {
+        'totem': {
+            'interface': [{
+                'linknumber': '0',
+                'knet_link_priority': '1',
+            }, {
+                'linknumber': '2',
+                'knet_link_priority': '10',
+                'knet_transport': 'sctp',
+            }]
+        },
+        'nodelist': {
+            'node': [{
+                'nodeid': '1',
+                'name': 'node1',
+                'ring0_addr': '192.0.2.1',
+                'ring1_addr': '192.0.2.101',
+                'ring2_addr': '192.0.2.201',
+            }, {
+                'nodeid': '3',
+                'name': 'node3',
+                'ring0_addr': '192.0.2.3',
+                'ring1_addr': '192.0.2.103',
+                'ring2_addr': '192.0.2.203',
+            }, {
+                'nodeid': '2',
+                'name': 'node2',
+                'ring0_addr': '192.0.2.3',
+                'ring1_addr': '192.0.2.102',
+                'ring2_addr': '192.0.2.202',
+            }]
+        }
+    }
+
+    def setUp(self):
+        self.lm = corosync.LinkManager(copy.deepcopy(self.ORIGINAL))
+
+    def test_update_and_add_new_option(self):
+        dom = self.lm.update_link(0, {'knet_transport': 'sctp', 'knet_link_priority': '2'})
+        self.assertEqual(2, len(dom['totem']['interface']))
+        self.assertDictEqual({
+            'linknumber': '0',
+            'knet_link_priority': '2',
+            'knet_transport': 'sctp'
+        }, dom['totem']['interface'][0])
+        self.assertDictEqual(self.ORIGINAL['totem']['interface'][1], dom['totem']['interface'][1])
+        self.assertDictEqual(self.ORIGINAL['nodelist'], dom['nodelist'])
+
+    def test_add_new_interface_section(self):
+        dom = self.lm.update_link(1, {'knet_link_priority': '2'})
+        self.assertEqual(3, len(dom['totem']['interface']))
+        self.assertDictEqual({
+            'linknumber': '1',
+            'knet_link_priority': '2',
+        }, dom['totem']['interface'][2])
+        self.assertDictEqual(self.ORIGINAL['totem']['interface'][0], dom['totem']['interface'][0])
+        self.assertDictEqual(self.ORIGINAL['totem']['interface'][1], dom['totem']['interface'][1])
+        self.assertDictEqual(self.ORIGINAL['nodelist'], dom['nodelist'])
+
+    def test_remove_option(self):
+        dom = self.lm.update_link(2, {'knet_transport': None})
+        self.assertEqual(2, len(dom['totem']['interface']))
+        self.assertEqual('2', dom['totem']['interface'][1]['linknumber'])
+        self.assertNotIn('knet_transport', dom['totem']['interface'][1])
+        self.assertDictEqual(self.ORIGINAL['nodelist'], dom['nodelist'])
+
+    def test_remove_interface_section(self):
+        dom = self.lm.update_link(0, {'knet_link_priority': None})
+        self.assertEqual(1, len(dom['totem']['interface']))
+        self.assertEqual('2', dom['totem']['interface'][0]['linknumber'])
+        self.assertDictEqual(self.ORIGINAL['nodelist'], dom['nodelist'])
+
+    def test_add_non_unsupported_option(self):
+        with self.assertRaises(ValueError):
+            self.lm.update_link(0, {'knet_link_priority': '2', 'foo': 'bar'})
+        self.assertDictEqual({
+            'linknumber': '0',
+            'knet_link_priority': '1',
+        }, self.lm._config['totem']['interface'][0])
+        with self.assertRaises(ValueError):
+            self.lm.update_link(0, {'linknumber': '1'})
+        with self.assertRaises(ValueError):
+            self.lm.update_link(0, {'nodes': [{'foo': 'bar'}]})
+
+    def test_remove_non_unsupported_option(self):
+        with self.assertRaises(ValueError):
+            self.lm.update_link(0, {'knet_link_priority': '2', 'foo': None})
+        self.assertDictEqual({
+            'linknumber': '0',
+            'knet_link_priority': '1',
+        }, self.lm._config['totem']['interface'][0])
+        with self.assertRaises(ValueError):
+            self.lm.update_link(0, {'linknumber': None})
+        with self.assertRaises(ValueError):
+            self.lm.update_link(0, {'nodes': None})
+
+    def test_update_non_existing_link(self):
+        with self.assertRaises(ValueError):
+            self.lm.update_link(3, dict())
 
 
 if __name__ == '__main__':
