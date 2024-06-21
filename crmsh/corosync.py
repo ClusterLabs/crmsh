@@ -582,6 +582,12 @@ class Link:
 
 
 class LinkManager:
+    LINK_OPTIONS_UPDATABLE = {
+        field.name
+        for field in dataclasses.fields(Link)
+        if field.name not in {'linknumber', 'nodes'}
+    }
+
     def __init__(self, config: dict):
         self._config = config
 
@@ -639,3 +645,54 @@ class LinkManager:
         assert isinstance(interfaces, list)
         links_option_dict = {ln: x for ln, x in ((Link().load_options(x).linknumber, x) for x in interfaces)}
         return [link.load_options(links_option_dict[i]) if i in links_option_dict else link for i, link in enumerate(links)]
+
+    def update_link(self, linknumber: int, options: dict[str, str|None]) -> dict:
+        """update link options
+
+        Parameters:
+            * linknumber: the link to update
+            * options: specify the options to update. Not specified options will not be changed.
+                       Specify None value will reset the option to its default value.
+        Returns: updated configuration dom. The internal state of LinkManager is also updated.
+        """
+        links = self.links()
+        if linknumber >= len(links):
+            raise ValueError(f'Link {linknumber} does not exist.')
+        if 'nodes' in options:
+            raise ValueError('Unknown option "nodes".')
+        for option in options:
+            if option not in self.LINK_OPTIONS_UPDATABLE:
+                raise ValueError(f'Updating option "{option}" is not supported.')
+        links[linknumber].load_options(options)
+        assert 'totem' in self._config
+        try:
+            interfaces = self._config['totem']['interface']
+            assert isinstance(interfaces, list)
+        except KeyError:
+            interfaces = list()
+        linknumber_str = str(linknumber)
+        interface_index = next((i for i, x in enumerate(interfaces) if x.get('linknumber', -1) == linknumber_str), -1)
+        if interface_index == -1:
+            interface = {'linknumber': linknumber_str}
+        else:
+            interface = interfaces[interface_index]
+        for k, v in dataclasses.asdict(links[linknumber]).items():
+            if k not in self.LINK_OPTIONS_UPDATABLE:
+                continue
+            if v is None:
+                interface.pop(k, None)
+            else:
+                interface[k] = str(v)
+        if len(interface) == 1:
+            assert 'linknumber' in interface
+            if interface_index != -1:
+                del interfaces[interface_index]
+            # else do nothing
+        else:
+            if interface_index == -1:
+                interfaces.append(interface)
+        if not interfaces and 'interface' in self._config['totem']:
+            del self._config['totem']['interface']
+        else:
+            self._config['totem']['interface'] = interfaces
+        return self._config
