@@ -25,7 +25,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
@@ -40,7 +40,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "stopped" on "hanode2"
-    And     Resource "stonith:external/sbd" not configured
+    And     Resource "stonith:fence_sbd" not configured
 
   @clean
   Scenario: Configure diskless sbd(bsc#1181907)
@@ -58,7 +58,7 @@ Feature: crmsh bootstrap sbd management
     Then    Expected "Diskless SBD requires cluster with three or more nodes." not in stderr
     Then    Cluster service is "started" on "hanode3"
     And     Service "sbd" is "started" on "hanode3"
-    And     Resource "stonith:external/sbd" not configured
+    And     Resource "stonith:fence_sbd" not configured
 
   @clean
   Scenario: Configure multi disks sbd
@@ -71,7 +71,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster init -s /dev/sda1 -s /dev/sda2 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
@@ -93,7 +93,7 @@ Feature: crmsh bootstrap sbd management
     And     Run "crm cluster join cluster -y -c hanode1" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
 
   @clean
   Scenario: Configure diskless sbd in several stages(bsc#1175057)
@@ -112,7 +112,7 @@ Feature: crmsh bootstrap sbd management
     And     Run "crm cluster join cluster -y -c hanode1" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
-    And     Resource "stonith:external/sbd" not configured
+    And     Resource "stonith:fence_sbd" not configured
 
   @clean
   Scenario: Configure sbd on running cluster via stage(bsc#1181906)
@@ -126,7 +126,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
 
   @clean
   Scenario: Configure sbd on running cluster via stage with ra running(bsc#1181906)
@@ -147,7 +147,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster restart" on "hanode2"
     Then    Service "sbd" is "started" on "hanode2"
     When    Run "sleep 20" on "hanode1"
-    Then    Resource "stonith-sbd" type "external/sbd" is "Started"
+    Then    Resource "stonith-sbd" type "fence_sbd" is "Started"
 
   @clean
   Scenario: Configure sbd when no watchdog device(bsc#1154927, bsc#1178869)
@@ -163,7 +163,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
 
   @clean
   Scenario: Setup sbd and test fence node
@@ -174,7 +174,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
@@ -194,7 +194,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
@@ -213,7 +213,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
@@ -222,7 +222,7 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm -F cluster init sbd -S -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
-    And     Resource "stonith:external/sbd" not configured
+    And     Resource "stonith:fence_sbd" not configured
     When    Try "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '"
     Then    Expected return code is "1"
 
@@ -238,12 +238,12 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
-    And     Resource "stonith:external/sbd" not configured
+    And     Resource "stonith:fence_sbd" not configured
 
     When    Run "crm -F cluster init sbd -s /dev/sda1 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
     And     Run "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '" OK
 
   @clean
@@ -260,13 +260,13 @@ Feature: crmsh bootstrap sbd management
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
     And     Run "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '" OK
 
     When    Run "crm -F cluster init sbd -s /dev/sda2 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
-    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
     And     Run "ps -ef|grep -v grep|grep 'watcher: /dev/sda2 '" OK
     When    Try "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '"
     Then    Expected return code is "1"
