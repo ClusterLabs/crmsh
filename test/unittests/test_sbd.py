@@ -690,12 +690,13 @@ class TestSBDManager(unittest.TestCase):
         self.sbd_inst._context = mock.Mock(cluster_is_running=True)
         self.sbd_inst._get_sbd_device_from_config = mock.Mock()
         self.sbd_inst._get_sbd_device_from_config.return_value = ["/dev/sda1"]
+        self.sbd_inst._sbd_devices = ["/dev/sda1"]
 
         self.sbd_inst.configure_sbd_resource_and_properties()
 
         mock_package.assert_called_once_with("sbd")
         mock_enabled.assert_called_once_with("sbd.service")
-        mock_run.assert_called_once_with("crm configure primitive {} {}".format(sbd.SBDManager.SBD_RA_ID, sbd.SBDManager.SBD_RA))
+        mock_run.assert_called_once_with("crm configure primitive {} {} params devices=\"/dev/sda1\"".format(sbd.SBDManager.SBD_RA_ID, sbd.SBDManager.SBD_RA))
         mock_set_property.assert_called_once_with("stonith-enabled", "true")
 
     @mock.patch('crmsh.utils.package_is_installed')
