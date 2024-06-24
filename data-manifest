@@ -152,10 +152,6 @@ test/testcases/scripts.filter
 test/testcases/shadow
 test/testcases/shadow.exp
 test/testcases/xmlonly.sh
-test/unittests/bug-862577_corosync.conf
-test/unittests/corosync.conf.1
-test/unittests/corosync.conf.2
-test/unittests/corosync.conf.3
 test/unittests/__init__.py
 test/unittests/pacemaker.log
 test/unittests/pacemaker.log.2

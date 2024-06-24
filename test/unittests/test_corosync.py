@@ -4,37 +4,10 @@
 # unit tests for parse.py
 
 import copy
-import os
 import unittest
 import pytest
 from unittest import mock
 from crmsh import corosync
-
-
-F1 = open(os.path.join(os.path.dirname(__file__), 'corosync.conf.1')).read()
-F2 = open(os.path.join(os.path.dirname(__file__), 'corosync.conf.2')).read()
-F3 = open(os.path.join(os.path.dirname(__file__), 'bug-862577_corosync.conf')).read()
-F4 = open(os.path.join(os.path.dirname(__file__), 'corosync.conf.3')).read()
-
-
-def _valid(parser):
-    depth = 0
-    for t in parser._tokens:
-        if t.token not in (corosync._tCOMMENT,
-                           corosync._tBEGIN,
-                           corosync._tEND,
-                           corosync._tVALUE):
-            raise AssertionError("illegal token " + str(t))
-        if t.token == corosync._tBEGIN:
-            depth += 1
-        if t.token == corosync._tEND:
-            depth -= 1
-    if depth != 0:
-        raise AssertionError("Unbalanced sections")
-
-
-def _print(parser):
-    print(parser.to_string())
 
 
 def test_query_status_exception():

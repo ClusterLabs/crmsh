@@ -1,4 +1,3 @@
-import os
 import unittest
 import socket
 
@@ -10,10 +9,6 @@ except ImportError:
 from crmsh import bootstrap
 from crmsh import sbd
 from crmsh import qdevice, lock
-
-
-F2 = open(os.path.join(os.path.dirname(__file__), 'corosync.conf.2')).read()
-F4 = open(os.path.join(os.path.dirname(__file__), 'corosync.conf.3')).read()
 
 
 @mock.patch('crmsh.utils.calculate_quorate_status')
