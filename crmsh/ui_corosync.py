@@ -1,13 +1,10 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 import dataclasses
-import os
 from . import command, sh
 from . import completers
 from . import utils
 from . import corosync
-from . import parallax
-from . import bootstrap
 from . import log
 from . import constants
 from .service_manager import ServiceManager
