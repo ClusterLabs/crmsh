@@ -9,6 +9,7 @@ import dataclasses
 import itertools
 import os
 import re
+import socket
 import typing
 from io import StringIO
 
@@ -703,4 +704,32 @@ class LinkManager:
             del self._config['totem']['interface']
         else:
             self._config['totem']['interface'] = interfaces
+        return self._config
+
+    def update_node_addr(self, linknumber: int, node_addresses: typing.Mapping[int, str]) -> dict:
+        """Update the network addresses of the specified nodes on the specified link.
+
+        Parameters:
+            * linknumber: the link to update
+            * node_addresses: a mapping of nodeid->addr
+        Returns: updated configuration dom. The internal state of LinkManager is also updated.
+        """
+        links = self.links()
+        if linknumber >= len(links):
+            raise ValueError(f'Link {linknumber} does not exist.')
+        for nodeid, addr in node_addresses.items():
+            try:
+                socket.getaddrinfo(addr, 0, flags=socket.AI_NUMERICHOST)
+            except socket.gaierror:
+                raise ValueError(f'Invalid node address: {addr}.')
+            found = next((node for node in links[linknumber].nodes if node.nodeid == nodeid), None)
+            if found is None:
+                raise ValueError(f'Unknown nodeid {nodeid}.')
+            found.addr = addr
+        nodes = self._config['nodelist']['node']
+        assert isinstance(nodes, list)
+        for node in nodes:
+            updated_addr = node_addresses.get(int(node['nodeid']), None)
+            if updated_addr is not None:
+                node[f'ring{linknumber}_addr'] = updated_addr
         return self._config

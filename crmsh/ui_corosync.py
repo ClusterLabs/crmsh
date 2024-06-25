@@ -151,8 +151,17 @@ class Link(command.UI):
             logger.error('%s', str(e))
             print('Usage: link update <linknumber> [<node>=<addr> ...] [options <option>=[<value>] ...] ', file=sys.stderr)
             return False
-        # TODO: update ringX_addr
-        lm.write_config_file(lm.update_link(args.linknumber, args.options))
+        lm.update_link(args.linknumber, args.options)   # this also verifies if args.linknumber is valid
+        nodes = lm.links()[args.linknumber].nodes
+        node_addresses: dict[int, str] = dict()
+        for name, addr in args.nodes:
+            nodeid = next((x.nodeid for x in nodes if x.name == name), -1)
+            if nodeid == -1:
+                logger.error(f'Unknown node {name}.')
+            node_addresses[nodeid] = addr
+        lm.write_config_file(
+            lm.update_node_addr(args.linknumber, node_addresses)
+        )
         logger.info("Use \"crm corosync diff\" to show the difference")
         logger.info("Use \"crm corosync push\" to sync")
 
