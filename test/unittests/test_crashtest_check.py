@@ -333,7 +333,7 @@ class TestCheck(TestCase):
         mock_task_inst.run.return_value.__exit__ = mock.Mock()
         mock_fence_info_inst = mock.Mock(fence_enabled=True)
         mock_fence_info.return_value = mock_fence_info_inst
-        mock_run.return_value = (0, "* stonith-sbd  (stonith:external/sbd):  Stopped (disabled)", None)
+        mock_run.return_value = (0, "* stonith-sbd  (stonith:fence_sbd):  Stopped (disabled)", None)
         mock_active.return_value = False
 
         check.check_fencing()
@@ -343,10 +343,10 @@ class TestCheck(TestCase):
         mock_run.assert_called_once_with("crm_mon -r1 | grep '(stonith:.*):'")
         mock_task_inst.info.assert_has_calls([
             mock.call("stonith is enabled"),
-            mock.call("stonith resource stonith-sbd(external/sbd) is configured")
+            mock.call("stonith resource stonith-sbd(fence_sbd) is configured")
             ])
         mock_task_inst.warn.assert_has_calls([
-            mock.call("stonith resource stonith-sbd(external/sbd) is Stopped"),
+            mock.call("stonith resource stonith-sbd(fence_sbd) is Stopped"),
             mock.call("sbd service is not running!")
             ])
 
@@ -361,7 +361,7 @@ class TestCheck(TestCase):
         mock_task_inst.run.return_value.__exit__ = mock.Mock()
         mock_fence_info_inst = mock.Mock(fence_enabled=True)
         mock_fence_info.return_value = mock_fence_info_inst
-        mock_run.return_value = (0, "* stonith-sbd  (stonith:external/sbd):  Started node2", None)
+        mock_run.return_value = (0, "* stonith-sbd  (stonith:fence_sbd):  Started node2", None)
         mock_active.return_value = True
 
         check.check_fencing()
@@ -371,8 +371,8 @@ class TestCheck(TestCase):
         mock_run.assert_called_once_with("crm_mon -r1 | grep '(stonith:.*):'")
         mock_task_inst.info.assert_has_calls([
             mock.call("stonith is enabled"),
-            mock.call("stonith resource stonith-sbd(external/sbd) is configured"),
-            mock.call("stonith resource stonith-sbd(external/sbd) is Started"),
+            mock.call("stonith resource stonith-sbd(fence_sbd) is configured"),
+            mock.call("stonith resource stonith-sbd(fence_sbd) is Started"),
             mock.call("sbd service is running")
             ])
         mock_active.assert_called_once_with("sbd")

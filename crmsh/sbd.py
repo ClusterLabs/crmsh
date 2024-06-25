@@ -267,7 +267,7 @@ class SBDManager(object):
     DISKLESS_SBD_WARNING = "Diskless SBD requires cluster with three or more nodes. If you want to use diskless SBD for 2-node cluster, should be combined with QDevice."
     PARSE_RE = "[; ]"
     DISKLESS_CRM_CMD = "crm configure property stonith-enabled=true stonith-watchdog-timeout={} stonith-timeout={}"
-    SBD_RA = "stonith:external/sbd"
+    SBD_RA = "stonith:fence_sbd"
     SBD_RA_ID = "stonith-sbd"
 
     def __init__(self, context):
@@ -528,7 +528,9 @@ class SBDManager(object):
 
         # disk-based sbd
         if self._get_sbd_device_from_config():
-            shell.get_stdout_or_raise_error("crm configure primitive {} {}".format(self.SBD_RA_ID, self.SBD_RA))
+            devices_param_str = f"params devices=\"{','.join(self._sbd_devices)}\""
+            cmd = f"crm configure primitive {self.SBD_RA_ID} {self.SBD_RA} {devices_param_str}"
+            shell.get_stdout_or_raise_error(cmd)
             utils.set_property("stonith-enabled", "true")
         # disk-less sbd
         else:
