@@ -456,5 +456,74 @@ class TestLinkManagerUpdateLink(unittest.TestCase):
             self.lm.update_link(3, dict())
 
 
+class TestLinkManagerUpdateNodeAddr(unittest.TestCase):
+    ORIGINAL = {
+        'nodelist': {
+            'node': [{
+                'nodeid': '1',
+                'name': 'node1',
+                'ring0_addr': '192.0.2.1',
+                'ring1_addr': '192.0.2.101',
+                'ring2_addr': '192.0.2.201',
+            }, {
+                'nodeid': '3',
+                'name': 'node3',
+                'ring0_addr': '192.0.2.3',
+                'ring1_addr': '192.0.2.103',
+                'ring2_addr': '192.0.2.203',
+            }, {
+                'nodeid': '2',
+                'name': 'node2',
+                'ring0_addr': '192.0.2.3',
+                'ring1_addr': '192.0.2.102',
+                'ring2_addr': '192.0.2.202',
+            }]
+        }
+    }
+
+    def setUp(self):
+        self.lm = corosync.LinkManager(copy.deepcopy(self.ORIGINAL))
+
+    def test_update_addr(self):
+        self.lm.update_node_addr(
+            1,
+            {
+                1: "192.0.2.65",
+                2: "192.0.2.66",
+                3: "192.0.2.67",
+            }
+        )
+        self.assertEqual('1', self.lm._config['nodelist']['node'][0]['nodeid'])
+        self.assertEqual('3', self.lm._config['nodelist']['node'][1]['nodeid'])
+        self.assertEqual('2', self.lm._config['nodelist']['node'][2]['nodeid'])
+        self.assertEqual('192.0.2.65', self.lm._config['nodelist']['node'][0]['ring1_addr'])
+        self.assertEqual('192.0.2.67', self.lm._config['nodelist']['node'][1]['ring1_addr'])
+        self.assertEqual('192.0.2.66', self.lm._config['nodelist']['node'][2]['ring1_addr'])
+
+    def test_update_unknown_node(self):
+        with self.assertRaises(ValueError):
+            self.lm.update_node_addr(
+                1,
+                {
+                    1: "192.0.2.65",
+                    4: "192.0.2.66",
+                }
+            )
+        self.assertEqual('1', self.lm._config['nodelist']['node'][0]['nodeid'])
+        self.assertEqual('192.0.2.101', self.lm._config['nodelist']['node'][0]['ring1_addr'])
+
+    def test_update_unknown_link(self):
+        with self.assertRaises(ValueError):
+            self.lm.update_node_addr(
+                3,
+                {
+                    1: "192.0.2.65",
+                    2: "192.0.2.66",
+                    3: "192.0.2.67",
+                }
+            )
+        self.assertDictEqual(self.ORIGINAL, self.lm._config)
+
+
 if __name__ == '__main__':
     unittest.main()
