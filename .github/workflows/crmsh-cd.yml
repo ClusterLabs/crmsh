@@ -18,6 +18,7 @@ jobs:
   integration:
     if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'master'
     uses: ./.github/workflows/crmsh-ci.yml
+    secrets: inherit
 
   delivery:
     needs: integration
