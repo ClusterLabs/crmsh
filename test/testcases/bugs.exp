@@ -210,8 +210,8 @@ property SAPHanaSR_2: \
 INFO: 6: pulling in template virtual-ip
 .INP: load vip
 .INP: apply update
-.EXT crm_resource --show-metadata ocf:heartbeat:IPaddr
-.EXT crm_resource --list-ocf-alternatives IPaddr
+.EXT crm_resource --show-metadata ocf:heartbeat:IPaddr2
+.EXT crm_resource --list-ocf-alternatives IPaddr2
 .INP: up
 .INP: commit
 .EXT crm_resource --list-options=primitive --all --output-as=xml

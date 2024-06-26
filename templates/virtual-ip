@@ -33,7 +33,7 @@
 
 %generate
 
-primitive %_ ocf:heartbeat:IPaddr
+primitive %_ ocf:heartbeat:IPaddr2
 	params ip=%_:ip
 	opt cidr_netmask=%_:netmask
 	opt lvs_support=%_:lvs_support

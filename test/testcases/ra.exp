@@ -1,6 +1,6 @@
 .TRY RA interface
 .INP: ra
-.INP: providers IPaddr
+.INP: providers IPaddr2
 
 heartbeat
 .INP: providers Dummy
