@@ -591,5 +591,32 @@ class TestLinkManagerRemoveLink(unittest.TestCase):
             self.lm.remove_link(0)
 
 
+@mock.patch('crmsh.corosync.LinkManager.update_link')
+@mock.patch('crmsh.corosync.LinkManager._LinkManager__upsert_node_addr_impl')
+@mock.patch('crmsh.corosync.LinkManager.links')
+class TestLinkManagerAddLink(unittest.TestCase):
+    def test_unspecified_node(self, mock_links, mock_upsert_node, mock_update_link):
+        mock_links.return_value = [corosync.Link(0, [
+            corosync.LinkNode(1, 'node1', '192.0.2.101'),
+            corosync.LinkNode(2, 'node2', '192.0.2.102'),
+        ])]
+        lm = corosync.LinkManager(dict())
+        with self.assertRaises(ValueError):
+            lm.add_link({1: '192.0.2.201'}, dict())
+        mock_upsert_node.assert_not_called()
+        mock_update_link.assert_not_called()
+
+    def test_unknown_node(self, mock_links, mock_upsert_node, mock_update_link):
+        mock_links.return_value = [corosync.Link(0, [
+            corosync.LinkNode(1, 'node1', '192.0.2.101'),
+        ])]
+        mock_upsert_node.side_effect = ValueError()
+        lm = corosync.LinkManager(dict())
+        with self.assertRaises(ValueError):
+            lm.add_link({1: '192.0.2.201', 2: '192.0.2.202'}, dict())
+        mock_upsert_node.assert_called_once()
+        mock_update_link.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()

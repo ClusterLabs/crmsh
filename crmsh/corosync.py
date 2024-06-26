@@ -717,6 +717,23 @@ class LinkManager:
         links = self.links()
         if linknumber >= len(links):
             raise ValueError(f'Link {linknumber} does not exist.')
+        return self.__upsert_node_addr_impl(self._config, links, linknumber, node_addresses)
+
+    @staticmethod
+    def __upsert_node_addr_impl(
+            config: dict, links: typing.Sequence[Link],
+            linknumber: int, node_addresses: typing.Mapping[int, str],
+    ) -> dict:
+        """Add a new link or updating the node addresses in an existing link.
+        Args:
+            config: [in/out] the configuration dom
+            links: [in] parsed link data
+            linknumber: [in] the linknunmber to add or update
+            node_addresses: [in] a mapping from nodeid to node address.
+
+        Returns:
+            a reference to in/out arg `config`
+        """
         for nodeid, addr in node_addresses.items():
             try:
                 socket.getaddrinfo(addr, 0, flags=socket.AI_NUMERICHOST)
@@ -726,13 +743,24 @@ class LinkManager:
             if found is None:
                 raise ValueError(f'Unknown nodeid {nodeid}.')
             found.addr = addr
-        nodes = self._config['nodelist']['node']
+        nodes = config['nodelist']['node']
         assert isinstance(nodes, list)
         for node in nodes:
             updated_addr = node_addresses.get(int(node['nodeid']), None)
             if updated_addr is not None:
                 node[f'ring{linknumber}_addr'] = updated_addr
-        return self._config
+        return config
+
+    def add_link(self, node_addresses: typing.Mapping[int, str], options: dict[str, str|None]) -> dict:
+        links = self.links()
+        node_ids = {node.nodeid for node in links[0].nodes}
+        for nodeid in node_ids:
+            if nodeid not in node_addresses:
+                raise ValueError(f'The address of node {nodeid} is not specified.')
+        next_linknumber = len(links)
+        links.append(Link(next_linknumber, [dataclasses.replace(node) for node in links[0].nodes]))
+        self.__upsert_node_addr_impl(self._config, links, next_linknumber, node_addresses)
+        return self.update_link(next_linknumber, options)
 
     def remove_link(self, linknumber: int) -> dict:
         """Remove the specified link.
