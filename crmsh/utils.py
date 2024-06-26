@@ -991,12 +991,12 @@ def append_file(dest, src):
 
 def get_dc(peer=None):
     cmd = "crmadmin -D -t 1"
-    _, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
+    rc, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     if not out:
-        return None
+        return (None, rc)
     if not out.startswith("Designated"):
-        return None
-    return out.split()[-1]
+        return (None, rc)
+    return (out.split()[-1], rc)
 
 
 def wait4dc(what="", show_progress=True):
@@ -1022,8 +1022,21 @@ def wait4dc(what="", show_progress=True):
     There's no timeout, as we expect the DC to eventually becomes
     idle.
     '''
-    dc = get_dc()
-    if not dc:
+    def dc_waiter():
+        while True:
+            dc, rc = get_dc()
+            if rc == 0:
+                return dc
+            if rc == 102 or rc == 1:
+                logger.warning("Could not connect to the controller: Connection refused")
+                return None
+            if rc == 124:
+                logger.warning("No reply received from the controller before timeout")
+                continue
+            logger.warning("Unknown return code from crmadmin: %d", rc)
+            return None
+
+    if not dc_waiter:
         logger.warning("can't find DC")
         return False
     cmd = "crm_attribute -Gq -t crm_config -n crmd-transition-delay 2> /dev/null"
@@ -1039,7 +1052,7 @@ def wait4dc(what="", show_progress=True):
     max_sleep = 1.00
     sleep_time = init_sleep
     while True:
-        dc = get_dc()
+        dc = dc_waiter()
         if not dc:
             logger.warning("DC lost during wait")
             return False
