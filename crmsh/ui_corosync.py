@@ -56,12 +56,13 @@ class LinkArgumentParser:
     class SyntaxException(Exception):
         pass
 
-    def parse(self, args: typing.Sequence[str]):
+    def parse(self, parse_linknumber: bool, args: typing.Sequence[str]):
         if not args:
             raise LinkArgumentParser.SyntaxException('linknumber is required')
         i = 0
-        self.linknumber = self.__parse_linknumber(args, i)
-        i += 1
+        if parse_linknumber:
+            self.linknumber = self.__parse_linknumber(args, i)
+            i += 1
         while i < len(args):
             if args[i] == 'options':
                 i += 1
@@ -146,7 +147,7 @@ class Link(command.UI):
             logger.error('Corosync is not using knet transport')
             return False
         try:
-            args = LinkArgumentParser().parse(argv)
+            args = LinkArgumentParser().parse(True, argv)
         except LinkArgumentParser.SyntaxException as e:
             logger.error('%s', str(e))
             print('Usage: link update <linknumber> [<node>=<addr> ...] [options <option>=[<value>] ...] ', file=sys.stderr)
@@ -161,6 +162,30 @@ class Link(command.UI):
             node_addresses[nodeid] = addr
         lm.write_config_file(
             lm.update_node_addr(args.linknumber, node_addresses)
+        )
+        logger.info("Use \"crm corosync diff\" to show the difference")
+        logger.info("Use \"crm corosync push\" to sync")
+
+    def do_add(self, context, *argv):
+        lm = corosync.LinkManager.load_config_file()
+        if lm.totem_transport() != 'knet':
+            logger.error('Corosync is not using knet transport')
+            return False
+        try:
+            args = LinkArgumentParser().parse(False, argv)
+        except LinkArgumentParser.SyntaxException as e:
+            logger.error('%s', str(e))
+            print('Usage: link add <node>=<addr> ... [options <option>=<value> ...] ', file=sys.stderr)
+            return False
+        nodes = lm.links()[0].nodes
+        node_addresses: dict[int, str] = dict()
+        for name, addr in args.nodes:
+            nodeid = next((x.nodeid for x in nodes if x.name == name), -1)
+            if nodeid == -1:
+                logger.error(f'Unknown node {name}.')
+            node_addresses[nodeid] = addr
+        lm.write_config_file(
+            lm.add_link(node_addresses, args.options)
         )
         logger.info("Use \"crm corosync diff\" to show the difference")
         logger.info("Use \"crm corosync push\" to sync")
