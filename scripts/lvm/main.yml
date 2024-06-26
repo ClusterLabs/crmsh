@@ -6,7 +6,7 @@ longdesc: >-
   Does not create the referenced volume group.
 
 include:
-  - agent: ocf:heartbeat:LVM
+  - agent: ocf:heartbeat:LVM-activate
     name: lvm
     parameters:
       - name: id

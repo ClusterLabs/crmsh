@@ -9,7 +9,7 @@
 .EXT crm_resource --show-metadata ocf:heartbeat:db2
 .EXT crm_resource --show-metadata ocf:heartbeat:exportfs
 .EXT crm_resource --show-metadata systemd:haproxy
-.EXT crm_resource --show-metadata ocf:heartbeat:LVM
+.EXT crm_resource --show-metadata ocf:heartbeat:LVM-activate
 .EXT crm_resource --show-metadata ocf:heartbeat:MailTo
 .EXT crm_resource --show-metadata ocf:heartbeat:nginx
 .EXT crm_resource --show-metadata ocf:heartbeat:Raid1
@@ -110,7 +110,7 @@ Script:
 
 check-uptime     Check uptime of nodes
 gfs2-base        GFS2 File System Base (Cloned)
-lvm              Controls the availability of an LVM Volume Group
+lvm              This agent activates/deactivates logical volumes.
 raid1            Manages Linux software RAID (MD) devices on shared storage
 sapdb            SAP Database Instance
 sapinstance      SAP Instance
