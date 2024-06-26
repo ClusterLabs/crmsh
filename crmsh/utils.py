@@ -989,14 +989,16 @@ def append_file(dest, src):
         return False
 
 
-def get_dc(peer=None):
+def get_dc(peer=None, show_rc=False):
     cmd = "crmadmin -D -t 1"
     rc, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
-    if not out:
-        return (None, rc)
-    if not out.startswith("Designated"):
-        return (None, rc)
-    return (out.split()[-1], rc)
+    if not out or not out.startswith("Designated"):
+        out = None
+    else:
+        out = out.split()[-1]
+    if show_rc:
+        return (out, rc)
+    return out
 
 
 def wait4dc(what="", show_progress=True):
