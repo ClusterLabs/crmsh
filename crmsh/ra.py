@@ -357,7 +357,7 @@ class RAInfo(object):
         self.broken_ra = False
         return self.ra_elem
 
-    def params(self, completion=False):
+    def params(self):
         '''
         Construct a dict of dicts: parameters are keys and
         dictionary of attributes/values are values. Cached too.
@@ -365,12 +365,6 @@ class RAInfo(object):
         completion:
         If true, filter some (advanced) parameters out.
         '''
-        if completion:
-            if self.mk_ra_node() is None:
-                return None
-            return [c.get("name")
-                    for c in self.ra_elem.xpath("//parameters/parameter")
-                    if c.get("name") and c.get("name") not in self.excluded_from_completion]
         ident = "ra_params-%s" % self
         if cache.is_cached(ident):
             return cache.retrieve(ident)
@@ -379,7 +373,7 @@ class RAInfo(object):
         d = {}
         for c in self.ra_elem.xpath("//parameters/parameter"):
             name = c.get("name")
-            if not name:
+            if not name or name in self.excluded_from_completion:
                 continue
             required = c.get("required") if not (c.get("deprecated") or c.get("obsoletes")) else "0"
             unique = c.get("unique")
