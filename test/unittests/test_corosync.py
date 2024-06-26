@@ -525,5 +525,71 @@ class TestLinkManagerUpdateNodeAddr(unittest.TestCase):
         self.assertDictEqual(self.ORIGINAL, self.lm._config)
 
 
+class TestLinkManagerRemoveLink(unittest.TestCase):
+    ORIGINAL = {
+        'totem': {
+            'interface': [{
+                'linknumber': '0',
+                'knet_link_priority': '1',
+            }, {
+                'linknumber': '2',
+                'knet_link_priority': '10',
+                'knet_transport': 'sctp',
+            }]
+        },
+        'nodelist': {
+            'node': [{
+                'nodeid': '1',
+                'name': 'node1',
+                'ring0_addr': '192.0.2.1',
+                'ring1_addr': '192.0.2.101',
+                'ring2_addr': '192.0.2.201',
+            }, {
+                'nodeid': '3',
+                'name': 'node3',
+                'ring0_addr': '192.0.2.3',
+                'ring1_addr': '192.0.2.103',
+                'ring2_addr': '192.0.2.203',
+            }, {
+                'nodeid': '2',
+                'name': 'node2',
+                'ring0_addr': '192.0.2.3',
+                'ring1_addr': '192.0.2.102',
+                'ring2_addr': '192.0.2.202',
+            }]
+        }
+    }
+
+    def setUp(self):
+        self.lm = corosync.LinkManager(copy.deepcopy(self.ORIGINAL))
+
+    def test_remove(self):
+        self.lm.remove_link(1)
+        self.assertEqual(2, len(self.lm._config['totem']['interface']))
+        self.assertEqual('0', self.lm._config['totem']['interface'][0]['linknumber'])
+        self.assertEqual('1', self.lm._config['totem']['interface'][1]['linknumber'])
+        self.assertEqual(3, len(self.lm._config['nodelist']['node']))
+        self.assertNotIn('ring2_addr', self.lm._config['nodelist']['node'][0])
+        self.assertNotIn('ring2_addr', self.lm._config['nodelist']['node'][1])
+        self.assertNotIn('ring2_addr', self.lm._config['nodelist']['node'][2])
+        self.assertEqual('192.0.2.201', self.lm._config['nodelist']['node'][0]['ring1_addr'])
+        self.assertEqual('192.0.2.203', self.lm._config['nodelist']['node'][1]['ring1_addr'])
+        self.assertEqual('192.0.2.202', self.lm._config['nodelist']['node'][2]['ring1_addr'])
+
+    def test_remove_unknown_link(self):
+        with self.assertRaises(ValueError):
+            self.lm.remove_link(3)
+
+    def test_remove_last_link(self):
+        self.lm.remove_link(1)
+        self.lm.remove_link(1)
+        self.assertEqual(1, len(self.lm._config['totem']['interface']))
+        self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][0])
+        self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][1])
+        self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][2])
+        with self.assertRaises(ValueError):
+            self.lm.remove_link(0)
+
+
 if __name__ == '__main__':
     unittest.main()

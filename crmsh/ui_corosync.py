@@ -165,6 +165,20 @@ class Link(command.UI):
         logger.info("Use \"crm corosync diff\" to show the difference")
         logger.info("Use \"crm corosync push\" to sync")
 
+    def do_remove(self, context, linknumber: str):
+        if not linknumber.isdecimal():
+            raise ValueError(f'Invalid linknumber: {linknumber}')
+        linknumber = int(linknumber)
+        lm = corosync.LinkManager.load_config_file()
+        if lm.totem_transport() != 'knet':
+            logger.error('Corosync is not using knet transport')
+            return False
+        lm.write_config_file(
+            lm.remove_link(linknumber)
+        )
+        logger.info("Use \"crm corosync diff\" to show the difference")
+        logger.info("Use \"crm corosync push\" to sync")
+
 
 class Corosync(command.UI):
     '''
