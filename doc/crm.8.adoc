@@ -1380,6 +1380,98 @@ Usage:
 status [ring|quorum|qdevice|qnetd|cpg]
 .........
 
+[[cmdhelp.corosync.link,Knet link management]]
+==== `link`
+
+Knet is a multi-link and multi-protocol transport used by corosync.
+
+Upon successfully changing the configuration file locally, it will be synced to all cluster nodes.
+
+Usage:
+....
+link add <nodename>=<new_address> ... [options <option>=[value] ...]
+link remove <linknumber>
+link show
+link update <linknumber> [<nodename>=<new_address> ... ] [options <option>=[value] ...]
+....
+
+[[cmdhelp.corosync.link.show,Show knet links]]
+===== `show`
+
+List knet links defined in the configuration file.
+
+Usage:
+....
+show
+....
+
+[[cmdhelp.corosync.link.add,Add a new link]]
+===== `add`
+
+Add a knet link to the configuration file.
+
+Usage:
+....
+add <nodename>=<ip_address> ... [options <name>=value ...]
+....
+
+All nodes in the cluster must to be specified in `<nodename>=<ip_address>`.
+`options` are optional. Unspecified options will be omitted from the
+configuration file.
+
+Available options:
+
+* `mcastport`
+* `knet_link_priority`
+* `knet_ping_interval`
+* `knet_ping_timeout`
+* `knet_ping_precision`
+* `knet_pong_count`
+* `knet_transport`
+
+See `corosync.conf(5)` for details about these options.
+
+[[cmdhelp.corosync.link.update,Update a knet link]]
+===== `update`
+
+Modify an existing knet link in the configuration file, changing node adresses
+and/or link options.
+
+Usage:
+....
+update <linknumber> [<nodename>=<ip_address> ...] [options <name>=[value] ...]
+....
+
+Unspecified nodes will keep their IP addresses unchanged.
+
+Unspecified options will be kept untouched.
+
+Specify `<name>=` to remove the option from the configuration file.
+
+Available options:
+
+* `mcastport`
+* `knet_link_priority`
+* `knet_ping_interval`
+* `knet_ping_timeout`
+* `knet_ping_precision`
+* `knet_pong_count`
+* `knet_transport`
+
+See `corosync.conf(5)` for details about these options.
+
+[[cmdhelp.corosync.link.remove,Remove a knet link]]
+===== `remove`
+
+Remove an existing knet link from the configuration file.
+
+The last remaining link in the cluster cannot be removed.
+
+Usage:
+....
+remove <linknumber>
+....
+
 [[cmdhelp.cib,CIB shadow management]]
 === `cib` - CIB shadow management
 
