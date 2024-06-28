@@ -231,7 +231,10 @@ def _prim_params_completer(agent, args):
         return []
     elif '=' in completing:
         return []
-    return utils.filter_keys(agent.params(completion=True), args)
+    if command.sort_completion_inst is not None:
+        # Set the value to 0 to use the costum sort order
+        command.sort_completion_inst.value = 0
+    return utils.filter_keys(agent.params(), args)
 
 
 def _prim_meta_completer(agent, args):
