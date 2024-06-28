@@ -603,6 +603,14 @@ class LinkManager:
         except (OSError, corosync_config_format.ParserException) as e:
             raise ValueError(str(e)) from None
 
+    @staticmethod
+    def write_config_file(dom, path=None, file_mode=0o644):
+        if not path:
+            path = conf()
+        with utils.open_atomic(path, 'w', fsync=True, encoding='utf-8') as f:
+            corosync_config_format.DomSerializer(dom, f)
+            os.fchmod(f.fileno(), file_mode)
+
     def totem_transport(self):
         try:
             return self._config['totem']['transport']
