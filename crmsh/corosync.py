@@ -4,12 +4,10 @@
 Functions that abstract creating and editing the corosync.conf
 configuration file, and also the corosync-* utilities.
 '''
-import collections
 import dataclasses
 import itertools
 import os
 import re
-import socket
 import typing
 from io import StringIO
 
@@ -734,15 +732,27 @@ class LinkManager:
         Returns:
             a reference to in/out arg `config`
         """
+        existing_addr_node_map = {
+            utils.IP(node.addr).ip_address: node.nodeid
+            for link in links
+                for node in link.nodes
+            if node.addr != ''
+        }
         for nodeid, addr in node_addresses.items():
-            try:
-                socket.getaddrinfo(addr, 0, flags=socket.AI_NUMERICHOST)
-            except socket.gaierror:
-                raise ValueError(f'Invalid node address: {addr}.')
             found = next((node for node in links[linknumber].nodes if node.nodeid == nodeid), None)
             if found is None:
                 raise ValueError(f'Unknown nodeid {nodeid}.')
+            canonical_addr = utils.IP(addr).ip_address
+            if (
+                    found.addr == ''    # adding a new addr
+                    or utils.IP(found.addr).ip_address != canonical_addr    # updating a addr and the new value is not the same as the old value
+            ):
+                # need to change uniqueness
+                existing = existing_addr_node_map.get(canonical_addr, None)
+                if existing is not None:
+                    raise ValueError(f'Duplicated node address: {addr}: already used by node {existing}')
             found.addr = addr
+            existing_addr_node_map[canonical_addr] = found.nodeid
         nodes = config['nodelist']['node']
         assert isinstance(nodes, list)
         for node in nodes:
@@ -758,7 +768,7 @@ class LinkManager:
             if nodeid not in node_addresses:
                 raise ValueError(f'The address of node {nodeid} is not specified.')
         next_linknumber = len(links)
-        links.append(Link(next_linknumber, [dataclasses.replace(node) for node in links[0].nodes]))
+        links.append(Link(next_linknumber, [dataclasses.replace(node, addr='') for node in links[0].nodes]))
         self.__upsert_node_addr_impl(self._config, links, next_linknumber, node_addresses)
         return self.update_link(next_linknumber, options)
 

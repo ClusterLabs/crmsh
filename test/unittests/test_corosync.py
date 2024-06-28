@@ -318,7 +318,7 @@ class TestLinkManagerShowLinks(unittest.TestCase):
                 }, {
                     'nodeid': '2',
                     'name': 'node2',
-                    'ring0_addr': '192.0.2.3',
+                    'ring0_addr': '192.0.2.2',
                     'ring1_addr': '192.0.2.102',
                     'ring2_addr': '192.0.2.202',
                 }]
@@ -382,7 +382,7 @@ class TestLinkManagerUpdateLink(unittest.TestCase):
             }, {
                 'nodeid': '2',
                 'name': 'node2',
-                'ring0_addr': '192.0.2.3',
+                'ring0_addr': '192.0.2.2',
                 'ring1_addr': '192.0.2.102',
                 'ring2_addr': '192.0.2.202',
             }]
@@ -474,7 +474,7 @@ class TestLinkManagerUpdateNodeAddr(unittest.TestCase):
             }, {
                 'nodeid': '2',
                 'name': 'node2',
-                'ring0_addr': '192.0.2.3',
+                'ring0_addr': '192.0.2.2',
                 'ring1_addr': '192.0.2.102',
                 'ring2_addr': '192.0.2.202',
             }]
@@ -499,6 +499,43 @@ class TestLinkManagerUpdateNodeAddr(unittest.TestCase):
         self.assertEqual('192.0.2.65', self.lm._config['nodelist']['node'][0]['ring1_addr'])
         self.assertEqual('192.0.2.67', self.lm._config['nodelist']['node'][1]['ring1_addr'])
         self.assertEqual('192.0.2.66', self.lm._config['nodelist']['node'][2]['ring1_addr'])
+
+    def test_update_unchanged_addr(self):
+        self.lm.update_node_addr(
+            1,
+            {
+                1: "192.0.2.101",
+                2: "192.0.2.102",
+                3: "192.0.2.103",
+            }
+        )
+        self.assertListEqual(self.ORIGINAL['nodelist']['node'], self.lm._config['nodelist']['node'])
+
+    def test_update_duplicated_addr(self):
+        with self.assertRaises(ValueError):
+            self.lm.update_node_addr(1, {1: "192.0.2.1"})
+        with self.assertRaises(ValueError):
+            self.lm.update_node_addr(1, {1: "192.0.2.2"})
+        with self.assertRaises(ValueError):
+            self.lm.update_node_addr(1, {1: "192.0.2.102"})
+        with self.assertRaises(ValueError):
+            self.lm.update_node_addr(
+                1,
+                {
+                    1: "192.0.2.65",
+                    2: "192.0.2.66",
+                    3: "192.0.2.65",
+                }
+            )
+        with self.assertRaises(ValueError):
+            self.lm.update_node_addr(
+                1,
+                {
+                    1: "fd00:a0::1",
+                    2: "fd00:a0::2",
+                    3: "fd00:00a0:0000:0000:0000:0000:0000:0001",
+                }
+            )
 
     def test_update_unknown_node(self):
         with self.assertRaises(ValueError):
@@ -553,7 +590,7 @@ class TestLinkManagerRemoveLink(unittest.TestCase):
             }, {
                 'nodeid': '2',
                 'name': 'node2',
-                'ring0_addr': '192.0.2.3',
+                'ring0_addr': '192.0.2.2',
                 'ring1_addr': '192.0.2.102',
                 'ring2_addr': '192.0.2.202',
             }]
