@@ -187,3 +187,9 @@ Feature: Use "crm configure set" to update attributes and operations
       """
     When    Run "crm configure clone promotable-1 stateful-1 meta promotable=true" on "hanode1"
     Then    Run "sleep 2;crm resource status promotable-1|grep 'Promoted$'" OK
+
+  @clean
+  Scenario: Use rsc_template
+    When    Run "crm configure rsc_template dummy_template ocf:pacemaker:Dummy op monitor interval=12s" on "hanode1"
+    And     Try "crm configure primitive d8 @dummy_template params passwd=123" on "hanode1"
+    Then    Expected "got no meta-data, does this RA exist" not in stderr
