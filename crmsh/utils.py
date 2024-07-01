@@ -2779,6 +2779,17 @@ def get_property(name, property_type="crm_config", peer=None):
     return stdout if rc == 0 else None
 
 
+def delete_property(name, property_type="crm_config") -> bool:
+    cmd = f"crm_attribute -D -t {property_type} -n {name}"
+    rc, _, stderr = ShellUtils().get_stdout_stderr(cmd)
+    if rc == 0:
+        logger.info("Delete cluster property \"%s\" in %s", name, property_type)
+        return True
+    elif stderr:
+        logger.error(stderr)
+    return False
+
+
 def check_no_quorum_policy_with_dlm():
     """
     Give warning when no-quorum-policy not freeze while configured DLM

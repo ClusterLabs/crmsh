@@ -1981,9 +1981,12 @@ def join_cluster(seed_host, remote_user):
     with logger_utils.status_long("Reloading cluster configuration"):
 
         # Ditch no-quorum-policy=ignore
-        _rc, outp = ShellUtils().get_stdout("crm configure show")
-        if re.search('no-quorum-policy=.*ignore', outp):
-            invoke("crm_attribute --attr-name no-quorum-policy --delete-attr")
+        no_quorum_policy = utils.get_property("no-quorum-policy")
+        if no_quorum_policy == "ignore":
+            logger.info("Ditching no-quorum-policy=ignore")
+            if not utils.delete_property("no-quorum-policy"):
+                logger.error("Failed to delete no-quorum-policy=ignore")
+
         invoke("crm cluster run 'crm corosync reload'")
 
     if is_qdevice_configured:
