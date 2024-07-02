@@ -1,10 +1,12 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 import dataclasses
+import ipaddress
+import json
 import sys
 import typing
 
-from . import command, sh
+from . import command, sh, parallax, iproute2
 from . import completers
 from . import utils
 from . import corosync
@@ -152,6 +154,7 @@ class Link(command.UI):
             logger.error('%s', str(e))
             print('Usage: link update <linknumber> [<node>=<addr> ...] [options <option>=[<value>] ...] ', file=sys.stderr)
             return False
+        self._validate_node_addresses(dict(args.nodes))
         lm.update_link(args.linknumber, args.options)   # this also verifies if args.linknumber is valid
         nodes = lm.links()[args.linknumber].nodes
         node_addresses: dict[int, str] = dict()
@@ -177,6 +180,7 @@ class Link(command.UI):
             logger.error('%s', str(e))
             print('Usage: link add <node>=<addr> ... [options <option>=<value> ...] ', file=sys.stderr)
             return False
+        self._validate_node_addresses(dict(args.nodes))
         nodes = lm.links()[0].nodes
         node_addresses: dict[int, str] = dict()
         for name, addr in args.nodes:
@@ -208,6 +212,21 @@ class Link(command.UI):
         )
         logger.info("Use \"crm corosync diff\" to show the difference")
         logger.info("Use \"crm corosync push\" to sync")
+
+    @staticmethod
+    def _validate_node_addresses(node_addrs: typing.Mapping[str, str]):
+        node_interfaces = {
+            node: iproute2.IPAddr(json.loads(stdout)).interfaces()
+            for node, (_, stdout, _) in parallax.parallax_call(node_addrs.keys(), 'ip -j addr')
+        }
+        for node, addr in node_addrs.items():
+            ip_addr = ipaddress.ip_address(addr)
+            if not any(
+                ip_addr == addr.ip
+                for interface in node_interfaces[node]
+                for addr in interface.addr_info
+            ):
+                raise ValueError(f'{addr} is not a configured interface address on node {node}.')
 
 
 class Corosync(command.UI):
