@@ -1380,6 +1380,92 @@ Usage:
 status [ring|quorum|qdevice|qnetd|cpg]
 .........
 
+[[cmdhelp_corosync_link,Knet link management]]
+==== `link`
+
+Knet is a multi-link and multi-protocol transport used by corosync.
+This level provides subcommands for managing these links.
+
+All the subcommands in this level operates on local configuration file.
+
+Usage:
+....
+link show|add|update|remove
+....
+
+===== `show`
+
+List knet links defined in the configuration file.
+
+Usage:
+....
+show
+....
+
+===== `add`
+
+Add a knet link to the configuration file.
+
+Usage:
+....
+add <nodename>=<ip_address> ... [options <name>=value ...]
+....
+
+All nodes in the cluster must to be specified in `<nodename>=<ip_address>`.
+`options` are optional. Unspecified options will be omitted from the
+configuration file.
+
+Available options:
+
+* `mcastport`
+* `knet_link_priority`
+* `knet_ping_interval`
+* `knet_ping_timeout`
+* `knet_ping_precision`
+* `knet_pong_count`
+* `knet_transport`
+
+See `corosync.conf(5)` for details about these options.
+
+===== `update`
+
+Modify an existing knet link in the configuration file, changing node adresses
+and/or link options.
+
+Usage:
+....
+update <linknumber> [<nodename>=<ip_address> ...] [options <name>=[value] ...]
+....
+
+Unspecified nodes will keep their IP addresses unchanged.
+
+Unspecified options will be kept untouched.
+
+Specify `<name>=` to remove the option from the configuration file.
+
+Available options:
+
+* `mcastport`
+* `knet_link_priority`
+* `knet_ping_interval`
+* `knet_ping_timeout`
+* `knet_ping_precision`
+* `knet_pong_count`
+* `knet_transport`
+
+See `corosync.conf(5)` for details about these options.
+
+===== `update`
+
+Remove an existing knet link from the configuration file.
+
+The last remaining link in the cluster cannot be removed.
+
+Usage:
+....
+remove <linknumber>
+....
+
 [[cmdhelp_cib,CIB shadow management]]
 === `cib` - CIB shadow management
 
