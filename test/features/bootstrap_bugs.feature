@@ -297,3 +297,15 @@ Feature: Regression test for bootstrap bugs
     And     Expected "hacluster:haclient" in stdout
     Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode2"
     And     Expected "hacluster:haclient" in stdout
+
+  @clean
+  Scenario: Ditch no-quorum-policy=ignore when joining
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    And     Run "crm configure property no-quorum-policy=ignore" on "hanode1"
+    And     Run "crm configure show" on "hanode1"
+    Then    Expected "no-quorum-policy=ignore" in stdout
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    And     Run "crm configure show" on "hanode1"
+    Then    Expected "no-quorum-policy=ignore" not in stdout
