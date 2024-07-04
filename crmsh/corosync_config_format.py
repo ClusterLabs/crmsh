@@ -223,7 +223,8 @@ class DomSerializer:
                 raise TypeError('invalid to serialize a scalar value')
 
     def on_dict(self, node):
-        for key, value in node.items():
+        for key in self._sort_dict_keys(node.keys()):
+            value = node[key]
             match value:
                 case dict(_):
                     self.__write_indent(len(self._path_stack))
@@ -270,6 +271,22 @@ class DomSerializer:
 
     def on_value(self, value):
         self._ofile.write(str(value))
+
+    @classmethod
+    def _sort_dict_keys(cls, li):
+        ret = list()
+        first_ringx_addr_index = -1
+        for i, x in enumerate(li):
+            if re.match('^ring._addr$', x):
+                if first_ringx_addr_index == -1:
+                    # keep all ringX_addr placed together
+                    first_ringx_addr_index = i
+                ret.append((first_ringx_addr_index, x))
+            else:
+                ret.append((i, x))
+        ret.sort()
+        for _, x in ret:
+            yield x
 
     def __write_indent(self, n):
         for _ in range(n):
