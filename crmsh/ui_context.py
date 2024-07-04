@@ -326,7 +326,7 @@ class Context(object):
         '''
         ok = True
         if len(self.stack) > 1:
-            if self.command_name and self.command_name not in constants.NON_FUNCTIONAL_COMMANDS:
+            if ServiceManager().service_is_active("pacemaker.service"):
                 ok = self.current_level().end_game(no_questions_asked=self._in_transit) is not False
             self.stack.pop()
             self.clear_readline_cache()
