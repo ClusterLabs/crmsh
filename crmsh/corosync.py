@@ -733,3 +733,38 @@ class LinkManager:
             if updated_addr is not None:
                 node[f'ring{linknumber}_addr'] = updated_addr
         return self._config
+
+    def remove_link(self, linknumber: int) -> dict:
+        """Remove the specified link.
+
+        Parameters:
+            * linknumber: the link to update
+        Returns: updated configuration dom. The internal state of LinkManager is also updated.
+        """
+        links = self.links()
+        if linknumber >= len(links):
+            raise ValueError(f'Link {linknumber} does not exist.')
+        if linknumber == 0:
+            raise ValueError(f'Cannot remove the last link.')
+        nodes = self._config['nodelist']['node']
+        assert isinstance(nodes, list)
+        for node in nodes:
+            for key in node:
+                match = re.match('^ring([0-9]+)_addr$', key)
+                if match:
+                    x = int(match.group(1))
+                    if x > linknumber:
+                        node[f'ring{x-1}_addr'] = node[key]
+            del node[f'ring{len(links)-1}_addr']
+        assert 'totem' in self._config
+        if 'interface' not in self._config['totem']:
+            return self._config
+        interfaces = self._config['totem']['interface']
+        assert isinstance(interfaces, list)
+        interfaces = [interface for interface in interfaces if int(interface['linknumber']) != linknumber]
+        for interface in interfaces:
+            ln = int(interface['linknumber'])
+            if ln > linknumber:
+                interface['linknumber'] = str(ln - 1)
+        self._config['totem']['interface'] = interfaces
+        return self._config
