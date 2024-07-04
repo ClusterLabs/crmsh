@@ -143,7 +143,6 @@ class Link(command.UI):
         # TODO: show link status
 
     def do_update(self, context, *argv):
-        # TODO: handle --help
         lm = corosync.LinkManager.load_config_file()
         if lm.totem_transport() != 'knet':
             logger.error('Corosync is not using knet transport')
@@ -163,11 +162,14 @@ class Link(command.UI):
             if nodeid == -1:
                 logger.error(f'Unknown node {name}.')
             node_addresses[nodeid] = addr
-        lm.write_config_file(
-            lm.update_node_addr(args.linknumber, node_addresses)
-        )
-        logger.info("Use \"crm corosync diff\" to show the difference")
-        logger.info("Use \"crm corosync push\" to sync")
+        if not args.nodes and not args.options:
+            logger.info("Nothing is updated.")
+        else:
+            lm.write_config_file(
+                lm.update_node_addr(args.linknumber, node_addresses)
+            )
+            logger.info("Use \"crm corosync diff\" to show the difference")
+            logger.info("Use \"crm corosync push\" to sync")
 
     def do_add(self, context, *argv):
         lm = corosync.LinkManager.load_config_file()
