@@ -991,12 +991,12 @@ def append_file(dest, src):
 
 def get_dc(peer=None):
     cmd = "crmadmin -D -t 1"
-    rc, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
+    _, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     if not out:
-        return (None, rc)
+        return None
     if not out.startswith("Designated"):
-        return (None, rc)
-    return (out.split()[-1], rc)
+        return None
+    return out.split()[-1]
 
 
 def wait_dc_stable(what="", show_progress=True):
