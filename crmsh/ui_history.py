@@ -158,7 +158,7 @@ class History(command.UI):
     def do_latest(self, context):
         "usage: latest"
         self._init_source()
-        if not utils.wait4dc("transition", not options.batch):
+        if not utils.wait_dc_stable("transition", not options.batch):
             return False
         self._set_source("live")
         crm_report().refresh_source()

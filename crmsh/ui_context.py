@@ -104,7 +104,7 @@ class Context(object):
 
         # wait for dc if wait flag set
         if self._wait_for_dc:
-            return utils.wait4dc(self.command_name, not options.batch)
+            return utils.wait_dc_stable(self.command_name, not options.batch)
         return rv
 
     def complete(self, line):

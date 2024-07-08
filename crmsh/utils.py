@@ -999,7 +999,7 @@ def get_dc(peer=None):
     return (out.split()[-1], rc)
 
 
-def wait4dc(what="", show_progress=True):
+def wait_dc_stable(what="", show_progress=True):
     '''
     Wait for the DC to get into the S_IDLE state. This should be
     invoked only after a CIB modification which would exercise
