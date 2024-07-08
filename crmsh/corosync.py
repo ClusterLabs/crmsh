@@ -41,6 +41,7 @@ logging {
     timestamp: on
 }
 """
+KNET_LINK_NUM_LIMIT = 8
 
 
 def is_knet() -> bool:
@@ -763,6 +764,8 @@ class LinkManager:
 
     def add_link(self, node_addresses: typing.Mapping[int, str], options: dict[str, str|None]) -> dict:
         links = self.links()
+        if len(links) >= KNET_LINK_NUM_LIMIT:
+            raise ValueError(f'Cannot add a new link. The maximum number of links supported is {KNET_LINK_NUM_LIMIT}.')
         node_ids = {node.nodeid for node in links[0].nodes}
         for nodeid in node_ids:
             if nodeid not in node_addresses:
@@ -780,10 +783,10 @@ class LinkManager:
         Returns: updated configuration dom. The internal state of LinkManager is also updated.
         """
         links = self.links()
+        if len(links) <= 1:
+            raise ValueError(f'Cannot remove the last link.')
         if linknumber >= len(links):
             raise ValueError(f'Link {linknumber} does not exist.')
-        if linknumber == 0:
-            raise ValueError(f'Cannot remove the last link.')
         nodes = self._config['nodelist']['node']
         assert isinstance(nodes, list)
         for node in nodes:

@@ -619,7 +619,7 @@ class TestLinkManagerRemoveLink(unittest.TestCase):
 
     def test_remove_last_link(self):
         self.lm.remove_link(1)
-        self.lm.remove_link(1)
+        self.lm.remove_link(0)
         self.assertEqual(1, len(self.lm._config['totem']['interface']))
         self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][0])
         self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][1])
