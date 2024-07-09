@@ -19,7 +19,6 @@ from . import schema
 from . import utils
 from . import cibverify
 from . import parse
-from . import ordereddict
 from . import orderedset
 from . import cibstatus
 from . import crm_gv
@@ -1352,7 +1351,7 @@ class Op(object):
     def __init__(self, op_name, prim, node=None):
         self.prim = prim
         self.node = node
-        self.attr_d = ordereddict.odict()
+        self.attr_d = {}
         self.attr_d["name"] = op_name
         if self.node is not None:
             self.xml2dict()
@@ -2080,7 +2079,7 @@ class CibFencingOrder(CibObject):
 
     def _repr_cli_head(self, format_mode):
         s = clidisplay.keyword(self.obj_type)
-        d = ordereddict.odict()
+        d = {}
         for c in self.node.iterchildren("fencing-level"):
             if "target-pattern" in c.attrib:
                 target = (None, c.get("target-pattern"))
@@ -2091,7 +2090,7 @@ class CibFencingOrder(CibObject):
             if target not in d:
                 d[target] = {}
             d[target][c.get("index")] = c.get("devices")
-        dd = ordereddict.odict()
+        dd = {}
         for target in list(d.keys()):
             sorted_keys = sorted([int(i) for i in list(d[target].keys())])
             dd[target] = [d[target][str(x)] for x in sorted_keys]
@@ -2284,7 +2283,7 @@ cib_object_map = {
 
 
 # generate a translation cli -> tag
-backtrans = ordereddict.odict((item[0], key) for key, item in cib_object_map.items())
+backtrans = dict((item[0], key) for key, item in cib_object_map.items())
 
 
 def default_id_for_tag(tag):

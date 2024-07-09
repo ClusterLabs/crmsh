@@ -5,7 +5,6 @@ import re
 from . import config
 from . import tmpfiles
 from . import utils
-from .ordereddict import odict
 from . import log
 
 
@@ -38,9 +37,9 @@ class Gv(object):
         self.nodes = {}
         self.edges = []
         self.subgraphs = []
-        self.node_attrs = odict()
-        self.attrs = odict()
-        self.graph_attrs = odict()
+        self.node_attrs = {}
+        self.attrs = {}
+        self.graph_attrs = {}
         self.edge_attrs = []
         self.top_nodes = []
         self.norank_nodes = []
@@ -54,7 +53,7 @@ class Gv(object):
     def new_attr(self, n, attr_n, attr_v):
         ident = self.gv_id(n)
         if ident not in self.attrs:
-            self.attrs[ident] = odict()
+            self.attrs[ident] = {}
         self.attrs[ident][attr_n] = attr_v
 
     def new_node(self, n, top_node=False, norank=False):
@@ -81,7 +80,7 @@ class Gv(object):
                 continue
             self.nodes[node] = i
         self.edges.append(ne)
-        self.edge_attrs.append(odict())
+        self.edge_attrs.append({})
         return len(self.edges)-1
 
     def new_edge_attr(self, e_id, attr_n, attr_v):

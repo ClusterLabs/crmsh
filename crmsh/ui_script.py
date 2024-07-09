@@ -348,7 +348,6 @@ class Script(command.UI):
         """
         import yaml
         import os
-        from .ordereddict import OrderedDict
 
         def flatten(script):
             if not isinstance(script, dict):
@@ -373,7 +372,7 @@ class Script(command.UI):
             order = ["version", "name", "category", "shortdesc", "longdesc", "include", "parameters", "steps", "actions"]
             return order.index(item[0])
 
-        yaml.add_representer(OrderedDict, order_rep)
+        yaml.add_representer(dict, order_rep)
         fromscript = os.path.abspath(workflow)
         tgtdir = outdir
 
@@ -386,7 +385,7 @@ class Script(command.UI):
         del script["dir"]
         script["actions"] = [{"cib": "\n\n".join([action["cib"] for action in script["actions"]])}]
 
-        script = OrderedDict(sorted(list(script.items()), key=scriptsorter))
+        script = dict(sorted(list(script.items()), key=scriptsorter))
         if script is not None:
             try:
                 os.mkdir(os.path.join(tgtdir, name))
