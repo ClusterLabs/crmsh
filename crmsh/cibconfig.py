@@ -2769,14 +2769,18 @@ class CibFactory(object):
                 # no need to warn, user can see the object displayed as XML
                 logger.debug("object %s cannot be represented in the CLI notation", obj.obj_id)
 
-    def initialize(self, cib=None):
+    def initialize(self, cib=None, no_side_effects=False):
         if self.cib_elem is not None:
             return True
         if cib is None:
-            cib = read_cib(cibdump2elem)
+            cib_element = read_cib(lambda x: cibdump2elem(x, no_side_effects=no_side_effects))
+            if cib_element is None and no_side_effects:
+                return False
         elif isinstance(cib, str):
-            cib = text2elem(cib)
-        if not self._import_cib(cib):
+            cib_element = text2elem(cib)
+        else:
+            cib_element = cib
+        if not self._import_cib(cib_element):
             return False
         self.cib_orig = copy.deepcopy(self.cib_elem)
         sanitize_cib_for_patching(self.cib_orig)

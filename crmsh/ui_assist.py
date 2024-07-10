@@ -29,7 +29,8 @@ class Assist(command.UI):
         command.UI.__init__(self)
 
     def requires(self):
-        return cib_factory.initialize()
+        cib_factory.initialize(no_side_effects=True)
+        return True
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.call(cib_factory.prim_id_list))
