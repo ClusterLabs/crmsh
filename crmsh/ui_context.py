@@ -326,8 +326,7 @@ class Context(object):
         '''
         ok = True
         if len(self.stack) > 1:
-            if ServiceManager().service_is_active("pacemaker.service"):
-                ok = self.current_level().end_game(no_questions_asked=self._in_transit) is not False
+            ok = self.current_level().end_game(no_questions_asked=self._in_transit) is not False
             self.stack.pop()
             self.clear_readline_cache()
         return ok
@@ -348,9 +347,7 @@ class Context(object):
         '''
         Exit from the top level
         '''
-        ok = True
-        if self.command_name and self.command_name not in constants.NON_FUNCTIONAL_COMMANDS:
-            ok = self.current_level().end_game()
+        ok = self.current_level().end_game()
         if options.interactive and not options.batch:
             if constants.need_reset:
                 utils.ext_cmd("reset")
