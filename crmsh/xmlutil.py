@@ -135,7 +135,7 @@ def text2elem(text: str) -> etree.Element:
         return None
 
 
-def cibdump2elem(section=None):
+def cibdump2elem(section=None, no_side_effects=False):
     if section:
         cmd = "%s -o %s" % (cib_dump, section)
     else:
@@ -143,7 +143,7 @@ def cibdump2elem(section=None):
     rc, outp, errp = sudocall(cmd)
     if rc == 0:
         return text2elem(outp)
-    else:
+    elif not no_side_effects:
         logger.error("running %s: %s", cmd, errp)
     return None
 
