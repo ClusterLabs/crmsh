@@ -512,7 +512,5 @@ RSC_ROLE_PROMOTED_LEGACY = "Master"
 RSC_ROLE_UNPROMOTED_LEGACY = "Slave"
 PCMK_VERSION_DEFAULT = "2.0.0"
 
-NON_FUNCTIONAL_COMMANDS = {'help', 'cd', 'ls', 'quit', 'up'}
-NON_FUNCTIONAL_OPTIONS = {'--help', '--help-without-redirect'}
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
 # vim:ts=4:sw=4:et:
