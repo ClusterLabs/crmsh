@@ -11,7 +11,6 @@ from . import userdir
 from . import constants
 from . import log
 from . import main
-from .service_manager import ServiceManager
 
 
 logger = log.setup_logger(__name__)
@@ -258,9 +257,8 @@ class Context(object):
         self._in_transit = True
 
         entry = level()
-        if ServiceManager().service_is_active("pacemaker.service"):
-            if 'requires' in dir(entry) and not entry.requires():
-                self.fatal_error("Missing requirements")
+        if 'requires' in dir(entry) and not entry.requires():
+            self.fatal_error("Missing requirements")
         self.stack.append(entry)
         self.clear_readline_cache()
 
