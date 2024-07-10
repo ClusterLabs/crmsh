@@ -17,6 +17,8 @@ from .service_manager import ServiceManager
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
+_NON_FUNCTIONAL_COMMANDS = {'help', 'cd', 'ls', 'quit', 'up'}
+_NON_FUNCTIONAL_OPTIONS = {'--help', '--help-without-redirect'}
 
 class Context(object):
     """
@@ -83,8 +85,8 @@ class Context(object):
                     cmd = True
                     break
             if cmd:
-                if self.command_name not in constants.NON_FUNCTIONAL_COMMANDS\
-                        and all(arg not in constants.NON_FUNCTIONAL_OPTIONS for arg in self.command_args):
+                if self.command_name not in _NON_FUNCTIONAL_COMMANDS\
+                        and all(arg not in _NON_FUNCTIONAL_OPTIONS for arg in self.command_args):
                     entry = self.current_level()
                     if 'requires' in dir(entry) and not entry.requires():
                         self.fatal_error("Missing requirements")
