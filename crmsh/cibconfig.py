@@ -3308,9 +3308,13 @@ class CibFactory(object):
         return not self.get_elems_on_type("type:primitive")
 
     def has_cib_changed(self):
-        if not self.is_cib_sane():
+        if self.cib_elem is None:
+            # cib is not loaded, so it is also not changed
             return False
-        return self.modified_elems() or self.remove_queue
+        elif not self.is_cib_sane():
+            return False
+        else:
+            return self.modified_elems() or self.remove_queue
 
     def ensure_cib_updated(self):
         if options.interactive and not self.has_cib_changed():
