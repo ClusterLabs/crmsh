@@ -670,7 +670,10 @@ class LinkManager:
             raise ValueError('Unknown option "nodes".')
         for option in options:
             if option not in self.LINK_OPTIONS_UPDATABLE:
-                raise ValueError(f'Updating option "{option}" is not supported.')
+                raise ValueError('Updating option "{}" is not supported. Updatable options: {}'.format(
+                    option,
+                    ', '.join(self.LINK_OPTIONS_UPDATABLE),
+                ))
         links[linknumber].load_options(options)
         assert 'totem' in self._config
         try:
