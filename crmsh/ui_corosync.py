@@ -1,6 +1,9 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 import dataclasses
+import sys
+import typing
+
 from . import command, sh
 from . import completers
 from . import utils
@@ -44,6 +47,71 @@ def _diff_nodes(args):
         return []
 
 
+@dataclasses.dataclass
+class LinkArgumentParser:
+    linknumber: int = -1
+    nodes: list[tuple[str, str]] = dataclasses.field(default_factory=list)
+    options: dict[str, str|None] = dataclasses.field(default_factory=dict)
+
+    class SyntaxException(Exception):
+        pass
+
+    def parse(self, args: typing.Sequence[str]):
+        if not args:
+            raise LinkArgumentParser.SyntaxException('linknumber is required')
+        i = 0
+        self.linknumber = self.__parse_linknumber(args, i)
+        i += 1
+        while i < len(args):
+            if args[i] == 'options':
+                i += 1
+                break
+            self.nodes.append(self.__parse_node_spec(args, i))
+            i += 1
+        if i == len(args):
+            if args[i-1] == 'options':
+                raise LinkArgumentParser.SyntaxException('no options are specified')
+            else:
+                return self
+        # else args[i-1] == 'options'
+        while i < len(args):
+            k, v = self.__parse_option_spec(args, i)
+            self.options[k] = v
+            i += 1
+        return self
+
+    @staticmethod
+    def __parse_linknumber(args: typing.Sequence[str], i: int):
+        if not args[i].isdecimal():
+            raise LinkArgumentParser.SyntaxException(f'expected linknumber, actual {args[i]}')
+        try:
+            return int(args[i])
+        except ValueError:
+            raise SyntaxError(f'expected linknumber, actual {args[i]}')
+
+    @staticmethod
+    def __parse_node_spec(args: typing.Sequence[str], i: int):
+        match args[i].split('=', 2):
+            case [name, addr]:
+                try:
+                    utils.IP(addr).ip_address
+                    return name, addr
+                except ValueError:
+                    raise LinkArgumentParser.SyntaxException(f'invalid node address: {addr}')
+            case _:
+                raise LinkArgumentParser.SyntaxException(f'invalid node address specification: {args[i]}')
+
+    @staticmethod
+    def __parse_option_spec(args: typing.Sequence[str], i: int):
+        match args[i].split('=', 1):
+            case [k, '']:
+                return k, None
+            case [k, v]:
+                return k, v
+            case _:
+                raise LinkArgumentParser.SyntaxException(f'invalid option specification: {args[i]}')
+
+
 class Link(command.UI):
     """This level provides subcommands for managing knet links."""
 
@@ -70,6 +138,23 @@ class Link(command.UI):
                 print(f'    {name}:\t{value}')
             print('')
         # TODO: show link status
+
+    def do_update(self, context, *argv):
+        # TODO: handle --help
+        lm = corosync.LinkManager.load_config_file()
+        if lm.totem_transport() != 'knet':
+            logger.error('Corosync is not using knet transport')
+            return False
+        try:
+            args = LinkArgumentParser().parse(argv)
+        except LinkArgumentParser.SyntaxException as e:
+            logger.error('%s', str(e))
+            print('Usage: link update <linknumber> [<node>=<addr> ...] [options <option>=[<value>] ...] ', file=sys.stderr)
+            return False
+        # TODO: update ringX_addr
+        lm.write_config_file(lm.update_link(args.linknumber, args.options))
+        logger.info("Use \"crm corosync diff\" to show the difference")
+        logger.info("Use \"crm corosync push\" to sync")
 
 
 class Corosync(command.UI):
