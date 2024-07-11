@@ -38,6 +38,8 @@ Feature: crm corosync ui test cases
     Then    Expected "crm corosync diff" in stdout
     When    Run "crm corosync diff" on "hanode1"
     Then    Expected "knet_link_priority: 10" in stdout
+    When    Try "crm corosync link add hanode1=@hanode1.ip.0 hanode2=@hanode2.ip.0 options knet_link_priority=" on "hanode1"
+    Then    Expected "invalid option" in stderr
     When    Run "crm corosync link add hanode1=@hanode1.ip.0 hanode2=@hanode2.ip.0 options knet_link_priority=11" on "hanode1"
     Then    Expected "crm corosync diff" in stdout
     When    Run "crm corosync diff" on "hanode1"

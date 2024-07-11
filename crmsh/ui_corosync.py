@@ -58,7 +58,7 @@ class LinkArgumentParser:
     class SyntaxException(Exception):
         pass
 
-    def parse(self, parse_linknumber: bool, args: typing.Sequence[str]):
+    def parse(self, parse_linknumber: bool, allow_empty_options: bool, args: typing.Sequence[str]):
         if not args:
             raise LinkArgumentParser.SyntaxException('linknumber is required')
         i = 0
@@ -79,6 +79,8 @@ class LinkArgumentParser:
         # else args[i-1] == 'options'
         while i < len(args):
             k, v = self.__parse_option_spec(args, i)
+            if not allow_empty_options and v is None:
+                raise LinkArgumentParser.SyntaxException(f"invalid option specification: {args[i]}")
             self.options[k] = v
             i += 1
         return self
@@ -148,7 +150,7 @@ class Link(command.UI):
             logger.error('Corosync is not using knet transport')
             return False
         try:
-            args = LinkArgumentParser().parse(True, argv)
+            args = LinkArgumentParser().parse(True, True, argv)
         except LinkArgumentParser.SyntaxException as e:
             logger.error('%s', str(e))
             print('Usage: link update <linknumber> [<node>=<addr> ...] [options <option>=[<value>] ...] ', file=sys.stderr)
@@ -177,7 +179,7 @@ class Link(command.UI):
             logger.error('Corosync is not using knet transport')
             return False
         try:
-            args = LinkArgumentParser().parse(False, argv)
+            args = LinkArgumentParser().parse(False, False, argv)
         except LinkArgumentParser.SyntaxException as e:
             logger.error('%s', str(e))
             print('Usage: link add <node>=<addr> ... [options <option>=<value> ...] ', file=sys.stderr)
