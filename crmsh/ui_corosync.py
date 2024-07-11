@@ -1,6 +1,6 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import dataclasses
 import os
 from . import command, sh
 from . import completers
@@ -45,6 +45,34 @@ def _diff_nodes(args):
         return n
     except:
         return []
+
+
+class Link(command.UI):
+    """This level provides subcommands for managing knet links."""
+
+    name = 'link'
+
+    def do_show(self, context):
+        """
+        Show link configurations.
+        """
+        lm = corosync.LinkManager.load_config_file()
+        if lm.totem_transport() != 'knet':
+            logger.error('Corosync is not using knet transport')
+            return False
+        for link in lm.links():
+            print(f'Link {link.linknumber}:\n  Node addresses:')
+            for node in link.nodes:
+                print(f'    Node {node.nodeid}: {node.name}\t{node.addr}')
+            print('\n  Options:')
+            for name, value in dataclasses.asdict(link).items():
+                if name == 'linknumber' or name == 'nodes':
+                    continue
+                if value is None:
+                    continue
+                print(f'    {name}:\t{value}')
+            print('')
+        # TODO: show link status
 
 
 class Corosync(command.UI):
@@ -158,3 +186,7 @@ class Corosync(command.UI):
     def do_set(self, context, path, value, index: int = 0):
         """Set a corosync configuration value"""
         corosync.set_value(path, value, index)
+
+    @command.level(Link)
+    def do_link(self):
+        pass
