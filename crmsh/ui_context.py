@@ -11,12 +11,13 @@ from . import userdir
 from . import constants
 from . import log
 from . import main
-from .service_manager import ServiceManager
 
 
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
+_NON_FUNCTIONAL_COMMANDS = {'help', 'cd', 'ls', 'quit', 'up'}
+_NON_FUNCTIONAL_OPTIONS = {'--help', '--help-without-redirect'}
 
 class Context(object):
     """
@@ -83,8 +84,8 @@ class Context(object):
                     cmd = True
                     break
             if cmd:
-                if self.command_name not in constants.NON_FUNCTIONAL_COMMANDS\
-                        and all(arg not in constants.NON_FUNCTIONAL_OPTIONS for arg in self.command_args):
+                if self.command_name not in _NON_FUNCTIONAL_COMMANDS\
+                        and all(arg not in _NON_FUNCTIONAL_OPTIONS for arg in self.command_args):
                     entry = self.current_level()
                     if 'requires' in dir(entry) and not entry.requires():
                         self.fatal_error("Missing requirements")
@@ -256,9 +257,8 @@ class Context(object):
         self._in_transit = True
 
         entry = level()
-        if ServiceManager().service_is_active("pacemaker.service"):
-            if 'requires' in dir(entry) and not entry.requires():
-                self.fatal_error("Missing requirements")
+        if 'requires' in dir(entry) and not entry.requires():
+            self.fatal_error("Missing requirements")
         self.stack.append(entry)
         self.clear_readline_cache()
 
@@ -326,8 +326,7 @@ class Context(object):
         '''
         ok = True
         if len(self.stack) > 1:
-            if ServiceManager().service_is_active("pacemaker.service"):
-                ok = self.current_level().end_game(no_questions_asked=self._in_transit) is not False
+            ok = self.current_level().end_game(no_questions_asked=self._in_transit) is not False
             self.stack.pop()
             self.clear_readline_cache()
         return ok
@@ -348,9 +347,7 @@ class Context(object):
         '''
         Exit from the top level
         '''
-        ok = True
-        if self.command_name and self.command_name not in constants.NON_FUNCTIONAL_COMMANDS:
-            ok = self.current_level().end_game()
+        ok = self.current_level().end_game()
         if options.interactive and not options.batch:
             if constants.need_reset:
                 utils.ext_cmd("reset")

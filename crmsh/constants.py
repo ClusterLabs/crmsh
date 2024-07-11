@@ -443,8 +443,6 @@ If a nic name is provided, the first IP of that nic will be used.
 Use multiple -i for more links. Note: Only one link is allowed for the non knet transport type
 """
 
-NON_FUNCTIONAL_COMMANDS = {'help', 'cd', 'ls', 'quit', 'up'}
-NON_FUNCTIONAL_OPTIONS = {'--help', '--help-without-redirect'}
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
 
 COROSYNC_PORT = 5405

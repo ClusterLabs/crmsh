@@ -512,8 +512,8 @@ class CibConfig(command.UI):
         # immediately so that tab completion works
 
     def requires(self):
-        if not cib_factory.initialize():
-            return False
+        if not cib_factory.initialize(no_side_effects=True):
+            return True
         # see the configure ptest/simulate command
         has_ptest = utils.is_program('ptest')
         has_simulate = utils.is_program('crm_simulate')

@@ -26,7 +26,8 @@ class Maintenance(command.UI):
         command.UI.__init__(self)
 
     def requires(self):
-        return cib_factory.initialize()
+        cib_factory.initialize(no_side_effects=True)
+        return True
 
     def _onoff(self, resource, onoff):
         if resource is not None:
