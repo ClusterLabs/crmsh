@@ -16,7 +16,7 @@ def get_from_date():
 def create_report():
     cmd = ['crm', 'report',
            '-f', get_from_date(),
-           '-D', '-Z', 'health-report']
+           '-Z', 'health-report']
     rc, out, err = crm.call(cmd, shell=False)
     return rc == 0
 
@@ -26,7 +26,7 @@ if not create_report():
 
 
 def extract_report():
-    rc, out, err = crm.call(['tar', 'xjf', 'health-report.tar.bz2'], shell=False)
+    rc, out, err = crm.call(['tar', 'xzf', 'health-report.tar.gz'], shell=False)
     return rc == 0
 
 
