@@ -31,7 +31,6 @@ from .sh import ShellUtils
 from .utils import page_string
 from . import config
 from . import clidisplay
-from .ordereddict import odict
 from . import log
 
 
@@ -139,9 +138,9 @@ _REFERENCE_RE = re.compile(r'<<[^,]+,(.+)>>')
 # _LOADED is set to True when an attempt
 # has been made (so it won't be tried again)
 _LOADED = False
-_TOPICS = odict()
-_LEVELS = odict()
-_COMMANDS = odict()
+_TOPICS = {}
+_LEVELS = {}
+_COMMANDS = {}
 
 _TOPICS["Overview"] = HelpEntry("Available help topics and commands", generated=True)
 _TOPICS["Topics"] = HelpEntry("Available help topics", generated=True)
@@ -300,7 +299,7 @@ def add_help(entry, topic=None, level=None, command=None):
         if level not in _LEVELS:
             _LEVELS[level] = HelpEntry("No description available", generated=True)
         if level not in _COMMANDS:
-            _COMMANDS[level] = odict()
+            _COMMANDS[level] = {}
         lvl = _COMMANDS[level]
         if command not in lvl or lvl[command] is _DEFAULT:
             lvl[command] = entry
@@ -360,7 +359,7 @@ def _load_help():
         elif entry['type'] == 'command':
             lvl = entry['level']
             if lvl not in _COMMANDS:
-                _COMMANDS[lvl] = odict()
+                _COMMANDS[lvl] = {}
             helpobj.set_long_lazy_load_source(entry['level'], entry['name'], entry['from_cli'])
             _COMMANDS[lvl][name] = helpobj
 

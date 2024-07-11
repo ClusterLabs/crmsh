@@ -1,9 +1,5 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
-from .ordereddict import odict
-
-
 cib_cli_map = {
     "node": "node",
     "primitive": "primitive",
@@ -64,15 +60,15 @@ subpfx_list = {
     "deny": "deny",
 }
 acl_rule_names = ("read", "write", "deny")
-acl_spec_map = odict({
+acl_spec_map = {
     "xpath": "xpath",
     "ref": "ref",
     "tag": "tag",
     "attribute": "attribute",
-})
+}
 # ACLs were rewritten in pacemaker 1.1.12
 # this is the new acl syntax
-acl_spec_map_2 = odict({
+acl_spec_map_2 = {
     "xpath": "xpath",
     "ref": "reference",
     "reference": "reference",
@@ -80,7 +76,7 @@ acl_spec_map_2 = odict({
     "type": "object-type",
     "attr": "attribute",
     "attribute": "attribute"
-})
+}
 
 acl_spec_map_2_rev = (('xpath', 'xpath'),
                       ('reference', 'ref'),
