@@ -2937,22 +2937,6 @@ def detect_file(_file, remote=None):
     return rc
 
 
-def check_function_with_timeout(check_function, wait_timeout=30, interval=1, *args, **kwargs):
-    """
-    Run check_function in a loop
-    Return when check_function is true
-    Raise TimeoutError when timeout
-    """
-    current_time = int(time.time())
-    timeout = current_time + wait_timeout
-    while current_time <= timeout:
-        if check_function(*args, **kwargs):
-            return
-        time.sleep(interval)
-        current_time = int(time.time())
-    raise TimeoutError
-
-
 def retry_with_timeout(callable, timeout_sec: float, interval_sec=1):
     """Try callable repeatedly until it returns without raising an exception.
 
