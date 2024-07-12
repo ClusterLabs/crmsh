@@ -1,9 +1,8 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
+import asyncio
 import errno
 import os
-import socket
 import sys
 import typing
 from tempfile import mkstemp
@@ -14,7 +13,6 @@ import time
 import datetime
 import shutil
 import shlex
-import bz2
 import fnmatch
 import gc
 import ipaddress
@@ -88,6 +86,11 @@ def any_startswith(iterable, prefix):
 
 def rindex(iterable, value):
     return len(iterable) - iterable[::-1].index(value) - 1
+
+
+def raise_exception(e):
+    # a wrapper for raising an exception in lambda function
+    raise e
 
 
 def memoize(function):
@@ -999,6 +1002,20 @@ def get_dc(peer=None):
     return out.split()[-1]
 
 
+def wait_for_dc(node: str = None):
+    """
+    Wait for the cluster's DC to become available
+    """
+    if not ServiceManager().service_is_active("pacemaker.service", remote_addr=node):
+        raise ValueError("Pacemaker is not running. No DC.")
+    dc_deadtime = get_property("dc-deadtime", peer=node) or str(constants.DC_DEADTIME_DEFAULT)
+    dc_timeout = crm_msec(dc_deadtime) // 1000 + 5
+    try:
+        return retry_with_timeout(lambda: get_dc(node) or raise_exception(Exception()), dc_timeout)
+    except TimeoutError:
+        raise ValueError("No DC found currently, please wait if the cluster is still starting")
+
+
 def wait_dc_stable(what="", show_progress=True):
     '''
     Wait for the DC to get into the S_IDLE state. This should be
@@ -1022,21 +1039,8 @@ def wait_dc_stable(what="", show_progress=True):
     There's no timeout, as we expect the DC to eventually becomes
     idle.
     '''
-    def dc_waiter():
-        while True:
-            dc, rc = get_dc()
-            if rc == 0:
-                return dc
-            if rc == 102 or rc == 1:
-                logger.warning("Could not connect to the controller: Connection refused")
-                return None
-            if rc == 124:
-                logger.warning("No reply received from the controller before timeout")
-                continue
-            logger.warning("Unknown return code from crmadmin: %d", rc)
-            return None
 
-    if not dc_waiter:
+    if not wait_for_dc():
         logger.warning("can't find DC")
         return False
     cmd = "crm_attribute -Gq -t crm_config -n crmd-transition-delay 2> /dev/null"
@@ -1052,7 +1056,7 @@ def wait_dc_stable(what="", show_progress=True):
     max_sleep = 1.00
     sleep_time = init_sleep
     while True:
-        dc = dc_waiter()
+        dc = wait_for_dc()
         if not dc:
             logger.warning("DC lost during wait")
             return False
@@ -2947,6 +2951,24 @@ def check_function_with_timeout(check_function, wait_timeout=30, interval=1, *ar
         time.sleep(interval)
         current_time = int(time.time())
     raise TimeoutError
+
+
+def retry_with_timeout(callable, timeout_sec: float, interval_sec=1):
+    """Try callable repeatedly until it returns without raising an exception.
+
+    Return the return value of callable,
+    or raises TimeoutError if it does not return a value after retrying for timeout_sec.
+
+    The callable runs in the calling thread and should not block for a long time.
+    """
+    async def wrapper():
+        while True:
+            try:
+                return callable()
+            except Exception:
+                pass
+            await asyncio.sleep(interval_sec)
+    return asyncio.get_event_loop_policy().get_event_loop().run_until_complete(asyncio.wait_for(wrapper(), timeout_sec))
 
 
 def fetch_cluster_node_list_from_node(init_node):
