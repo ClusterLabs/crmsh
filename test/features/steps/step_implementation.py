@@ -156,7 +156,7 @@ def step_impl(context, msg):
     context.stderr = None
 
 
-@then('Expected regrex "{reg_str}" in stdout')
+@then('Expected regex "{reg_str}" in stdout')
 def step_impl(context, reg_str):
     res = re.search(reg_str, context.stdout)
     assert res is not None
