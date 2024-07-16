@@ -163,6 +163,12 @@ def step_impl(context, reg_str):
     context.stdout = None
 
 
+@then('Expected regex "{reg_str}" in stderr')
+def step_impl(context, reg_str):
+    assert context.stderr is not None and re.search(reg_str, context.stderr)
+    context.stderr = None
+
+
 @then('Expected return code is "{num}"')
 def step_impl(context, num):
     assert context.return_code == int(num)
