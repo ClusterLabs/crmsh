@@ -677,7 +677,7 @@ class QDevice(object):
         Wrap function to collect functions to config and start qdevice
         """
         QDevice.remove_qdevice_db()
-        if self.tls == "on":
+        if self.tls == "on" or self.tls == 'required':
             with logger_utils.status_long("Qdevice certification process"):
                 self.certificate_process_on_init()
         self.adjust_sbd_watchdog_timeout_with_qdevice()
