@@ -12,6 +12,8 @@ from crmsh.sh import Utils
 
 _DEFAULT_CONCURRENCY = 32
 
+_SUDO_SFTP_SERVER = 'sudo PATH=/usr/lib/ssh:/usr/lib/openssh:/usr/libexec/ssh:/usr/libexec/openssh /bin/sh -c "exec sftp-server"'
+
 
 class ProcessResult:
     def __init__(self, returncode: int, stdout: bytes, stderr: bytes):
@@ -185,9 +187,10 @@ exec sudo -u {local_sudoer} ssh "$@"''')
 
 def _build_copy_task(ssh: str, script: str, host: str):
     _, remote_sudoer = UserOfHost.instance().user_pair_for_ssh(host)
-    cmd = "sftp {} {} -o BatchMode=yes -s 'sudo PATH=/usr/lib/ssh:/usr/libexec/ssh /bin/sh -c \"exec sftp-server\"' -b - {}@{}".format(
+    cmd = "sftp {} {} -o BatchMode=yes -s '{}' -b - {}@{}".format(
         ssh,
         crmsh.constants.SSH_OPTION,
+        _SUDO_SFTP_SERVER,
         remote_sudoer, _enclose_inet6_addr(host),
     )
     return Task(
@@ -249,9 +252,10 @@ def pfetch_from_remote(
 
 def _build_fetch_task( ssh: str, host: str, src: str, dst: str, flags: str) -> Task:
     _, remote_sudoer = UserOfHost.instance().user_pair_for_ssh(host)
-    cmd = "sftp {} {} -o BatchMode=yes -s 'sudo PATH=/usr/lib/ssh:/usr/libexec/ssh /bin/sh -c \"exec sftp-server\"' -b - {}@{}".format(
+    cmd = "sftp {} {} -o BatchMode=yes -s '{}' -b - {}@{}".format(
         ssh,
         crmsh.constants.SSH_OPTION,
+        _SUDO_SFTP_SERVER,
         remote_sudoer, _enclose_inet6_addr(host),
     )
     os.makedirs(f"{dst}/{host}", exist_ok=True)
