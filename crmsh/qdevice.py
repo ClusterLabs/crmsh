@@ -103,7 +103,6 @@ class QDevice(object):
 
     Whole certification process:
     For init
-    Step 1:  init_db_on_qnetd
     Step 2:  fetch_qnetd_crt_from_qnetd
     Step 3:  copy_qnetd_crt_to_cluster
     Step 4:  init_db_on_cluster
@@ -294,27 +293,17 @@ class QDevice(object):
         """
         exception_msg = ""
         suggest = ""
-        duplicated_cluster_name = False
         shell = sh.cluster_shell()
         if not utils.package_is_installed("corosync-qnetd", remote_addr=self.qnetd_addr):
             exception_msg = "Package \"corosync-qnetd\" not installed on {}!".format(self.qnetd_addr)
             suggest = "install \"corosync-qnetd\" on {}".format(self.qnetd_addr)
-        elif ServiceManager().service_is_active("corosync-qnetd", remote_addr=self.qnetd_addr):
+        else:
+            self.init_tls_certs_on_qnetd()
+            self.start_qnetd()
             cmd = "corosync-qnetd-tool -l -c {}".format(self.cluster_name)
             if shell.get_stdout_or_raise_error(cmd, self.qnetd_addr):
-                duplicated_cluster_name = True
-        else:
-            cmd = "test -f {}".format(self.qnetd_cluster_crt_on_qnetd)
-            try:
-                shell.get_stdout_or_raise_error(cmd, self.qnetd_addr)
-            except ValueError:
-                # target file not exist
-                pass
-            else:
-                duplicated_cluster_name = True
-        if duplicated_cluster_name:
-            exception_msg = "This cluster's name \"{}\" already exists on qnetd server!".format(self.cluster_name)
-            suggest = "consider to use the different cluster-name property"
+                exception_msg = "This cluster's name \"{}\" already exists on qnetd server!".format(self.cluster_name)
+                suggest = "consider to use the different cluster-name property"
 
         if exception_msg:
             if self.is_stage:
@@ -342,24 +331,18 @@ class QDevice(object):
             raise ValueError("No cluster_name found in {}".format(corosync.conf()))
 
     @qnetd_lock_for_multi_cluster
-    def init_db_on_qnetd(self):
-        """
-        Certificate process for init
-        Step 1
-        Initialize database on QNetd server by running corosync-qnetd-certutil -i
-        """
+    def init_tls_certs_on_qnetd(self):
+        """Initialize NSS database and generates CA and server certs on QNetd server."""
         cmd = "test -f {}".format(self.qnetd_cacert_on_qnetd)
         try:
             parallax.parallax_call([self.qnetd_addr], cmd)
+            return
         except ValueError:
             # target file not exist
             pass
-        else:
-            return
 
+        logger.info('Generating QNetd CA and server certificates on %s', self.qnetd_addr)
         cmd = "corosync-qnetd-certutil -i"
-        desc = "Step 1: Initialize database on {}".format(self.qnetd_addr)
-        QDevice.log_only_to_file(desc, cmd)
         parallax.parallax_call([self.qnetd_addr], cmd)
 
     def fetch_qnetd_crt_from_qnetd(self):
@@ -509,7 +492,6 @@ class QDevice(object):
         """
         The qdevice certificate process on init node
         """
-        self.init_db_on_qnetd()
         self.fetch_qnetd_crt_from_qnetd()
         self.copy_qnetd_crt_to_cluster()
         self.init_db_on_cluster()
