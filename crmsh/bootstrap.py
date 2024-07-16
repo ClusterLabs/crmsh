@@ -1491,7 +1491,7 @@ def configure_qdevice_interactive():
             valid_func=qdevice.QDevice.check_qdevice_algo)
     qdevice_tie_breaker = prompt_for_string("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest",
             valid_func=qdevice.QDevice.check_qdevice_tie_breaker)
-    qdevice_tls = prompt_for_string("Whether using TLS on QDevice/QNetd (on/off/required)", default="on",
+    qdevice_tls = prompt_for_string("Whether using TLS on QDevice (on/off/required)", default="on",
             valid_func=qdevice.QDevice.check_qdevice_tls)
     qdevice_heuristics = prompt_for_string("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate",
             valid_func=qdevice.QDevice.check_qdevice_heuristics,
