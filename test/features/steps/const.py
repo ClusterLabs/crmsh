@@ -117,7 +117,7 @@ QDevice configuration:
   --qdevice-tie-breaker TIE_BREAKER
                         QNetd TIE_BREAKER (lowest/highest/valid_node_id,
                         default:lowest)
-  --qdevice-tls TLS     Whether using TLS on QDevice/QNetd (on/off/required,
+  --qdevice-tls TLS     Whether using TLS on QDevice (on/off/required,
                         default:on)
   --qdevice-heuristics COMMAND
                         COMMAND to run with absolute path. For multiple
