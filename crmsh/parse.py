@@ -170,13 +170,13 @@ class BaseParser(object):
         self.begin(cmd, min_args=min_args)
         return self.match_dispatch(errmsg="Unknown command")
 
-    def do_parse(self, cmd, ignore_empty, complete_advised):
+    def do_parse(self, cmd, ignore_empty, add_default_op_values):
         """
         Called by CliParser. Calls parse()
         Parsers should pass their return value through this method.
         """
         self.ignore_empty = ignore_empty
-        self.complete_advised = complete_advised
+        self.add_default_op_values = add_default_op_values
         out = self.parse(cmd)
         if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
@@ -655,13 +655,13 @@ class BaseParser(object):
             else:
                 break
 
-        self.complete_advised_ops(out)
+        self.add_default_advised_ops(out)
 
-    def complete_advised_ops(self, out):
+    def add_default_advised_ops(self, out):
         """
-        Complete operation actions advised values
+        Add default operation actions advised values
         """
-        if not self.complete_advised or out.tag != "primitive":
+        if not self.add_default_op_values or out.tag != "primitive":
             return
         ra_inst = ra.RAInfo(out.get('class'), out.get('type'), out.get('provider'))
         ra_actions_dict = ra_inst.actions()
@@ -753,7 +753,7 @@ class BaseParser(object):
                     inst_attrs = xmlutil.child(container_node, name)
                     # set meaningful id for port-mapping and storage-mapping
                     # when the bundle is newly created
-                    if self.complete_advised:
+                    if self.add_default_op_values:
                         id_str = f"{bundle_id}_{name.replace('-', '_')}_{index}"
                         inst_attrs.set('id', id_str)
                     child_flag = True
@@ -1795,7 +1795,7 @@ class ResourceSet(object):
         return ret
 
 
-def parse(s, comments=None, ignore_empty=True, complete_advised=False):
+def parse(s, comments=None, ignore_empty=True, add_default_op_values=False):
     '''
     Input: a list of tokens (or a CLI format string).
     Return: a cibobject
@@ -1841,7 +1841,7 @@ def parse(s, comments=None, ignore_empty=True, complete_advised=False):
         return False
 
     try:
-        ret = parser.do_parse(s, ignore_empty, complete_advised)
+        ret = parser.do_parse(s, ignore_empty, add_default_op_values)
         if ret is not None and len(comments) > 0:
             if ret.tag in constants.defaults_tags:
                 xmlutil.stuff_comments(ret[0], comments)
