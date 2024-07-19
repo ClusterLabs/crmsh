@@ -38,6 +38,7 @@ Feature: corosync qdevice/qnetd options
     When    Run "crm cluster init --qnetd-hostname=qnetd-node --qdevice-tls=off -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode1"
+    And     Service "corosync-qnetd" is "started" on "qnetd-node"
     And     Show corosync qdevice configuration
 
   @clean

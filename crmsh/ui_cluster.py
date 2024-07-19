@@ -433,7 +433,7 @@ Examples:
         qdevice_group.add_argument("--qdevice-tie-breaker", dest="qdevice_tie_breaker", metavar="TIE_BREAKER", default="lowest",
                                    help="QNetd TIE_BREAKER (lowest/highest/valid_node_id, default:lowest)")
         qdevice_group.add_argument("--qdevice-tls", dest="qdevice_tls", metavar="TLS", default="on", choices=['on', 'off', 'required'],
-                                   help="Whether using TLS on QDevice/QNetd (on/off/required, default:on)")
+                                   help="Whether using TLS on QDevice (on/off/required, default:on)")
         qdevice_group.add_argument("--qdevice-heuristics", dest="qdevice_heuristics", metavar="COMMAND",
                                    help="COMMAND to run with absolute path. For multiple commands, use \";\" to separate (details about heuristics can see man 8 corosync-qdevice)")
         qdevice_group.add_argument("--qdevice-heuristics-mode", dest="qdevice_heuristics_mode", metavar="MODE", choices=['on', 'sync', 'off'],

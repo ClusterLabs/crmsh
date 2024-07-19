@@ -1116,7 +1116,7 @@ class TestBootstrap(unittest.TestCase):
                 valid_func=qdevice.QDevice.check_qdevice_algo),
             mock.call("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest",
                 valid_func=qdevice.QDevice.check_qdevice_tie_breaker),
-            mock.call("Whether using TLS on QDevice/QNetd (on/off/required)", default="on",
+            mock.call("Whether using TLS on QDevice (on/off/required)", default="on",
                 valid_func=qdevice.QDevice.check_qdevice_tls),
             mock.call("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate",
                 valid_func=qdevice.QDevice.check_qdevice_heuristics,

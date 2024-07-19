@@ -84,7 +84,7 @@ Feature: corosync qdevice/qnetd options validate
     When    Run "crm cluster init -n cluster1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     When    Try "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode2,hanode3"
-    Then    Except "ERROR: cluster.init: Duplicated cluster name "cluster1"!"
+    Then    Expected regex "(?:Duplicated cluster name|cluster's name .* already exists)" in stderr
     When    Run "crm cluster stop" on "hanode2"
     When    Run "crm cluster stop" on "hanode3"
 

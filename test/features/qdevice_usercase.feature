@@ -31,11 +31,11 @@ Feature: Verify usercase master survive when split-brain
     And     Service "corosync-qnetd" is "started" on "qnetd-node"
     And     Show corosync qdevice configuration
     When    Run "crm corosync status qnetd" on "hanode1"
-    Then    Expected regrex "Heuristics:\s+Fail" in stdout
+    Then    Expected regex "Heuristics:\s+Fail" in stdout
     When    Run "touch /tmp/heuristics.txt" on "hanode1"
     When    Run "sleep 30" on "hanode1"
     When    Run "crm corosync status qnetd" on "hanode1"
-    Then    Expected regrex "Heuristics:\s+Pass" in stdout
+    Then    Expected regex "Heuristics:\s+Pass" in stdout
 
   @clean
   Scenario: Master survive when split-brain
