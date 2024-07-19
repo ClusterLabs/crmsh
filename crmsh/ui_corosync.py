@@ -126,10 +126,7 @@ class Link(command.UI):
         """
         Show link configurations.
         """
-        lm = corosync.LinkManager.load_config_file()
-        if lm.totem_transport() != 'knet':
-            logger.error('Corosync is not using knet transport')
-            return False
+        lm = self.__load_and_validate_links()
         for link in lm.links():
             print(f'Link {link.linknumber}:\n  Node addresses:')
             for node in link.nodes:
@@ -145,10 +142,7 @@ class Link(command.UI):
         # TODO: show link status
 
     def do_update(self, context, *argv):
-        lm = corosync.LinkManager.load_config_file()
-        if lm.totem_transport() != 'knet':
-            logger.error('Corosync is not using knet transport')
-            return False
+        lm = self.__load_and_validate_links()
         try:
             args = LinkArgumentParser().parse(True, True, argv)
         except LinkArgumentParser.SyntaxException as e:
@@ -167,17 +161,13 @@ class Link(command.UI):
         if not args.nodes and not args.options:
             logger.info("Nothing is updated.")
         else:
-            lm.write_config_file(
-                lm.update_node_addr(args.linknumber, node_addresses)
+            self.__save_changed_config(
+                lm,
+                lm.update_node_addr(args.linknumber, node_addresses),
             )
-            logger.info("Use \"crm corosync diff\" to show the difference")
-            logger.info("Use \"crm corosync push\" to sync")
 
     def do_add(self, context, *argv):
-        lm = corosync.LinkManager.load_config_file()
-        if lm.totem_transport() != 'knet':
-            logger.error('Corosync is not using knet transport')
-            return False
+        lm = self.__load_and_validate_links()
         try:
             args = LinkArgumentParser().parse(False, False, argv)
         except LinkArgumentParser.SyntaxException as e:
@@ -192,11 +182,10 @@ class Link(command.UI):
             if nodeid == -1:
                 logger.error(f'Unknown node {name}.')
             node_addresses[nodeid] = addr
-        lm.write_config_file(
-            lm.add_link(node_addresses, args.options)
+        self.__save_changed_config(
+            lm,
+            lm.add_link(node_addresses, args.options),
         )
-        logger.info("Use \"crm corosync diff\" to show the difference")
-        logger.info("Use \"crm corosync push\" to sync")
 
     @command.completer(completers.call(lambda: [
         str(link.linknumber)
@@ -207,15 +196,11 @@ class Link(command.UI):
         if not linknumber.isdecimal():
             raise ValueError(f'Invalid linknumber: {linknumber}')
         linknumber = int(linknumber)
-        lm = corosync.LinkManager.load_config_file()
-        if lm.totem_transport() != 'knet':
-            logger.error('Corosync is not using knet transport')
-            return False
-        lm.write_config_file(
-            lm.remove_link(linknumber)
+        lm = self.__load_and_validate_links()
+        self.__save_changed_config(
+            lm,
+            lm.remove_link(linknumber),
         )
-        logger.info("Use \"crm corosync diff\" to show the difference")
-        logger.info("Use \"crm corosync push\" to sync")
 
     @staticmethod
     def _validate_node_addresses(node_addrs: typing.Mapping[str, str]):
@@ -231,6 +216,19 @@ class Link(command.UI):
                 for addr in interface.addr_info
             ):
                 raise ValueError(f'{addr} is not a configured interface address on node {node}.')
+
+    @staticmethod
+    def __load_and_validate_links():
+        lm = corosync.LinkManager.load_config_file()
+        if lm.totem_transport() != 'knet':
+            raise ValueError('Corosync is not using knet transport')
+        return lm
+
+    @staticmethod
+    def __save_changed_config(linkmanager, dom):
+        linkmanager.write_config_file(dom)
+        logger.info("Use \"crm corosync diff\" to show the difference")
+        logger.info("Use \"crm corosync push\" to sync")
 
 
 class Corosync(command.UI):
