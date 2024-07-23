@@ -80,7 +80,7 @@ class TestCluster(unittest.TestCase):
         mock_qdevice_configured.assert_called_once_with()
         mock_info.assert_called_once_with("The cluster stack started on node1")
 
-    @mock.patch('crmsh.ui_cluster.Cluster._wait_for_dc')
+    @mock.patch('crmsh.utils.wait_for_dc')
     @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     def test_do_stop_return(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc):
@@ -98,7 +98,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.ui_cluster.ServiceManager')
     @mock.patch('crmsh.ui_cluster.Cluster._set_dlm')
-    @mock.patch('crmsh.ui_cluster.Cluster._wait_for_dc')
+    @mock.patch('crmsh.utils.wait_for_dc')
     @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
     def test_do_stop(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc,

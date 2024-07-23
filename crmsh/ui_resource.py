@@ -325,7 +325,7 @@ class RscMgmt(command.UI):
         logger.info("ordering %s to stop", ", ".join(resources))
         if not self._commit_meta_attrs(context, resources, "target-role", "Stopped"):
             return False
-        if not utils.wait4dc("stop", not options.batch):
+        if not utils.wait_dc_stable("stop", not options.batch):
             return False
         logger.info("ordering %s to start", ", ".join(resources))
         return self._commit_meta_attrs(context, resources, "target-role", "Started")

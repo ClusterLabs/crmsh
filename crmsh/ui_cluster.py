@@ -225,22 +225,6 @@ class Cluster(command.UI):
         return True
 
     @staticmethod
-    def _wait_for_dc(node=None):
-        """
-        Wait for the cluster's DC to become available
-        """
-        if not ServiceManager().service_is_active("pacemaker.service", remote_addr=node):
-            return
-
-        dc_deadtime = utils.get_property("dc-deadtime", peer=node) or str(constants.DC_DEADTIME_DEFAULT)
-        dc_timeout = int(dc_deadtime.strip('s')) + 5
-        try:
-            utils.check_function_with_timeout(utils.get_dc, wait_timeout=dc_timeout, peer=node)
-        except TimeoutError:
-            logger.error("No DC found currently, please wait if the cluster is still starting")
-            raise utils.TerminateSubCommand
-
-    @staticmethod
     def _set_dlm(node=None):
         """
         When dlm running and quorum is lost, before stop cluster service, should set
@@ -261,7 +245,7 @@ class Cluster(command.UI):
             return
         logger.debug(f"stop node list: {node_list}")
 
-        self._wait_for_dc(node_list[0])
+        utils.wait_for_dc(node_list[0])
 
         self._set_dlm(node_list[0])
 

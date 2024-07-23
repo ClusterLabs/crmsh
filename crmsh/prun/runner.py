@@ -55,7 +55,7 @@ class Runner:
         )
         if timeout_seconds > 0:
             awaitable = self._timeout_limit(timeout_seconds, awaitable)
-        return asyncio.get_event_loop().run_until_complete(awaitable)
+        return asyncio.get_event_loop_policy().get_event_loop().run_until_complete(awaitable)
 
     async def _timeout_limit(self, timeout_seconds: int, awaitable: typing.Awaitable):
         assert timeout_seconds > 0

@@ -862,7 +862,7 @@ class CibConfig(command.UI):
         argl = [x for x in argl if x not in ('-f', '--force')]
         if arg_force or config.core.force:
             if self._stop_if_running(argl) > 0:
-                utils.wait4dc(what="Stopping %s" % (", ".join(argl)))
+                utils.wait_dc_stable(what="Stopping %s" % (", ".join(argl)))
         cib_factory.ensure_cib_updated()
         return cib_factory.delete(*argl)
 
