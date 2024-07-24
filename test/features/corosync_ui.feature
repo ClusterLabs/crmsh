@@ -35,19 +35,14 @@ Feature: crm corosync ui test cases
     When    Run "crm corosync link update 0" on "hanode1"
     Then    Expected "Nothing is updated." in stdout
     When    Run "crm corosync link update 0 hanode1=@hanode1.ip.1 hanode2=@hanode2.ip.1 options knet_link_priority=10" on "hanode1"
-    Then    Expected "crm corosync diff" in stdout
-    When    Run "crm corosync diff" on "hanode1"
-    Then    Expected "knet_link_priority: 10" in stdout
+    Then    Expected "Restarting corosync.service is needed to apply the changes, ie. crm cluster restart --all" in stderr
+    Given   Run "systemctl restart corosync.service" OK on "hanode1,hanode2"
     When    Try "crm corosync link add hanode1=@hanode1.ip.0 hanode2=@hanode2.ip.0 options knet_link_priority=" on "hanode1"
     Then    Expected "invalid option" in stderr
-    When    Run "crm corosync link add hanode1=@hanode1.ip.0 hanode2=@hanode2.ip.0 options knet_link_priority=11" on "hanode1"
-    Then    Expected "crm corosync diff" in stdout
-    When    Run "crm corosync diff" on "hanode1"
-    Then    Expected "linknumber: 1" in stdout
+    Given   Run "crm corosync link add hanode1=@hanode1.ip.0 hanode2=@hanode2.ip.0 options knet_link_priority=11" OK on "hanode1"
     When    Try "crm corosync link update 1 hanode1=@hanode1.ip.1" on "hanode1"
     Then    Expected "Duplicated" in stderr
-    When    Run "crm corosync link remove 1" on "hanode1"
-    Then    Expected "crm corosync diff" in stdout
+    Given   Run "crm corosync link remove 1" OK on "hanode1"
     When    Try "crm corosync link add hanode1=@hanode1.ip.1 hanode2=@hanode2.ip.0" on "hanode1"
     Then    Expected "Duplicated" in stderr
     When    Try "crm corosync link add hanode1=192.0.2.101 hanode2=192.0.2.102 options knet_link_priority=10" on "hanode1"

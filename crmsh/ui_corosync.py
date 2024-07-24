@@ -3,6 +3,7 @@
 import dataclasses
 import ipaddress
 import json
+import subprocess
 import sys
 import typing
 
@@ -164,6 +165,7 @@ class Link(command.UI):
             self.__save_changed_config(
                 lm,
                 lm.update_node_addr(args.linknumber, node_addresses),
+                reload=not args.nodes,    # changes to node addresses are not hot reloadable
             )
 
     def do_add(self, context, *argv):
@@ -185,6 +187,7 @@ class Link(command.UI):
         self.__save_changed_config(
             lm,
             lm.add_link(node_addresses, args.options),
+            reload=True,
         )
 
     @command.completer(completers.call(lambda: [
@@ -200,6 +203,7 @@ class Link(command.UI):
         self.__save_changed_config(
             lm,
             lm.remove_link(linknumber),
+            reload=True,
         )
 
     @staticmethod
@@ -225,10 +229,21 @@ class Link(command.UI):
         return lm
 
     @staticmethod
-    def __save_changed_config(linkmanager, dom):
+    def __save_changed_config(linkmanager, dom, reload: bool):
         linkmanager.write_config_file(dom)
-        logger.info("Use \"crm corosync diff\" to show the difference")
-        logger.info("Use \"crm corosync push\" to sync")
+        nodes = utils.list_cluster_nodes()
+        nodes.remove(utils.this_node())
+        logger.info('Synchronizing corosync.conf in the cluster...')
+        if not corosync.push_configuration(nodes):
+            raise ValueError('Failed to synchronize corosync.conf in the cluster.')
+        if not ServiceManager().service_is_active("corosync.service"):
+            return
+        elif reload:
+            result = subprocess.run(['corosync-cfgtool', '-R'])
+            if 0 != result.returncode:
+                raise ValueError('Failed to reload corosync.conf.')
+        else:
+            logger.warning('Restarting corosync.service is needed to apply the changes, ie. crm cluster restart --all')
 
 
 class Corosync(command.UI):
