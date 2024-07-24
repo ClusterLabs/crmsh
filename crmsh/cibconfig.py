@@ -868,7 +868,7 @@ def parse_cli_to_xml(cli, oldnode=None):
             advised_op_values = False
             default_promotable_meta = False
         else:
-            advised_op_values = True
+            advised_op_values = config.core.add_advised_op_values
             default_promotable_meta = True
         node = parse.parse(cli, comments=comments, ignore_empty=False, add_advised_op_values=advised_op_values)
     if node is False:
