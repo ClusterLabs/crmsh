@@ -5,6 +5,7 @@ Functions that abstract creating and editing the corosync.conf
 configuration file, and also the corosync-* utilities.
 '''
 import dataclasses
+import ipaddress
 import itertools
 import os
 import re
@@ -582,6 +583,19 @@ class Link:
 
 
 class LinkManager:
+    class LinkManageException(Exception):
+        pass
+
+    @dataclasses.dataclass
+    class MissingNodesException(LinkManageException):
+        nodeids: list[int]
+
+    @dataclasses.dataclass
+    class DuplicatedNodeAddressException(LinkManageException):
+        address: str
+        node1: int
+        node2: int
+
     LINK_OPTIONS_UPDATABLE = {
         field.name
         for field in dataclasses.fields(Link)
@@ -754,7 +768,7 @@ class LinkManager:
                 # need to change uniqueness
                 existing = existing_addr_node_map.get(canonical_addr, None)
                 if existing is not None:
-                    raise ValueError(f'Duplicated node address: {addr}: already used by node {existing}')
+                    raise LinkManager.DuplicatedNodeAddressException(addr, nodeid, existing)
             found.addr = addr
             existing_addr_node_map[canonical_addr] = found.nodeid
         nodes = config['nodelist']['node']
@@ -769,10 +783,9 @@ class LinkManager:
         links = self.links()
         if len(links) >= KNET_LINK_NUM_LIMIT:
             raise ValueError(f'Cannot add a new link. The maximum number of links supported is {KNET_LINK_NUM_LIMIT}.')
-        node_ids = {node.nodeid for node in links[0].nodes}
-        for nodeid in node_ids:
-            if nodeid not in node_addresses:
-                raise ValueError(f'The address of node {nodeid} is not specified.')
+        unspecified_nodes = [node.nodeid for node in links[0].nodes if node.nodeid not in node_addresses]
+        if unspecified_nodes:
+            raise self.MissingNodesException(unspecified_nodes)
         next_linknumber = len(links)
         links.append(Link(next_linknumber, [dataclasses.replace(node, addr='') for node in links[0].nodes]))
         self.__upsert_node_addr_impl(self._config, links, next_linknumber, node_addresses)

@@ -512,13 +512,13 @@ class TestLinkManagerUpdateNodeAddr(unittest.TestCase):
         self.assertListEqual(self.ORIGINAL['nodelist']['node'], self.lm._config['nodelist']['node'])
 
     def test_update_duplicated_addr(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(corosync.LinkManager.DuplicatedNodeAddressException):
             self.lm.update_node_addr(1, {1: "192.0.2.1"})
-        with self.assertRaises(ValueError):
+        with self.assertRaises(corosync.LinkManager.DuplicatedNodeAddressException):
             self.lm.update_node_addr(1, {1: "192.0.2.2"})
-        with self.assertRaises(ValueError):
+        with self.assertRaises(corosync.LinkManager.DuplicatedNodeAddressException):
             self.lm.update_node_addr(1, {1: "192.0.2.102"})
-        with self.assertRaises(ValueError):
+        with self.assertRaises(corosync.LinkManager.DuplicatedNodeAddressException):
             self.lm.update_node_addr(
                 1,
                 {
@@ -527,7 +527,7 @@ class TestLinkManagerUpdateNodeAddr(unittest.TestCase):
                     3: "192.0.2.65",
                 }
             )
-        with self.assertRaises(ValueError):
+        with self.assertRaises(corosync.LinkManager.DuplicatedNodeAddressException):
             self.lm.update_node_addr(
                 1,
                 {
@@ -638,7 +638,7 @@ class TestLinkManagerAddLink(unittest.TestCase):
             corosync.LinkNode(2, 'node2', '192.0.2.102'),
         ])]
         lm = corosync.LinkManager(dict())
-        with self.assertRaises(ValueError):
+        with self.assertRaises(corosync.LinkManager.MissingNodesException):
             lm.add_link({1: '192.0.2.201'}, dict())
         mock_upsert_node.assert_not_called()
         mock_update_link.assert_not_called()

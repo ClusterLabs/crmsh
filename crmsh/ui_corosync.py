@@ -162,11 +162,17 @@ class Link(command.UI):
         if not args.nodes and not args.options:
             logger.info("Nothing is updated.")
         else:
-            self.__save_changed_config(
-                lm,
-                lm.update_node_addr(args.linknumber, node_addresses),
-                reload=not args.nodes,    # changes to node addresses are not hot reloadable
-            )
+            try:
+                self.__save_changed_config(
+                    lm,
+                    lm.update_node_addr(args.linknumber, node_addresses),
+                    reload=not args.nodes,    # changes to node addresses are not hot reloadable
+                )
+            except corosync.LinkManager.DuplicatedNodeAddressException as e:
+                node1 = next(x.name for x in nodes if x.nodeid == e.node1)
+                node2 = next(x.name for x in nodes if x.nodeid == e.node2)
+                logger.error('Duplicated ip address %s: used for both %s and %s.', e.address, node1, node2)
+                return False
 
     def do_add(self, context, *argv):
         lm = self.__load_and_validate_links()
@@ -184,11 +190,24 @@ class Link(command.UI):
             if nodeid == -1:
                 logger.error(f'Unknown node {name}.')
             node_addresses[nodeid] = addr
-        self.__save_changed_config(
-            lm,
-            lm.add_link(node_addresses, args.options),
-            reload=True,
-        )
+        try:
+            self.__save_changed_config(
+                lm,
+                lm.add_link(node_addresses, args.options),
+                reload=True,
+            )
+        except corosync.LinkManager.MissingNodesException as e:
+            for nodeid in e.nodeids:
+                name = next(x.name for x in nodes if x.nodeid == nodeid)
+                logger.error('The address of node %s is not specified.', name)
+            logger.error('The address of all nodes must be specified when adding a new link.')
+            return False
+        except corosync.LinkManager.DuplicatedNodeAddressException as e:
+            node1 = next(x.name for x in nodes if x.nodeid == e.node1)
+            node2 = next(x.name for x in nodes if x.nodeid == e.node2)
+            logger.error('Duplicated ip address %s=%s: already used for %s=%s.', node1, e.address, node2, e.address)
+            return False
+
 
     @command.completer(completers.call(lambda: [
         str(link.linknumber)
