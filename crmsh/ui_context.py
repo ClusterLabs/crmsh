@@ -16,7 +16,7 @@ from . import main
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
-_NON_FUNCTIONAL_COMMANDS = {'help', 'cd', 'ls', 'quit', 'up'}
+_NON_FUNCTIONAL_COMMANDS = {'help', 'ls'}
 _NON_FUNCTIONAL_OPTIONS = {'--help', '--help-without-redirect'}
 
 class Context(object):
@@ -257,8 +257,10 @@ class Context(object):
         self._in_transit = True
 
         entry = level()
-        if 'requires' in dir(entry) and not entry.requires():
-            self.fatal_error("Missing requirements")
+        if self.command_name not in _NON_FUNCTIONAL_COMMANDS \
+                and all(arg not in _NON_FUNCTIONAL_OPTIONS for arg in self.command_args):
+            if 'requires' in dir(entry) and not entry.requires():
+                self.fatal_error("Missing requirements")
         self.stack.append(entry)
         self.clear_readline_cache()
 
