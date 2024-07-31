@@ -307,32 +307,33 @@ class TestLinkManagerShowLinks(unittest.TestCase):
                     'nodeid': '1',
                     'name': 'node1',
                     'ring0_addr': '192.0.2.1',
-                    'ring1_addr': '192.0.2.101',
+                    'ring3_addr': '192.0.2.101',
                     'ring2_addr': '192.0.2.201',
                 }, {
                     'nodeid': '3',
                     'name': 'node3',
                     'ring0_addr': '192.0.2.3',
-                    'ring1_addr': '192.0.2.103',
+                    'ring3_addr': '192.0.2.103',
                     'ring2_addr': '192.0.2.203',
                 }, {
                     'nodeid': '2',
                     'name': 'node2',
                     'ring0_addr': '192.0.2.2',
-                    'ring1_addr': '192.0.2.102',
+                    'ring3_addr': '192.0.2.102',
                     'ring2_addr': '192.0.2.202',
                 }]
             }
         })
         links = lm.links()
-        self.assertEqual(3, len(links))
-        self.assertEqual(1, links[1].linknumber)
-        self.assertEqual(3, len(links[1].nodes))
-        self.assertEqual(1, links[1].nodes[0].nodeid)
-        self.assertEqual(2, links[1].nodes[1].nodeid)
-        self.assertEqual(3, links[1].nodes[2].nodeid)
+        self.assertEqual(8, len(links))
+        self.assertTrue(all(links[i] is None for i in [1, 4, 5, 6, 7]))
+        self.assertEqual(3, links[3].linknumber)
+        self.assertEqual(3, len(links[3].nodes))
+        self.assertEqual(1, links[3].nodes[0].nodeid)
+        self.assertEqual(2, links[3].nodes[1].nodeid)
+        self.assertEqual(3, links[3].nodes[2].nodeid)
         self.assertEqual(1, links[0].knet_link_priority)
-        self.assertIsNone(links[1].knet_link_priority)
+        self.assertIsNone(links[3].knet_link_priority)
         self.assertEqual(10, links[2].knet_link_priority)
         self.assertEqual('sctp', links[2].knet_transport)
 
@@ -347,7 +348,8 @@ class TestLinkManagerShowLinks(unittest.TestCase):
             }
         })
         links = lm.links()
-        self.assertEqual(1, len(links))
+        self.assertEqual(8, len(links))
+        self.assertTrue(all(links[i] is None for i in range(1, 8)))
         self.assertEqual(0, links[0].linknumber)
         self.assertEqual(1, len(links[0].nodes))
         self.assertEqual(1, links[0].nodes[0].nodeid)
@@ -604,14 +606,14 @@ class TestLinkManagerRemoveLink(unittest.TestCase):
         self.lm.remove_link(1)
         self.assertEqual(2, len(self.lm._config['totem']['interface']))
         self.assertEqual('0', self.lm._config['totem']['interface'][0]['linknumber'])
-        self.assertEqual('1', self.lm._config['totem']['interface'][1]['linknumber'])
+        self.assertEqual('2', self.lm._config['totem']['interface'][1]['linknumber'])
         self.assertEqual(3, len(self.lm._config['nodelist']['node']))
-        self.assertNotIn('ring2_addr', self.lm._config['nodelist']['node'][0])
-        self.assertNotIn('ring2_addr', self.lm._config['nodelist']['node'][1])
-        self.assertNotIn('ring2_addr', self.lm._config['nodelist']['node'][2])
-        self.assertEqual('192.0.2.201', self.lm._config['nodelist']['node'][0]['ring1_addr'])
-        self.assertEqual('192.0.2.203', self.lm._config['nodelist']['node'][1]['ring1_addr'])
-        self.assertEqual('192.0.2.202', self.lm._config['nodelist']['node'][2]['ring1_addr'])
+        self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][0])
+        self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][1])
+        self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][2])
+        self.assertEqual('192.0.2.201', self.lm._config['nodelist']['node'][0]['ring2_addr'])
+        self.assertEqual('192.0.2.203', self.lm._config['nodelist']['node'][1]['ring2_addr'])
+        self.assertEqual('192.0.2.202', self.lm._config['nodelist']['node'][2]['ring2_addr'])
 
     def test_remove_unknown_link(self):
         with self.assertRaises(ValueError):
@@ -621,11 +623,11 @@ class TestLinkManagerRemoveLink(unittest.TestCase):
         self.lm.remove_link(1)
         self.lm.remove_link(0)
         self.assertEqual(1, len(self.lm._config['totem']['interface']))
-        self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][0])
-        self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][1])
-        self.assertNotIn('ring1_addr', self.lm._config['nodelist']['node'][2])
+        self.assertIn('ring2_addr', self.lm._config['nodelist']['node'][0])
+        self.assertIn('ring2_addr', self.lm._config['nodelist']['node'][1])
+        self.assertIn('ring2_addr', self.lm._config['nodelist']['node'][2])
         with self.assertRaises(ValueError):
-            self.lm.remove_link(0)
+            self.lm.remove_link(2)
 
 
 @mock.patch('crmsh.corosync.LinkManager.update_link')
@@ -633,10 +635,11 @@ class TestLinkManagerRemoveLink(unittest.TestCase):
 @mock.patch('crmsh.corosync.LinkManager.links')
 class TestLinkManagerAddLink(unittest.TestCase):
     def test_unspecified_node(self, mock_links, mock_upsert_node, mock_update_link):
-        mock_links.return_value = [corosync.Link(0, [
+        mock_links.return_value = [None] * 8
+        mock_links.return_value[0] = corosync.Link(0, [
             corosync.LinkNode(1, 'node1', '192.0.2.101'),
             corosync.LinkNode(2, 'node2', '192.0.2.102'),
-        ])]
+        ])
         lm = corosync.LinkManager(dict())
         with self.assertRaises(corosync.LinkManager.MissingNodesException):
             lm.add_link({1: '192.0.2.201'}, dict())
@@ -644,9 +647,10 @@ class TestLinkManagerAddLink(unittest.TestCase):
         mock_update_link.assert_not_called()
 
     def test_unknown_node(self, mock_links, mock_upsert_node, mock_update_link):
-        mock_links.return_value = [corosync.Link(0, [
+        mock_links.return_value = [None] * 8
+        mock_links.return_value[0] = corosync.Link(0, [
             corosync.LinkNode(1, 'node1', '192.0.2.101'),
-        ])]
+        ])
         mock_upsert_node.side_effect = ValueError()
         lm = corosync.LinkManager(dict())
         with self.assertRaises(ValueError):

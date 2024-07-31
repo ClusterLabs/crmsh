@@ -129,6 +129,8 @@ class Link(command.UI):
         """
         lm = self.__load_and_validate_links()
         for link in lm.links():
+            if link is None:
+                continue
             print(f'Link {link.linknumber}:\n  Node addresses:')
             for node in link.nodes:
                 print(f'    Node {node.nodeid}: {node.name}\t{node.addr}')
@@ -183,7 +185,7 @@ class Link(command.UI):
             print('Usage: link add <node>=<addr> ... [options <option>=<value> ...] ', file=sys.stderr)
             return False
         self._validate_node_addresses(dict(args.nodes))
-        nodes = lm.links()[0].nodes
+        nodes = next(x for x in lm.links() if x is not None).nodes
         node_addresses: dict[int, str] = dict()
         for name, addr in args.nodes:
             nodeid = next((x.nodeid for x in nodes if x.name == name), -1)

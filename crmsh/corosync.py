@@ -631,9 +631,10 @@ class LinkManager:
         except KeyError:
             return 'knet'
 
-    def links(self) -> list[Link]:
-        """Returns a list of links, sorted ascending by linknumber.
-        The linknumber always starts from 0 and are continuous."""
+    def links(self) -> list[typing.Optional[Link]]:
+        """Returns a list of links, indexed by linknumber.
+        The length of returned list is always KNET_LINK_NUM_LIMIT.
+        If a link with certain linknumber does not exist, the corresponding list item is None."""
         assert self.totem_transport() == 'knet'
         try:
             nodelist = self._config['nodelist']['node']
@@ -645,12 +646,12 @@ class LinkManager:
         assert all('name' in node for node in nodelist)
         ids = [int(node['nodeid']) for node in nodelist]
         names = [node['name'] for node in nodelist]
-        links = list()
-        for i in itertools.count():
+        links: list[typing.Optional[Link]] = [None] * KNET_LINK_NUM_LIMIT
+        for i in range(KNET_LINK_NUM_LIMIT):
             # enumerate ringX_addr for X = 0, 1, ...
             # each ringX_addr is corresponding to a link
             if f'ring{i}_addr' not in nodelist[0]:
-                break
+                continue
             # If the link exists, load the ringX_addr of all nodes on this link
             addrs = [node[f'ring{i}_addr'] for node in nodelist]
             assert len(addrs) == len(ids)   # both nodeid and ringX_address are required for every node
@@ -659,14 +660,17 @@ class LinkManager:
             link = Link()
             link.linknumber = i
             link.nodes = link_nodes
-            links.append(link)
+            links[i] = link
         try:
             interfaces = self._config['totem']['interface']
         except KeyError:
             return links
         assert isinstance(interfaces, list)
         links_option_dict = {ln: x for ln, x in ((Link().load_options(x).linknumber, x) for x in interfaces)}
-        return [link.load_options(links_option_dict[i]) if i in links_option_dict else link for i, link in enumerate(links)]
+        return [
+            link.load_options(links_option_dict[i]) if link is not None and i in links_option_dict else link
+            for i, link in enumerate(links)
+        ]
 
     def update_link(self, linknumber: int, options: dict[str, str|None]) -> dict:
         """update link options
@@ -678,7 +682,7 @@ class LinkManager:
         Returns: updated configuration dom. The internal state of LinkManager is also updated.
         """
         links = self.links()
-        if linknumber >= len(links):
+        if links[linknumber] is None:
             raise ValueError(f'Link {linknumber} does not exist.')
         if 'nodes' in options:
             raise ValueError('Unknown option "nodes".')
@@ -731,7 +735,7 @@ class LinkManager:
         Returns: updated configuration dom. The internal state of LinkManager is also updated.
         """
         links = self.links()
-        if linknumber >= len(links):
+        if links[linknumber] is None:
             raise ValueError(f'Link {linknumber} does not exist.')
         return self.__upsert_node_addr_impl(self._config, links, linknumber, node_addresses)
 
@@ -752,7 +756,7 @@ class LinkManager:
         """
         existing_addr_node_map = {
             utils.IP(node.addr).ip_address: node.nodeid
-            for link in links
+            for link in links if link is not None
                 for node in link.nodes
             if node.addr != ''
         }
@@ -781,13 +785,14 @@ class LinkManager:
 
     def add_link(self, node_addresses: typing.Mapping[int, str], options: dict[str, str|None]) -> dict:
         links = self.links()
-        if len(links) >= KNET_LINK_NUM_LIMIT:
+        next_linknumber = next((i for i, link in enumerate(links) if link is None), -1)
+        if next_linknumber == -1:
             raise ValueError(f'Cannot add a new link. The maximum number of links supported is {KNET_LINK_NUM_LIMIT}.')
-        unspecified_nodes = [node.nodeid for node in links[0].nodes if node.nodeid not in node_addresses]
+        nodes = next(x for x in links if x is not None).nodes
+        unspecified_nodes = [node.nodeid for node in nodes if node.nodeid not in node_addresses]
         if unspecified_nodes:
             raise self.MissingNodesException(unspecified_nodes)
-        next_linknumber = len(links)
-        links.append(Link(next_linknumber, [dataclasses.replace(node, addr='') for node in links[0].nodes]))
+        links[next_linknumber] = Link(next_linknumber, [dataclasses.replace(node, addr='') for node in nodes])
         self.__upsert_node_addr_impl(self._config, links, next_linknumber, node_addresses)
         return self.update_link(next_linknumber, options)
 
@@ -799,29 +804,19 @@ class LinkManager:
         Returns: updated configuration dom. The internal state of LinkManager is also updated.
         """
         links = self.links()
-        if len(links) <= 1:
-            raise ValueError(f'Cannot remove the last link.')
-        if linknumber >= len(links):
+        if links[linknumber] is None:
             raise ValueError(f'Link {linknumber} does not exist.')
+        if sum(1 if link is not None else 0 for link in links) <= 1:
+            raise ValueError(f'Cannot remove the last link.')
         nodes = self._config['nodelist']['node']
         assert isinstance(nodes, list)
         for node in nodes:
-            for key in node:
-                match = re.match('^ring([0-9]+)_addr$', key)
-                if match:
-                    x = int(match.group(1))
-                    if x > linknumber:
-                        node[f'ring{x-1}_addr'] = node[key]
-            del node[f'ring{len(links)-1}_addr']
+            del node[f'ring{linknumber}_addr']
         assert 'totem' in self._config
         if 'interface' not in self._config['totem']:
             return self._config
         interfaces = self._config['totem']['interface']
         assert isinstance(interfaces, list)
         interfaces = [interface for interface in interfaces if int(interface['linknumber']) != linknumber]
-        for interface in interfaces:
-            ln = int(interface['linknumber'])
-            if ln > linknumber:
-                interface['linknumber'] = str(ln - 1)
         self._config['totem']['interface'] = interfaces
         return self._config
