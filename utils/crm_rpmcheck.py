@@ -6,7 +6,7 @@ import os
 import sys
 import json
 import subprocess
-
+import shutil
 
 def run(cmd):
     proc = subprocess.Popen(cmd,
@@ -23,13 +23,49 @@ def package_data(pkg):
     """
     Gathers version and release information about a package.
     """
-    if os.path.isfile('/bin/rpm'):
+    if shutil.which('ansible'):
+        rc, data = ansible_package_data(pkg)
+        if rc == 0:
+            return data
+
+    if shutil.which('rpm'):
         return rpm_package_data(pkg)
 
-    if os.path.isfile('/usr/bin/dpkg'):
+    if shutil.which('dpkg'):
         return dpkg_package_data(pkg)
 
     return {'name': pkg, 'error': "unknown package manager"}
+
+_packages = None
+def ansible_package_data(pkg) -> tuple[int, dict]:
+    """
+    Gathers version and release information about a package.
+    Using ansible.
+    """
+    global _packages
+    if not _packages:
+        # if _packages is None, then get it
+        rc, out, err = run(['ansible', '-m', 'package_facts', 'localhost'])
+        if rc == -1:
+            return -1, {}
+        # output format 'localhost | SUCCESS => { json...'
+        bracket_pos = out.find('{')
+        if bracket_pos == -1:
+            return -1, {}
+        is_ok = out[:bracket_pos].find('SUCCESS =>')
+        if is_ok == -1:
+            return -1, {}
+
+        # get the json part
+        out = out[bracket_pos:]
+        json_tree = json.loads(out)
+        # get _packages
+        _packages = json_tree['ansible_facts']['packages']
+
+    if pkg not in _packages:
+        return 0, {'name': pkg, 'error': "package not installed"}
+    else:
+        return 0, _packages[pkg][0]
 
 
 def rpm_package_data(pkg):
