@@ -26,6 +26,7 @@ import functools
 import gzip
 import bz2
 import lzma
+import json
 from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
@@ -3107,4 +3108,27 @@ def time_value_with_unit(time_value):
     Check if the time value contains unit
     """
     return re.search(r'^\d+[a-z]+$', time_value) is not None
+
+
+def ansible_installed():
+    return shutil.which('ansible')
+
+
+def ansible_facts(module_name) -> dict:
+    proc = subprocess.run(['ansible', '-m', module_name, 'localhost']
+                        , capture_output=True, text=True)
+    out = proc.stdout
+    # output format 'localhost | SUCCESS => { json...'
+    bracket_pos = out.find('{')
+    if bracket_pos == -1:
+        logger.error("Parsing ansible output.")
+        return {}
+    is_ok = out[:bracket_pos].find('SUCCESS =>')
+    if is_ok == -1:
+        logger.error("Failure calling ansible module.")
+        return {}
+    # get the json part
+    out = out[bracket_pos:]
+    json_tree = json.loads(out)
+    return json_tree['ansible_facts']
 # vim:ts=4:sw=4:et:

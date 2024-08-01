@@ -10,6 +10,7 @@ import crm_script
 import crmsh.log
 crmsh.log.setup_logging()
 from crmsh.report import utils
+import crmsh.utils
 
 data = crm_script.get_input()
 
@@ -32,6 +33,27 @@ def get_user():
 
 
 def sys_info():
+    with open('/proc/uptime') as f:
+        uptime = f.read().split()
+
+    if crmsh.utils.ansible_installed():
+        facts = crmsh.utils.ansible_facts('setup')
+
+        return {'system': facts.get("ansible_system"),
+            'node': facts.get("ansible_hostname"),
+            'release': facts.get("ansible_kernel"),
+            'version': facts.get("ansible_kernel_version"),
+            'machine': facts.get("ansible_machine"),
+            'processor': facts.get("ansible_architecture"),
+            'distname': facts.get("ansible_distribution"),
+            'user': facts.get("ansible_user_id"),
+            'hostname': facts.get("ansible_nodename"),
+            'uptime': facts.get("ansible_uptime_seconds"),
+            'idletime': uptime[1], # :( not in ansible setup module
+            'loadavg': facts.get("ansible_loadavg").get("15m")  # 15 minute average
+            }
+
+    # if ansible is not installed, do it like before
     sysname, nodename, release, version, machine = os.uname()
     # The first three columns measure CPU and IO utilization of the
     # last one, five, and 15 minute periods. The fourth column shows
@@ -41,8 +63,8 @@ def sys_info():
     distname = utils.get_distro_info()
     hostname = os.uname()[1]
 
-    uptime = open('/proc/uptime').read().split()
-    loadavg = open('/proc/loadavg').read().split()
+    with open('/proc/loadavg') as f:
+        loadavg = f.read().split()
 
     return {'system': system,
             'node': node,
