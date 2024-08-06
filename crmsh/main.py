@@ -365,7 +365,6 @@ def run():
         if options.profile:
             return profile_run(context, user_args)
         else:
-            upgradeutil.upgrade_if_needed()
             return main_input_loop(context, user_args)
     except KeyboardInterrupt:
         if config.core.debug:
