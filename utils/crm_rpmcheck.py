@@ -7,6 +7,7 @@ import sys
 import json
 import subprocess
 import shutil
+from crmsh import utils
 
 def run(cmd):
     proc = subprocess.Popen(cmd,
@@ -23,10 +24,8 @@ def package_data(pkg):
     """
     Gathers version and release information about a package.
     """
-    if shutil.which('ansible'):
-        rc, data = ansible_package_data(pkg)
-        if rc == 0:
-            return data
+    if utils.ansible_installed():
+        return ansible_package_data(pkg)
 
     if shutil.which('rpm'):
         return rpm_package_data(pkg)
@@ -36,36 +35,23 @@ def package_data(pkg):
 
     return {'name': pkg, 'error': "unknown package manager"}
 
+
 _packages = None
-def ansible_package_data(pkg) -> tuple[int, dict]:
+def ansible_package_data(pkg) -> dict:
     """
     Gathers version and release information about a package.
     Using ansible.
     """
+    # if _packages is None, then get it
     global _packages
     if not _packages:
-        # if _packages is None, then get it
-        rc, out, err = run(['ansible', '-m', 'package_facts', 'localhost'])
-        if rc == -1:
-            return -1, {}
-        # output format 'localhost | SUCCESS => { json...'
-        bracket_pos = out.find('{')
-        if bracket_pos == -1:
-            return -1, {}
-        is_ok = out[:bracket_pos].find('SUCCESS =>')
-        if is_ok == -1:
-            return -1, {}
+        facts = utils.ansible_facts('package_facts')
+        _packages = facts.get('packages')
 
-        # get the json part
-        out = out[bracket_pos:]
-        json_tree = json.loads(out)
-        # get _packages
-        _packages = json_tree['ansible_facts']['packages']
-
-    if pkg not in _packages:
-        return 0, {'name': pkg, 'error': "package not installed"}
-    else:
-        return 0, _packages[pkg][0]
+    if _packages and pkg in _packages:
+        return _packages[pkg][0]
+    
+    return {'name': pkg, 'error': "package not installed"}       
 
 
 def rpm_package_data(pkg):
