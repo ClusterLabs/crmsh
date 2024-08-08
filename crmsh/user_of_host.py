@@ -47,7 +47,7 @@ class UserOfHost:
         """Return (local_user, remote_user) pair for ssh connection"""
         if config.core.no_ssh:
             from .utils import NoSSHError
-            raise NoSSHError("ssh-related operations are disabled. crmsh works in local mode.")
+            raise NoSSHError(constants.NO_SSH_ERROR_MSG)
 
         local_user = None
         remote_user = None
