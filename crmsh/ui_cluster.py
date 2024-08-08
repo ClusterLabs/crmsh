@@ -249,7 +249,12 @@ class Cluster(command.UI):
         Stops the cluster stack on all nodes or specific node(s)
         '''
         node_list = parse_option_for_nodes(context, *args)
-        node_list = [n for n in node_list if self._node_ready_to_stop_cluster_service(n)]
+        try:
+            node_list = [n for n in node_list if self._node_ready_to_stop_cluster_service(n)]
+        except utils.NoSSHError as msg:
+            logger.warning(msg)
+            logger.info("Please try 'crm cluster stop' on each node")
+            return
         if not node_list:
             return
         logger.debug(f"stop node list: {node_list}")
