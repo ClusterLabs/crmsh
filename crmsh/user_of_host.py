@@ -45,6 +45,10 @@ class UserOfHost:
 
     def user_pair_for_ssh(self, host: str) -> typing.Tuple[str, str]:
         """Return (local_user, remote_user) pair for ssh connection"""
+        if config.core.no_ssh:
+            from .utils import NoSSHError
+            raise NoSSHError("ssh-related operations are disabled. crmsh works in local mode.")
+
         local_user = None
         remote_user = None
         try:
