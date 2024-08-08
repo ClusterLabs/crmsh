@@ -448,4 +448,6 @@ DLM_PORT = 21064
 
 # Commands that are deprecated and hidden from UI
 HIDDEN_COMMANDS = {'ms'}
+
+NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
 # vim:ts=4:sw=4:et:

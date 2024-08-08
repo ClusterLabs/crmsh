@@ -3175,6 +3175,6 @@ def ssh_command():
     should be set to 'yes', then this function will raise NoSSHError
     """
     if config.core.no_ssh:
-        raise NoSSHError("ssh-related operations are disabled. crmsh works in local mode.")
+        raise NoSSHError(constants.NO_SSH_ERROR_MSG)
     return "ssh"
 # vim:ts=4:sw=4:et:
