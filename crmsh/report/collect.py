@@ -65,6 +65,7 @@ def collect_ha_logs(context: core.Context) -> None:
     Collect pacemaker, corosync and extra logs
     """
     log_list = [get_pcmk_log(), get_corosync_log()] + context.extra_log_list
+    logger.info("Collecting logs: %s", log_list)
     for log in log_list:
         if log and os.path.isfile(log):
             utils.dump_logset(context, log)
