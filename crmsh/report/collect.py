@@ -57,8 +57,13 @@ def collect_ratraces():
     # need to parse crmsh log file to extract custom trace ra log directory on each node
     log_contents = ""
     cmd = "grep 'INFO: Trace for .* is written to ' {}*|grep -v 'collect'".format(log.CRMSH_LOG_FILE)
-    for node in crmutils.list_cluster_nodes():
-        log_contents += crmutils.get_stdout_or_raise_error(cmd, remote=node, no_raise=True) + "\n"
+
+    if utillib.local_mode():
+        log_contents = crmutils.get_stdout_or_raise_error(cmd, no_raise=True) + "\n"
+    else:
+        for node in crmutils.list_cluster_nodes():
+            log_contents += crmutils.get_stdout_or_raise_error(cmd, remote=node, no_raise=True) + "\n"
+
     trace_dir_str = ' '.join(list(set(re.findall("written to (.*)/.*", log_contents))))
     if not trace_dir_str:
         return

@@ -1600,4 +1600,11 @@ def sub_sensitive_string(data):
         patt = '|'.join([re.escape(s) for s in constants.SANITIZE_VALUE_CIB])
         result = re.sub('({})({})'.format('|'.join(constants.SANITIZE_KEY_CIB), patt), '\\1******', result)
     return result
+
+
+def local_mode():
+    """
+    Check if -S option is set or if the node list is just the local node
+    """
+    return constants.NO_SSH or constants.NODES == constants.WE
 # vim:ts=4:sw=4:et:
