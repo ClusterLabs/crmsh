@@ -66,7 +66,7 @@ def collect_ha_logs(context: core.Context) -> None:
     """
     log_list = [get_pcmk_log(), get_corosync_log()] + context.extra_log_list
     for log in log_list:
-        if os.path.isfile(log):
+        if log and os.path.isfile(log):
             utils.dump_logset(context, log)
 
 
