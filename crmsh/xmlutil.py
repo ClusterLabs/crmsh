@@ -1526,7 +1526,9 @@ class CrmMonXmlParser(object):
         """
         Load xml output of crm_mon
         """
-        _, output, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.peer, constants.CRM_MON_XML_OUTPUT)
+        _, output, stderr = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.peer, constants.CRM_MON_XML_OUTPUT)
+        if stderr:
+            logger.error("Error while running crm_mon: %s", stderr)
         return text2elem(output)
 
     def is_node_online(self, node):

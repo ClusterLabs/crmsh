@@ -488,7 +488,7 @@ XML_STATUS_PATH = "/cib/status/node_state"
 XML_NODE_QUERY_STANDBY_PATH = "//nodes/node[@id='{node_id}']/instance_attributes/nvpair[@name='standby']"
 XML_STATUS_QUERY_STANDBY_PATH = "//status/node_state[@id='{node_id}']/transient_attributes/instance_attributes/nvpair[@name='standby']"
 CRM_MON_ONE_SHOT = "crm_mon -1"
-CRM_MON_XML_OUTPUT= "crm_mon --output-as=xml"
+CRM_MON_XML_OUTPUT= "/usr/sbin/crm_mon --output-as=xml"
 STONITH_TIMEOUT_DEFAULT = 60
 PCMK_DELAY_MAX = 30
 DLM_CONTROLD_RA = "ocf::pacemaker:controld"
