@@ -260,6 +260,9 @@ def run():
         constants.THIS_IS_NODE = 1
 
     if not is_collector():
+        if not utillib.local_mode() and config.core.no_ssh:
+            logger.error("ssh-related operations are disabled. crm report works in local mode.")
+            constants.NO_SSH = True
         if constants.THIS_IS_NODE != 1:
             logger.warning("this is not a node and you didn't specify a list of nodes using -n")
         #
