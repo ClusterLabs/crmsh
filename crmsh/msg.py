@@ -94,7 +94,7 @@ class ErrorBuffer(object):
                           self.add_lineno(s))
 
     def info(self, s):
-        self._prefix(clidisplay.info("INFO"), s)
+        self._prefix(clidisplay.info("INFO"), s, to=sys.stdout)
 
     def debug(self, s):
         if config.core.debug:
