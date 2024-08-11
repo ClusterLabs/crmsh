@@ -16,7 +16,7 @@ deploy_node() {
   echo "##### Deploy $node_name start"
 
   docker run -d --name=$node_name --hostname $node_name \
-             --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v "$(pwd):/app" --shm-size="1g" ${Docker_image}
+             --privileged -v "$(pwd):/app" --shm-size="1g" ${Docker_image}
   docker network connect second_net $node_name
   docker network connect third_net $node_name
   docker exec -t $node_name /bin/sh -c "echo \"$etc_hosts_content\" | grep -v $node_name >> /etc/hosts"
