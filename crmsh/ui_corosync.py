@@ -3,6 +3,7 @@
 import dataclasses
 import ipaddress
 import json
+import re
 import subprocess
 import sys
 import typing
@@ -13,6 +14,7 @@ from . import utils
 from . import corosync
 from . import log
 from . import constants
+from .prun import prun
 from .service_manager import ServiceManager
 
 logger = log.setup_logger(__name__)
@@ -142,7 +144,6 @@ class Link(command.UI):
                     continue
                 print(f'    {name}:\t{value}')
             print('')
-        # TODO: show link status
 
     def do_update(self, context, *argv):
         lm = self.__load_and_validate_links()
@@ -221,11 +222,40 @@ class Link(command.UI):
             raise ValueError(f'Invalid linknumber: {linknumber}')
         linknumber = int(linknumber)
         lm = self.__load_and_validate_links()
+        self._check_link_removable(lm, linknumber)
         self.__save_changed_config(
             lm,
             lm.remove_link(linknumber),
             reload=True,
         )
+
+    @staticmethod
+    def _check_link_removable(lm: corosync.LinkManager, linknumber):
+        if not ServiceManager().service_is_active("corosync.service"):
+            return
+        nodes = utils.list_cluster_nodes()
+        for host, result in prun.prun({node: 'corosync-cmapctl -m stats' for node in nodes}).items():
+            # for each node <host> in the cluster
+            match result:
+                case prun.SSHError() as e:
+                    raise ValueError(str(e))
+                case prun.ProcessResult() as x:
+                    if x.returncode != 0:
+                        raise ValueError(f'{host}: {x.returncode}, {sh.Utils.decode_str(x.stderr)}')
+                    stdout = sh.Utils.decode_str(x.stdout)
+                    connected_nodes = {
+                        nodeid
+                        for nodeid, ln, connected in re.findall(
+                            '^stats\\.knet\\.node([0-9]+)\\.link([0-9]+)\\.connected\\W+.*=\\s*([0-9]+)$',
+                            stdout, re.ASCII | re.MULTILINE,
+                        ) if connected == '1'   # only connected node
+                        and ln != str(linknumber)    # filter out the link to be removed
+                    }
+                    # the number of nodes connected to <host> should be equal to the total number of nodes in the cluster
+                    if len(connected_nodes) < len(next(link for link in lm.links() if link is not None).nodes):
+                        # or <host> will lose quorum
+                        raise ValueError(f'Cannot remove link {linknumber}. Removing this link makes the cluster to lose quorum.')
+
 
     @staticmethod
     def _validate_node_addresses(node_addrs: typing.Mapping[str, str]):
