@@ -885,14 +885,15 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
                 logger.info("Adding public keys to authorized_keys on %s@%s", user, node)
                 for key in ssh_public_keys:
                     authorized_key_manager.add(node, local_user, key)
-                if user != 'root' and 0 != shell.subprocess_run_without_input(
-                        node, user, 'sudo true',
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                ).returncode:
-                    raise ValueError(f'Failed to sudo on {user}@{node}')
         else:
             _init_ssh_on_remote_nodes(local_user, user_node_list)
+        for user, node in user_node_list:
+            if user != 'root' and 0 != shell.subprocess_run_without_input(
+                    node, user, 'sudo true',
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+            ).returncode:
+                raise ValueError(f'Failed to sudo on {user}@{node}')
         for user, node in user_node_list:
             user_by_host.add(user, node)
         user_by_host.add(local_user, utils.this_node())
