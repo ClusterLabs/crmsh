@@ -1625,6 +1625,13 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
             raise ValueError(msg)
         # After this, login to remote_node is passwordless
         swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
+    ssh_shell = sh.SSHShell(local_shell, local_user)
+    if seed_user != 'root' and 0 != ssh_shell.subprocess_run_without_input(
+            seed_host, seed_user, 'sudo true',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+    ).returncode:
+        raise ValueError(f'Failed to sudo on {seed_user}@{seed_host}')
 
     user_by_host = utils.HostUserConfig()
     user_by_host.clear()
@@ -1655,12 +1662,6 @@ def join_ssh_with_ssh_agent(
     if not shell.can_run_as(seed_host, seed_user):
         for key in ssh_public_keys:
             authorized_key_manager.add(seed_host, seed_user, key)
-    if seed_user != 'root' and 0 != shell.subprocess_run_without_input(
-            seed_host, seed_user, 'sudo true',
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-    ).returncode:
-        raise ValueError(f'Failed to sudo on {seed_user}@{seed_host}')
     for key in ssh_public_keys:
         authorized_key_manager.add(None, local_user, key)
 
