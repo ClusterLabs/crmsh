@@ -554,19 +554,24 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key_for_secondary_user')
     @mock.patch('crmsh.bootstrap.change_user_shell')
+    @mock.patch('crmsh.sh.SSHShell')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
     @mock.patch('crmsh.utils.ssh_copy_id_no_raise')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
     def test_join_ssh(
             self,
-            mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_change, mock_swap_2,
+            mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap,
+            mock_ssh_shell,
+            mock_change, mock_swap_2,
             mock_get_node_cononical_hostname,
             mock_detect_cluster_service_on_node
     ):
         bootstrap._context = mock.Mock(current_user="bob", default_nic="eth1", use_ssh_agent=False, stage=None)
         mock_swap.return_value = None
         mock_ssh_copy_id.return_value = 0
+        mock_subprocess_run_without_input = mock_ssh_shell.return_value.subprocess_run_without_input
+        mock_subprocess_run_without_input.return_value = mock.Mock(returncode=0)
         mock_get_node_cononical_hostname.return_value='node1'
 
         bootstrap.join_ssh("node1", "alice")
@@ -577,6 +582,11 @@ class TestBootstrap(unittest.TestCase):
                 mock.call("hacluster"),
             ])
         mock_ssh_copy_id.assert_called_once_with("bob", "alice", "node1")
+        mock_subprocess_run_without_input.assert_called_once_with(
+            'node1', 'alice', 'sudo true',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         mock_swap.assert_called_once_with("node1", "bob", "alice", "bob", "alice", add=True)
         mock_swap_2.assert_called_once()
         args, kwargs = mock_swap_2.call_args
