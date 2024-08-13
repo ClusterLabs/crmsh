@@ -18,8 +18,10 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
-    # calculated and set by sbd RA
-    And     Cluster property "stonith-timeout" is "43"
+    # original value is 43, which is calculated by external/sbd RA
+    # now fence_sbd doesn't calculate it, so this value is the default one
+    # from pacemaker
+    And     Cluster property "stonith-timeout" is "60"
     And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
 
     Given   Has disk "/dev/sda1" on "hanode2"
@@ -112,8 +114,10 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "60"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
-    # calculated and set by sbd RA
-    And     Cluster property "stonith-timeout" is "172"
+    # original value is 172, which is calculated by external/sbd RA
+    # now fence_sbd doesn't calculate it, so this value is the default one
+    # from pacemaker
+    And     Cluster property "stonith-timeout" is "60"
     And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
 
     Given   Has disk "/dev/sda1" on "hanode2"
