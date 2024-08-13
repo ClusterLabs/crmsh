@@ -855,7 +855,7 @@ def parse_cli_to_xml(cli, oldnode=None):
     output: XML, obj_type, obj_id
     """
     node = None
-    default_op_values = False
+    advised_op_values = False
     default_promotable_meta = False
     comments = []
     if isinstance(cli, str):
@@ -865,12 +865,12 @@ def parse_cli_to_xml(cli, oldnode=None):
     else:  # should be a pre-tokenized list
         utils.auto_convert_role = True
         if len(cli) >= 3 and cli[0] == "primitive" and cli[2].startswith("@"):
-            default_op_values = False
+            advised_op_values = False
             default_promotable_meta = False
         else:
-            default_op_values = True
+            advised_op_values = config.core.add_advised_op_values
             default_promotable_meta = True
-        node = parse.parse(cli, comments=comments, ignore_empty=False, add_default_op_values=default_op_values)
+        node = parse.parse(cli, comments=comments, ignore_empty=False, add_advised_op_values=advised_op_values)
     if node is False:
         return None, None, None
     elif node is None:
