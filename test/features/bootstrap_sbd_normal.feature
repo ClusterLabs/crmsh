@@ -139,7 +139,7 @@ Feature: crmsh bootstrap sbd management
     And     Online nodes are "hanode1 hanode2"
     When    Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
     When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
-    Then    Expected "WARNING: To start sbd.service, need to restart cluster service manually on each node" in stderr
+    Then    Expected "WARNING: Resource is running, need to restart cluster service manually on each node" in stderr
     Then    Service "sbd" is "stopped" on "hanode1"
     And     Service "sbd" is "stopped" on "hanode2"
     When    Run "crm cluster restart" on "hanode1"
@@ -263,6 +263,8 @@ Feature: crmsh bootstrap sbd management
     And     Resource "stonith-sbd" type "fence_sbd" is "Started"
     And     Run "ps -ef|grep -v grep|grep 'watcher: /dev/sda1 '" OK
 
+    When    Try "crm cluster init sbd -s /dev/sda2 -y"
+    Then    Except "ERROR: cluster.init: Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy"
     When    Run "crm -F cluster init sbd -s /dev/sda2 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
