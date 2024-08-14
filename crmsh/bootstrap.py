@@ -1523,19 +1523,21 @@ def _setup_passwordless_ssh_for_qnetd(cluster_node_list: typing.List[str]):
                 'root',
             )).add(qnetd_addr, qnetd_user, key)
     else:
-        if utils.check_ssh_passwd_need(local_user, qnetd_user, qnetd_addr):
-            if 0 != utils.ssh_copy_id_no_raise(local_user, qnetd_user, qnetd_addr):
-                msg = f"Failed to login to {qnetd_user}@{qnetd_addr}. Please check the credentials."
-                sudoer = userdir.get_sudoer()
-                if sudoer and qnetd_user != sudoer:
-                    args = ['sudo crm']
-                    args += [x for x in sys.argv[1:]]
-                    for i, arg in enumerate(args):
-                        if arg == '--qnetd-hostname' and i + 1 < len(args):
-                            if '@' not in args[i + 1]:
-                                args[i + 1] = f'{sudoer}@{qnetd_addr}'
-                                msg += '\nOr, run "{}".'.format(' '.join(args))
-                raise ValueError(msg)
+        if 0 != utils.ssh_copy_id_no_raise(
+                local_user, qnetd_user, qnetd_addr,
+                sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''}),
+        ):
+            msg = f"Failed to login to {qnetd_user}@{qnetd_addr}. Please check the credentials."
+            sudoer = userdir.get_sudoer()
+            if sudoer and qnetd_user != sudoer:
+                args = ['sudo crm']
+                args += [x for x in sys.argv[1:]]
+                for i, arg in enumerate(args):
+                    if arg == '--qnetd-hostname' and i + 1 < len(args):
+                        if '@' not in args[i + 1]:
+                            args[i + 1] = f'{sudoer}@{qnetd_addr}'
+                            msg += '\nOr, run "{}".'.format(' '.join(args))
+            raise ValueError(msg)
 
         cluster_shell = sh.cluster_shell()
         # Add other nodes' public keys to qnetd's authorized_keys
@@ -1609,9 +1611,9 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
         local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
         join_ssh_with_ssh_agent(local_shell, local_user, seed_host, seed_user, ssh_public_keys)
     else:
-        local_shell = sh.LocalShell()
+        local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''})
         configure_ssh_key(local_user)
-        if 0 != utils.ssh_copy_id_no_raise(local_user, seed_user, seed_host):
+        if 0 != utils.ssh_copy_id_no_raise(local_user, seed_user, seed_host, local_shell):
             msg = f"Failed to login to {seed_user}@{seed_host}. Please check the credentials."
             sudoer = userdir.get_sudoer()
             if sudoer and seed_user != sudoer:
@@ -2633,7 +2635,10 @@ def bootstrap_join_geo(context):
             join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
         else:
             configure_ssh_key(local_user)
-            if 0 != utils.ssh_copy_id_no_raise(local_user, remote_user, node):
+            if 0 != utils.ssh_copy_id_no_raise(
+                    local_user, remote_user, node,
+                    sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''}),
+            ):
                 raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
             swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True)
         user_by_host = utils.HostUserConfig()
@@ -2669,7 +2674,10 @@ def bootstrap_arbitrator(context):
             join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
         else:
             configure_ssh_key(local_user)
-            if 0 != utils.ssh_copy_id_no_raise(local_user, remote_user, node):
+            if 0 != utils.ssh_copy_id_no_raise(
+                    local_user, remote_user, node,
+                    sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''}),
+            ):
                 raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
             swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True)
         user_by_host.add(local_user, utils.this_node())

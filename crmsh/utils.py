@@ -132,11 +132,13 @@ def user_pair_for_ssh(host):
         raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
 
 
-def ssh_copy_id_no_raise(local_user, remote_user, remote_node):
-    if check_ssh_passwd_need(local_user, remote_user, remote_node):
+def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalShell = None):
+    if shell is None:
+        shell = sh.LocalShell()
+    if check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
         cmd = "ssh-copy-id -i ~/.ssh/id_rsa.pub '{}@{}' &> /dev/null".format(remote_user, remote_node)
-        result = sh.LocalShell().su_subprocess_run(local_user, cmd, tty=True)
+        result = shell.su_subprocess_run(local_user, cmd, tty=True)
         return result.returncode
     else:
         return 0
@@ -2095,21 +2097,16 @@ def debug_timestamp():
     return datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
 
 
-def check_ssh_passwd_need(local_user, remote_user, host):
+def check_ssh_passwd_need(local_user, remote_user, host, shell: sh.LocalShell = None):
     """
     Check whether access to host need password
     """
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
-    ssh_cmd = "{} ssh {} -T -o Batchmode=yes {}@{} true".format(get_ssh_agent_str(), ssh_options, remote_user, host)
-    rc, _ = sh.LocalShell().get_rc_and_error(local_user, ssh_cmd)
+    ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
+    if shell is None:
+        shell = sh.LocalShell()
+    rc, _ = shell.get_rc_and_error(local_user, ssh_cmd)
     return rc != 0
-
-
-def get_ssh_agent_str():
-    ssh_agent_str = ""
-    if crmsh.user_of_host.instance().use_ssh_agent():
-        ssh_agent_str = f"SSH_AUTH_SOCK={os.environ.get('SSH_AUTH_SOCK')}"
-    return ssh_agent_str
 
 
 def check_port_open(ip, port):
