@@ -21,6 +21,7 @@ import ipaddress
 import argparse
 import random
 import string
+import pwd
 import grp
 import gzip
 import bz2
@@ -444,12 +445,10 @@ def chown(path, user, group):
     if isinstance(user, int):
         uid = user
     else:
-        import pwd
         uid = pwd.getpwnam(user).pw_uid
     if isinstance(group, int):
         gid = group
     else:
-        import grp
         gid = grp.getgrnam(group).gr_gid
     try:
         os.chown(path, uid, gid)
@@ -3013,7 +3012,7 @@ def in_haclient():
     """
     Check if current user is in haclient group
     """
-    return constants.HA_GROUP in [grp.getgrgid(g).gr_name for g in os.getgroups()]
+    return grp.getgrnam(constants.HA_GROUP).gr_gid in (os.getgroups() + [os.getegid()])
 
 
 def check_user_access(level_name):
