@@ -79,7 +79,7 @@ def test_check_ssh_passwd_need(mock_run):
     assert res is True
     mock_run.assert_called_once_with(
         "bob",
-        " ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes alice@node1 true",
+        "ssh -o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15 -T -o Batchmode=yes alice@node1 true",
     )
 
 
