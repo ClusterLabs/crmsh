@@ -1864,15 +1864,16 @@ def test_has_sudo_access(mock_run):
     mock_run.assert_called_once_with("sudo -S -k -n id -u")
 
 
-@mock.patch('grp.getgrgid')
+@mock.patch('grp.getgrnam')
+@mock.patch('os.getegid')
 @mock.patch('os.getgroups')
-def test_in_haclient(mock_group, mock_getgrgid):
-    mock_group.return_value = [90, 100]
-    mock_getgrgid_inst1 = mock.Mock(gr_name=constants.HA_GROUP)
-    mock_getgrgid_inst2 = mock.Mock(gr_name="other")
-    mock_getgrgid.side_effect = [mock_getgrgid_inst1, mock_getgrgid_inst2]
+def test_in_haclient(mock_getgroups, mock_getegid, mock_getgrnam):
+    mock_getgroups.return_value = [90]
+    mock_getegid.return_value = 90
+    mock_getgrnam_inst = mock.Mock(gr_gid=90)
+    mock_getgrnam.return_value = mock_getgrnam_inst
     assert utils.in_haclient() is True
-    mock_group.assert_called_once_with()
+    mock_getgrnam.assert_called_once_with(constants.HA_GROUP)
 
 
 @mock.patch('crmsh.utils.in_haclient')
