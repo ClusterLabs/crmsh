@@ -345,7 +345,7 @@ def _load_help():
             short_help, _ = short_help.split(',')
             entry['from_cli'] = True
         entry['short'] = short_help.strip()
-        info = info.split('_')
+        info = info.split('.')
         if info[0] == 'topics':
             entry['type'] = 'topic'
             entry['name'] = info[-1]
@@ -356,7 +356,7 @@ def _load_help():
             elif len(info) >= 3:
                 entry['type'] = 'command'
                 entry['level'] = info[1]
-                entry['name'] = '_'.join(info[2:])
+                entry['name'] = '.'.join(info[2:])
 
         return entry
 
