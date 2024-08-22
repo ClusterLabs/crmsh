@@ -885,9 +885,6 @@ class CibConfig(command.UI):
     @command.completers(compl.choice(['nodes']))
     def do_erase(self, context, nodes=None):
         "usage: erase [nodes]"
-        if not options.regression_tests:
-            logger.warning("`crm configure erase` is deprecated. The replacement could be `crm cluster remove [node]`")
-            return True
         cib_factory.ensure_cib_updated()
         if nodes is None:
             return cib_factory.erase()
