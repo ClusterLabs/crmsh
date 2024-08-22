@@ -7,6 +7,8 @@ import sys
 import crmsh.healthcheck
 import crmsh.parallax
 import crmsh.utils
+import crmsh.config
+import crmsh.constants
 from crmsh.prun import prun
 
 
@@ -151,6 +153,8 @@ def _upgrade(nodes, seq):
 
 
 def upgrade_if_needed():
+    if crmsh.config.core.no_ssh:
+        return
     if os.geteuid() != 0:
         return
     if not crmsh.utils.can_ask(background_wait=False):

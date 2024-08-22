@@ -134,6 +134,9 @@ class UserOfHost:
 
     def user_pair_for_ssh(self, host: str) -> typing.Tuple[str, str]:
         """Return (local_user, remote_user) pair for ssh connection"""
+        if config.core.no_ssh:
+            raise NoSSHError(constants.NO_SSH_ERROR_MSG)
+
         local_user = None
         remote_user = None
         try:
@@ -3606,4 +3609,19 @@ def parse_user_at_host(s: str):
     else:
         return s[:i], s[i+1:]
 
+
+class NoSSHError(Exception):
+    pass
+
+
+def ssh_command():
+    """
+    Wrapper function for ssh command
+
+    When ssh between cluster nodes is blocked, core.no_ssh
+    should be set to 'yes', then this function will raise NoSSHError
+    """
+    if config.core.no_ssh:
+        raise NoSSHError(constants.NO_SSH_ERROR_MSG)
+    return "ssh"
 # vim:ts=4:sw=4:et:

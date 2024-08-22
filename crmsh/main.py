@@ -367,6 +367,9 @@ def run():
         else:
             upgradeutil.upgrade_if_needed()
             return main_input_loop(context, user_args)
+    except utils.NoSSHError as msg:
+        logger.error('%s', msg)
+        sys.exit(1)
     except KeyboardInterrupt:
         if config.core.debug:
             raise

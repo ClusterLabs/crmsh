@@ -53,6 +53,7 @@ def dump_env():
     env_dict["EXTRA_LOGS"] = constants.EXTRA_LOGS
     env_dict["PCMK_LOG"] = constants.PCMK_LOG
     env_dict["VERBOSITY"] = int(config.report.verbosity) or (1 if config.core.debug else 0)
+    env_dict["NO_SSH"] = constants.NO_SSH
 
     res_str = ""
     for k, v in env_dict.items():
@@ -133,6 +134,7 @@ def load_env(env_str):
     constants.SKIP_LVL = utillib.str_to_bool(env_dict["SKIP_LVL"])
     constants.EXTRA_LOGS = env_dict["EXTRA_LOGS"]
     constants.PCMK_LOG = env_dict["PCMK_LOG"]
+    constants.NO_SSH = env_dict["NO_SSH"] == "True"
     config.report.verbosity = env_dict["VERBOSITY"]
 
 
@@ -258,6 +260,9 @@ def run():
         constants.THIS_IS_NODE = 1
 
     if not is_collector():
+        if not utillib.local_mode() and config.core.no_ssh:
+            logger.error("ssh-related operations are disabled. crm report works in local mode.")
+            constants.NO_SSH = True
         if constants.THIS_IS_NODE != 1:
             logger.warning("this is not a node and you didn't specify a list of nodes using -n")
         #
