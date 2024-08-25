@@ -334,16 +334,17 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
         mock_isfile.return_value = True
         mock_run_inst = mock.Mock()
         mock_run.return_value = mock_run_inst
-        mock_run_inst.get_stdout_or_raise_error.side_effect = ["data1", "data2"]
+        mock_run_inst.get_stdout_or_raise_error.return_value = "data1"
+        mock_run_inst.get_rc_stdout_stderr_without_input.return_value = (0, "data2", "error")
         collect.consume_cib_in_workdir("/workdir")
         mock_isfile.assert_called_once_with(f"/workdir/{constants.CIB_F}")
-        mock_run_inst.get_stdout_or_raise_error.assert_has_calls([
-            mock.call('CIB_file=/workdir/cib.xml crm configure show'),
-            mock.call('crm_verify -V -x /workdir/cib.xml')
-        ])
+        cmd1 = "CIB_file=/workdir/cib.xml crm configure show"
+        mock_run_inst.get_stdout_or_raise_error.assert_called_once_with(cmd1)
+        cmd2 = f"crm_verify -V -x /workdir/cib.xml"
+        mock_run_inst.get_rc_stdout_stderr_without_input.assert_called_once_with(None, cmd2)
         mock_str2file.assert_has_calls([
             mock.call("data1", f"/workdir/{constants.CONFIGURE_SHOW_F}"),
-            mock.call("data2", f"/workdir/{constants.CRM_VERIFY_F}")
+            mock.call("error", f"/workdir/{constants.CRM_VERIFY_F}")
         ])
 
     @mock.patch('crmsh.report.utils.real_path')
