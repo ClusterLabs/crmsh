@@ -20,6 +20,7 @@ import crmsh.sh
 import crmsh.report.sh
 import crmsh.user_of_host
 from crmsh import utils as crmutils
+from crmsh import constants as crmconstants
 from crmsh import config, log, tmpfiles, ui_cluster
 from crmsh.sh import ShellUtils
 
@@ -331,13 +332,20 @@ def process_dest(context: Context) -> None:
         context.dest_path = f"{context.dest_dir}/{context.dest}.tar{context.compress_suffix}"
 
 
+def local_mode(context: Context) -> bool:
+    return context.single or (len(context.node_list) == 1 and context.node_list[0] == context.me)
+
+
 def process_node_list(context: Context) -> None:
-    if not context.node_list:
+    if not local_mode(context) and config.core.no_ssh:
+        logger.error('%s', crmconstants.NO_SSH_ERROR_MSG)
+        context.single = True
+    if context.single:
+        context.node_list = [context.me]
+    elif not context.node_list:
         context.node_list = crmutils.list_cluster_nodes()
         if not context.node_list:
             raise utils.ReportGenericError("Could not figure out a list of nodes; is this a cluster node?")
-    if context.single:
-        context.node_list = [context.me]
 
     for node in context.node_list[:]:
         if node == context.me:
