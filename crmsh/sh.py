@@ -87,6 +87,14 @@ class CommandFailure(Error):
             super().__init__("Failed to run command as {}@{}: '{}': {}".format(user, host, cmd, msg), cmd)
         self.host = host
         self.user = user
+        self.cmd = cmd
+        self.msg = msg
+
+    def __reduce__(self):
+        '''
+        Return a tuple that Python will use for pickling this object
+        '''
+        return CommandFailure, (self.cmd, self.host, self.user, self.msg)
 
 
 class Utils:
