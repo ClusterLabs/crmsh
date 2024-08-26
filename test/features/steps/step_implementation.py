@@ -376,6 +376,16 @@ def step_impl(context, f, archive):
     assert file_in_archive(f, archive) is True
 
 
+@then('Directory "{directory}" created')
+def step_impl(context, directory):
+    assert os.path.isdir(directory) is True
+
+
+@then('Directory "{directory}" not created')
+def step_impl(context, directory):
+    assert os.path.isdir(directory) is False
+
+
 @then('File "{f}" not in "{archive}"')
 def step_impl(context, f, archive):
     assert file_in_archive(f, archive) is False
