@@ -177,3 +177,11 @@ Feature: Use "crm configure set" to update attributes and operations
     When    Run "crm configure rsc_template dummy_template ocf:pacemaker:Dummy op monitor interval=12s" on "hanode1"
     And     Try "crm configure primitive d8 @dummy_template params passwd=123" on "hanode1"
     Then    Expected "got no meta-data, does this RA exist" not in stderr
+
+  @clean
+  Scenario: Don't add time units to values for existing CIB (bsc#1228817)
+    When    Run "crm configure show xml d > /tmp/d.xml" on "hanode1"
+    And     Run "sed -i '/<op name="monitor"/s/timeout="20s"/timeout="20"/' /tmp/d.xml" on "hanode1"
+    And     Run "crm configure load xml update /tmp/d.xml" on "hanode1"
+    And     Try "crm configure show|grep -E "^xml <primitive""
+    Then    Expected return code is "1"
