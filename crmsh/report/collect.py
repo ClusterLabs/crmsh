@@ -375,8 +375,9 @@ def consume_cib_in_workdir(workdir: str) -> None:
         crmutils.str2file(out, os.path.join(workdir, constants.CONFIGURE_SHOW_F))
 
         cmd = f"crm_verify -V -x {cib_in_workdir}"
-        out = cluster_shell_inst.get_stdout_or_raise_error(cmd)
-        crmutils.str2file(out, os.path.join(workdir, constants.CRM_VERIFY_F))
+        _, _, err = cluster_shell_inst.get_rc_stdout_stderr_without_input(None, cmd)
+        if err:
+            crmutils.str2file(err, os.path.join(workdir, constants.CRM_VERIFY_F))
 
 
 def collect_config(context: core.Context) -> None:

@@ -1,5 +1,6 @@
 import subprocess
 import unittest
+import pickle
 from unittest import mock
 
 import crmsh.sh
@@ -193,3 +194,33 @@ class TestClusterShell(unittest.TestCase):
                 stdin=subprocess.PIPE,
             )
         self.cluster_shell.local_shell.su_subprocess_run.assert_not_called()
+
+
+class TestCommandFailurePickling(unittest.TestCase):
+    def test_pickling_unpickling(self):
+        # Create an instance of CommandFailure
+        original = crmsh.sh.CommandFailure(cmd="ls", host="localhost", user="root", msg="Permission denied")
+        # Pickle the object
+        pickled = pickle.dumps(original)
+        # Unpickle the object
+        unpickled = pickle.loads(pickled)
+
+        # Assert that the unpickled object retains the same attributes as the original
+        self.assertEqual(original.cmd, unpickled.cmd)
+        self.assertEqual(original.host, unpickled.host)
+        self.assertEqual(original.user, unpickled.user)
+        self.assertEqual(original.msg, unpickled.msg)
+
+    def test_pickling_unpickling_with_none_values(self):
+        # Create an instance of CommandFailure with None values for optional parameters
+        original = crmsh.sh.CommandFailure(cmd="ls", host=None, user=None, msg="No such file or directory")
+        # Pickle the object
+        pickled = pickle.dumps(original)
+        # Unpickle the object
+        unpickled = pickle.loads(pickled)
+
+        # Assert that the unpickled object retains the same attributes, including None values
+        self.assertEqual(original.cmd, unpickled.cmd)
+        self.assertEqual(original.host, unpickled.host)
+        self.assertEqual(original.user, unpickled.user)
+        self.assertEqual(original.msg, unpickled.msg)
