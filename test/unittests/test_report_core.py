@@ -455,23 +455,30 @@ class TestRun(unittest.TestCase):
             core.process_arguments(mock_ctx_inst)
             self.assertEqual("The start time must be before the finish time", str(err.exception))
 
+    @mock.patch('crmsh.report.core.local_mode')
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    def test_process_node_list_exception(self, mock_list_nodes):
-        mock_ctx_inst = mock.Mock(node_list=[])
+    def test_process_node_list_exception(self, mock_list_nodes, mock_local_mode):
+        mock_local_mode.return_value = False
+        config.core.no_ssh = False
+        mock_ctx_inst = mock.Mock(node_list=[], single=False)
         mock_list_nodes.return_value = []
         with self.assertRaises(utils.ReportGenericError) as err:
             core.process_node_list(mock_ctx_inst)
             self.assertEqual("Could not figure out a list of nodes; is this a cluster node?", str(err.exception))
 
+    @mock.patch('crmsh.report.core.local_mode')
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    def test_process_node_list_single(self, mock_list_nodes):
+    def test_process_node_list_single(self, mock_list_nodes, mock_local_mode):
+        mock_local_mode.return_value = True
         mock_ctx_inst = mock.Mock(node_list=["node1", "node2"], single=True, me="node1")
         core.process_node_list(mock_ctx_inst)
 
+    @mock.patch('crmsh.report.core.local_mode')
     @mock.patch('logging.Logger.error')
     @mock.patch('crmsh.utils.ping_node')
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    def test_process_node_list(self, mock_list_nodes, mock_ping, mock_error):
+    def test_process_node_list(self, mock_list_nodes, mock_ping, mock_error, mock_local_mode):
+        mock_local_mode.return_value = False
         mock_ctx_inst = mock.Mock(node_list=["node1", "node2"], single=False, me="node1")
         mock_ping.side_effect = ValueError("error")
         core.process_node_list(mock_ctx_inst)
