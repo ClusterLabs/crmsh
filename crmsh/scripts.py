@@ -13,12 +13,14 @@ from copy import deepcopy
 from glob import glob
 from lxml import etree
 
+from .prun.runner import Task
+
 try:
     import json
 except ImportError:
     import simplejson as json
 
-from . import config
+from . import config, constants
 from . import handles
 from . import options
 from . import userdir
@@ -1075,10 +1077,30 @@ def _check_control_persist():
     return "Bad configuration option" not in err
 
 
+class _PRunAsCurrentUserInterceptor(prun.PRunInterceptor):
+    _user = userdir.getuser()
+
+    def task(self, task: Task) -> Task:
+        if self._user != 'hacluster':
+            return task
+        elif any('ssh' in arg for arg in task.args):
+            task.args = ['ssh']
+            task.args .extend(constants.SSH_OPTION_ARGS)
+            task.args .extend([task.context['host'], '/bin/bash'])
+        else:
+            task.args = ['/bin/bash']
+        task.context['ssh_user'] = self._user
+        return task
+
+
 def _parallax_call(printer, hosts, cmd, timeout_seconds):
     "parallax.call with debug logging"
     printer.debug("parallax.call(%s, %s)" % (repr(hosts), cmd))
-    return prun.prun({host: cmd for host, _, _ in hosts}, timeout_seconds=timeout_seconds)
+    return prun.prun(
+        {host: cmd for host, _, _ in hosts},
+        interceptor=_PRunAsCurrentUserInterceptor(),
+        timeout_seconds=timeout_seconds,
+    )
 
 
 def _resolve_script(name):
@@ -1092,10 +1114,29 @@ def _resolve_script(name):
     return None
 
 
+class _PRunCopyAsCurrentUserInterceptor(prun.PRunInterceptor):
+    _user = userdir.getuser()
+
+    def task(self, task: Task) -> Task:
+        if self._user != 'hacluster':
+            return task
+        task.args = ['sftp']
+        task.args.extend(constants.SSH_OPTION_ARGS)
+        task.args.extend(['-o', 'BatchMode=yes', '-b', '-', task.context['host']])
+        task.context['remote_user'] = userdir.getuser()
+        return task
+
+
 def _parallax_copy(printer, hosts, src, dst, timeout_seconds):
     "parallax.copy with debug logging"
     printer.debug("parallax.copy(%s, %s, %s)" % (repr(hosts), src, dst))
-    return prun.pcopy_to_remote(src, [x[0] for x in hosts], dst, recursive=True, timeout_seconds=timeout_seconds)
+    return prun.pcopy_to_remote(
+        src,
+        [x[0] for x in hosts],
+        dst,
+        recursive=True, timeout_seconds=timeout_seconds,
+        interceptor=_PRunCopyAsCurrentUserInterceptor(),
+    )
 
 
 def _tempname(prefix):
