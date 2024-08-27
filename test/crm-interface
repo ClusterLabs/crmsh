@@ -17,11 +17,11 @@ crm_setup() {
 	$CRM_NO_REG options reset
 	$CRM_NO_REG options check-frequency on-verify
 	$CRM_NO_REG options check-mode relaxed
-	$CRM_NO_REG cib delete $CIB 2>/dev/null
+	$CRM_NO_REG cib delete $CIB >/dev/null 2>&1
 }
 
 crm_mksample() {
-	$CRM_NO_REG cib new $CIB empty 2>/dev/null
+	$CRM_NO_REG cib new $CIB empty >/dev/null 2>&1
 	$CRM_NO_REG -c $CIB<<EOF
 configure
 node node1
