@@ -61,6 +61,22 @@ def resources(args=None):
     return rsc_id_list
 
 
+def online_nodes(completed_args):
+    xml_parser = xmlutil.CrmMonXmlParser()
+    online_nodes = xml_parser.get_node_list("online")
+    if completed_args:
+        online_nodes = [node for node in online_nodes if node not in completed_args]
+    return online_nodes
+
+
+def standby_nodes(completed_args):
+    xml_parser = xmlutil.CrmMonXmlParser()
+    standby_nodes = xml_parser.get_node_list("standby")
+    if completed_args:
+        standby_nodes = [node for node in standby_nodes if node not in completed_args]
+    return standby_nodes
+
+
 def primitives(args):
     cib_el = xmlutil.resources_xml()
     if cib_el is None:
@@ -70,9 +86,6 @@ def primitives(args):
 
 
 nodes = call(xmlutil.listnodes)
-online_nodes = call(xmlutil.CrmMonXmlParser().get_node_list, "online")
-standby_nodes = call(xmlutil.CrmMonXmlParser().get_node_list, "standby")
-
 shadows = call(xmlutil.listshadows)
 
 status_option = """full bynode inactive ops timing failcounts
