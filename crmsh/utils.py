@@ -3021,9 +3021,7 @@ def check_user_access(level_name):
     Check current user's privilege and give hints to user
     """
     current_user = userdir.getuser()
-    if current_user == "root":
-        return
-    if level_name != "cluster" and in_haclient():
+    if current_user == "root" or in_haclient():
         return
 
     if not has_sudo_access():

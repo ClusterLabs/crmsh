@@ -149,6 +149,7 @@ def pcopy_to_remote(
         *,
         timeout_seconds: int = -1,
         concurrency: int = _DEFAULT_CONCURRENCY,
+        interceptor: PRunInterceptor = PRunInterceptor(),
 ) -> typing.Dict[str, typing.Optional[PRunError]]:
     """Copy file or directory from local to remote hosts concurrently."""
     if src == dst:
@@ -176,13 +177,13 @@ exec sudo -u {local_sudoer} ssh "$@"''')
             tasks = [_build_copy_task("-S '{}'".format(ssh.name), script, host) for host in hosts]
         runner = Runner(concurrency)
         for task in tasks:
-            runner.add_task(task)
+            runner.add_task(interceptor.task(task))
         runner.run(timeout_seconds)
     finally:
         if ssh is not None:
             os.unlink(ssh.name)
             ssh.close()
-    return {task.context['host']: _parse_copy_result(task) for task in tasks}
+    return {task.context['host']: _parse_copy_result(task, interceptor) for task in tasks}
 
 
 def _build_copy_task(ssh: str, script: str, host: str):
@@ -202,13 +203,13 @@ def _build_copy_task(ssh: str, script: str, host: str):
     )
 
 
-def _parse_copy_result(task: Task) -> typing.Optional[PRunError]:
+def _parse_copy_result(task: Task, interceptor: PRunInterceptor) -> typing.Optional[PRunError]:
     if task.returncode == 0:
         return None
     elif task.returncode == 255:
-        return SSHError(task.context['ssh_user'], task.context['host'], Utils.decode_str(task.stdout))
+        return interceptor.exception(SSHError(task.context['ssh_user'], task.context['host'], Utils.decode_str(task.stdout)))
     else:
-        return PRunError(task.context['ssh_user'], task.context['host'], Utils.decode_str(task.stdout))
+        return interceptor.exception(PRunError(task.context['ssh_user'], task.context['host'], Utils.decode_str(task.stdout)))
 
 
 def pfetch_from_remote(
@@ -217,6 +218,7 @@ def pfetch_from_remote(
         recursive=False,
         *,
         concurrency: int = _DEFAULT_CONCURRENCY,
+        interceptor: PRunInterceptor = PRunInterceptor(),
 ) -> typing.Dict[str, typing.Union[str, PRunError]]:
     """Copy files from remote hosts to local concurrently.
 
@@ -237,7 +239,7 @@ def pfetch_from_remote(
             tasks = [_build_fetch_task("-S '{}'".format(ssh.name), host, src, dst, flags) for host in hosts]
         runner = Runner(concurrency)
         for task in tasks:
-            runner.add_task(task)
+            runner.add_task(interceptor.task(task))
         runner.run()
     finally:
         if ssh is not None:
@@ -246,7 +248,7 @@ def pfetch_from_remote(
     basename = os.path.basename(src)
     return {
         host: v if v is not None else f"{dst}/{host}/{basename}"
-        for host, v in ((task.context['host'], _parse_copy_result(task)) for task in tasks)
+        for host, v in ((task.context['host'], _parse_copy_result(task, interceptor)) for task in tasks)
     }
 
 

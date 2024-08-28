@@ -5,25 +5,12 @@ Feature: Functional test for user access
 
   Scenario: User in haclient group
     Given   Cluster service is "stopped" on "hanode1"
-    When    Run "useradd -m -s /bin/bash -N -g 90 xin1" on "hanode1"
+    When    Run "useradd -m -s /bin/bash -N -g haclient xin1" on "hanode1"
     When    Run "echo 'export PATH=$PATH:/usr/sbin/' >> ~xin1/.bashrc" on "hanode1"
-    When    Try "su - xin1 -c 'crm cluster init -y'"
-    Then    Except multiple lines
-      """
-      ERROR: Please run this command starting with "sudo".
-      Currently, this command needs to use sudo to escalate itself as root.
-      Please consider to add "xin1" as sudoer. For example:
-        sudo bash -c 'echo "xin1 ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/xin1'
-      """
     When    Run "echo "xin1 ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/xin1" on "hanode1"
-    When    Try "su - xin1 -c 'crm cluster init -y'"
-    Then    Except multiple lines
-      """
-      ERROR: Please run this command starting with "sudo"
-      """
     When    Run "su - xin1 -c 'sudo crm cluster init -y'" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-
+    And     Run "su - hacluster -c 'crm script run health'" OK on "hanode1"
     When    Run "su - xin1 -c 'crm node standby hanode1'" on "hanode1"
     Then    Node "hanode1" is standby
 
