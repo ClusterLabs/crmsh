@@ -20,8 +20,10 @@
 ; ignore_missing_metadata = no
 ; report_tool_options =
 ; lock_timeout = 120
-; add_advised_op_values = yes
 ; no_ssh = no
+
+; For resource agent, automatically add the advised values, default is yes.
+; ra_advised_op_values = yes
 
 ; For fence agent, automatically add the advised values, default is no.
 ; fa_advised_op_values = no

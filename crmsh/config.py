@@ -258,7 +258,7 @@ DEFAULTS = {
         'lock_timeout': opt_string('120'),
         'OCF_1_1_SUPPORT': opt_boolean('yes'),
         'no_ssh': opt_boolean('no'),
-        'add_advised_op_values': opt_boolean('yes'),
+        'ra_advised_op_values': opt_boolean('yes'),
         'fa_advised_op_values': opt_boolean('no'),
         'obscure_pattern': opt_string('passw*')
     },
