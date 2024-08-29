@@ -258,6 +258,7 @@ DEFAULTS = {
         'no_ssh': opt_boolean('no'),
         'OCF_1_1_SUPPORT': opt_boolean('no'),
         'add_advised_op_values': opt_boolean('yes'),
+        'fa_advised_op_values': opt_boolean('no'),
         'obscure_pattern': opt_string('passw*')
     },
     'path': {

@@ -857,6 +857,8 @@ def parse_cli_to_xml(cli, oldnode=None):
     node = None
     # Flag to auto add adviced operation values and time units
     auto_add = False
+    # Flag to auto add adviced operation values for fence agents
+    fa_advised_op_values = False
     default_promotable_meta = False
     comments = []
     if isinstance(cli, str):
@@ -867,11 +869,18 @@ def parse_cli_to_xml(cli, oldnode=None):
         utils.auto_convert_role = True
         if len(cli) >= 3 and cli[0] == "primitive" and cli[2].startswith("@"):
             auto_add = False
+            fa_advised_op_values = False
             default_promotable_meta = False
         else:
             auto_add = config.core.add_advised_op_values
+            fa_advised_op_values = config.core.fa_advised_op_values
             default_promotable_meta = True
-        node = parse.parse(cli, comments=comments, ignore_empty=False, auto_add=auto_add)
+        node = parse.parse(
+                cli,
+                comments=comments,
+                ignore_empty=False,
+                auto_add=auto_add,
+                fa_advised_op_values=fa_advised_op_values)
     if node is False:
         return None, None, None
     elif node is None:

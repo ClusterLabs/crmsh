@@ -170,13 +170,14 @@ class BaseParser(object):
         self.begin(cmd, min_args=min_args)
         return self.match_dispatch(errmsg="Unknown command")
 
-    def do_parse(self, cmd, ignore_empty, auto_add):
+    def do_parse(self, cmd, ignore_empty, auto_add, fa_advised_op_values):
         """
         Called by CliParser. Calls parse()
         Parsers should pass their return value through this method.
         """
         self.ignore_empty = ignore_empty
         self.auto_add = auto_add
+        self.fa_advised_op_values = fa_advised_op_values
         out = self.parse(cmd)
         if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
@@ -663,7 +664,10 @@ class BaseParser(object):
         """
         if not self.auto_add or out.tag != "primitive":
             return
-        ra_inst = ra.RAInfo(out.get('class'), out.get('type'), out.get('provider'))
+        ra_class = out.get('class')
+        if ra_class == "stonith" and not self.fa_advised_op_values:
+            return
+        ra_inst = ra.RAInfo(ra_class, out.get('type'), out.get('provider'))
         ra_actions_dict = ra_inst.actions()
         if not ra_actions_dict:
             return
@@ -1795,7 +1799,7 @@ class ResourceSet(object):
         return ret
 
 
-def parse(s, comments=None, ignore_empty=True, auto_add=False):
+def parse(s, comments=None, ignore_empty=True, auto_add=False, fa_advised_op_values=False):
     '''
     Input: a list of tokens (or a CLI format string).
     Return: a cibobject
@@ -1841,7 +1845,7 @@ def parse(s, comments=None, ignore_empty=True, auto_add=False):
         return False
 
     try:
-        ret = parser.do_parse(s, ignore_empty, auto_add)
+        ret = parser.do_parse(s, ignore_empty, auto_add, fa_advised_op_values)
         if ret is not None and len(comments) > 0:
             if ret.tag in constants.defaults_tags:
                 xmlutil.stuff_comments(ret[0], comments)

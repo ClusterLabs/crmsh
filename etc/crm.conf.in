@@ -23,6 +23,9 @@
 ; add_advised_op_values = yes
 ; no_ssh = no
 
+; For fence agent, automatically add the advised values, default is no.
+; fa_advised_op_values = no
+
 ; set OCF_1_1_SUPPORT to yes is to fully turn on OCF 1.1 feature once the corresponding CIB detected.
 ; OCF_1_1_SUPPORT = yes
 
