@@ -170,7 +170,7 @@ class BaseParser(object):
         self.begin(cmd, min_args=min_args)
         return self.match_dispatch(errmsg="Unknown command")
 
-    def do_parse(self, cmd, ignore_empty, auto_add, fa_advised_op_values):
+    def do_parse(self, cmd, ignore_empty, auto_add, fa_advised_op_values, auto_add_time_unit):
         """
         Called by CliParser. Calls parse()
         Parsers should pass their return value through this method.
@@ -178,6 +178,7 @@ class BaseParser(object):
         self.ignore_empty = ignore_empty
         self.auto_add = auto_add
         self.fa_advised_op_values = fa_advised_op_values
+        self.auto_add_time_unit = auto_add_time_unit
         out = self.parse(cmd)
         if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
@@ -798,7 +799,7 @@ class BaseParser(object):
                 if inst_attrs is not None:
                     self.err(f"Attribute order error: {name} must appear before any instance attribute")
                 value = nvp.get('value')
-                if name in ('interval', 'timeout') and self.auto_add:
+                if name in ('interval', 'timeout') and self.auto_add_time_unit:
                     value = add_time_unit_if_needed(value)
                 node.set(name, value)
             else:
@@ -1799,7 +1800,12 @@ class ResourceSet(object):
         return ret
 
 
-def parse(s, comments=None, ignore_empty=True, auto_add=False, fa_advised_op_values=False):
+def parse(s,
+        comments=None,
+        ignore_empty=True,
+        auto_add=False,
+        fa_advised_op_values=False,
+        auto_add_time_units=False):
     '''
     Input: a list of tokens (or a CLI format string).
     Return: a cibobject
@@ -1845,7 +1851,7 @@ def parse(s, comments=None, ignore_empty=True, auto_add=False, fa_advised_op_val
         return False
 
     try:
-        ret = parser.do_parse(s, ignore_empty, auto_add, fa_advised_op_values)
+        ret = parser.do_parse(s, ignore_empty, auto_add, fa_advised_op_values, auto_add_time_units)
         if ret is not None and len(comments) > 0:
             if ret.tag in constants.defaults_tags:
                 xmlutil.stuff_comments(ret[0], comments)
