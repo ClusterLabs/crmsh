@@ -180,10 +180,15 @@ class Cluster(command.UI):
 
         service_manager = ServiceManager()
         node_list = parse_option_for_nodes(context, *args)
-        for node in node_list[:]:
-            if all([service_manager.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
-                logger.info("The cluster stack already started on {}".format(node))
-                node_list.remove(node)
+        try:
+            for node in node_list[:]:
+                if all([service_manager.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
+                    logger.info("The cluster stack already started on {}".format(node))
+                    node_list.remove(node)
+        except utils.NoSSHError as msg:
+            logger.error('%s', msg)
+            logger.info("Please try 'crm cluster start' on each node")
+            return
         if not node_list:
             return
 
@@ -256,7 +261,12 @@ class Cluster(command.UI):
         Stops the cluster stack on all nodes or specific node(s)
         '''
         node_list = parse_option_for_nodes(context, *args)
-        node_list = [n for n in node_list if self._node_ready_to_stop_cluster_service(n)]
+        try:
+            node_list = [n for n in node_list if self._node_ready_to_stop_cluster_service(n)]
+        except utils.NoSSHError as msg:
+            logger.error('%s', msg)
+            logger.info("Please try 'crm cluster stop' on each node")
+            return
         if not node_list:
             return
         logger.debug(f"stop node list: {node_list}")

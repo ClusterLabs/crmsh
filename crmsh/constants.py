@@ -513,4 +513,6 @@ RSC_ROLE_UNPROMOTED_LEGACY = "Slave"
 PCMK_VERSION_DEFAULT = "2.0.0"
 
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
+
+NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
 # vim:ts=4:sw=4:et:
