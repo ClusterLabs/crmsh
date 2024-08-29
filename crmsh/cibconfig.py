@@ -855,8 +855,8 @@ def parse_cli_to_xml(cli, oldnode=None):
     output: XML, obj_type, obj_id
     """
     node = None
-    # Flag to auto add adviced operation values and time units
-    auto_add = False
+    # Flag to auto add advised operation values for resource agents
+    ra_advised_op_values = False
     # Flag to auto add adviced operation values for fence agents
     fa_advised_op_values = False
     # Flag to auto add time units for operations
@@ -870,12 +870,12 @@ def parse_cli_to_xml(cli, oldnode=None):
     else:  # should be a pre-tokenized list
         utils.auto_convert_role = True
         if len(cli) >= 3 and cli[0] == "primitive" and cli[2].startswith("@"):
-            auto_add = False
+            ra_advised_op_values = False
             fa_advised_op_values = False
             auto_add_time_units = False
             default_promotable_meta = False
         else:
-            auto_add = config.core.add_advised_op_values
+            ra_advised_op_values = config.core.ra_advised_op_values
             fa_advised_op_values = config.core.fa_advised_op_values
             auto_add_time_units = True
             default_promotable_meta = True
@@ -883,7 +883,7 @@ def parse_cli_to_xml(cli, oldnode=None):
                 cli,
                 comments=comments,
                 ignore_empty=False,
-                auto_add=auto_add,
+                ra_advised_op_values=ra_advised_op_values,
                 fa_advised_op_values=fa_advised_op_values,
                 auto_add_time_units=auto_add_time_units)
     if node is False:
