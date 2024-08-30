@@ -510,6 +510,9 @@ class NodeMgmt(command.UI):
             if cib_elem is None:
                 return False
             crmd = cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node)
+            if not crmd:
+                logger.error("Node '%s' not found in CIB", node)
+                return False
             if crmd == ["online"] or (crmd[0].isdigit() and int(crmd[0]) != 0):
                 return utils.ext_cmd(self.node_cleanup_resources % node) == 0
             in_ccm = cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node)
