@@ -581,29 +581,44 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key_for_secondary_user')
     @mock.patch('crmsh.bootstrap.change_user_shell')
+    @mock.patch('crmsh.sh.SSHShell')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
     @mock.patch('crmsh.utils.ssh_copy_id_no_raise')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
+    @mock.patch('crmsh.sh.LocalShell')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
     def test_join_ssh(
             self,
-            mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_change, mock_swap_2,
+            mock_start_service, mock_local_shell, mock_config_ssh, mock_ssh_copy_id, mock_swap,
+            mock_ssh_shell,
+            mock_change, mock_swap_2,
             mock_get_node_cononical_hostname,
             mock_detect_cluster_service_on_node
     ):
         bootstrap._context = mock.Mock(current_user="bob", default_nic="eth1", use_ssh_agent=False, stage=None)
         mock_swap.return_value = None
         mock_ssh_copy_id.return_value = 0
+        mock_subprocess_run_without_input = mock_ssh_shell.return_value.subprocess_run_without_input
+        mock_subprocess_run_without_input.return_value = mock.Mock(returncode=0)
         mock_get_node_cononical_hostname.return_value='node1'
 
         bootstrap.join_ssh("node1", "alice")
 
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
+        mock_local_shell: mock.MagicMock
+        mock_local_shell.assert_has_calls([
+            mock.call(additional_environ={'SSH_AUTH_SOCK': ''}),
+        ])
         mock_config_ssh.assert_has_calls([
                 mock.call("bob"),
                 mock.call("hacluster"),
             ])
-        mock_ssh_copy_id.assert_called_once_with("bob", "alice", "node1")
+        mock_ssh_copy_id.assert_called_once_with("bob", "alice", "node1", mock_local_shell.return_value)
+        mock_subprocess_run_without_input.assert_called_once_with(
+            'node1', 'alice', 'sudo true',
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         mock_swap.assert_called_once_with("node1", "bob", "alice", "bob", "alice", add=True)
         mock_swap_2.assert_called_once()
         args, kwargs = mock_swap_2.call_args
@@ -649,8 +664,9 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
     @mock.patch('crmsh.utils.ssh_copy_id_no_raise')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
+    @mock.patch('crmsh.sh.LocalShell')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
-    def test_join_ssh_bad_credential(self, mock_start_service, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_invoke, mock_change):
+    def test_join_ssh_bad_credential(self, mock_start_service, mock_local_shell, mock_config_ssh, mock_ssh_copy_id, mock_swap, mock_invoke, mock_change):
         bootstrap._context = mock.Mock(current_user="bob", default_nic="eth1", use_ssh_agent=False)
         mock_invoke.return_value = ''
         mock_swap.return_value = None
@@ -660,10 +676,13 @@ class TestBootstrap(unittest.TestCase):
             bootstrap.join_ssh("node1", "alice")
 
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
+        mock_local_shell.assert_has_calls([
+            mock.call(additional_environ={'SSH_AUTH_SOCK': ''}),
+        ])
         mock_config_ssh.assert_has_calls([
             mock.call("bob"),
         ])
-        mock_ssh_copy_id.assert_called_once_with("bob", "alice", "node1")
+        mock_ssh_copy_id.assert_called_once_with("bob", "alice", "node1", mock_local_shell.return_value)
         mock_swap.assert_not_called()
         mock_invoke.assert_not_called()
 
@@ -1036,10 +1055,11 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
+    @mock.patch('crmsh.sh.LocalShell')
     @mock.patch('logging.Logger.info')
     def test_init_qdevice_already_configured(
             self,
-            mock_status, mock_ssh, mock_configure_ssh_key,
+            mock_status, mock_local_shell, mock_ssh, mock_configure_ssh_key,
             mock_qdevice_configured, mock_confirm, mock_list_nodes, mock_user_of_host,
             mock_host_user_config_class,
             mock_select_user_pair_for_ssh,
@@ -1057,7 +1077,11 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.init_qdevice()
 
         mock_status.assert_called_once_with("Configure Qdevice/Qnetd:")
-        mock_ssh.assert_called_once_with("bob", "bob", "qnetd-node")
+        mock_local_shell.assert_has_calls([
+            mock.call(additional_environ={'SSH_AUTH_SOCK': ''}),
+            mock.call(),
+        ])
+        mock_ssh.assert_called_once_with("bob", "bob", "qnetd-node", mock_local_shell.return_value)
         mock_configure_ssh_key.assert_not_called()
         mock_host_user_config_class.return_value.save_remote.assert_called_once_with(mock_list_nodes.return_value)
         mock_qdevice_configured.assert_called_once_with()
@@ -1074,8 +1098,9 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
+    @mock.patch('crmsh.sh.LocalShell')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice(self, mock_info, mock_ssh, mock_configure_ssh_key, mock_qdevice_configured,
+    def test_init_qdevice(self, mock_info, mock_local_shell, mock_ssh, mock_configure_ssh_key, mock_qdevice_configured,
                           mock_this_node, mock_list_nodes, mock_adjust_priority, mock_adjust_fence_delay,
                           mock_user_of_host, mock_host_user_config_class, mock_select_user_pair_for_ssh):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob")
@@ -1093,7 +1118,11 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.init_qdevice()
 
         mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
-        mock_ssh.assert_called_once_with("bob", "bob", "qnetd-node")
+        mock_local_shell.assert_has_calls([
+            mock.call(additional_environ={'SSH_AUTH_SOCK': ''}),
+            mock.call(),
+        ])
+        mock_ssh.assert_called_once_with("bob", "bob", "qnetd-node", mock_local_shell.return_value)
         mock_host_user_config_class.return_value.add.assert_has_calls([
             mock.call('bob', '192.0.2.100'),
             mock.call('bob', 'qnetd-node'),
