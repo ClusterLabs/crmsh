@@ -855,9 +855,9 @@ def parse_cli_to_xml(cli, oldnode=None):
     """
     node = None
     # Flag to auto add advised operation values for resource agents
-    ra_advised_op_values = False
+    has_ra_advised_op = False
     # Flag to auto add adviced operation values for fence agents
-    fa_advised_op_values = False
+    has_fa_advised_op = False
     # Flag to auto add time units for operations
     auto_add_time_units = False
     default_promotable_meta = False
@@ -869,21 +869,21 @@ def parse_cli_to_xml(cli, oldnode=None):
     else:  # should be a pre-tokenized list
         utils.auto_convert_role = True
         if len(cli) >= 3 and cli[0] == "primitive" and cli[2].startswith("@"):
-            ra_advised_op_values = False
-            fa_advised_op_values = False
+            has_ra_advised_op = False
+            has_fa_advised_op = False
             auto_add_time_units = False
             default_promotable_meta = False
         else:
-            ra_advised_op_values = config.core.ra_advised_op_values
-            fa_advised_op_values = config.core.fa_advised_op_values
+            has_ra_advised_op = config.core.has_ra_advised_op
+            has_fa_advised_op = config.core.has_fa_advised_op
             auto_add_time_units = True
             default_promotable_meta = True
         node = parse.parse(
                 cli,
                 comments=comments,
                 ignore_empty=False,
-                ra_advised_op_values=ra_advised_op_values,
-                fa_advised_op_values=fa_advised_op_values,
+                has_ra_advised_op=has_ra_advised_op,
+                has_fa_advised_op=has_fa_advised_op,
                 auto_add_time_units=auto_add_time_units)
     if node is False:
         return None, None, None

@@ -404,7 +404,7 @@ adjust_test_case() {
 run_origin_regression_test() {
 	CONFIG_COROSYNC_FLAG=0
 	setup_cluster "hanode1"
-	docker_exec "hanode1" "echo -e '[core]\nfa_advised_op_values = yes' > /etc/crm/crm.conf"
+	docker_exec "hanode1" "echo -e '[core]\nhas_fa_advised_op = yes' > /etc/crm/crm.conf"
 	docker_exec "hanode1" "sh /usr/share/crmsh/tests/regression.sh"
 	return $?
 }
