@@ -170,14 +170,14 @@ class BaseParser(object):
         self.begin(cmd, min_args=min_args)
         return self.match_dispatch(errmsg="Unknown command")
 
-    def do_parse(self, cmd, ignore_empty, ra_advised_op_values, fa_advised_op_values, auto_add_time_unit):
+    def do_parse(self, cmd, ignore_empty, has_ra_advised_op, has_fa_advised_op, auto_add_time_unit):
         """
         Called by CliParser. Calls parse()
         Parsers should pass their return value through this method.
         """
         self.ignore_empty = ignore_empty
-        self.ra_advised_op_values = ra_advised_op_values
-        self.fa_advised_op_values = fa_advised_op_values
+        self.has_ra_advised_op = has_ra_advised_op
+        self.has_fa_advised_op = has_fa_advised_op
         self.auto_add_time_unit = auto_add_time_unit
         out = self.parse(cmd)
         if self.has_tokens():
@@ -663,10 +663,10 @@ class BaseParser(object):
         """
         Add default operation actions advised values
         """
-        if not self.ra_advised_op_values or out.tag != "primitive":
+        if not self.has_ra_advised_op or out.tag != "primitive":
             return
         ra_class = out.get('class')
-        if ra_class == "stonith" and not self.fa_advised_op_values:
+        if ra_class == "stonith" and not self.has_fa_advised_op:
             return
         ra_inst = ra.RAInfo(ra_class, out.get('type'), out.get('provider'))
         ra_actions_dict = ra_inst.actions()
@@ -758,7 +758,7 @@ class BaseParser(object):
                     inst_attrs = xmlutil.child(container_node, name)
                     # set meaningful id for port-mapping and storage-mapping
                     # when the bundle is newly created
-                    if self.ra_advised_op_values:
+                    if self.has_ra_advised_op:
                         id_str = f"{bundle_id}_{name.replace('-', '_')}_{index}"
                         inst_attrs.set('id', id_str)
                     child_flag = True
@@ -1803,8 +1803,8 @@ class ResourceSet(object):
 def parse(s,
         comments=None,
         ignore_empty=True,
-        ra_advised_op_values=False,
-        fa_advised_op_values=False,
+        has_ra_advised_op=False,
+        has_fa_advised_op=False,
         auto_add_time_units=False):
     '''
     Input: a list of tokens (or a CLI format string).
@@ -1851,7 +1851,7 @@ def parse(s,
         return False
 
     try:
-        ret = parser.do_parse(s, ignore_empty, ra_advised_op_values, fa_advised_op_values, auto_add_time_units)
+        ret = parser.do_parse(s, ignore_empty, has_ra_advised_op, has_fa_advised_op, auto_add_time_units)
         if ret is not None and len(comments) > 0:
             if ret.tag in constants.defaults_tags:
                 xmlutil.stuff_comments(ret[0], comments)
