@@ -450,6 +450,21 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
 
+  functional_test_blocking_ssh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v4
+    - name: functional test for blocking ssh
+      run:  |
+        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker.service
+        $DOCKER_SCRIPT `$GET_INDEX_OF cluster_blocking_ssh`
+    - uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
+
   original_regression_test:
     runs-on: ubuntu-24.04
     timeout-minutes: 40

@@ -3155,4 +3155,20 @@ def ansible_facts(module_name) -> dict:
     out = out[bracket_pos:]
     json_tree = json.loads(out)
     return json_tree['ansible_facts']
+
+
+class NoSSHError(Exception):
+    pass
+
+
+def ssh_command():
+    """
+    Wrapper function for ssh command
+
+    When ssh between cluster nodes is blocked, core.no_ssh
+    should be set to 'yes', then this function will raise NoSSHError
+    """
+    if config.core.no_ssh:
+        raise NoSSHError(constants.NO_SSH_ERROR_MSG)
+    return "ssh"
 # vim:ts=4:sw=4:et:
