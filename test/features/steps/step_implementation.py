@@ -500,6 +500,13 @@ def step_impl(context, path, node):
     assert rc == 0
 
 
+@given('File "{path}" not exist on "{node}"')
+def step_impl(context, path, node):
+    cmd = '[ ! -f {} ]'.format(path)
+    rc, _, stderr = behave_agent.call(node, 1122, cmd, user='root')
+    assert rc == 0
+
+
 @then('File "{path}" not exist on "{node}"')
 def step_impl(context, path, node):
     cmd = '[ ! -f {} ]'.format(path)

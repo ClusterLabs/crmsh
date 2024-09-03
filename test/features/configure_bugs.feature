@@ -5,6 +5,22 @@ Feature: Functional test for configure sub level
   Need nodes: hanode1 hanode2
 
   @clean
+  Scenario: Load CIB_file env before read-only commands
+    Given   Cluster service is "stopped" on "hanode1"
+    # Should put this scenario at the beginning of the test suite
+    And     File "/var/lib/pacemaker/cib/cib.xml" not exist on "hanode1"
+    When    Try "crm configure show" on "hanode1"
+    Then    Except "Cannot find cib file: /var/lib/pacemaker/cib/cib.xml" in stderr
+    And     Expected return code is "1"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster stop" on "hanode1"
+    Then    Cluster service is "stopped" on "hanode1"
+    When    Try "crm configure show" on "hanode1"
+    Then    Except "Cluster is not running, loading the CIB file from /var/lib/pacemaker/cib/cib.xml" in stderr
+    And     Expected return code is "0"
+
+  @clean
   Scenario: Replace sensitive data by default(bsc#1163581)
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
