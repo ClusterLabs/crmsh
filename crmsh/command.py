@@ -426,7 +426,7 @@ Examples:
         return cls._children
 
     @classmethod
-    def init_ui(cls):
+    def init_ui(cls, path: list[str]):
         def get_if_command(attr):
             "Return the named attribute if it's a command"
             child = getattr(cls, attr)
@@ -438,10 +438,11 @@ Examples:
                 aliases.append(alias)
                 children[alias] = info
 
-        def add_help(info):
+        def add_help(path: list[str], info):
             "Add static help to the help system"
             if info.short_help:
                 entry = help_module.HelpEntry(info.short_help, info.long_help, generated=True)
+                help_module.add_help(path + [info.name], entry)
             elif info.type == 'command':
                 entry = help_module.HelpEntry(
                     'Help for command ' + info.name,
@@ -449,24 +450,12 @@ Examples:
                     'Usage: %s %s' % (info.name,
                                       ui_utils.pretty_arguments(info.function, nskip=2)),
                     generated=True)
+                help_module.add_help(path + [info.name], entry)
             elif info.type == 'level':
                 entry = help_module.HelpEntry('Help for level ' + info.name,
                                               'Note: This level is not documented.\n',
                                               generated=True)
-            if info.type == 'command':
-                #help_module.add_help(entry, level=cls.name, command=info.name)
-                pass
-            elif info.type == 'level':
-                help_module.add_help(entry, level=info.name)
-
-        def prepare(children, child, aliases):
-            info = ChildInfo(child, cls)
-            if info.type == 'command' and not is_valid_command_function(info.function):
-                raise ValueError("Invalid command function: %s.%s" %
-                                 (cls.__name__, info.function.__name__))
-            children[info.name] = info
-            add_aliases(children, info, aliases)
-            add_help(info)
+                help_module.add_help(path + [info.name], entry)
 
         children = {}
         aliases = []
@@ -475,9 +464,17 @@ Examples:
                 continue
             child = get_if_command(child_name)
             if child:
-                prepare(children, child, aliases)
-        setattr(cls, '_children', children)
-        setattr(cls, '_aliases', aliases)
+                info = ChildInfo(child, cls)
+                if info.type == 'command' and not is_valid_command_function(info.function):
+                    raise ValueError("Invalid command function: %s.%s" %
+                                     (cls.__name__, info.function.__name__))
+                elif info.type == 'level' and info.level:
+                    info.children = info.level.init_ui(path + [info.name])
+                children[info.name] = info
+                add_aliases(children, info, aliases)
+                add_help(path, info)
+        cls._children = children
+        cls._aliases = aliases
         return children
 
 
@@ -529,8 +526,6 @@ class ChildInfo(object):
         self.completer = maybe('_completer', None)
         self.parent = parent
         self.children = {}
-        if self.type == 'level' and self.level:
-            self.children = self.level.init_ui()
 
     def complete(self, context, args):
         '''

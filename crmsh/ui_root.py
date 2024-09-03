@@ -198,7 +198,7 @@ verify [scores]
 
 
 # this will initialize _children for all levels under the root
-Root.init_ui()
+Root.init_ui(list())
 
 
 # vim:ts=4:sw=4:et:

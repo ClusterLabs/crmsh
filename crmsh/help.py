@@ -341,7 +341,7 @@ def help_contextual(levels: typing.Sequence[str]):
         raise ValueError("No help found for '%s'! 'overview' lists all help entries" % (topic))
 
 
-def add_help(entry, topic=None, level=None, command=None):
+def add_help(levels: typing.Sequence[str], entry):
     '''
     Takes a help entry as argument and inserts it into the
     help system.
@@ -349,20 +349,8 @@ def add_help(entry, topic=None, level=None, command=None):
     Used to define some help texts statically, for example
     for 'up' and 'help' itself.
     '''
-    if topic:
-        if topic not in _TOPICS or _TOPICS[topic] is _DEFAULT:
-            _TOPICS[topic] = entry
-    elif level and command:
-        if level not in _LEVELS:
-            _LEVELS[level] = HelpEntry("No description available", generated=True)
-        if level not in _COMMANDS:
-            _COMMANDS[level] = {}
-        lvl = _COMMANDS[level]
-        if command not in lvl or lvl[command] is _DEFAULT:
-            lvl[command] = entry
-    elif level:
-        if level not in _LEVELS or _LEVELS[level] is _DEFAULT:
-            _LEVELS[level] = entry
+    node = _COMMAND_TREE.make_sublevel_recursively(levels[:-1])
+    node.children[levels[-1]] = SubcommandTreeNode(levels[-1], entry, dict())
 
 
 def _load_help():
