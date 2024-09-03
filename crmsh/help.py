@@ -26,6 +26,7 @@ Help for the level itself is like this:
 '''
 import dataclasses
 import functools
+import io
 import os
 import re
 import typing
@@ -204,37 +205,34 @@ def get_max_width(dict_):
     return max_width
 
 
+def _render_command_tree(out: io.StringIO, node: SubcommandTreeNode, indent: int):
+    max_width = get_max_width(node.children)
+    for name, node in sorted(node.children.items(), key=lambda x: (bool(x[1].children), x[0])):
+        if not node.help.is_alias():
+            for _ in range(indent):
+                out.write('\t')
+            if node.children:
+                out.write(_titleline(name, node.help.short, suffix='/', width=max_width))
+                _render_command_tree(out, node, indent + 1)
+                out.write('\n')
+            else:
+                out.write(_titleline(name, node.help.short, width=max_width))
+
+
 def help_overview():
     '''
     Returns an overview of all available
     topics and commands.
     '''
     _load_help()
-    s = "Available topics:\n\n"
+    s = io.StringIO()
+    s.write("Available topics:\n\n")
     max_width = get_max_width(_TOPICS)
     for title, topic in _TOPICS.items():
-        s += '\t' + _titleline(title, topic.short, width=max_width)
-    s += "\n"
-    s += "Available commands:\n\n"
-
-    max_width = get_max_width(_COMMANDS.get('root', {}))
-    for title, command in _COMMANDS.get('root', {}).items():
-        if not command.is_alias():
-            s += '\t' + _titleline(title, command.short, width=max_width)
-    s += "\n"
-
-    max_width_1 = get_max_width(_LEVELS)
-    for title, level in sorted(iter(_LEVELS.items()), key=lambda x: x[0]):
-        if title != 'root' and title in _COMMANDS:
-            s += '\t' + _titleline(title, level.short, suffix='/', width=max_width_1)
-            max_width_2 = get_max_width(_COMMANDS[title])
-            for cmdname, cmd in sorted(iter(_COMMANDS[title].items()), key=lambda x: x[0]):
-                if cmdname in _hidden_commands or cmdname.startswith('_'):
-                    continue
-                if not cmd.is_alias():
-                    s += '\t\t' + _titleline(cmdname, cmd.short, width=max_width_2)
-            s += "\n"
-    return HelpEntry('Help overview for crmsh\n', s, generated=True)
+        s.write('\t' + _titleline(title, topic.short, width=max_width))
+    s.write("\nAvailable commands:\n\n")
+    _render_command_tree(s, _COMMAND_TREE, 1)
+    return HelpEntry('Help overview for crmsh\n', s.getvalue(), generated=True)
 
 
 def help_topics():
