@@ -1345,7 +1345,7 @@ def test_check_user_access_acl(mock_user, mock_in, mock_sudo, mock_error):
     mock_sudo.return_value = False
     with pytest.raises(utils.TerminateSubCommand) as err:
         utils.check_user_access('ra')
-    mock_error.assert_called_once_with('This command needs higher privilege.\nOption 1) Please consider to add "user" as sudoer. For example:\n  sudo bash -c \'echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user\'\nOption 2) Add "user" to the haclient group. For example:\n  sudo usermod -g haclient user')
+    mock_error.assert_called_once_with('Operation is denied. The current user lacks the necessary privilege.')
 
 
 @mock.patch('logging.Logger.error')
@@ -1358,4 +1358,4 @@ def test_check_user_access_cluster(mock_user, mock_in, mock_sudo, mock_error):
     mock_sudo.return_value = False
     with pytest.raises(utils.TerminateSubCommand) as err:
         utils.check_user_access('cluster')
-    mock_error.assert_called_once_with('Please run this command starting with "sudo".\nCurrently, this command needs to use sudo to escalate itself as root.\nPlease consider to add "user" as sudoer. For example:\n  sudo bash -c \'echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user\'')
+    mock_error.assert_called_once_with('Operation is denied. The current user lacks the necessary privilege.')
