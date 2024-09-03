@@ -317,6 +317,7 @@ class NodeMgmt(command.UI):
     @command.completers(compl.nodes)
     def do_show(self, context, node=None):
         'usage: show [<node>]'
+        utils.load_cib_file_env()
         cib = xmlutil.cibdump2elem()
         if cib is None:
             return False
@@ -615,6 +616,7 @@ class NodeMgmt(command.UI):
         server -- print server hostname / address for each node
         server <node> ... -- print server hostname / address for node
         """
+        utils.load_cib_file_env()
         cib = xmlutil.cibdump2elem()
         if cib is None:
             return False
