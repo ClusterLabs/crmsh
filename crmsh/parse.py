@@ -170,13 +170,15 @@ class BaseParser(object):
         self.begin(cmd, min_args=min_args)
         return self.match_dispatch(errmsg="Unknown command")
 
-    def do_parse(self, cmd, ignore_empty, auto_add):
+    def do_parse(self, cmd, ignore_empty, has_ra_advised_op, has_fa_advised_op, auto_add_time_unit):
         """
         Called by CliParser. Calls parse()
         Parsers should pass their return value through this method.
         """
         self.ignore_empty = ignore_empty
-        self.auto_add = auto_add
+        self.has_ra_advised_op = has_ra_advised_op
+        self.has_fa_advised_op = has_fa_advised_op
+        self.auto_add_time_unit = auto_add_time_unit
         out = self.parse(cmd)
         if self.has_tokens():
             self.err("Unknown arguments: " + ' '.join(self._cmd[self._currtok:]))
@@ -661,9 +663,12 @@ class BaseParser(object):
         """
         Add default operation actions advised values
         """
-        if not self.auto_add or out.tag != "primitive":
+        if not self.has_ra_advised_op or out.tag != "primitive":
             return
-        ra_inst = ra.RAInfo(out.get('class'), out.get('type'), out.get('provider'))
+        ra_class = out.get('class')
+        if ra_class == "stonith" and not self.has_fa_advised_op:
+            return
+        ra_inst = ra.RAInfo(ra_class, out.get('type'), out.get('provider'))
         ra_actions_dict = ra_inst.actions()
         if not ra_actions_dict:
             return
@@ -753,7 +758,7 @@ class BaseParser(object):
                     inst_attrs = xmlutil.child(container_node, name)
                     # set meaningful id for port-mapping and storage-mapping
                     # when the bundle is newly created
-                    if self.auto_add:
+                    if self.has_ra_advised_op:
                         id_str = f"{bundle_id}_{name.replace('-', '_')}_{index}"
                         inst_attrs.set('id', id_str)
                     child_flag = True
@@ -794,7 +799,7 @@ class BaseParser(object):
                 if inst_attrs is not None:
                     self.err(f"Attribute order error: {name} must appear before any instance attribute")
                 value = nvp.get('value')
-                if name in ('interval', 'timeout') and self.auto_add:
+                if name in ('interval', 'timeout') and self.auto_add_time_unit:
                     value = add_time_unit_if_needed(value)
                 node.set(name, value)
             else:
@@ -1794,7 +1799,12 @@ class ResourceSet(object):
         return ret
 
 
-def parse(s, comments=None, ignore_empty=True, auto_add=False):
+def parse(s,
+        comments=None,
+        ignore_empty=True,
+        has_ra_advised_op=False,
+        has_fa_advised_op=False,
+        auto_add_time_units=False):
     '''
     Input: a list of tokens (or a CLI format string).
     Return: a cibobject
@@ -1840,7 +1850,7 @@ def parse(s, comments=None, ignore_empty=True, auto_add=False):
         return False
 
     try:
-        ret = parser.do_parse(s, ignore_empty, auto_add)
+        ret = parser.do_parse(s, ignore_empty, has_ra_advised_op, has_fa_advised_op, auto_add_time_units)
         if ret is not None and len(comments) > 0:
             if ret.tag in constants.defaults_tags:
                 xmlutil.stuff_comments(ret[0], comments)

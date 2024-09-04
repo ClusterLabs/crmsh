@@ -20,8 +20,13 @@
 ; ignore_missing_metadata = no
 ; report_tool_options =
 ; lock_timeout = 120
-; add_advised_op_values = yes
 ; no_ssh = no
+
+; For resource agent, automatically add the advised values, default is yes.
+; has_ra_advised_op = yes
+
+; For fence agent, automatically add the advised values, default is no.
+; has_fa_advised_op = no
 
 ; set OCF_1_1_SUPPORT to yes is to fully turn on OCF 1.1 feature once the corresponding CIB detected.
 ; OCF_1_1_SUPPORT = yes
