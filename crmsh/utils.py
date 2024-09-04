@@ -3171,4 +3171,38 @@ def load_cib_file_env():
         raise ValueError(f"Cannot find cib file: {cib_file}")
 
 
+def fuzzy_get(items, s):
+    """
+    Finds s in items using a fuzzy
+    matching algorithm:
+
+    1. if exact match, return value
+    2. if unique prefix, return value
+    3. if unique prefix substring, return value
+    """
+    found = items.get(s)
+    if found:
+        return found
+
+    def fuzzy_match(rx):
+        try:
+            matcher = re.compile(rx, re.I)
+            matches = [c
+                       for m, c in items.items()
+                       if matcher.match(m)]
+            if len(matches) == 1:
+                return matches[0]
+        except re.error as e:
+            raise ValueError(e)
+        return None
+
+    # prefix match
+    m = fuzzy_match(s + '.*')
+    if m:
+        return m
+    # substring match
+    m = fuzzy_match('.*'.join(s) + '.*')
+    if m:
+        return m
+    return None
 # vim:ts=4:sw=4:et:
