@@ -566,6 +566,7 @@ class CibConfig(command.UI):
     def do_show(self, context, *args):
         "usage: show [xml] [<id>...]"
         from .utils import obscure
+        utils.load_cib_file_env()
         osargs = [arg[8:] for arg in args if arg.startswith('obscure:')]
         if not osargs and config.core.obscure_pattern:
             # obscure_pattern could be
@@ -585,6 +586,7 @@ class CibConfig(command.UI):
     @command.completers_repeating(compl.call(ra.get_properties_list))
     def do_get_property(self, context, *args):
         "usage: get-property [-t|--true [<name>...]"
+        utils.load_cib_file_env()
         properties = [a for a in args if a not in ('-t', '--true')]
         truth = any(a for a in args if a in ('-t', '--true'))
 
@@ -743,6 +745,7 @@ class CibConfig(command.UI):
     @command.skill_level('administrator')
     def do_verify(self, context):
         "usage: verify"
+        utils.load_cib_file_env()
         cib_factory.ensure_cib_updated()
         set_obj_all = mkset_obj("xml")
         return self._verify(set_obj_all, set_obj_all)

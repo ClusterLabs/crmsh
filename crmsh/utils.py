@@ -3176,4 +3176,15 @@ def ssh_command():
     if config.core.no_ssh:
         raise NoSSHError(constants.NO_SSH_ERROR_MSG)
     return "ssh"
+
+
+def load_cib_file_env():
+    if options.regression_tests or ServiceManager().service_is_active("pacemaker.service"):
+        return
+    cib_file = os.environ.setdefault('CIB_file', constants.CIB_RAW_FILE)
+    logger.warning("Cluster is not running, loading the CIB file from %s", cib_file)
+    if not os.path.exists(cib_file):
+        raise ValueError(f"Cannot find cib file: {cib_file}")
+
+
 # vim:ts=4:sw=4:et:
