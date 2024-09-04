@@ -413,20 +413,20 @@ def _load_help():
         '''
         return _REFERENCE_RE.sub(r'\1', line)
 
-    def append_cmdinfos():
-        "append command information to level descriptions"
-        for lvlname, level in _LEVELS.items():
-            if lvlname in _COMMANDS and not isinstance(level, LazyHelpEntryFromCli):
-                level.long += "\n\nCommands:\n"
-                max_width = get_max_width(_COMMANDS[lvlname])
-                for cmdname, cmd in sorted(iter(_COMMANDS[lvlname].items()), key=lambda x: x[0]):
-                    if cmdname in _hidden_commands or cmdname.startswith('_'):
-                        continue
-                    level.long += "\t" + _titleline(cmdname, cmd.short, width=max_width)
-                level.long += "\n"
-                for cmdname, cmd in sorted(iter(_COMMANDS[lvlname].items()), key=lambda x: x[0]):
-                    if cmdname in _hidden_commands:
-                        level.long += "\t" + _titleline(cmdname, cmd.short, width=max_width)
+    def append_subcommand_list_to_long_description(node: SubcommandTreeNode):
+        if isinstance(node.help, LazyHelpEntryFromCli) or not node.children:
+            return
+        buf = io.StringIO()
+        buf.write(node.help.long)
+        buf.write('\n\nCommands:\n')
+        max_width = get_max_width(node.children)
+        for name, child in sorted(node.children.items(), key=lambda x: (bool(x[1].children), x[0])):
+            if name in _hidden_commands or name.startswith('_'):
+                continue
+            buf.write('\t')
+            buf.write(_titleline(name, child.help.short, width=max_width))
+            append_subcommand_list_to_long_description(child)
+        node.help.long = buf.getvalue()
 
     def fixup_root_commands():
         "root commands appear as levels"
@@ -468,7 +468,7 @@ def _load_help():
                     entry['long'] += filter_line(line)
             if entry is not None:
                 process(entry)
-        append_cmdinfos()
+        append_subcommand_list_to_long_description(_COMMAND_TREE)
         #fixup_root_commands()
         from . import ui_root
         for name, childinfo in ui_root.Root.children().items():
