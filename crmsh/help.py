@@ -208,7 +208,7 @@ def get_max_width(dict_):
 def _render_command_tree(out: io.StringIO, node: SubcommandTreeNode, indent: int):
     max_width = get_max_width(node.children)
     for name, node in sorted(node.children.items(), key=lambda x: (bool(x[1].children), x[0])):
-        if not node.help.is_alias():
+        if name == node.name:   # is not an alias
             for _ in range(indent):
                 out.write('\t')
             if node.children:
@@ -438,31 +438,14 @@ def _load_help():
         for t in strip_topics:
             del _LEVELS[t]
 
-    def fixup_help_aliases():
+    def fixup_help_aliases(help_node: SubcommandTreeNode, childinfo):
         "add help for aliases"
-
-        def add_help_for_alias(lvlname, command, alias):
-            if lvlname not in _COMMANDS:
-                return
-            if command not in _COMMANDS[lvlname]:
-                return
-            if alias in _COMMANDS[lvlname]:
-                return
-            info = _COMMANDS[lvlname][command]
-            match info:
-                case LazyHelpEntryFromCli():
-                    _COMMANDS[lvlname][alias] = LazyHelpEntryFromCli(info.short, info._cmd_args, (alias, command))
-                case HelpEntry():
-                    _COMMANDS[lvlname][alias] = HelpEntry(info.short, info.long, (alias, command))
-
-        def add_aliases_for_level(lvl):
-            for name, info in lvl.children().items():
-                for alias in info.aliases:
-                    add_help_for_alias(lvl.name, info.name, alias)
-                if info.level:
-                    add_aliases_for_level(info.level)
-        from .ui_root import Root
-        add_aliases_for_level(Root)
+        for name, childinfo in childinfo.children.items():
+            if name in help_node.children:
+                fixup_help_aliases(help_node.children[name], childinfo)
+                for alias in childinfo.aliases:
+                    help_node.children[alias] = help_node.children[name]
+        return
 
     def fixup_topics():
         "fix entries for topics and overview"
@@ -487,7 +470,14 @@ def _load_help():
                 process(entry)
         append_cmdinfos()
         #fixup_root_commands()
-        #fixup_help_aliases()
+        from . import ui_root
+        for name, childinfo in ui_root.Root.children().items():
+            # the 1st level uses children(), but deeper levels uses children
+            # this requires us to write the 1st level of the recursion separately
+            if name in _COMMAND_TREE.children:
+                fixup_help_aliases(_COMMAND_TREE.children[name], childinfo)
+                for alias in childinfo.aliases:
+                    ui_root.Root.children()[alias] = ui_root.Root.children()[name]
         fixup_topics()
     except IOError as msg:
         logger.error("Help text not found! %s", msg)
