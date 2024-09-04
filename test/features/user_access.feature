@@ -47,10 +47,7 @@ Feature: Functional test for user access
     Then    Except multiple lines
       """
       WARNING: Failed to open log file: [Errno 13] Permission denied: '/var/log/crmsh/crmsh.log'
-      ERROR: Please run this command starting with "sudo".
-      Currently, this command needs to use sudo to escalate itself as root.
-      Please consider to add "user1" as sudoer. For example:
-        sudo bash -c 'echo "user1 ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user1'
+      ERROR: Operation is denied. The current user lacks the necessary privilege.
       """
     When    Run "echo "user1 ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user1" on "hanode1"
     When    Try "su - user1 -c 'crm cluster init -y'"
@@ -68,11 +65,7 @@ Feature: Functional test for user access
     Then    Except multiple lines
       """
       WARNING: Failed to open log file: [Errno 13] Permission denied: '/var/log/crmsh/crmsh.log'
-      ERROR: This command needs higher privilege.
-      Option 1) Please consider to add "user2" as sudoer. For example:
-        sudo bash -c 'echo "user2 ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user2'
-      Option 2) Add "user2" to the haclient group. For example:
-        sudo usermod -g haclient user2
+      ERROR: Operation is denied. The current user lacks the necessary privilege.
       """
     When    Run "usermod -g haclient user2" on "hanode1"
     When    Run "su - user2 -c 'crm node standby hanode1'" on "hanode1"
@@ -84,11 +77,7 @@ Feature: Functional test for user access
     Then    Except multiple lines
       """
       WARNING: Failed to open log file: [Errno 13] Permission denied: '/var/log/crmsh/crmsh.log'
-      ERROR: This command needs higher privilege.
-      Option 1) Please consider to add "user3" as sudoer. For example:
-        sudo bash -c 'echo "user3 ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user3'
-      Option 2) Add "user3" to the haclient group. For example:
-        sudo usermod -g haclient user3
+      ERROR: Operation is denied. The current user lacks the necessary privilege.
       """
     When    Run "echo "user3 ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user3" on "hanode1"
     When    Try "su - user3 -c 'crm node online hanode1'"
