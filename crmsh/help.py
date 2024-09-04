@@ -176,8 +176,6 @@ _REFERENCE_RE = re.compile(r'<<[^,]+,(.+)>>')
 # has been made (so it won't be tried again)
 _LOADED = False
 _TOPICS = {}
-_LEVELS = {}
-_COMMANDS = {}
 _COMMAND_TREE = SubcommandTreeNode(
     'crm',
     HelpEntry(''),
@@ -323,14 +321,12 @@ def help_contextual(levels: typing.Sequence[str]):
     if len(levels) == 0:
         return help_overview()
     elif len(levels) == 1:
-        return help_level(levels[0])
+        return help_command(levels[0:])
     elif _is_help_topic(levels[0]):
         topic = levels[0]
         return help_topic(topic)
-    elif _is_command(levels):
+    elif _is_command(levels) or _is_level(levels):
         return help_command(levels)
-    elif _is_level(levels):
-        return help_level(levels)
     else:
         topic = levels[0].lower()
         t = fuzzy_get(_TOPICS, topic)
@@ -396,7 +392,6 @@ def _load_help():
         if entry['type'] == 'topic':
             _TOPICS[name] = HelpEntry(short_help, long_help.rstrip())
         elif entry['type'] == 'level':
-            _LEVELS[name] = HelpEntry(short_help, long_help.rstrip())
             _COMMAND_TREE.children[name] = SubcommandTreeNode(name, HelpEntry(short_help, long_help.rstrip()), dict())
         elif entry['type'] == 'command':
             subcommand = entry['subcommand']
@@ -427,16 +422,6 @@ def _load_help():
             buf.write(_titleline(name, child.help.short, width=max_width))
             append_subcommand_list_to_long_description(child)
         node.help.long = buf.getvalue()
-
-    def fixup_root_commands():
-        "root commands appear as levels"
-
-        strip_topics = []
-        for tname, topic in _LEVELS.items():
-            if not _COMMANDS.get(tname):
-                strip_topics.append(tname)
-        for t in strip_topics:
-            del _LEVELS[t]
 
     def fixup_help_aliases(help_node: SubcommandTreeNode, childinfo):
         "add help for aliases"
