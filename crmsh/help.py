@@ -24,10 +24,15 @@ Help for the level itself is like this:
 
 [[cmdhelp_<level>,<short help text>]]
 '''
-
+import dataclasses
+import functools
+import io
 import os
 import re
+import typing
+
 from .sh import ShellUtils
+from .utils import fuzzy_get
 from .utils import page_string
 from . import config
 from . import clidisplay
@@ -76,12 +81,17 @@ class HelpEntry(object):
             self.short = short_help[0].upper() + short_help[1:]
         else:
             self.short = 'Help'
-        self.long = long_help
+        self._long_help = long_help
         self.alias_for = alias_for
         self.generated = generated
-        self.from_cli = False
-        self.level = False
-        self.name = False
+
+    @property
+    def long_help(self):
+        return self._long_help
+
+    @long_help.setter
+    def long_help(self, value):
+        self._long_help = value
 
     def is_alias(self):
         return self.alias_for is not None
@@ -94,13 +104,7 @@ class HelpEntry(object):
         helpfilter = HelpFilter()
 
         short_help = clidisplay.help_header(self.short)
-        if self.from_cli and self.level and self.name:
-            level = '' if self.level == 'root' else self.level
-            _, output, _ = ShellUtils().get_stdout_stderr(f"crm {level} {self.name} --help-without-redirect")
-            page_string(short_help + '\n\n'+ output)
-            return
-
-        long_help = self.long
+        long_help = self.long_help
         if long_help:
             long_help = helpfilter(long_help)
             if not long_help.startswith('\n'):
@@ -112,21 +116,54 @@ class HelpEntry(object):
 
         page_string(short_help + '\n' + prefix + long_help)
 
-    def set_long_help(self, long_help):
-        self.long = long_help
-
-    def set_long_lazy_load_source(self, level, name, from_cli):
-        self.level = level
-        self.name = name
-        self.from_cli = from_cli
-
     def __str__(self):
-        if self.long:
-            return self.short + '\n' + self.long
+        if self.long_help:
+            return self.short + '\n' + self.long_help
         return self.short
 
     def __repr__(self):
         return str(self)
+
+
+class LazyHelpEntryFromCli(HelpEntry):
+    """lazy load from cli --help"""
+    def __init__(
+            self,
+            short_help: str,
+            cmd_args: typing.Sequence[str],
+            alias_for=None, generated=False,
+    ):
+        super().__init__(short_help, '', alias_for, generated)
+        self._cmd_args = cmd_args
+
+    @functools.cached_property
+    def long_help(self):
+        args = ['crm']
+        args.extend(self._cmd_args)
+        args.append('--help-without-redirect')
+        rc, stdout, _ = ShellUtils.get_stdout_stderr(args, shell=False, mix_stderr=True)
+        return stdout
+
+    def paginate(self):
+        page_string('{}\n\n{}'.format(self.short, self.long_help))
+
+
+@dataclasses.dataclass
+class SubcommandTreeNode:
+    """Tree node representing subcommmand hierarchy and holding HelpEntries"""
+    name: str
+    help: HelpEntry
+    children: dict[str, typing.Self]
+
+    def make_sublevel_recursively(self, sublevels: typing.Sequence[str]) -> typing.Self:
+        current_level = self
+        for sublevel in sublevels:
+            x = current_level.children.get(sublevel, None)
+            if x is None:
+                x = SubcommandTreeNode(sublevel, HelpEntry(''), dict())
+                current_level.children[sublevel] = x
+            current_level = x
+        return current_level
 
 
 HELP_FILE = os.path.join(config.path.sharedir, 'crm.8.adoc')
@@ -139,8 +176,11 @@ _REFERENCE_RE = re.compile(r'<<[^,]+,(.+)>>')
 # has been made (so it won't be tried again)
 _LOADED = False
 _TOPICS = {}
-_LEVELS = {}
-_COMMANDS = {}
+_COMMAND_TREE = SubcommandTreeNode(
+    'crm',
+    HelpEntry(''),
+    dict()
+)
 
 _TOPICS["Overview"] = HelpEntry("Available help topics and commands", generated=True)
 _TOPICS["Topics"] = HelpEntry("Available help topics", generated=True)
@@ -163,37 +203,34 @@ def get_max_width(dict_):
     return max_width
 
 
+def _render_command_tree(out: io.StringIO, node: SubcommandTreeNode, indent: int):
+    max_width = get_max_width(node.children)
+    for name, node in sorted(node.children.items(), key=lambda x: (bool(x[1].children), x[0])):
+        if name == node.name:   # is not an alias
+            for _ in range(indent):
+                out.write('\t')
+            if node.children:
+                out.write(_titleline(name, node.help.short, suffix='/', width=max_width))
+                _render_command_tree(out, node, indent + 1)
+                out.write('\n')
+            else:
+                out.write(_titleline(name, node.help.short, width=max_width))
+
+
 def help_overview():
     '''
     Returns an overview of all available
     topics and commands.
     '''
     _load_help()
-    s = "Available topics:\n\n"
+    s = io.StringIO()
+    s.write("Available topics:\n\n")
     max_width = get_max_width(_TOPICS)
     for title, topic in _TOPICS.items():
-        s += '\t' + _titleline(title, topic.short, width=max_width)
-    s += "\n"
-    s += "Available commands:\n\n"
-
-    max_width = get_max_width(_COMMANDS.get('root', {}))
-    for title, command in _COMMANDS.get('root', {}).items():
-        if not command.is_alias():
-            s += '\t' + _titleline(title, command.short, width=max_width)
-    s += "\n"
-
-    max_width_1 = get_max_width(_LEVELS)
-    for title, level in sorted(iter(_LEVELS.items()), key=lambda x: x[0]):
-        if title != 'root' and title in _COMMANDS:
-            s += '\t' + _titleline(title, level.short, suffix='/', width=max_width_1)
-            max_width_2 = get_max_width(_COMMANDS[title])
-            for cmdname, cmd in sorted(iter(_COMMANDS[title].items()), key=lambda x: x[0]):
-                if cmdname in _hidden_commands or cmdname.startswith('_'):
-                    continue
-                if not cmd.is_alias():
-                    s += '\t\t' + _titleline(cmdname, cmd.short, width=max_width_2)
-            s += "\n"
-    return HelpEntry('Help overview for crmsh\n', s, generated=True)
+        s.write('\t' + _titleline(title, topic.short, width=max_width))
+    s.write("\nAvailable commands:\n\n")
+    _render_command_tree(s, _COMMAND_TREE, 1)
+    return HelpEntry('Help overview for crmsh\n', s.getvalue(), generated=True)
 
 
 def help_topics():
@@ -222,69 +259,83 @@ def help_topic(topic):
     return _TOPICS.get(topic, _DEFAULT)
 
 
-def help_level(level):
+def _get_level_help(root: SubcommandTreeNode, levels: typing.Sequence[str]):
+    node = root
+    for level in levels:
+        if node is not None:
+            node = fuzzy_get(node.children, level)
+        else:
+            return None
+    return node.help
+
+
+def help_level(levels: typing.Sequence[str]):
     '''
     Returns a help entry for a given level.
     '''
     _load_help()
-    from .command import fuzzy_get
-    return fuzzy_get(_LEVELS, level) or _DEFAULT
+    help = _get_level_help(_COMMAND_TREE, levels)
+    if help is None:
+        return _DEFAULT
+    else:
+        return help
 
 
-def help_command(level, command):
+def help_command(levels: typing.Sequence[str]):
     '''
     Returns a help entry for a given command
     '''
     _load_help()
-    from .command import fuzzy_get
-    lvlhelp = fuzzy_get(_COMMANDS, level)
-    if not lvlhelp:
-        raise ValueError("Undocumented topic '%s'" % (level))
-    cmdhelp = fuzzy_get(lvlhelp, command)
-    if not cmdhelp:
-        raise ValueError("Undocumented topic '%s' in '%s'" % (command, level))
-    return cmdhelp
+    help = _get_level_help(_COMMAND_TREE, levels)
+    if help is None:
+            raise ValueError("Undocumented topic '{}'".format(' '.join(levels)))
+    else:
+        return help
 
 
 def _is_help_topic(arg):
     return arg and arg[0].isupper()
 
 
-def _is_command(level, command):
-    from .command import fuzzy_get
-    return level in _COMMANDS and fuzzy_get(_COMMANDS[level], command)
+def _is_command(levels: typing.Sequence[str]):
+    node = _COMMAND_TREE
+    for level in levels:
+        if node is not None:
+            node = fuzzy_get(node.children, level)
+    return node is not None and not node.children
 
 
-def _is_level(level):
-    from .command import fuzzy_get
-    return fuzzy_get(_LEVELS, level)
+def _is_level(levels: typing.Sequence[str]):
+    node = _COMMAND_TREE
+    for level in levels:
+        if node is not None:
+            node = fuzzy_get(node.children, level)
+    return node is not None and node.children
 
 
-def help_contextual(context, subject, subtopic):
+def help_contextual(levels: typing.Sequence[str]):
     """
     Returns contextual help
     """
     _load_help()
-    if subject is None:
-        if context == 'root':
-            return help_overview()
-        return help_level(context)
-    if _is_help_topic(subject):
-        return help_topic(subject)
-    if subtopic is not None:
-        return help_command(subject, subtopic)
-    if _is_command(context, subject):
-        return help_command(context, subject)
-    if _is_level(subject):
-        return help_level(subject)
-    from .command import fuzzy_get
-    t = fuzzy_get(_TOPICS, subject.lower())
-    if t:
-        return t
-    raise ValueError("No help found for '%s'! 'overview' lists all help entries" % (subject))
+    if len(levels) == 0:
+        return help_overview()
+    elif len(levels) == 1:
+        return help_command(levels[0:])
+    elif _is_help_topic(levels[0]):
+        topic = levels[0]
+        return help_topic(topic)
+    elif _is_command(levels) or _is_level(levels):
+        return help_command(levels)
+    else:
+        topic = levels[0].lower()
+        t = fuzzy_get(_TOPICS, topic)
+        if t:
+            return t
+        raise ValueError("No help found for '%s'! 'overview' lists all help entries" % (topic))
 
 
-def add_help(entry, topic=None, level=None, command=None):
+def add_help(levels: typing.Sequence[str], entry):
     '''
     Takes a help entry as argument and inserts it into the
     help system.
@@ -292,20 +343,8 @@ def add_help(entry, topic=None, level=None, command=None):
     Used to define some help texts statically, for example
     for 'up' and 'help' itself.
     '''
-    if topic:
-        if topic not in _TOPICS or _TOPICS[topic] is _DEFAULT:
-            _TOPICS[topic] = entry
-    elif level and command:
-        if level not in _LEVELS:
-            _LEVELS[level] = HelpEntry("No description available", generated=True)
-        if level not in _COMMANDS:
-            _COMMANDS[level] = {}
-        lvl = _COMMANDS[level]
-        if command not in lvl or lvl[command] is _DEFAULT:
-            lvl[command] = entry
-    elif level:
-        if level not in _LEVELS or _LEVELS[level] is _DEFAULT:
-            _LEVELS[level] = entry
+    node = _COMMAND_TREE.make_sublevel_recursively(levels[:-1])
+    node.children[levels[-1]] = SubcommandTreeNode(levels[-1], entry, dict())
 
 
 def _load_help():
@@ -329,7 +368,7 @@ def _load_help():
             short_help, _ = short_help.split(',')
             entry['from_cli'] = True
         entry['short'] = short_help.strip()
-        info = info.split('_')
+        info = info.split('.')
         if info[0] == 'topics':
             entry['type'] = 'topic'
             entry['name'] = info[-1]
@@ -339,8 +378,7 @@ def _load_help():
                 entry['name'] = info[1]
             elif len(info) >= 3:
                 entry['type'] = 'command'
-                entry['level'] = info[1]
-                entry['name'] = '_'.join(info[2:])
+                entry['subcommand'] = info[1:]
 
         return entry
 
@@ -350,18 +388,19 @@ def _load_help():
         long_help = entry['long']
         if long_help.startswith('=='):
             long_help = long_help.split('\n', 1)[1]
-        helpobj = HelpEntry(short_help, long_help.rstrip())
         name = entry['name']
         if entry['type'] == 'topic':
-            _TOPICS[name] = helpobj
+            _TOPICS[name] = HelpEntry(short_help, long_help.rstrip())
         elif entry['type'] == 'level':
-            _LEVELS[name] = helpobj
+            _COMMAND_TREE.children[name] = SubcommandTreeNode(name, HelpEntry(short_help, long_help.rstrip()), dict())
         elif entry['type'] == 'command':
-            lvl = entry['level']
-            if lvl not in _COMMANDS:
-                _COMMANDS[lvl] = {}
-            helpobj.set_long_lazy_load_source(entry['level'], entry['name'], entry['from_cli'])
-            _COMMANDS[lvl][name] = helpobj
+            subcommand = entry['subcommand']
+            if entry['from_cli']:
+                help_entry = LazyHelpEntryFromCli(short_help, subcommand)
+            else:
+                help_entry = HelpEntry(short_help, long_help.rstrip())
+            level = _COMMAND_TREE.make_sublevel_recursively(subcommand[:-1])
+            level.children[subcommand[-1]] = SubcommandTreeNode(subcommand[-1], help_entry, dict())
 
     def filter_line(line):
         '''clean up an input line
@@ -369,52 +408,29 @@ def _load_help():
         '''
         return _REFERENCE_RE.sub(r'\1', line)
 
-    def append_cmdinfos():
-        "append command information to level descriptions"
-        for lvlname, level in _LEVELS.items():
-            if lvlname in _COMMANDS:
-                level.long += "\n\nCommands:\n"
-                max_width = get_max_width(_COMMANDS[lvlname])
-                for cmdname, cmd in sorted(iter(_COMMANDS[lvlname].items()), key=lambda x: x[0]):
-                    if cmdname in _hidden_commands or cmdname.startswith('_'):
-                        continue
-                    level.long += "\t" + _titleline(cmdname, cmd.short, width=max_width)
-                level.long += "\n"
-                for cmdname, cmd in sorted(iter(_COMMANDS[lvlname].items()), key=lambda x: x[0]):
-                    if cmdname in _hidden_commands:
-                        level.long += "\t" + _titleline(cmdname, cmd.short, width=max_width)
+    def append_subcommand_list_to_long_description(node: SubcommandTreeNode):
+        if isinstance(node.help, LazyHelpEntryFromCli) or not node.children:
+            return
+        buf = io.StringIO()
+        buf.write(node.help.long_help)
+        buf.write('\n\nCommands:\n')
+        max_width = get_max_width(node.children)
+        for name, child in sorted(node.children.items(), key=lambda x: (bool(x[1].children), x[0])):
+            if name in _hidden_commands or name.startswith('_'):
+                continue
+            buf.write('\t')
+            buf.write(_titleline(name, child.help.short, width=max_width))
+            append_subcommand_list_to_long_description(child)
+        node.help.long_help = buf.getvalue()
 
-    def fixup_root_commands():
-        "root commands appear as levels"
-
-        strip_topics = []
-        for tname, topic in _LEVELS.items():
-            if not _COMMANDS.get(tname):
-                strip_topics.append(tname)
-        for t in strip_topics:
-            del _LEVELS[t]
-
-    def fixup_help_aliases():
+    def fixup_help_aliases(help_node: SubcommandTreeNode, childinfo):
         "add help for aliases"
-
-        def add_help_for_alias(lvlname, command, alias):
-            if lvlname not in _COMMANDS:
-                return
-            if command not in _COMMANDS[lvlname]:
-                return
-            if alias in _COMMANDS[lvlname]:
-                return
-            info = _COMMANDS[lvlname][command]
-            _COMMANDS[lvlname][alias] = HelpEntry(info.short, info.long, (alias, command))
-
-        def add_aliases_for_level(lvl):
-            for name, info in lvl.children().items():
-                for alias in info.aliases:
-                    add_help_for_alias(lvl.name, info.name, alias)
-                if info.level:
-                    add_aliases_for_level(info.level)
-        from .ui_root import Root
-        add_aliases_for_level(Root)
+        for name, childinfo in childinfo.children.items():
+            if name in help_node.children:
+                fixup_help_aliases(help_node.children[name], childinfo)
+                for alias in childinfo.aliases:
+                    help_node.children[alias] = help_node.children[name]
+        return
 
     def fixup_topics():
         "fix entries for topics and overview"
@@ -423,24 +439,30 @@ def _load_help():
 
     try:
         name = os.getenv("CRM_HELP_FILE") or HELP_FILE
-        helpfile = open(name, 'r')
-        entry = None
-        for line in helpfile:
-            if line.startswith('[['):
-                if entry is not None:
+        with open(name, 'r') as helpfile:
+            entry = None
+            for line in helpfile:
+                if line.startswith('[['):
+                    if entry is not None:
+                        process(entry)
+                    entry = parse_header(line)
+                elif entry is not None and line.startswith('===') and entry['long']:
                     process(entry)
-                entry = parse_header(line)
-            elif entry is not None and line.startswith('===') and entry['long']:
+                    entry = None
+                elif entry is not None:
+                    entry['long'] += filter_line(line)
+            if entry is not None:
                 process(entry)
-                entry = None
-            elif entry is not None:
-                entry['long'] += filter_line(line)
-        if entry is not None:
-            process(entry)
-        helpfile.close()
-        append_cmdinfos()
-        fixup_root_commands()
-        fixup_help_aliases()
+        append_subcommand_list_to_long_description(_COMMAND_TREE)
+        #fixup_root_commands()
+        from . import ui_root
+        for name, childinfo in ui_root.Root.children().items():
+            # the 1st level uses children(), but deeper levels uses children
+            # this requires us to write the 1st level of the recursion separately
+            if name in _COMMAND_TREE.children:
+                fixup_help_aliases(_COMMAND_TREE.children[name], childinfo)
+                for alias in childinfo.aliases:
+                    ui_root.Root.children()[alias] = ui_root.Root.children()[name]
         fixup_topics()
     except IOError as msg:
         logger.error("Help text not found! %s", msg)

@@ -15,7 +15,7 @@ SYNOPSIS
 *crm* [OPTIONS] [SUBCOMMAND ARGS...]
 
 
-[[topics_Description,Program description]]
+[[topics.Description,Program description]]
 DESCRIPTION
 -----------
 The `crm` shell is a command-line based cluster configuration and
@@ -48,7 +48,7 @@ on the same line. It is possible to use a continuation character (+\+)
 to write one command in two or more lines. The continuation character
 is commonly used when displaying configurations.
 
-[[topics_CommandLine,Command line options]]
+[[topics.CommandLine,Command line options]]
 OPTIONS
 -------
 *-f, --file*='FILE'::
@@ -102,13 +102,13 @@ OPTIONS
      +options save+ then the value passed here will also be saved.
      Multiple options can be set by using +-o+ multiple times.
 
-[[topics_Introduction,Introduction]]
+[[topics.Introduction,Introduction]]
 == Introduction
 
 This section of the user guide covers general topics about the user
 interface and describes some of the features of `crmsh` in detail.
 
-[[topics_Introduction_Interface,User interface]]
+[[topics.Introduction.Interface,User interface]]
 === User interface
 
 The main purpose of `crmsh` is to provide a simple yet powerful
@@ -200,7 +200,7 @@ work with so-called <<topics_Features_Shadows,shadow CIBs>>. These are separate,
 configurations stored in files, that can be applied and thereby
 replace the live configuration at any time.
 
-[[topics_Introduction_Completion,Tab completion]]
+[[topics.Introduction.Completion,Tab completion]]
 === Tab completion
 
 The `crm` makes extensive use of tab completion. The completion
@@ -238,7 +238,7 @@ auth* (string)
 system shell. This should be installed automatically with the command
 itself.
 
-[[topics_Introduction_Shorthand,Shorthand syntax]]
+[[topics.Introduction.Shorthand,Shorthand syntax]]
 === Shorthand syntax
 
 When using the `crm` shell to manage clusters, you will end up typing
@@ -256,7 +256,7 @@ For example, instead of typing `crm status`, you can type `crm st` or
 The exact list of accepted aliases is too long to print in full, but
 experimentation and typos should help in discovering more of them.
 
-[[topics_Features,Features]]
+[[topics.Features,Features]]
 == Features
 
 The feature set of crmsh covers a wide range of functionality, and
@@ -266,7 +266,7 @@ features and use cases of `crmsh` in more depth. The intention is to
 provide a deeper understanding of these features, but also to serve as
 a guide to using them.
 
-[[topics_Features_Shadows,Shadow CIB usage]]
+[[topics.Features.Shadows,Shadow CIB usage]]
 === Shadow CIB usage
 
 A Shadow CIB is a normal cluster configuration stored in a file.
@@ -293,7 +293,7 @@ INFO: test-2 shadow CIB created
 crm(test-2)configure# commit
 ...............
 
-[[topics_Features_Checks,Configuration semantic checks]]
+[[topics.Features.Checks,Configuration semantic checks]]
 === Configuration semantic checks
 
 Resource definitions may be checked against the meta-data
@@ -324,7 +324,7 @@ Note that if the +check-frequency+ is set to +always+ and the
 +check-mode+ to +strict+, errors are not tolerated and such
 configuration cannot be saved.
 
-[[topics_Features_Templates,Configuration templates]]
+[[topics.Features.Templates,Configuration templates]]
 === Configuration templates
 
 .Deprecation note
@@ -491,7 +491,7 @@ following steps:
 - `show`: see if the configuration is valid
 - `apply`: apply the configuration to the `configure` level
 
-[[topics_Features_Testing,Resource testing]]
+[[topics.Features.Testing,Resource testing]]
 === Resource testing
 
 The amount of detail in a cluster makes all configurations prone
@@ -557,7 +557,7 @@ doesn't know if a resource can run on a node at all in case of an
 asymmetric cluster. It is up to the user to specify a list of
 eligible nodes if a resource is not meant to run on every node.
 
-[[topics_Features_Security,Access Control Lists (ACL)]]
+[[topics.Features.Security,Access Control Lists (ACL)]]
 === Access Control Lists (ACL)
 
 .Note on ACLs in Pacemaker 1.1.12
@@ -650,7 +650,7 @@ XPath is a powerful language, but you should try to keep your ACL
 xpaths simple and the builtin shortcuts should be used whenever
 possible.
 
-[[topics_Features_Resourcesets,Syntax: Resource sets]]
+[[topics.Features.Resourcesets,Syntax: Resource sets]]
 === Syntax: Resource sets
 
 Using resource sets can be a bit confusing unless one knows the
@@ -687,7 +687,7 @@ To create multiple sets with both +sequential+ and +require-all+ set to
 true, explicitly set +sequential+ in a parenthesis set:
 +A B ( C D sequential=true )+.
 
-[[topics_Features_AttributeListReferences,Syntax: Attribute list references]]
+[[topics.Features.AttributeListReferences,Syntax: Attribute list references]]
 === Syntax: Attribute list references
 
 Attribute lists are used to set attributes and parameters for
@@ -715,7 +715,7 @@ primitive dummy-2 Dummy params $id-ref=on-state
 
 The resource +dummy-2+ will now also have the parameter +state+ set to the value 1.
 
-[[topics_Features_AttributeReferences,Syntax: Attribute references]]
+[[topics.Features.AttributeReferences,Syntax: Attribute references]]
 === Syntax: Attribute references
 
 In some cases, referencing complete attribute lists is too
@@ -762,7 +762,7 @@ primitive virtual-ip IPaddr2 params $vip:ip=192.168.1.100
 primitive webserver apache params @vip:server_ip
 ............
 
-[[topics_Syntax_RuleExpressions,Syntax: Rule expressions]]
+[[topics.Syntax.RuleExpressions,Syntax: Rule expressions]]
 === Syntax: Rule expressions
 
 Many of the configuration commands in `crmsh` now support the use of
@@ -828,7 +828,7 @@ duration|date_spec ::
          | weekyears=<value>
 ..............
 
-[[topics_Lifetime,Lifetime parameter format]]
+[[topics.Lifetime,Lifetime parameter format]]
 == Lifetime parameter format
 
 Lifetimes can be specified in the ISO 8601 time format or the ISO 8601
@@ -850,7 +850,7 @@ The cluster checks lifetimes at an interval defined by the
 cluster-recheck-interval property (default 15 minutes).
 
 
-[[topics_Reference,Command reference]]
+[[topics.Reference,Command reference]]
 == Command reference
 
 The commands are structured to be compatible with the shell command
@@ -879,7 +879,7 @@ grammar.
 * `first|second` means either first or second.
 * The rest are literals (strings, `:`, `=`).
 
-[[cmdhelp_root_status,Cluster status]]
+[[cmdhelp.root.status,Cluster status]]
 === `status`
 
 Show cluster status. The status is displayed by `crm_mon`. Supply
@@ -914,7 +914,7 @@ option :: full
         | brief
 ...............
 
-[[cmdhelp_root_verify,Verify cluster status]]
+[[cmdhelp.root.verify,Verify cluster status]]
 === `verify`
 
 Performs basic checks for the cluster configuration and
@@ -933,7 +933,7 @@ Usage:
 verify [scores]
 ...............
 
-[[cmdhelp_cluster,Cluster setup and management]]
+[[cmdhelp.cluster,Cluster setup and management]]
 === `cluster` - Cluster setup and management
 
 Whole-cluster configuration management with High Availability
@@ -947,7 +947,7 @@ These commands enable easy installation and maintenance of a HA
 cluster, by providing support for package installation, configuration
 of the cluster messaging layer, file system setup and more.
 
-[[cmdhelp_cluster_copy,Copy file to other cluster nodes]]
+[[cmdhelp.cluster.copy,Copy file to other cluster nodes]]
 ==== `copy`
 
 Copy file to other cluster nodes.
@@ -965,7 +965,7 @@ Example:
 copy /etc/motd
 ...............
 
-[[cmdhelp_cluster_diff,Diff file across cluster]]
+[[cmdhelp.cluster.diff,Diff file across cluster]]
 ==== `diff`
 
 Displays the difference, if any, between a given file
@@ -984,27 +984,27 @@ diff /etc/crm/crm.conf node2
 diff /etc/resolv.conf --checksum
 ...............
 
-[[cmdhelp_cluster_disable,Disable cluster services,From Code]]
+[[cmdhelp.cluster.disable,Disable cluster services,From Code]]
 ==== `disable`
 See "crm cluster help disable" or "crm cluster disable --help"
 
-[[cmdhelp_cluster_enable,Enable cluster services,From Code]]
+[[cmdhelp.cluster.enable,Enable cluster services,From Code]]
 ==== `enable`
 See "crm cluster help enable" or "crm cluster enable --help
 
-[[cmdhelp_cluster_geo_init,Configure cluster as geo cluster,From Code]]
+[[cmdhelp.cluster.geo_init,Configure cluster as geo cluster,From Code]]
 ==== `geo-init`
 See "crm cluster help geo_init" or "crm cluster geo_init --help"
 
-[[cmdhelp_cluster_geo_init_arbitrator,Initialize node as geo cluster arbitrator,From Code]]
+[[cmdhelp.cluster.geo_init_arbitrator,Initialize node as geo cluster arbitrator,From Code]]
 ==== `geo-init-arbitrator`
 See "crm cluster help geo_init_arbitrator" or "crm cluster geo_init_arbitrator --help"
 
-[[cmdhelp_cluster_geo_join,Join cluster to existing geo cluster,From Code]]
+[[cmdhelp.cluster.geo_join,Join cluster to existing geo cluster,From Code]]
 ==== `geo-join`
 See "crm cluster help geo_join" or "crm cluster geo_join --help"
 
-[[cmdhelp_cluster_health,Cluster health check]]
+[[cmdhelp.cluster.health,Cluster health check]]
 ==== `health`
 
 Runs a larger set of tests and queries on all nodes in the cluster to
@@ -1015,27 +1015,27 @@ Usage:
 health
 ...............
 
-[[cmdhelp_cluster_init,Initializes a new HA cluster,From Code]]
+[[cmdhelp.cluster.init,Initializes a new HA cluster,From Code]]
 ==== `init`
 See "crm cluster help init" or "crm cluster init --help"
 
-[[cmdhelp_cluster_join,Join existing cluster,From Code]]
+[[cmdhelp.cluster.join,Join existing cluster,From Code]]
 ==== `join`
 See "crm cluster help join" or "crm cluster join --help"
 
-[[cmdhelp_cluster_remove,Remove node(s) from the cluster,From Code]]
+[[cmdhelp.cluster.remove,Remove node(s) from the cluster,From Code]]
 ==== `remove`
 See "crm cluster help remove" or "crm cluster remove --help"
 
-[[cmdhelp_cluster_crash_test,Cluster crash test tool set,From Code]]
+[[cmdhelp.cluster.crash_test,Cluster crash test tool set,From Code]]
 ==== `crash_test`
 See "crm cluster help crash_test" or "crm cluster crash_test --help"
 
-[[cmdhelp_cluster_restart,Restart cluster services,From Code]]
+[[cmdhelp.cluster.restart,Restart cluster services,From Code]]
 ==== `restart`
 See "crm cluster help restart" or "crm cluster restart --help"
 
-[[cmdhelp_cluster_rename,Rename the cluster]]
+[[cmdhelp.cluster.rename,Rename the cluster]]
 ==== `rename`
 
 Rename the cluster name 
@@ -1046,7 +1046,7 @@ rename <new_cluster_name>
 ...............
 
 
-[[cmdhelp_cluster_run,Execute an arbitrary command on all nodes/specific node]]
+[[cmdhelp.cluster.run,Execute an arbitrary command on all nodes/specific node]]
 ==== `run`
 
 This command takes a shell statement as argument, executes that
@@ -1064,11 +1064,11 @@ run "cat /proc/uptime"
 run "ls" node1 node2
 ...............
 
-[[cmdhelp_cluster_start,Start cluster services,From Code]]
+[[cmdhelp.cluster.start,Start cluster services,From Code]]
 ==== `start`
 See "crm cluster help start" or "crm cluster start --help"
 
-[[cmdhelp_cluster_status,Cluster status check]]
+[[cmdhelp.cluster.status,Cluster status check]]
 ==== `status`
 
 Reports the status for the cluster messaging layer on the local
@@ -1079,11 +1079,11 @@ Usage:
 status
 ...............
 
-[[cmdhelp_cluster_stop,Stop cluster services,From Code]]
+[[cmdhelp.cluster.stop,Stop cluster services,From Code]]
 ==== `stop`
 See "crm cluster help stop" or "crm cluster stop --help"
 
-[[cmdhelp_cluster_wait_for_startup,Wait for cluster to start]]
+[[cmdhelp.cluster.wait_for_startup,Wait for cluster to start]]
 ==== `wait_for_startup`
 
 Mostly useful in scripts or automated workflows, this command will
@@ -1097,7 +1097,7 @@ Usage:
 wait_for_startup
 ........
 
-[[cmdhelp_script,Cluster script management]]
+[[cmdhelp.script,Cluster script management]]
 === `script` - Cluster script management
 
 A big part of the configuration and management of a cluster is
@@ -1117,7 +1117,7 @@ provides a thin wrapper on top of SSH. This allows the scripts to
 function through the usual SSH channels used for system maintenance,
 requiring no additional software to be installed or maintained.
 
-[[cmdhelp_script_json,JSON API for cluster scripts]]
+[[cmdhelp.script.json,JSON API for cluster scripts]]
 ==== `json`
 
 This command provides a JSON API for the cluster scripts, intended for
@@ -1156,7 +1156,7 @@ API:
 ........
 
 
-[[cmdhelp_script_list,List available scripts]]
+[[cmdhelp.script.list,List available scripts]]
 ==== `list`
 
 Lists the available scripts, sorted by category. Scripts that have the
@@ -1178,7 +1178,7 @@ list
 list all names
 ............
 
-[[cmdhelp_script_run,Run the script]]
+[[cmdhelp.script.run,Run the script]]
 ==== `run`
 
 Given a list of parameter values, this command will execute the
@@ -1204,7 +1204,7 @@ run apache install=true
 run sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
 .............
 
-[[cmdhelp_script_show,Describe the script]]
+[[cmdhelp.script.show,Describe the script]]
 ==== `show`
 
 Prints a description and short summary of the script, with
@@ -1223,7 +1223,7 @@ Example:
 show virtual-ip
 ............
 
-[[cmdhelp_script_verify,Verify the script]]
+[[cmdhelp.script.verify,Verify the script]]
 ==== `verify`
 
 Checks the given parameter values, and returns a list
@@ -1240,14 +1240,14 @@ Example:
 verify sbd id=sbd-1 node=node1 sbd_device=/dev/disk/by-uuid/F00D-CAFE
 ............
 
-[[cmdhelp_corosync,Corosync management]]
+[[cmdhelp.corosync,Corosync management]]
 === `corosync` - Corosync management
 
 Corosync is the underlying messaging layer for most HA clusters.
 This level provides commands for editing and managing the corosync
 configuration.
 
-[[cmdhelp_corosync_diff,Diffs the corosync configuration]]
+[[cmdhelp.corosync.diff,Diffs the corosync configuration]]
 ==== `diff`
 
 Diffs the corosync configurations on different nodes. If no nodes are
@@ -1262,7 +1262,7 @@ Usage:
 diff [--checksum] [node...]
 .........
 
-[[cmdhelp_corosync_edit,Edit the corosync configuration]]
+[[cmdhelp.corosync.edit,Edit the corosync configuration]]
 ==== `edit`
 
 Opens the Corosync configuration file in an editor.
@@ -1272,7 +1272,7 @@ Usage:
 edit
 .........
 
-[[cmdhelp_corosync_get,Get a corosync configuration value]]
+[[cmdhelp.corosync.get,Get a corosync configuration value]]
 ==== `get`
 
 Returns the value configured in `corosync.conf`, which is not
@@ -1290,7 +1290,7 @@ Example:
 get nodelist.node.ring0_addr
 ........
 
-[[cmdhelp_corosync_log,Show the corosync log file]]
+[[cmdhelp.corosync.log,Show the corosync log file]]
 ==== `log`
 
 Opens the log file specified in the corosync configuration file. If no
@@ -1304,7 +1304,7 @@ Usage:
 log
 .........
 
-[[cmdhelp_corosync_pull,Pulls the corosync configuration]]
+[[cmdhelp.corosync.pull,Pulls the corosync configuration]]
 ==== `pull`
 
 Gets the corosync configuration from another node and copies
@@ -1315,7 +1315,7 @@ Usage:
 pull <node>
 .........
 
-[[cmdhelp_corosync_push,Push the corosync configuration]]
+[[cmdhelp.corosync.push,Push the corosync configuration]]
 ==== `push`
 
 Pushes the corosync configuration file on this node to
@@ -1335,7 +1335,7 @@ Example:
 push node-2 node-3
 .........
 
-[[cmdhelp_corosync_reload,Reload the corosync configuration]]
+[[cmdhelp.corosync.reload,Reload the corosync configuration]]
 ==== `reload`
 
 Tells all instances of corosync in this cluster to reload
@@ -1349,7 +1349,7 @@ Usage:
 reload
 .........
 
-[[cmdhelp_corosync_set,Set a corosync configuration value]]
+[[cmdhelp.corosync.set,Set a corosync configuration value]]
 ==== `set`
 
 Sets the value identified by the given path. If the value does not
@@ -1361,7 +1361,7 @@ Usage:
 set quorum.expected_votes 2
 .........
 
-[[cmdhelp_corosync_show,Display the corosync configuration]]
+[[cmdhelp.corosync.show,Display the corosync configuration]]
 ==== `show`
 
 Displays the corosync configuration on the current node.
@@ -1370,7 +1370,7 @@ Displays the corosync configuration on the current node.
 show
 .........
 
-[[cmdhelp_corosync_status,Display the corosync status]]
+[[cmdhelp.corosync.status,Display the corosync status]]
 ==== `status`
 
 Displays the corosync ring status(default), also can display quorum/qdevice/qnetd/cpg status.
@@ -1380,7 +1380,7 @@ Usage:
 status [ring|quorum|qdevice|qnetd|cpg]
 .........
 
-[[cmdhelp_cib,CIB shadow management]]
+[[cmdhelp.cib,CIB shadow management]]
 === `cib` - CIB shadow management
 
 This level is for management of shadow CIBs. It is available both
@@ -1390,13 +1390,13 @@ All the commands are implemented using `cib_shadow(8)` and the
 `CIB_shadow` environment variable. The user prompt always
 includes the name of the currently active shadow or the live CIB.
 
-[[cmdhelp_cib_cibstatus,CIB status management and editing]]
+[[cmdhelp.cib.cibstatus,CIB status management and editing]]
 ==== `cibstatus`
 
 Enter edit and manage the CIB status section level. See the
 <<cmdhelp_cibstatus,CIB status management section>>.
 
-[[cmdhelp_cib_commit,copy a shadow CIB to the cluster]]
+[[cmdhelp.cib.commit,copy a shadow CIB to the cluster]]
 ==== `commit`
 
 Apply a shadow CIB to the cluster. If the shadow name is omitted
@@ -1409,7 +1409,7 @@ Usage:
 commit [<cib>]
 ...............
 
-[[cmdhelp_cib_delete,delete a shadow CIB]]
+[[cmdhelp.cib.delete,delete a shadow CIB]]
 ==== `delete`
 
 Delete an existing shadow CIB.
@@ -1419,7 +1419,7 @@ Usage:
 delete <cib>
 ...............
 
-[[cmdhelp_cib_diff,diff between the shadow CIB and the live CIB]]
+[[cmdhelp.cib.diff,diff between the shadow CIB and the live CIB]]
 ==== `diff`
 
 Print differences between the current cluster configuration and
@@ -1430,7 +1430,7 @@ Usage:
 diff
 ...............
 
-[[cmdhelp_cib_import,import a CIB or PE input file to a shadow]]
+[[cmdhelp.cib.import,import a CIB or PE input file to a shadow]]
 ==== `import`
 
 At times it may be useful to create a shadow file from the
@@ -1457,7 +1457,7 @@ import pe-warn-2222
 import 2289 issue2
 ...............
 
-[[cmdhelp_cib_list,list all shadow CIBs]]
+[[cmdhelp.cib.list,list all shadow CIBs]]
 ==== `list`
 
 List existing shadow CIBs.
@@ -1467,7 +1467,7 @@ Usage:
 list
 ...............
 
-[[cmdhelp_cib_new,create a new shadow CIB]]
+[[cmdhelp.cib.new,create a new shadow CIB]]
 ==== `new`
 
 Create a new shadow CIB. The live cluster configuration and
@@ -1493,7 +1493,7 @@ Usage:
 new [<cib>] [withstatus] [force] [empty]
 ...............
 
-[[cmdhelp_cib_reset,copy live cib to a shadow CIB]]
+[[cmdhelp.cib.reset,copy live cib to a shadow CIB]]
 ==== `reset`
 
 Copy the current cluster configuration into the shadow CIB.
@@ -1503,7 +1503,7 @@ Usage:
 reset <cib>
 ...............
 
-[[cmdhelp_cib_use,change working CIB]]
+[[cmdhelp.cib.use,change working CIB]]
 ==== `use`
 
 Choose a CIB source. If you want to edit the status from the
@@ -1515,14 +1515,14 @@ Usage:
 use [<cib>] [withstatus]
 ...............
 
-[[cmdhelp_ra,Resource Agents (RA) lists and documentation]]
+[[cmdhelp.ra,Resource Agents (RA) lists and documentation]]
 === `ra` - Resource Agents (RA) lists and documentation
 
 This level contains commands which show various information about
 the installed resource agents. It is available both at the top
 level and at the `configure` level.
 
-[[cmdhelp_ra_classes,list classes and providers]]
+[[cmdhelp.ra.classes,list classes and providers]]
 ==== `classes`
 
 Print all resource agents' classes and, where appropriate, a list
@@ -1533,7 +1533,7 @@ Usage:
 classes
 ...............
 
-[[cmdhelp_ra_info,show meta data for a RA]]
+[[cmdhelp.ra.info,show meta data for a RA]]
 ==== `info` (`meta`)
 
 Show the meta-data of a resource agent type. This is where users
@@ -1554,7 +1554,7 @@ info stonith:ipmilan
 info pacemaker-fenced
 ...............
 
-[[cmdhelp_ra_list,list RA for a class (and provider)]]
+[[cmdhelp.ra.list,list RA for a class (and provider)]]
 ==== `list`
 
 List available resource agents for the given class. If the class
@@ -1570,7 +1570,7 @@ Example:
 list ocf pacemaker
 ...............
 
-[[cmdhelp_ra_providers,show providers for a RA and a class]]
+[[cmdhelp.ra.providers,show providers for a RA and a class]]
 ==== `providers`
 
 List providers for a resource agent type. The class parameter
@@ -1585,7 +1585,7 @@ Example:
 providers apache
 ...............
 
-[[cmdhelp_ra_validate,validate parameters for RA]]
+[[cmdhelp.ra.validate,validate parameters for RA]]
 ==== `validate`
 
 If the resource agent supports the `validate-all` action, this calls
@@ -1597,7 +1597,7 @@ Usage:
 validate <agent> [<key>=<value> ...]
 ................
 
-[[cmdhelp_resource,Resource management]]
+[[cmdhelp.resource,Resource management]]
 === `resource` - Resource management
 
 At this level resources may be managed.
@@ -1605,7 +1605,7 @@ At this level resources may be managed.
 All (or almost all) commands are implemented with the CRM tools
 such as `crm_resource(8)`.
 
-[[cmdhelp_resource_ban,ban a resource from a node]]
+[[cmdhelp.resource.ban,ban a resource from a node]]
 ==== `ban`
 
 Ban a resource from running on a certain node. If no node is given
@@ -1618,7 +1618,7 @@ Usage:
 ban <rsc> [<node>] [<lifetime>] [force]
 ...............
 
-[[cmdhelp_resource_cleanup,cleanup resource status]]
+[[cmdhelp.resource.cleanup,cleanup resource status]]
 ==== `cleanup`
 
 If resource has any past failures, clear its history and fail
@@ -1636,7 +1636,7 @@ Usage:
 cleanup [<rsc>] [<node>] [force]
 ...............
 
-[[cmdhelp_resource_clear,Clear any relocation constraint]]
+[[cmdhelp.resource.clear,Clear any relocation constraint]]
 ==== `clear` (`unmove`, `unmigrate`, `unban`)
 
 Remove any relocation constraint created by
@@ -1649,7 +1649,7 @@ unmigrate <rsc>
 unban <rsc>
 ...............
 
-[[cmdhelp_resource_constraints,Show constraints affecting a resource]]
+[[cmdhelp.resource.constraints,Show constraints affecting a resource]]
 ==== `constraints`
 
 Display the location and colocation constraints affecting the
@@ -1660,7 +1660,7 @@ Usage:
 constraints <rsc>
 ................
 
-[[cmdhelp_resource_demote,demote a promotable resource]]
+[[cmdhelp.resource.demote,demote a promotable resource]]
 ==== `demote`
 
 Demote a promotable resource using the `target-role`
@@ -1671,7 +1671,7 @@ Usage:
 demote <rsc>
 ...............
 
-[[cmdhelp_resource_failcount,manage failcounts]]
+[[cmdhelp.resource.failcount,manage failcounts]]
 ==== `failcount`
 
 Show/edit/delete the failcount of a resource.
@@ -1690,7 +1690,7 @@ Example:
 failcount fs_0 delete node2
 ...............
 
-[[cmdhelp_resource_locate,show the location of resources]]
+[[cmdhelp.resource.locate,show the location of resources]]
 ==== `locate`
 
 Show the current location of one or more resources.
@@ -1700,7 +1700,7 @@ Usage:
 locate [<rsc> ...]
 ...............
 
-[[cmdhelp_resource_maintenance,Enable/disable per-resource maintenance mode]]
+[[cmdhelp.resource.maintenance,Enable/disable per-resource maintenance mode]]
 ==== `maintenance`
 
 Enables or disables the per-resource maintenance mode. When this mode
@@ -1720,7 +1720,7 @@ maintenance rsc1
 maintenance rsc2 off
 ..................
 
-[[cmdhelp_resource_manage,put a resource into managed mode]]
+[[cmdhelp.resource.manage,put a resource into managed mode]]
 ==== `manage`
 
 Manage a resource using the `is-managed` attribute. If there
@@ -1738,7 +1738,7 @@ Usage:
 manage <rsc>
 ...............
 
-[[cmdhelp_resource_meta,manage a meta attribute]]
+[[cmdhelp.resource.meta,manage a meta attribute]]
 ==== `meta`
 
 Show/edit/delete a meta attribute of a resource. Currently, all
@@ -1756,7 +1756,7 @@ Example:
 meta ip_0 set target-role stopped
 ...............
 
-[[cmdhelp_resource_move,Move a resource to another node]]
+[[cmdhelp.resource.move,Move a resource to another node]]
 ==== `move` (`migrate`)
 
 Move a resource away from its current location.
@@ -1774,7 +1774,7 @@ Usage:
 move <rsc> [<node>] [<lifetime>] [force]
 ...............
 
-[[cmdhelp_resource_operations,Show active resource operations]]
+[[cmdhelp.resource.operations,Show active resource operations]]
 ==== `operations`
 
 Show active operations, optionally filtered by resource and node.
@@ -1784,7 +1784,7 @@ Usage:
 operations [<rsc>] [<node>]
 ................
 
-[[cmdhelp_resource_param,manage a parameter of a resource]]
+[[cmdhelp.resource.param,manage a parameter of a resource]]
 ==== `param`
 
 Show/edit/delete a parameter of a resource.
@@ -1800,7 +1800,7 @@ Example:
 param ip_0 show ip
 ...............
 
-[[cmdhelp_resource_promote,promote a promotable resource]]
+[[cmdhelp.resource.promote,promote a promotable resource]]
 ==== `promote`
 
 Promote a promotable resource using the `target-role`
@@ -1811,7 +1811,7 @@ Usage:
 promote <rsc>
 ...............
 
-[[cmdhelp_resource_refresh,Recheck current resource status and drop failure history]]
+[[cmdhelp.resource.refresh,Recheck current resource status and drop failure history]]
 ==== `refresh`
 
 Delete resource's history (including failures) so its current state is rechecked.
@@ -1821,7 +1821,7 @@ Usage:
 refresh [<rsc>] [<node>] [force]
 ...............
 
-[[cmdhelp_resource_restart,restart resources]]
+[[cmdhelp.resource.restart,restart resources]]
 ==== `restart`
 
 Restart one or more resources. This is essentially a shortcut for
@@ -1847,7 +1847,7 @@ INFO: ordering g_webserver to start
 #
 ...............
 
-[[cmdhelp_resource_scores,Display resource scores]]
+[[cmdhelp.resource.scores,Display resource scores]]
 ==== `scores`
 
 Display the allocation scores for all resources.
@@ -1857,7 +1857,7 @@ Usage:
 scores
 ................
 
-[[cmdhelp_resource_secret,manage sensitive parameters]]
+[[cmdhelp.resource.secret,manage sensitive parameters]]
 ==== `secret`
 
 Sensitive parameters can be kept in local files rather than CIB
@@ -1885,7 +1885,7 @@ secret fence_1 stash password
 secret fence_1 set password secret_value
 ...............
 
-[[cmdhelp_resource_start,start resources]]
+[[cmdhelp.resource.start,start resources]]
 ==== `start`
 
 Start one or more resources by setting the `target-role` attribute. If
@@ -1901,7 +1901,7 @@ Usage:
 start <rsc> [<rsc> ...]
 ...............
 
-[[cmdhelp_resource_status,show status of resources]]
+[[cmdhelp.resource.status,show status of resources]]
 ==== `status` (`show`, `list`)
 
 Print resource status. More than one resource can be shown at once. If
@@ -1913,7 +1913,7 @@ Usage:
 status [<rsc> ...]
 ...............
 
-[[cmdhelp_resource_stop,stop resources]]
+[[cmdhelp.resource.stop,stop resources]]
 ==== `stop`
 
 Stop one or more resources using the `target-role` attribute. If there
@@ -1929,7 +1929,7 @@ Usage:
 stop <rsc> [<rsc> ...]
 ...............
 
-[[cmdhelp_resource_trace,start RA tracing]]
+[[cmdhelp.resource.trace,start RA tracing]]
 ==== `trace`
 
 Start tracing RA for the given operation. When `[<log-dir>]`
@@ -1961,7 +1961,7 @@ trace webserver probe
 trace fs monitor 0 /var/log/foo/bar
 ...............
 
-[[cmdhelp_resource_unmanage,put a resource into unmanaged mode]]
+[[cmdhelp.resource.unmanage,put a resource into unmanaged mode]]
 ==== `unmanage`
 
 Unmanage a resource using the `is-managed` attribute. If there
@@ -1976,7 +1976,7 @@ Usage:
 unmanage <rsc>
 ...............
 
-[[cmdhelp_resource_untrace,stop RA tracing]]
+[[cmdhelp.resource.untrace,stop RA tracing]]
 ==== `untrace`
 
 Stop tracing RA for the given operation. If no operation name is
@@ -1992,7 +1992,7 @@ untrace fs start
 untrace webserver
 ...............
 
-[[cmdhelp_resource_utilization,manage a utilization attribute]]
+[[cmdhelp.resource.utilization,manage a utilization attribute]]
 ==== `utilization`
 
 Show/edit/delete a utilization attribute of a resource. These
@@ -2012,12 +2012,12 @@ Example:
 utilization xen1 set memory 4096
 ...............
 
-[[cmdhelp_node,Node management]]
+[[cmdhelp.node,Node management]]
 === `node` - Node management
 
 Node management and status commands.
 
-[[cmdhelp_node_attribute,manage attributes]]
+[[cmdhelp.node.attribute,manage attributes]]
 ==== `attribute`
 
 Edit node attributes. This kind of attribute should refer to
@@ -2034,7 +2034,7 @@ Example:
 attribute node_1 set memory_size 4096
 ...............
 
-[[cmdhelp_node_clearstate,Clear node state]]
+[[cmdhelp.node.clearstate,Clear node state]]
 ==== `clearstate`
 
 Resets and clears the state of the specified node. This node is
@@ -2050,7 +2050,7 @@ Usage:
 clearstate <node>
 ...............
 
-[[cmdhelp_node_delete,delete node (deprecated)]]
+[[cmdhelp.node.delete,delete node (deprecated)]]
 ==== `delete`
 
 Remove a node from cluster.
@@ -2071,7 +2071,7 @@ which will adjust the related cluster configurations and clean up the leftover
 (eg. stopping the cluster services) on the removed node.
 *****
 
-[[cmdhelp_node_fence,fence node]]
+[[cmdhelp.node.fence,fence node]]
 
 ==== `fence`
 
@@ -2084,7 +2084,7 @@ Usage:
 fence <node>
 ...............
 
-[[cmdhelp_node_maintenance,put node into maintenance mode]]
+[[cmdhelp.node.maintenance,put node into maintenance mode]]
 ==== `maintenance`
 
 Set the node status to maintenance. This is equivalent to the
@@ -2100,11 +2100,11 @@ Usage:
 maintenance [<node>]
 ...............
 
-[[cmdhelp_node_online,set node online,From Code]]
+[[cmdhelp.node.online,set node online,From Code]]
 ==== `online`
 See "crm node help online" or "crm node online --help"
 
-[[cmdhelp_node_ready,put node into ready mode]]
+[[cmdhelp.node.ready,put node into ready mode]]
 ==== `ready`
 
 Set the node's maintenance status to `off`. The node should be
@@ -2118,7 +2118,7 @@ Usage:
 ready [<node>]
 ...............
 
-[[cmdhelp_node_server,show node hostname or server address]]
+[[cmdhelp.node.server,show node hostname or server address]]
 ==== `server`
 
 Remote nodes may have a configured server address which should
@@ -2133,7 +2133,7 @@ Usage:
 server [<node> ...]
 ...............
 
-[[cmdhelp_node_show,show node]]
+[[cmdhelp.node.show,show node]]
 ==== `show`
 
 Show a node definition. If the node parameter is omitted, then all
@@ -2144,11 +2144,11 @@ Usage:
 show [<node>]
 ...............
 
-[[cmdhelp_node_standby,put node into standby,From Code]]
+[[cmdhelp.node.standby,put node into standby,From Code]]
 ==== `standby`
 See "crm node help standby" or "crm node standby --help"
 
-[[cmdhelp_node_status-attr,manage status attributes]]
+[[cmdhelp.node.status-attr,manage status attributes]]
 ==== `status-attr`
 
 Edit node attributes which are in the CIB status section, i.e.,
@@ -2166,7 +2166,7 @@ Example:
 status-attr node_1 show pingd
 ...............
 
-[[cmdhelp_node_utilization,manage utilization attributes]]
+[[cmdhelp.node.utilization,manage utilization attributes]]
 ==== `utilization`
 
 Edit node utilization attributes. These attributes describe
@@ -2188,13 +2188,13 @@ utilization node_1 set memory 16384
 utilization node_1 show cpu
 ...............
 
-[[cmdhelp_site,GEO clustering site support]]
+[[cmdhelp.site,GEO clustering site support]]
 === `site` - GEO clustering site support
 
 A cluster may consist of two or more subclusters in different and
 distant locations. This set of commands supports such setups.
 
-[[cmdhelp_site_ticket,manage site tickets]]
+[[cmdhelp.site.ticket,manage site tickets]]
 ==== `ticket`
 
 Tickets are cluster-wide attributes. They can be managed at the
@@ -2213,12 +2213,12 @@ Example:
 ticket grant ticket1
 ...............
 
-[[cmdhelp_options,User preferences]]
+[[cmdhelp.options,User preferences]]
 === `options` - User preferences
 
 The user may set various options for the crm shell itself.
 
-[[cmdhelp_options_add-quotes,add quotes around parameters containing spaces]]
+[[cmdhelp.options.add-quotes,add quotes around parameters containing spaces]]
 ==== `add-quotes`
 
 The shell (as in `/bin/sh`) parser strips quotes from the command
@@ -2244,7 +2244,7 @@ the following:
 ...............
 ****************************
 
-[[cmdhelp_options_check-frequency,when to perform semantic check]]
+[[cmdhelp.options.check-frequency,when to perform semantic check]]
 ==== `check-frequency`
 
 Semantic check of the CIB or elements modified or created may be
@@ -2258,7 +2258,7 @@ not installed at the configuration time set this preference to
 
 See <<topics_Features_Checks,Configuration semantic checks>> for more details.
 
-[[cmdhelp_options_check-mode,how to treat semantic errors]]
+[[cmdhelp.options.check-mode,how to treat semantic errors]]
 ==== `check-mode`
 
 Semantic check of the CIB or elements modified or created may be
@@ -2268,7 +2268,7 @@ certain problems are treated as configuration errors. In the
 
 See <<topics_Features_Checks,Configuration semantic checks>> for more details.
 
-[[cmdhelp_options_colorscheme,set colors for output]]
+[[cmdhelp.options.colorscheme,set colors for output]]
 ==== `colorscheme`
 
 With `output` set to `color`, a comma separated list of colors
@@ -2297,7 +2297,7 @@ Example:
 colorscheme yellow,normal,blue,red,green,magenta
 ...............
 
-[[cmdhelp_options_editor,set preferred editor program]]
+[[cmdhelp.options.editor,set preferred editor program]]
 ==== `editor`
 
 The `edit` command invokes an editor. Use this to specify your
@@ -2314,7 +2314,7 @@ Example:
 editor vim
 ...............
 
-[[cmdhelp_options_manage-children,how to handle children resource attributes]]
+[[cmdhelp.options.manage-children,how to handle children resource attributes]]
 ==== `manage-children`
 
 Some resource management commands, such as `resource stop`, when
@@ -2357,7 +2357,7 @@ which have values different from the parent. If set to +never+,
 all children attributes are left intact. Finally, if set to
 +ask+, the user will be asked for each member what is to be done.
 
-[[cmdhelp_options_output,set output type]]
+[[cmdhelp.options.output,set output type]]
 ==== `output`
 
 `crm` can adorn configurations in two ways: in color (similar to
@@ -2370,7 +2370,7 @@ In case you need color codes in pipes, `color-always` forces color
 codes even in case the terminal is not a tty (just like `ls
 --color=always`).
 
-[[cmdhelp_options_pager,set preferred pager program]]
+[[cmdhelp.options.pager,set preferred pager program]]
 ==== `pager`
 
 The `view` command displays text through a pager. Use this to
@@ -2378,20 +2378,20 @@ specify your preferred pager program. If not set, it will default
 to either the value of the `PAGER` environment variable or to one
 of the standard UNIX system pagers (`less`,`more`,`pg`).
 
-[[cmdhelp_options_reset,reset user preferences to factory defaults]]
+[[cmdhelp.options.reset,reset user preferences to factory defaults]]
 ==== `reset`
 
 This command resets all user options to the defaults. If used as
 a single-shot command, the rc file (+$HOME/.config/crm/rc+) is
 reset to the defaults too.
 
-[[cmdhelp_options_save,save the user preferences to the rc file]]
+[[cmdhelp.options.save,save the user preferences to the rc file]]
 ==== `save`
 
 Save current settings to the rc file (+$HOME/.config/crm/rc+). On
 further `crm` runs, the rc file is automatically read and parsed.
 
-[[cmdhelp_options_set,Set the value of a given option]]
+[[cmdhelp.options.set,Set the value of a given option]]
 ==== `set`
 
 Sets the value of an option. Takes the fully qualified
@@ -2411,7 +2411,7 @@ set color.warn "magenta bold"
 set editor nano
 ........
 
-[[cmdhelp_options_show,show current user preference]]
+[[cmdhelp.options.show,show current user preference]]
 ==== `show`
 
 Display all current settings.
@@ -2433,7 +2433,7 @@ show skill-level
 show all
 ........
 
-[[cmdhelp_options_skill-level,set skill level]]
+[[cmdhelp.options.skill-level,set skill level]]
 ==== `skill-level`
 
 Based on the skill-level setting, the user is allowed to use only
@@ -2459,7 +2459,7 @@ stopping any users change their skill level (see
 access control).
 ****************************
 
-[[cmdhelp_options_sort-elements,sort CIB elements]]
+[[cmdhelp.options.sort-elements,sort CIB elements]]
 ==== `sort-elements`
 
 `crm` by default sorts CIB elements. If you want them appear in
@@ -2474,7 +2474,7 @@ Example:
 sort-elements no
 ...............
 
-[[cmdhelp_options_user,set the cluster user]]
+[[cmdhelp.options.user,set the cluster user]]
 ==== `user`
 
 Sufficient privileges are necessary in order to manage a
@@ -2495,7 +2495,7 @@ Example:
 user hacluster
 ...............
 
-[[cmdhelp_options_wait,synchronous operation]]
+[[cmdhelp.options.wait,synchronous operation]]
 ==== `wait`
 
 In normal operation, `crm` runs a command and gets back
@@ -2513,7 +2513,7 @@ Example:
 wait yes
 ...............
 
-[[cmdhelp_configure,CIB configuration]]
+[[cmdhelp.configure,CIB configuration]]
 === `configure` - CIB configuration
 
 This level enables all CIB object definition commands.
@@ -2580,7 +2580,7 @@ Comments start with +#+ in the first line. The comments are tied
 to the element which follows. If the element moves, its comments
 will follow.
 
-[[cmdhelp_configure_acl_target,Define target access rights]]
+[[cmdhelp.configure.acl_target,Define target access rights]]
 ==== `acl_target`
 
 Defines an ACL target.
@@ -2594,7 +2594,7 @@ Example:
 acl_target joe resource_admin constraint_editor
 ................
 
-[[cmdhelp_configure_alert,Event-driven alerts]]
+[[cmdhelp.configure.alert,Event-driven alerts]]
 ==== `alert`
 
 .Version note
@@ -2653,7 +2653,7 @@ alert alert-3 /srv/pacemaker/example_alert.sh \
 
 ...............
 
-[[cmdhelp_configure_bundle,Container bundle]]
+[[cmdhelp.configure.bundle,Container bundle]]
 ==== `bundle`
 
 A bundle is a single resource specifying the settings, networking
@@ -2683,7 +2683,7 @@ bundle httpd \
 
 ...............
 
-[[cmdhelp_configure_cib,CIB shadow management]]
+[[cmdhelp.configure.cib,CIB shadow management]]
 ==== `cib`
 
 This level is for management of shadow CIBs. It is available at
@@ -2699,13 +2699,13 @@ Note how the current CIB in the prompt changed from +live+ to
 +test-2+ after issuing the `cib new` command. See also the
 <<cmdhelp_cib,CIB shadow management>> for more information.
 
-[[cmdhelp_configure_cibstatus,CIB status management and editing]]
+[[cmdhelp.configure.cibstatus,CIB status management and editing]]
 ==== `cibstatus`
 
 Enter edit and manage the CIB status section level. See the
 <<cmdhelp_cibstatus,CIB status management section>>.
 
-[[cmdhelp_configure_clone,define a clone]]
+[[cmdhelp.configure.clone,define a clone]]
 ==== `clone`
 
 The `clone` command creates a resource clone. It may contain a
@@ -2732,7 +2732,7 @@ clone disk1 drbd1 \
   meta promotable=true notify=true globally-unique=false
 ...............
 
-[[cmdhelp_configure_colocation,colocate resources]]
+[[cmdhelp.configure.colocation,colocate resources]]
 ==== `colocation` (`collocation`)
 
 This constraint expresses the placement relation between two
@@ -2786,7 +2786,7 @@ colocation never_put_apache_with_dummy -inf: apache dummy
 colocation c1 inf: A ( B C )
 ...............
 
-[[cmdhelp_configure_commit,commit the changes to the CIB]]
+[[cmdhelp.configure.commit,commit the changes to the CIB]]
 ==== `commit`
 
 Commit the current configuration to the CIB in use. As noted
@@ -2809,7 +2809,7 @@ Usage:
 commit [force] [replace]
 ...............
 
-[[cmdhelp_configure_default-timeouts,set timeouts for operations to minimums from the meta-data]]
+[[cmdhelp.configure.default-timeouts,set timeouts for operations to minimums from the meta-data]]
 ==== `default-timeouts`
 
 This command takes the timeouts from the actions section of the
@@ -2832,7 +2832,7 @@ Appropriate timeouts for resource actions are context-sensitive, and
 should be carefully considered with the whole configuration in mind.
 ****************************
 
-[[cmdhelp_configure_delete,delete CIB objects]]
+[[cmdhelp.configure.delete,delete CIB objects]]
 ==== `delete`
 
 Delete one or more objects. If an object to be deleted belongs to
@@ -2848,7 +2848,7 @@ Usage:
 delete [--force] <id> [<id>...]
 ...............
 
-[[cmdhelp_configure_edit,edit CIB objects]]
+[[cmdhelp.configure.edit,edit CIB objects]]
 ==== `edit`
 
 This command invokes the editor with the object description. As
@@ -2872,7 +2872,7 @@ promotable resources. Group and promotable resources themselves also cannot be
 renamed. Please use the `rename` command instead.
 ****************************
 
-[[cmdhelp_configure_erase,erase the CIB]]
+[[cmdhelp.configure.erase,erase the CIB]]
 ==== `erase`
 
 The `erase` clears all configuration. Apart from nodes. To remove
@@ -2886,7 +2886,7 @@ Usage:
 erase [nodes]
 ...............
 
-[[cmdhelp_configure_fencing_topology,node fencing order]]
+[[cmdhelp.configure.fencing_topology,node fencing order]]
 ==== `fencing_topology`
 
 If multiple fencing (stonith) devices are available capable of
@@ -2942,7 +2942,7 @@ fencing_topology \
     pattern:red.* apple pear
 ...............
 
-[[cmdhelp_configure_filter,filter CIB objects]]
+[[cmdhelp.configure.filter,filter CIB objects]]
 ==== `filter`
 
 This command filters the given CIB elements through an external
@@ -2983,7 +2983,7 @@ to supply the filter command as standard input. See the last example
 above.
 **************************
 
-[[cmdhelp_configure_get_property,Get property value]]
+[[cmdhelp.configure.get_property,Get property value]]
 ==== `get-property`
 
 Show the value of the given property. If the value is not set, the
@@ -3011,7 +3011,7 @@ get-property stonith-enabled
 get-property -t maintenance-mode
 ...............
 
-[[cmdhelp_configure_graph,generate a directed graph]]
+[[cmdhelp.configure.graph,generate a directed graph]]
 ==== `graph`
 
 Create a graphviz graphical layout from the current cluster
@@ -3045,7 +3045,7 @@ graph dot clu1.conf.dot
 graph dot clu1.conf.svg svg
 ...............
 
-[[cmdhelp_configure_group,define a group]]
+[[cmdhelp.configure.group,define a group]]
 ==== `group`
 
 The `group` command creates a group of resources. This can be useful
@@ -3073,7 +3073,7 @@ group internal_www disk0 fs0 internal_ip apache \
   meta target_role=stopped
 ...............
 
-[[cmdhelp_configure_load,import the CIB from a file]]
+[[cmdhelp.configure.load,import the CIB from a file]]
 ==== `load`
 
 Load a part of configuration (or all of it) from a local file or
@@ -3100,7 +3100,7 @@ load xml replace http://storage.big.com/cibs/bigcib.xml
 load xml push smallcib.xml
 ...............
 
-[[cmdhelp_configure_location,a location preference]]
+[[cmdhelp.configure.location,a location preference]]
 ==== `location`
 
 `location` defines the preference of nodes for the given
@@ -3186,7 +3186,7 @@ location conn_2 dummy_float \
 location no-probe rsc1 resource-discovery=never -inf: node1
 ...............
 
-[[cmdhelp_configure_modgroup,modify group]]
+[[cmdhelp.configure.modgroup,modify group]]
 ==== `modgroup`
 
 Add or remove primitives in a group. The `add` subcommand appends
@@ -3203,7 +3203,7 @@ Examples:
 modgroup share1 add storage2 before share1-fs
 ...............
 
-[[cmdhelp_configure_monitor,add monitor operation to a primitive]]
+[[cmdhelp.configure.monitor,add monitor operation to a primitive]]
 ==== `monitor`
 
 Monitor is by far the most common operation. It is possible to
@@ -3226,7 +3226,7 @@ Note that after executing the command, the monitor operation may
 be shown as part of the primitive definition.
 
 
-[[cmdhelp_configure_node,define a cluster node]]
+[[cmdhelp.configure.node,define a cluster node]]
 ==== `node`
 
 The node command describes a cluster node. Nodes in the CIB are
@@ -3252,7 +3252,7 @@ node node1
 node big_node attributes memory=64
 ...............
 
-[[cmdhelp_configure_op_defaults,set resource operations defaults]]
+[[cmdhelp.configure.op_defaults,set resource operations defaults]]
 ==== `op_defaults`
 
 Set defaults for the operations meta attributes.
@@ -3269,7 +3269,7 @@ Example:
 op_defaults record-pending=true
 ...............
 
-[[cmdhelp_configure_order,order resources]]
+[[cmdhelp.configure.order,order resources]]
 ==== `order`
 
 This constraint expresses the order of actions on two resources
@@ -3321,7 +3321,7 @@ order o-2 Serialize: A ( B C )
 order o-4 first-resource then-resource
 ...............
 
-[[cmdhelp_configure_primitive,define a resource]]
+[[cmdhelp.configure.primitive,define a resource]]
 ==== `primitive`
 
 The primitive command describes a resource. It may be referenced
@@ -3433,7 +3433,7 @@ It is advisable to give meaningful names to attribute sets which
 are going to be referenced.
 ****************************
 
-[[cmdhelp_configure_property,set a cluster property]]
+[[cmdhelp.configure.property,set a cluster property]]
 ==== `property`
 
 Set cluster configuration properties.
@@ -3454,7 +3454,7 @@ property stonith-enabled=true
 property rule date spec years=2014 stonith-enabled=false
 ...............
 
-[[cmdhelp_configure_ptest,show cluster actions if changes were committed]]
+[[cmdhelp.configure.ptest,show cluster actions if changes were committed]]
 ==== `ptest` (`simulate`)
 
 Show PE (Policy Engine) motions using `ptest(8)` or
@@ -3495,7 +3495,7 @@ ptest vvvvv
 simulate actions
 ...............
 
-[[cmdhelp_configure_refresh,refresh from CIB]]
+[[cmdhelp.configure.refresh,refresh from CIB]]
 ==== `refresh`
 
 Refresh the internal structures from the CIB. All changes made
@@ -3506,7 +3506,7 @@ Usage:
 refresh
 ...............
 
-[[cmdhelp_configure_rename,rename a CIB object]]
+[[cmdhelp.configure.rename,rename a CIB object]]
 ==== `rename`
 
 Rename an object. It is recommended to use this command to rename
@@ -3521,7 +3521,7 @@ Usage:
 rename <old_id> <new_id>
 ...............
 
-[[cmdhelp_configure_role,define role access rights]]
+[[cmdhelp.configure.role,define role access rights]]
 ==== `role`
 
 An ACL role is a set of rules which describe access rights to
@@ -3578,7 +3578,7 @@ role app1_admin \
     read ref:app1
 ...............
 
-[[cmdhelp_configure_rsc_defaults,set resource defaults]]
+[[cmdhelp.configure.rsc_defaults,set resource defaults]]
 ==== `rsc_defaults`
 
 Set defaults for the resource meta attributes.
@@ -3595,7 +3595,7 @@ Example:
 rsc_defaults failure-timeout=3m
 ...............
 
-[[cmdhelp_configure_rsc_template,define a resource template]]
+[[cmdhelp.configure.rsc_template,define a resource template]]
 ==== `rsc_template`
 
 The `rsc_template` command creates a resource template. It may be
@@ -3630,7 +3630,7 @@ primitive xen1 @public_vm \
   params xmfile=/etc/xen/xen1
 ...............
 
-[[cmdhelp_configure_rsc_ticket,resources ticket dependency]]
+[[cmdhelp.configure.rsc_ticket,resources ticket dependency]]
 ==== `rsc_ticket`
 
 This constraint expresses dependency of resources on cluster-wide
@@ -3660,7 +3660,7 @@ rsc_ticket ticket-B_storage ticket-B: drbd-a:Promoted drbd-b:Promoted
 ...............
 
 
-[[cmdhelp_configure_rsctest,test resources as currently configured]]
+[[cmdhelp.configure.rsctest,test resources as currently configured]]
 ==== `rsctest`
 
 Test resources with current resource configuration. If no nodes
@@ -3693,7 +3693,7 @@ rsctest my_ip websvc
 rsctest websvc nodeB
 ...............
 
-[[cmdhelp_configure_save,save the CIB to a file]]
+[[cmdhelp.configure.save,save the CIB to a file]]
 ==== `save`
 
 Save the current configuration to a file. Optionally, as XML. Use
@@ -3714,7 +3714,7 @@ save myfirstcib.txt
 save web-server server-config.txt
 ...............
 
-[[cmdhelp_configure_schema,set or display current CIB RNG schema]]
+[[cmdhelp.configure.schema,set or display current CIB RNG schema]]
 ==== `schema`
 
 CIB's content is validated by a RNG schema. Pacemaker supports
@@ -3738,7 +3738,7 @@ Example:
 schema pacemaker-1.1
 ...............
 
-[[cmdhelp_configure_set,set an attribute value]]
+[[cmdhelp.configure.set,set an attribute value]]
 ==== `set`
 
 Set the value of a configured attribute. The attribute must
@@ -3765,7 +3765,7 @@ set vip1.monitor.on-fail ignore
 set drbd.monitor.10s.interval 20s
 ...............
 
-[[cmdhelp_configure_show,display CIB objects]]
+[[cmdhelp.configure.show,display CIB objects]]
 ==== `show`
 
 The `show` command displays CIB objects. Without any argument, it
@@ -3858,7 +3858,7 @@ show related:stonith
 show type:primitive obscure:passwd
 ...............
 
-[[cmdhelp_configure_tag,Define resource tags]]
+[[cmdhelp.configure.tag,Define resource tags]]
 ==== `tag`
 
 Define a resource tag. A tag is an id referring to one or more
@@ -3877,7 +3877,7 @@ tag web: p-webserver p-vip
 tag ips server-vip admin-vip
 ...............
 
-[[cmdhelp_configure_template,edit and import a configuration from a template]]
+[[cmdhelp.configure.template,edit and import a configuration from a template]]
 ==== `template`
 
 The specified template is loaded into the editor. It's up to the
@@ -3893,7 +3893,7 @@ Example:
 template two-apaches.txt
 ...............
 
-[[cmdhelp_configure_upgrade,upgrade the CIB]]
+[[cmdhelp.configure.upgrade,upgrade the CIB]]
 ==== `upgrade`
 
 Attempts to upgrade the CIB to validate with the current
@@ -3915,7 +3915,7 @@ Example:
 upgrade force
 ...............
 
-[[cmdhelp_configure_user,define user access rights]]
+[[cmdhelp.configure.user,define user access rights]]
 ==== `user`
 
 Users which normally cannot view or manage cluster configuration
@@ -3941,7 +3941,7 @@ user joe \
     role:read_all
 ...............
 
-[[cmdhelp_configure_validate_all,call agent validate-all for resource]]
+[[cmdhelp.configure.validate_all,call agent validate-all for resource]]
 ==== `validate-all`
 
 Call the `validate-all` action for the resource, if possible.
@@ -3958,7 +3958,7 @@ validate-all <rsc>
 ...............
 
 
-[[cmdhelp_configure_verify,verify the CIB with crm_verify]]
+[[cmdhelp.configure.verify,verify the CIB with crm_verify]]
 ==== `verify`
 
 Verify the contents of the CIB which would be committed.
@@ -3968,7 +3968,7 @@ Usage:
 verify
 ...............
 
-[[cmdhelp_configure_xml,raw xml]]
+[[cmdhelp.configure.xml,raw xml]]
 ==== `xml`
 
 Even though we promissed no xml, it may happen, but hopefully
@@ -3985,7 +3985,7 @@ Usage:
 xml <xml>
 ...............
 
-[[cmdhelp_template,edit and import a configuration from a template]]
+[[cmdhelp.template,edit and import a configuration from a template]]
 === `template` - Import configuration from templates
 
 User may be assisted in the cluster configuration by templates
@@ -3995,7 +3995,7 @@ configuration which may be edited to suit particular user needs.
 This command enters a template level where additional commands
 for configuration/template management are available.
 
-[[cmdhelp_template_apply,process and apply the current configuration to the current CIB]]
+[[cmdhelp.template.apply,process and apply the current configuration to the current CIB]]
 ==== `apply`
 
 Copy the current or given configuration to the current CIB. By
@@ -4009,7 +4009,7 @@ apply [<method>] [<config>]
 method :: replace | update
 ...............
 
-[[cmdhelp_template_delete,delete a configuration]]
+[[cmdhelp.template.delete,delete a configuration]]
 ==== `delete`
 
 Remove a configuration. The loaded (active) configuration may be
@@ -4020,7 +4020,7 @@ Usage:
 delete <config> [force]
 ...............
 
-[[cmdhelp_template_edit,edit a configuration]]
+[[cmdhelp.template.edit,edit a configuration]]
 ==== `edit`
 
 Edit current or given configuration using your favourite editor.
@@ -4030,7 +4030,7 @@ Usage:
 edit [<config>]
 ...............
 
-[[cmdhelp_template_list,list configurations/templates]]
+[[cmdhelp.template.list,list configurations/templates]]
 ==== `list`
 
 When called with no argument, lists existing templates and
@@ -4045,7 +4045,7 @@ Usage:
 list [templates|configs]
 ...............
 
-[[cmdhelp_template_load,load a configuration]]
+[[cmdhelp.template.load,load a configuration]]
 ==== `load`
 
 Load an existing configuration. Further `edit`, `show`, and
@@ -4056,7 +4056,7 @@ Usage:
 load <config>
 ...............
 
-[[cmdhelp_template_new,create a new configuration from templates]]
+[[cmdhelp.template.new,create a new configuration from templates]]
 ==== `new`
 
 Create a new configuration from one or more templates. Note that
@@ -4086,7 +4086,7 @@ new bigfs ocfs2 params device=/dev/sdx8 directory=/bigfs
 new apache
 ...............
 
-[[cmdhelp_template_show,show the processed configuration]]
+[[cmdhelp.template.show,show the processed configuration]]
 ==== `show`
 
 Process the current or given configuration and display the result.
@@ -4096,7 +4096,7 @@ Usage:
 show [<config>]
 ...............
 
-[[cmdhelp_cibstatus,CIB status management and editing]]
+[[cmdhelp.cibstatus,CIB status management and editing]]
 === `cibstatus` - CIB status management and editing
 
 The `status` section of the CIB keeps the current status of nodes
@@ -4124,7 +4124,7 @@ run with the CIB which was loaded along with the status section.
 The `simulate` and `run` commands as well as all status
 modification commands are implemented using `crm_simulate(8)`.
 
-[[cmdhelp_cibstatus_load,load the CIB status section]]
+[[cmdhelp.cibstatus.load,load the CIB status section]]
 ==== `load`
 
 Load a status section from a file, a shadow CIB, or the running
@@ -4151,7 +4151,7 @@ load bug-12299.xml
 load shadow:test1
 ...............
 
-[[cmdhelp_cibstatus_node,change node status]]
+[[cmdhelp.cibstatus.node,change node status]]
 ==== `node`
 
 Change the node status. It is possible to throw a node out of
@@ -4178,7 +4178,7 @@ Example:
 node xen-b unclean
 ...............
 
-[[cmdhelp_cibstatus_op,edit outcome of a resource operation]]
+[[cmdhelp.cibstatus.op,edit outcome of a resource operation]]
 ==== `op`
 
 Edit the outcome of a resource operation. This way you can
@@ -4211,7 +4211,7 @@ op monitor d1 xen-b not_running
 op stop d1 xen-b 0 timeout
 ...............
 
-[[cmdhelp_cibstatus_origin,display origin of the CIB status section]]
+[[cmdhelp.cibstatus.origin,display origin of the CIB status section]]
 ==== `origin`
 
 Show the origin of the status section currently in use. This
@@ -4222,7 +4222,7 @@ Usage:
 origin
 ...............
 
-[[cmdhelp_cibstatus_quorum,set the quorum]]
+[[cmdhelp.cibstatus.quorum,set the quorum]]
 ==== `quorum`
 
 Set the quorum value.
@@ -4236,7 +4236,7 @@ Example:
 quorum false
 ...............
 
-[[cmdhelp_cibstatus_run,run policy engine]]
+[[cmdhelp.cibstatus.run,run policy engine]]
 ==== `run`
 
 Run the policy engine with the edited status section.
@@ -4257,7 +4257,7 @@ Example:
 run
 ...............
 
-[[cmdhelp_cibstatus_save,save the CIB status section]]
+[[cmdhelp.cibstatus.save,save the CIB status section]]
 ==== `save`
 
 The current internal status section with whatever modifications
@@ -4280,7 +4280,7 @@ Example:
 save bug-12299.xml
 ...............
 
-[[cmdhelp_cibstatus_show,show CIB status section]]
+[[cmdhelp.cibstatus.show,show CIB status section]]
 ==== `show`
 
 Show the current status section in the XML format. Brace yourself
@@ -4292,7 +4292,7 @@ Usage:
 show [changed]
 ...............
 
-[[cmdhelp_cibstatus_simulate,simulate cluster transition]]
+[[cmdhelp.cibstatus.simulate,simulate cluster transition]]
 ==== `simulate`
 
 Run the policy engine with the edited status section and simulate
@@ -4314,7 +4314,7 @@ Example:
 simulate
 ...............
 
-[[cmdhelp_cibstatus_ticket,manage tickets]]
+[[cmdhelp.cibstatus.ticket,manage tickets]]
 ==== `ticket`
 
 Modify the ticket status. Tickets can be granted and revoked.
@@ -4329,7 +4329,7 @@ Example:
 ticket ticketA grant
 ...............
 
-[[cmdhelp_assist,Configuration assistant]]
+[[cmdhelp.assist,Configuration assistant]]
 === `assist` - Configuration assistant
 
 The `assist` sublevel is a collection of helper
@@ -4340,7 +4340,7 @@ configurations.
 For more information on individual commands, see
 the help text for those commands.
 
-[[cmdhelp_assist_template,Create template for primitives]]
+[[cmdhelp.assist.template,Create template for primitives]]
 ==== `template`
 
 This command takes a list of primitives as argument, and creates a new
@@ -4352,7 +4352,7 @@ Usage:
 template primitive-1 primitive-2 primitive-3
 ........
 
-[[cmdhelp_assist_weak-bond,Create a weak bond between resources]]
+[[cmdhelp.assist.weak-bond,Create a weak bond between resources]]
 ==== `weak-bond`
 
 A colocation between a group of resources says that the resources
@@ -4373,7 +4373,7 @@ Usage:
 weak-bond resource-1 resource-2
 ........
 
-[[cmdhelp_maintenance,Maintenance mode commands]]
+[[cmdhelp.maintenance,Maintenance mode commands]]
 === `maintenance` - Maintenance mode commands
 
 Maintenance mode commands are commands that manipulate resources
@@ -4384,7 +4384,7 @@ or manipulate the resources while these commands are being executed.
 To ensure this, these commands require that maintenance mode is set
 either for the particular resource, or for the whole cluster.
 
-[[cmdhelp_maintenance_action,Invoke a resource action]]
+[[cmdhelp.maintenance.action,Invoke a resource action]]
 ==== `action`
 
 Invokes the given action for the resource. This is
@@ -4411,7 +4411,7 @@ action webserver reload
 action webserver monitor ssh
 ...............
 
-[[cmdhelp_maintenance_off,Disable maintenance mode]]
+[[cmdhelp.maintenance.off,Disable maintenance mode]]
 ==== `off`
 
 Disables maintenances mode, either for the whole cluster
@@ -4427,7 +4427,7 @@ Example:
 off rsc1
 ...............
 
-[[cmdhelp_maintenance_on,Enable maintenance mode]]
+[[cmdhelp.maintenance.on,Enable maintenance mode]]
 ==== `on`
 
 Enables maintenances mode, either for the whole cluster
@@ -4443,7 +4443,7 @@ Example:
 on rsc1
 ...............
 
-[[cmdhelp_history,Cluster history]]
+[[cmdhelp.history,Cluster history]]
 === `history` - Cluster history
 
 Examining Pacemaker's history is a particularly involved task. The
@@ -4492,7 +4492,7 @@ Report saved in .../strange_restart.tar.bz2
 crm(live)history#
 ...............
 
-[[cmdhelp_history_detail,set the level of detail shown]]
+[[cmdhelp.history.detail,set the level of detail shown]]
 ==== `detail`
 
 How much detail to show from the logs. Valid detail levels are either
@@ -4510,7 +4510,7 @@ Example:
 detail 1
 ...............
 
-[[cmdhelp_history_diff,cluster states/transitions difference]]
+[[cmdhelp.history.diff,cluster states/transitions difference]]
 ==== `diff`
 
 A transition represents a change in cluster configuration or
@@ -4538,7 +4538,7 @@ diff 2066 2067
 diff pe-input-2080.bz2 live status
 ...............
 
-[[cmdhelp_history_events,Show events in log]]
+[[cmdhelp.history.events,Show events in log]]
 ==== `events`
 
 By analysing the log output and looking for particular
@@ -4559,7 +4559,7 @@ Example:
 events
 ...............
 
-[[cmdhelp_history_exclude,exclude log messages]]
+[[cmdhelp.history.exclude,exclude log messages]]
 ==== `exclude`
 
 If a log is infested with irrelevant messages, those messages may
@@ -4578,7 +4578,7 @@ Example:
 exclude kernel.*ocfs2
 ...............
 
-[[cmdhelp_history_graph,generate a directed graph from the PE file]]
+[[cmdhelp.history.graph,generate a directed graph from the PE file]]
 ==== `graph`
 
 Create a graphviz graphical layout from the PE file (the
@@ -4600,7 +4600,7 @@ graph 322 dot clu1.conf.dot
 graph 322 dot clu1.conf.svg svg
 ...............
 
-[[cmdhelp_history_info,Cluster information summary]]
+[[cmdhelp.history.info,Cluster information summary]]
 ==== `info`
 
 The `info` command provides a summary of the information source, which
@@ -4616,7 +4616,7 @@ Example:
 info
 ...............
 
-[[cmdhelp_history_latest,show latest news from the cluster]]
+[[cmdhelp.history.latest,show latest news from the cluster]]
 ==== `latest`
 
 The `latest` command shows a bit of recent history, more
@@ -4633,7 +4633,7 @@ Example:
 latest
 ...............
 
-[[cmdhelp_history_limit,limit timeframe to be examined]]
+[[cmdhelp.history.limit,limit timeframe to be examined]]
 ==== `limit` (`timeframe`)
 
 This command can be used to modify the time span to examine. All
@@ -4671,7 +4671,7 @@ limit 15h22m 16h
 limit "Sun 5 20:46" "Sun 5 22:00"
 ...............
 
-[[cmdhelp_history_log,log content]]
+[[cmdhelp.history.log,log content]]
 ==== `log`
 
 Show messages logged on one or more nodes. Leaving out a node
@@ -4695,7 +4695,7 @@ Example:
 log node-a
 ...............
 
-[[cmdhelp_history_node,node events]]
+[[cmdhelp.history.node,node events]]
 ==== `node`
 
 Show important events that happened on a node. Important events
@@ -4711,7 +4711,7 @@ Example:
 node node1
 ...............
 
-[[cmdhelp_history_peinputs,list or get PE input files]]
+[[cmdhelp.history.peinputs,list or get PE input files]]
 ==== `peinputs`
 
 Every event in the cluster results in generating one or more
@@ -4732,7 +4732,7 @@ peinputs 440:444 446
 peinputs v
 ...............
 
-[[cmdhelp_history_refresh,refresh live report]]
+[[cmdhelp.history.refresh,refresh live report]]
 ==== `refresh`
 
 This command makes sense only for the +live+ source and makes
@@ -4745,7 +4745,7 @@ Usage:
 refresh [force]
 ...............
 
-[[cmdhelp_history_resource,resource events]]
+[[cmdhelp.history.resource,resource events]]
 ==== `resource`
 
 Show actions and any failures that happened on all specified
@@ -4767,7 +4767,7 @@ resource my_.*_db2
 resource ping_clone
 ...............
 
-[[cmdhelp_history_session,manage history sessions]]
+[[cmdhelp.history.session,manage history sessions]]
 ==== `session`
 
 Sometimes you may want to get back to examining a particular
@@ -4796,7 +4796,7 @@ session load rsclost-2
 session list
 ...............
 
-[[cmdhelp_history_setnodes,set the list of cluster nodes]]
+[[cmdhelp.history.setnodes,set the list of cluster nodes]]
 ==== `setnodes`
 
 In case the host this program runs on is not part of the cluster,
@@ -4811,7 +4811,7 @@ Example:
 setnodes node_a node_b
 ...............
 
-[[cmdhelp_history_show,show status or configuration of the PE input file]]
+[[cmdhelp.history.show,show status or configuration of the PE input file]]
 ==== `show`
 
 Every transition is saved as a PE file. Use this command to
@@ -4830,7 +4830,7 @@ show 2066
 show pe-input-2080.bz2 status
 ...............
 
-[[cmdhelp_history_source,set source to be examined]]
+[[cmdhelp.history.source,set source to be examined]]
 ==== `source`
 
 Events to be examined can come from the current cluster or from a
@@ -4854,7 +4854,7 @@ source /tmp/customer_case_22
 source
 ...............
 
-[[cmdhelp_history_transition,show transition]]
+[[cmdhelp.history.transition,show transition]]
 ==== `transition`
 
 This command will print actions planned by the PE and run
@@ -4915,7 +4915,7 @@ transition log
 transition save 0 enigma-22
 ...............
 
-[[cmdhelp_history_transitions,List transitions]]
+[[cmdhelp.history.transitions,List transitions]]
 ==== `transitions`
 
 A transition represents a change in cluster configuration or
@@ -4931,7 +4931,7 @@ transitions
 ...............
 
 
-[[cmdhelp_history_wdiff,cluster states/transitions difference]]
+[[cmdhelp.history.wdiff,cluster states/transitions difference]]
 ==== `wdiff`
 
 A transition represents a change in cluster configuration or
@@ -4959,7 +4959,7 @@ wdiff 2066 2067
 wdiff pe-input-2080.bz2 live status
 ...............
 
-[[cmdhelp_root_report,Create cluster status report,From Code]]
+[[cmdhelp.root.report,Create cluster status report,From Code]]
 === `report`
 See "crm help report" or "crm report --help"
 
