@@ -83,7 +83,6 @@ class Context(object):
     Context object used to avoid having to pass these variables
     to every bootstrap method.
     """
-    MAX_LINK_NUM = 8
     DEFAULT_PROFILE_NAME = "default"
     KNET_DEFAULT_PROFILE_NAME = "knet-default"
     S390_PROFILE_NAME = "s390"
@@ -205,8 +204,8 @@ class Context(object):
             Validation.valid_admin_ip(self.admin_ip)
         if self.type == "init" and self.transport != "knet" and len(self.nic_addr_list) > 1:
             utils.fatal(f"Only one link is allowed for the '{self.transport}' transport type")
-        if len(self.nic_addr_list) > self.MAX_LINK_NUM:
-            utils.fatal(f"Maximum number of interfaces is {self.MAX_LINK_NUM}")
+        if len(self.nic_addr_list) > corosync.KNET_LINK_NUM_LIMIT:
+            utils.fatal(f"Maximum number of interfaces is {corosync.KNET_LINK_NUM_LIMIT}")
         if self.transport == "udp":
             cloud_type = utils.detect_cloud()
             if cloud_type:
@@ -1330,7 +1329,7 @@ def get_address_list() -> typing.List[str]:
         loop_count = len(_context.default_ip_list)
     else:
         # interative mode and without -i option specified
-        loop_count = min(Context.MAX_LINK_NUM, len(_context.interfaces_inst.nic_list))
+        loop_count = min(corosync.KNET_LINK_NUM_LIMIT, len(_context.interfaces_inst.nic_list))
 
     ringXaddr_list = []
     for i in range(loop_count):
