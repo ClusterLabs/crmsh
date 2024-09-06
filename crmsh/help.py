@@ -86,11 +86,11 @@ class HelpEntry(object):
         self.generated = generated
 
     @property
-    def long(self):
+    def long_help(self):
         return self._long_help
 
-    @long.setter
-    def long(self, value):
+    @long_help.setter
+    def long_help(self, value):
         self._long_help = value
 
     def is_alias(self):
@@ -104,7 +104,7 @@ class HelpEntry(object):
         helpfilter = HelpFilter()
 
         short_help = clidisplay.help_header(self.short)
-        long_help = self.long
+        long_help = self.long_help
         if long_help:
             long_help = helpfilter(long_help)
             if not long_help.startswith('\n'):
@@ -117,8 +117,8 @@ class HelpEntry(object):
         page_string(short_help + '\n' + prefix + long_help)
 
     def __str__(self):
-        if self.long:
-            return self.short + '\n' + self.long
+        if self.long_help:
+            return self.short + '\n' + self.long_help
         return self.short
 
     def __repr__(self):
@@ -137,7 +137,7 @@ class LazyHelpEntryFromCli(HelpEntry):
         self._cmd_args = cmd_args
 
     @functools.cached_property
-    def long(self):
+    def long_help(self):
         args = ['crm']
         args.extend(self._cmd_args)
         args.append('--help-without-redirect')
@@ -145,7 +145,7 @@ class LazyHelpEntryFromCli(HelpEntry):
         return stdout
 
     def paginate(self):
-        page_string('{}\n\n{}'.format(self.short, self.long))
+        page_string('{}\n\n{}'.format(self.short, self.long_help))
 
 
 @dataclasses.dataclass
@@ -412,7 +412,7 @@ def _load_help():
         if isinstance(node.help, LazyHelpEntryFromCli) or not node.children:
             return
         buf = io.StringIO()
-        buf.write(node.help.long)
+        buf.write(node.help.long_help)
         buf.write('\n\nCommands:\n')
         max_width = get_max_width(node.children)
         for name, child in sorted(node.children.items(), key=lambda x: (bool(x[1].children), x[0])):
@@ -421,7 +421,7 @@ def _load_help():
             buf.write('\t')
             buf.write(_titleline(name, child.help.short, width=max_width))
             append_subcommand_list_to_long_description(child)
-        node.help.long = buf.getvalue()
+        node.help.long_help = buf.getvalue()
 
     def fixup_help_aliases(help_node: SubcommandTreeNode, childinfo):
         "add help for aliases"
