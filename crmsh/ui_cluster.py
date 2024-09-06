@@ -42,17 +42,6 @@ def parse_options(parser, args):
     return options, args
 
 
-def _remove_completer(args):
-    try:
-        n = utils.list_cluster_nodes()
-    except:
-        n = []
-    for node in args[1:]:
-        if node in n:
-            n.remove(node)
-    return scripts.param_completion_list('remove') + n
-
-
 def script_printer():
     from .ui_script import ConsolePrinter
     return ConsolePrinter()
@@ -319,7 +308,6 @@ class Cluster(command.UI):
             return args + ['%s=%s' % (name, ','.join(vals))]
         return args
 
-    # @command.completers_repeating(compl.call(scripts.param_completion_list, 'init'))
     @command.skill_level('administrator')
     def do_init(self, context, *args):
         '''
@@ -532,7 +520,7 @@ Examples:
         return True
 
     @command.alias("delete")
-    @command.completers_repeating(_remove_completer)
+    @command.completers_repeating(compl.nodes)
     @command.skill_level('administrator')
     def do_remove(self, context, *args):
         '''
@@ -758,7 +746,7 @@ to get the geo cluster configuration.""",
         bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
-    @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
+    @command.completers_repeating(compl.nodes)
     def do_health(self, context, *args):
         '''
         Extensive health check.
@@ -768,9 +756,6 @@ to get the geo cluster configuration.""",
         if script is None:
             raise ValueError("health script failed to load")
         return scripts.run(script, script_args(params), script_printer())
-
-    def _node_in_cluster(self, node):
-        return node in utils.list_cluster_nodes()
 
     def do_status(self, context):
         '''
