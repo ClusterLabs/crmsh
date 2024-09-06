@@ -24,9 +24,11 @@ Help for the level itself is like this:
 
 [[cmdhelp_<level>,<short help text>]]
 '''
-
+import functools
 import os
 import re
+import typing
+
 from .sh import ShellUtils
 from .utils import page_string
 from . import config
@@ -76,12 +78,17 @@ class HelpEntry(object):
             self.short = short_help[0].upper() + short_help[1:]
         else:
             self.short = 'Help'
-        self.long = long_help
+        self._long_help = long_help
         self.alias_for = alias_for
         self.generated = generated
-        self.from_cli = False
-        self.level = False
-        self.name = False
+
+    @property
+    def long(self):
+        return self._long_help
+
+    @long.setter
+    def long(self, value):
+        self._long_help = value
 
     def is_alias(self):
         return self.alias_for is not None
@@ -94,12 +101,6 @@ class HelpEntry(object):
         helpfilter = HelpFilter()
 
         short_help = clidisplay.help_header(self.short)
-        if self.from_cli and self.level and self.name:
-            level = '' if self.level == 'root' else self.level
-            _, output, _ = ShellUtils().get_stdout_stderr(f"crm {level} {self.name} --help-without-redirect")
-            page_string(short_help + '\n\n'+ output)
-            return
-
         long_help = self.long
         if long_help:
             long_help = helpfilter(long_help)
@@ -112,14 +113,6 @@ class HelpEntry(object):
 
         page_string(short_help + '\n' + prefix + long_help)
 
-    def set_long_help(self, long_help):
-        self.long = long_help
-
-    def set_long_lazy_load_source(self, level, name, from_cli):
-        self.level = level
-        self.name = name
-        self.from_cli = from_cli
-
     def __str__(self):
         if self.long:
             return self.short + '\n' + self.long
@@ -127,6 +120,29 @@ class HelpEntry(object):
 
     def __repr__(self):
         return str(self)
+
+
+class LazyHelpEntryFromCli(HelpEntry):
+    """lazy load from cli --help"""
+    def __init__(
+            self,
+            short_help: str,
+            cmd_args: typing.Sequence[str],
+            alias_for=None, generated=False,
+    ):
+        super().__init__(short_help, '', alias_for, generated)
+        self._cmd_args = cmd_args
+
+    @functools.cached_property
+    def long(self):
+        args = ['crm']
+        args.extend(self._cmd_args)
+        args.append('--help-without-redirect')
+        rc, stdout = ShellUtils.get_stdout(args, shell=False)
+        return stdout
+
+    def paginate(self):
+        page_string('{}\n\n{}'.format(self.short, self.long))
 
 
 HELP_FILE = os.path.join(config.path.sharedir, 'crm.8.adoc')
@@ -350,18 +366,20 @@ def _load_help():
         long_help = entry['long']
         if long_help.startswith('=='):
             long_help = long_help.split('\n', 1)[1]
-        helpobj = HelpEntry(short_help, long_help.rstrip())
         name = entry['name']
         if entry['type'] == 'topic':
-            _TOPICS[name] = helpobj
+            _TOPICS[name] = HelpEntry(short_help, long_help.rstrip())
         elif entry['type'] == 'level':
-            _LEVELS[name] = helpobj
+            _LEVELS[name] = HelpEntry(short_help, long_help.rstrip())
         elif entry['type'] == 'command':
             lvl = entry['level']
             if lvl not in _COMMANDS:
                 _COMMANDS[lvl] = {}
-            helpobj.set_long_lazy_load_source(entry['level'], entry['name'], entry['from_cli'])
-            _COMMANDS[lvl][name] = helpobj
+            if entry['from_cli']:
+                _COMMANDS[lvl][name] = HelpEntry(short_help, long_help.rstrip())
+                _COMMANDS[lvl][name] = LazyHelpEntryFromCli(short_help, [lvl, name])
+            else:
+                _COMMANDS[lvl][name] = HelpEntry(short_help, long_help.rstrip())
 
     def filter_line(line):
         '''clean up an input line
@@ -372,7 +390,7 @@ def _load_help():
     def append_cmdinfos():
         "append command information to level descriptions"
         for lvlname, level in _LEVELS.items():
-            if lvlname in _COMMANDS:
+            if lvlname in _COMMANDS and not isinstance(level, LazyHelpEntryFromCli):
                 level.long += "\n\nCommands:\n"
                 max_width = get_max_width(_COMMANDS[lvlname])
                 for cmdname, cmd in sorted(iter(_COMMANDS[lvlname].items()), key=lambda x: x[0]):
@@ -405,7 +423,11 @@ def _load_help():
             if alias in _COMMANDS[lvlname]:
                 return
             info = _COMMANDS[lvlname][command]
-            _COMMANDS[lvlname][alias] = HelpEntry(info.short, info.long, (alias, command))
+            match info:
+                case LazyHelpEntryFromCli():
+                    _COMMANDS[lvlname][alias] = LazyHelpEntryFromCli(info.short, info._cmd_args, (alias, command))
+                case HelpEntry():
+                    _COMMANDS[lvlname][alias] = HelpEntry(info.short, info.long, (alias, command))
 
         def add_aliases_for_level(lvl):
             for name, info in lvl.children().items():
@@ -423,21 +445,20 @@ def _load_help():
 
     try:
         name = os.getenv("CRM_HELP_FILE") or HELP_FILE
-        helpfile = open(name, 'r')
-        entry = None
-        for line in helpfile:
-            if line.startswith('[['):
-                if entry is not None:
+        with open(name, 'r') as helpfile:
+            entry = None
+            for line in helpfile:
+                if line.startswith('[['):
+                    if entry is not None:
+                        process(entry)
+                    entry = parse_header(line)
+                elif entry is not None and line.startswith('===') and entry['long']:
                     process(entry)
-                entry = parse_header(line)
-            elif entry is not None and line.startswith('===') and entry['long']:
+                    entry = None
+                elif entry is not None:
+                    entry['long'] += filter_line(line)
+            if entry is not None:
                 process(entry)
-                entry = None
-            elif entry is not None:
-                entry['long'] += filter_line(line)
-        if entry is not None:
-            process(entry)
-        helpfile.close()
         append_cmdinfos()
         fixup_root_commands()
         fixup_help_aliases()
