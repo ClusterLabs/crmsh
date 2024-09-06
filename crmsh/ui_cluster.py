@@ -598,6 +598,7 @@ the config.core.force option.""",
             for node in args:
                 rm_context.cluster_node = node
                 bootstrap.bootstrap_remove(rm_context)
+                print()
         return True
 
     @command.skill_level('administrator')
