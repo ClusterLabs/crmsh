@@ -458,9 +458,11 @@ class ShellUtils:
         return proc.returncode, stdout_data.strip()
 
     @classmethod
-    def get_stdout_stderr(cls, cmd, input_s=None, shell=True, raw=False, no_reg=False, timeout=None):
+    def get_stdout_stderr(cls, cmd, input_s=None, shell=True, raw=False, no_reg=False, timeout=None, mix_stderr=False):
         '''
         Run a cmd, return (rc, stdout, stderr)
+        Parameters:
+            mix_stderr: whether to mix stderr data into stdout
         '''
         if crmsh.options.regression_tests and not no_reg:
             print(".EXT", cmd)
@@ -469,7 +471,7 @@ class ShellUtils:
             shell=shell,
             stdin=input_s and subprocess.PIPE or None,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.STDOUT if mix_stderr else subprocess.PIPE,
             env=os.environ,  # bsc#1205925
         )
         # will raise subprocess.TimeoutExpired if set timeout
@@ -478,9 +480,10 @@ class ShellUtils:
             return proc.returncode, stdout_data, stderr_data
         else:
             if isinstance(stdout_data, bytes):
-                stdout_data = Utils.decode_str(stdout_data)
-                stderr_data = Utils.decode_str(stderr_data)
-        return proc.returncode, stdout_data.strip(), stderr_data.strip()
+                stdout_data = Utils.decode_str(stdout_data).strip()
+            if isinstance(stderr_data, bytes):
+                stderr_data = Utils.decode_str(stderr_data).strip()
+        return proc.returncode, stdout_data, stderr_data
 
 
 class ClusterShellAdaptorForLocalShell(ClusterShell):

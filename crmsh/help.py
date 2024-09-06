@@ -141,7 +141,7 @@ class LazyHelpEntryFromCli(HelpEntry):
         args = ['crm']
         args.extend(self._cmd_args)
         args.append('--help-without-redirect')
-        rc, stdout = ShellUtils.get_stdout(args, shell=False)
+        rc, stdout, _ = ShellUtils.get_stdout_stderr(args, shell=False, mix_stderr=True)
         return stdout
 
     def paginate(self):
