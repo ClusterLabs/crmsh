@@ -37,7 +37,8 @@ Feature: crm corosync ui test cases
     When    Run "crm corosync link update 0 hanode1=@hanode1.ip.1 hanode2=@hanode2.ip.1 options knet_link_priority=10" on "hanode1"
     Then    Expected "Restarting corosync.service is needed to apply the changes, ie. crm cluster restart --all" in stderr
     Given   Run "systemctl restart corosync.service" OK on "hanode1,hanode2"
-    When    Try "crm corosync link add hanode1=@hanode1.ip.0 hanode2=@hanode2.ip.0 options knet_link_priority=" on "hanode1"
+    When    Wait "5" seconds
+    And     Try "crm corosync link add hanode1=@hanode1.ip.0 hanode2=@hanode2.ip.0 options knet_link_priority=" on "hanode1"
     Then    Expected "invalid option" in stderr
     Given   Run "crm corosync link add hanode1=@hanode1.ip.0 hanode2=@hanode2.ip.0 options knet_link_priority=11" OK on "hanode1"
     When    Try "crm corosync link update 1 hanode1=@hanode1.ip.1" on "hanode1"

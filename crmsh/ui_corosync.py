@@ -1,6 +1,7 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 import dataclasses
+import io
 import ipaddress
 import json
 import re
@@ -234,7 +235,7 @@ class Link(command.UI):
         if not ServiceManager().service_is_active("corosync.service"):
             return
         nodes = utils.list_cluster_nodes()
-        for host, result in prun.prun({node: 'corosync-cmapctl -m stats' for node in nodes}).items():
+        for host, result in prun.prun({node: 'corosync-cfgtool -s' for node in nodes}).items():
             # for each node <host> in the cluster
             match result:
                 case prun.SSHError() as e:
@@ -242,16 +243,20 @@ class Link(command.UI):
                 case prun.ProcessResult() as x:
                     if x.returncode != 0:
                         raise ValueError(f'{host}: {x.returncode}, {sh.Utils.decode_str(x.stderr)}')
-                    stdout = sh.Utils.decode_str(x.stdout)
-                    connected_nodes = {
-                        nodeid
-                        for nodeid, ln, connected in re.findall(
-                            '^stats\\.knet\\.node([0-9]+)\\.link([0-9]+)\\.connected\\W+.*=\\s*([0-9]+)$',
-                            stdout, re.ASCII | re.MULTILINE,
-                        ) if connected == '1'   # only connected node
-                        and ln != str(linknumber)    # filter out the link to be removed
-                    }
-                    # the number of nodes connected to <host> should be equal to the total number of nodes in the cluster
+                    connected_nodes = set()
+                    ln = -1
+                    for line in io.StringIO(sh.Utils.decode_str(x.stdout)):
+                        mo = re.match('^(?:LINK ID (\\d+)|\\s*nodeid:\\s*(\\d+):\\s*(?:localhost|connected)$)', line)
+                        if mo is None:
+                            continue
+                        if mo.group(1):
+                            ln = int(mo.group(1))
+                            continue
+                        if ln == linknumber:
+                            # filter out the link to be removed
+                            continue
+                        if mo.group(2):
+                            connected_nodes.add(mo.group(2))
                     if len(connected_nodes) < len(next(link for link in lm.links() if link is not None).nodes):
                         # or <host> will lose quorum
                         raise ValueError(f'Cannot remove link {linknumber}. Removing this link makes the cluster to lose quorum.')
