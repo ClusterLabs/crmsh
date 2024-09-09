@@ -682,7 +682,7 @@ class LinkManager:
         Returns: updated configuration dom. The internal state of LinkManager is also updated.
         """
         links = self.links()
-        if links[linknumber] is None:
+        if linknumber >= KNET_LINK_NUM_LIMIT or links[linknumber] is None:
             raise ValueError(f'Link {linknumber} does not exist.')
         if 'nodes' in options:
             raise ValueError('Unknown option "nodes".')
@@ -735,7 +735,7 @@ class LinkManager:
         Returns: updated configuration dom. The internal state of LinkManager is also updated.
         """
         links = self.links()
-        if links[linknumber] is None:
+        if linknumber >= KNET_LINK_NUM_LIMIT or links[linknumber] is None:
             raise ValueError(f'Link {linknumber} does not exist.')
         return self.__upsert_node_addr_impl(self._config, links, linknumber, node_addresses)
 
@@ -804,7 +804,7 @@ class LinkManager:
         Returns: updated configuration dom. The internal state of LinkManager is also updated.
         """
         links = self.links()
-        if links[linknumber] is None:
+        if linknumber >= KNET_LINK_NUM_LIMIT or links[linknumber] is None:
             raise ValueError(f'Link {linknumber} does not exist.')
         if sum(1 if link is not None else 0 for link in links) <= 1:
             raise ValueError(f'Cannot remove the last link.')
