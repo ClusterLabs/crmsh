@@ -3130,6 +3130,9 @@ def read_from_file(infile: str) -> str:
     try:
         with _open(infile, 'rt', encoding='utf-8', errors='replace') as f:
             data = f.read()
+    except PermissionError as err:
+        logger.warning("When reading file \"%s\": %s", infile, str(err))
+        return ""
     except Exception as err:
         logger.error("When reading file \"%s\": %s", infile, str(err))
         return ""
