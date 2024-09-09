@@ -196,7 +196,7 @@ available levels and commands.
 
 The +(live)+ string in the `crm` prompt signifies that the current CIB
 in use is the cluster live configuration. It is also possible to
-work with so-called <<topics_Features_Shadows,shadow CIBs>>. These are separate, inactive
+work with so-called <<topics.Features.Shadows,shadow CIBs>>. These are separate, inactive
 configurations stored in files, that can be applied and thereby
 replace the live configuration at any time.
 
@@ -317,8 +317,8 @@ values given are just _advisory minimum_---your resources may
 require longer timeouts.
 
 User may tune the frequency of checks and the treatment of errors
-by the <<cmdhelp_options_check-frequency,`check-frequency`>> and
-<<cmdhelp_options_check-mode,`check-mode`>> preferences.
+by the <<cmdhelp.options.check-frequency,`check-frequency`>> and
+<<cmdhelp.options.check-mode,`check-mode`>> preferences.
 
 Note that if the +check-frequency+ is set to +always+ and the
 +check-mode+ to +strict+, errors are not tolerated and such
@@ -332,7 +332,7 @@ configuration cannot be saved.
 Configuration templates have been deprecated in favor of the more
 capable `cluster scripts`. To learn how to use cluster scripts, see
 the dedicated documentation on the `crmsh` website at
-http://crmsh.github.io/, or in the <<cmdhelp_script,Script section>>.
+http://crmsh.github.io/, or in the <<cmdhelp.script,Script section>>.
 ****************************
 
 Configuration templates are ready made configurations created by
@@ -1486,7 +1486,7 @@ includes the name of the currently active shadow or the live CIB.
 ==== `cibstatus`
 
 Enter edit and manage the CIB status section level. See the
-<<cmdhelp_cibstatus,CIB status management section>>.
+<<cmdhelp.cibstatus,CIB status management section>>.
 
 [[cmdhelp.cib.commit,copy a shadow CIB to the cluster]]
 ==== `commit`
@@ -1573,7 +1573,7 @@ Note that if the temporary shadow is not committed all changes in
 the temporary shadow are lost.
 
 Specify `withstatus` if you want to edit the status section of
-the shadow CIB (see the <<cmdhelp_cibstatus,cibstatus section>>).
+the shadow CIB (see the <<cmdhelp.cibstatus,cibstatus section>>).
 Add `force` to force overwriting the existing shadow CIB.
 
 To start with an empty configuration that is not copied from the live
@@ -1599,7 +1599,7 @@ reset <cib>
 ==== `use`
 
 Choose a CIB source. If you want to edit the status from the
-shadow CIB specify `withstatus` (see <<cmdhelp_cibstatus,`cibstatus`>>).
+shadow CIB specify `withstatus` (see <<cmdhelp.cibstatus,`cibstatus`>>).
 Leave out the CIB name to switch to the running CIB.
 
 Usage:
@@ -1823,7 +1823,7 @@ removed from the children resources.
 the `is-managed` attribute, the user is proposed to remove the
 `maintenance` attribute if it exists.
 
-For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
+For details on group management see <<cmdhelp.options.manage-children,`options manage-children`>>.
 
 Usage:
 ...............
@@ -1924,7 +1924,7 @@ entailing a whole set of operations, informational messages are
 printed to let the user see some progress.
 
 For details on group management see
-<<cmdhelp_options_manage-children,`options manage-children`>>.
+<<cmdhelp.options.manage-children,`options manage-children`>>.
 
 Usage:
 ...............
@@ -1986,7 +1986,7 @@ of them. If the resource is a clone, all `target-role` attributes are
 removed from the children resources.
 
 For details on group management see
-<<cmdhelp_options_manage-children,`options manage-children`>>.
+<<cmdhelp.options.manage-children,`options manage-children`>>.
 
 Usage:
 ...............
@@ -2014,7 +2014,7 @@ them. If the resource is a clone, all `target-role` attributes are
 removed from the children resources.
 
 For details on group management see
-<<cmdhelp_options_manage-children,`options manage-children`>>.
+<<cmdhelp.options.manage-children,`options manage-children`>>.
 
 Usage:
 ...............
@@ -2061,7 +2061,7 @@ are multiple meta attributes sets, the attribute is set in all of
 them. If the resource is a clone, all `is-managed` attributes are
 removed from the children resources.
 
-For details on group management see <<cmdhelp_options_manage-children,`options manage-children`>>.
+For details on group management see <<cmdhelp.options.manage-children,`options manage-children`>>.
 
 Usage:
 ...............
@@ -2091,7 +2091,7 @@ Show/edit/delete a utilization attribute of a resource. These
 attributes describe hardware requirements. By setting the
 `placement-strategy` cluster property appropriately, it is
 possible then to distribute resources based on resource
-requirements and node size. See also <<cmdhelp_node_utilization,node utilization attributes>>.
+requirements and node size. See also <<cmdhelp.node.utilization,node utilization attributes>>.
 
 Usage:
 ...............
@@ -2266,7 +2266,7 @@ hardware characteristics as integer numbers such as memory size
 or the number of CPUs. By setting the `placement-strategy`
 cluster property appropriately, it is possible then to distribute
 resources based on resource requirements and node size. See also
-<<cmdhelp_resource_utilization,resource utilization attributes>>.
+<<cmdhelp.resource.utilization,resource utilization attributes>>.
 
 Usage:
 ...............
@@ -2293,7 +2293,7 @@ Tickets are cluster-wide attributes. They can be managed at the
 site where this command is executed.
 
 It is then possible to constrain resources depending on the
-ticket availability (see the <<cmdhelp_configure_rsc_ticket,`rsc_ticket`>> command
+ticket availability (see the <<cmdhelp.configure.rsc_ticket,`rsc_ticket`>> command
 for more details).
 
 Usage:
@@ -2348,7 +2348,7 @@ The checks require that resource agents are present. If they are
 not installed at the configuration time set this preference to
 `never`.
 
-See <<topics_Features_Checks,Configuration semantic checks>> for more details.
+See <<topics.Features.Checks,Configuration semantic checks>> for more details.
 
 [[cmdhelp.options.check-mode,how to treat semantic errors]]
 ==== `check-mode`
@@ -2358,7 +2358,7 @@ done in the `strict` mode or in the `relaxed` mode. In the former
 certain problems are treated as configuration errors. In the
 `relaxed` mode all are treated as warnings. The default is `strict`.
 
-See <<topics_Features_Checks,Configuration semantic checks>> for more details.
+See <<topics.Features.Checks,Configuration semantic checks>> for more details.
 
 [[cmdhelp.options.colorscheme,set colors for output]]
 ==== `colorscheme`
@@ -2547,7 +2547,7 @@ level :: operator | administrator | expert
 ****************************
 The `skill-level` option is advisory only. There is nothing
 stopping any users change their skill level (see
-<<topics_Features_Security,Access Control Lists (ACL)>> on how to enforce
+<<topics.Features.Security,Access Control Lists (ACL)>> on how to enforce
 access control).
 ****************************
 
@@ -2789,13 +2789,13 @@ crm(test-2)configure# commit
 ...............
 Note how the current CIB in the prompt changed from +live+ to
 +test-2+ after issuing the `cib new` command. See also the
-<<cmdhelp_cib,CIB shadow management>> for more information.
+<<cmdhelp.cib,CIB shadow management>> for more information.
 
 [[cmdhelp.configure.cibstatus,CIB status management and editing]]
 ==== `cibstatus`
 
 Enter edit and manage the CIB status section level. See the
-<<cmdhelp_cibstatus,CIB status management section>>.
+<<cmdhelp.cibstatus,CIB status management section>>.
 
 [[cmdhelp.configure.clone,define a clone]]
 ==== `clone`
@@ -2854,7 +2854,7 @@ setting a node attribute +color+ on all nodes and setting the
 will be placed on any node that has the same color.
 
 For more details on how to configure resource sets, see
-<<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
+<<topics.Features.Resourcesets,`Syntax: Resource sets`>>.
 
 Usage:
 ...............
@@ -3211,13 +3211,13 @@ The +resource-discovery+ attribute allows probes to be selectively
 enabled or disabled per resource and node.
 
 The syntax for resource sets is described in detail for
-<<cmdhelp_configure_colocation,`colocation`>>.
+<<cmdhelp.configure.colocation,`colocation`>>.
 
 For more details on how to configure resource sets, see
-<<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
+<<topics.Features.Resourcesets,`Syntax: Resource sets`>>.
 
 For more information on rule expressions, see
-<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+<<topics.Syntax.RuleExpressions,Syntax: Rule expressions>>.
 
 Note: pacemaker has deprecated support for multiple top-level rules
 within a location constraint since version 2.1.8.
@@ -3350,7 +3350,7 @@ node big_node attributes memory=64
 Set defaults for the operations meta attributes.
 
 For more information on rule expressions, see
-<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+<<topics.Syntax.RuleExpressions,Syntax: Rule expressions>>.
 
 Usage:
 ...............
@@ -3384,7 +3384,7 @@ scores +0+ and +inf+ to keywords +advisory+ and +mandatory+.
 That is still valid but deprecated.
 
 For more details on how to configure resource sets, see
-<<topics_Features_Resourcesets,`Syntax: Resource sets`>>.
+<<topics.Features.Resourcesets,`Syntax: Resource sets`>>.
 
 Usage:
 ...............
@@ -3441,7 +3441,7 @@ The +Master/Slave+ resources are deprecated and replaced by +Promoted/Unpromoted
 
 A template may be defined for resources which are of the same
 type and which share most of the configuration. See
-<<cmdhelp_configure_rsc_template,`rsc_template`>> for more information.
+<<cmdhelp.configure.rsc_template,`rsc_template`>> for more information.
 
 Attributes containing time values, such as the +interval+ attribute on
 operations, are configured either as a plain number, which is
@@ -3534,7 +3534,7 @@ inform the user if there are nodes or resources that
 have the +maintenance+ property.
 
 For more information on rule expressions, see
-<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+<<topics.Syntax.RuleExpressions,Syntax: Rule expressions>>.
 
 Usage:
 ...............
@@ -3558,7 +3558,7 @@ through `ptest` (or `crm_simulate`) to show changes which would
 happen if the configuration is committed.
 
 The status section may be loaded from another source and modified
-using the <<cmdhelp_cibstatus,`cibstatus`>> level commands. In that case, the
+using the <<cmdhelp.cibstatus,`cibstatus`>> level commands. In that case, the
 `ptest` command will issue a message informing the user that the
 Policy Engine graph is not calculated based on the current status
 section and therefore won't show what would happen to the
@@ -3637,7 +3637,7 @@ status is necessary for various monitoring tools such as
 `crm_mon(8)` (aka `crm status`).
 
 For more information on rule expressions, see
-<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+<<topics.Syntax.RuleExpressions,Syntax: Rule expressions>>.
 
 Usage:
 ...............
@@ -3676,7 +3676,7 @@ role app1_admin \
 Set defaults for the resource meta attributes.
 
 For more information on rule expressions, see
-<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+<<topics.Syntax.RuleExpressions,Syntax: Rule expressions>>.
 
 Usage:
 ...............
@@ -3735,7 +3735,7 @@ resource (or resources) if the ticket is revoked. The default is
 either +stop+ or +demote+ depending on whether a resource is
 multi-state.
 
-See also the <<cmdhelp_site_ticket,`site`>> set of commands.
+See also the <<cmdhelp.site.ticket,`site`>> set of commands.
 
 Usage:
 ...............
@@ -3792,7 +3792,7 @@ Save the current configuration to a file. Optionally, as XML. Use
 +-+ instead of file name to write the output to `stdout`.
 
 The `save` command accepts the same selection arguments as the `show`
-command. See the <<cmdhelp_configure_show,help section>> for `show`
+command. See the <<cmdhelp.configure.show,help section>> for `show`
 for more details.
 
 Usage:
@@ -3974,7 +3974,7 @@ tag ips server-vip admin-vip
 
 The specified template is loaded into the editor. It's up to the
 user to make a good CRM configuration out of it. See also the
-<<cmdhelp_template,template section>>.
+<<cmdhelp.template,template section>>.
 
 Usage:
 ...............
@@ -4017,7 +4017,7 @@ definitions or by referencing roles. The latter is considered
 best practice.
 
 For more information on rule expressions, see
-<<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
+<<topics.Syntax.RuleExpressions,Syntax: Rule expressions>>.
 
 Usage:
 ...............
@@ -4208,7 +4208,7 @@ allow the user to load status sections from various sources and
 then insert or modify resource operations or change nodes' state.
 
 The effect of those changes may then be observed by running the
-<<cmdhelp_configure_ptest,`ptest`>> command at the `configure` level
+<<cmdhelp.configure.ptest,`ptest`>> command at the `configure` level
 or `simulate` and `run` commands at this level. The `ptest`
 runs with the user edited CIB whereas the latter two commands
 run with the CIB which was loaded along with the status section.
@@ -4675,7 +4675,7 @@ exclude kernel.*ocfs2
 
 Create a graphviz graphical layout from the PE file (the
 transition). Every transition contains the cluster configuration
-which was active at the time. See also <<cmdhelp_configure_graph,generate a directed graph
+which was active at the time. See also <<cmdhelp.configure.graph,generate a directed graph
 from configuration>>.
 
 Usage:
