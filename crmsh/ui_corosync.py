@@ -96,7 +96,7 @@ class LinkArgumentParser:
         try:
             return int(args[i])
         except ValueError:
-            raise SyntaxError(f'expected linknumber, actual {args[i]}')
+            raise LinkArgumentParser.SyntaxException(f'expected linknumber, actual {args[i]}')
 
     @staticmethod
     def __parse_node_spec(args: typing.Sequence[str], i: int):
