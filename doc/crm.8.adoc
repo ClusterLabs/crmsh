@@ -2107,7 +2107,10 @@ utilization xen1 set memory 4096
 [[cmdhelp.sbd,SBD management]]
 === `sbd` - SBD management
 
-This level is for managing the SBD (STONITH Block Device) daemon.
+This level displays the real-time SBD status and the static SBD configuration.
+Additionally, it manages the configuration file for both disk-based and diskless SBD scenarios,
+as well as the on-disk metadata for the disk-based scenario.
+Currently, SBD management requires a running cluster.
 
 [[cmdhelp.sbd.configure,configure SBD]]
 ==== `configure`
@@ -2118,9 +2121,7 @@ Main functionailities include:
 - Show configured disk metadata
 - Show contents of /etc/sysconfig/sbd
 - Show SBD related cluster properties
-- Newly setup SBD configuration on a running cluster
-- Update the existing parameters
-- Add more devices to the existing disk-based SBD configuration
+- Update the SBD related configuration parameters
 
 For more details on SBD and related parameters, please see man sbd(8).
 
@@ -2128,11 +2129,11 @@ Usage:
 ...............
 # For disk-based SBD
 crm sbd configure show [disk_metadata|sysconfig|property]
-crm sbd configure [device=<dev>]... [watchdog-device=<dev>] [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>]
+crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [watchdog-device=<device>]
 
 # For disk-less SBD
 crm sbd configure show [sysconfig|property]
-crm sbd configure device="" [watchdog-device=<dev>] [watchdog-timeout=<integer>]
+crm sbd configure [watchdog-timeout=<integer>] [watchdog-device=<device>]
 ...............
 
 example:
@@ -2141,32 +2142,43 @@ configure show
 configure show disk_metadata
 configure show sysconfig
 configure show property
-configure device="/dev/sdb1;/dev/sdb2"
-configure device=/dev/sdb1 device=/dev/sdb2
-configure device=/dev/sdb1 watchdog-timeout=30 msgwait-timeout=60
-configure device="" watchdog-timeout=30
+configure watchdog-timeout=30
 ...............
 
-[[cmdhelp.sbd.status,show SBD status]]
+[[cmdhelp.sbd.device,add or remove SBD device]]
+==== `device`
+
+Add or remove SBD device(s) from the existing SBD configuration.
+
+example:
+...............
+device add /dev/sdb5
+device add /dev/sdb5 /dev/sdb6
+device add "/dev/sda5;/dev/sda6"
+device remove /dev/sdb5
+...............
+
+[[cmdhelp.sbd.status,show SBD runtime status]]
 ==== `status`
 
-Show the status of the SBD daemon.
+Show the runtime status of the SBD daemon and
+the other information of those SBD related components,
+ie. watchdog, fence agent.
 
 Usage:
 ...............
 status
 ...............
 
-[[cmdhelp.sbd.remove,remove SBD configuration]]
-==== `remove`
+[[cmdhelp.sbd.purge,purge SBD from cluster]]
+==== `purge`
 
-Remove part of devices from the SBD configuration, or remove SBD
-service from the cluster.
+Disable the systemd sbd.service on all cluster nodes,
+move the sbd sysconfig to .bak and adjust SBD related cluster properties.
 
 Usage:
 ...............
-remove
-remove [<device> ...]
+purge
 ...............
 
 [[cmdhelp.node,Node management]]
