@@ -359,6 +359,7 @@ class SBD(command.UI):
         if self.device_list_from_config:
             self.watchdog_timeout_from_config = None
             self.watchdog_device_from_config = None
+            sbd.clean_up_existing_sbd_resource()
 
         update_dict = {}
         parameter_dict = self._adjust_timeout_dict(parameter_dict, diskless=True)
