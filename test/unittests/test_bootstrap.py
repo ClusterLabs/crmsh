@@ -296,13 +296,40 @@ class TestBootstrap(unittest.TestCase):
         self.assertEqual(bootstrap.key_files("root"), expected_res)
         mock_gethome.assert_called_once_with("root")
 
-    @mock.patch('builtins.open')
-    def test_is_nologin(self, mock_open_file):
-        data = "hacluster:x:90:90:heartbeat processes:/var/lib/heartbeat/cores/hacluster:/sbin/nologin"
-        mock_open_file.return_value = mock.mock_open(read_data=data).return_value
-        assert bootstrap.is_nologin("hacluster") is not None
-        mock_open_file.assert_called_once_with("/etc/passwd")
+    @mock.patch('subprocess.run')
+    @mock.patch('os.access')
+    @mock.patch('pwd.getpwnam')
+    def test_is_nologin_shell(self, mock_getpwnam, mock_access, mock_run):
+        mock_getpwnam.return_value = mock.Mock(pw_shell='/usr/bin/zsh')
+        mock_access.return_value = True
+        mock_run.return_value = mock.Mock(returncode=0)
+        self.assertFalse(bootstrap.is_nologin('hacluster'))
 
+    @mock.patch('subprocess.run')
+    @mock.patch('os.access')
+    @mock.patch('pwd.getpwnam')
+    def test_is_nologin_nonexist(self, mock_getpwnam, mock_access, mock_run):
+        mock_getpwnam.return_value = mock.Mock(pw_shell='/nonexist')
+        mock_access.return_value = False
+        self.assertTrue(bootstrap.is_nologin('hacluster'))
+
+    @mock.patch('subprocess.run')
+    @mock.patch('os.access')
+    @mock.patch('pwd.getpwnam')
+    def test_is_nologin_nologin(self, mock_getpwnam, mock_access, mock_run):
+        mock_getpwnam.return_value = mock.Mock(pw_shell='/usr/bin/nologin')
+        mock_access.return_value = True
+        mock_run.return_value = mock.Mock(returncode=1)
+        self.assertTrue(bootstrap.is_nologin('hacluster'))
+
+    @mock.patch('subprocess.run')
+    @mock.patch('os.access')
+    @mock.patch('pwd.getpwnam')
+    def test_is_nologin_unknown(self, mock_getpwnam, mock_access, mock_run):
+        mock_getpwnam.return_value = mock.Mock(pw_shell='/usr/bin/unknown')
+        mock_access.return_value = True
+        mock_run.return_value = mock.Mock(returncode=255)
+        self.assertTrue(bootstrap.is_nologin('hacluster'))
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.is_nologin')
