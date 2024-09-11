@@ -172,6 +172,8 @@ class SBD(command.UI):
             content_list = [line.strip() for line in f.readlines()
                             if not line.startswith("#")
                             and line.strip()]
+        if content_list:
+            logger.info("crm sbd configure show sysconfig")
         for line in content_list:
             print(line)
 
@@ -179,6 +181,8 @@ class SBD(command.UI):
         '''
         Show sbd disk metadata for each configured device
         '''
+        if self.device_list_from_config:
+            logger.info("crm sbd configure show disk_metadata")
         for dev in self.device_list_from_config:
             print(self.cluster_shell.get_stdout_or_raise_error(f"sbd -d {dev} dump"))
             print()
@@ -196,11 +200,14 @@ class SBD(command.UI):
             cmd = f"CIB_file={cib_path} crm configure show"
         out = self.cluster_shell.get_stdout_or_raise_error(cmd)
 
+        logger.info("crm sbd configure show property")
         regex = f"({'|'.join(self.PCMK_ATTRS)})=([^\s]+)"
         matches = re.findall(regex, out)
         for match in matches:
             print(f"{match[0]}={match[1]}")
 
+        print()
+        logger.info("systemctl show -p TimeoutStartUSec sbd --value")
         systemd_start_timeout = sbd.SBDTimeout.get_sbd_systemd_start_timeout()
         print(f"TimeoutStartUSec={systemd_start_timeout}")
 
