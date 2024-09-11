@@ -191,14 +191,7 @@ class SBD(command.UI):
         '''
         Show sbd-related properties from cluster and systemd
         '''
-        if self.service_manager.service_is_active(constants.PCMK_SERVICE):
-            cmd = "crm configure show"
-        else: # static case
-            cib_path = os.getenv("CIB_file", constants.CIB_RAW_FILE)
-            if not os.path.exists(cib_path):
-                return
-            cmd = f"CIB_file={cib_path} crm configure show"
-        out = self.cluster_shell.get_stdout_or_raise_error(cmd)
+        out = self.cluster_shell.get_stdout_or_raise_error("crm configure show")
 
         logger.info("crm sbd configure show property")
         regex = f"({'|'.join(self.PCMK_ATTRS)})=([^\s]+)"
