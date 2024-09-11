@@ -95,13 +95,15 @@ class SBD(command.UI):
         "priority-fencing-delay",
         "pcmk_delay_max"
     )
+    # a commom character class for matching device path
+    dev_char_class = r'[\w/\d;\-:.]'
     PARSE_RE = re.compile(
 		# Match "device" key with any value, including empty
-        r'(device)=("[^"]*"|[\w/\d;]*)'
+        fr'(device)=("[^"]*"|{dev_char_class}*)'
 		# Match other keys with non-empty values, capturing possible suffix
         r'|(\w+)(?:-(\w+))?=("[^"]+"|[\w/\d;]+)'
 	    # Match standalone device path
-        r'|(/dev/[\w\d]+)'
+        fr'|(/dev/{dev_char_class}+)'
     )
 
     class SyntaxError(Exception):
