@@ -2107,7 +2107,10 @@ utilization xen1 set memory 4096
 [[cmdhelp.sbd,SBD management]]
 === `sbd` - SBD management
 
-This level is for managing the SBD (STONITH Block Device) daemon.
+This level displays the real-time SBD status and the static SBD configuration.
+Additionally, it manages the configuration file for both disk-based and diskless SBD scenarios,
+as well as the on-disk metadata for the disk-based scenario.
+Currently, SBD management requires a running cluster.
 
 [[cmdhelp.sbd.configure,configure SBD]]
 ==== `configure`
@@ -2150,7 +2153,9 @@ configure device="" watchdog-timeout=30
 [[cmdhelp.sbd.status,show SBD status]]
 ==== `status`
 
-Show the status of the SBD daemon.
+Show the runtime status of the SBD daemon and
+the other information of those SBD related components,
+ie. watchdog, fence agent.
 
 Usage:
 ...............
@@ -2166,7 +2171,7 @@ service from the cluster.
 Usage:
 ...............
 remove
-remove [<device> ...]
+remove [<device=> ...]
 ...............
 
 [[cmdhelp.node,Node management]]
