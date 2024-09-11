@@ -324,8 +324,7 @@ class SBDTimeout(object):
 
     @staticmethod
     def get_sbd_systemd_start_timeout() -> int:
-        cmd = "systemctl show -p TimeoutStartUSec sbd --value"
-        out = sh.cluster_shell().get_stdout_or_raise_error(cmd)
+        out = sh.cluster_shell().get_stdout_or_raise_error(constants.SHOW_SBD_START_TIMEOUT_CMD)
         return utils.get_systemd_timeout_start_in_sec(out)
 
     def adjust_systemd_start_timeout(self):
