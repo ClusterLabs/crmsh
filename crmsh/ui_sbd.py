@@ -128,7 +128,7 @@ class SBD(command.UI):
             self.device_meta_dict_runtime = sbd.SBDUtils.get_sbd_device_metadata(self.device_list_from_config[0], timeout_only=True)
         try:
             self.watchdog_timeout_from_config = sbd.SBDTimeout.get_sbd_watchdog_timeout()
-        except:
+        except Exception:
             self.watchdog_timeout_from_config = None
         self.watchdog_device_from_config = watchdog.Watchdog.get_watchdog_device_from_sbd_config()
 
@@ -152,7 +152,7 @@ class SBD(command.UI):
         Build usage string for sbd configure command,
         including disk-based and diskless sbd cases
         '''
-        def build_timeout_usage_str(timeout_types: tuple[str]) -> str:
+        def build_timeout_usage_str(timeout_types: tuple[str, ...]) -> str:
             return " ".join([f"[{t}-timeout=<integer>]" for t in timeout_types])
         timeout_usage_str = build_timeout_usage_str(self.TIMEOUT_TYPES)
         timeout_usage_str_diskless = build_timeout_usage_str(self.DISKLESS_TIMEOUT_TYPES)
@@ -196,13 +196,13 @@ class SBD(command.UI):
         out = self.cluster_shell.get_stdout_or_raise_error("crm configure show")
 
         logger.info("crm sbd configure show property")
-        regex = f"({'|'.join(self.PCMK_ATTRS)})=([^\s]+)"
+        regex = f"({'|'.join(self.PCMK_ATTRS)})=(\\S+)"
         matches = re.findall(regex, out)
         for match in matches:
             print(f"{match[0]}={match[1]}")
 
         print()
-        logger.info("systemctl show -p TimeoutStartUSec sbd --value")
+        logger.info('%s', constants.SHOW_SBD_START_TIMEOUT_CMD)
         systemd_start_timeout = sbd.SBDTimeout.get_sbd_systemd_start_timeout()
         print(f"TimeoutStartUSec={systemd_start_timeout}")
 
@@ -227,7 +227,7 @@ class SBD(command.UI):
             print()
             self._show_property()
 
-    def _parse_args(self, args: typing.List[str]) -> dict[str, int|str|list[str]]:
+    def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str|list[str]]:
         '''
         Parse arguments and verify them
 
@@ -399,13 +399,14 @@ class SBD(command.UI):
             parameter_dict = self._parse_args(args)
             # disk-based sbd case
             if "device-list" in parameter_dict:
-                return self._configure_diskbase(parameter_dict)
+                self._configure_diskbase(parameter_dict)
             # diskless sbd case
             else:
-                return self._configure_diskless(parameter_dict)
+                self._configure_diskless(parameter_dict)
+            return True
 
         except self.SyntaxError as e:
-            logger.error(str(e))
+            logger.error('%s', e)
             print(self.configure_usage)
             return False
 
