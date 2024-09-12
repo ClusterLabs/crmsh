@@ -13,6 +13,8 @@
 # TODO: Configuration file for bootstrap?
 
 import os
+import pwd
+import subprocess
 import sys
 import random
 import re
@@ -762,8 +764,21 @@ def is_nologin(user):
     """
     Check if user's shell is /sbin/nologin
     """
-    with open("/etc/passwd") as f:
-        return re.search("{}:.*:/sbin/nologin".format(user), f.read())
+    shell = pwd.getpwnam(user).pw_shell
+    if not os.access(shell, os.F_OK | os.X_OK):
+        return True
+    basename = os.path.basename(shell)
+    if basename == 'nologin' or basename == 'false':
+        return True
+    try:
+        return 0 != subprocess.run(
+            [shell],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode
+    except Exception:
+        return True
 
 
 def change_user_shell(user):
