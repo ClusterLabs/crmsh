@@ -22,6 +22,11 @@ def collect_for_nodes(nodes, arg_str):
     """
     Start slave collectors
     """
+    if constants.SSH_PASSWORD_NODES and not crmutils.can_ask():
+        logger.error('Cannot create a report non-interactively. Interactive authentication is required.')
+        if userdir.getuser() == 'hacluster':
+            logger.info('Please setup passwordless ssh authentication for user hacluster.')
+        raise ValueError('Cannot create a report.')
     process_list = []
     for node in nodes.split():
         if node in constants.SSH_PASSWORD_NODES:
