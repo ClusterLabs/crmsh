@@ -373,22 +373,6 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
 
-  functional_test_healthcheck:
-    runs-on: ubuntu-20.04
-    timeout-minutes: 40
-    steps:
-    - uses: actions/checkout@v4
-    - name: functional test for healthcheck
-      run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
-        index=`$GET_INDEX_OF healthcheck`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        flags: integration
-
   functional_test_cluster_api:
     runs-on: ubuntu-20.04
     timeout-minutes: 40

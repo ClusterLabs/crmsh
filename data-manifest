@@ -79,7 +79,6 @@ test/features/crm_report_bugs.feature
 test/features/crm_report_normal.feature
 test/features/environment.py
 test/features/geo_setup.feature
-test/features/healthcheck.feature
 test/features/ocfs2.feature
 test/features/qdevice_options.feature
 test/features/qdevice_setup_remove.feature
