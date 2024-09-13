@@ -445,13 +445,23 @@ class SBD(command.UI):
         logger.info('%s', self.RESTART_INFO)
         return True
 
-    def do_status(self, context) -> bool:
-        '''
-        Implement sbd status command
-        '''
-        self._load_attributes()
+    def _print_sbd_type(self):
+        if not self.service_manager.service_is_active(constants.SBD_SERVICE):
+            return
+        print("# Type of SBD:")
+        if self.device_list_from_config:
+            print("Disk-based SBD configured")
+        else:
+            print("Diskless SBD configured")
+        print()
 
-        print(f"{constants.SBD_SERVICE} status: (active|enabled|since)")
+    def _print_sbd_status(self):
+        padding = 2
+        status_len = 8
+        max_node_len = max(len(node) for node in self.cluster_nodes) + padding
+
+        print(f"# Status of {constants.SBD_SERVICE}:")
+        print(f"{'Node':<{max_node_len}}|{'Active':<{status_len}}|{'Enabled':<{status_len}}|Since")
         for node in self.cluster_nodes:
             is_active = self.service_manager.service_is_active(constants.SBD_SERVICE, node)
             is_active_str = "YES" if is_active else "NO"
@@ -461,24 +471,42 @@ class SBD(command.UI):
             since_str_prefix = "active since" if is_active else "disactive since"
             systemctl_show_cmd = f"systemctl show {constants.SBD_SERVICE} --property={systemd_property} --value"
             since = self.cluster_shell.get_stdout_or_raise_error(systemctl_show_cmd, node) or "N/A"
-            print(f"{node}: {is_active_str:<4}|{is_enabled_str:<4}|{since_str_prefix}: {since}")
+            print(f"{node:<{max_node_len}}|{is_active_str:<{status_len}}|{is_enabled_str:<{status_len}}|{since_str_prefix}: {since}")
         print()
 
-        print("watchdog info: (device|driver|kernel timeout)")
+    def _print_watchdog_info(self):
+        padding = 2
+        max_node_len = max(len(node) for node in self.cluster_nodes) + padding
+
         watchdog_sbd_re = "\[[0-9]+\] (/dev/.*)\nIdentity: Busy: .*sbd.*\nDriver: (.*)"
-        for node in self.cluster_nodes:
+        device_list, driver_list, kernel_timeout_list = [], [], []
+        cluster_nodes = self.cluster_nodes[:]
+        for node in cluster_nodes[:]:
             out = self.cluster_shell.get_stdout_or_raise_error("sbd query-watchdog", node)
             res = re.search(watchdog_sbd_re, out)
             if res:
                 device, driver = res.groups()
                 kernel_timeout = self.cluster_shell.get_stdout_or_raise_error("cat /proc/sys/kernel/watchdog_thresh", node)
-                print(f"{node}: {device}|{driver}|{kernel_timeout}")
+                device_list.append(device)
+                driver_list.append(driver)
+                kernel_timeout_list.append(kernel_timeout)
             else:
                 logger.error("Failed to get watchdog info from %s", node)
+                cluster_nodes.remove(node)
+        if not cluster_nodes:
+            return
+
+        print("# Watchdog info:")
+        max_dev_len = max(len(dev) for dev in device_list) + padding
+        max_driver_len = max(len(driver) for driver in driver_list) + padding
+        print(f"{'Node':<{max_node_len}}|{'Device':<{max_dev_len}}|{'Driver':<{max_driver_len}}|Kernel Timeout")
+        for i, node in enumerate(cluster_nodes):
+            print(f"{node:<{max_node_len}}|{device_list[i]:<{max_dev_len}}|{driver_list[i]:<{max_driver_len}}|{kernel_timeout_list[i]}")
         print()
 
+    def _print_sbd_agent_status(self):
         if self.crm_mon_xml_parser.is_resource_configured(sbd.SBDManager.SBD_RA):
-            print("fence_sbd status: ")
+            print("# Status of fence_sbd:")
             sbd_id_list = self.crm_mon_xml_parser.get_resource_id_list_via_type(sbd.SBDManager.SBD_RA)
             for sbd_id in sbd_id_list:
                 rc, out, err = self.cluster_shell.get_rc_stdout_stderr_without_input(None, f"crm resource status {sbd_id}")
@@ -486,3 +514,14 @@ class SBD(command.UI):
                     print(out)
                 if err:
                     print(err)
+
+    def do_status(self, context) -> bool:
+        '''
+        Implement sbd status command
+        '''
+        self._load_attributes()
+        self._print_sbd_type()
+        self._print_sbd_status()
+        self._print_watchdog_info()
+        self._print_sbd_agent_status()
+        return True
