@@ -390,6 +390,7 @@ class SBDManager:
     NO_SBD_WARNING = "Not configuring SBD - STONITH will be disabled."
     DISKLESS_SBD_MIN_EXPECTED_VOTE = 3
     DISKLESS_SBD_WARNING = "Diskless SBD requires cluster with three or more nodes. If you want to use diskless SBD for 2-node cluster, should be combined with QDevice."
+    SBD_NOT_INSTALLED_MSG = "Package sbd is not installed."
     SBD_RA = "stonith:fence_sbd"
     SBD_RA_ID = "stonith-sbd"
     SBD_DEVICE_MAX = 3
@@ -407,10 +408,6 @@ class SBDManager:
         '''
         Init function which can be called from crm sbd subcommand or bootstrap
         '''
-        self.package_installed = utils.package_is_installed("sbd")
-        if not self.package_installed:
-            return
-
         self.device_list_to_init = device_list_to_init or []
         self.timeout_dict = timeout_dict or {}
         self.update_dict = update_dict or {}
@@ -530,22 +527,25 @@ class SBDManager:
             vote_dict = utils.get_quorum_votes_dict(peer)
             expected_vote = int(vote_dict.get('Expected', 0))
             if expected_vote < self.DISKLESS_SBD_MIN_EXPECTED_VOTE:
-                logger.warning(self.DISKLESS_SBD_WARNING)
+                logger.warning('%s', self.DISKLESS_SBD_WARNING)
         # When in init process
         elif self.diskless_sbd:
-            logger.warning(self.DISKLESS_SBD_WARNING)
+            logger.warning('%s', self.DISKLESS_SBD_WARNING)
 
     def get_sbd_device_interactive(self):
         '''
         Get sbd device on interactive mode
         '''
         if self.bootstrap_context.yes_to_all:
-            logger.warning(self.NO_SBD_WARNING)
+            logger.warning('%s', self.NO_SBD_WARNING)
             return
         logger.info(self.SBD_STATUS_DESCRIPTION)
         if not bootstrap.confirm("Do you wish to use SBD?"):
-            logger.warning(self.NO_SBD_WARNING)
+            logger.warning('%s', self.NO_SBD_WARNING)
             return
+
+        if not utils.package_is_installed("sbd"):
+            utils.fatal(self.SBD_NOT_INSTALLED_MSG)
 
         configured_devices = SBDUtils.get_sbd_device_from_config()
         for dev in configured_devices:
@@ -565,7 +565,7 @@ class SBDManager:
             try:
                 SBDUtils.verify_sbd_device(dev_list)
             except ValueError as e:
-                logger.error(e)
+                logger.error('%s', e)
                 continue
             for dev in dev_list:
                 if dev not in self.no_overwrite_dev_map:
@@ -605,9 +605,6 @@ class SBDManager:
         4. Restart cluster service if possible
         5. Configure stonith-sbd resource and related properties
         '''
-        if not self.package_installed:
-            return
-
         if self.bootstrap_context:
             self.get_sbd_device_from_bootstrap()
             if not self.device_list_to_init and not self.diskless_sbd:
@@ -630,9 +627,6 @@ class SBDManager:
         On joining process, check whether peer node has enabled sbd.service
         If so, check prerequisites of SBD and verify sbd device on join node
         '''
-        if not self.package_installed:
-            return
-
         service_manager = ServiceManager()
         if not os.path.exists(SYSCONFIG_SBD) or not service_manager.service_is_enabled(constants.SBD_SERVICE, peer_host):
             service_manager.disable_service(constants.SBD_SERVICE)

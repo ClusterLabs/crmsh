@@ -142,7 +142,7 @@ class SBD(command.UI):
         Requirements check when entering sbd sub-level
         '''
         if not utils.package_is_installed("sbd"):
-            logger.error("sbd is not installed")
+            logger.error('%s', sbd.SBDManager.SBD_NOT_INSTALLED_MSG)
             return False
         return True
 
@@ -442,7 +442,7 @@ class SBD(command.UI):
         else:
             sbd.disable_sbd_from_cluster()
 
-        logger.info(self.RESTART_INFO)
+        logger.info('%s', self.RESTART_INFO)
         return True
 
     def do_status(self, context) -> bool:
