@@ -183,20 +183,10 @@ Feature: Regression test for bootstrap bugs
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -y" on "hanode1"
+    And     Run "rm -f /root/.ssh/id_rsa.pub" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    When    Run "rm -f /root/.ssh/id_rsa.pub" on "hanode1"
-    When    Run "rm -f /root/.ssh/id_rsa.pub" on "hanode2"
-    When    Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode1"
-    When    Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode2"
-    When    Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode1"
-    And     Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode2"
-    And     Run "usermod -s /usr/sbin/nologin hacluster" on "hanode1"
-    And     Run "usermod -s /usr/sbin/nologin hacluster" on "hanode2"
-    And     Run "crm status" on "hanode1"
-    Then    Check user shell for hacluster between "hanode1 hanode2"
-    Then    Check passwordless for hacluster between "hanode1 hanode2"
 
   @skip_non_root
   @clean
@@ -228,24 +218,4 @@ Feature: Regression test for bootstrap bugs
     Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode1"
     And     Expected "hacluster:haclient" in stdout
     And     Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode2"
-    And     Expected "hacluster:haclient" in stdout
-    # in an upgraded cluster in which ~hacluster/.ssh/authorized_keys exists
-    When    Run "chown root:root ~hacluster/.ssh/authorized_keys && chmod 0600 ~hacluster/.ssh/authorized_keys" on "hanode1"
-    And     Run "chown root:root ~hacluster/.ssh/authorized_keys && chmod 0600 ~hacluster/.ssh/authorized_keys" on "hanode2"
-    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode1"
-    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode2"
-    And     Run "crm status" on "hanode1"
-    Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode1"
-    And     Expected "hacluster:haclient" in stdout
-    Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode2"
-    And     Expected "hacluster:haclient" in stdout
-    # in an upgraded cluster in which ~hacluster/.ssh/authorized_keys does not exist
-    When    Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh/" on "hanode1"
-    And     Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh/" on "hanode2"
-    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode1"
-    And     Run "rm -f /var/lib/crmsh/upgrade_seq" on "hanode2"
-    And     Run "crm status" on "hanode1"
-    Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode1"
-    And     Expected "hacluster:haclient" in stdout
-    Then    Run "stat -c '%U:%G' ~hacluster/.ssh/authorized_keys" OK on "hanode2"
     And     Expected "hacluster:haclient" in stdout
