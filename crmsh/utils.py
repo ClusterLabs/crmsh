@@ -153,7 +153,7 @@ class UserOfHost:
                 else:
                     ret = self._guess_user_for_ssh(host)
                     if ret is None:
-                        raise self.UserNotFoundError
+                        raise self.UserNotFoundError from None
                     else:
                         self._user_pair_cache[host] = ret
                         return ret

@@ -11,7 +11,6 @@ from . import options
 from . import constants
 from . import clidisplay
 from . import term
-from . import upgradeutil
 from . import utils
 from . import userdir
 
@@ -365,7 +364,6 @@ def run():
         if options.profile:
             return profile_run(context, user_args)
         else:
-            upgradeutil.upgrade_if_needed()
             return main_input_loop(context, user_args)
     except utils.NoSSHError as msg:
         logger.error('%s', msg)

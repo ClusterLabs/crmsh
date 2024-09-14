@@ -1366,7 +1366,12 @@ def start_slave_collector(node, arg_str):
         cmd = r'ssh {} {} "{} {}"'.format(constants.SSH_OPTS, node, constants.SUDO, cmd)
         for item in arg_str.split():
             cmd += " {}".format(str(item))
-        code, out, err = crmutils.su_get_stdout_stderr(constants.SSH_USER, cmd)
+        if constants.SSH_USER and os.geteuid() == 0:
+            code, out, err = crmutils.su_get_stdout_stderr(constants.SSH_USER, cmd)
+        else:
+            # a remote user is not specfied
+            # or current user is not root, impossible to su
+            code, out, err = crmutils.get_stdout_stderr(cmd)
         if code != 0:
             logger.warning(err)
             for ip in get_peer_ip():

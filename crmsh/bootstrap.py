@@ -31,7 +31,6 @@ from lxml import etree
 
 import crmsh.parallax
 from . import config, constants
-from . import upgradeutil
 from . import utils
 from . import xmlutil
 from .cibconfig import mkset_obj, cib_factory
@@ -1472,10 +1471,6 @@ def init_sbd():
     _context.sbd_manager.sbd_init()
 
 
-def init_upgradeutil():
-    upgradeutil.force_set_local_upgrade_seq()
-
-
 def init_ocfs2():
     """
     OCFS2 configure process
@@ -2392,7 +2387,6 @@ def bootstrap_init(context):
         init_corosync()
         init_remote_auth()
         init_sbd()
-        init_upgradeutil()
 
         lock_inst = lock.Lock()
         try:
@@ -2466,7 +2460,6 @@ def bootstrap_join(context):
             _context.cluster_node = cluster_user_at_node
             _context.initialize_user()
 
-        init_upgradeutil()
         remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
         utils.ping_node(cluster_node)
 
