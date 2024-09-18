@@ -1643,7 +1643,10 @@ def _check_parallax_remote_available(printer, hosts):
     try:
         _parallax_call(printer, hosts, 'true', timeout_seconds=15)
     except user_of_host.UserNotFoundError:
-        raise ValueError('Passwordless ssh does not work.') from None
+        if userdir.getuser() == 'hacluster':
+            raise ValueError('Passwordless ssh does not work. Run "crm cluster health hawk2 --fix" to set it up.') from None
+        else:
+            raise ValueError('Passwordless ssh does not work.') from None
 
 
 def _create_remote_workdirs(printer, hosts, path, timeout_seconds):
