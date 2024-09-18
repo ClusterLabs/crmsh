@@ -9,7 +9,7 @@ import typing
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
-from . import command
+from . import command, healthcheck
 from . import utils
 from . import scripts
 from . import completers as compl
@@ -778,11 +778,36 @@ to get the geo cluster configuration.""",
         bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
-    @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
     def do_health(self, context, *args):
         '''
         Extensive health check.
         '''
+        if not args:
+            return self._do_health_legacy(context, *args)
+        parser = argparse.ArgumentParser()
+        parser.add_argument('component', choices=['hawk2'])
+        parser.add_argument('-f', '--fix', action='store_true')
+        parsed_args = parser.parse_args(args)
+        if parsed_args.component == 'hawk2':
+            nodes = utils.list_cluster_nodes()
+            if parsed_args.fix:
+                try:
+                    healthcheck.feature_fix(healthcheck.PasswordlessHaclusterAuthenticationFeature(), nodes, utils.ask)
+                    logger.info("hawk2: passwordless ssh authentication: OK.")
+                    return True
+                except healthcheck.FixFailure:
+                    logger.error("hawk2: passwordless ssh authentication: FAIL.")
+                    return False
+            else:
+                if healthcheck.feature_full_check(healthcheck.PasswordlessHaclusterAuthenticationFeature(), nodes):
+                    logger.info("hawk2: passwordless ssh authentication: OK.")
+                    return True
+                else:
+                    logger.error("hawk2: passwordless ssh authentication: FAIL.")
+                    logger.warning('Please run "crm cluster health hawk2 --fix"')
+                    return False
+
+    def _do_health_legacy(self, context, *args):
         params = self._args_implicit(context, args, 'nodes')
         script = scripts.load_script('health')
         if script is None:
