@@ -161,6 +161,35 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
         )
 
 
+class PasswordlessPrimaryUserAuthenticationFeature(Feature):
+    def check_quick(self) -> bool:
+        local_node = crmsh.utils.this_node()
+        try:
+            crmsh.utils.user_of(local_node)
+            return True
+        except crmsh.utils.UserOfHost.UserNotFoundError:
+            return False
+
+    def check_local(self, nodes: typing.Iterable[str]) -> bool:
+        try:
+            for node in nodes:
+                crmsh.utils.user_of(node)
+        except crmsh.utils.UserOfHost.UserNotFoundError:
+            return False
+        try:
+            crmsh.parallax.parallax_call(nodes, 'true')
+            return True
+        except ValueError:
+            return False
+
+    def fix_local(self, nodes: typing.Iterable[str], ask: typing.Callable[[str], None]) -> None:
+        logger.warning('Passwordless ssh is not initialized. Use `crm cluster init ssh` and `crm cluster join ssh -c <init-node>` to set it up.')
+        raise FixFailure
+
+    def fix_cluster(self, nodes: typing.Iterable[str], ask: typing.Callable[[str], None]) -> None:
+        return self.fix_local(nodes, ask)
+
+
 def main_check_local(args) -> int:
     try:
         feature = Feature.get_feature_by_name(args.feature)()
