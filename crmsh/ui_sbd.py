@@ -13,7 +13,6 @@ from crmsh import sh
 from crmsh import xmlutil
 from crmsh import constants
 from crmsh.service_manager import ServiceManager
-from crmsh.bootstrap import SYSCONFIG_SBD
 
 
 logger = logging.getLogger(__name__)
@@ -171,7 +170,7 @@ class SBD(command.UI):
         '''
         Show pure content of /etc/sysconfig/sbd
         '''
-        with open(SYSCONFIG_SBD) as f:
+        with open(sbd.SBDManager.SYSCONFIG_SBD) as f:
             content_list = [line.strip() for line in f.readlines()
                             if not line.startswith("#")
                             and line.strip()]
@@ -435,7 +434,7 @@ class SBD(command.UI):
             changed_dev_list = set(self.device_list_from_config) - set(dev_list)
             # remove part of devices from config
             if changed_dev_list:
-                logger.info("Remove '%s' from %s", ";".join(dev_list), SYSCONFIG_SBD)
+                logger.info("Remove '%s' from %s", ";".join(dev_list), sbd.SBDManager.SYSCONFIG_SBD)
                 sbd.SBDManager.update_sbd_configuration({"SBD_DEVICE": ";".join(changed_dev_list)})
             # remove all devices, equivalent to stop sbd.service
             else:

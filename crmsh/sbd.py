@@ -3,7 +3,6 @@ import re
 import typing
 from . import utils, sh
 from . import bootstrap
-from .bootstrap import SYSCONFIG_SBD, SBD_SYSTEMD_DELAY_START_DIR
 from . import log
 from . import constants
 from . import corosync
@@ -77,7 +76,7 @@ class SBDUtils:
         '''
         Get value from /etc/sysconfig/sbd
         '''
-        return utils.parse_sysconfig(SYSCONFIG_SBD).get(key)
+        return utils.parse_sysconfig(SBDManager.SYSCONFIG_SBD).get(key)
 
     @staticmethod
     def get_sbd_device_from_config():
@@ -339,10 +338,10 @@ class SBDTimeout(object):
         if start_timeout > int(sbd_delay_start_value):
             return
 
-        utils.mkdirp(SBD_SYSTEMD_DELAY_START_DIR)
-        sbd_delay_start_file = "{}/sbd_delay_start.conf".format(SBD_SYSTEMD_DELAY_START_DIR)
+        utils.mkdirp(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
+        sbd_delay_start_file = "{}/sbd_delay_start.conf".format(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
         utils.str2file("[Service]\nTimeoutSec={}".format(int(1.2*int(sbd_delay_start_value))), sbd_delay_start_file)
-        bootstrap.sync_file(SBD_SYSTEMD_DELAY_START_DIR)
+        bootstrap.sync_file(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
         utils.cluster_run_cmd("systemctl daemon-reload")
 
     def adjust_stonith_timeout(self):
@@ -377,7 +376,9 @@ class SBDTimeout(object):
 
 
 class SBDManager:
+    SYSCONFIG_SBD = "/etc/sysconfig/sbd"
     SYSCONFIG_SBD_TEMPLATE = "/usr/share/fillup-templates/sysconfig.sbd"
+    SBD_SYSTEMD_DELAY_START_DIR = "/etc/systemd/system/sbd.service.d"
     SBD_STATUS_DESCRIPTION = '''Configure SBD:
   If you have shared storage, for example a SAN or iSCSI target,
   you can use it avoid split-brain scenarios by configuring SBD.
@@ -403,7 +404,7 @@ class SBDManager:
         no_overwrite_dev_map: typing.Dict[str, bool] | None = None,
         new_config: bool = False,
         diskless_sbd: bool = False,
-        bootstrap_context: bootstrap.Context | None = None
+        bootstrap_context: 'bootstrap.Context | None' = None
     ):
         '''
         Init function which can be called from crm sbd subcommand or bootstrap
@@ -452,13 +453,13 @@ class SBDManager:
         if not self.update_dict:
             return
         if (self.bootstrap_context and self.bootstrap_context.type == "init") or self.new_config:
-            utils.copy_local_file(self.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
+            utils.copy_local_file(self.SYSCONFIG_SBD_TEMPLATE, self.SYSCONFIG_SBD)
 
         for key, value in self.update_dict.items():
-            logger.info("Update %s in %s: %s", key, SYSCONFIG_SBD, value)
-        utils.sysconfig_set(SYSCONFIG_SBD, **self.update_dict)
-        bootstrap.sync_file(SYSCONFIG_SBD)
-        logger.info("Already synced %s to all nodes", SYSCONFIG_SBD)
+            logger.info("Update %s in %s: %s", key, self.SYSCONFIG_SBD, value)
+        utils.sysconfig_set(self.SYSCONFIG_SBD, **self.update_dict)
+        bootstrap.sync_file(self.SYSCONFIG_SBD)
+        logger.info("Already synced %s to all nodes", self.SYSCONFIG_SBD)
 
     @classmethod
     def update_sbd_configuration(cls, update_dict: typing.Dict[str, str]) -> None:
@@ -628,7 +629,7 @@ class SBDManager:
         If so, check prerequisites of SBD and verify sbd device on join node
         '''
         service_manager = ServiceManager()
-        if not os.path.exists(SYSCONFIG_SBD) or not service_manager.service_is_enabled(constants.SBD_SERVICE, peer_host):
+        if not os.path.exists(self.SYSCONFIG_SBD) or not service_manager.service_is_enabled(constants.SBD_SERVICE, peer_host):
             service_manager.disable_service(constants.SBD_SERVICE)
             return
 
