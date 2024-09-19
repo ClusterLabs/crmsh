@@ -15,6 +15,7 @@ from . import bootstrap
 from . import lock
 from . import log
 from .service_manager import ServiceManager
+from .sbd import SBDManager, SBDTimeout, SBDUtils
 
 
 logger = log.setup_logger(__name__)
@@ -612,7 +613,6 @@ class QDevice(object):
         """
         Adjust SBD_WATCHDOG_TIMEOUT when configuring qdevice and diskless SBD
         """
-        from .sbd import SBDManager, SBDTimeout, SBDUtils
         utils.check_all_nodes_reachable()
         self.using_diskless_sbd = SBDUtils.is_using_diskless_sbd()
         # add qdevice after diskless sbd started

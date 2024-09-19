@@ -1,14 +1,15 @@
 import re
 from . import utils
 from .constants import SSH_OPTION
-from .bootstrap import invoke, invokerc, WATCHDOG_CFG, SYSCONFIG_SBD
 from .sh import ShellUtils
+from . import sbd
 
 
 class Watchdog(object):
     """
     Class to find valid watchdog device name
     """
+    WATCHDOG_CFG = "/etc/modules-load.d/watchdog.conf"
     QUERY_CMD = "sudo sbd query-watchdog"
     DEVICE_FIND_REGREX = "\\[[0-9]+\\] (/dev/.*)\n.*\nDriver: (.*)"
 
@@ -44,15 +45,15 @@ class Watchdog(object):
         """
         Load specific watchdog driver
         """
-        invoke("echo {} > {}".format(driver, WATCHDOG_CFG))
-        invoke("systemctl restart systemd-modules-load")
+        ShellUtils().get_stdout_stderr(f"echo {driver} > {Watchdog.WATCHDOG_CFG}")
+        ShellUtils().get_stdout_stderr("systemctl restart systemd-modules-load")
 
     @staticmethod
     def get_watchdog_device_from_sbd_config():
         """
         Try to get watchdog device name from sbd config file
         """
-        conf = utils.parse_sysconfig(SYSCONFIG_SBD)
+        conf = utils.parse_sysconfig(sbd.SBDManager.SYSCONFIG_SBD)
         return conf.get("SBD_WATCHDOG_DEV")
 
     @staticmethod
@@ -144,7 +145,7 @@ class Watchdog(object):
 
         res = self.get_watchdog_device_from_sbd_config()
         if not res:
-            utils.fatal("Failed to get watchdog device from {}".format(SYSCONFIG_SBD))
+            utils.fatal("Failed to get watchdog device from {}".format(sbd.SBDManager.SYSCONFIG_SBD))
         self._input = res
 
         if not self._valid_device(self._input):
@@ -164,7 +165,8 @@ class Watchdog(object):
             return
 
         # self._input is invalid, exit
-        if not invokerc("modinfo {}".format(self._input)):
+        rc, _, _ = ShellUtils().get_stdout_stderr(f"modinfo {self._input}")
+        if rc != 0:
             utils.fatal("Should provide valid watchdog device or driver name by -w option")
 
         # self._input is a driver name, load it if it was unloaded

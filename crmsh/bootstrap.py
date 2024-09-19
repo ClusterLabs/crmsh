@@ -43,6 +43,8 @@ from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import NodeMgmt
 from .user_of_host import UserOfHost, UserNotFoundError
+from .sbd import SBDUtils, SBDManager, SBDTimeout
+from . import watchdog
 import crmsh.healthcheck
 
 
@@ -55,21 +57,18 @@ CSYNC2_CFG = "/etc/csync2/csync2.cfg"
 COROSYNC_AUTH = "/etc/corosync/authkey"
 CRM_CFG = "/etc/crm/crm.conf"
 PROFILES_FILE = "/etc/crm/profiles.yml"
-SYSCONFIG_SBD = "/etc/sysconfig/sbd"
 SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_NFS = "/etc/sysconfig/nfs"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service", CSYNC2_SERVICE]
-WATCHDOG_CFG = "/etc/modules-load.d/watchdog.conf"
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
 BOOTH_AUTH = "/etc/booth/authkey"
-SBD_SYSTEMD_DELAY_START_DIR = "/etc/systemd/system/sbd.service.d"
 FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
-        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
-        PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
+        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SBDManager.SYSCONFIG_SBD, PCMK_REMOTE_AUTH, watchdog.Watchdog.WATCHDOG_CFG,
+        PROFILES_FILE, CRM_CFG, SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
 
 INIT_STAGES_EXTERNAL = ("ssh", "csync2", "corosync", "sbd", "cluster", "admin", "qdevice")
 INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote")
@@ -132,7 +131,7 @@ class Context(object):
         self.profiles_dict = {}
         self.default_nic = None
         self.default_ip_list = []
-        self.rm_list = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
+        self.rm_list = [SBDManager.SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
                 COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
                 "/var/lib/csync2/*", "~/.config/crm/*"]
@@ -211,7 +210,6 @@ class Context(object):
         """
         Validate sbd options
         """
-        from .sbd import SBDUtils
         with_sbd_option = self.sbd_devices or self.diskless_sbd
         sbd_installed = utils.package_is_installed("sbd")
 
@@ -301,7 +299,6 @@ class Context(object):
         self._validate_sbd_option()
 
     def init_sbd_manager(self):
-        from .sbd import SBDManager
         self.sbd_manager = SBDManager(bootstrap_context=self)
 
     def detect_platform(self):
@@ -773,7 +770,6 @@ def start_pacemaker(node_list=[], enable_flag=False):
 
     Return success node list
     """
-    from .sbd import SBDTimeout
     # not _context means not in init or join process
     if not _context and \
             utils.package_is_installed("sbd") and \
@@ -2057,8 +2053,7 @@ def rm_configuration_files(remote=None):
     shell.get_stdout_or_raise_error("rm -f {}".format(' '.join(_context.rm_list)), remote)
     # restore original sbd configuration file from /usr/share/fillup-templates/sysconfig.sbd
     if utils.package_is_installed("sbd", remote_addr=remote):
-        from .sbd import SBDManager
-        cmd = "cp {} {}".format(SBDManager.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
+        cmd = "cp {} {}".format(SBDManager.SYSCONFIG_SBD_TEMPLATE, SBDManager.SYSCONFIG_SBD)
         shell.get_stdout_or_raise_error(cmd, remote)
 
 
@@ -2682,7 +2677,6 @@ def adjust_stonith_timeout():
     Adjust stonith-timeout for sbd and other scenarios
     """
     if ServiceManager().service_is_active(constants.SBD_SERVICE):
-        from .sbd import SBDTimeout
         SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
     else:
         value = get_stonith_timeout_generally_expected()
