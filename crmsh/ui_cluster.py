@@ -791,6 +791,16 @@ to get the geo cluster configuration.""",
         if parsed_args.component == 'hawk2':
             nodes = utils.list_cluster_nodes()
             if parsed_args.fix:
+                if not healthcheck.feature_full_check(healthcheck.PasswordlessPrimaryUserAuthenticationFeature(), nodes):
+                    try:
+                        healthcheck.feature_fix(
+                            healthcheck.PasswordlessPrimaryUserAuthenticationFeature(),
+                            nodes,
+                            utils.ask,
+                        )
+                    except healthcheck.FixFailure:
+                        logger.error('Cannot fix automatically.')
+                        return False
                 try:
                     healthcheck.feature_fix(healthcheck.PasswordlessHaclusterAuthenticationFeature(), nodes, utils.ask)
                     logger.info("hawk2: passwordless ssh authentication: OK.")
