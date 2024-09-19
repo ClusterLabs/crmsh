@@ -7,8 +7,9 @@ import yaml
 import behave
 from behave import given, when, then
 import behave_agent
-from crmsh import corosync, sbd, userdir, bootstrap
+from crmsh import corosync, userdir, bootstrap
 from crmsh import utils as crmutils
+from crmsh import sbd
 from crmsh.sh import ShellUtils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
