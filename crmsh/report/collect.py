@@ -378,11 +378,16 @@ def collect_sbd_info(context: core.Context) -> None:
         return
 
     sbd_f = os.path.join(context.work_dir, constants.SBD_F)
-    cmd = ". {};export SBD_DEVICE;{};{}".format(constants.SBDCONF, "sbd dump", "sbd list")
+    cmd_list = [
+        f". {constants.SBDCONF};export SBD_DEVICE;sbd dump;sbd list",
+        "crm sbd configure show",
+        "crm sbd status"
+    ]
     with open(sbd_f, "w") as f:
-        f.write("\n\n#=====[ Command ] ==========================#\n")
-        f.write(f"# {cmd}\n")
-        f.write(utils.get_cmd_output(cmd))
+        for cmd in cmd_list:
+            f.write("\n\n#=====[ Command ] ==========================#\n")
+            f.write(f"# {cmd}\n")
+            f.write(utils.get_cmd_output(cmd))
 
     logger.debug(f"Dump SBD config file into {utils.real_path(sbd_f)}")
 

@@ -3212,4 +3212,12 @@ def is_subdict(sub_dict, main_dict):
     Check if sub_dict is a sub-dictionary of main_dict
     """
     return all(item in main_dict.items() for item in sub_dict.items())
+
+
+def strip_ansi_escape_sequences(text):
+    """
+    Remove ANSI escape sequences from text
+    """
+    ansi_escape_pattern = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+    return ansi_escape_pattern.sub('', text)
 # vim:ts=4:sw=4:et:
