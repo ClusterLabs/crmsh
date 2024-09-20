@@ -803,7 +803,7 @@ def append(fromfile, tofile, remote=None):
 def append_unique(fromfile, tofile, user=None, remote=None, from_local=False):
     """
     Append unique content from fromfile to tofile
-    
+
     if from_local and remote:
         append local fromfile to remote tofile
     elif remote:
@@ -938,15 +938,18 @@ def is_nologin(user, remote=None):
     """
     Check if user's shell is nologin
     """
-    passwd_file = "/etc/passwd"
-    pattern = f"{user}:.*:/.*/nologin"
-    if remote:
-        cmd = f"cat {passwd_file}|grep {pattern}"
-        rc, _, _ = utils.run_cmd_on_remote(cmd, remote)
-        return rc == 0
-    else:
-        with open(passwd_file) as f:
-            return re.search(pattern, f.read()) is not None
+    rc, _, _ = utils.get_stdout_stderr_auto_ssh_no_input(
+        remote,
+        "set -e\n"
+        f"shell=$(getent passwd '{user}' | awk -F: '{{ print $NF }}')\n"
+        '[ -n "${shell}" ] && [ -f "${shell}" ] && [ -x "${shell}" ] || exit 1\n'
+        'case $(basename "$shell") in\n'
+        '  nologin) exit 1 ;;\n'
+        '  false) exit 1 ;;\n'
+        'esac\n'
+        '"${shell}" < /dev/null &>/dev/null\n'
+    )
+    return 0 != rc
 
 
 def change_user_shell(user, remote=None):
