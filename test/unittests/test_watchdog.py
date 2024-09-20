@@ -5,6 +5,7 @@ try:
 except ImportError:
     import mock
 
+from crmsh import sbd
 from crmsh import watchdog
 from crmsh import bootstrap
 from crmsh import constants
@@ -46,7 +47,7 @@ class TestWatchdog(unittest.TestCase):
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_verify_watchdog_device_ignore_error(self, mock_run):
         mock_run.return_value = (1, None, "error")
-        res = self.watchdog_inst._verify_watchdog_device("/dev/watchdog", True)
+        res = self.watchdog_inst.verify_watchdog_device("/dev/watchdog", True)
         self.assertEqual(res, False)
         mock_run.assert_called_once_with("wdctl /dev/watchdog")
 
@@ -56,21 +57,21 @@ class TestWatchdog(unittest.TestCase):
         mock_run.return_value = (1, None, "error")
         mock_error.side_effect = ValueError
         with self.assertRaises(ValueError) as err:
-            self.watchdog_inst._verify_watchdog_device("/dev/watchdog")
+            self.watchdog_inst.verify_watchdog_device("/dev/watchdog")
         mock_error.assert_called_once_with("Invalid watchdog device /dev/watchdog: error")
         mock_run.assert_called_once_with("wdctl /dev/watchdog")
 
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_verify_watchdog_device(self, mock_run):
         mock_run.return_value = (0, None, None)
-        res = self.watchdog_inst._verify_watchdog_device("/dev/watchdog")
+        res = self.watchdog_inst.verify_watchdog_device("/dev/watchdog")
         self.assertEqual(res, True)
 
-    @mock.patch('crmsh.watchdog.invoke')
-    def test_load_watchdog_driver(self, mock_invoke):
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
+    def test_load_watchdog_driver(self, mock_run):
         self.watchdog_inst._load_watchdog_driver("softdog")
-        mock_invoke.assert_has_calls([
-            mock.call("echo softdog > /etc/modules-load.d/watchdog.conf"),
+        mock_run.assert_has_calls([
+            mock.call(f"echo softdog > {watchdog.Watchdog.WATCHDOG_CFG}"),
             mock.call("systemctl restart systemd-modules-load")
             ])
 
@@ -79,9 +80,9 @@ class TestWatchdog(unittest.TestCase):
         mock_parse_inst = mock.Mock()
         mock_parse.return_value = mock_parse_inst
         mock_parse_inst.get.return_value = "/dev/watchdog"
-        res = self.watchdog_inst._get_watchdog_device_from_sbd_config()
+        res = self.watchdog_inst.get_watchdog_device_from_sbd_config()
         self.assertEqual(res, "/dev/watchdog")
-        mock_parse.assert_called_once_with(bootstrap.SYSCONFIG_SBD)
+        mock_parse.assert_called_once_with(sbd.SBDManager.SYSCONFIG_SBD)
 
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_driver_is_loaded(self, mock_run):
@@ -128,7 +129,7 @@ Driver: iTCO_wdt
         self.watchdog_inst._set_watchdog_info()
         self.assertEqual(self.watchdog_inst._watchdog_info_dict, {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'})
 
-    @mock.patch('crmsh.watchdog.Watchdog._verify_watchdog_device')
+    @mock.patch('crmsh.watchdog.Watchdog.verify_watchdog_device')
     def test_get_device_through_driver_none(self, mock_verify):
         self.watchdog_inst._watchdog_info_dict = {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'}
         mock_verify.return_value = False
@@ -136,7 +137,7 @@ Driver: iTCO_wdt
         self.assertEqual(res, None)
         mock_verify.assert_called_once_with("/dev/watchdog1")
 
-    @mock.patch('crmsh.watchdog.Watchdog._verify_watchdog_device')
+    @mock.patch('crmsh.watchdog.Watchdog.verify_watchdog_device')
     def test_get_device_through_driver(self, mock_verify):
         self.watchdog_inst._watchdog_info_dict = {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'}
         mock_verify.return_value = True
@@ -187,7 +188,7 @@ Driver: iTCO_wdt
         res = self.watchdog_inst._get_first_unused_device()
         self.assertEqual(res, None)
 
-    @mock.patch('crmsh.watchdog.Watchdog._verify_watchdog_device')
+    @mock.patch('crmsh.watchdog.Watchdog.verify_watchdog_device')
     def test_get_first_unused_device(self, mock_verify):
         mock_verify.return_value = True
         self.watchdog_inst._watchdog_info_dict = {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'}
@@ -196,8 +197,8 @@ Driver: iTCO_wdt
         mock_verify.assert_called_once_with("/dev/watchdog", ignore_error=True)
 
     @mock.patch('crmsh.watchdog.Watchdog._get_first_unused_device')
-    @mock.patch('crmsh.watchdog.Watchdog._verify_watchdog_device')
-    @mock.patch('crmsh.watchdog.Watchdog._get_watchdog_device_from_sbd_config')
+    @mock.patch('crmsh.watchdog.Watchdog.verify_watchdog_device')
+    @mock.patch('crmsh.watchdog.Watchdog.get_watchdog_device_from_sbd_config')
     def test_set_input_from_config(self, mock_from_config, mock_verify, mock_first):
         mock_from_config.return_value = "/dev/watchdog"
         mock_verify.return_value = True
@@ -206,8 +207,8 @@ Driver: iTCO_wdt
         mock_from_config.assert_called_once_with()
 
     @mock.patch('crmsh.watchdog.Watchdog._get_first_unused_device')
-    @mock.patch('crmsh.watchdog.Watchdog._verify_watchdog_device')
-    @mock.patch('crmsh.watchdog.Watchdog._get_watchdog_device_from_sbd_config')
+    @mock.patch('crmsh.watchdog.Watchdog.verify_watchdog_device')
+    @mock.patch('crmsh.watchdog.Watchdog.get_watchdog_device_from_sbd_config')
     def test_set_input(self, mock_from_config, mock_verify, mock_first):
         mock_from_config.return_value = None
         mock_first.return_value = None
@@ -221,7 +222,7 @@ Driver: iTCO_wdt
         res = self.watchdog_inst._valid_device("test")
         self.assertEqual(res, False)
 
-    @mock.patch('crmsh.watchdog.Watchdog._verify_watchdog_device')
+    @mock.patch('crmsh.watchdog.Watchdog.verify_watchdog_device')
     def test_valid_device(self, mock_verify):
         mock_verify.return_value = True
         self.watchdog_inst._watchdog_info_dict = {'/dev/watchdog': 'softdog', '/dev/watchdog0': 'softdog', '/dev/watchdog1': 'iTCO_wdt'}
@@ -229,7 +230,7 @@ Driver: iTCO_wdt
         self.assertEqual(res, True)
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.watchdog.Watchdog._get_watchdog_device_from_sbd_config')
+    @mock.patch('crmsh.watchdog.Watchdog.get_watchdog_device_from_sbd_config')
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
     def test_join_watchdog_error(self, mock_set_info, mock_from_config, mock_error):
         mock_from_config.return_value = None
@@ -238,12 +239,12 @@ Driver: iTCO_wdt
             self.watchdog_join_inst.join_watchdog()
         mock_set_info.assert_called_once_with()
         mock_from_config.assert_called_once_with()
-        mock_error.assert_called_once_with("Failed to get watchdog device from {}".format(bootstrap.SYSCONFIG_SBD))
+        mock_error.assert_called_once_with("Failed to get watchdog device from {}".format(sbd.SBDManager.SYSCONFIG_SBD))
 
     @mock.patch('crmsh.watchdog.Watchdog._load_watchdog_driver')
     @mock.patch('crmsh.watchdog.Watchdog._get_driver_through_device_remotely')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')
-    @mock.patch('crmsh.watchdog.Watchdog._get_watchdog_device_from_sbd_config')
+    @mock.patch('crmsh.watchdog.Watchdog.get_watchdog_device_from_sbd_config')
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
     def test_join_watchdog(self, mock_set_info, mock_from_config, mock_valid, mock_get_driver_remotely, mock_load):
         mock_from_config.return_value = "/dev/watchdog"
@@ -258,25 +259,26 @@ Driver: iTCO_wdt
         mock_get_driver_remotely.assert_called_once_with("/dev/watchdog")
         mock_load.assert_called_once_with("softdog")
 
-    @mock.patch('crmsh.watchdog.invokerc')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')
     @mock.patch('crmsh.watchdog.Watchdog._set_input')
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
-    def test_init_watchdog_valid(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc):
+    def test_init_watchdog_valid(self, mock_set_info, mock_set_input, mock_valid, mock_run):
         mock_valid.return_value = True
+        mock_run.return_value = (0, None, None)
         self.watchdog_inst._input = "/dev/watchdog"
         self.watchdog_inst.init_watchdog()
-        mock_invokerc.assert_not_called()
+        mock_run.assert_not_called()
         mock_valid.assert_called_once_with("/dev/watchdog")
 
     @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.watchdog.invokerc')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')
     @mock.patch('crmsh.watchdog.Watchdog._set_input')
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
-    def test_init_watchdog_error(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc, mock_error):
+    def test_init_watchdog_error(self, mock_set_info, mock_set_input, mock_valid, mock_run, mock_error):
         mock_valid.return_value = False
-        mock_invokerc.return_value = False
+        mock_run.return_value = (1, None, None)
         self.watchdog_inst._input = "test"
         mock_error.side_effect = SystemExit
 
@@ -284,27 +286,27 @@ Driver: iTCO_wdt
             self.watchdog_inst.init_watchdog()
 
         mock_valid.assert_called_once_with("test")
-        mock_invokerc.assert_called_once_with("modinfo test")
+        mock_run.assert_called_once_with("modinfo test")
         mock_error.assert_called_once_with("Should provide valid watchdog device or driver name by -w option")
 
     @mock.patch('crmsh.watchdog.Watchdog._get_device_through_driver')
     @mock.patch('crmsh.watchdog.Watchdog._load_watchdog_driver')
     @mock.patch('crmsh.watchdog.Watchdog._driver_is_loaded')
-    @mock.patch('crmsh.watchdog.invokerc')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')
     @mock.patch('crmsh.watchdog.Watchdog._set_input')
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
-    def test_init_watchdog(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc, mock_is_loaded, mock_load, mock_get_device):
+    def test_init_watchdog(self, mock_set_info, mock_set_input, mock_valid, mock_run, mock_is_loaded, mock_load, mock_get_device):
         mock_valid.return_value = False
         self.watchdog_inst._input = "softdog"
-        mock_invokerc.return_value = True
+        mock_run.return_value = (0, None, None)
         mock_is_loaded.return_value = False
         mock_get_device.return_value = "/dev/watchdog"
 
         self.watchdog_inst.init_watchdog()
 
         mock_valid.assert_called_once_with("softdog")
-        mock_invokerc.assert_called_once_with("modinfo softdog")
+        mock_run.assert_called_once_with("modinfo softdog")
         mock_is_loaded.assert_called_once_with("softdog")
         mock_load.assert_called_once_with("softdog")
         mock_set_info.assert_has_calls([mock.call(), mock.call()])

@@ -29,6 +29,7 @@ except ImportError:
 from crmsh import bootstrap
 from crmsh import constants
 from crmsh import qdevice
+from crmsh import sbd
 
 
 class TestContext(unittest.TestCase):
@@ -126,8 +127,10 @@ class TestContext(unittest.TestCase):
         ctx.initialize_qdevice()
         mock_qdevice.assert_called_once_with(qnetd_addr='node3', port=123, ssh_user='alice', algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
 
+    @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.fatal')
-    def test_validate_sbd_option_error_together(self, mock_error):
+    def test_validate_sbd_option_error_together(self, mock_error, mock_installed):
+        mock_installed.return_value = True
         mock_error.side_effect = SystemExit
         ctx = crmsh.bootstrap.Context()
         ctx.sbd_devices = ["/dev/sda1"]
@@ -136,8 +139,10 @@ class TestContext(unittest.TestCase):
             ctx._validate_sbd_option()
         mock_error.assert_called_once_with("Can't use -s and -S options together")
 
+    @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.fatal')
-    def test_validate_sbd_option_error_sbd_stage_no_option(self, mock_error):
+    def test_validate_sbd_option_error_sbd_stage_no_option(self, mock_error, mock_installed):
+        mock_installed.return_value = True
         mock_error.side_effect = SystemExit
         ctx = crmsh.bootstrap.Context()
         ctx.stage = "sbd"
@@ -146,9 +151,11 @@ class TestContext(unittest.TestCase):
             ctx._validate_sbd_option()
         mock_error.assert_called_once_with("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
 
+    @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_validate_sbd_option_error_sbd_stage_service(self, mock_active, mock_error):
+    def test_validate_sbd_option_error_sbd_stage_service(self, mock_active, mock_error, mock_installed):
+        mock_installed.return_value = True
         mock_error.side_effect = SystemExit
         ctx = crmsh.bootstrap.Context()
         ctx.stage = "sbd"
@@ -159,10 +166,12 @@ class TestContext(unittest.TestCase):
         mock_error.assert_called_once_with("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
         mock_active.assert_called_once_with("sbd.service")
 
+    @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_validate_sbd_option_error_sbd_stage(self, mock_active, mock_check_all):
+    def test_validate_sbd_option_error_sbd_stage(self, mock_active, mock_check_all, mock_installed):
         options = mock.Mock(stage="sbd", diskless_sbd=True, cluster_is_running=True)
+        mock_installed.return_value = True
         ctx = crmsh.bootstrap.Context()
         ctx.stage = "sbd"
         ctx.diskless_sbd = True
@@ -465,8 +474,8 @@ class TestBootstrap(unittest.TestCase):
             mock.call("pacemaker.service", enable=False, node_list=node_list)
             ])
         mock_parallax_call.assert_has_calls([
-            mock.call(node_list, 'mkdir -p /run/systemd/system/sbd.service.d/'),
-            mock.call(node_list, "echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > /run/systemd/system/sbd.service.d/sbd_delay_start_disabled.conf"),
+            mock.call(node_list, f'mkdir -p {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}'),
+            mock.call(node_list, f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"),
             mock.call(node_list, "systemctl daemon-reload"),
             ])
 
@@ -1336,13 +1345,12 @@ done
         bootstrap.adjust_pcmk_delay_max(False)
         mock_run.assert_called_once_with("crm resource param res_1 delete pcmk_delay_max")
 
-    @mock.patch('crmsh.sbd.SBDTimeout')
+    @mock.patch('crmsh.sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_adjust_stonith_timeout_sbd(self, mock_is_active, mock_sbd_timeout):
+    def test_adjust_stonith_timeout_sbd(self, mock_is_active, mock_sbd_adjust_timeout):
         mock_is_active.return_value = True
-        mock_sbd_timeout.adjust_sbd_timeout_related_cluster_configuration = mock.Mock()
         bootstrap.adjust_stonith_timeout()
-        mock_sbd_timeout.adjust_sbd_timeout_related_cluster_configuration.assert_called_once_with()
+        mock_sbd_adjust_timeout.assert_called_once_with()
 
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.bootstrap.get_stonith_timeout_generally_expected')

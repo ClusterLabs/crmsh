@@ -213,6 +213,7 @@ test/unittests/test_sh.py
 test/unittests/test_time.py
 test/unittests/test_ui_cluster.py
 test/unittests/test_ui_corosync.py
+test/unittests/test_ui_sbd.py
 test/unittests/test_upgradeuitl.py
 test/unittests/test_utils.py
 test/unittests/test_watchdog.py
