@@ -270,6 +270,12 @@ class SBD(command.UI):
         watchdog_device = parameter_dict.get("watchdog-device")
         parameter_dict["watchdog-device"] = watchdog.Watchdog.get_watchdog_device(watchdog_device)
 
+        # No need to specify device="" when trying to modify properties under diskless sbd
+        if sbd.SBDUtils.is_using_diskless_sbd() \
+                and "device-list" in parameter_dict \
+                and not parameter_dict["device-list"]:
+            parameter_dict.pop("device-list")
+
         logger.debug("Parsed arguments: %s", parameter_dict)
         return parameter_dict
 
