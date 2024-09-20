@@ -443,15 +443,18 @@ class TestBootstrap(unittest.TestCase):
             mock.call(node_list, "systemctl daemon-reload"),
             ])
 
+    @mock.patch('crmsh.bootstrap.change_user_shell')
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
-    def test_init_ssh(self, mock_start_service, mock_config_ssh):
+    def test_init_ssh(self, mock_start_service, mock_config_ssh, mock_change_user_shell):
         bootstrap._context = mock.Mock(current_user="alice", user_at_node_list=[], use_ssh_agent=False)
         bootstrap.init_ssh()
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
         mock_config_ssh.assert_has_calls([
-            mock.call("alice")
-            ])
+            mock.call("alice"),
+            mock.call("hacluster"),
+        ])
+        mock_change_user_shell.assert_called_once_with("hacluster")
 
     @mock.patch('crmsh.userdir.gethomedir')
     def test_key_files(self, mock_gethome):
@@ -459,13 +462,6 @@ class TestBootstrap(unittest.TestCase):
         expected_res = {"private": "/root/.ssh/id_rsa", "public": "/root/.ssh/id_rsa.pub", "authorized": "/root/.ssh/authorized_keys"}
         self.assertEqual(bootstrap.key_files("root"), expected_res)
         mock_gethome.assert_called_once_with("root")
-
-    @mock.patch('builtins.open')
-    def test_is_nologin(self, mock_open_file):
-        data = "hacluster:x:90:90:heartbeat processes:/var/lib/heartbeat/cores/hacluster:/sbin/nologin"
-        mock_open_file.return_value = mock.mock_open(read_data=data).return_value
-        assert bootstrap.is_nologin("hacluster") is not None
-        mock_open_file.assert_called_once_with("/etc/passwd")
 
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('logging.Logger.info')
@@ -536,10 +532,12 @@ class TestBootstrap(unittest.TestCase):
 
     @mock.patch('crmsh.ssh_key.AuthorizedKeyManager.add')
     @mock.patch('crmsh.ssh_key.KeyFileManager.ensure_key_pair_exists_for_user')
-    def test_configure_ssh_key(self, mock_ensure_key_pair, mock_add):
+    @mock.patch('crmsh.bootstrap.change_user_shell')
+    def test_configure_ssh_key(self, mock_change_user_shell, mock_ensure_key_pair, mock_add):
         public_key = crmsh.ssh_key.InMemoryPublicKey('foo')
         mock_ensure_key_pair.return_value = (True, [public_key])
         bootstrap.configure_ssh_key('alice')
+        mock_change_user_shell.assert_called_once_with('alice')
         mock_ensure_key_pair.assert_called_once_with(None, 'alice')
         mock_add.assert_called_once_with(None, 'alice', public_key)
 
