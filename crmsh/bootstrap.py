@@ -976,15 +976,18 @@ def is_nologin(user, remote=None):
     """
     Check if user's shell is nologin
     """
-    passwd_file = "/etc/passwd"
-    pattern = f"{user}:.*:/.*/nologin"
-    if remote:
-        cmd = f"cat {passwd_file}|grep {pattern}"
-        rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote, cmd)
-        return rc == 0
-    else:
-        with open(passwd_file) as f:
-            return re.search(pattern, f.read()) is not None
+    rc, error = sh.cluster_shell().get_rc_and_error(
+        remote, None,
+        "set -e\n"
+        f"shell=$(getent passwd '{user}' | awk -F: '{{ print $NF }}')\n"
+        '[ -n "${shell}" ] && [ -f "${shell}" ] && [ -x "${shell}" ] || exit 1\n'
+        'case $(basename "$shell") in\n'
+        '  nologin) exit 1 ;;\n'
+        '  false) exit 1 ;;\n'
+        'esac\n'
+        '"${shell}" < /dev/null &>/dev/null\n'
+    )
+    return 0 != rc
 
 
 def change_user_shell(user, remote=None):
