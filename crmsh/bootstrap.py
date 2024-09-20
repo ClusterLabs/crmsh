@@ -2074,7 +2074,7 @@ def stop_services(stop_list, remote_addr=None):
     service_manager = ServiceManager()
     for service in stop_list:
         if service_manager.service_is_active(service, remote_addr=remote_addr):
-            logger.info("Stopping the %s%s", service, " on {}".format(remote_addr) if remote_addr else "")
+            logger.info("Stopping the %s on %s", service, remote_addr if remote_addr else utils.this_node())
             service_manager.stop_service(service, disable=True, remote_addr=remote_addr)
 
 
@@ -2101,7 +2101,7 @@ def remove_node_from_cluster(node):
     rm_configuration_files(node)
 
     # execute the command : crm node delete $HOSTNAME
-    logger.info("Removing the node {}".format(node))
+    logger.info("Removing node %s from CIB", node)
     if not NodeMgmt.call_delnode(node):
         utils.fatal("Failed to remove {}.".format(node))
 
@@ -2341,7 +2341,7 @@ def bootstrap_join(context):
 
 
 def bootstrap_finished():
-    logger.info("Done (log saved to %s)" % (log.CRMSH_LOG_FILE))
+    logger.info("Done (log saved to %s on %s)", log.CRMSH_LOG_FILE, utils.this_node())
 
 
 def join_ocfs2(peer_host, peer_user):
@@ -2398,12 +2398,14 @@ def bootstrap_remove(context):
 
     init()
 
+    if _context.qdevice_rm_flag and _context.cluster_node:
+        utils.fatal("Either remove node or qdevice")
+    if _context.cluster_node:
+        logger.info("Removing node %s from cluster", _context.cluster_node)
+
     service_manager = ServiceManager()
     if not service_manager.service_is_active("corosync.service"):
         utils.fatal("Cluster is not active - can't execute removing action")
-
-    if _context.qdevice_rm_flag and _context.cluster_node:
-        utils.fatal("Either remove node or qdevice")
 
     _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE)
     if _context.skip_csync2:
@@ -2451,11 +2453,13 @@ def remove_self(force_flag=False):
     nodes = xmlutil.listnodes(include_remote_nodes=False)
     othernode = next((x for x in nodes if x != me), None)
     if othernode is not None:
-        # remove from other node
+        logger.info("Removing node %s from cluster on %s", me, othernode)
         cmd = "crm{} cluster remove{} -c {}".format(" -F" if force_flag else "", " -y" if yes_to_all else "", me)
-        rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(othernode, cmd)
+        rc, stdout, stderr = sh.cluster_shell().get_rc_stdout_stderr_without_input(othernode, cmd)
         if rc != 0:
-            utils.fatal("Failed to remove this node from {}".format(othernode))
+            utils.fatal(f"Failed to remove this node from {othernode}: {stderr}")
+        elif stdout:
+            print(stdout)
     else:
         # disable and stop cluster
         stop_services(SERVICES_STOP_LIST)
