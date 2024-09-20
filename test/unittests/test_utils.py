@@ -945,7 +945,7 @@ def test_has_disk_mounted(mock_run):
     mock_run.assert_called_once_with("mount")
 
 
-@mock.patch('crmsh.sbd.SBDManager.is_using_diskless_sbd')
+@mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 def test_has_stonith_running(mock_run, mock_diskless):
     mock_run.return_value = """
