@@ -36,6 +36,8 @@ Feature: crmsh bootstrap process - options
     Then    Expected "-x option or SKIP_CSYNC2_SYNC can't be used with any stage" in stderr
     When    Try "crm cluster init sbd -N hanode1 -N hanode2 -y" on "hanode1"
     Then    Expected "Can't use -N/--nodes option and stage(sbd) together" in stderr
+    When    Try "crm corosync link help add" on "hanode1"
+    Then    Expected return code is "0"
 
   @clean
   Scenario: Stage validation

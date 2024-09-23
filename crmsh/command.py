@@ -382,11 +382,9 @@ Examples:
     @completer(_help_completer)
     def do_help(self, context, *args):
         """usage: help topic|level|command"""
-        if context.level_name() == 'root':
-            levels = args
-        else:
-            levels = [context.level_name()]
-            levels.extend(args)
+        levels = [ui.name for ui in context.stack]
+        levels = levels[1:]     # drop the 1st element "root"
+        levels.extend(args)
         h = help_module.help_contextual(levels)
         h.paginate()
         context.command_name = ""
