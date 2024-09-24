@@ -8,6 +8,7 @@ import typing
 
 import crmsh.constants
 import crmsh.parallax
+import crmsh.user_of_host
 import crmsh.utils
 
 
@@ -162,6 +163,35 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
         crmsh.bootstrap.swap_key_for_hacluster(remote_nodes)
         for node in remote_nodes:
             crmsh.bootstrap.change_user_shell('hacluster', node)
+
+
+class PasswordlessPrimaryUserAuthenticationFeature(Feature):
+    def check_quick(self) -> bool:
+        local_node = crmsh.utils.this_node()
+        try:
+            crmsh.utils.user_of(local_node)
+            return True
+        except crmsh.user_of_host.UserNotFoundError:
+            return False
+
+    def check_local(self, nodes: typing.Iterable[str]) -> bool:
+        try:
+            for node in nodes:
+                crmsh.utils.user_of(node)
+        except crmsh.user_of_host.UserNotFoundError:
+            return False
+        try:
+            crmsh.parallax.parallax_call(nodes, 'true')
+            return True
+        except ValueError:
+            return False
+
+    def fix_local(self, nodes: typing.Iterable[str], ask: typing.Callable[[str], None]) -> None:
+        logger.warning('Passwordless ssh is not initialized. Use `crm cluster init ssh` and `crm cluster join ssh -c <init-node>` to set it up.')
+        raise FixFailure
+
+    def fix_cluster(self, nodes: typing.Iterable[str], ask: typing.Callable[[str], None]) -> None:
+        return self.fix_local(nodes, ask)
 
 
 def main_check_local(args) -> int:

@@ -17,21 +17,14 @@ Feature: healthcheck detect and fix problems in a crmsh deployment
     And     Show cluster status on "hanode1"
 
   @clean
-  Scenario: a new node joins when directory ~hacluster/.ssh is removed from cluster
-    When    Run "rm -rf ~hacluster/.ssh" on "hanode1"
-    And     Run "rm -rf ~hacluster/.ssh" on "hanode2"
-    And     Run "crm cluster join -c hanode1 -y" on "hanode3"
-    Then    Cluster service is "started" on "hanode3"
-    # FIXME: new join implement does not trigger a exception any longer, and the auto fix is not applied
-    # And     File "~hacluster/.ssh/id_rsa" exists on "hanode1"
-    # And     File "~hacluster/.ssh/id_rsa" exists on "hanode2"
-    # And     File "~hacluster/.ssh/id_rsa" exists on "hanode3"
-
-  # skip non-root as behave_agent is not able to run commands interactively with non-root sudoer
-  @skip_non_root
-  @clean
   Scenario: An upgrade_seq file in ~hacluster/crmsh/ will be migrated to /var/lib/crmsh (bsc#1213050)
-    When    Run "mv /var/lib/crmsh ~hacluster/" on "hanode1"
-    Then    File "~hacluster/crmsh/upgrade_seq" exists on "hanode1"
-    When    Run "crm cluster status" on "hanode1"
-    Then    File "/var/lib/crmsh/upgrade_seq" exists on "hanode1"
+    When    Run "rm -rf ~hacluster/.ssh" on "hanode1"
+    And     Try "crm cluster health hawk2" on "hanode1"
+    Then    Expected "hawk2: passwordless ssh authentication: FAIL." in stderr
+    When    Run "crm cluster health hawk2 --fix" on "hanode1"
+    Then    Expected "hawk2: passwordless ssh authentication: OK." in stdout
+    When    Run "rm -rf ~hacluster/.ssh /root/.config/crm" on "hanode1"
+    And     Try "crm cluster health hawk2" on "hanode1"
+    Then    Expected "hawk2: passwordless ssh authentication: FAIL." in stderr
+    When    Try "crm cluster health hawk2 --fix" on "hanode1"
+    Then    Expected "Cannot fix automatically" in stderr
