@@ -20,7 +20,7 @@ try:
 except ImportError:
     import simplejson as json
 
-from . import config, constants
+from . import config, constants, user_of_host
 from . import handles
 from . import options
 from . import userdir
@@ -1639,6 +1639,16 @@ def _copy_utils(dst):
         raise ValueError(e)
 
 
+def _check_parallax_remote_available(printer, hosts):
+    try:
+        _parallax_call(printer, hosts, 'true', timeout_seconds=15)
+    except user_of_host.UserNotFoundError:
+        if userdir.getuser() == 'hacluster':
+            raise ValueError('Passwordless ssh does not work. Run "crm cluster health hawk2 --fix" to set it up.') from None
+        else:
+            raise ValueError('Passwordless ssh does not work.') from None
+
+
 def _create_remote_workdirs(printer, hosts, path, timeout_seconds):
     "Create workdirs on remote hosts"
     ok = True
@@ -1779,6 +1789,7 @@ class RunActions(object):
             json.dump(self.data, open(self.statefile, 'w'))
             _copy_utils(self.workdir)
             if has_remote_actions:
+                _check_parallax_remote_available(self.printer, self.hosts)
                 _create_remote_workdirs(self.printer, self.hosts, self.workdir, self.timeout_seconds)
                 _copy_to_remote_dirs(self.printer, self.hosts, self.workdir, self.timeout_seconds)
             # make sure all path references are relative to the script directory
@@ -2106,7 +2117,10 @@ def run(script, params, printer):
     finally:
         if not dry_run:
             if not config.core.debug:
-                _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, int(params['timeout']))
+                try:
+                    _run_cleanup(printer, has_remote_actions, local_node, hosts, workdir, int(params['timeout']))
+                except user_of_host.UserNotFoundError:
+                    pass
             elif has_remote_actions:
                 _print_debug(printer, local_node, hosts, workdir, int(params['timeout']))
             else:
