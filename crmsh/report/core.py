@@ -408,8 +408,9 @@ def find_ssh_user(context: Context) -> None:
             if not crmutils.can_ask():
                 logger.error('Cannot create a report non-interactively. Interactive authentication is required.')
                 if userdir.getuser() == 'hacluster':
-                    logger.warning('Passwordless ssh does not work. Run "crm cluster health hawk2 --fix" to set it up.')
-                raise ValueError('Cannot create a report.')
+                    raise ValueError('Passwordless ssh does not work. Run "crm cluster health hawk2 --fix" to set it up.')
+                else:
+                    raise ValueError('Cannot create a report.')
 
 
 def load_from_crmsh_config(context: Context) -> None:
