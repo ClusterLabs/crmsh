@@ -491,9 +491,9 @@ class TestRun(unittest.TestCase):
         core.process_arguments(mock_ctx_inst)
 
 
-    @mock.patch('crmsh.sh.ShellUtils.get_stdout')
+    @mock.patch('subprocess.Popen')
     @mock.patch('ast.literal_eval')
-    def test_start_collector(self, mock_literal_eval, mock_get_stdout):
+    def test_start_collector(self, mock_literal_eval, mock_popen):
         mock_shell = mock.Mock(crmsh.report.sh.Shell)
         mock_context = mock.Mock(
             ssh_user=None,
