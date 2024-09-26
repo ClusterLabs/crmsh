@@ -230,7 +230,7 @@ class Context(object):
             utils.fatal(f"Overriding current user '{self.current_user}' by '{user}'. Ouch, don't do it.")
         self.user_at_node_list = [value for (user, node), value in zip(li, self.user_at_node_list) if node != me]
         for user, node in (utils.parse_user_at_host(x) for x in self.user_at_node_list):
-            utils.ping_node(node)
+            utils.node_reachable_check(node)
 
     def _validate_cluster_node(self):
         """
@@ -2589,7 +2589,7 @@ def bootstrap_join(context):
             _context.initialize_user()
 
         remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
-        utils.ping_node(cluster_node)
+        utils.node_reachable_check(cluster_node)
         join_ssh(cluster_node, remote_user)
         remote_user = utils.user_of(cluster_node)
 
