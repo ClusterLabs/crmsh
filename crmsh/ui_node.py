@@ -256,7 +256,7 @@ keep the node in standby after reboot. The life time defaults to
     node_list = member_list if options.all else args
     for node in node_list:
         try:
-            utils.ping_node(node)
+            utils.node_reachable_check(node)
         except ValueError as err:
             logger.warning(str(err))
             node_list.remove(node)
