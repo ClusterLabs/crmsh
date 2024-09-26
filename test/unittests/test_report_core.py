@@ -475,12 +475,12 @@ class TestRun(unittest.TestCase):
 
     @mock.patch('crmsh.report.core.local_mode')
     @mock.patch('logging.Logger.error')
-    @mock.patch('crmsh.utils.ping_node')
+    @mock.patch('crmsh.utils.node_reachable_check')
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    def test_process_node_list(self, mock_list_nodes, mock_ping, mock_error, mock_local_mode):
+    def test_process_node_list(self, mock_list_nodes, mock_reachable, mock_error, mock_local_mode):
         mock_local_mode.return_value = False
         mock_ctx_inst = mock.Mock(node_list=["node1", "node2"], single=False, me="node1")
-        mock_ping.side_effect = ValueError("error")
+        mock_reachable.side_effect = ValueError("error")
         core.process_node_list(mock_ctx_inst)
         self.assertEqual(mock_ctx_inst.node_list, ["node1"])
 
