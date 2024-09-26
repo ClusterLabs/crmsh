@@ -68,7 +68,7 @@ Feature: crm report functional test for common cases
     Then    Expected "Directory /fsf does not exist" in stderr
 
     When    Try "crm report -n fs" on "hanode1"
-    Then    Expected "host "fs" is unreachable:" in stderr
+    Then    Expected "host "fs" is unreachable" in stderr
 
     When    Try "crm report -f xxxx" on "hanode1"
     Then    Expected "Invalid time string 'xxxx'" in stderr
