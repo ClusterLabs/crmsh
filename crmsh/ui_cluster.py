@@ -746,7 +746,7 @@ to get the geo cluster configuration.""",
         bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
-    @command.completers_repeating(compl.nodes)
+    @command.completers(compl.choice(['hawk2']))
     def do_health(self, context, *args):
         '''
         Extensive health check.

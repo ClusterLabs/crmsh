@@ -187,7 +187,7 @@ class PasswordlessPrimaryUserAuthenticationFeature(Feature):
             return False
 
     def fix_local(self, nodes: typing.Iterable[str], ask: typing.Callable[[str], None]) -> None:
-        logger.warning('Passwordless ssh is not initialized. Use `crm cluster init ssh` and `crm cluster join ssh -c <init-node>` to set it up.')
+        logger.warning('Passwordless ssh is not initialized. Use `crm cluster init ssh` (on one node) and `crm cluster join ssh -c <init-node>` (on other nodes) to set it up.')
         raise FixFailure
 
     def fix_cluster(self, nodes: typing.Iterable[str], ask: typing.Callable[[str], None]) -> None:
