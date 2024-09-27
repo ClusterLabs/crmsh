@@ -320,19 +320,18 @@ def help_contextual(levels: typing.Sequence[str]):
     _load_help()
     if len(levels) == 0:
         return help_overview()
-    elif len(levels) == 1:
-        return help_command(levels[0:])
-    elif _is_help_topic(levels[0]):
-        topic = levels[0]
-        return help_topic(topic)
+    elif len(levels) == 1 and _is_help_topic(levels[0]):
+        return help_topic(levels[0])
     elif _is_command(levels) or _is_level(levels):
-        return help_command(levels)
+        return help_command(levels[0:])
     else:
         topic = levels[0].lower()
         t = fuzzy_get(_TOPICS, topic)
         if t:
             return t
-        raise ValueError("No help found for '%s'! 'overview' lists all help entries" % (topic))
+    raise ValueError('No help found for "crm {}". Run "crm help overview" to list all help entries.'.format(
+        ' '.join(levels),
+    ))
 
 
 def add_help(levels: typing.Sequence[str], entry):
