@@ -272,39 +272,37 @@ def test_sysconfig_set_bsc1145823():
     sc = utils.parse_sysconfig(fname)
     assert (sc.get("age") == "100")
 
-@mock.patch("crmsh.utils.IP.is_ipv6")
+@mock.patch("socket.getaddrinfo")
 @mock.patch("socket.socket")
 @mock.patch("crmsh.utils.closing")
-def test_check_port_open_false(mock_closing, mock_socket, mock_is_ipv6):
-    mock_is_ipv6.return_value = False
+def test_check_port_open_false(mock_closing, mock_socket, mock_getaddrinfo):
     sock_inst = mock.Mock()
     mock_socket.return_value = sock_inst
     mock_closing.return_value.__enter__.return_value = sock_inst
     sock_inst.connect_ex.return_value = 1
+    mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 22))]
 
-    assert utils.check_port_open("10.10.10.1", 22) is False
+    assert utils.check_port_open("localhost", 22) is False
 
-    mock_is_ipv6.assert_called_once_with("10.10.10.1")
-    mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM)
+    mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM, 6)
     mock_closing.assert_called_once_with(sock_inst)
-    sock_inst.connect_ex.assert_called_once_with(("10.10.10.1", 22))
+    sock_inst.connect_ex.assert_called_once_with(("127.0.0.1", 22))
 
-@mock.patch("crmsh.utils.IP.is_ipv6")
+@mock.patch("socket.getaddrinfo")
 @mock.patch("socket.socket")
 @mock.patch("crmsh.utils.closing")
-def test_check_port_open_true(mock_closing, mock_socket, mock_is_ipv6):
-    mock_is_ipv6.return_value = True
+def test_check_port_open_true(mock_closing, mock_socket, mock_getaddrinfo):
     sock_inst = mock.Mock()
     mock_socket.return_value = sock_inst
     mock_closing.return_value.__enter__.return_value = sock_inst
     sock_inst.connect_ex.return_value = 0
+    mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 22))]
 
-    assert utils.check_port_open("2001:db8:10::7", 22) is True
+    assert utils.check_port_open("localhost", 22) is True
 
-    mock_is_ipv6.assert_called_once_with("2001:db8:10::7")
-    mock_socket.assert_called_once_with(socket.AF_INET6, socket.SOCK_STREAM)
+    mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM, 6)
     mock_closing.assert_called_once_with(sock_inst)
-    sock_inst.connect_ex.assert_called_once_with(("2001:db8:10::7", 22))
+    sock_inst.connect_ex.assert_called_once_with(("127.0.0.1", 22))
 
 def test_valid_port():
     assert utils.valid_port(1) is False
@@ -857,15 +855,6 @@ def test_get_iplist_from_name(mock_get_nodeid, mock_get_nodeinfo):
     mock_get_nodeinfo.assert_called_once_with()
 
 
-@mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-def test_ping_node(mock_run):
-    mock_run.return_value = (1, None, "error data")
-    with pytest.raises(ValueError) as err:
-        utils.ping_node("node_unreachable")
-    assert str(err.value) == 'host "node_unreachable" is unreachable: error data'
-    mock_run.assert_called_once_with("ping -c 1 node_unreachable")
-
-
 def test_calculate_quorate_status():
     assert utils.calculate_quorate_status(3, 2) is True
     assert utils.calculate_quorate_status(3, 1) is False
@@ -1099,13 +1088,13 @@ def test_is_block_device(mock_stat, mock_isblk):
     mock_isblk.assert_called_once_with(12345)
 
 
-@mock.patch('crmsh.utils.ping_node')
+@mock.patch('crmsh.utils.node_reachable_check')
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-def test_check_all_nodes_reachable(mock_run, mock_ping):
+def test_check_all_nodes_reachable(mock_run, mock_reachable):
     mock_run.return_value = "1084783297 15sp2-1 member"
     utils.check_all_nodes_reachable()
     mock_run.assert_called_once_with("crm_node -l")
-    mock_ping.assert_called_once_with("15sp2-1")
+    mock_reachable.assert_called_once_with("15sp2-1")
 
 
 @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')

@@ -207,23 +207,10 @@ class TestQDevice(unittest.TestCase):
         res = self.qdevice_with_ip_cluster_node.qdevice_p12_on_cluster
         self.assertEqual(res, "/etc/corosync/qdevice/net/node1.com/qdevice-net-node.p12")
 
-    @mock.patch('crmsh.utils.check_port_open')
     @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
-    @mock.patch('crmsh.utils.ping_node')
+    @mock.patch('crmsh.utils.node_reachable_check')
     @mock.patch('socket.getaddrinfo')
-    def test_check_qnetd_addr_port_error(self, mock_getaddrinfo, mock_ping, mock_in_local, mock_check):
-        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_in_local.return_value = False
-        mock_check.return_value = False
-        with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qnetd_addr("qnetd-node")
-        excepted_err_string = "ssh service on \"qnetd-node\" not available"
-        self.assertEqual(excepted_err_string, str(err.exception))
-
-    @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
-    @mock.patch('crmsh.utils.ping_node')
-    @mock.patch('socket.getaddrinfo')
-    def test_check_qnetd_addr_local(self, mock_getaddrinfo, mock_ping, mock_in_local):
+    def test_check_qnetd_addr_local(self, mock_getaddrinfo, mock_reachable, mock_in_local):
         mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
         mock_in_local.return_value = True
         with self.assertRaises(ValueError) as err:

@@ -352,7 +352,7 @@ def process_node_list(context: Context) -> None:
         if node == context.me:
             continue
         try:
-            crmutils.ping_node(node)
+            crmutils.node_reachable_check(node)
         except Exception as err:
             logger.error(str(err))
             context.node_list.remove(node)
