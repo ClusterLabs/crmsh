@@ -26,6 +26,7 @@ import gzip
 import bz2
 import lzma
 import json
+import socket
 from pathlib import Path
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
@@ -2108,15 +2109,21 @@ def check_ssh_passwd_need(local_user, remote_user, host, shell: sh.LocalShell = 
     return rc != 0
 
 
-def check_port_open(ip, port):
-    import socket
-
-    family = socket.AF_INET6 if IP.is_ipv6(ip) else socket.AF_INET
-    with closing(socket.socket(family, socket.SOCK_STREAM)) as sock:
-        if sock.connect_ex((ip, port)) == 0:
-            return True
-        else:
-            return False
+def check_port_open(host, port, timeout=3) -> bool:
+    """
+    Check whether the port is open on the host
+    Use getaddrinfo to support both IPv4 and IPv6
+    """
+    try:
+        addrinfo = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        af, socktype, proto, canonname, sa = addrinfo[0]
+        with closing(socket.socket(af, socktype, proto)) as sock:
+            sock.settimeout(timeout)
+            if sock.connect_ex(sa) == 0:
+                return True
+        return False
+    except socket.error:
+        return False
 
 
 def valid_port(port):
@@ -2460,13 +2467,18 @@ def package_is_installed(pkg, remote_addr=None):
     return rc == 0
 
 
-def ping_node(node):
+def node_reachable_check(node, ping_count=1, port=22, timeout=3):
     """
-    Check if the remote node is reachable
+    Check if node is reachable by using ping and socket to ssh port
     """
-    rc, _, err = ShellUtils().get_stdout_stderr("ping -c 1 {}".format(node))
-    if rc != 0:
-        raise ValueError("host \"{}\" is unreachable: {}".format(node, err))
+    rc, _, _ = ShellUtils().get_stdout_stderr(f"ping -n -c {ping_count} -W {timeout} {node}")
+    if rc == 0:
+        return True
+    # ping failed, try to connect to ssh port by socket
+    if check_port_open(node, port, timeout):
+        return True
+    # both ping and socket failed
+    raise ValueError(f"host \"{node}\" is unreachable")
 
 
 def calculate_quorate_status(expected_votes, actual_votes):
@@ -2490,7 +2502,7 @@ def check_all_nodes_reachable():
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l")
     for node in re.findall("\d+ (.*) \w+", out):
-        ping_node(node)
+        node_reachable_check(node)
 
 
 def re_split_string(reg, string):
