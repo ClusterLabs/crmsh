@@ -11,7 +11,6 @@ import sys
 import shutil
 import json
 import ast
-import typing
 from inspect import getmembers, isfunction
 from io import StringIO
 from typing import List
@@ -280,25 +279,31 @@ def start_collector(node: str, context: Context) -> None:
     elif ret.stderr:
         print(crmsh.sh.Utils.decode_str(ret.stderr), file=sys.stderr)
 
-    compress_data = ""
+    archive_data_literal = ""
     for data in ret.stdout.decode('utf-8').split("\n"):
         if data.startswith(constants.COMPRESS_DATA_FLAG):
             # crm report data from collector
-            compress_data = data.lstrip(constants.COMPRESS_DATA_FLAG)
+            archive_data_literal = data.lstrip(constants.COMPRESS_DATA_FLAG)
         else:
             # INFO log data from collector
             print(data)
 
     try:
         # Safely evaluate the string representation of a tarball from push_data
-        data_object = ast.literal_eval(compress_data)
+        archive_data = ast.literal_eval(archive_data_literal)
     except (SyntaxError, ValueError) as e:
         logger.error(f"Error evaluating data: {e}")
         return
 
     # Extract the tarball in the specified working directory
-    cmd = f"cd {context.work_dir} && tar x"
-    ShellUtils().get_stdout(cmd, input_s=data_object)
+    child = subprocess.Popen(
+        ['tar', '-x'],
+        cwd=context.work_dir,
+        stdin=subprocess.PIPE,
+    )
+    child.stdin.write(archive_data)
+    child.stdin.close()
+    child.wait()
 
 
 def process_dest(context: Context) -> None:
@@ -412,8 +417,9 @@ def find_ssh_user(context: Context) -> None:
             if not crmutils.can_ask():
                 logger.error('Cannot create a report non-interactively. Interactive authentication is required.')
                 if userdir.getuser() == 'hacluster':
-                    logger.warning('Passwordless ssh does not work. Run "crm cluster health hawk2 --fix" to set it up.')
-                raise ValueError('Cannot create a report.')
+                    raise ValueError('Passwordless ssh does not work. Run "crm cluster health hawk2 --fix" to set it up.')
+                else:
+                    raise ValueError('Cannot create a report.')
 
 
 def load_from_crmsh_config(context: Context) -> None:
