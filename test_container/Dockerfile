@@ -1,4 +1,4 @@
-FROM opensuse/tumbleweed
+FROM docker.io/opensuse/tumbleweed
 MAINTAINER Xin Liang <XLiang@suse.com>
 
 CMD ["/usr/lib/systemd/systemd", "--system"]
