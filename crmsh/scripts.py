@@ -1257,10 +1257,17 @@ def _filter_nodes(nodes, user, port):
         nodes = nodes.replace(',', ' ').split()
     else:
         nodes = utils.list_cluster_nodes()
-    if not nodes:
-        raise ValueError("No hosts")
-    nodes = [(node, port or None, user or None) for node in nodes]
-    return nodes
+
+    reachable_nodes = []
+    for node in nodes:
+        try:
+            utils.node_reachable_check(node)
+            reachable_nodes.append((node, port or None, user or None))
+        except ValueError:
+            logger.warning("Node %s is unreachable", node)
+    if not reachable_nodes:
+        raise ValueError("No reachable hosts")
+    return reachable_nodes
 
 
 def _scoped_param(context, name):
