@@ -2530,7 +2530,7 @@ def has_stonith_running():
     from . import sbd
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
     has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
-    using_diskless_sbd = sbd.SBDManager.is_using_diskless_sbd()
+    using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
     return has_stonith_device or using_diskless_sbd
 
 
@@ -2790,13 +2790,15 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
     return 0
 
 
-def get_property(name, property_type="crm_config", peer=None):
+def get_property(name, property_type="crm_config", peer=None, get_default=True):
     """
     Get cluster properties
 
     "property_type" can be crm_config|rsc_defaults|op_defaults
+    "get_default" is used to get the default value from cluster metadata,
+    when it is False, the property value will be got from cib
     """
-    if property_type == "crm_config":
+    if property_type == "crm_config" and get_default:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
     else:
@@ -3178,7 +3180,7 @@ def ssh_command():
 
 
 def load_cib_file_env():
-    if options.regression_tests or ServiceManager().service_is_active("pacemaker.service"):
+    if options.regression_tests or ServiceManager().service_is_active(constants.PCMK_SERVICE):
         return
     cib_file = os.environ.setdefault('CIB_file', constants.CIB_RAW_FILE)
     logger.warning("Cluster is not running, loading the CIB file from %s", cib_file)
@@ -3220,4 +3222,27 @@ def fuzzy_get(items, s):
     if m:
         return m
     return None
+
+
+def cleanup_stonith_related_properties():
+    for p in ("stonith-watchdog-timeout", "stonith-timeout", "priority-fencing-delay"):
+        if get_property(p, get_default=False):
+            delete_property(p)
+    if get_property("stonith-enabled") == "true":
+        set_property("stonith-enabled", "false")
+
+
+def is_subdict(sub_dict, main_dict):
+    """
+    Check if sub_dict is a sub-dictionary of main_dict
+    """
+    return all(item in main_dict.items() for item in sub_dict.items())
+
+
+def strip_ansi_escape_sequences(text):
+    """
+    Remove ANSI escape sequences from text
+    """
+    ansi_escape_pattern = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+    return ansi_escape_pattern.sub('', text)
 # vim:ts=4:sw=4:et:

@@ -119,7 +119,7 @@ e.g. crm cluster init ocfs2 -o <ocfs2_device>
         """
         from . import sbd
         if ServiceManager().service_is_enabled("sbd.service"):
-            sbd_device_list = sbd.SBDManager.get_sbd_device_from_config()
+            sbd_device_list = sbd.SBDUtils.get_sbd_device_from_config()
             for dev in self.ocfs2_devices:
                 if dev in sbd_device_list:
                     self._dynamic_raise_error("{} cannot be the same with SBD device".format(dev))
