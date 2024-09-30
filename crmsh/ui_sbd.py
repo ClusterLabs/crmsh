@@ -18,16 +18,24 @@ from crmsh.service_manager import ServiceManager
 logger = logging.getLogger(__name__)
 
 
-def sbd_devices_completer(completed_list: typing.List[str]) -> typing.List[str]:
+def sbd_device_completer(completed_list: typing.List[str]) -> typing.List[str]:
     '''
-    completion for sbd devices
+    Completion for sbd device command
     '''
-    if not ServiceManager().service_is_active(constants.SBD_SERVICE):
+    if not sbd.SBDUtils.is_using_disk_based_sbd():
         return []
+    if len(completed_list) == 2:
+        return ["add", "remove"]
+    if len(completed_list) > 2 and completed_list[1] != "remove":
+        return []
+
+    # completer for sbd device remove
     dev_list = sbd.SBDUtils.get_sbd_device_from_config()
-    if dev_list:
-        return [dev for dev in dev_list if dev not in completed_list]
-    return []
+    not_complete_list = [dev for dev in dev_list if dev not in completed_list[2:]]
+    # not allow to remove the last device
+    if len(not_complete_list) == 1:
+        return []
+    return not_complete_list
 
 
 def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str]:
@@ -51,8 +59,6 @@ def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str
             return [t for t in show_types if t not in completed_list]
         else:
             return []
-    if completed_list[-1] == "device=":
-        return []
 
     timeout_types = SBD.TIMEOUT_TYPES if is_diskbased else SBD.DISKLESS_TIMEOUT_TYPES
     parameters_pool.extend([f"{t}-timeout=" for t in timeout_types])
@@ -62,11 +68,6 @@ def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str
         for p in parameters_pool
         if not any(c.startswith(p) for c in completed_list)
     ]
-
-    if is_diskbased:
-        dev_count = sum(1 for c in completed_list if c.startswith("device="))
-        if dev_count < sbd.SBDManager.SBD_DEVICE_MAX:
-            parameters_pool.append("device=")
 
     return parameters_pool
 
@@ -384,6 +385,78 @@ class SBD(command.UI):
         )
         sbd_manager.init_and_deploy_sbd()
 
+    def _device_add(self, devices_to_add: typing.List[str]):
+        '''
+        Implement sbd device add command, add devices to sbd configuration
+        '''
+        all_device_list = self.device_list_from_config + devices_to_add
+        sbd.SBDUtils.verify_sbd_device(all_device_list)
+
+        logger.info("Append devices: %s", ';'.join(devices_to_add))
+        update_dict = {"SBD_DEVICE": ";".join(all_device_list)}
+        sbd_manager = sbd.SBDManager(
+            device_list_to_init=devices_to_add,
+            update_dict=update_dict,
+            timeout_dict=self.device_meta_dict_runtime
+        )
+        sbd_manager.init_and_deploy_sbd()
+
+    def _device_remove(self, devices_to_remove: typing.List[str]):
+        '''
+        Implement sbd device remove command, remove devices from sbd configuration
+        '''
+        for dev in devices_to_remove:
+            if dev not in self.device_list_from_config:
+                raise self.SyntaxError(f"Device {dev} is not in config")
+        # To keep the order of devices during removal
+        left_device_list = [dev for dev in self.device_list_from_config if dev not in devices_to_remove]
+        if len(left_device_list) == 0:
+            raise self.SyntaxError(f"Not allowed to remove all devices")
+
+        logger.info("Remove devices: %s", ';'.join(devices_to_remove))
+        update_dict = {"SBD_DEVICE": ";".join(left_device_list)}
+        sbd.SBDManager.update_sbd_configuration(update_dict)
+        logger.info('%s', self.RESTART_INFO)
+
+    @command.completers_repeating(sbd_device_completer)
+    def do_device(self, context, *args) -> bool:
+        '''
+        Implement sbd device command
+        '''
+        if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
+            logger.error("%s is not active", constants.PCMK_SERVICE)
+            return False
+        if not sbd.SBDUtils.is_using_disk_based_sbd():
+            logger.error("Only works for disk-based SBD")
+            logger.info("Please use 'crm cluster init sbd -s <dev1> [-s <dev2> [-s <dev3>]]' to configure the disk-based SBD first")
+            return False
+
+        try:
+            if not args:
+                raise self.SyntaxError("No argument")
+            if args[0] not in ("add", "remove"):
+                raise self.SyntaxError(f"Invalid argument: {args[0]}")
+            if len(args) < 2:
+                raise self.SyntaxError("No device specified")
+
+            self._load_attributes()
+            logger.info("Configured sbd devices: %s", ';'.join(self.device_list_from_config))
+            if len(args) == 2 and ";" in args[1]:
+                device_list_from_args = args[1].split(";")
+            else:
+                device_list_from_args = list(args[1:])
+            match args[0]:
+                case "add":
+                    self._device_add(device_list_from_args)
+                case "remove":
+                    self._device_remove(device_list_from_args)
+            return True
+
+        except self.SyntaxError as e:
+            logger.error('%s', e)
+            logger.info("Usage: crm sbd device <add|remove> <device>...")
+            return False
+
     @command.completers_repeating(sbd_configure_completer)
     def do_configure(self, context, *args) -> bool:
         '''
@@ -417,7 +490,6 @@ class SBD(command.UI):
             print(self.configure_usage)
             return False
 
-    @command.completers_repeating(sbd_devices_completer)
     def do_remove(self, context, *args) -> bool:
         '''
         Implement sbd remove command

@@ -87,12 +87,24 @@ class SBDUtils:
         return res.split(';') if res else []
 
     @staticmethod
+    def _is_sbd_running_with_device():
+        if not ServiceManager().service_is_active(constants.SBD_SERVICE):
+            return False
+        return bool(SBDUtils.get_sbd_device_from_config())
+
+    @staticmethod
     def is_using_diskless_sbd():
         '''
         Check if using diskless SBD
         '''
-        dev_list = SBDUtils.get_sbd_device_from_config()
-        return not dev_list and ServiceManager().service_is_active(constants.SBD_SERVICE)
+        return not SBDUtils._is_sbd_running_with_device()
+
+    @staticmethod
+    def is_using_disk_based_sbd():
+        '''
+        Check if using disk-based SBD
+        '''
+        return SBDUtils._is_sbd_running_with_device()
 
     @staticmethod
     def has_sbd_device_already_initialized(dev) -> bool:
