@@ -456,9 +456,7 @@ class SBDManager(object):
         Try to configure sbd resource, restart cluster on needed
         """
         if not xmlutil.CrmMonXmlParser().is_any_resource_running():
-            logger.info("Restarting cluster service")
-            utils.cluster_run_cmd("crm cluster restart")
-            bootstrap.wait_for_cluster()
+            bootstrap.restart_cluster()
             self.configure_sbd_resource_and_properties()
         else:
             logger.warning("To start sbd.service, need to restart cluster service manually on each node")

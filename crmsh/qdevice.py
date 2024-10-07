@@ -599,9 +599,7 @@ class QDevice(object):
             logger.info("Starting corosync-qdevice.service in cluster")
             utils.cluster_run_cmd("systemctl restart corosync-qdevice")
         elif self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
-            logger.info("Restarting cluster service")
-            utils.cluster_run_cmd("crm cluster restart")
-            bootstrap.wait_for_cluster()
+            bootstrap.restart_cluster()
         else:
             logger.warning("To use qdevice service, need to restart cluster service manually on each node")
 
