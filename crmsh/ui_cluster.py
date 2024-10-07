@@ -16,6 +16,7 @@ from . import completers as compl
 from . import bootstrap
 from . import corosync
 from . import qdevice
+from . import xmlutil
 from .cibconfig import cib_factory
 from .prun import prun
 from .service_manager import ServiceManager
@@ -594,8 +595,17 @@ the config.core.force option.""",
         '''
         Rename the cluster.
         '''
-        if not ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("corosync.service"):
+        service_manager = ServiceManager()
+        if not service_manager.service_is_active("corosync.service"):
             context.fatal_error("Can't rename cluster when cluster service is stopped")
+        if service_manager.service_is_active("corosync-qdevice.service"):
+            logger.error("Can't rename cluster when QDevice service is running")
+            suggestion = '''Please run `crm cluster remove --qdevice` on any node in the cluster to remove the QDevice configuration;
+Then rename the cluster;
+Finally run `crm cluster init qdevice` on any node in the cluster to re-deploy the QDevice.'''
+            logger.info(suggestion)
+            return
+
         old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:
             context.fatal_error("Expected a different name")
@@ -613,8 +623,11 @@ the config.core.force option.""",
         if not cib_factory.commit():
             context.fatal_error("Change property cluster-name failed!")
 
-        # it's a safe way to give user a hints that need to restart service
-        context.info("To apply the change, restart the cluster service at convenient time")
+        if xmlutil.CrmMonXmlParser().is_any_resource_running():
+            context.info("To apply the change, restart the cluster service at convenient time")
+        else:
+            bootstrap.restart_cluster()
+
 
     def _parse_clustermap(self, clusters):
         '''
