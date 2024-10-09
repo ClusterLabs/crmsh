@@ -34,7 +34,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT,\
+from .constants import QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT,\
         REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX, CSYNC2_SERVICE, WAIT_TIMEOUT_MS_DEFAULT
 from . import qdevice
 from . import parallax
