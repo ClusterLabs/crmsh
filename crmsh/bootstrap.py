@@ -26,15 +26,13 @@ import typing
 
 import yaml
 import socket
-from tempfile import mktemp
 from string import Template
 from lxml import etree
 
-import crmsh.parallax
 from . import config, constants
 from . import utils
 from . import xmlutil
-from .cibconfig import mkset_obj, cib_factory
+from .cibconfig import cib_factory
 from . import corosync
 from . import tmpfiles
 from . import lock
