@@ -497,7 +497,7 @@ def is_online():
         return False
 
     # if peer_node is None, this is in the init process
-    if _context.cluster_node is None:
+    if not _context or _context.cluster_node is None:
         return True
     # In join process
     # If the joining node is already online but can't find the init node
@@ -2654,9 +2654,7 @@ def remove_qdevice():
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
         invoke("crm cluster run 'crm corosync reload'")
     elif qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART:
-        logger.info("Restarting cluster service")
-        utils.cluster_run_cmd("crm cluster restart")
-        wait_for_cluster()
+        restart_cluster()
     else:
         logger.warning("To remove qdevice service, need to restart cluster service manually on each node")
 
@@ -3077,4 +3075,10 @@ def sync_file(path):
         utils.cluster_copy_file(path, nodes=_context.node_list_in_cluster, output=False)
     else:
         csync2_update(path)
+
+
+def restart_cluster():
+    logger.info("Restarting cluster service")
+    utils.cluster_run_cmd("crm cluster restart")
+    wait_for_cluster()
 # EOF
