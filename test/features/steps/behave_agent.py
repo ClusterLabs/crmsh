@@ -59,6 +59,11 @@ class SocketIO(io.RawIOBase):
 
 
 def call(host: str, port: int, cmdline: str, user: typing.Optional[str] = None):
+    subprocess.run(['ip', 'addr'])
+    subprocess.run(['cat', '/etc/resolv.conf'])
+    subprocess.run(['cat', '/etc/hosts'])
+    subprocess.run(['strace', 'getent', 'hosts', 'hanode2'])
+    print(f'behave.call({host}, {port})')
     family, type, proto, _, sockaddr =  socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)[0]
     with socket.socket(family, type, proto) as s:
         s.connect(sockaddr)

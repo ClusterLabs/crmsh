@@ -1,5 +1,5 @@
 #!/bin/bash
-DOCKER_IMAGE=${DOCKER_IMAGE:-"liangxin1300/alpha"}
+DOCKER_IMAGE=${DOCKER_IMAGE:-"nyang23/haleap:knet-1.29"}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
 DOCKER_SERVICE="docker.service"
@@ -209,10 +209,7 @@ deploy_ha_node() {
 	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
-	docker run --restart always $docker_options $DOCKER_IMAGE &> /dev/null
-	for network in ${HA_NETWORK_ARRAY[@]};do
-		docker network connect $network $node_name
-	done
+	docker run --network=${HA_NETWORK_FIRST} --network=${HA_NETWORK_SECOND} $docker_options $DOCKER_IMAGE &> /dev/null
 
 	if [ "$node_name" != "qnetd-node" ];then
 		rm_qnetd_cmd="rpm -q corosync-qnetd && rpm -e corosync-qnetd"
@@ -252,9 +249,11 @@ create_node() {
 	for index in ${!HA_NETWORK_ARRAY[@]};do
 		network=${HA_NETWORK_ARRAY[$index]}
 		info "Create ha specific docker network \"$network\"..."
-		docker network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network &> /dev/null
+		docker network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network
 	done
 
+        echo -n 'cgroups: '
+        stat -fc %T /sys/fs/cgroup/
 	for node in $*;do
 		deploy_ha_node $node &
 	done
