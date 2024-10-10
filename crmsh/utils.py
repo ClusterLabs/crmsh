@@ -1104,6 +1104,7 @@ def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     if config.core.dotty and not nograph:
         fd, dotfile = mkstemp()
         ptest = "%s -D %s" % (ptest, dotfile)
+        os.close(fd)
     else:
         dotfile = None
     # ptest prints to stderr
