@@ -256,6 +256,8 @@ create_node() {
 		docker network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network &> /dev/null
 	done
 
+        echo -n 'cgroups: '
+        stat -fc %T /sys/fs/cgroup/
 	for node in $*;do
 		deploy_ha_node $node &
 	done
