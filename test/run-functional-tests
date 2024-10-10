@@ -211,7 +211,7 @@ deploy_ha_node() {
 	info "Deploying \"$node_name\"..."
 	docker run --restart always $docker_options $DOCKER_IMAGE &> /dev/null
 	for network in ${HA_NETWORK_ARRAY[@]};do
-		docker network connect $network $node_name
+		docker network connect --alias $node_name $network $node_name
 	done
 
 	if [ "$node_name" != "qnetd-node" ];then
