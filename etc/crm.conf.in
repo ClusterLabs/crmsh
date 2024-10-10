@@ -21,6 +21,7 @@
 ; report_tool_options =
 ; lock_timeout = 120
 ; no_ssh = no
+; has_ra_advised_op = no
 
 ; set OCF_1_1_SUPPORT to yes is to fully turn on OCF 1.1 feature once the corresponding CIB detected.
 ; OCF_1_1_SUPPORT = yes

@@ -855,7 +855,7 @@ def parse_cli_to_xml(cli, oldnode=None):
     output: XML, obj_type, obj_id
     """
     node = None
-    complete = False
+    has_ra_advised_op = False
     default_promotable_meta = False
     comments = []
     if isinstance(cli, str):
@@ -864,9 +864,9 @@ def parse_cli_to_xml(cli, oldnode=None):
             node = parse.parse(s, comments=comments)
     else:  # should be a pre-tokenized list
         utils.auto_convert_role = True
-        complete = True
+        has_ra_advised_op = config.core.has_ra_advised_op
         default_promotable_meta = True
-        node = parse.parse(cli, comments=comments, ignore_empty=False, complete_advised=complete)
+        node = parse.parse(cli, comments=comments, ignore_empty=False, complete_advised=has_ra_advised_op)
     if node is False:
         return None, None, None
     elif node is None:
