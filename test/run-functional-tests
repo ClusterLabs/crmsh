@@ -252,7 +252,7 @@ create_node() {
 	for index in ${!HA_NETWORK_ARRAY[@]};do
 		network=${HA_NETWORK_ARRAY[$index]}
 		info "Create ha specific docker network \"$network\"..."
-		docker network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network &> /dev/null
+		docker network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network
 	done
 
         echo -n 'cgroups: '
