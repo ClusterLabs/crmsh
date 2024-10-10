@@ -793,7 +793,7 @@ def id_for_node(node, id_hint=None):
     return obj_id
 
 
-def postprocess_cli(node, oldnode=None, id_hint=None, complete_advised=False):
+def postprocess_cli(node, oldnode=None, id_hint=None, promotable_default_meta=False):
     """
     input: unprocessed but parsed XML
     output: XML, obj_type, obj_id
@@ -816,14 +816,14 @@ def postprocess_cli(node, oldnode=None, id_hint=None, complete_advised=False):
     resolve_references(node)
     if oldnode is not None:
         remove_id_used_attributes(oldnode)
-    if complete_advised:
-        complete_advised_meta(node)
+    if promotable_default_meta:
+        add_promotable_default_meta_attr(node)
     return node, obj_type, obj_id
 
 
-def complete_advised_meta(node):
+def add_promotable_default_meta_attr(node):
     """
-    Complete advised meta attributes
+    Add promotable default advised meta attributes
     """
     if node.tag != "clone":
         return
@@ -856,6 +856,7 @@ def parse_cli_to_xml(cli, oldnode=None):
     """
     node = None
     complete = False
+    default_promotable_meta = False
     comments = []
     if isinstance(cli, str):
         utils.auto_convert_role = False
@@ -864,12 +865,13 @@ def parse_cli_to_xml(cli, oldnode=None):
     else:  # should be a pre-tokenized list
         utils.auto_convert_role = True
         complete = True
+        default_promotable_meta = True
         node = parse.parse(cli, comments=comments, ignore_empty=False, complete_advised=complete)
     if node is False:
         return None, None, None
     elif node is None:
         return None, None, None
-    return postprocess_cli(node, oldnode, complete_advised=complete)
+    return postprocess_cli(node, oldnode, promotable_default_meta=default_promotable_meta)
 
 #
 # cib element classes (CibObject the parent class)
