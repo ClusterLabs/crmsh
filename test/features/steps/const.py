@@ -134,18 +134,6 @@ Storage configuration:
                         Block device to use for SBD fencing, use ";" as
                         separator or -s multiple times for multi path (up to 3
                         devices)
-  -o DEVICE, --ocfs2-device DEVICE
-                        Block device to use for OCFS2; When using Cluster LVM2
-                        to manage the shared storage, user can specify one or
-                        multiple raw disks, use ";" as separator or -o
-                        multiple times for multi path (must specify -C option)
-                        NOTE: this is a Technical Preview
-  -C, --cluster-lvm2    Use Cluster LVM2 (only valid together with -o option)
-                        NOTE: this is a Technical Preview
-  -m MOUNT, --mount-point MOUNT
-                        Mount point for OCFS2 device (default is
-                        /srv/clusterfs, only valid together with -o option)
-                        NOTE: this is a Technical Preview
 
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
@@ -153,7 +141,6 @@ Stage can be one of:
     corosync    Configure corosync
     sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
-    ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
     admin       Create administration virtual IP (optional)
     qdevice     Configure qdevice and qnetd
 
@@ -181,12 +168,6 @@ Examples:
   # Setup the cluster on the current node, with QDevice
   crm cluster init --qnetd-hostname <qnetd addr> -y
 
-  # Setup the cluster on the current node, with SBD+OCFS2
-  crm cluster init -s <share disk1> -o <share disk2> -y
-
-  # Setup the cluster on the current node, with SBD+OCFS2+Cluster LVM
-  crm cluster init -s <share disk1> -o <share disk2> -o <share disk3> -C -y
-
   # Add SBD on a running cluster
   crm cluster init sbd -s <share disk> -y
 
@@ -197,10 +178,7 @@ Examples:
   crm cluster init sbd -S -y
 
   # Add QDevice on a running cluster
-  crm cluster init qdevice --qnetd-hostname <qnetd addr> -y
-
-  # Add OCFS2+Cluster LVM on a running cluster
-  crm cluster init ocfs2 -o <share disk1> -o <share disk2> -C -y'''
+  crm cluster init qdevice --qnetd-hostname <qnetd addr> -y'''
 
 
 CRM_CLUSTER_JOIN_H_OUTPUT = '''Join existing cluster
