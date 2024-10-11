@@ -28,6 +28,7 @@ import lzma
 import json
 import socket
 from pathlib import Path
+from collections import defaultdict
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from lxml import etree
@@ -2497,6 +2498,19 @@ def is_block_device(dev):
     except OSError:
         return False
     return rc
+
+
+def detect_duplicate_device_path(device_list: typing.List[str]):
+    """
+    Resolve device path and check if there are duplicated device path
+    """
+    path_dict = defaultdict(list)
+    for dev in device_list:
+        resolved_path = Path(dev).resolve()
+        path_dict[resolved_path].append(dev)
+    for path, dev_list in path_dict.items():
+        if len(dev_list) > 1:
+            raise ValueError(f"Duplicated device path detected: {','.join(dev_list)}. They are all pointing to {path}")
 
 
 def has_stonith_running():
