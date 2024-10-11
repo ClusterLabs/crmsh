@@ -17,8 +17,8 @@ Feature: crm report functional test for common cases
 
   @clean
   Scenario: crm report collect trace ra log
-    When    Run "crm configure primitive d Dummy" on "hanode1"
-    And     Run "crm configure primitive d2 Dummy" on "hanode1"
+    When    Run "crm configure primitive d Dummy op monitor interval=10s" on "hanode1"
+    And     Run "crm configure primitive d2 Dummy op monitor interval=10s" on "hanode1"
     Then    Resource "d" is started on "hanode1"
     And     Resource "d2" is started on "hanode2"
     When    Run "crm resource trace d monitor" on "hanode1"
