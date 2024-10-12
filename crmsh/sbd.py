@@ -321,6 +321,7 @@ class SBDManager(object):
             if not utils.is_block_device(dev):
                 raise ValueError("{} doesn't look like a block device".format(dev))
             self._compare_device_uuid(dev, compare_node_list)
+        utils.detect_duplicate_device_path(dev_list)
 
     def _no_overwrite_check(self, dev):
         """
