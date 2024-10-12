@@ -253,6 +253,7 @@ DEFAULTS = {
         'report_tool_options': opt_string(''),
         'lock_timeout': opt_string('120'),
         'OCF_1_1_SUPPORT': opt_boolean('no'),
+        'has_ra_advised_op': opt_boolean('no'),
         'obscure_pattern': opt_string('passw*')
     },
     'path': {
