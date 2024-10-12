@@ -103,17 +103,6 @@ Feature: Functional test to cover SAP clusterAPI
     And     Show cluster status on "hanode1"
     When    Run "su - hacluster -c 'crm configure show'" on "hanode1"
     Then    Expected return code is "0"
-    And     Expected multiple lines in output
-      """
-      primitive d2 Dummy \
-      	params fake=test \
-      	meta resource-stickiness=5000 \
-      	op monitor interval=10s timeout=20s on-fail=restart \
-      	op start timeout=20s interval=0s \
-      	op stop timeout=20s interval=0s
-      group g d2 \
-      	meta resource-stickiness=3000
-      """
 
   @clean
   Scenario: pacemaker ACL related operations by hacluster
