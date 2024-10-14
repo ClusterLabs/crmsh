@@ -78,8 +78,9 @@ class SBD(command.UI):
 
     Includes commands:
     - sbd configure
-    - sbd remove
+    - sbd device
     - sbd status
+    - sbd disable
     '''
     name = "sbd"
     TIMEOUT_TYPES = ("watchdog", "allocate", "loop", "msgwait")
@@ -490,37 +491,14 @@ class SBD(command.UI):
             print(self.configure_usage)
             return False
 
-    def do_remove(self, context, *args) -> bool:
+    def do_disable(self, context) -> bool:
         '''
-        Implement sbd remove command
+        Implement sbd disable command
         '''
-        self._load_attributes()
-
-        if not self.service_manager.service_is_active(constants.SBD_SERVICE):
+        if not ServiceManager().service_is_active(constants.SBD_SERVICE):
             logger.error("%s is not active", constants.SBD_SERVICE)
             return False
-
-        parameter_dict = self._parse_args(args)
-        dev_list = parameter_dict.get("device-list", [])
-        if dev_list:
-            if not self.device_list_from_config:
-                logger.error("No sbd device found in config")
-                return False
-            for dev in dev_list:
-                if dev not in self.device_list_from_config:
-                    logger.error("Device %s is not in config", dev)
-                    return False
-            changed_dev_list = set(self.device_list_from_config) - set(dev_list)
-            # remove part of devices from config
-            if changed_dev_list:
-                logger.info("Remove '%s' from %s", ";".join(dev_list), sbd.SBDManager.SYSCONFIG_SBD)
-                sbd.SBDManager.update_sbd_configuration({"SBD_DEVICE": ";".join(changed_dev_list)})
-            # remove all devices, equivalent to stop sbd.service
-            else:
-                sbd.disable_sbd_from_cluster()
-        else:
-            sbd.disable_sbd_from_cluster()
-
+        sbd.disable_sbd_from_cluster()
         logger.info('%s', self.RESTART_INFO)
         return True
 
