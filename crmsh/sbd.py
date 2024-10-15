@@ -87,24 +87,22 @@ class SBDUtils:
         return res.split(';') if res else []
 
     @staticmethod
-    def _is_sbd_running_with_device():
-        if not ServiceManager().service_is_active(constants.SBD_SERVICE):
-            return False
-        return bool(SBDUtils.get_sbd_device_from_config())
-
-    @staticmethod
     def is_using_diskless_sbd():
         '''
         Check if using diskless SBD
         '''
-        return not SBDUtils._is_sbd_running_with_device()
+        if not ServiceManager().service_is_active(constants.SBD_SERVICE):
+            return False
+        return not bool(SBDUtils.get_sbd_device_from_config())
 
     @staticmethod
     def is_using_disk_based_sbd():
         '''
         Check if using disk-based SBD
         '''
-        return SBDUtils._is_sbd_running_with_device()
+        if not ServiceManager().service_is_active(constants.SBD_SERVICE):
+            return False
+        return bool(SBDUtils.get_sbd_device_from_config())
 
     @staticmethod
     def has_sbd_device_already_initialized(dev) -> bool:
@@ -414,7 +412,6 @@ class SBDManager:
         timeout_dict: typing.Dict[str, int] | None = None,
         update_dict: typing.Dict[str, str] | None = None,
         no_overwrite_dev_map: typing.Dict[str, bool] | None = None,
-        new_config: bool = False,
         diskless_sbd: bool = False,
         bootstrap_context: 'bootstrap.Context | None' = None
     ):
@@ -428,7 +425,6 @@ class SBDManager:
         self.cluster_is_running = ServiceManager().service_is_active(constants.PCMK_SERVICE)
         self.bootstrap_context = bootstrap_context
         self.no_overwrite_dev_map = no_overwrite_dev_map or {}
-        self.new_config = new_config
 
         # From bootstrap init or join process, override the values
         if self.bootstrap_context:
@@ -464,7 +460,7 @@ class SBDManager:
         '''
         if not self.update_dict:
             return
-        if (self.bootstrap_context and self.bootstrap_context.type == "init") or self.new_config:
+        if self.bootstrap_context and self.bootstrap_context.type == "init":
             utils.copy_local_file(self.SYSCONFIG_SBD_TEMPLATE, self.SYSCONFIG_SBD)
 
         for key, value in self.update_dict.items():
