@@ -3207,13 +3207,6 @@ def cleanup_stonith_related_properties():
         set_property("stonith-enabled", "false")
 
 
-def is_subdict(sub_dict, main_dict):
-    """
-    Check if sub_dict is a sub-dictionary of main_dict
-    """
-    return all(item in main_dict.items() for item in sub_dict.items())
-
-
 def strip_ansi_escape_sequences(text):
     """
     Remove ANSI escape sequences from text

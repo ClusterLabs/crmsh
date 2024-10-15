@@ -42,25 +42,31 @@ def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str
     '''
     completion for sbd configure command
     '''
-    if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
+    service_manager = ServiceManager()
+    pcmk_is_active = service_manager.service_is_active(constants.PCMK_SERVICE)
+    sbd_is_active = service_manager.service_is_active(constants.SBD_SERVICE)
+    if not pcmk_is_active or not sbd_is_active:
         return []
-    sbd_service_is_enabled = service_manager.service_is_enabled(constants.SBD_SERVICE)
-    dev_list = sbd.SBDUtils.get_sbd_device_from_config()
-    # Show disk-based sbd configure options
-    # if there are devices in config or sbd.service is not enabled
-    is_diskbased = bool(dev_list) or not sbd_service_is_enabled
 
-    parameters_pool = []
-    if completed_list[1] == '':
-        parameters_pool = ["show"]
-    elif completed_list[1] == "show":
+    is_diskbased = sbd.SBDUtils.is_using_disk_based_sbd()
+    is_diskless = sbd.SBDUtils.is_using_diskless_sbd()
+    show_types, timeout_types = (), ()
+    if is_diskbased:
+        show_types = SBD.SHOW_TYPES
+        timeout_types = SBD.TIMEOUT_TYPES
+    elif is_diskless:
+        show_types = SBD.DISKLESS_SHOW_TYPES
+        timeout_types = SBD.DISKLESS_TIMEOUT_TYPES
+
+    if completed_list[1] == "show":
         if len(completed_list) == 3:
-            show_types = SBD.SHOW_TYPES if is_diskbased else SBD.DISKLESS_SHOW_TYPES
             return [t for t in show_types if t not in completed_list]
         else:
             return []
 
-    timeout_types = SBD.TIMEOUT_TYPES if is_diskbased else SBD.DISKLESS_TIMEOUT_TYPES
+    parameters_pool = []
+    if completed_list[1] == '':
+        parameters_pool = ["show"]
     parameters_pool.extend([f"{t}-timeout=" for t in timeout_types])
     parameters_pool.append("watchdog-device=")
     parameters_pool = [
@@ -68,7 +74,6 @@ def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str
         for p in parameters_pool
         if not any(c.startswith(p) for c in completed_list)
     ]
-
     return parameters_pool
 
 
@@ -96,15 +101,9 @@ class SBD(command.UI):
         "priority-fencing-delay",
         "pcmk_delay_max"
     )
-    # a commom character class for matching device path
-    dev_char_class = r'[\w/\d;\-:.]'
     PARSE_RE = re.compile(
-		# Match "device" key with any value, including empty
-        fr'(device)=("[^"]*"|{dev_char_class}*)'
-		# Match other keys with non-empty values, capturing possible suffix
-        r'|(\w+)(?:-(\w+))?=("[^"]+"|[\w/\d;]+)'
-	    # Match standalone device path
-        fr'|(/dev/{dev_char_class}+)'
+		# Match keys with non-empty values, capturing possible suffix
+        r'(\w+)(?:-(\w+))?=("[^"]+"|[\w/\d;]+)'
     )
 
     class SyntaxError(Exception):
@@ -153,18 +152,17 @@ class SBD(command.UI):
         Build usage string for sbd configure command,
         including disk-based and diskless sbd cases
         '''
-        def build_timeout_usage_str(timeout_types: tuple[str, ...]) -> str:
-            return " ".join([f"[{t}-timeout=<integer>]" for t in timeout_types])
-        timeout_usage_str = build_timeout_usage_str(self.TIMEOUT_TYPES)
-        timeout_usage_str_diskless = build_timeout_usage_str(self.DISKLESS_TIMEOUT_TYPES)
-        show_usage_str = f"[{'|'.join(self.SHOW_TYPES)}]"
-        show_usage_str_diskless = f"[{'|'.join(self.DISKLESS_SHOW_TYPES)}]"
-        return ("Usage for disk-based SBD:\n"
-                f"crm sbd configure show {show_usage_str}\n"
-                f"crm sbd configure [device=<dev>]... {timeout_usage_str} [watchdog-device=<dev>]\n\n"
-                "Usage for diskless SBD:\n"
-                f"crm sbd configure show {show_usage_str_diskless}\n"
-                f"crm sbd configure device=\"\" {timeout_usage_str_diskless} [watchdog-device=<dev>]\n")
+        timeout_types, show_types = (), ()
+        if sbd.SBDUtils.is_using_disk_based_sbd():
+            timeout_types, show_types = self.TIMEOUT_TYPES, self.SHOW_TYPES
+        elif sbd.SBDUtils.is_using_diskless_sbd():
+            timeout_types, show_types = self.DISKLESS_TIMEOUT_TYPES, self.DISKLESS_SHOW_TYPES
+        else:
+            return ""
+
+        timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in timeout_types])
+        show_usage = f"crm sbd configure show [{'|'.join(show_types)}]"
+        return f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device>]\n"
 
     @staticmethod
     def _show_sysconfig() -> None:
@@ -230,36 +228,19 @@ class SBD(command.UI):
             print()
             self._show_property()
 
-    def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str|list[str]]:
+    def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str]:
         '''
         Parse arguments and verify them
-
-        Possible arguments format like:
-        device="/dev/sdb5;/dev/sda6"
-        device="" watchdog-timeout=10
-        /dev/sda5 watchdog-timeout=10 watchdog-device=/dev/watchdog
-        device=/dev/sdb5 device=/dev/sda6 watchdog-timeout=10 msgwait-timeout=20
         '''
-        parameter_dict = {"device-list": []}
+        parameter_dict = {}
 
         for arg in args:
             match = self.PARSE_RE.match(arg)
             if not match:
                 raise self.SyntaxError(f"Invalid argument: {arg}")
-            device_key, device_value, key, suffix, value, device_path = match.groups()
-
-            # device=<device name> parameter
-            if device_key:
-                if device_value:
-                    parameter_dict.setdefault("device-list", []).extend(device_value.split(";"))
-                # explicitly set empty value, stands for diskless sbd
-                elif not parameter_dict.get("device-list"):
-                    parameter_dict.pop("device-list", None)
-            # standalone device parameter
-            elif device_path:
-                parameter_dict.setdefault("device-list", []).append(device_path)
+            key, suffix, value = match.groups()
             # timeout related parameters
-            elif key in self.TIMEOUT_TYPES and suffix and suffix == "timeout":
+            if key in self.TIMEOUT_TYPES and suffix and suffix == "timeout":
                 if not value.isdigit():
                     raise self.SyntaxError(f"Invalid timeout value: {value}")
                 parameter_dict[key] = int(value)
@@ -271,12 +252,6 @@ class SBD(command.UI):
 
         watchdog_device = parameter_dict.get("watchdog-device")
         parameter_dict["watchdog-device"] = watchdog.Watchdog.get_watchdog_device(watchdog_device)
-
-        # No need to specify device="" when trying to modify properties under diskless sbd
-        if sbd.SBDUtils.is_using_diskless_sbd() \
-                and "device-list" in parameter_dict \
-                and not parameter_dict["device-list"]:
-            parameter_dict.pop("device-list")
 
         logger.debug("Parsed arguments: %s", parameter_dict)
         return parameter_dict
@@ -307,43 +282,11 @@ class SBD(command.UI):
         '''
         Configure disk-based SBD based on input parameters and runtime config
         '''
-        if not self.device_list_from_config:
-            self.watchdog_timeout_from_config = None
-            self.watchdog_device_from_config = None
-
         update_dict = {}
-        device_list = parameter_dict.get("device-list", [])
-        if not device_list and not self.device_list_from_config:
-            raise self.SyntaxError("No device specified")
-        if len(device_list) > len(set(device_list)):
-            raise self.SyntaxError("Duplicate device")
         watchdog_device = parameter_dict.get("watchdog-device")
         if watchdog_device != self.watchdog_device_from_config:
             update_dict["SBD_WATCHDOG_DEV"] = watchdog_device
         timeout_dict = {k: v for k, v in parameter_dict.items() if k in self.TIMEOUT_TYPES}
-
-        all_device_list = list(
-            dict.fromkeys(self.device_list_from_config + device_list)
-        )
-        sbd.SBDUtils.verify_sbd_device(all_device_list)
-
-        new_device_list = list(
-            set(device_list) - set(self.device_list_from_config)
-        )
-        no_overwrite_dev_map : dict[str, bool] = {
-            dev: sbd.SBDUtils.no_overwrite_device_check(dev) for dev in new_device_list
-        }
-        if new_device_list:
-            update_dict["SBD_DEVICE"] = ";".join(all_device_list)
-
-        device_list_to_init = []
-        # initialize new devices only if no timeout parameter specified or timeout parameter is already in runtime config
-        if not timeout_dict or utils.is_subdict(timeout_dict, self.device_meta_dict_runtime):
-            device_list_to_init = new_device_list
-        # initialize all devices
-        else:
-            device_list_to_init = all_device_list
-
         # merge runtime timeout dict with new timeout dict
         timeout_dict = self.device_meta_dict_runtime | timeout_dict
         # adjust watchdog and msgwait timeout
@@ -353,11 +296,9 @@ class SBD(command.UI):
             update_dict["SBD_WATCHDOG_TIMEOUT"] = str(watchdog_timeout)
 
         sbd_manager = sbd.SBDManager(
-            device_list_to_init=device_list_to_init,
+            device_list_to_init=self.device_list_from_config,
             timeout_dict=timeout_dict,
-            update_dict=update_dict,
-            no_overwrite_dev_map=no_overwrite_dev_map,
-            new_config=False if self.device_list_from_config else True
+            update_dict=update_dict
         )
         sbd_manager.init_and_deploy_sbd()
         
@@ -365,11 +306,6 @@ class SBD(command.UI):
         '''
         Configure diskless SBD based on input parameters and runtime config
         '''
-        if self.device_list_from_config:
-            self.watchdog_timeout_from_config = None
-            self.watchdog_device_from_config = None
-            sbd.clean_up_existing_sbd_resource()
-
         update_dict = {}
         parameter_dict = self._adjust_timeout_dict(parameter_dict, diskless=True)
         watchdog_timeout = parameter_dict.get("watchdog")
@@ -381,8 +317,7 @@ class SBD(command.UI):
 
         sbd_manager = sbd.SBDManager(
             update_dict=update_dict,
-            diskless_sbd=True,
-            new_config=True if self.device_list_from_config else False
+            diskless_sbd=True
         )
         sbd_manager.init_and_deploy_sbd()
 
@@ -466,6 +401,11 @@ class SBD(command.UI):
         self._load_attributes()
 
         try:
+            for service in (constants.PCMK_SERVICE, constants.SBD_SERVICE):
+                if not self.service_manager.service_is_active(service):
+                    logger.error("%s is not active", service)
+                    return False
+
             if not args:
                 raise self.SyntaxError("No argument")
 
@@ -473,22 +413,18 @@ class SBD(command.UI):
                 self._configure_show(args)
                 return True
 
-            if not self.service_manager.service_is_active(constants.PCMK_SERVICE):
-                logger.error("%s is not active", constants.PCMK_SERVICE)
-                return False
-
             parameter_dict = self._parse_args(args)
-            # disk-based sbd case
-            if "device-list" in parameter_dict:
+            if sbd.SBDUtils.is_using_disk_based_sbd():
                 self._configure_diskbase(parameter_dict)
-            # diskless sbd case
-            else:
+            elif sbd.SBDUtils.is_using_diskless_sbd():
                 self._configure_diskless(parameter_dict)
             return True
 
         except self.SyntaxError as e:
             logger.error('%s', e)
-            print(self.configure_usage)
+            usage = self.configure_usage
+            if usage:
+                print(usage)
             return False
 
     def do_disable(self, context) -> bool:
