@@ -330,7 +330,7 @@ cleanup_cluster() {
 		return 0
 	fi
 
-	container_array=(`podman network inspect $exist_network_array -f '{{range .Containers}}{{printf "%s " .Name}}{{end}}'`)
+	container_array=(`podman network inspect $exist_network_array | jq -r '.[].containers[].name' | sort | uniq`)
 	for node in ${container_array[@]};do
 		cleanup_container $node &
 	done
