@@ -183,7 +183,7 @@ deploy_ha_node() {
 	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
-	podman run -d $podman_options $podman_capabilties $CONTAINER_IMAGE &> /dev/null
+	podman run --rm -d $podman_options $podman_capabilties $CONTAINER_IMAGE &> /dev/null
 	for network in ${HA_NETWORK_ARRAY[@]};do
 		podman network connect $network $node_name
 	done
@@ -312,30 +312,12 @@ setup_cluster() {
 }
 
 
-cleanup_container() {
-	node=$1
-	info "Cleanup container \"$node\"..."
-	podman stop $node
-	podman rm $node
-}
-
-
 cleanup_cluster() {
+        podman ps --format json | jq -r '.[].Names[]' | grep -E 'hanode.*|qnetd-node' | xargs podman stop
 	exist_network_array=()
 	for network in ${HA_NETWORK_ARRAY[@]};do
 		podman network ls|grep -q $network && exist_network_array+=($network)
 	done
-	if [ ${#exist_network_array[@]} -eq 0 ];then
-		info "Already cleaned up"
-		return 0
-	fi
-
-	container_array=(`podman network inspect $exist_network_array | jq -r '.[].containers[].name' | sort | uniq`)
-	for node in ${container_array[@]};do
-		cleanup_container $node &
-	done
-	wait
-
 	for network in ${exist_network_array[@]};do
 		info "Cleanup ha specific container network \"$network\"..."
 		podman network rm $network
