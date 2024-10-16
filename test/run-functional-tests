@@ -179,7 +179,8 @@ deploy_ha_node() {
 	podman_options="--name $node_name -h $node_name --systemd always --shm-size 1g"
         # CAP_SYS_NICE for corosync to set realtime priority
         # CAP_AUDIT_CONTROL for sshd
-        podman_capabilties="--cap-add CAP_SYS_NICE --cap-add CAP_AUDIT_CONTROL"
+        # CAP_NET_ADMIN for firewall and virtual ip
+        podman_capabilties="--cap-add CAP_SYS_NICE --cap-add CAP_AUDIT_CONTROL --cap-add CAP_NET_ADMIN"
 	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
