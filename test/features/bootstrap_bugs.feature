@@ -81,7 +81,7 @@ Feature: Regression test for bootstrap bugs
     When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     When    Run "crm corosync get nodelist.node.ring0_addr" on "hanode1"
-    Then    Expected "@hanode2.ip.0" in stdout
+    Then    Expected "@hanode2.ip.1" in stdout
     #And     Service "hawk.service" is "started" on "hanode2"
     When    Run "crm cluster remove hanode2 -y" on "hanode1"
     Then    Online nodes are "hanode1"
@@ -89,7 +89,7 @@ Feature: Regression test for bootstrap bugs
     # verify bsc#1175708
     #And     Service "hawk.service" is "stopped" on "hanode2"
     When    Run "crm corosync get nodelist.node.ring0_addr" on "hanode1"
-    Then    Expected "@hanode2.ip.0" not in stdout
+    Then    Expected "@hanode2.ip.1" not in stdout
 
   @clean
   Scenario: Multi nodes join in parallel(bsc#1175976)
