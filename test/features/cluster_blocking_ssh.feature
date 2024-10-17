@@ -35,13 +35,13 @@ Feature: cluster testing with ssh blocked
 
       nodelist {
         node {
-                ring0_addr: @hanode1.ip.default
+                ring0_addr: @hanode1.ip.0
                 name: hanode1
                 nodeid: 1
         }
 
         node {
-                ring0_addr: @hanode2.ip.default
+                ring0_addr: @hanode2.ip.0
                 name: hanode2
                 nodeid: 2
         }

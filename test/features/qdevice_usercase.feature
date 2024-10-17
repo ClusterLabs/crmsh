@@ -73,8 +73,8 @@ Feature: Verify usercase master survive when split-brain
     When    Run "corosync-quorumtool -s" on "hanode1"
     Then    Expected "Quorate:          Yes" in stdout
     # Use iptables command to simulate split-brain
-    When    Run "iptables -I INPUT -s @hanode2.ip.default -j DROP; sudo iptables -I OUTPUT -d @hanode2.ip.default -j DROP" on "hanode1"
-    And     Run "iptables -I INPUT -s @hanode1.ip.default -j DROP; sudo iptables -I OUTPUT -d @hanode1.ip.default -j DROP" on "hanode2"
+    When    Run "iptables -I INPUT -s @hanode2.ip.0 -j DROP; sudo iptables -I OUTPUT -d @hanode2.ip.0 -j DROP" on "hanode1"
+    And     Run "iptables -I INPUT -s @hanode1.ip.0 -j DROP; sudo iptables -I OUTPUT -d @hanode1.ip.0 -j DROP" on "hanode2"
     # Check whether hanode1 has quorum, while hanode2 doesn't
     And     Run "sleep 20" on "hanode1"
     When    Run "crm corosync status quorum" on "hanode1"
