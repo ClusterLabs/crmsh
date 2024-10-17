@@ -120,7 +120,7 @@ class SBDUtils:
         '''
         initialized = SBDUtils.has_sbd_device_already_initialized(dev)
         return initialized and \
-                not bootstrap.confirm(f"{dev} has already been initialized by SBD, do you want to overwrite it?")
+                not bootstrap.confirm(f"{dev} has already been initialized by SBD - overwrite?")
 
     @staticmethod
     def check_devices_metadata_consistent(dev_list) -> bool:
@@ -131,11 +131,41 @@ class SBDUtils:
         if len(dev_list) < 2:
             return consistent
         first_dev_metadata = SBDUtils.get_sbd_device_metadata(dev_list[0], timeout_only=True)
+        if not first_dev_metadata:
+            logger.warning(f"Cannot get metadata for {dev_list[0]}")
+            return False
         for dev in dev_list[1:]:
-            if SBDUtils.get_sbd_device_metadata(dev, timeout_only=True) != first_dev_metadata:
+            this_dev_metadata = SBDUtils.get_sbd_device_metadata(dev, timeout_only=True)
+            if not this_dev_metadata:
+                logger.warning(f"Cannot get metadata for {dev}")
+                return False
+            if this_dev_metadata != first_dev_metadata:
                 logger.warning(f"Device {dev} doesn't have the same metadata as {dev_list[0]}")
                 consistent = False
         return consistent
+
+    @staticmethod
+    def handle_input_sbd_devices(dev_list, dev_list_from_config=None):
+        '''
+        Given a list of devices, split them into two lists:
+        - overwrite_list: devices that need to be overwritten
+        - no_overwrite_list: devices that don't need to be overwritten
+
+        Raise TerminateSubCommand if the metadata of no_overwrite_list is not consistent
+        '''
+        no_overwrite_list = dev_list_from_config or []
+        overwrite_list = []
+
+        for dev in dev_list:
+            if SBDUtils.no_overwrite_device_check(dev):
+                no_overwrite_list.append(dev)
+            else:
+                overwrite_list.append(dev)
+
+        if no_overwrite_list and not SBDUtils.check_devices_metadata_consistent(no_overwrite_list):
+            raise utils.TerminateSubCommand
+
+        return overwrite_list, no_overwrite_list
 
 
 class SBDTimeout(object):
@@ -406,12 +436,14 @@ class SBDManager:
     SBD_RA_ID = "stonith-sbd"
     SBD_DEVICE_MAX = 3
 
+    class NotConfigSBD(Exception):
+        pass
+
     def __init__(
         self,
         device_list_to_init: typing.List[str] | None = None,
         timeout_dict: typing.Dict[str, int] | None = None,
         update_dict: typing.Dict[str, str] | None = None,
-        no_overwrite_dev_map: typing.Dict[str, bool] | None = None,
         diskless_sbd: bool = False,
         bootstrap_context: 'bootstrap.Context | None' = None
     ):
@@ -424,23 +456,24 @@ class SBDManager:
         self.diskless_sbd = diskless_sbd
         self.cluster_is_running = ServiceManager().service_is_active(constants.PCMK_SERVICE)
         self.bootstrap_context = bootstrap_context
-        self.no_overwrite_dev_map = no_overwrite_dev_map or {}
+        self.overwrite_sysconfig = False
 
         # From bootstrap init or join process, override the values
         if self.bootstrap_context:
-            self.device_list_to_init = self.bootstrap_context.sbd_devices
+            self.overwrite_sysconfig = self.bootstrap_context.type == "init"
             self.diskless_sbd = self.bootstrap_context.diskless_sbd
             self.cluster_is_running = self.bootstrap_context.cluster_is_running
 
     def _load_attributes_from_bootstrap(self):
-        if not self.bootstrap_context:
+        if not self.bootstrap_context or not self.overwrite_sysconfig:
             return
-        timeout_inst = SBDTimeout(self.bootstrap_context)
-        timeout_inst.initialize_timeout()
-        self.timeout_dict["watchdog"] = timeout_inst.sbd_watchdog_timeout
-        if not self.diskless_sbd:
-            self.timeout_dict["msgwait"] = timeout_inst.sbd_msgwait
-        self.update_dict["SBD_WATCHDOG_TIMEOUT"] = str(timeout_inst.sbd_watchdog_timeout)
+        if not self.timeout_dict:
+            timeout_inst = SBDTimeout(self.bootstrap_context)
+            timeout_inst.initialize_timeout()
+            self.timeout_dict["watchdog"] = timeout_inst.sbd_watchdog_timeout
+            if not self.diskless_sbd:
+                self.timeout_dict["msgwait"] = timeout_inst.sbd_msgwait
+            self.update_dict["SBD_WATCHDOG_TIMEOUT"] = str(timeout_inst.sbd_watchdog_timeout)
         self.update_dict["SBD_WATCHDOG_DEV"] = watchdog.Watchdog.get_watchdog_device(self.bootstrap_context.watchdog)
 
     @staticmethod
@@ -460,7 +493,7 @@ class SBDManager:
         '''
         if not self.update_dict:
             return
-        if self.bootstrap_context and self.bootstrap_context.type == "init":
+        if self.overwrite_sysconfig:
             utils.copy_local_file(self.SYSCONFIG_SBD_TEMPLATE, self.SYSCONFIG_SBD)
 
         for key, value in self.update_dict.items():
@@ -479,21 +512,18 @@ class SBDManager:
             logger.info("Configuring diskless SBD")
             self._warn_diskless_sbd()
             return
-        elif not all(self.no_overwrite_dev_map.values()):
+        elif self.device_list_to_init:
             logger.info("Configuring disk-based SBD")
+        else:
+            return
 
         opt_str = SBDManager.convert_timeout_dict_to_opt_str(self.timeout_dict)
         shell = sh.cluster_shell()
         for dev in self.device_list_to_init:
-            # skip if device already initialized and not overwrite
-            if dev in self.no_overwrite_dev_map and self.no_overwrite_dev_map[dev]:
-                continue
             logger.info("Initializing SBD device %s", dev)
             cmd = f"sbd {opt_str} -d {dev} create"
             logger.debug("Running command: %s", cmd)
             shell.get_stdout_or_raise_error(cmd)
-
-        SBDUtils.check_devices_metadata_consistent(self.device_list_to_init)
 
     @staticmethod
     def enable_sbd_service():
@@ -547,20 +577,22 @@ class SBDManager:
         '''
         if self.bootstrap_context.yes_to_all:
             logger.warning('%s', self.NO_SBD_WARNING)
-            return
+            raise self.NotConfigSBD
         logger.info(self.SBD_STATUS_DESCRIPTION)
         if not bootstrap.confirm("Do you wish to use SBD?"):
             logger.warning('%s', self.NO_SBD_WARNING)
-            return
-
+            raise self.NotConfigSBD
         if not utils.package_is_installed("sbd"):
             utils.fatal(self.SBD_NOT_INSTALLED_MSG)
 
         configured_devices = SBDUtils.get_sbd_device_from_config()
-        for dev in configured_devices:
-            self.no_overwrite_dev_map[dev] = SBDUtils.no_overwrite_device_check(dev)
-        if self.no_overwrite_dev_map and all(self.no_overwrite_dev_map.values()):
-            return configured_devices
+        if configured_devices:
+            wants_to_overwrite_msg = f"SBD_DEVICE in {self.SYSCONFIG_SBD} is already configured to use '{';'.join(configured_devices)}' - overwrite?"
+            if not bootstrap.confirm(wants_to_overwrite_msg):
+                if not SBDUtils.check_devices_metadata_consistent(configured_devices):
+                    raise utils.TerminateSubCommand
+                self.overwrite_sysconfig = False
+                return
 
         dev_list = []
         dev_looks_sane = False
@@ -577,18 +609,16 @@ class SBDManager:
                 logger.error('%s', e)
                 continue
             for dev in dev_list:
-                if dev not in self.no_overwrite_dev_map:
-                    self.no_overwrite_dev_map[dev] = SBDUtils.no_overwrite_device_check(dev)
-                if self.no_overwrite_dev_map[dev]:
-                    if dev == dev_list[-1]:
-                        return dev_list
-                    continue
-                logger.warning("All data on %s will be destroyed", dev)
-                if bootstrap.confirm('Are you sure you wish to use this device?'):
+                if SBDUtils.has_sbd_device_already_initialized(dev):
                     dev_looks_sane = True
+                    continue
                 else:
-                    dev_looks_sane = False
-                    break
+                    logger.warning("All data on %s will be destroyed", dev)
+                    if bootstrap.confirm('Are you sure you wish to use this device?'):
+                        dev_looks_sane = True
+                    else:
+                        dev_looks_sane = False
+                        break
 
         return dev_list
 
@@ -598,12 +628,21 @@ class SBDManager:
         -s is for disk-based sbd
         -S is for diskless sbd
         '''
-        # specified sbd device with -s option
-        if self.device_list_to_init:
-            self.update_dict["SBD_DEVICE"] = ';'.join(self.device_list_to_init)
-        # no -s and no -S option
-        elif not self.diskless_sbd:
-            self.device_list_to_init = self.get_sbd_device_interactive()
+        # if specified sbd device with -s option
+        device_list = self.bootstrap_context.sbd_devices
+        # else if not use -S option, get sbd device interactively
+        if not device_list and not self.bootstrap_context.diskless_sbd:
+            device_list = self.get_sbd_device_interactive()
+        if not device_list:
+            return
+
+        # get two lists of devices, one for overwrite, one for no overwrite with consistent metadata
+        overwrite_list, no_overwrite_list = SBDUtils.handle_input_sbd_devices(device_list)
+        self.device_list_to_init = overwrite_list
+        # if no_overwrite_list is not empty, get timeout metadata from the first device
+        if no_overwrite_list:
+            self.timeout_dict = SBDUtils.get_sbd_device_metadata(no_overwrite_list[0], timeout_only=True)
+        self.update_dict["SBD_DEVICE"] = ';'.join(device_list)
 
     def init_and_deploy_sbd(self):
         '''
@@ -615,8 +654,9 @@ class SBDManager:
         5. Configure stonith-sbd resource and related properties
         '''
         if self.bootstrap_context:
-            self.get_sbd_device_from_bootstrap()
-            if not self.device_list_to_init and not self.diskless_sbd:
+            try:
+                self.get_sbd_device_from_bootstrap()
+            except self.NotConfigSBD:
                 ServiceManager().disable_service(constants.SBD_SERVICE)
                 return
             self._load_attributes_from_bootstrap()

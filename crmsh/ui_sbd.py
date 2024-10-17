@@ -328,10 +328,15 @@ class SBD(command.UI):
         all_device_list = self.device_list_from_config + devices_to_add
         sbd.SBDUtils.verify_sbd_device(all_device_list)
 
+        devices_to_init, _ = sbd.SBDUtils.handle_input_sbd_devices(
+            devices_to_add,
+            self.device_list_from_config
+        )
+
         logger.info("Append devices: %s", ';'.join(devices_to_add))
         update_dict = {"SBD_DEVICE": ";".join(all_device_list)}
         sbd_manager = sbd.SBDManager(
-            device_list_to_init=devices_to_add,
+            device_list_to_init=devices_to_init,
             update_dict=update_dict,
             timeout_dict=self.device_meta_dict_runtime
         )
