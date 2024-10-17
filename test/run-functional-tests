@@ -176,7 +176,7 @@ create_alice_bob_carol() {
 
 deploy_ha_node() {
 	node_name=$1
-	podman_options="--name $node_name -h $node_name --systemd always --shm-size 1g"
+	podman_options="--name $node_name -h $node_name --network ha_network_first --systemd always --shm-size 1g"
         # CAP_SYS_NICE for corosync to set realtime priority
         # CAP_AUDIT_CONTROL for sshd
         # CAP_NET_ADMIN for firewall and virtual ip
@@ -184,10 +184,8 @@ deploy_ha_node() {
 	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
-	podman run --rm -d $podman_options $podman_capabilties $CONTAINER_IMAGE &> /dev/null
-	for network in ${HA_NETWORK_ARRAY[@]};do
-		podman network connect $network $node_name
-	done
+	podman run --rm -d $podman_options $podman_capabilties $CONTAINER_IMAGE
+        podman network connect ha_network_second $node_name
 
 	if [ "$node_name" != "qnetd-node" ];then
 		rm_qnetd_cmd="rpm -q corosync-qnetd && rpm -e corosync-qnetd"
@@ -328,7 +326,7 @@ cleanup_cluster() {
 
 adjust_test_case() {
 	node_name=$1
-	replace_arry=(`podman_exec $node_name "grep -o -E '@(hanode[0-9]+|qnetd-node)\.ip[6]?\.(default|[0-9])' $2|sort -u|dos2unix"`)
+	replace_arry=(`podman_exec $node_name "grep -o -E '@(hanode[0-9]+|qnetd-node)\.ip6?\.[0-9]' $2|sort -u"`)
 	for item in ${replace_arry[@]};do
 		item_str=${item##@}
 		node=`echo $item_str|cut -d "." -f 1`
@@ -338,11 +336,7 @@ adjust_test_case() {
 			ip_search_str="GlobalIPv6Address"
 		fi
 		index=`echo $item_str|cut -d "." -f 3|tr -d "\r"`
-		if [ "$index" == "default" ];then
-			ip=`podman container inspect $node -f "{{range .NetworkSettings.Networks}}{{printf \"%s \" .$ip_search_str}}{{end}}"|awk '{print $1}'|tr -d "\r"`
-		else
-			ip=`podman container inspect $node -f "{{.NetworkSettings.Networks.${HA_NETWORK_ARRAY[$index]}.$ip_search_str}}"|tr -d "\r"`
-		fi
+                ip=`podman container inspect $node -f "{{.NetworkSettings.Networks.${HA_NETWORK_ARRAY[$index]}.$ip_search_str}}"|tr -d "\r"`
 		item=`echo $item|tr -d "\r"`
 		podman_exec $node_name "sed -i s/$item/$ip/g $2"
 	done
