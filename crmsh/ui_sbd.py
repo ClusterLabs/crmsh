@@ -324,11 +324,26 @@ class SBD(command.UI):
         '''
         all_device_list = self.device_list_from_config + devices_to_add
         sbd.SBDUtils.verify_sbd_device(all_device_list)
+        devices_to_init = devices_to_add
+
+        # Should check if the device is already initialized and
+        # make sure the metadata is consistent between devices
+        no_overwrite_dev_list = [
+            dev
+            for dev in devices_to_add
+            if sbd.SBDUtils.no_overwrite_device_check(dev)
+        ]
+        if no_overwrite_dev_list:
+            dev_check_list = self.device_list_from_config + no_overwrite_dev_list
+            if sbd.SBDUtils.check_devices_metadata_consistent(dev_check_list):
+                devices_to_init = list(set(devices_to_add) - set(no_overwrite_dev_list))
+            else:
+                raise utils.TerminateSubCommand
 
         logger.info("Append devices: %s", ';'.join(devices_to_add))
         update_dict = {"SBD_DEVICE": ";".join(all_device_list)}
         sbd_manager = sbd.SBDManager(
-            device_list_to_init=devices_to_add,
+            device_list_to_init=devices_to_init,
             update_dict=update_dict,
             timeout_dict=self.device_meta_dict_runtime
         )

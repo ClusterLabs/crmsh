@@ -120,7 +120,7 @@ class SBDUtils:
         '''
         initialized = SBDUtils.has_sbd_device_already_initialized(dev)
         return initialized and \
-                not bootstrap.confirm(f"{dev} has already been initialized by SBD, do you want to overwrite it?")
+                not bootstrap.confirm(f"{dev} has already been initialized by SBD - overwrite?")
 
     @staticmethod
     def check_devices_metadata_consistent(dev_list) -> bool:
@@ -131,8 +131,15 @@ class SBDUtils:
         if len(dev_list) < 2:
             return consistent
         first_dev_metadata = SBDUtils.get_sbd_device_metadata(dev_list[0], timeout_only=True)
+        if not first_dev_metadata:
+            logger.warning(f"Cannot get metadata for {dev_list[0]}")
+            return False
         for dev in dev_list[1:]:
-            if SBDUtils.get_sbd_device_metadata(dev, timeout_only=True) != first_dev_metadata:
+            this_dev_metadata = SBDUtils.get_sbd_device_metadata(dev, timeout_only=True)
+            if not this_dev_metadata:
+                logger.warning(f"Cannot get metadata for {dev}")
+                return False
+            if this_dev_metadata != first_dev_metadata:
                 logger.warning(f"Device {dev} doesn't have the same metadata as {dev_list[0]}")
                 consistent = False
         return consistent
@@ -493,8 +500,6 @@ class SBDManager:
             logger.debug("Running command: %s", cmd)
             shell.get_stdout_or_raise_error(cmd)
 
-        SBDUtils.check_devices_metadata_consistent(self.device_list_to_init)
-
     @staticmethod
     def enable_sbd_service():
         cluster_nodes = utils.list_cluster_nodes() or [utils.this_node()]
@@ -557,10 +562,14 @@ class SBDManager:
             utils.fatal(self.SBD_NOT_INSTALLED_MSG)
 
         configured_devices = SBDUtils.get_sbd_device_from_config()
-        for dev in configured_devices:
-            self.no_overwrite_dev_map[dev] = SBDUtils.no_overwrite_device_check(dev)
-        if self.no_overwrite_dev_map and all(self.no_overwrite_dev_map.values()):
-            return configured_devices
+        if configured_devices:
+            wants_to_overwrite_msg = f"SBD_DEVICE in {self.SYSCONFIG_SBD} is already configured to use '{';'.join(configured_devices)}' - overwrite?"
+            if not bootstrap.confirm(wants_to_overwrite_msg):
+                if not SBDUtils.check_devices_metadata_consistent(configured_devices):
+                    raise utils.TerminateSubCommand
+                self.no_overwrite_dev_map = {dev: True for dev in configured_devices}
+                self.update_dict = {}
+                return configured_devices
 
         dev_list = []
         dev_looks_sane = False
@@ -615,11 +624,11 @@ class SBDManager:
         5. Configure stonith-sbd resource and related properties
         '''
         if self.bootstrap_context:
+            self._load_attributes_from_bootstrap()
             self.get_sbd_device_from_bootstrap()
             if not self.device_list_to_init and not self.diskless_sbd:
                 ServiceManager().disable_service(constants.SBD_SERVICE)
                 return
-            self._load_attributes_from_bootstrap()
 
         self.initialize_sbd()
         self.update_configuration()
