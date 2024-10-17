@@ -7,8 +7,9 @@ import yaml
 import behave
 from behave import given, when, then
 import behave_agent
-from crmsh import corosync, sbd, userdir, bootstrap
+from crmsh import corosync, userdir, bootstrap
 from crmsh import utils as crmutils
+from crmsh import sbd
 from crmsh.sh import ShellUtils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
@@ -439,7 +440,7 @@ def step_impl(context, res_id, node):
 
 @then('SBD option "{key}" value is "{value}"')
 def step_impl(context, key, value):
-    res = sbd.SBDManager.get_sbd_value_from_config(key)
+    res = sbd.SBDUtils.get_sbd_value_from_config(key)
     assert_eq(value, res)
 
 
@@ -453,27 +454,27 @@ def step_impl(context, key, dev, value):
 def step_impl(context, key, value):
     res = crmutils.get_property(key)
     assert res is not None
-    assert_eq(value, str(res))
+    assert_eq(value.strip('s'), str(res).strip('s'))
 
 
 @then('Property "{key}" in "{type}" is "{value}"')
 def step_impl(context, key, type, value):
     res = crmutils.get_property(key, type)
     assert res is not None
-    assert_eq(value, str(res))
+    assert_eq(value.strip('s'), str(res).strip('s'))
 
 
 @then('Parameter "{param_name}" not configured in "{res_id}"')
 def step_impl(context, param_name, res_id):
     _, out, _ = run_command(context, "crm configure show {}".format(res_id))
-    result = re.search("params {}=".format(param_name), out)
+    result = re.search("params .*{}=".format(param_name), out)
     assert result is None
 
 
 @then('Parameter "{param_name}" configured in "{res_id}"')
 def step_impl(context, param_name, res_id):
     _, out, _ = run_command(context, "crm configure show {}".format(res_id))
-    result = re.search("params {}=".format(param_name), out)
+    result = re.search("params .*{}=".format(param_name), out)
     assert result is not None
 
 

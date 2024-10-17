@@ -187,7 +187,7 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
         mock_open_write = mock.mock_open()
         file_handle = mock_open_write.return_value.__enter__.return_value
         mock_open_file.return_value = mock_open_write.return_value
-        mock_run.return_value = "data"
+        mock_run.side_effect = ["data", "data", "data"]
         mock_ctx_inst = mock.Mock(work_dir="/opt")
 
         collect.collect_sbd_info(mock_ctx_inst)
@@ -199,6 +199,12 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
         file_handle.write.assert_has_calls([
             mock.call("\n\n#=====[ Command ] ==========================#\n"),
             mock.call("# . /etc/sysconfig/sbd;export SBD_DEVICE;sbd dump;sbd list\n"),
+            mock.call("data"),
+            mock.call("\n\n#=====[ Command ] ==========================#\n"),
+            mock.call("# crm sbd configure show\n"),
+            mock.call("data"),
+            mock.call("\n\n#=====[ Command ] ==========================#\n"),
+            mock.call("# crm sbd status\n"),
             mock.call("data")
             ])
         mock_debug.assert_called_once_with(f"Dump SBD config file into {constants.SBD_F}")

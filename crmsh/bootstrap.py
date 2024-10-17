@@ -43,6 +43,8 @@ from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import NodeMgmt
 from .user_of_host import UserOfHost, UserNotFoundError
+from .sbd import SBDUtils, SBDManager, SBDTimeout
+from . import watchdog
 import crmsh.healthcheck
 
 
@@ -55,21 +57,18 @@ CSYNC2_CFG = "/etc/csync2/csync2.cfg"
 COROSYNC_AUTH = "/etc/corosync/authkey"
 CRM_CFG = "/etc/crm/crm.conf"
 PROFILES_FILE = "/etc/crm/profiles.yml"
-SYSCONFIG_SBD = "/etc/sysconfig/sbd"
 SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_NFS = "/etc/sysconfig/nfs"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service", CSYNC2_SERVICE]
-WATCHDOG_CFG = "/etc/modules-load.d/watchdog.conf"
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
 BOOTH_AUTH = "/etc/booth/authkey"
-SBD_SYSTEMD_DELAY_START_DIR = "/etc/systemd/system/sbd.service.d"
 FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
-        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SYSCONFIG_SBD, PCMK_REMOTE_AUTH, WATCHDOG_CFG,
-        PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
+        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SBDManager.SYSCONFIG_SBD, PCMK_REMOTE_AUTH, watchdog.Watchdog.WATCHDOG_CFG,
+        PROFILES_FILE, CRM_CFG, SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
 
 INIT_STAGES_EXTERNAL = ("ssh", "csync2", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
 INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote", "remote_auth")
@@ -135,7 +134,7 @@ class Context(object):
         self.profiles_dict = {}
         self.default_nic = None
         self.default_ip_list = []
-        self.rm_list = [SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
+        self.rm_list = [SBDManager.SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
                 COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
                 "/var/lib/csync2/*", "~/.config/crm/*"]
@@ -214,12 +213,21 @@ class Context(object):
         """
         Validate sbd options
         """
+        with_sbd_option = self.sbd_devices or self.diskless_sbd
+        sbd_installed = utils.package_is_installed("sbd")
+
+        if with_sbd_option and not sbd_installed:
+            utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
         if self.sbd_devices and self.diskless_sbd:
             utils.fatal("Can't use -s and -S options together")
+        if self.sbd_devices:
+            SBDUtils.verify_sbd_device(self.sbd_devices)
         if self.stage == "sbd":
-            if not self.sbd_devices and not self.diskless_sbd and self.yes_to_all:
+            if not sbd_installed:
+                utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
+            if not with_sbd_option and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
-            if ServiceManager().service_is_active("sbd.service") and not config.core.force:
+            if ServiceManager().service_is_active(constants.SBD_SERVICE) and not config.core.force:
                 utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
             if self.cluster_is_running:
                 utils.check_all_nodes_reachable()
@@ -296,8 +304,7 @@ class Context(object):
         self._validate_sbd_option()
 
     def init_sbd_manager(self):
-        from .sbd import SBDManager
-        self.sbd_manager = SBDManager(self)
+        self.sbd_manager = SBDManager(bootstrap_context=self)
 
     def detect_platform(self):
         """
@@ -399,7 +406,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[
 
 
 def confirm(msg):
-    if _context.yes_to_all:
+    if config.core.force or (_context and _context.yes_to_all):
         return True
     disable_completion()
     rc = logger_utils.confirm(msg)
@@ -409,12 +416,12 @@ def confirm(msg):
 
 
 def disable_completion():
-    if _context.ui_context:
+    if _context and _context.ui_context:
         _context.ui_context.disable_completion()
 
 
 def enable_completion():
-    if _context.ui_context:
+    if _context and _context.ui_context:
         _context.ui_context.setup_readline()
 
 
@@ -768,11 +775,10 @@ def start_pacemaker(node_list=[], enable_flag=False):
 
     Return success node list
     """
-    from .sbd import SBDTimeout
     # not _context means not in init or join process
     if not _context and \
             utils.package_is_installed("sbd") and \
-            ServiceManager().service_is_enabled("sbd.service") and \
+            ServiceManager().service_is_enabled(constants.SBD_SERVICE) and \
             SBDTimeout.is_sbd_delay_start():
         target_dir = "/run/systemd/system/sbd.service.d/"
         cmd1 = "mkdir -p {}".format(target_dir)
@@ -1399,7 +1405,7 @@ def init_sbd():
     import crmsh.sbd
     if _context.stage == "sbd":
         crmsh.sbd.clean_up_existing_sbd_resource()
-    _context.sbd_manager.sbd_init()
+    _context.sbd_manager.init_and_deploy_sbd()
 
 
 def init_ocfs2():
@@ -1432,7 +1438,9 @@ op_defaults op-options: timeout=600 record-pending=true
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    _context.sbd_manager.configure_sbd_resource_and_properties()
+    if ServiceManager().service_is_enabled(constants.SBD_SERVICE):
+        _context.sbd_manager.configure_sbd()
+
 
 
 def init_admin():
@@ -2084,8 +2092,7 @@ def rm_configuration_files(remote=None):
     shell.get_stdout_or_raise_error("rm -f {}".format(' '.join(_context.rm_list)), remote)
     # restore original sbd configuration file from /usr/share/fillup-templates/sysconfig.sbd
     if utils.package_is_installed("sbd", remote_addr=remote):
-        from .sbd import SBDManager
-        cmd = "cp {} {}".format(SBDManager.SYSCONFIG_SBD_TEMPLATE, SYSCONFIG_SBD)
+        cmd = "cp {} {}".format(SBDManager.SYSCONFIG_SBD_TEMPLATE, SBDManager.SYSCONFIG_SBD)
         shell.get_stdout_or_raise_error(cmd, remote)
 
 
@@ -2726,8 +2733,7 @@ def adjust_stonith_timeout():
     """
     Adjust stonith-timeout for sbd and other scenarios
     """
-    if ServiceManager().service_is_active("sbd.service"):
-        from .sbd import SBDTimeout
+    if ServiceManager().service_is_active(constants.SBD_SERVICE):
         SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
     else:
         value = get_stonith_timeout_generally_expected()
@@ -2790,7 +2796,12 @@ def sync_file(path):
     """
     Sync files between cluster nodes
     """
-    if _context.skip_csync2:
+    if _context:
+        skip_csync2 = _context.skip_csync2
+    else:
+        skip_csync2 = not ServiceManager().service_is_active(CSYNC2_SERVICE)
+
+    if skip_csync2:
         utils.cluster_copy_file(path, nodes=_context.node_list_in_cluster, output=False)
     else:
         csync2_update(path)

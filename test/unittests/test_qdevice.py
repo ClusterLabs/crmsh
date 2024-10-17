@@ -804,9 +804,9 @@ Membership information
 
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_timeout')
-    @mock.patch('crmsh.sbd.SBDManager.update_configuration')
-    @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
-    @mock.patch('crmsh.sbd.SBDManager.is_using_diskless_sbd')
+    @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
+    @mock.patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     def test_adjust_sbd_watchdog_timeout_with_qdevice(self, mock_check_reachable, mock_using_diskless_sbd, mock_get_sbd_value, mock_update_config, mock_get_timeout, mock_set_property):
         mock_using_diskless_sbd.return_value = True
