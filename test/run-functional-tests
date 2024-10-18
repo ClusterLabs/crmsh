@@ -184,7 +184,7 @@ deploy_ha_node() {
 	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
-	podman run --rm -d $podman_options $podman_capabilties $CONTAINER_IMAGE
+	podman run --rm -d $podman_options $podman_capabilties $CONTAINER_IMAGE > /dev/null
         podman network connect ha_network_second $node_name
 
 	if [ "$node_name" != "qnetd-node" ];then
@@ -223,9 +223,9 @@ create_node() {
 
         echo 16777216 > /proc/sys/net/core/rmem_max
         echo 16777216 > /proc/sys/net/core/wmem_max
+        info "Create ha specific container networks..."
 	for index in ${!HA_NETWORK_ARRAY[@]};do
 		network=${HA_NETWORK_ARRAY[$index]}
-		info "Create ha specific container network \"$network\"..."
 		podman network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network
 	done
 
@@ -312,13 +312,14 @@ setup_cluster() {
 
 
 cleanup_cluster() {
+        info "Cleanup ha specific containers..."
         podman ps --format json | jq -r '.[].Names[]' | grep -E 'hanode.*|qnetd-node' | xargs podman stop
+        info "Cleanup ha specific container networks..."
 	exist_network_array=()
 	for network in ${HA_NETWORK_ARRAY[@]};do
 		podman network ls|grep -q $network && exist_network_array+=($network)
 	done
 	for network in ${exist_network_array[@]};do
-		info "Cleanup ha specific container network \"$network\"..."
 		podman network rm $network
 	done
 }
