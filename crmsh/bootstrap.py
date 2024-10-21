@@ -1418,13 +1418,6 @@ def init_cluster():
     """
     init_cluster_local()
 
-    _rc, nnodes = ShellUtils().get_stdout("crm_node -l")
-    nnodes = len(nnodes.splitlines())
-    if nnodes < 1:
-        utils.fatal("No nodes found in cluster")
-    if nnodes > 1:
-        utils.fatal("Joined existing cluster - will not reconfigure.")
-
     logger.info("Loading initial cluster configuration")
 
     crm_configure_load("update", """property cib-bootstrap-options: stonith-enabled=false
