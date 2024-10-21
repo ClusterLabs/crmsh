@@ -22,7 +22,7 @@ def create_report():
 
 
 if not create_report():
-    crm.exit_ok({'status': 'Failed to create report'})
+    crm.exit_fail({'status': 'Failed to create report'})
 
 
 def extract_report():
@@ -31,7 +31,7 @@ def extract_report():
 
 
 if not extract_report():
-    crm.exit_ok({'status': 'Failed to extract report'})
+    crm.exit_fail({'status': 'Failed to extract report'})
 
 analysis = ''
 if os.path.isfile('health-report/analysis.txt'):
