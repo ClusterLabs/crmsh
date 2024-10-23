@@ -242,13 +242,3 @@ class Cib:
             assert uname
             result.append(Cib.Node(int(node_id), uname))
         return result
-
-
-if __name__ == '__main__':
-    # for demo only
-    # usage: python -m crmsh.migration
-    logging.basicConfig(level=logging.INFO)
-    from crmsh.main import envsetup
-    import sys
-    envsetup()
-    sys.exit(migrate())
