@@ -793,6 +793,7 @@ def start_pacemaker(node_list=[], enable_flag=False):
             except ValueError as err:
                 node_list.remove(node)
                 logger.error(err)
+    logger.info("Starting %s on %s", constants.PCMK_SERVICE, ', '.join(node_list) or utils.this_node())
     return service_manager.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
