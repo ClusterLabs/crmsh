@@ -785,6 +785,7 @@ def start_pacemaker(node_list=[], enable_flag=False):
             except ValueError as err:
                 node_list.remove(node)
                 logger.error(err)
+    logger.info("Starting pacemaker.service on %s", ', '.join(node_list) or utils.this_node())
     return utils.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
