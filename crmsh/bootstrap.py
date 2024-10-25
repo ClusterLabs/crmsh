@@ -688,6 +688,7 @@ def start_pacemaker(node_list=[], enable_flag=False):
         cmd3 = "systemctl daemon-reload"
         for cmd in [cmd1, cmd2, cmd3]:
             parallax.parallax_call(node_list, cmd)
+    logger.info("Starting pacemaker.service on %s", ', '.join(node_list) or utils.this_node())
     utils.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
