@@ -181,10 +181,15 @@ deploy_ha_node() {
         # CAP_AUDIT_CONTROL for sshd
         # CAP_NET_ADMIN for firewall and virtual ip
         podman_capabilties="--cap-add CAP_SYS_NICE --cap-add CAP_AUDIT_CONTROL --cap-add CAP_NET_ADMIN"
+        if [ -d /sys/kernel/security/apparmor ]; then
+            podman_security="--security-opt=apparmor=podman"
+        else
+            podman_security=""
+        fi
 	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
-	podman run --rm -d $podman_options $podman_capabilties $CONTAINER_IMAGE > /dev/null
+	podman run --rm -d $podman_options $podman_capabilties $podman_security $CONTAINER_IMAGE > /dev/null
         podman network connect ha_network_second $node_name
 
 	if [ "$node_name" != "qnetd-node" ];then
