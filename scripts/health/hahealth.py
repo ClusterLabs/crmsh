@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import glob
 import os
 import crm_script as crm
 
@@ -22,16 +23,24 @@ def create_report():
 
 
 if not create_report():
-    crm.exit_fail({'status': 'Failed to create report'})
+    crm.exit_fail('Failed to create report')
 
 
 def extract_report():
-    rc, out, err = crm.call(['tar', 'xzf', 'health-report.tar.gz'], shell=False)
+    path = None
+    compressed_tars = glob.glob('health-report.tar.*')
+    if compressed_tars:
+        path = compressed_tars[0]
+    elif os.access('health-report.tar', os.F_OK | os.R_OK):
+        path = 'health-report.tar'
+    else:
+        crm.exit_fail('Failed to extract report: file not found.')
+    rc, out, err = crm.call(['tar', '-xf', path], shell=False)
     return rc == 0
 
 
 if not extract_report():
-    crm.exit_fail({'status': 'Failed to extract report'})
+    crm.exit_fail('Failed to extract report')
 
 analysis = ''
 if os.path.isfile('health-report/analysis.txt'):
