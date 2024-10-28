@@ -64,10 +64,10 @@ Feature: crmsh bootstrap process - options
   @clean
   Scenario: Bind specific network interface using "-i" option
     Given   Cluster service is "stopped" on "hanode1"
-    And     IP "@hanode1.ip.0" is belong to "eth1"
+    And     IP "@hanode1.ip.1" is belong to "eth1"
     When    Run "crm cluster init -i eth1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     IP "@hanode1.ip.0" is used by corosync on "hanode1"
+    And     IP "@hanode1.ip.1" is used by corosync on "hanode1"
     And     Show corosync ring status
  
   @clean
@@ -83,26 +83,26 @@ Feature: crmsh bootstrap process - options
   @clean
   Scenario: Using multiple network interface using "-i" option
     Given   Cluster service is "stopped" on "hanode1"
-    And     IP "@hanode1.ip.default" is belong to "eth0"
-    And     IP "@hanode1.ip.0" is belong to "eth1"
+    And     IP "@hanode1.ip.0" is belong to "eth0"
+    And     IP "@hanode1.ip.1" is belong to "eth1"
     When    Run "crm cluster init -i eth0 -i eth1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     IP "@hanode1.ip.default" is used by corosync on "hanode1"
     And     IP "@hanode1.ip.0" is used by corosync on "hanode1"
+    And     IP "@hanode1.ip.1" is used by corosync on "hanode1"
     And     Show corosync ring status
 
   @clean
   Scenario: Using "-i" option, mixing with IP and NIC name
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -i eth0 -i @hanode1.ip.0 -y" on "hanode1"
+    When    Run "crm cluster init -i eth0 -i @hanode1.ip.1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     IP "@hanode1.ip.default" is used by corosync on "hanode1"
     And     IP "@hanode1.ip.0" is used by corosync on "hanode1"
-    When    Run "crm cluster join -c hanode1 -i eth0 -i @hanode2.ip.0 -y" on "hanode2"
+    And     IP "@hanode1.ip.1" is used by corosync on "hanode1"
+    When    Run "crm cluster join -c hanode1 -i eth0 -i @hanode2.ip.1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    And     IP "@hanode2.ip.default" is used by corosync on "hanode2"
     And     IP "@hanode2.ip.0" is used by corosync on "hanode2"
+    And     IP "@hanode2.ip.1" is used by corosync on "hanode2"
 
     When    Try "crm cluster join cluster -c hanode1 -y" on "hanode2"
     Then    Expected "Cluster is active, can't run 'cluster' stage" in stderr
@@ -136,21 +136,21 @@ Feature: crmsh bootstrap process - options
   @clean
   Scenario: Detect multi IP in the same NIC
     Given   Cluster service is "stopped" on "hanode1"
-    When    Try "crm cluster init -i eth1 -i @hanode1.ip.0 -y"
+    When    Try "crm cluster init -i eth0 -i @hanode1.ip.0 -y"
     Then    Except "ERROR: cluster.init: Invalid input '@hanode1.ip.0': the IP in the same NIC already used"
-    When    Try "crm cluster init -i @hanode1.ip.0 -i eth1 -y"
-    Then    Except "ERROR: cluster.init: Invalid input 'eth1': The same NIC already used"
+    When    Try "crm cluster init -i @hanode1.ip.0 -i eth0 -y"
+    Then    Except "ERROR: cluster.init: Invalid input 'eth0': The same NIC already used"
 
   @clean
   Scenario: Init cluster service with ipv6 using "-I" option
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -I -i eth1 -y" on "hanode1"
+    When    Run "crm cluster init -I -i eth0 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     IP "@hanode1.ip6.default" is used by corosync on "hanode1"
-    When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
+    And     IP "@hanode1.ip6.0" is used by corosync on "hanode1"
+    When    Run "crm cluster join -c hanode1 -i eth0 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    And     IP "@hanode2.ip6.default" is used by corosync on "hanode2"
+    And     IP "@hanode2.ip6.0" is used by corosync on "hanode2"
 
   @clean
   Scenario: Init cluster with -N option (bsc#1175863)

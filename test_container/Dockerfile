@@ -1,13 +1,14 @@
-FROM opensuse/tumbleweed
+FROM docker.io/opensuse/tumbleweed
 MAINTAINER Xin Liang <XLiang@suse.com>
 
 CMD ["/usr/lib/systemd/systemd", "--system"]
 
-RUN zypper refresh && \
-    zypper -n install systemd \
-        make autoconf automake vim which libxslt-tools mailx iproute2 iputils bzip2 openssh tar file glibc-locale-base firewalld libopenssl1_1 dos2unix iptables cpio gawk \
+RUN zypper ar -fG https://download.opensuse.org/repositories/home:/nicholasyang/openSUSE_Tumbleweed/home:nicholasyang.repo
+RUN zypper -n install systemd openssh \
+        firewalld iptables iptables-backend-nft \
+        make autoconf automake vim which libxslt-tools mailx iproute2 iputils bzip2 tar file glibc-locale-base libopenssl1_1 dos2unix cpio gawk \
         python3 python3-pip python3-lxml python3-python-dateutil python3-setuptools python3-PyYAML python3-curses python3-behave python3-coverage python3-packaging \
-        csync2 libglue-devel corosync corosync-qdevice pacemaker booth corosync-qnetd libknet1-*
+        csync2 libglue-devel corosync corosync-qdevice pacemaker booth corosync-qnetd
 
 RUN ssh-keygen -t rsa -f /root/.ssh/id_rsa -N '' && \
     cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys && \

@@ -9,7 +9,7 @@ on:
   - workflow_call
 
 env:
-  DOCKER_SCRIPT: ./test/run-functional-tests
+  CONTAINER_SCRIPT: sudo ./test/run-functional-tests
   GET_INDEX_OF: ./test/run-functional-tests _get_index_of
 
 jobs:
@@ -60,10 +60,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for crm_report bugs
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF crm_report_bugs`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -76,10 +74,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for crm_report normal
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF crm_report_normal`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -92,10 +88,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for bootstrap bugs
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF bootstrap_bugs`
-        $DOCKER_SCRIPT $index
+        $CONTAINER_SCRIPT $index
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -108,10 +102,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for bootstrap bugs, under non root user
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF bootstrap_bugs`
-        $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -124,10 +116,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for bootstrap common
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
-        $DOCKER_SCRIPT $index
+        $CONTAINER_SCRIPT $index
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -140,10 +130,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for bootstrap common, under non root user
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
-        $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -156,10 +144,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for bootstrap options
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF bootstrap_options`
-        $DOCKER_SCRIPT $index
+        $CONTAINER_SCRIPT $index
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -172,10 +158,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for crm corosync subcommand
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF corosync_ui`
-        $DOCKER_SCRIPT $index
+        $CONTAINER_SCRIPT $index
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -188,10 +172,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for bootstrap options, under non root user
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF bootstrap_options`
-        $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -204,10 +186,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for qdevice setup and remove
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF qdevice_setup_remove`
-        $DOCKER_SCRIPT $index
+        $CONTAINER_SCRIPT $index
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -220,10 +200,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for qdevice setup and remove, under non root user
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF qdevice_setup_remove`
-        $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -236,10 +214,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for qdevice options
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF qdevice_options`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -252,10 +228,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for qdevice validate
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF qdevice_validate`
-        $DOCKER_SCRIPT $index
+        $CONTAINER_SCRIPT $index
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -268,10 +242,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for qdevice validate, under non root user
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF qdevice_validate`
-        $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -284,10 +256,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for qdevice user case
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF qdevice_usercase`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -300,10 +270,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for resource failcount
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF resource_failcount`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -316,10 +284,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for resource set
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF resource_set`
-        $DOCKER_SCRIPT $index
+        $CONTAINER_SCRIPT $index
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -332,10 +298,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for resource set, under non root user
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF resource_set`
-        $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -348,10 +312,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for configure sublevel bugs
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF configure_bugs`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -364,10 +326,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for constraints bugs
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF constraints_bugs`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -380,10 +340,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for geo cluster
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF geo_setup`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -396,10 +354,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for healthcheck
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         index=`$GET_INDEX_OF healthcheck`
-        $DOCKER_SCRIPT $index && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -412,9 +368,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for cluster api
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
-        $DOCKER_SCRIPT `$GET_INDEX_OF cluster_api`
+        $CONTAINER_SCRIPT `$GET_INDEX_OF cluster_api`
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -427,9 +381,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for user access
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
-        $DOCKER_SCRIPT `$GET_INDEX_OF user_access`
+        $CONTAINER_SCRIPT `$GET_INDEX_OF user_access`
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -442,9 +394,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for ssh agent
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
-        $DOCKER_SCRIPT `$GET_INDEX_OF ssh_agent` && $DOCKER_SCRIPT -d && $DOCKER_SCRIPT -u `$GET_INDEX_OF ssh_agent`
+        $CONTAINER_SCRIPT `$GET_INDEX_OF ssh_agent` && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT -u `$GET_INDEX_OF ssh_agent`
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -457,9 +407,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: functional test for blocking ssh
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
-        $DOCKER_SCRIPT `$GET_INDEX_OF cluster_blocking_ssh`
+        $CONTAINER_SCRIPT `$GET_INDEX_OF cluster_blocking_ssh`
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -472,4 +420,4 @@ jobs:
     - uses: actions/checkout@v4
     - name: original regression test
       run:  |
-        $DOCKER_SCRIPT `$GET_INDEX_OF "regression test"`
+        $CONTAINER_SCRIPT `$GET_INDEX_OF "regression test"`
