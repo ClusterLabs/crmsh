@@ -177,6 +177,7 @@ class SBDTimeout(object):
     SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
     QDEVICE_SYNC_TIMEOUT_MARGIN = 5
+    SHOW_SBD_START_TIMEOUT_CMD = "systemctl show -p TimeoutStartUSec sbd.service --value"
 
     def __init__(self, context=None):
         '''
@@ -363,7 +364,7 @@ class SBDTimeout(object):
 
     @staticmethod
     def get_sbd_systemd_start_timeout() -> int:
-        out = sh.cluster_shell().get_stdout_or_raise_error(constants.SHOW_SBD_START_TIMEOUT_CMD)
+        out = sh.cluster_shell().get_stdout_or_raise_error(SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD)
         return utils.get_systemd_timeout_start_in_sec(out)
 
     def adjust_systemd_start_timeout(self):

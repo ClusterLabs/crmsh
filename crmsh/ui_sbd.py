@@ -208,7 +208,7 @@ class SBD(command.UI):
             print(f"{match[0]}={match[1]}")
 
         print()
-        logger.info('%s', constants.SHOW_SBD_START_TIMEOUT_CMD)
+        logger.info('%s', sbd.SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD)
         systemd_start_timeout = sbd.SBDTimeout.get_sbd_systemd_start_timeout()
         print(f"TimeoutStartUSec={systemd_start_timeout}")
 
