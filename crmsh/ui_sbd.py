@@ -512,11 +512,9 @@ class SBD(command.UI):
             print("# Status of fence_sbd:")
             sbd_id_list = self.crm_mon_xml_parser.get_resource_id_list_via_type(sbd.SBDManager.SBD_RA)
             for sbd_id in sbd_id_list:
-                rc, out, err = self.cluster_shell.get_rc_stdout_stderr_without_input(None, f"crm resource status {sbd_id}")
-                if out:
-                    print(out)
-                if err:
-                    print(err)
+                rc, output = self.cluster_shell.get_rc_output_without_input(None, f"crm resource status {sbd_id}")
+                if output:
+                    print(output)
 
     def do_status(self, context) -> bool:
         '''
