@@ -92,7 +92,6 @@ class SBD(command.UI):
     DISKLESS_TIMEOUT_TYPES = ("watchdog",)
     SHOW_TYPES = ("disk_metadata", "sysconfig", "property")
     DISKLESS_SHOW_TYPES = ("sysconfig", "property")
-    RESTART_INFO = "Requires to restart cluster service to take effect"
     PCMK_ATTRS = (
         "have-watchdog",
         "stonith-timeout",
@@ -357,7 +356,7 @@ class SBD(command.UI):
         logger.info("Remove devices: %s", ';'.join(devices_to_remove))
         update_dict = {"SBD_DEVICE": ";".join(left_device_list)}
         sbd.SBDManager.update_sbd_configuration(update_dict)
-        logger.info('%s', self.RESTART_INFO)
+        sbd.SBDManager.restart_cluster_if_possible()
 
     @command.completers_repeating(sbd_device_completer)
     def do_device(self, context, *args) -> bool:
@@ -440,7 +439,7 @@ class SBD(command.UI):
             logger.error("%s is not active", constants.SBD_SERVICE)
             return False
         sbd.disable_sbd_from_cluster()
-        logger.info('%s', self.RESTART_INFO)
+        sbd.SBDManager.restart_cluster_if_possible()
         return True
 
     def _print_sbd_type(self):
