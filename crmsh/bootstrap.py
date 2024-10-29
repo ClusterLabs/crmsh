@@ -71,7 +71,7 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         PROFILES_FILE, CRM_CFG, SBD_SYSTEMD_DELAY_START_DIR)
 
 INIT_STAGES_EXTERNAL = ("ssh", "csync2", "corosync", "sbd", "cluster", "admin", "qdevice")
-INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote", "remote_auth")
+INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote")
 INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
 JOIN_STAGES_EXTERNAL = ("ssh", "csync2", "ssh_merge", "cluster")
 
@@ -1201,7 +1201,7 @@ def init_corosync_auth():
     invoke("corosync-keygen -l -k {}".format(COROSYNC_AUTH))
 
 
-def init_remote_auth():
+def generate_pacemaker_remote_auth():
     """
     Generate the pacemaker-remote authkey
     """
@@ -1400,6 +1400,8 @@ def init_cluster():
     """
     Initial cluster configuration.
     """
+    generate_pacemaker_remote_auth()
+
     init_cluster_local()
 
     _rc, nnodes = ShellUtils().get_stdout("crm_node -l")
@@ -2128,22 +2130,19 @@ def corosync_stage_finished():
 
 
 INIT_STAGE_CHECKER = {
-        # stage: (function, is_internal)
-        "ssh": (ssh_stage_finished, False),
-        "csync2": (csync2_stage_finished, False),
-        "corosync": (corosync_stage_finished, False),
-        "remote_auth": (init_remote_auth, True),
-        "sbd": (lambda: True, False),
-        "cluster": (is_online, False)
+        "ssh": ssh_stage_finished,
+        "csync2": csync2_stage_finished,
+        "corosync": corosync_stage_finished,
+        "sbd": lambda: True,
+        "cluster": is_online
 }
 
 
 JOIN_STAGE_CHECKER = {
-        # stage: (function, is_internal)
-        "ssh": (ssh_stage_finished, False),
-        "csync2": (csync2_stage_finished, False),
-        "ssh_merge": (lambda: True, False),
-        "cluster": (is_online, False)
+        "ssh": ssh_stage_finished,
+        "csync2": csync2_stage_finished,
+        "ssh_merge": lambda: True,
+        "cluster": is_online
 }
 
 
@@ -2151,14 +2150,10 @@ def check_stage_dependency(stage):
     stage_checker = INIT_STAGE_CHECKER if _context.type == "init" else JOIN_STAGE_CHECKER
     if stage not in stage_checker:
         return
-    stage_order = list(stage_checker.keys())
-    for stage_name in stage_order:
+    for stage_name, check_func in stage_checker.items():
         if stage == stage_name:
             break
-        func, is_internal = stage_checker[stage_name]
-        if is_internal:
-            func()
-        elif not func():
+        if not check_func():
             utils.fatal(f"Please run '{stage_name}' stage first")
 
 
@@ -2203,7 +2198,6 @@ def bootstrap_init(context):
         else:
             init_csync2()
         init_corosync()
-        init_remote_auth()
         init_sbd()
 
         lock_inst = lock.Lock()
