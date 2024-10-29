@@ -134,6 +134,12 @@ class SBD(command.UI):
         self.service_manager = ServiceManager()
         self.cluster_shell = sh.cluster_shell()
         self.cluster_nodes = utils.list_cluster_nodes() or [utils.this_node()]
+        for node in self.cluster_nodes[:]:
+            try:
+                utils.node_reachable_check(node)
+            except Exception as e:
+                logger.error(e)
+                self.cluster_nodes.remove(node)
         self.crm_mon_xml_parser = xmlutil.CrmMonXmlParser()
 
     def requires(self) -> bool:
@@ -351,7 +357,7 @@ class SBD(command.UI):
         # To keep the order of devices during removal
         left_device_list = [dev for dev in self.device_list_from_config if dev not in devices_to_remove]
         if len(left_device_list) == 0:
-            raise self.SyntaxError(f"Not allowed to remove all devices")
+            raise self.SyntaxError("Not allowed to remove all devices")
 
         logger.info("Remove devices: %s", ';'.join(devices_to_remove))
         update_dict = {"SBD_DEVICE": ";".join(left_device_list)}
@@ -474,9 +480,9 @@ class SBD(command.UI):
     def _print_watchdog_info(self):
         padding = 2
         max_node_len = max(len(node) for node in self.cluster_nodes) + padding
-
-        watchdog_sbd_re = "\[[0-9]+\] (/dev/.*)\nIdentity: Busy: .*sbd.*\nDriver: (.*)"
+        watchdog_sbd_re = r"\[[0-9]+\] (/dev/.*)\nIdentity: Busy: .*sbd.*\nDriver: (.*)"
         device_list, driver_list, kernel_timeout_list = [], [], []
+
         cluster_nodes = self.cluster_nodes[:]
         for node in cluster_nodes[:]:
             out = self.cluster_shell.get_stdout_or_raise_error("sbd query-watchdog", node)
