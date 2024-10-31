@@ -101,7 +101,8 @@ class CheckResultInteractiveHandler(CheckResultHandler):
 
 def migrate():
     try:
-        check()
+        if 0 != check(list()):
+            raise MigrationFailure('Unable to start migration.')
         logger.info('Starting migration...')
         migrate_corosync_conf()
         logger.info('Finished migration.')
@@ -259,7 +260,12 @@ def migrate_corosync_conf():
         corosync_config_format.DomSerializer(config, f)
         os.fchmod(f.fileno(), 0o644)
     logger.info('Finish migrating corosync configuration.')
-    # TODO: copy to all cluster nodes
+    for host, result in prun.pcopy_to_remote(conf_path, utils.list_cluster_nodes_except_me(), conf_path).items():
+        match result:
+            case None:
+                pass
+            case prun.PRunError() as e:
+                logger.error("Failed to copy crmsh.conf to host %s: %s", host, e)
 
 
 def migrate_corosync_conf_impl(config):
