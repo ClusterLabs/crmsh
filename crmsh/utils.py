@@ -40,6 +40,7 @@ from . import userdir
 from . import constants
 from . import options
 from . import term
+from . import ssh_key
 from .constants import SSH_OPTION
 from . import log
 from .prun import prun
@@ -138,8 +139,9 @@ def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalSh
     if shell is None:
         shell = sh.LocalShell()
     if check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
+        local_public_key = ssh_key.fetch_public_key_list(None, local_user)[0]
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
-        cmd = "ssh-copy-id -i ~/.ssh/id_rsa.pub '{}@{}' &> /dev/null".format(remote_user, remote_node)
+        cmd = f"ssh-copy-id -i {local_public_key} '{remote_user}@{remote_node}' &> /dev/null"
         result = shell.su_subprocess_run(local_user, cmd, tty=True)
         return result.returncode
     else:
