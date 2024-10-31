@@ -130,8 +130,8 @@ class AuthorizedKeyManager:
                     tmp.flush()
                     self._add_by_ssh_copy_id(user, host, tmp.name)
 
-    @classmethod
-    def _add_by_editing_file(cls, user: str, key: Key):
+    @staticmethod
+    def _add_by_editing_file(user: str, key: Key):
         public_key = key.public_key()
         dir = f'~{user}/.ssh'
         file = f'{dir}/authorized_keys'
@@ -208,7 +208,7 @@ class KeyFileManager:
         filenames = self.list_public_key_for_user(host, user)
         if not filenames:
             return list()
-        cmd = f'cat ~{user}/.ssh/{{{",".join(filenames)}}}'
+        cmd = f'cat {",".join(filenames)}'
         result = self.cluster_shell.subprocess_run_without_input(
             host, user,
             cmd,
@@ -265,3 +265,37 @@ done
             else:
                 keys.append(InMemoryPublicKey(line))
         return generated, keys
+
+
+def fetch_public_key_list(
+        host: typing.Optional[str],
+        user: str,
+        generate_key_pair: bool = False,
+        with_content: bool = False
+) -> typing.List[str]:
+    """
+    Fetch the public key list for the specified user on the specified host.
+
+    :param host: the host where the user is located. If None, the local host is assumed.
+    :param user: the user name
+    :param generate_key_pair: whether to generate a new key pair if no key pair is found,
+     default is False
+    :param with_content: whether to return the content of the public key files,
+     default is False
+
+    :return: a list of public key files if with_content is False, otherwise a list of public key strings
+
+    :raise Error: if no public key file is found for the user
+    """
+    key_file_manager = KeyFileManager(sh.cluster_shell())
+    if generate_key_pair:
+        key_file_manager.ensure_key_pair_exists_for_user(host, user)
+    if with_content:
+        keys_in_memory = key_file_manager.load_public_keys_for_user(host, user)
+        public_keys = [key.public_key() for key in keys_in_memory]
+    else:
+        public_keys = key_file_manager.list_public_key_for_user(host, user)
+    if not public_keys:
+        host_str = f'@{host}' if host else ' locally'
+        raise Error(f'No public key file found for {user}{host_str}')
+    return public_keys
