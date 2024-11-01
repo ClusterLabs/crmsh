@@ -183,6 +183,7 @@ class AgentClient:
 
 
 class KeyFileManager:
+    DEFAULT_KEY_TYPE = 'rsa'
     KNOWN_KEY_TYPES = ['rsa', 'ed25519', 'ecdsa']   # dsa is not listed here as it is not so secure
     KNOWN_PUBLIC_KEY_FILENAME_PATTERN = re.compile('/id_(?:{})\\.pub$'.format('|'.join(KNOWN_KEY_TYPES)))
 
@@ -232,7 +233,7 @@ class KeyFileManager:
         * list_of_public_keys: all public keys of known types, including the newly generated one
         """
         script = '''if [ ! \\( {condition} \\) ]; then
-    ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -C "Cluster internal on $(hostname)" -N '' <> /dev/null
+    ssh-keygen -t {key_type} -f ~/.ssh/id_{key_type} -q -C "Cluster internal on $(hostname)" -N '' <> /dev/null
     echo 'GENERATED=1'
 fi
 for file in ~/.ssh/id_{{{pattern}}}; do
@@ -245,6 +246,7 @@ for file in ~/.ssh/id_{{{pattern}}}; do
 done
 '''.format(
             condition=' -o '.join([f'-f ~/.ssh/id_{t}' for t in self.KNOWN_KEY_TYPES]),
+            key_type=self.DEFAULT_KEY_TYPE,
             pattern=','.join(self.KNOWN_KEY_TYPES),
         )
         result = self.cluster_shell.subprocess_run_without_input(
