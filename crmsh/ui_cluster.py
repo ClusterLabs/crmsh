@@ -828,9 +828,12 @@ to get the geo cluster configuration.""",
         parser = argparse.ArgumentParser()
         parser.add_argument('component', choices=['hawk2', 'sles16'])
         parser.add_argument('-f', '--fix', action='store_true')
-        parsed_args = parser.parse_args(args)
+        parsed_args, remaining_args = parser.parse_known_args(args)
         match parsed_args.component:
             case 'hawk2':
+                if remaining_args:
+                    logger.error('Known arguments: %s', ' '.join(remaining_args))
+                    return False
                 nodes = utils.list_cluster_nodes()
                 if parsed_args.fix:
                     if not healthcheck.feature_full_check(healthcheck.PasswordlessPrimaryUserAuthenticationFeature(), nodes):
@@ -864,8 +867,7 @@ to get the geo cluster configuration.""",
                         logger.error('"--fix" is only available in SLES 16.')
                         return False
                     else:
-                        migration.check()
-                    return True
+                        return 0 == migration.check(remaining_args)
                 except migration.MigrationFailure as e:
                     logger.error('%s', e)
                     return False
