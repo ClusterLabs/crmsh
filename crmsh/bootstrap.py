@@ -1058,9 +1058,7 @@ def export_ssh_key_non_interactive(local_user_to_export, remote_user_to_swap, re
     """Copy ssh key from local to remote's authorized_keys. Require a configured non-interactive ssh authentication."""
     # ssh-copy-id will prompt for the password of the destination user
     # this is unwanted, so we write to the authorised_keys file ourselve
-    # cmd = "ssh-copy-id -i ~{}/.ssh/id_rsa.pub {}@{}".format(local_user, remote_user_to_access, remote_node)
-    with open(os.path.expanduser('~{}/.ssh/id_rsa.pub'.format(local_user_to_export)), 'r', encoding='utf-8') as f:
-        public_key = f.read()
+    public_key = ssh_key.fetch_public_key_list(None, local_user_to_export, with_content=True)[0]
     # FIXME: prevent duplicated entries in authorized_keys
     cmd = '''mkdir -p ~{user}/.ssh && chown {user} ~{user}/.ssh && chmod 0700 ~{user}/.ssh && cat >> ~{user}/.ssh/authorized_keys << "EOF"
 {key}
@@ -1081,7 +1079,7 @@ EOF
 
 def import_ssh_key(local_user, remote_user, local_sudoer, remote_node, remote_sudoer):
     "Copy ssh key from remote to local authorized_keys"
-    remote_key_content = remote_public_key_from(remote_user, local_sudoer, remote_node, remote_sudoer)
+    remote_key_content = ssh_key.fetch_public_key_list(remote_node, remote_user, with_content=True)[0]
     _, _, local_authorized_file = key_files(local_user).values()
     if not utils.check_text_included(remote_key_content, local_authorized_file, remote=None):
         sh.LocalShell().get_stdout_or_raise_error(
@@ -1186,7 +1184,7 @@ def init_qnetd_remote():
     Triggered by join_cluster, this function adds the joining node's key to the qnetd's authorized_keys
     """
     local_user, remote_user, join_node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
-    join_node_key_content = remote_public_key_from(remote_user, local_user, join_node, remote_user)
+    join_node_key_content = ssh_key.fetch_public_key_list(join_node, remote_user, with_content=True)[0]
     qnetd_host = corosync.get_value("quorum.device.net.host")
     _, qnetd_user, qnetd_host = _select_user_pair_for_ssh_for_secondary_components(qnetd_host)
     authorized_key_manager = ssh_key.AuthorizedKeyManager(sh.cluster_shell())
@@ -1531,7 +1529,7 @@ def _setup_passwordless_ssh_for_qnetd(cluster_node_list: typing.List[str]):
             if node == utils.this_node():
                 continue
             local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
-            remote_key_content = remote_public_key_from(remote_user, local_user, node, remote_user)
+            remote_key_content = ssh_key.fetch_public_key_list(node, remote_user, with_content=True)[0]
             in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
             ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
 
@@ -1691,24 +1689,6 @@ def swap_public_ssh_key(
             import_ssh_key(local_user_to_swap, remote_user_to_swap, local_sudoer, remote_node, remote_sudoer)
         except ValueError as e:
             logger.warning(e)
-
-
-def remote_public_key_from(remote_user, local_sudoer, remote_node, remote_sudoer):
-    "Get the id_rsa.pub from the remote node"
-    cmd = 'cat ~/.ssh/id_rsa.pub'
-    result = sh.LocalShell().su_subprocess_run(
-        local_sudoer,
-        'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote_node, remote_user),
-        input=cmd.encode('utf-8'),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        )
-    if result.returncode != 0:
-        utils.fatal("Can't get the remote id_rsa.pub from {}: {}".format(
-            remote_node,
-            codecs.decode(result.stderr, 'utf-8', 'replace'),
-        ))
-    return result.stdout.decode('utf-8')
 
 
 def join_csync2(seed_host, remote_user):
