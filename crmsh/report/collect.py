@@ -152,7 +152,7 @@ def collect_dlm_info(context: core.Context) -> None:
         name_list = []
         out_string = "##### NOTICE - Lockspace overview:\n"
         out_string += utils.get_cmd_output("dlm_tool ls")
-        name_list = re.findall("^name\s*(.*)$", out_string, re.MULTILINE)
+        name_list = re.findall(r"^name\s*(.*)$", out_string, re.MULTILINE)
 
         for name in name_list:
             out_string += f"\n\n## NOTICE - Lockspace {name}\n"

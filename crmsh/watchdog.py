@@ -10,7 +10,7 @@ class Watchdog(object):
     Class to find valid watchdog device name
     """
     QUERY_CMD = "sudo sbd query-watchdog"
-    DEVICE_FIND_REGREX = "\[[0-9]+\] (/dev/.*)\n.*\nDriver: (.*)"
+    DEVICE_FIND_REGREX = "\\[[0-9]+\\] (/dev/.*)\n.*\nDriver: (.*)"
 
     def __init__(self, _input=None, remote_user=None, peer_host=None):
         """
@@ -61,7 +61,7 @@ class Watchdog(object):
         Check if driver was already loaded
         """
         _, out, _ = ShellUtils().get_stdout_stderr("lsmod")
-        return re.search("\n{}\s+".format(driver), out)
+        return re.search("\n{}\\s+".format(driver), out)
 
     def _set_watchdog_info(self):
         """

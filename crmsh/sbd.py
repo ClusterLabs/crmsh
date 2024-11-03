@@ -92,7 +92,7 @@ class SBDTimeout(object):
         """
         out = sh.cluster_shell().get_stdout_or_raise_error("sbd -d {} dump".format(dev))
         # Format like "Timeout (msgwait)  : 30"
-        res = re.search("\(msgwait\)\s+:\s+(\d+)", out)
+        res = re.search(r"\(msgwait\)\s+:\s+(\d+)", out)
         if not res:
             raise ValueError("Cannot get sbd msgwait for {}".format(dev))
         return int(res.group(1))
@@ -293,7 +293,7 @@ class SBDManager(object):
         Get UUID for specific device and node
         """
         out = sh.cluster_shell().get_stdout_or_raise_error("sbd -d {} dump".format(dev), node)
-        res = re.search("UUID\s*:\s*(.*)\n", out)
+        res = re.search(r"UUID\s*:\s*(.*)\n", out)
         if not res:
             raise ValueError("Cannot find sbd device UUID for {}".format(dev))
         return res.group(1)

@@ -596,7 +596,7 @@ class TestInterfacesInfo(unittest.TestCase):
     Unitary tests for class utils.InterfacesInfo
     """
 
-    network_output_error = """1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+    network_output_error = """1: lo    inet 127.0.0.1/8 scope host lo\\       valid_lft forever preferred_lft forever
 2: enp1s0    inet 192.168.122.241/24 brd 192.168.122.255 scope global enp1s0
 61: tun0    inet 10.163.45.46 peer 10.163.45.45/32 scope global tun0"""
 
@@ -633,7 +633,7 @@ class TestInterfacesInfo(unittest.TestCase):
 
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_get_interfaces_info_no_address(self, mock_run):
-        only_lo = "1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever"
+        only_lo = "1: lo    inet 127.0.0.1/8 scope host lo\\       valid_lft forever preferred_lft forever"
         mock_run.return_value = (0, only_lo, None)
         with self.assertRaises(ValueError) as err:
             self.interfaces_info.get_interfaces_info()

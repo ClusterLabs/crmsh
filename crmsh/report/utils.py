@@ -204,7 +204,7 @@ def get_distro_info() -> str:
     elif shutil.which("lsb_release"):
         logger.debug2("Using lsb_release to get distribution info")
         out = sh.LocalShell().get_stdout_or_raise_error("lsb_release -d")
-        res = re.search("Description:\s+(.*)", out)
+        res = re.search(r"Description:\s+(.*)", out)
     return res.group(1) if res else "Unknown"
 
 
@@ -548,7 +548,7 @@ class Sanitizer:
         patt_set = set(self.context.sensitive_regex_list)
         # from /etc/crm/crm.conf
         if config.report.sanitize_rule:
-            patt_set |= set(re.split('\s*\|\s*|\s+', config.report.sanitize_rule.strip('|')))
+            patt_set |= set(re.split(r'\s*\|\s*|\s+', config.report.sanitize_rule.strip('|')))
         if patt_set:
             self.context.sanitize = True
         # Not set from -p option and crm.conf, use default

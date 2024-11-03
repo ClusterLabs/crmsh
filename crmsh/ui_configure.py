@@ -579,7 +579,7 @@ class CibConfig(command.UI):
             #   1. "pattern1 pattern2 pattern3"
             #   2. "pattern1|pattern2|pattern3"
             # regrex here also filter out possible spaces
-            osargs = re.split('\s*\|\s*|\s+', config.core.obscure_pattern.strip('|'))
+            osargs = re.split(r'\s*\|\s*|\s+', config.core.obscure_pattern.strip('|'))
         args = [arg for arg in args if not arg.startswith('obscure:')]
         cib_factory.ensure_cib_updated()
         with obscure(osargs):

@@ -2035,7 +2035,7 @@ def detect_azure():
     system_manufacturer = shell.get_stdout_or_raise_error("dmidecode -s system-manufacturer")
     chassis_asset_tag = shell.get_stdout_or_raise_error("dmidecode -s chassis-asset-tag")
     if "microsoft corporation" in system_manufacturer.lower() or \
-            ''.join([chr(int(n)) for n in re.findall("\d\d", chassis_asset_tag)]) == "MSFT AZURE VM":
+            ''.join([chr(int(n)) for n in re.findall(r"\d\d", chassis_asset_tag)]) == "MSFT AZURE VM":
         # To detect azure we also need to make an API request
         result = _cloud_metadata_request(
             "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-08-01&format=text",
@@ -2493,7 +2493,7 @@ def get_quorum_votes_dict(remote=None):
     Return a dictionary which contain expect votes and total votes
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("corosync-quorumtool -s", remote, success_exit_status={0, 2})
-    return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
+    return dict(re.findall(r"(Expected|Total) votes:\s+(\d+)", out))
 
 
 def check_all_nodes_reachable():
@@ -2501,7 +2501,7 @@ def check_all_nodes_reachable():
     Check if all cluster nodes are reachable
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l")
-    for node in re.findall("\d+ (.*) \w+", out):
+    for node in re.findall(r"\d+ (.*) \w+", out):
         node_reachable_check(node)
 
 
@@ -2582,7 +2582,7 @@ def get_all_vg_name():
     Get all available VGs
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("vgdisplay")
-    return re.findall("VG Name\s+(.*)", out)
+    return re.findall(r"VG Name\s+(.*)", out)
 
 
 def get_pe_number(vg_id):
@@ -2590,7 +2590,7 @@ def get_pe_number(vg_id):
     Get pe number
     """
     output = sh.cluster_shell().get_stdout_or_raise_error("vgdisplay {}".format(vg_id))
-    res = re.search("Total PE\s+(\d+)", output)
+    res = re.search(r"Total PE\s+(\d+)", output)
     if not res:
         raise ValueError("Cannot find PE on VG({})".format(vg_id))
     return int(res.group(1))
@@ -2678,7 +2678,7 @@ def get_qdevice_sync_timeout():
     Get qdevice sync_timeout
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("crm corosync status qdevice")
-    res = re.search("Sync HB interval:\s+(\d+)ms", out)
+    res = re.search(r"Sync HB interval:\s+(\d+)ms", out)
     if not res:
         raise ValueError("Cannot find qdevice sync timeout")
     return int(int(res.group(1))/1000)
@@ -2713,7 +2713,7 @@ def get_dlm_option_dict(peer=None):
     Get dlm config option dictionary
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("dlm_tool dump_config", peer)
-    return dict(re.findall("(\w+)=(\w+)", out))
+    return dict(re.findall(r"(\w+)=(\w+)", out))
 
 
 def set_dlm_option(peer=None, **kargs):
@@ -2749,7 +2749,7 @@ def is_resource_running(ra_type, peer=None):
     Check if the RA running
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1rR", peer)
-    patt = f"\({ra_type}\):\s*Started"
+    patt = f"\\({ra_type}\\):\\s*Started"
     return re.search(patt, out) is not None
 
 
@@ -2853,9 +2853,9 @@ def get_systemd_timeout_start_in_sec(time_res):
     Get the TimeoutStartUSec value in second unit
     The origin format was like: 1min 30s
     """
-    res_seconds = re.search("(\d+)s", time_res)
+    res_seconds = re.search(r"(\d+)s", time_res)
     start_timeout = int(res_seconds.group(1)) if res_seconds else 0
-    res_min = re.search("(\d+)min", time_res)
+    res_min = re.search(r"(\d+)min", time_res)
     start_timeout += 60 * int(res_min.group(1)) if res_min else 0
     return start_timeout
 
