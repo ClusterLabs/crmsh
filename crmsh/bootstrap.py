@@ -921,7 +921,7 @@ def _init_ssh_on_remote_nodes(
     for i, (remote_user, node) in enumerate(user_node_list):
         utils.ssh_copy_id(local_user, remote_user, node)
         # After this, login to remote_node is passwordless
-        public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True))
+        public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, generate_key_on_remote=True))
     if len(user_node_list) > 1:
         shell = sh.LocalShell()
         shell_script = _merge_line_into_file('~/.ssh/authorized_keys', public_key_list).encode('utf-8')
@@ -1727,7 +1727,7 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
                             msg += '\nOr, run "{}".'.format(' '.join(args))
             raise ValueError(msg)
         # After this, login to remote_node is passwordless
-        swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user, add=True)
+        swap_public_ssh_key(seed_host, local_user, seed_user, local_user, seed_user)
     ssh_shell = sh.SSHShell(local_shell, local_user)
     if seed_user != 'root' and 0 != ssh_shell.subprocess_run_without_input(
             seed_host, seed_user, 'sudo true',
@@ -1786,7 +1786,7 @@ def swap_public_ssh_key(
         remote_user_to_swap,
         local_sudoer,
         remote_sudoer,
-        add=False,
+        generate_key_on_remote=False
 ):
     """
     Swap public ssh key between remote_node and local
@@ -1795,7 +1795,7 @@ def swap_public_ssh_key(
     if utils.check_ssh_passwd_need(local_user_to_swap, remote_user_to_swap, remote_node):
         export_ssh_key_non_interactive(local_user_to_swap, remote_user_to_swap, remote_node, local_sudoer, remote_sudoer)
 
-    if add:
+    if generate_key_on_remote:
         public_key = generate_ssh_key_pair_on_remote(local_sudoer, remote_node, remote_sudoer, remote_user_to_swap)
         ssh_key.AuthorizedKeyManager(sh.SSHShell(sh.LocalShell(), local_user_to_swap)).add(
             None, local_user_to_swap, ssh_key.InMemoryPublicKey(public_key),
@@ -2018,7 +2018,7 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
             swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
             if local_user != 'hacluster':
                 change_user_shell('hacluster', node)
-                swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user, add=True)
+                swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user, generate_key_on_remote=True)
         if local_user != 'hacluster':
             swap_key_for_hacluster(cluster_nodes_list)
     else:
@@ -2898,7 +2898,7 @@ def bootstrap_join_geo(context):
                     sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''}),
             ):
                 raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
-            swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True)
+            swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, generate_key_on_remote=True)
         user_by_host = utils.HostUserConfig()
         user_by_host.add(local_user, utils.this_node())
         user_by_host.add(remote_user, node)
@@ -2937,7 +2937,7 @@ def bootstrap_arbitrator(context):
                     sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''}),
             ):
                 raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
-            swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True)
+            swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, generate_key_on_remote=True)
         user_by_host.add(local_user, utils.this_node())
         user_by_host.add(remote_user, node)
         user_by_host.set_no_generating_ssh_key(context.use_ssh_agent)
