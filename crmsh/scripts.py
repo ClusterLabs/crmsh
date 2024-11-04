@@ -2044,7 +2044,7 @@ class RunActions(object):
         Handle an action that executes locally
         """
         if self.sudo_pass:
-            input_s = u'sudo: %s\n' % (self.sudo_pass)
+            input_s = 'sudo: %s\n' % (self.sudo_pass)
         else:
             input_s = None
         if self.dry_run:
