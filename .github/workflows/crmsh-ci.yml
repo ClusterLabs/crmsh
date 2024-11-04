@@ -27,6 +27,8 @@ jobs:
                 echo "Please run ./update-data-manifest.sh && git add ./data-manifest in your local environment and push the code again."
                 exit 1
         }
+        sudo apt-get update && sudo apt-get install pylint
+        pylint --rcfile pylint.toml crmsh
 
   unit_test:
     runs-on: ubuntu-24.04
