@@ -1037,10 +1037,8 @@ def change_user_shell(user, remote=None):
 
 def configure_ssh_key(user):
     """
-    Configure ssh rsa key on local or remote
-
-    If <home_dir>/.ssh/id_rsa not exist, generate a new one
-    Add <home_dir>/.ssh/id_rsa.pub to <home_dir>/.ssh/authorized_keys anyway, make sure itself authorized
+    Configure ssh key for user, generate a new key pair if needed,
+    and add the public key to authorized_keys
     """
     change_user_shell(user)
     shell = sh.LocalShell()
