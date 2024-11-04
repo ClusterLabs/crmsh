@@ -1013,25 +1013,50 @@ def generate_ssh_key_pair_on_remote(
     shell = sh.LocalShell()
     # pass cmd through stdin rather than as arguments. It seems sudo has its own argument parsing mechanics,
     # which breaks shell expansion used in cmd
-    cmd = '''
-[ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
-[ -f ~/.ssh/id_rsa.pub ] || ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
+    generate_key_script = f'''
+key_types=({ ' '.join(ssh_key.KeyFileManager.KNOWN_KEY_TYPES) })
+for key_type in "${{key_types[@]}}"; do
+    priv_key_file=~/.ssh/id_${{key_type}}
+    if [ -f "$priv_key_file" ]; then
+        pub_key_file=$priv_key_file.pub
+        break
+    fi
+done
+
+if [ -z "$pub_key_file" ]; then
+    key_type={ssh_key.KeyFileManager.DEFAULT_KEY_TYPE}
+    priv_key_file=~/.ssh/id_${{key_type}}
+    ssh-keygen -q -t $key_type -f $priv_key_file -C "Cluster internal on $(hostname)" -N ''
+    pub_key_file=$priv_key_file.pub
+fi
+
+[ -f "$pub_key_file" ] || ssh-keygen -y -f $priv_key_file > $pub_key_file
 '''
     result = shell.su_subprocess_run(
         local_sudoer,
         'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote_host, remote_user),
-        input=cmd.encode('utf-8'),
+        input=generate_key_script.encode('utf-8'),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
     if result.returncode != 0:
         raise ValueError(codecs.decode(result.stdout, 'utf-8', 'replace'))
 
-    cmd = 'cat ~/.ssh/id_rsa.pub'
+    fetch_key_script = f'''
+key_types=({ ' '.join(ssh_key.KeyFileManager.KNOWN_KEY_TYPES) })
+for key_type in "${{key_types[@]}}"; do
+    priv_key_file=~/.ssh/id_${{key_type}}
+    if [ -f "$priv_key_file" ]; then
+        pub_key_file=$priv_key_file.pub
+        cat $pub_key_file
+        break
+    fi
+done
+'''
     result = shell.su_subprocess_run(
         local_sudoer,
         'ssh {} {}@{} sudo -H -u {} /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote_host, remote_user),
-        input=cmd.encode('utf-8'),
+        input=fetch_key_script.encode('utf-8'),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
