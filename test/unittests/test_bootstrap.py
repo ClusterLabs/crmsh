@@ -456,13 +456,6 @@ class TestBootstrap(unittest.TestCase):
         ])
         mock_change_user_shell.assert_called_once_with("hacluster")
 
-    @mock.patch('crmsh.userdir.gethomedir')
-    def test_key_files(self, mock_gethome):
-        mock_gethome.return_value = "/root"
-        expected_res = {"private": "/root/.ssh/id_rsa", "public": "/root/.ssh/id_rsa.pub", "authorized": "/root/.ssh/authorized_keys"}
-        self.assertEqual(bootstrap.key_files("root"), expected_res)
-        mock_gethome.assert_called_once_with("root")
-
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.is_nologin')
@@ -495,9 +488,24 @@ class TestBootstrap(unittest.TestCase):
             mock.call(
                 'local_sudoer',
                 'ssh -o StrictHostKeyChecking=no remote_sudoer@remote_host sudo -H -u remote_user /bin/sh',
-                input='''
-[ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -f ~/.ssh/id_rsa -C "Cluster internal on $(hostname)" -N ''
-[ -f ~/.ssh/id_rsa.pub ] || ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
+                input=f'''
+key_types=({ ' '.join(crmsh.ssh_key.KeyFileManager.KNOWN_KEY_TYPES) })
+for key_type in "${{key_types[@]}}"; do
+    priv_key_file=~/.ssh/id_${{key_type}}
+    if [ -f "$priv_key_file" ]; then
+        pub_key_file=$priv_key_file.pub
+        break
+    fi
+done
+
+if [ -z "$pub_key_file" ]; then
+    key_type={crmsh.ssh_key.KeyFileManager.DEFAULT_KEY_TYPE}
+    priv_key_file=~/.ssh/id_${{key_type}}
+    ssh-keygen -q -t $key_type -f $priv_key_file -C "Cluster internal on $(hostname)" -N ''
+    pub_key_file=$priv_key_file.pub
+fi
+
+[ -f "$pub_key_file" ] || ssh-keygen -y -f $priv_key_file > $pub_key_file
 '''.encode('utf-8'),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -505,7 +513,17 @@ class TestBootstrap(unittest.TestCase):
             mock.call(
                 'local_sudoer',
                 'ssh -o StrictHostKeyChecking=no remote_sudoer@remote_host sudo -H -u remote_user /bin/sh',
-                input='cat ~/.ssh/id_rsa.pub'.encode('utf-8'),
+                input=f'''
+key_types=({ ' '.join(crmsh.ssh_key.KeyFileManager.KNOWN_KEY_TYPES) })
+for key_type in "${{key_types[@]}}"; do
+    priv_key_file=~/.ssh/id_${{key_type}}
+    if [ -f "$priv_key_file" ]; then
+        pub_key_file=$priv_key_file.pub
+        cat $pub_key_file
+        break
+    fi
+done
+'''.encode('utf-8'),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             ),
@@ -590,7 +608,7 @@ class TestBootstrap(unittest.TestCase):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        mock_swap.assert_called_once_with("node1", "bob", "alice", "bob", "alice", add=True)
+        mock_swap.assert_called_once_with("node1", "bob", "alice", "bob", "alice")
         mock_swap_2.assert_called_once()
         args, kwargs = mock_swap_2.call_args
         self.assertEqual(3, len(args))
@@ -788,7 +806,7 @@ class TestBootstrap(unittest.TestCase):
         ])
         mock_swap.assert_has_calls([
             mock.call('node2', "carol", "bob", "carol", "bob"),
-            mock.call('node2', 'hacluster', 'hacluster', 'carol', 'bob', add=True)
+            mock.call('node2', 'hacluster', 'hacluster', 'carol', 'bob', generate_key_on_remote=True)
             ])
 
     @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')
@@ -937,7 +955,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.ssh_key.AuthorizedKeyManager')
     @mock.patch('crmsh.sh.cluster_shell')
     @mock.patch('crmsh.ssh_key.InMemoryPublicKey')
-    @mock.patch('crmsh.bootstrap.remote_public_key_from')
+    @mock.patch('crmsh.ssh_key.fetch_public_key_content_list')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.utils.ssh_copy_id_no_raise')
     @mock.patch('crmsh.utils.check_ssh_passwd_need')
@@ -952,7 +970,7 @@ class TestBootstrap(unittest.TestCase):
         mock_check_passwd.return_value = True
         mock_ssh_copy_id.return_value = 0
         mock_this_node.return_value = "node1"
-        mock_remote_public_key_from.return_value = "public_key"
+        mock_remote_public_key_from.return_value = ["public_key"]
         mock_in_memory_public_key.return_value = "public_key"
         mock_authorized_key_manager_instance = mock.Mock()
         mock_authorized_key_manager.return_value = mock_authorized_key_manager_instance
