@@ -2011,7 +2011,7 @@ def adjust_priority_fencing_delay(is_2node_wo_qdevice):
     out = sh.cluster_shell().get_stdout_or_raise_error("crm configure show related:stonith")
     if not out:
         return
-    pcmk_delay_max_v_list = re.findall("pcmk_delay_max=(\w+)", out)
+    pcmk_delay_max_v_list = re.findall(r"pcmk_delay_max=(\w+)", out)
     if pcmk_delay_max_v_list:
         max_value = max([int(utils.crm_msec(v)/1000) for v in pcmk_delay_max_v_list])
     if pcmk_delay_max_v_list and is_2node_wo_qdevice:
