@@ -268,7 +268,7 @@ def find_configured_ip(ip_list):
     If so, raise IPAlreadyConfiguredError
     """
     data = utils.read_from_file(conf())
-    corosync_iplist = re.findall('ring[0-7]_addr:\s*(.*?)\n', data)
+    corosync_iplist = re.findall('ring[0-7]_addr:\\s*(.*?)\n', data)
 
     # all_possible_ip is a ip set to check whether one of them already configured
     all_possible_ip = set(ip_list)
@@ -807,7 +807,7 @@ class LinkManager:
         if linknumber >= KNET_LINK_NUM_LIMIT or links[linknumber] is None:
             raise ValueError(f'Link {linknumber} does not exist.')
         if sum(1 if link is not None else 0 for link in links) <= 1:
-            raise ValueError(f'Cannot remove the last link.')
+            raise ValueError('Cannot remove the last link.')
         nodes = self._config['nodelist']['node']
         assert isinstance(nodes, list)
         for node in nodes:

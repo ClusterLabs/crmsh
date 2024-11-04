@@ -366,7 +366,7 @@ class Script(command.UI):
             return script
 
         def order_rep(dumper, data):
-            return dumper.represent_mapping(u'tag:yaml.org,2002:map', list(data.items()), flow_style=False)
+            return dumper.represent_mapping('tag:yaml.org,2002:map', list(data.items()), flow_style=False)
 
         def scriptsorter(item):
             order = ["version", "name", "category", "shortdesc", "longdesc", "include", "parameters", "steps", "actions"]
