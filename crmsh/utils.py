@@ -2429,16 +2429,6 @@ class InterfacesInfo(object):
         return res.group(1) if res else self.nic_list[0]
 
 
-def check_text_included(text, target_file, remote=None):
-    "Check whether target_file includes the text"
-    if not detect_file(target_file, remote=remote):
-        return False
-
-    cmd = "cat {}".format(target_file)
-    target_data = sh.cluster_shell().get_stdout_or_raise_error(cmd, remote)
-    return text in target_data
-
-
 def package_is_installed(pkg, remote_addr=None):
     """
     Check if package is installed
@@ -2915,21 +2905,6 @@ def diff_and_patch(orig_cib_str, current_cib_str):
         logger.error("Failed to patch")
         return False
     return True
-
-
-def detect_file(_file, remote=None):
-    """
-    Detect if file exists, support both local and remote
-    """
-    rc = False
-    if not remote:
-        cmd = "test -f {}".format(_file)
-    else:
-        # FIXME
-        cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user_of(remote), remote, _file)
-    code, _, _ = ShellUtils().get_stdout_stderr(cmd)
-    rc = code == 0
-    return rc
 
 
 def retry_with_timeout(callable, timeout_sec: float, interval_sec=1):

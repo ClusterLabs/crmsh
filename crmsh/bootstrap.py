@@ -956,18 +956,6 @@ def _fetch_core_hosts(shell: sh.ClusterShell, remote_host) -> typing.Tuple[typin
     return user_list, host_list
 
 
-def key_files(user):
-    """
-    Find home directory for user and return key files with abspath
-    """
-    keyfile_dict = {}
-    home_dir = userdir.gethomedir(user)
-    keyfile_dict['private'] = "{}/.ssh/id_rsa".format(home_dir)
-    keyfile_dict['public'] = "{}/.ssh/id_rsa.pub".format(home_dir)
-    keyfile_dict['authorized'] = "{}/.ssh/authorized_keys".format(home_dir)
-    return keyfile_dict
-
-
 def is_nologin(user, remote=None):
     """
     Check if user's shell is nologin
@@ -1078,12 +1066,9 @@ EOF
 def import_ssh_key(local_user, remote_user, local_sudoer, remote_node, remote_sudoer):
     "Copy ssh key from remote to local authorized_keys"
     remote_key_content = ssh_key.fetch_public_key_list(remote_node, remote_user, with_content=True)[0]
-    _, _, local_authorized_file = key_files(local_user).values()
-    if not utils.check_text_included(remote_key_content, local_authorized_file, remote=None):
-        sh.LocalShell().get_stdout_or_raise_error(
-            local_user,
-            "sed -i '$a {}' '{}'".format(remote_key_content, local_authorized_file),
-        )
+    in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
+    shell = sh.SSHShell(sh.LocalShell(), local_user)
+    ssh_key.AuthorizedKeyManager(shell).add(None, local_user, in_memory_key)
 
 
 def init_csync2():
