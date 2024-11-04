@@ -1,0 +1,27 @@
+name: test container CI
+on:
+  push:
+    paths:
+      - "test_container/**"
+  pull_request:
+    paths:
+      - "test_container/**"
+jobs:
+  build:
+    #if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'master'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ./test_container
+    steps:
+      - uses: actions/checkout@v4
+      - name: build container image
+        run: podman image build -t haleap:ci .
+      - name: push container image
+        if: ${{ github.ref_name == 'master' }}
+        env:
+          DOCKER_IO_ACCESS_TOKEN: ${{ secrets.DOCKER_IO_ACCESS_TOKEN }}
+        run: |
+          echo "$DOCKER_IO_ACCESS_TOKEN" | podman login --username ${{ vars.DOCKER_IO_USERNAME }} --password-stdin docker.io
+          podman image tag haleap:ci docker.io/nyang23/haleap:${{ github.ref_name }}
+          podman image push docker.io/nyang23/haleap:${{ github.ref_name }}
