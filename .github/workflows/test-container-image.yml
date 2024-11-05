@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - "test_container/**"
+  schedule:
+    - cron: "31 4 * * SUN"
 jobs:
   build:
     #if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'master'
