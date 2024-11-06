@@ -153,15 +153,15 @@ def extract_critical_log(context: core.Context) -> List[str]:
     Extract warnings and errors from collected log files
     """
     result_list = []
-    log_pattern_list = [f".*{p}.*" for p in constants.LOG_PATTERNS.split()]
-    log_pattern_str = '|'.join(log_pattern_list)
+    grep_e_option_str = f"-e {' -e '.join(constants.LOG_PATTERNS)}"
+    shell = sh.ShellUtils()
 
     for f in glob.glob(f"{context.work_dir}/*/*.log"):
-        _list = re.findall(log_pattern_str, crmutils.read_from_file(f))
-        if _list:
-            result_list.append(f"\nWARNINGS or ERRORS in {'/'.join(f.split('/')[3:])}:")
-            result_list.extend(_list)
-
+        grep_cmd = f"grep -F {grep_e_option_str} {f}"
+        _, out, _ = shell.get_stdout_stderr(grep_cmd)
+        if out:
+            result_list.append(f"\nWARNINGS or ERRORS in {real_path(f)}:")
+            result_list.append(out)
     return result_list
 
 
