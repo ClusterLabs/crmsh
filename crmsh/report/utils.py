@@ -29,6 +29,17 @@ class LogType(Enum):
     AFTER_TIMESPAN = 4   # log after timespan; exclude
 
 
+def convert_logtype_to_str(log_type: LogType) -> str:
+    log_type_str = {
+        LogType.GOOD: "in timespan",
+        LogType.IRREGULAR: "irregular",
+        LogType.EMPTY: "empty",
+        LogType.BEFORE_TIMESPAN: "before timespan",
+        LogType.AFTER_TIMESPAN: "after timespan"
+    }
+    return log_type_str[log_type]
+
+
 class ReportGenericError(Exception):
     pass
 
@@ -44,13 +55,18 @@ def arch_logs(context: core.Context, logf: str) -> Tuple[List[str], LogType]:
     # like ls -t, newest first
     for f in sorted(file_list, key=os.path.getmtime, reverse=True):
         tmp = is_our_log(context, f)
+        logger.debug2("File %s is %s", f, convert_logtype_to_str(tmp))
         if tmp not in (LogType.GOOD, LogType.IRREGULAR):
             continue
         log_type = tmp
         return_list.append(f)
 
     if return_list:
-        logger.debug2(f"Found logs {return_list} in {get_timespan_str(context)}")
+        logger.debug2(
+            "Found %s logs: %s",
+            convert_logtype_to_str(log_type),
+            ', '.join(return_list)
+        )
     return return_list, log_type
 
 
