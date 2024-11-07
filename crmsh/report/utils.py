@@ -54,6 +54,9 @@ def arch_logs(context: core.Context, logf: str) -> Tuple[List[str], LogType]:
     file_list = [logf] + glob.glob(logf+"*[0-9z]")
     # like ls -t, newest first
     for f in sorted(file_list, key=os.path.getmtime, reverse=True):
+        modify_time = os.path.getmtime(f)
+        if context.from_time > modify_time:
+            break # no need to check the rest
         tmp = is_our_log(context, f)
         logger.debug2("File %s is %s", f, convert_logtype_to_str(tmp))
         if tmp not in (LogType.GOOD, LogType.IRREGULAR):
