@@ -1103,7 +1103,7 @@ def export_ssh_key_non_interactive(local_user_to_export, remote_user_to_swap, re
     """Copy ssh key from local to remote's authorized_keys. Require a configured non-interactive ssh authentication."""
     # ssh-copy-id will prompt for the password of the destination user
     # this is unwanted, so we write to the authorised_keys file ourselve
-    public_key = ssh_key.fetch_public_key_list(None, local_user_to_export, with_content=True)[0]
+    public_key = ssh_key.fetch_public_key_content_list(None, local_user_to_export)[0]
     # FIXME: prevent duplicated entries in authorized_keys
     cmd = '''mkdir -p ~{user}/.ssh && chown {user} ~{user}/.ssh && chmod 0700 ~{user}/.ssh && cat >> ~{user}/.ssh/authorized_keys << "EOF"
 {key}
@@ -1124,7 +1124,7 @@ EOF
 
 def import_ssh_key(local_user, remote_user, local_sudoer, remote_node, remote_sudoer):
     "Copy ssh key from remote to local authorized_keys"
-    remote_key_content = ssh_key.fetch_public_key_list(remote_node, remote_user, with_content=True)[0]
+    remote_key_content = ssh_key.fetch_public_key_content_list(remote_node, remote_user)[0]
     in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
     shell = sh.SSHShell(sh.LocalShell(), local_user)
     ssh_key.AuthorizedKeyManager(shell).add(None, local_user, in_memory_key)
@@ -1226,7 +1226,7 @@ def init_qnetd_remote():
     Triggered by join_cluster, this function adds the joining node's key to the qnetd's authorized_keys
     """
     local_user, remote_user, join_node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
-    join_node_key_content = ssh_key.fetch_public_key_list(join_node, remote_user, with_content=True)[0]
+    join_node_key_content = ssh_key.fetch_public_key_content_list(join_node, remote_user)[0]
     qnetd_host = corosync.get_value("quorum.device.net.host")
     _, qnetd_user, qnetd_host = _select_user_pair_for_ssh_for_secondary_components(qnetd_host)
     authorized_key_manager = ssh_key.AuthorizedKeyManager(sh.cluster_shell())
@@ -1654,7 +1654,7 @@ def _setup_passwordless_ssh_for_qnetd(cluster_node_list: typing.List[str]):
             if node == utils.this_node():
                 continue
             local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
-            remote_key_content = ssh_key.fetch_public_key_list(node, remote_user, with_content=True)[0]
+            remote_key_content = ssh_key.fetch_public_key_content_list(node, remote_user)[0]
             in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
             ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
 
