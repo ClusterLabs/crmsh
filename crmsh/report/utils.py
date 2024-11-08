@@ -29,6 +29,17 @@ class LogType(Enum):
     AFTER_TIMESPAN = 4   # log after timespan; exclude
 
 
+def convert_logtype_to_str(log_type: LogType) -> str:
+    log_type_str = {
+        LogType.GOOD: "in timespan",
+        LogType.IRREGULAR: "irregular",
+        LogType.EMPTY: "empty",
+        LogType.BEFORE_TIMESPAN: "before timespan",
+        LogType.AFTER_TIMESPAN: "after timespan"
+    }
+    return log_type_str[log_type]
+
+
 class ReportGenericError(Exception):
     pass
 
@@ -43,14 +54,22 @@ def arch_logs(context: core.Context, logf: str) -> Tuple[List[str], LogType]:
     file_list = [logf] + glob.glob(logf+"*[0-9z]")
     # like ls -t, newest first
     for f in sorted(file_list, key=os.path.getmtime, reverse=True):
+        modify_time = os.path.getmtime(f)
+        if context.from_time > modify_time:
+            break # no need to check the rest
         tmp = is_our_log(context, f)
+        logger.debug2("File %s is %s", f, convert_logtype_to_str(tmp))
         if tmp not in (LogType.GOOD, LogType.IRREGULAR):
             continue
         log_type = tmp
         return_list.append(f)
 
     if return_list:
-        logger.debug2(f"Found logs {return_list} in {get_timespan_str(context)}")
+        logger.debug2(
+            "Found %s logs: %s",
+            convert_logtype_to_str(log_type),
+            ', '.join(return_list)
+        )
     return return_list, log_type
 
 
@@ -137,15 +156,15 @@ def extract_critical_log(context: core.Context) -> List[str]:
     Extract warnings and errors from collected log files
     """
     result_list = []
-    log_pattern_list = [f".*{p}.*" for p in constants.LOG_PATTERNS.split()]
-    log_pattern_str = '|'.join(log_pattern_list)
+    grep_e_option_str = f"-e {' -e '.join(constants.LOG_PATTERNS)}"
+    shell = sh.ShellUtils()
 
     for f in glob.glob(f"{context.work_dir}/*/*.log"):
-        _list = re.findall(log_pattern_str, crmutils.read_from_file(f))
-        if _list:
-            result_list.append(f"\nWARNINGS or ERRORS in {'/'.join(f.split('/')[3:])}:")
-            result_list.extend(_list)
-
+        grep_cmd = f"grep -F {grep_e_option_str} {f}"
+        _, out, _ = shell.get_stdout_stderr(grep_cmd)
+        if out:
+            result_list.append(f"\nWARNINGS or ERRORS in {real_path(f)}:")
+            result_list.append(out)
     return result_list
 
 
