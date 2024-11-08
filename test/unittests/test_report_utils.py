@@ -222,22 +222,26 @@ class TestSanitizer(unittest.TestCase):
 
 class TestUtils(unittest.TestCase):
 
-    @mock.patch('builtins.sorted', side_effect=lambda x, *args, **kwargs: x[::-1])
+    @mock.patch('os.path.getmtime')
     @mock.patch('crmsh.report.utils.get_timespan_str')
     @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
     @mock.patch('glob.glob')
     @mock.patch('crmsh.report.utils.is_our_log')
-    def test_arch_logs(self, mock_is_our_log, mock_glob, mock_logger, mock_timespan, mock_sorted):
+    def test_arch_logs(self, mock_is_our_log, mock_glob, mock_logger, mock_timespan, mock_getmtime):
         mock_is_our_log.return_value = utils.LogType.GOOD
         mock_glob.return_value = []
-        mock_ctx_inst = mock.Mock()
+        mock_ctx_inst = mock.Mock(from_time=1691938980.0, to_time=1691982180.0)
         mock_timespan.return_value = "0101-0202"
+        mock_getmtime.side_effect = [1691938980.0, 1691938980.0]
 
         return_list, log_type = utils.arch_logs(mock_ctx_inst, "file1")
 
         self.assertEqual(return_list, ["file1"])
         self.assertEqual(log_type, utils.LogType.GOOD)
-        mock_logger.debug2.assert_called_once_with("Found logs ['file1'] in 0101-0202")
+        mock_logger.debug2.assert_has_calls([
+            mock.call('File %s is %s', 'file1', 'in timespan'),
+            mock.call('Found %s logs: %s', 'in timespan', 'file1')
+        ])
 
     @mock.patch('sys.stdout.flush')
     @mock.patch('traceback.print_exc')
@@ -758,16 +762,15 @@ Legacy 003-10-11T22:14:15.003Z log data log
         res = utils.parse_to_timestamp("10d")
         self.assertEqual(int(res), int(expected_timestamp))
 
-    @mock.patch('crmsh.utils.read_from_file')
+    @mock.patch('crmsh.sh.ShellUtils')
     @mock.patch('glob.glob')
-    def test_extract_critical_log(self, mock_glob, mock_read):
+    def test_extract_critical_log(self, mock_glob, mock_run):
         mock_glob.return_value = ["/opt/workdir/pacemaker.log"]
-        mock_read.return_value = """
-line1
-pacemaker-controld[5678]:  warning: data
-pacemaker-schedulerd[5677]:  error: Resource
-line4
-        """
+        mock_run_inst = mock.Mock()
+        mock_run.return_value = mock_run_inst
+        data = """pacemaker-controld[5678]:  warning: data
+pacemaker-schedulerd[5677]:  error: Resource"""
+        mock_run_inst.get_stdout_stderr.return_value = (0, data, None)
         mock_ctx_inst = mock.Mock(work_dir="/opt/workdir")
         res = utils.extract_critical_log(mock_ctx_inst)
         expected_data = """
