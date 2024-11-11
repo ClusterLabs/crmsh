@@ -164,25 +164,13 @@ class LeveledFormatter(logging.Formatter):
 
 class DebugCustomFilter(logging.Filter):
     """
-    A custom filter for debug message
+    A custom filter for debug and debug2 messages
     """
     def filter(self, record):
-        from .config import core
+        from .config import core, report
         if record.levelno == logging.DEBUG:
-            return core.debug
-        else:
-            return True
-
-
-class ReportDebugCustomFilter(logging.Filter):
-    """
-    A custom filter for crm report debug message
-    """
-    def filter(self, record):
-        from .config import report
-        if record.levelno == logging.DEBUG:
-            return int(report.verbosity) >= 1
-        if record.levelno == DEBUG2:
+            return core.debug or int(report.verbosity) >= 1
+        elif record.levelno == DEBUG2:
             return int(report.verbosity) > 1
         else:
             return True
@@ -235,9 +223,6 @@ LOGGING_CFG = {
         "filter": {
             "()": DebugCustomFilter
         },
-        "filter_report": {
-            "()": ReportDebugCustomFilter
-        },
     },
     "handlers": {
         'null': {
@@ -246,7 +231,7 @@ LOGGING_CFG = {
         "console_report": {
             "()": ConsoleCustomHandler,
             "formatter": "console_report",
-            "filters": ["filter_report"]
+            "filters": ["filter"]
         },
         "console": {
             "()": ConsoleCustomHandler,
