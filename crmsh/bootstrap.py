@@ -10,6 +10,7 @@
 # simplicity and flexibility.
 #
 import codecs
+import io
 import os
 import subprocess
 import sys
@@ -33,7 +34,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from .constants import SSH_OPTION, QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT,\
+from .constants import QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT,\
         REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX, CSYNC2_SERVICE, WAIT_TIMEOUT_MS_DEFAULT
 from . import qdevice
 from . import parallax
@@ -890,7 +891,7 @@ def _init_ssh_on_remote_nodes(
         public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user, add=True))
     if len(user_node_list) > 1:
         shell = sh.LocalShell()
-        shell_script = _merge_authorized_keys(public_key_list)
+        shell_script = _merge_line_into_file('~/.ssh/authorized_keys', public_key_list).encode('utf-8')
         for i, (remote_user, node) in enumerate(user_node_list):
             result = shell.su_subprocess_run(
                 local_user,
@@ -924,16 +925,18 @@ def _init_ssh_for_secondary_user_on_remote_nodes(
                 authorized_key_manager.add(None, user, key)
 
 
-def _merge_authorized_keys(keys: typing.List[str]) -> bytes:
-    shell_script = '''for key in "${keys[@]}"; do
-    grep -F "$key" ~/.ssh/authorized_keys > /dev/null || sed -i "\\$a $key" ~/.ssh/authorized_keys
-    done'''
-    keys_definition = ("keys+=('{}')\n".format(key) for key in keys)
-    buf = bytearray()
+def _merge_line_into_file(path: str, lines: typing.Iterable[str]) -> str:
+    shell_script = '''[ -e "$path" ] || echo '# created by crmsh' > "$path"
+for key in "${keys[@]}"; do
+    grep -F "$key" "$path" > /dev/null || sed -i "\\$a $key" "$path"
+done'''
+    keys_definition = ("keys+=('{}')\n".format(key) for key in lines)
+    buf = io.StringIO()
+    buf.write(f'path={path}\n')
     for item in keys_definition:
-        buf.extend(item.encode('utf-8'))
-    buf.extend(shell_script.encode('utf-8'))
-    return buf
+        buf.write(item)
+    buf.write(shell_script)
+    return buf.getvalue()
 
 
 def _fetch_core_hosts(shell: sh.ClusterShell, remote_host) -> typing.Tuple[typing.List[str], typing.List[str]]:
@@ -1771,7 +1774,7 @@ def join_ssh_merge(cluster_node, remote_user):
     # create local entry in known_hosts
     shell.ssh_to_localhost(None, 'true')
 
-    known_hosts_new = set()
+    known_hosts_new: set[str] = set()
 
     cat_cmd = "[ -e ~/.ssh/known_hosts ] && cat ~/.ssh/known_hosts || true"
     #logger_utils.log_only_to_file("parallax.call {} : {}".format(hosts, cat_cmd))
@@ -1781,10 +1784,9 @@ def join_ssh_merge(cluster_node, remote_user):
             known_hosts_new.update((utils.to_ascii(known_hosts_content) or "").splitlines())
 
     if known_hosts_new:
-        hoststxt = "\n".join(sorted(known_hosts_new))
-        #results = parallax.parallax_copy(hosts, tmpf, known_hosts_path, strict=False)
+        script = _merge_line_into_file('~/.ssh/known_hosts', known_hosts_new)
         for host in hosts:
-            utils.write_remote_file(hoststxt, "~/.ssh/known_hosts", utils.user_of(host), host)
+            shell.get_stdout_or_raise_error(script, host)
 
 
 def setup_passwordless_with_other_nodes(init_node, remote_user):
