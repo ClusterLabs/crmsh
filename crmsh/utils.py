@@ -776,21 +776,6 @@ def str2file(s, fname, mod=0o644):
             return False
     return True
 
-def write_remote_file(text, tofile, user, remote):
-    shell_script = f'''cat >> {tofile} << EOF
-{text}
-EOF
-'''
-    result = subprocess_run_auto_ssh_no_input(
-        shell_script,
-        remote,
-        user,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-    )
-    if result.returncode != 0:
-        raise ValueError("Failed to write to {}@{}/{}: {}".format(user, remote, tofile, result.stdout.decode('utf-8')))
-
 def copy_remote_textfile(remote_user, remote_node, remote_text_file, local_path):
     """
     scp might lack permissions to copy the file for a non-root user.
