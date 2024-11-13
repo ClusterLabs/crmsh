@@ -707,20 +707,12 @@ def clean_up_existing_sbd_resource():
         utils.ext_cmd("crm configure delete {}".format(' '.join(sbd_id_list)))
 
 
-def enable_sbd_on_cluster():
-    cluster_nodes = utils.list_cluster_nodes()
-    service_manager = ServiceManager()
-    for node in cluster_nodes:
-        if not service_manager.service_is_enabled(constants.SBD_SERVICE, node):
-            logger.info("Enable %s on node %s", constants.SBD_SERVICE, node)
-            service_manager.enable_service(constants.SBD_SERVICE, node)
-
-
-def disable_sbd_from_cluster():
+def purge_sbd_from_cluster():
     '''
-    Disable SBD from cluster, the process includes:
+    Purge SBD from cluster, the process includes:
     - stop and remove sbd agent
     - disable sbd.service
+    - move /etc/sysconfig/sbd to /etc/sysconfig/sbd.bak
     - adjust cluster attributes
     - adjust related timeout values
     '''
@@ -732,6 +724,10 @@ def disable_sbd_from_cluster():
         if service_manager.service_is_enabled(constants.SBD_SERVICE, node):
             logger.info("Disable %s on node %s", constants.SBD_SERVICE, node)
             service_manager.disable_service(constants.SBD_SERVICE, node)
+
+    config_bak = f"{SBDManager.SYSCONFIG_SBD}.bak"
+    logger.info("Move %s to %s on all nodes", SBDManager.SYSCONFIG_SBD, config_bak)
+    utils.cluster_run_cmd(f"mv {SBDManager.SYSCONFIG_SBD} {config_bak}")
 
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
     res = re.search("([0-9]+) fence device[s]* found", out)

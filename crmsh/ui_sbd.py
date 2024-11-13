@@ -85,7 +85,7 @@ class SBD(command.UI):
     - sbd configure
     - sbd device
     - sbd status
-    - sbd disable
+    - sbd purge
     '''
     name = "sbd"
     TIMEOUT_TYPES = ("watchdog", "allocate", "loop", "msgwait")
@@ -118,6 +118,7 @@ class SBD(command.UI):
         self.cluster_nodes: list[str] = None
         self.crm_mon_xml_parser: xmlutil.CrmMonXmlParser = None
 
+        self._load_attributes()
         command.UI.__init__(self)
 
     def _load_attributes(self):
@@ -148,6 +149,12 @@ class SBD(command.UI):
         '''
         if not utils.package_is_installed("sbd"):
             logger.error('%s', sbd.SBDManager.SBD_NOT_INSTALLED_MSG)
+            return False
+        return True
+
+    def service_is_active(self, service: str) -> bool:
+        if not self.service_manager.service_is_active(service):
+            logger.error("%s is not active", service)
             return False
         return True
 
@@ -369,8 +376,7 @@ class SBD(command.UI):
         '''
         Implement sbd device command
         '''
-        if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
-            logger.error("%s is not active", constants.PCMK_SERVICE)
+        if not self.service_is_active(constants.PCMK_SERVICE):
             return False
         if not sbd.SBDUtils.is_using_disk_based_sbd():
             logger.error("Only works for disk-based SBD")
@@ -385,7 +391,6 @@ class SBD(command.UI):
             if len(args) < 2:
                 raise self.SyntaxError("No device specified")
 
-            self._load_attributes()
             logger.info("Configured sbd devices: %s", ';'.join(self.device_list_from_config))
             if len(args) == 2 and ";" in args[1]:
                 device_list_from_args = args[1].split(";")
@@ -399,7 +404,7 @@ class SBD(command.UI):
             return True
 
         except self.SyntaxError as e:
-            logger.error('%s', e)
+            logger.error('%s', str(e))
             logger.info("Usage: crm sbd device <add|remove> <device>...")
             return False
 
@@ -408,21 +413,16 @@ class SBD(command.UI):
         '''
         Implement sbd configure command
         '''
-        self._load_attributes()
-
         try:
             for service in (constants.PCMK_SERVICE, constants.SBD_SERVICE):
-                if not self.service_manager.service_is_active(service):
-                    logger.error("%s is not active", service)
+                if not self.service_is_active(service):
                     return False
-
             if not args:
                 raise self.SyntaxError("No argument")
 
             if args[0] == "show":
                 self._configure_show(args)
                 return True
-
             parameter_dict = self._parse_args(args)
             if sbd.SBDUtils.is_using_disk_based_sbd():
                 self._configure_diskbase(parameter_dict)
@@ -431,20 +431,19 @@ class SBD(command.UI):
             return True
 
         except self.SyntaxError as e:
-            logger.error('%s', e)
+            logger.error('%s', str(e))
             usage = self.configure_usage
             if usage:
                 print(usage)
             return False
 
-    def do_disable(self, context) -> bool:
+    def do_purge(self, context) -> bool:
         '''
-        Implement sbd disable command
+        Implement sbd purge command
         '''
-        if not ServiceManager().service_is_active(constants.SBD_SERVICE):
-            logger.error("%s is not active", constants.SBD_SERVICE)
+        if not self.service_is_active(constants.SBD_SERVICE):
             return False
-        sbd.disable_sbd_from_cluster()
+        sbd.purge_sbd_from_cluster()
         sbd.SBDManager.restart_cluster_if_possible()
         return True
 
@@ -520,7 +519,6 @@ class SBD(command.UI):
         '''
         Implement sbd status command
         '''
-        self._load_attributes()
         self._print_sbd_type()
         self._print_sbd_status()
         self._print_watchdog_info()
