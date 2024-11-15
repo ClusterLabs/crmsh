@@ -572,36 +572,30 @@ class SBDManager:
         elif self.diskless_sbd:
             logger.warning('%s', self.DISKLESS_SBD_WARNING)
 
-    def get_sbd_device_interactive(self):
-        '''
-        Get sbd device on interactive mode
-        '''
-        if self.bootstrap_context.yes_to_all:
-            logger.warning('%s', self.NO_SBD_WARNING)
-            raise self.NotConfigSBD
-        logger.info(self.SBD_STATUS_DESCRIPTION)
-        if not bootstrap.confirm("Do you wish to use SBD?"):
-            logger.warning('%s', self.NO_SBD_WARNING)
-            raise self.NotConfigSBD
-        if not utils.package_is_installed("sbd"):
-            utils.fatal(self.SBD_NOT_INSTALLED_MSG)
+    def _warn_and_raise_no_sbd(self):
+        logger.warning('%s', self.NO_SBD_WARNING)
+        raise self.NotConfigSBD
 
-        configured_devices = SBDUtils.get_sbd_device_from_config()
-        if configured_devices:
-            wants_to_overwrite_msg = f"SBD_DEVICE in {self.SYSCONFIG_SBD} is already configured to use '{';'.join(configured_devices)}' - overwrite?"
-            if not bootstrap.confirm(wants_to_overwrite_msg):
-                if not SBDUtils.check_devices_metadata_consistent(configured_devices):
-                    raise utils.TerminateSubCommand
-                self.overwrite_sysconfig = False
-                return
+    def _wants_to_overwrite(self, configured_devices):
+        wants_to_overwrite_msg = f"SBD_DEVICE in {self.SYSCONFIG_SBD} is already configured to use '{';'.join(configured_devices)}' - overwrite?"
+        if not bootstrap.confirm(wants_to_overwrite_msg):
+            if not SBDUtils.check_devices_metadata_consistent(configured_devices):
+                raise utils.TerminateSubCommand
+            self.overwrite_sysconfig = False
+            return False
+        return True
 
+    def _prompt_for_sbd_device(self) -> list[str]:
+        '''
+        Prompt for sbd device and verify
+        '''
         dev_list = []
         dev_looks_sane = False
         while not dev_looks_sane:
             dev = bootstrap.prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', r'none|\/.*')
             if dev == "none":
                 self.diskless_sbd = True
-                return
+                return []
 
             dev_list = utils.re_split_string("[; ]", dev)
             try:
@@ -620,8 +614,26 @@ class SBDManager:
                     else:
                         dev_looks_sane = False
                         break
-
         return dev_list
+
+    def get_sbd_device_interactive(self) -> list[str]:
+        '''
+        Get sbd device on interactive mode
+        '''
+        if self.bootstrap_context.yes_to_all:
+            self._warn_and_raise_no_sbd()
+        logger.info(self.SBD_STATUS_DESCRIPTION)
+        if not bootstrap.confirm("Do you wish to use SBD?"):
+            self._warn_and_raise_no_sbd()
+        if not utils.package_is_installed("sbd"):
+            utils.fatal(self.SBD_NOT_INSTALLED_MSG)
+
+        configured_devices = SBDUtils.get_sbd_device_from_config()
+        # return empty list if already configured and user doesn't want to overwrite
+        if configured_devices and not self._wants_to_overwrite(configured_devices):
+            return []
+
+        return self._prompt_for_sbd_device()
 
     def get_sbd_device_from_bootstrap(self):
         '''
@@ -696,7 +708,7 @@ class SBDManager:
         service_manager.enable_service(constants.SBD_SERVICE)
 
 
-def clean_up_existing_sbd_resource():
+def cleanup_existing_sbd_resource():
     if xmlutil.CrmMonXmlParser().is_resource_configured(SBDManager.SBD_RA):
         sbd_id_list = xmlutil.CrmMonXmlParser().get_resource_id_list_via_type(SBDManager.SBD_RA)
         if xmlutil.CrmMonXmlParser().is_resource_started(SBDManager.SBD_RA):
@@ -716,7 +728,7 @@ def purge_sbd_from_cluster():
     - adjust cluster attributes
     - adjust related timeout values
     '''
-    clean_up_existing_sbd_resource()
+    cleanup_existing_sbd_resource()
 
     cluster_nodes = utils.list_cluster_nodes()
     service_manager = ServiceManager()

@@ -1400,7 +1400,7 @@ def init_sbd():
     """
     import crmsh.sbd
     if _context.stage == "sbd":
-        crmsh.sbd.clean_up_existing_sbd_resource()
+        crmsh.sbd.cleanup_existing_sbd_resource()
     _context.sbd_manager.init_and_deploy_sbd()
 
 
