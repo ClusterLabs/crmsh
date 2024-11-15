@@ -1,3 +1,146 @@
+* Fri Nov 15 2024 Xin Liang <XLiang@suse.com>
+- Release 4.6.1
+- Dev: bootstrap: more robust implementation for ssh_merge (bsc#1230530)
+- Fix: log: The report DEBUG log message is not displayed in the log file
+- Dev: report.utils: For a sequence of archived log files, check the modify time
+- Fix: report.utils: Fix the performance issue (bsc#1232821)
+- Dev: report.utils: Add debug info for the log file types
+- Fix: report.collect: Make sure the log is not None before using it (bsc#1232821)
+- Dev: bootstrap: Add log info when starting pacemaker.service
+- Dev: utils: Introduced `detect_duplicate_device_path` function in utils
+- Fix: cibconfig: Disable auto add advise values for operations (bsc#1231386)
+- Fix: ui_cluster: Stop renaming cluster name when using qdevice
+- Dev: utils: Check node is reachable by using both ping and ssh
+- Dev: report: do not capture stderr when unarchiving tarballs
+- Dev: report: make error messages easier to parse for hawk2 (bsc#1228899)
+- Fix: report: find_shell should accept hacluster user (bsc#1228899)
+- Dev: healthcheck: Enhace log clarity
+- Dev: ui_cluster: Change the completer for crm cluster health
+- Dev: report: add a reminder to use `crm cluster health` (bsc#1228899)
+- Dev: ui_cluster: add a reminder to use "crm cluster init/join ssh" to
+initialize ssh (bsc#1228899)
+- Dev: scripts: add a reminder to use `crm cluster health` to fix hacluster
+passwordless ssh authentication (bsc#1228899)
+- Dev: scripts: generate readable messages when ssh authentication fails (bsc#1228899)
+- Fix: report: should not try interactive authentication when stdin is not a
+tty (bsc#1228899)
+- Dev: main: remove upgradeutil (bsc#1228899)
+- Fix: bootstrap: check is_nologin more robustly (bsc#1228251)
+- Dev: completers: Reuse node completer for cluster remove and health
+- Dev: bootstrap: Enhance log clarity during crm cluster remove process
+- Dev: utils: Catch PermissionError when reading files
+- Dev: utils: Load CIB_file env before some readonly commands
+- Dev: Rename variables to make them look like boolean type
+- Fix: utils: Stop providing the detailed and precise sudoer rules to "hack"
+the privilege (bsc#1229093)
+- Dev: ui_node: Improve command 'clearstate <node>'
+- Dev: Rename the option 'add_advised_op_values' to 'ra_advised_op_values'
+- Dev: Add a new internal flag to control auto add time units on operation
+- Fix: Add a new option 'fa_advised_op_values' (bsc#1228858)
+- Fix: utils: group check failure when os.getgroups() returns empty (bsc#1229030)
+- Fix: report: When 'core.no_ssh' set to 'yes', crm report works in local mode (bsc#1228899)
+- Fix: completers: deferring calls to crm_mon until envsetup() is called (bsc#1228271)
+- Fix: utils: allow haclient group to use cluster level commands (bsc#1228271)
+- Fix: scripts: call commands as current user when running as hacluster (bsc#1228271)
+- Fix: prun: allow pcopy_to_remote to use intercept (bsc#1228271)
+- Fix: upgradeutil: Immdiately return if config.core.no_ssh is set (bsc#1228899)
+- Fix: ui_cluster: Handle 'crm cluster start --all' command (bsc#1228899)
+- Fix: ui_cluster: Handle 'crm cluster stop --all' command (bsc#1228899)
+- Fix: utils: Define utils.NoSSHError exception and ssh wrapper function (bsc#1228899)
+- Fix: config: Add 'core.no_ssh' option (bsc#1228899)
+- Dev: sh: Ensure CommandFailure Exception is Picklable Across Processes (bsc#1229686)
+- Fix: report: Error output of crm_verify should be recorded in report result (bsc#1229686)
+- Fix: Don't add time units to values for existing CIB (bsc#1228817)
+- Fix: bootstrap: drop environ SSH_AUTH_SOCK before checking passwordless ssh
+when it is not enabled (bsc#1228950)
+- Fix: bootstrap: should check if sudo is available when running `cluster join
+-c` with a non-root destination user (bsc#1228950)
+- Fix: bootstrap: should check if sudo is available when running `cluster init
+-N` with a non-root destination user (bsc#1228950)
+- Dev: Add option core.add_advised_op_values, default value is 'yes'
+- Dev: Rename variable 'add_default_op_values' to 'add_advised_op_values'
+- Revert "Dev: ui_configure: Deprecate configure erase sub-command" (bsc#1228713)
+- Fix: hahealth.py script (bsc#1228271)
+- Dev: qdevice: numbers automatically the steps to generate client certs
+- Dev: prun: add more possible libexec PATH for sftp-server
+- Fix: qdevice: config "tls" should accept value "required" (bsc#1227649)
+- Fix: bootstrap: refine the wording in the question asking TLS config for
+qdevice (bsc#1227649)
+- Fix: qdevice: TLS certs should always be generated for qnetd (bsc#1227649)
+- Dev: Rename variables to distinguish the concept of adding default
+- Fix: cli: loading cib should be a soft depenedency
+- Dev: ui_context: refactor NON_FUNCTIONAL_COMMAND and NON_FUNCTIONAL_OPTIONS
+- Revert changes to `quit` and `up` in ui_context from #1300 (#1466)
+- Fix: cibconfig: do not load cib to check if cib is changed (#1466)
+- Dev: ra: Refine RAInfo.params interface to exclude some completion results
+- Dev: ui_context: Don't append space when completion ends with equal sign
+- Dev: ui_configure: Complete required parameters first
+- Dev: ra: Guess stonith class type when using fence agents
+- Fix: upgradeutil: refine error handling (bsc#1226147, bsc#1223371)
+- Fix: cibconfig: Disable complete advised operation values when adding a rsc_template
+- Dev: ui_resource: Improve completers for 'crm resource' command
+- Fix: cmd_status: call crm_mon without shell (#1429)
+- Dev: log an error when fencing node without stonith device configured and running
+- Fix: healthcheck: KeyError when local nodename not found in cib (bsc#1223438)
+- Dev: utils: Add info when property is newly added
+- Dev: corosync: Show corosync cpg status in `crm corosync status cpg`
+- Dev: ui_context: ignore requirements when option --help is specified
+- Dev: ui_context: Skip querying CIB when in a sublevel or help command
+- Dev: bootstrap: Setup the stage dependency on init and join side (bsc#1175865, bsc#1219940)
+- Dev: bootstrap: Enhance stage validation
+- Fix: healthcheck: Add crmsh.constants.SSH_OPTION when doing ssh in check_local
+- Fix: healthcheck: Missing 'id_' prefix while checking the ssh key existence
+- Fix: main: Set PATH environment first
+- Dev: bash_completion: Enable complete 'id=' on non-interactive mode
+- Fix: bootstrap: Detect cluster service on init node before saving the
+canonical hostname (bsc#1222714)
+- Fix: ui_node: When `utils.list_cluster_nodes` return None, try to get ip
+list from corosync.conf
+- Dev: report: Collect quorum/qdevice/qnetd status
+- Dev: ui_context: make help subcommands to exit with 0 (#1374)
+- Dev: bootstrap: Add all nodes' keys to qnetd authroized_keys even init
+- Fix: bootstrap: fix NameError
+- Dev: qdevice: Refactor init_qdevice function
+- Dev: qdevice: Add all nodes' keys to qnetd authorized_keys
+- Dev: bootstrap: Give a warning when detecting $SSH_AUTH_SOCK but not use
+--use-ssh-agent option
+- Fix: sh: Return the value of AuthorizationError.diagnose if it is not None
+- Dev: ssh_key: Extract duplicate code about list keys from ssh-agent to a function
+- Dev: bootstrap: Refactor qdevice user parsing and finding
+- Fix: utils: set env `CIB_shadow` using `os.environ` (bsc#1205925)
+- Fix: pass env to child process explicitly (bsc#1205925)
+- Fix: term: unset env `COLUMNS` and `ROWS` (bsc#1205925)
+- Fix: sh: pass env to child process explicitly (bsc#1205925)
+- Fix: report: Show different perspectives of cluster
+- Fix: ui_node: prevent traceback on node online
+- Fix: ui_node: prevent traceback on node standby
+- Fix: add diagnostic messages when crm report cannot find ssh-agent (bsc#1219538)
+- Dev: use ClusterShell for the changes in the previous commit
+- Fix: crm report hangs in the root passwordless with ssh-agent
+- Fix: report: use ClusterShell for ssh (bsc#1220170)
+- Fix: ui_node: clearstate command needs adjustment (bsc#1219831)
+- Fix: bootstrap: fail to join a cluster with hostname alias
+- Fix: bootstrap: clear stall data about ssh users left possiblely from
+previous setups (bsc#1219476)
+- Fix: report: Escape special characters in pattern (bsc#1220022)
+- Dev: ui_configure: verify all cib objects even if there is no primitive
+resource configured
+- Dev: ui_configure: bundle: support podman container
+- Dev: constants: Update the bundle help text
+- Dev: parse: Assign meaningful id to the bundle's port-mapping and storage-mapping
+- Dev: cibconfig: Hide the id of bundle port-mapping and storage-mapping
+- Dev: cibconfig: Change the multiline format for bundle
+- Dev: utils: Return empty list if corosync.conf does not exist
+- Dev: report: Enable crm report even cib.xml does not exist
+- Dev: utils: Query pacemaker_remote node correctly
+- Fix: ui_cluster: Can't start cluster with --all option if no cib (bsc#1219052)
+- Fix: bootstrap: ssh key of the init node is duplicated in the
+authorized_keys files of other node (bsc#1218940)
+- Fix: sh: guide users to setup key-based ssh authentication when
+non-interactive authentcation fails (bsc#1219045)
+- Fix: parse: Automatically append 's' as default time unit for timeout and interval (#1304)
+- Dev: ui_configure: Update the operation id after the monitor interval changed
+
 * Tue Jan 9 2024 Xin Liang <XLiang@suse.com>
 - Release 4.6.0
 - Fix: report: Unable to gather log files that are in the syslog format (bsc#1218491)
