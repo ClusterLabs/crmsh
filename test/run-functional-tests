@@ -245,10 +245,26 @@ create_node() {
 }
 
 
+is_podman5_or_newer() {
+    podman_version=$(podman --version | awk '{print $3}')
+    podman_ver=$(echo $podman_version | cut -d '.' -f 1-2)
+
+    if [[ "$(echo -e "$podman_ver\n5.0" | sort -V | head -n 1)" == "5.0" ]]; then
+        info "Podman version 5.x or newer is detected: $podman_version"
+        return 0
+    else
+        return 1
+    fi
+}
+
 config_cluster() {
 	node_num=$#
 	insert_str=""
-	container_ip_array=(`podman network inspect $HA_NETWORK_ARRAY -f '{{range .Containers}}{{printf "%s " .IPv4Address}}{{end}}'`)
+	if [[ is_podman5_or_newer ]];then
+		container_ip_array=($(podman network inspect $HA_NETWORK_ARRAY | jq -r '.[] | .containers[] | .interfaces[] | .subnets[] | select(.ipnet | test("^(\\d{1,3}\\.){3}\\d{1,3}\\/\\d+$")) | .ipnet | split("/") | .[0]'))
+	else
+		container_ip_array=(`podman network inspect $HA_NETWORK_ARRAY -f '{{range .Containers}}{{printf "%s " .IPv4Address}}{{end}}'`)
+    fi
 
 	for i in $(seq $node_num -1 1);do
 		ip=`echo ${container_ip_array[$((i-1))]}|awk -F/ '{print $1}'`
