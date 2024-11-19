@@ -332,7 +332,7 @@ setup_cluster() {
 	[ "$CONFIG_COROSYNC_FLAG" -eq 0 ] && return
 	config_cluster ${hanodes_arry[@]}
 	start_cluster ${hanodes_arry[@]}
-	podman_exec "hanode1" "crm configure property stonith-enabled=false"
+	podman_exec "hanode1" "crm configure property stonith-enabled=false" 1> /dev/null
 }
 
 
