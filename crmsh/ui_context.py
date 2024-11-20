@@ -114,8 +114,6 @@ class Context(object):
         A space at the end of the line is significant.
         '''
         complete_next = line.endswith(' ')
-        # if complete_next:
-        #    print >>sys.stderr, "complete_next is on"
 
         # copy current state
         prev_stack = list(self.stack)
@@ -137,7 +135,7 @@ class Context(object):
                     self.command_args = tokens
                     self.command_info = self.current_level().get_child(token)
 
-                    if not self.command_info:
+                    if not self.command_args and not self.command_info:
                         return self.current_level().get_completions()
                     if self.command_info.type == 'level':
                         self.enter_level(self.command_info.level)
