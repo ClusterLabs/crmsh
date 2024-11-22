@@ -1,5 +1,5 @@
 #!/bin/bash
-CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/nyang23/haleap:master"}
+CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/nyang23/haleap:corosync-3.1.9"}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
 COROSYNC_CONF="/etc/corosync/corosync.conf"

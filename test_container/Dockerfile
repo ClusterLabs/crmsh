@@ -9,6 +9,9 @@ RUN zypper -n install systemd openssh \
         python3 python3-pip python3-lxml python3-python-dateutil python3-setuptools python3-PyYAML python3-curses python3-behave python3-coverage python3-packaging \
         csync2 libglue-devel corosync corosync-qdevice pacemaker booth corosync-qnetd
 
+RUN zypper ar -fG https://download.opensuse.org/repositories/home:/nicholasyang/openSUSE_Tumbleweed/home:nicholasyang.repo && \
+    zypper -n update --repo 'home:nicholasyang (openSUSE_Tumbleweed)' --allow-vendor-change corosync
+
 RUN ssh-keygen -t rsa -f /root/.ssh/id_rsa -N '' && \
     cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys && \
     chmod 0600 /root/.ssh/authorized_keys
