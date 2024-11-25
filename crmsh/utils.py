@@ -40,6 +40,7 @@ from . import userdir
 from . import constants
 from . import options
 from . import term
+from . import ssh_key
 from .constants import SSH_OPTION
 from . import log
 from .prun import prun
@@ -138,8 +139,9 @@ def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalSh
     if shell is None:
         shell = sh.LocalShell()
     if check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
+        local_public_key = ssh_key.fetch_public_key_file_list(None, local_user)[0]
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
-        cmd = "ssh-copy-id -i ~/.ssh/id_rsa.pub '{}@{}' &> /dev/null".format(remote_user, remote_node)
+        cmd = f"ssh-copy-id -i {local_public_key} '{remote_user}@{remote_node}' &> /dev/null"
         result = shell.su_subprocess_run(local_user, cmd, tty=True)
         return result.returncode
     else:
@@ -2427,16 +2429,6 @@ class InterfacesInfo(object):
         return res.group(1) if res else self.nic_list[0]
 
 
-def check_text_included(text, target_file, remote=None):
-    "Check whether target_file includes the text"
-    if not detect_file(target_file, remote=remote):
-        return False
-
-    cmd = "cat {}".format(target_file)
-    target_data = sh.cluster_shell().get_stdout_or_raise_error(cmd, remote)
-    return text in target_data
-
-
 def package_is_installed(pkg, remote_addr=None):
     """
     Check if package is installed
@@ -2913,21 +2905,6 @@ def diff_and_patch(orig_cib_str, current_cib_str):
         logger.error("Failed to patch")
         return False
     return True
-
-
-def detect_file(_file, remote=None):
-    """
-    Detect if file exists, support both local and remote
-    """
-    rc = False
-    if not remote:
-        cmd = "test -f {}".format(_file)
-    else:
-        # FIXME
-        cmd = "ssh {} {}@{} 'test -f {}'".format(SSH_OPTION, user_of(remote), remote, _file)
-    code, _, _ = ShellUtils().get_stdout_stderr(cmd)
-    rc = code == 0
-    return rc
 
 
 def retry_with_timeout(callable, timeout_sec: float, interval_sec=1):

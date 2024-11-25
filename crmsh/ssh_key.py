@@ -130,8 +130,8 @@ class AuthorizedKeyManager:
                     tmp.flush()
                     self._add_by_ssh_copy_id(user, host, tmp.name)
 
-    @classmethod
-    def _add_by_editing_file(cls, user: str, key: Key):
+    @staticmethod
+    def _add_by_editing_file(user: str, key: Key):
         public_key = key.public_key()
         dir = f'~{user}/.ssh'
         file = f'{dir}/authorized_keys'
@@ -183,6 +183,7 @@ class AgentClient:
 
 
 class KeyFileManager:
+    DEFAULT_KEY_TYPE = 'rsa'
     KNOWN_KEY_TYPES = ['rsa', 'ed25519', 'ecdsa']   # dsa is not listed here as it is not so secure
     KNOWN_PUBLIC_KEY_FILENAME_PATTERN = re.compile('/id_(?:{})\\.pub$'.format('|'.join(KNOWN_KEY_TYPES)))
 
@@ -208,7 +209,7 @@ class KeyFileManager:
         filenames = self.list_public_key_for_user(host, user)
         if not filenames:
             return list()
-        cmd = f'cat ~{user}/.ssh/{{{",".join(filenames)}}}'
+        cmd = f'cat {",".join(filenames)}'
         result = self.cluster_shell.subprocess_run_without_input(
             host, user,
             cmd,
@@ -232,7 +233,7 @@ class KeyFileManager:
         * list_of_public_keys: all public keys of known types, including the newly generated one
         """
         script = '''if [ ! \\( {condition} \\) ]; then
-    ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -C "Cluster internal on $(hostname)" -N '' <> /dev/null
+    ssh-keygen -t {key_type} -f ~/.ssh/id_{key_type} -q -C "Cluster internal on $(hostname)" -N '' <> /dev/null
     echo 'GENERATED=1'
 fi
 for file in ~/.ssh/id_{{{pattern}}}; do
@@ -245,6 +246,7 @@ for file in ~/.ssh/id_{{{pattern}}}; do
 done
 '''.format(
             condition=' -o '.join([f'-f ~/.ssh/id_{t}' for t in self.KNOWN_KEY_TYPES]),
+            key_type=self.DEFAULT_KEY_TYPE,
             pattern=','.join(self.KNOWN_KEY_TYPES),
         )
         result = self.cluster_shell.subprocess_run_without_input(
@@ -265,3 +267,58 @@ done
             else:
                 keys.append(InMemoryPublicKey(line))
         return generated, keys
+
+
+def fetch_public_key_file_list(
+        host: typing.Optional[str],
+        user: str,
+        generate_key_pair: bool = False
+) -> typing.List[str]:
+    """
+    Fetch the public key file list for the specified user on the specified host.
+
+    :param host: the host where the user is located. If None, the local host is assumed.
+    :param user: the user name
+    :param generate_key_pair: whether to generate a new key pair if no key pair is found,
+     default is False
+
+    :return: a list of public key file paths
+
+    :raise Error: if no public key file is found for the user
+    """
+    key_file_manager = KeyFileManager(sh.cluster_shell())
+    if generate_key_pair:
+        key_file_manager.ensure_key_pair_exists_for_user(host, user)
+    public_keys = key_file_manager.list_public_key_for_user(host, user)
+    if not public_keys:
+        host_str = f'@{host}' if host else ' locally'
+        raise Error(f'No public key file found for {user}{host_str}')
+    return public_keys
+
+
+def fetch_public_key_content_list(
+        host: typing.Optional[str],
+        user: str,
+        generate_key_pair: bool = False
+) -> typing.List[str]:
+    """
+    Fetch the public key content list for the specified user on the specified host.
+
+    :param host: the host where the user is located. If None, the local host is assumed.
+    :param user: the user name
+    :param generate_key_pair: whether to generate a new key pair if no key pair is found,
+     default is False
+
+    :return: a list of public key strings
+
+    :raise Error: if no public key file is found for the user
+    """
+    key_file_manager = KeyFileManager(sh.cluster_shell())
+    if generate_key_pair:
+        key_file_manager.ensure_key_pair_exists_for_user(host, user)
+    keys_in_memory = key_file_manager.load_public_keys_for_user(host, user)
+    public_keys = [key.public_key() for key in keys_in_memory]
+    if not public_keys:
+        host_str = f'@{host}' if host else ' locally'
+        raise Error(f'No public key file found for {user}{host_str}')
+    return public_keys
