@@ -120,6 +120,7 @@ OPTIONS:
   -d			Cleanup the cluster containers
   -u			Run test as a normal user like in Public Cloud, eg. Azure
   -q			Create a qnetd node(with -n and -x option, and named 'qnetd-node')
+  -S			Not start cluster right after creating the cluster node
 
 EXAMPLES:
 To launch 2 nodes with the running cluster with the very basic corosync.conf
@@ -335,11 +336,8 @@ config_cluster() {
 }
 
 
-start_cluster() {
-	if [ ${#hanode_list_current_cluster[@]} -ne 0 ] && [ ${#hanode_list_new_members[@]} -ne 0 ]; then
-		podman_exec hanode1 "corosync-cfgtool -R > /dev/null"
-		info On the existing cluster hanode{1..${#hanode_list_current_cluster[@]}}: reloading corosync.conf ... Done
-	fi
+start_cluster_on_new_nodes() {
+	[ "$START_CLUSTER_NOW" -eq 0 ] && return
 
 	for node in ${hanode_list_new_members[@]};do
 		podman_exec $node "crm cluster enable && crm cluster start" 1> /dev/null
@@ -349,6 +347,16 @@ start_cluster() {
 			fatal "Failed to start cluster service on \"$node\""
 		fi
 	done
+}
+
+
+start_cluster() {
+	if [ ${#hanode_list_current_cluster[@]} -ne 0 ] && [ ${#hanode_list_new_members[@]} -ne 0 ]; then
+		podman_exec hanode1 "corosync-cfgtool -R > /dev/null"
+		info On the existing cluster hanode{1..${#hanode_list_current_cluster[@]}}: reloading corosync.conf ... Done
+	fi
+
+	start_cluster_on_new_nodes
 }
 
 
@@ -470,7 +478,8 @@ WITH_QNETD_NODE=0
 NORMAL_USER_FLAG=0
 CONFIG_COROSYNC_FLAG=1
 SETUP_N_NODES_CLUSTER=0
-options=$(getopt -l "help" -o "hldxuqn:" -- "$@")
+START_CLUSTER_NOW=1
+options=$(getopt -l "help" -o "hldxuqn:S" -- "$@")
 eval set -- "$options"
 while true;do
 case $1 in
@@ -499,6 +508,10 @@ case $1 in
 	shift
 	is_number $1 || fatal "-n option need a number larger than 0"
 	SETUP_N_NODES_CLUSTER=$1
+	shift
+	;;
+-S)
+	START_CLUSTER_NOW=0
 	shift
 	;;
 --)
