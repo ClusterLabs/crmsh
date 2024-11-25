@@ -675,33 +675,6 @@ done
         mock_swap.assert_not_called()
         mock_invoke.assert_not_called()
 
-
-    @mock.patch('crmsh.bootstrap.import_ssh_key')
-    @mock.patch('crmsh.bootstrap.export_ssh_key_non_interactive')
-    @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.utils.check_ssh_passwd_need')
-    def test_swap_public_ssh_key_exception(self, mock_check_passwd, mock_warn, mock_export_ssh_key, mock_import_ssh):
-        mock_check_passwd.return_value = False
-        mock_import_ssh.side_effect = ValueError("Can't get the remote id_rsa.pub from {}: {}")
-
-        bootstrap.swap_public_ssh_key("node1", "bob", "bob", "alice", "alice")
-
-        mock_check_passwd.assert_called_once_with("bob", "bob", "node1")
-        mock_import_ssh.assert_called_once_with("bob", "bob", "alice", "node1", "alice")
-        mock_warn.assert_called_once_with(mock_import_ssh.side_effect)
-
-    @mock.patch('crmsh.bootstrap.import_ssh_key')
-    @mock.patch('crmsh.bootstrap.export_ssh_key_non_interactive')
-    @mock.patch('crmsh.utils.check_ssh_passwd_need')
-    def test_swap_public_ssh_key(self, mock_check_passwd, mock_export_ssh, mock_import_ssh):
-        mock_check_passwd.return_value = True
-
-        bootstrap.swap_public_ssh_key("node1", "bob", "bob", "alice", "alice")
-
-        mock_check_passwd.assert_called_once_with("bob", "bob", "node1")
-        mock_export_ssh.assert_called_once_with("bob", "bob", "node1", "alice", "alice")
-        mock_import_ssh.assert_called_once_with("bob", "bob", "alice", "node1", "alice")
-
     @mock.patch('crmsh.utils.this_node')
     def test_bootstrap_add_return(self, mock_this_node):
         ctx = mock.Mock(user_at_node_list=[], use_ssh_agent=False)
@@ -806,7 +779,7 @@ done
         ])
         mock_swap.assert_has_calls([
             mock.call('node2', "carol", "bob", "carol", "bob"),
-            mock.call('node2', 'hacluster', 'hacluster', 'carol', 'bob', generate_key_on_remote=True)
+            mock.call('node2', 'hacluster', 'hacluster', 'carol', 'bob')
             ])
 
     @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')
