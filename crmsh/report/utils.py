@@ -10,6 +10,7 @@ import sys
 import traceback
 from dateutil import tz
 from enum import Enum
+from collections import Counter
 from typing import Optional, List, Tuple
 
 from crmsh import utils as crmutils
@@ -228,7 +229,7 @@ def get_distro_info() -> str:
     return res.group(1) if res else "Unknown"
 
 
-def dump_logset(context: core.Context, logf: str) -> None:
+def dump_logset(context: core.Context, logf: str, create_dir: bool = False) -> None:
     """
     Dump the log set into the specified output file
     """
@@ -255,7 +256,17 @@ def dump_logset(context: core.Context, logf: str) -> None:
             out_string += print_logseg(newest, 0, context.to_time)
 
     if out_string:
-        outf = os.path.join(context.work_dir, os.path.basename(logf))
+        if create_dir:
+            basename, dirname = os.path.basename(logf), os.path.dirname(logf)
+            dest_dir = os.path.join(
+                context.work_dir,
+                f'{basename}.d',
+                dirname.lstrip('/')
+            )
+            crmutils.mkdirp(dest_dir)
+            outf = os.path.join(dest_dir, basename)
+        else:
+            outf = os.path.join(context.work_dir, os.path.basename(logf))
         crmutils.str2file(out_string.strip('\n'), outf)
         logger.debug(f"Dump {logf} into {real_path(outf)}")
 
@@ -775,4 +786,14 @@ def print_traceback():
 
 def real_path(target_file: str) -> str:
     return '/'.join(target_file.split('/')[3:])
+
+
+def mark_duplicate_basenames(file_path_list: List[str]) -> List[Tuple[str, bool]]:
+    """
+    Mark the paths with the same basename
+    Return a list of tuples, each tuple contains the path and a boolean value
+    indicating whether the path has the same basename with others
+    """
+    counter = Counter([os.path.basename(path) for path in file_path_list])
+    return [(path, counter[os.path.basename(path)] > 1) for path in file_path_list]
 # vim:ts=4:sw=4:et:
