@@ -65,9 +65,11 @@ def collect_ha_logs(context: core.Context) -> None:
     Collect pacemaker, corosync and extra logs
     """
     log_list = [get_pcmk_log(), get_corosync_log()] + context.extra_log_list
-    for log in log_list:
+    log_list = [os.path.expanduser(log) for log in log_list]
+    log_list_marked_same_basename = utils.mark_duplicate_basenames(log_list)
+    for log, same_basename in log_list_marked_same_basename:
         if log and os.path.isfile(log):
-            utils.dump_logset(context, log)
+            utils.dump_logset(context, log, create_dir=same_basename)
 
 
 def collect_journal_logs(context: core.Context) -> None:
