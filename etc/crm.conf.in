@@ -82,7 +82,7 @@ ocf_root = @OCF_ROOT_DIR@
 ; compress = yes
 ; compress_prog = gzip
 ; speed_up = no
-; collect_extra_logs = /var/log/messages /var/log/pacemaker.log
+; collect_extra_logs = /var/log/messages, /var/log/crmsh/crmsh.log, /etc/crm/profiles.yml, /etc/crm/crm.conf, ~/.config/crm/crm.conf
 ; remove_exist_dest = no
 ; single_node = no
 ;
