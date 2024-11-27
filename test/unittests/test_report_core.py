@@ -39,7 +39,7 @@ class TestContext(unittest.TestCase):
         mock_config.report = mock.Mock(
             from_time="20230101",
             compress=False,
-            collect_extra_logs="file1 file2",
+            collect_extra_logs=["file1", "file2"],
             remove_exist_dest=False,
             single_node=False
         )
