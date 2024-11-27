@@ -52,10 +52,11 @@ def arch_logs(context: core.Context, logf: str) -> Tuple[List[str], LogType]:
     log_type = None
 
     file_list = [logf] + glob.glob(logf+"*[0-9z]")
+    do_have_archived_logs = len(file_list) > 1
     # like ls -t, newest first
     for f in sorted(file_list, key=os.path.getmtime, reverse=True):
-        modify_time = os.path.getmtime(f)
-        if context.from_time > modify_time:
+        # for those archived logs, if the newest one is older than the from_time
+        if do_have_archived_logs and context.from_time > os.path.getmtime(f):
             break # no need to check the rest
         tmp = is_our_log(context, f)
         logger.debug2("File %s is %s", f, convert_logtype_to_str(tmp))
