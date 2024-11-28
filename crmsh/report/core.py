@@ -40,7 +40,7 @@ class Context:
         self.to_time: float = utils.now()
         self.no_compress: bool = not config.report.compress
         self.speed_up: bool = config.report.speed_up
-        self.extra_log_list: List[str] = config.report.collect_extra_logs.split()
+        self.extra_log_list: List[str] = config.report.collect_extra_logs
         self.rm_exist_dest: bool = config.report.remove_exist_dest
         self.single: bool= config.report.single_node
         self.sensitive_regex_list: List[str] = []
