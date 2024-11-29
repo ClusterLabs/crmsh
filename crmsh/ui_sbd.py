@@ -515,12 +515,36 @@ class SBD(command.UI):
                 if output:
                     print(output)
 
+    def _print_sbd_cgroup_status(self):
+        scripts_in_shell = '''#!/bin/bash
+cgroup_procs_file="/sys/fs/cgroup/system.slice/sbd.service/cgroup.procs"
+if [ ! -f "$cgroup_procs_file" ]; then
+    exit
+fi
+pids=$(cat "$cgroup_procs_file")
+for pid in $pids; do
+    cmdline_file="/proc/$pid/cmdline"
+    if [ -f "$cmdline_file" ]; then
+        cmdline=$(tr '\0' ' ' < "$cmdline_file")
+        if [[ "$cmdline" == *"slot:"* ]]; then
+            echo "├─$pid \"$cmdline\""
+        fi
+    fi
+done
+        '''
+        for node in self.cluster_nodes:
+            out = self.cluster_shell.get_stdout_or_raise_error(scripts_in_shell, node)
+            if out:
+                print(f"# Status of the sbd disk watcher process on {node}:")
+                print(out + "\n")
+
     def do_status(self, context) -> bool:
         '''
         Implement sbd status command
         '''
         self._print_sbd_type()
         self._print_sbd_status()
+        self._print_sbd_cgroup_status()
         self._print_watchdog_info()
         self._print_sbd_agent_status()
         return True
