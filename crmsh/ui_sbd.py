@@ -116,7 +116,6 @@ class SBD(command.UI):
         self.service_manager: ServiceManager = None
         self.cluster_shell: sh.cluster_shell = None
         self.cluster_nodes: list[str] = None
-        self.crm_mon_xml_parser: xmlutil.CrmMonXmlParser = None
 
         self._load_attributes()
         command.UI.__init__(self)
@@ -141,7 +140,6 @@ class SBD(command.UI):
             except Exception as e:
                 logger.error(e)
                 self.cluster_nodes.remove(node)
-        self.crm_mon_xml_parser = xmlutil.CrmMonXmlParser()
 
     def requires(self) -> bool:
         '''
@@ -486,38 +484,37 @@ class SBD(command.UI):
         watchdog_sbd_re = r"\[[0-9]+\] (/dev/.*)\nIdentity: Busy: .*sbd.*\nDriver: (.*)"
         device_list, driver_list, kernel_timeout_list = [], [], []
 
-        cluster_nodes = self.cluster_nodes[:]
-        for node in cluster_nodes[:]:
+        for node in self.cluster_nodes:
             out = self.cluster_shell.get_stdout_or_raise_error("sbd query-watchdog", node)
             res = re.search(watchdog_sbd_re, out)
             if res:
                 device, driver = res.groups()
                 kernel_timeout = self.cluster_shell.get_stdout_or_raise_error("cat /proc/sys/kernel/watchdog_thresh", node)
-                device_list.append(device)
-                driver_list.append(driver)
-                kernel_timeout_list.append(kernel_timeout)
             else:
-                logger.error("Failed to get watchdog info from %s", node)
-                cluster_nodes.remove(node)
-        if not cluster_nodes:
-            return
+                device, driver, kernel_timeout = "N/A", "N/A", "N/A"
+            device_list.append(device)
+            driver_list.append(driver)
+            kernel_timeout_list.append(kernel_timeout)
 
         print("# Watchdog info:")
-        max_dev_len = max(len(dev) for dev in device_list) + padding
-        max_driver_len = max(len(driver) for driver in driver_list) + padding
+        max_dev_len = max(len(dev) for dev in device_list+["Device"]) + padding
+        max_driver_len = max(len(driver) for driver in driver_list+["Driver"]) + padding
         print(f"{'Node':<{max_node_len}}|{'Device':<{max_dev_len}}|{'Driver':<{max_driver_len}}|Kernel Timeout")
-        for i, node in enumerate(cluster_nodes):
+        for i, node in enumerate(self.cluster_nodes):
             print(f"{node:<{max_node_len}}|{device_list[i]:<{max_dev_len}}|{driver_list[i]:<{max_driver_len}}|{kernel_timeout_list[i]}")
         print()
 
     def _print_sbd_agent_status(self):
-        if self.crm_mon_xml_parser.is_resource_configured(sbd.SBDManager.SBD_RA):
-            print("# Status of fence_sbd:")
-            sbd_id_list = self.crm_mon_xml_parser.get_resource_id_list_via_type(sbd.SBDManager.SBD_RA)
-            for sbd_id in sbd_id_list:
-                rc, output = self.cluster_shell.get_rc_output_without_input(None, f"crm resource status {sbd_id}")
-                if output:
-                    print(output)
+        for node in self.cluster_nodes:
+            crm_mon_xml_parser = xmlutil.CrmMonXmlParser(node)
+            if crm_mon_xml_parser.is_resource_configured(sbd.SBDManager.SBD_RA):
+                print("# Status of fence_sbd:")
+                sbd_id_list = crm_mon_xml_parser.get_resource_id_list_via_type(sbd.SBDManager.SBD_RA)
+                for sbd_id in sbd_id_list:
+                    rc, output = self.cluster_shell.get_rc_output_without_input(node, f"crm resource status {sbd_id}")
+                    if output:
+                        print(output)
+                return
 
     def _print_sbd_cgroup_status(self):
         scripts_in_shell = '''#!/bin/bash
