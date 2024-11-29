@@ -269,26 +269,21 @@ class SBD(command.UI):
         return parameter_dict
 
     @staticmethod
-    def _adjust_timeout_dict(timeout_dict: dict, diskless: bool = False) -> dict:
+    def _adjust_timeout_dict(timeout_dict: dict) -> dict:
         watchdog_timeout = timeout_dict.get("watchdog")
-        if not watchdog_timeout:
-            watchdog_timeout, _ = sbd.SBDTimeout.get_advised_sbd_timeout(diskless)
-            logger.info("No watchdog timeout specified, use advised value: %s", watchdog_timeout)
-            timeout_dict["watchdog"] = watchdog_timeout
-
-        if diskless:
-            return timeout_dict
-
         msgwait_timeout = timeout_dict.get("msgwait")
-        if not msgwait_timeout:
-            msgwait_timeout = 2*watchdog_timeout
-            logger.info("No msgwait timeout specified, use 2*watchdog timeout: %s", msgwait_timeout)
-            timeout_dict["msgwait"] = msgwait_timeout
-
-        if msgwait_timeout < 2*watchdog_timeout:
+        if watchdog_timeout and msgwait_timeout and msgwait_timeout < 2*watchdog_timeout:
             logger.warning("It's recommended to set msgwait timeout >= 2*watchdog timeout")
-
-        return timeout_dict
+            return timeout_dict
+        if watchdog_timeout and not msgwait_timeout:
+            timeout_dict["msgwait"] = 2*watchdog_timeout
+            logger.info("No msgwait timeout specified, use 2*watchdog timeout: %s", 2*watchdog_timeout)
+            return timeout_dict
+        if msgwait_timeout and not watchdog_timeout:
+            watchdog_timeout = msgwait_timeout//2
+            timeout_dict["watchdog"] = watchdog_timeout
+            logger.info("No watchdog timeout specified, use msgwait timeout/2: %s", watchdog_timeout)
+            return timeout_dict
 
     def _configure_diskbase(self, parameter_dict: dict):
         '''
@@ -299,10 +294,17 @@ class SBD(command.UI):
         if watchdog_device != self.watchdog_device_from_config:
             update_dict["SBD_WATCHDOG_DEV"] = watchdog_device
         timeout_dict = {k: v for k, v in parameter_dict.items() if k in self.TIMEOUT_TYPES}
-        # merge runtime timeout dict with new timeout dict
-        timeout_dict = self.device_meta_dict_runtime | timeout_dict
-        # adjust watchdog and msgwait timeout
-        timeout_dict = self._adjust_timeout_dict(timeout_dict)
+        is_subdict_timeout = utils.is_subdict(timeout_dict, self.device_meta_dict_runtime)
+
+        if is_subdict_timeout and not update_dict:
+            logger.info("No change in SBD configuration")
+            return
+
+        if not is_subdict_timeout:
+            timeout_dict = self._adjust_timeout_dict(timeout_dict)
+            # merge runtime timeout dict into parameter timeout dict without overwriting
+            timeout_dict = {**self.device_meta_dict_runtime, **timeout_dict}
+
         watchdog_timeout = timeout_dict.get("watchdog")
         if watchdog_timeout != self.watchdog_timeout_from_config:
             update_dict["SBD_WATCHDOG_TIMEOUT"] = str(watchdog_timeout)
@@ -319,13 +321,15 @@ class SBD(command.UI):
         Configure diskless SBD based on input parameters and runtime config
         '''
         update_dict = {}
-        parameter_dict = self._adjust_timeout_dict(parameter_dict, diskless=True)
         watchdog_timeout = parameter_dict.get("watchdog")
         if watchdog_timeout and watchdog_timeout != self.watchdog_timeout_from_config:
             update_dict["SBD_WATCHDOG_TIMEOUT"] = str(watchdog_timeout)
         watchdog_device = parameter_dict.get("watchdog-device")
         if watchdog_device != self.watchdog_device_from_config:
             update_dict["SBD_WATCHDOG_DEV"] = watchdog_device
+        if not update_dict:
+            logger.info("No change in SBD configuration")
+            return
 
         sbd_manager = sbd.SBDManager(
             update_dict=update_dict,
