@@ -472,9 +472,10 @@ class SBDManager:
             timeout_inst = SBDTimeout(self.bootstrap_context)
             timeout_inst.initialize_timeout()
             self.timeout_dict["watchdog"] = timeout_inst.sbd_watchdog_timeout
-            if not self.diskless_sbd:
+            if self.diskless_sbd:
+                self.update_dict["SBD_WATCHDOG_TIMEOUT"] = str(timeout_inst.sbd_watchdog_timeout)
+            else:
                 self.timeout_dict["msgwait"] = timeout_inst.sbd_msgwait
-            self.update_dict["SBD_WATCHDOG_TIMEOUT"] = str(timeout_inst.sbd_watchdog_timeout)
         self.update_dict["SBD_WATCHDOG_DEV"] = watchdog.Watchdog.get_watchdog_device(self.bootstrap_context.watchdog)
 
     @staticmethod

@@ -174,8 +174,7 @@ class SBD(command.UI):
         show_usage = f"crm sbd configure show [{'|'.join(show_types)}]"
         return f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device>]\n"
 
-    @staticmethod
-    def _show_sysconfig() -> None:
+    def _show_sysconfig(self) -> None:
         '''
         Show pure content of /etc/sysconfig/sbd
         '''
@@ -188,6 +187,8 @@ class SBD(command.UI):
         if content_list:
             logger.info("crm sbd configure show sysconfig")
         for line in content_list:
+            if line.startswith("SBD_WATCHDOG_TIMEOUT") and bool(self.device_list_from_config):
+                continue
             print(line)
 
     def _show_disk_metadata(self) -> None:
@@ -225,7 +226,7 @@ class SBD(command.UI):
                 case "disk_metadata":
                     self._show_disk_metadata()
                 case "sysconfig":
-                    SBD._show_sysconfig()
+                    self._show_sysconfig()
                 case "property":
                     self._show_property()
                 case _:
@@ -234,7 +235,7 @@ class SBD(command.UI):
             self._show_disk_metadata()
             if self.device_list_from_config:
                 print()
-            SBD._show_sysconfig()
+            self._show_sysconfig()
             print()
             self._show_property()
 
@@ -302,10 +303,6 @@ class SBD(command.UI):
             timeout_dict = self._adjust_timeout_dict(timeout_dict)
             # merge runtime timeout dict into parameter timeout dict without overwriting
             timeout_dict = {**self.device_meta_dict_runtime, **timeout_dict}
-
-        watchdog_timeout = timeout_dict.get("watchdog")
-        if watchdog_timeout != self.watchdog_timeout_from_config:
-            update_dict["SBD_WATCHDOG_TIMEOUT"] = str(watchdog_timeout)
 
         sbd_manager = sbd.SBDManager(
             device_list_to_init=self.device_list_from_config,
