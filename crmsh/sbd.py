@@ -8,6 +8,7 @@ from . import constants
 from . import corosync
 from . import xmlutil
 from . import watchdog
+from . import parallax
 from .service_manager import ServiceManager
 from .sh import ShellUtils
 
@@ -420,6 +421,8 @@ class SBDManager:
     SYSCONFIG_SBD = "/etc/sysconfig/sbd"
     SYSCONFIG_SBD_TEMPLATE = "/usr/share/fillup-templates/sysconfig.sbd"
     SBD_SYSTEMD_DELAY_START_DIR = "/etc/systemd/system/sbd.service.d"
+    SBD_SYSTEMD_DELAY_START_DISABLE_DIR = "/run/systemd/system/sbd.service.d"
+    SBD_SYSTEMD_DELAY_START_DISABLE_FILE = f"{SBD_SYSTEMD_DELAY_START_DISABLE_DIR}/sbd_delay_start_disabled.conf"
     SBD_STATUS_DESCRIPTION = '''Configure SBD:
   If you have shared storage, for example a SAN or iSCSI target,
   you can use it avoid split-brain scenarios by configuring SBD.
@@ -747,3 +750,7 @@ def purge_sbd_from_cluster():
     # after disable sbd.service, check if sbd is the last stonith device
     if res and int(res.group(1)) <= 1:
         utils.cleanup_stonith_related_properties()
+
+    for _dir in [SBDManager.SBD_SYSTEMD_DELAY_START_DIR, SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR]:
+        cmd = f"test -d {_dir} && rm -rf {_dir} || exit 0"
+        parallax.parallax_call(cluster_nodes, cmd)

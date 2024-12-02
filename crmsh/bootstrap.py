@@ -775,10 +775,8 @@ def start_pacemaker(node_list=[], enable_flag=False):
             utils.package_is_installed("sbd") and \
             ServiceManager().service_is_enabled(constants.SBD_SERVICE) and \
             SBDTimeout.is_sbd_delay_start():
-        target_dir = "/run/systemd/system/sbd.service.d/"
-        cmd1 = "mkdir -p {}".format(target_dir)
-        target_file = "{}sbd_delay_start_disabled.conf".format(target_dir)
-        cmd2 = "echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {}".format(target_file)
+        cmd1 = f"mkdir -p {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}"
+        cmd2 = f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"
         cmd3 = "systemctl daemon-reload"
         for cmd in [cmd1, cmd2, cmd3]:
             parallax.parallax_call(node_list, cmd)
