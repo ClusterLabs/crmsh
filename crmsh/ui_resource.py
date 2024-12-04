@@ -2,6 +2,7 @@
 # Copyright (C) 2013-2018 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import re
 from . import command
 from . import completers as compl
 from . import constants
@@ -172,7 +173,8 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
     return True
 
 
-_attrcmds = compl.choice(['delete', 'set', 'show'])
+ATTR_OPERATION_CMDS = ('delete', 'set', 'show')
+_attrcmds = compl.choice(ATTR_OPERATION_CMDS)
 _raoperations = compl.choice(constants.ra_operations)
 
 
@@ -490,20 +492,23 @@ class RscMgmt(command.UI):
         failcount <rsc> delete <node>
         failcount <rsc> show <node>"""
         def sec_to_ms(s):
-            return s + '000'
+            return '0' if s == '0' else s + '000'
 
         def ms_to_sec(m):
-            return m[:len(m)-3]
+            return '0' if m == '0' else str(int(m) // 1000)
+
+        USAGE = "Usage: failcount <rsc> set <node> <value> [operation] [interval]"
 
         if rsc not in compl.resources():
-            context.warning("Resource {} not exists in this cluster".format(rsc))
+            logger.warning("Resource %s not in this cluster", rsc)
             return
-        valid_cmd_list = ["set", "delete", "show"]
-        if cmd not in valid_cmd_list:
-            context.fatal_error("{} is not valid command(should be one of {})".format(cmd, valid_cmd_list))
+        if cmd not in ATTR_OPERATION_CMDS:
+            context.fatal_error(f"{cmd} is not valid command(should be one of {', '.join(ATTR_OPERATION_CMDS)})")
         nodeid = utils.get_nodeid_from_name(node)
         if nodeid is None:
-            context.fatal_error("Node {} not in this cluster".format(node))
+            context.fatal_error(f"Node {node} not in this cluster")
+        if value and (not value.isdigit() and value != "INFINITY"):
+            context.fatal_error("value should be a non-negative integer or 'INFINITY'")
 
         if cmd == "set":
             # query the current failcount status
@@ -513,46 +518,50 @@ class RscMgmt(command.UI):
                 context.fatal_error(err)
 
             # try to get failcount dict {operation:interval}
-            import re
-            failcount_res = re.findall(r'fail-count-{}#(.*)_([0-9]+)'.format(rsc), out)
-            if not failcount_res:
-                return True if value and int(value) == 0 else False
-            failcount_dict = dict(failcount_res)
-
-            # validate for operation and interval
-            if operation and operation not in failcount_dict.keys():
-                context.fatal_error("Usage: failcount <rsc> set <node> <value> [operation] [interval]\n\
-                           Should specify operation between \"{}\"".format(' '.join(failcount_dict.keys())))
-            if (operation and interval) and (operation, sec_to_ms(interval)) not in failcount_res:
-                context.fatal_error("Usage: failcount <rsc> set <node> <value> [operation] [interval]\n\
-                           Should specify (operation, interval) between {}".\
-                           format([(op, ms_to_sec(inter)) for op, inter in failcount_res]))
+            failcount_dict = dict(re.findall(rf'fail-count-{rsc}#(.*)_([0-9]+)', out))
+            if failcount_dict:
+                # validate for operation and interval
+                if operation and operation not in failcount_dict:
+                    context.fatal_error(f"Should specify operation between ({', '.join(failcount_dict.keys())})\n{USAGE}")
+                if (operation and interval) and (operation, sec_to_ms(interval)) not in failcount_dict.items():
+                    failcount_items = [(op, ms_to_sec(inter)) for op, inter in failcount_dict.items()]
+                    context.fatal_error(f"Should specify (operation, interval) between {failcount_items}\n{USAGE}")
+            else:
+                # no failcount entry for this resource and node
+                if operation and interval:
+                    rsc = f'{rsc}#{operation}_{sec_to_ms(interval)}'
+                else:
+                    # when no failcount entry, it's no harm to give a warning and return true
+                    # https://bugzilla.suse.com/show_bug.cgi?id=1180332#c11
+                    logger.warning("Should specify operation and interval\n%s", USAGE)
+                    return
 
             # just one failcount entry
-            if len(failcount_res) == 1:
-                operation = failcount_res[0][0]
-                interval = failcount_dict[operation]
-                rsc = '{}#{}_{}'.format(rsc, operation, interval)
+            if len(failcount_dict) == 1:
+                operation, interval_in_ms = failcount_dict.popitem()
+                rsc = f'{rsc}#{operation}_{interval_in_ms}'
 
             # multiple failcount entries for this resource and node
-            if len(failcount_res) > 1:
+            if len(failcount_dict) > 1:
                 if operation and interval:
-                    rsc = '{}#{}_{}'.format(rsc, operation, sec_to_ms(interval))
+                    rsc = f'{rsc}#{operation}_{sec_to_ms(interval)}'
                 elif int(value) == 0:
-                    # using '-P' option of 'crm_attribute' command
+                    op_interval_list = [
+                        f'{op}_{inter}'
+                        for op, inter in failcount_dict.items()
+                        if not operation or op == operation
+                    ]
+                    op_interval_str = '|'.join(op_interval_list)
+                    rsc = f'{rsc}#{op_interval_str}'
+                    # using '-P' option of 'crm_attribute' command, to match the pattern
                     cmd = "set_p"
-                    if operation:
-                        op_interval_str = '|'.join(['{}_{}'.format(operation, inter) for op, inter in failcount_res if op==operation])
-                    else:
-                        op_interval_str = '|'.join(['{}_{}'.format(op, inter) for op, inter in failcount_res])
-                    rsc = '{}#({})'.format(rsc, op_interval_str)
                 else:
                     # value != 0
-                    if operation and len([op for op, _ in failcount_res if op == operation]) == 1:
-                        rsc = '{}#{}_{}'.format(rsc, operation, failcount_dict[operation])
+                    if operation and len([op for op in failcount_dict if op == operation]) == 1:
+                        rsc = f'{rsc}#{operation}_{failcount_dict[operation]}'
                     else:
-                        context.fatal_error("Should specify (operation, interval) between {}".
-                                format([(op, ms_to_sec(inter)) for op, inter in failcount_res]))
+                        failcount_items = [(op, ms_to_sec(inter)) for op, inter in failcount_dict.items()]
+                        context.fatal_error(f"Should specify (operation, interval) between {failcount_items}\n{USAGE}")
 
         return ui_utils.manage_attr(context.get_command_name(), self.rsc_failcount,
                                     rsc, cmd, node, value)
