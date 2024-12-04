@@ -555,11 +555,14 @@ class SBDManager:
         '''
         if self.diskless_sbd:
             utils.set_property("stonith-watchdog-timeout", SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT)
-        elif not xmlutil.CrmMonXmlParser().is_resource_configured(self.SBD_RA):
-            all_device_list = SBDUtils.get_sbd_device_from_config()
-            devices_param_str = f"params devices=\"{','.join(all_device_list)}\""
-            cmd = f"crm configure primitive {self.SBD_RA_ID} {self.SBD_RA} {devices_param_str}"
-            sh.cluster_shell().get_stdout_or_raise_error(cmd)
+        else:
+            if utils.get_property("stonith-watchdog-timeout", get_default=False):
+                utils.delete_property("stonith-watchdog-timeout")
+            if not xmlutil.CrmMonXmlParser().is_resource_configured(self.SBD_RA):
+                all_device_list = SBDUtils.get_sbd_device_from_config()
+                devices_param_str = f"params devices=\"{','.join(all_device_list)}\""
+                cmd = f"crm configure primitive {self.SBD_RA_ID} {self.SBD_RA} {devices_param_str}"
+                sh.cluster_shell().get_stdout_or_raise_error(cmd)
         utils.set_property("stonith-enabled", "true")
 
     def _warn_diskless_sbd(self, peer=None):
