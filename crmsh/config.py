@@ -298,8 +298,13 @@ DEFAULTS = {
         'compress': opt_boolean('yes'),
         'compress_prog': opt_string('gzip'),
         'speed_up': opt_boolean('no'),
-        'collect_extra_logs': opt_string('/var/log/messages \
-                /var/log/crmsh/crmsh.log /etc/crm/profiles.yml /etc/crm/crm.conf'),
+        'collect_extra_logs': opt_list([
+            '/var/log/messages',
+            '/var/log/crmsh/crmsh.log',
+            '/etc/crm/profiles.yml',
+            '/etc/crm/crm.conf',
+            '~/.config/crm/crm.conf'
+        ]),
         'remove_exist_dest': opt_boolean('no'),
         'single_node': opt_boolean('no'),
         'sanitize_rule': opt_string('passw.*'),
