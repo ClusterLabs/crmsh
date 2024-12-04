@@ -95,11 +95,11 @@ class SBD(command.UI):
     PCMK_ATTRS = (
         "have-watchdog",
         "stonith-timeout",
-        "stonith-watchdog-timeout",
         "stonith-enabled",
         "priority-fencing-delay",
         "pcmk_delay_max"
     )
+    PCMK_ATTRS_DISKLESS = ('stonith-watchdog-timeout',)
     PARSE_RE = re.compile(
 		# Match keys with non-empty values, capturing possible suffix
         r'(\w+)(?:-(\w+))?=("[^"]+"|[\w/\d;]+)'
@@ -208,7 +208,11 @@ class SBD(command.UI):
         out = self.cluster_shell.get_stdout_or_raise_error("crm configure show")
 
         logger.info("crm sbd configure show property")
-        regex = f"({'|'.join(self.PCMK_ATTRS)})=(\\S+)"
+        if self.device_list_from_config:
+            attrs = self.PCMK_ATTRS
+        else:
+            attrs = self.PCMK_ATTRS + self.PCMK_ATTRS_DISKLESS
+        regex = f"({'|'.join(attrs)})=(\\S+)"
         matches = re.findall(regex, out)
         for match in matches:
             print(f"{match[0]}={match[1]}")
