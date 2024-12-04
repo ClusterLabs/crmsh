@@ -384,6 +384,14 @@ class ClusterShell:
         rc, stdout, stderr = self.get_rc_stdout_stderr_raw_without_input(host, cmd)
         return rc, Utils.decode_str(stdout).strip(), Utils.decode_str(stderr).strip()
 
+    def get_rc_output_without_input(self, host, cmd) -> typing.Tuple[int, str]:
+        result = self.subprocess_run_without_input(
+            host, None, cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+        return result.returncode, Utils.decode_str(result.stdout).strip()
+
     def get_stdout_or_raise_error(
             self,
             cmd: str,

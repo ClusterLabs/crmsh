@@ -759,7 +759,7 @@ def get_cmd_output(cmd: str, timeout: int = None) -> str:
         out_str += f"{out}\n"
     if err:
         out_str += f"{err}\n"
-    return out_str
+    return crmutils.strip_ansi_escape_sequences(out_str)
 
 
 def get_timespan_str(context: core.Context) -> str:

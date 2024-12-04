@@ -1,5 +1,5 @@
 :man source:   crm
-:man version:  4.6.0
+:man version:  5.0.0
 :man manual:   crmsh documentation
 
 crm(8)
@@ -2102,6 +2102,83 @@ utilization <rsc> show <attr>
 Example:
 ...............
 utilization xen1 set memory 4096
+...............
+
+[[cmdhelp.sbd,SBD management]]
+=== `sbd` - SBD management
+
+This level displays the real-time SBD status and the static SBD configuration.
+Additionally, it manages the configuration file for both disk-based and diskless SBD scenarios,
+as well as the on-disk metadata for the disk-based scenario.
+Currently, SBD management requires a running cluster.
+
+[[cmdhelp.sbd.configure,configure SBD]]
+==== `configure`
+
+Configure the SBD daemon for both disk-based and disk-less mode.
+
+Main functionailities include:
+- Show configured disk metadata
+- Show contents of /etc/sysconfig/sbd
+- Show SBD related cluster properties
+- Update the SBD related configuration parameters
+
+For more details on SBD and related parameters, please see man sbd(8).
+
+Usage:
+...............
+# For disk-based SBD
+crm sbd configure show [disk_metadata|sysconfig|property]
+crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [watchdog-device=<device>]
+
+# For disk-less SBD
+crm sbd configure show [sysconfig|property]
+crm sbd configure [watchdog-timeout=<integer>] [watchdog-device=<device>]
+...............
+
+example:
+...............
+configure show
+configure show disk_metadata
+configure show sysconfig
+configure show property
+configure watchdog-timeout=30
+...............
+
+[[cmdhelp.sbd.device,add or remove SBD device]]
+==== `device`
+
+Add or remove SBD device(s) from the existing SBD configuration.
+
+example:
+...............
+device add /dev/sdb5
+device add /dev/sdb5 /dev/sdb6
+device add "/dev/sda5;/dev/sda6"
+device remove /dev/sdb5
+...............
+
+[[cmdhelp.sbd.status,show SBD runtime status]]
+==== `status`
+
+Show the runtime status of the SBD daemon and
+the other information of those SBD related components,
+ie. watchdog, fence agent.
+
+Usage:
+...............
+status
+...............
+
+[[cmdhelp.sbd.purge,purge SBD from cluster]]
+==== `purge`
+
+Disable the systemd sbd.service on all cluster nodes,
+move the sbd sysconfig to .bak and adjust SBD related cluster properties.
+
+Usage:
+...............
+purge
 ...............
 
 [[cmdhelp.node,Node management]]
