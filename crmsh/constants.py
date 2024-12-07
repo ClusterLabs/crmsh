@@ -44,6 +44,7 @@ op_cli_names = ("monitor",
                 "notify",
                 "reload")
 ra_operations = tuple(["probe"] + list(op_cli_names))
+ATTR_OPERATION_CMDS = ('delete', 'set', 'show')
 
 subpfx_list = {
     "instance_attributes": "instance_attributes",
