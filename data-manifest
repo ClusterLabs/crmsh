@@ -82,6 +82,7 @@ test/features/crm_report_normal.feature
 test/features/environment.py
 test/features/geo_setup.feature
 test/features/healthcheck.feature
+test/features/ocfs2.feature
 test/features/qdevice_options.feature
 test/features/qdevice_setup_remove.feature
 test/features/qdevice_usercase.feature
@@ -197,6 +198,7 @@ test/unittests/test_gv.py
 test/unittests/test_handles.py
 test/unittests/test_lock.py
 test/unittests/test_objset.py
+test/unittests/test_ocfs2.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
 test/unittests/test_prun.py
