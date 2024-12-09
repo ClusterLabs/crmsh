@@ -41,13 +41,18 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
             ])
         mock_read.assert_called_once_with(constants.PCMKCONF)
 
+    @mock.patch('crmsh.report.utils.mark_duplicate_basenames')
     @mock.patch('crmsh.report.utils.dump_logset')
     @mock.patch('os.path.isfile')
     @mock.patch('crmsh.report.collect.get_pcmk_log')
     @mock.patch('crmsh.report.collect.get_corosync_log')
-    def test_collect_ha_logs(self, mock_corosync_log, mock_get_log, mock_isfile, mock_dump):
+    def test_collect_ha_logs(self, mock_corosync_log, mock_get_log, mock_isfile, mock_dump, mock_mark):
         mock_corosync_log.return_value = "/var/log/cluster/corosync.log"
         mock_get_log.return_value = "/var/pacemaker.log"
+        mock_mark.return_value = [
+            (mock_get_log.return_value, False),
+            (mock_corosync_log.return_value, False)
+        ]
         mock_isfile.side_effect = [True, True]
         mock_ctx_inst = mock.Mock(extra_log_list=[])
 
@@ -59,8 +64,8 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
             mock.call(mock_corosync_log.return_value)
             ])
         mock_dump.assert_has_calls([
-            mock.call(mock_ctx_inst, mock_get_log.return_value),
-            mock.call(mock_ctx_inst, mock_corosync_log.return_value)
+            mock.call(mock_ctx_inst, mock_get_log.return_value, create_dir=False),
+            mock.call(mock_ctx_inst, mock_corosync_log.return_value, create_dir=False)
             ])
 
     @mock.patch('logging.Logger.warning')
@@ -125,31 +130,6 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
             mock.call(f"Dump jounal log for pacemaker into {constants.JOURNAL_PCMK_F}"),
             mock.call(f"Dump jounal log for corosync into {constants.JOURNAL_COROSYNC_F}"),
             mock.call(f"Dump jounal log for sbd into {constants.JOURNAL_SBD_F}")
-            ])
-
-    @mock.patch('crmsh.report.collect.ShellUtils')
-    def test_dump_D_process_empty(self, mock_run):
-        mock_run_inst = mock.Mock()
-        mock_run.return_value = mock_run_inst
-        mock_run_inst.get_stdout_stderr.return_value = (0, None, None)
-        res = collect.dump_D_process()
-        self.assertEqual(res, "Dump D-state process stack: 0\n")
-
-    @mock.patch('crmsh.report.collect.ShellUtils')
-    def test_dump_D_process(self, mock_run):
-        mock_run_inst = mock.Mock()
-        mock_run.return_value = mock_run_inst
-        mock_run_inst.get_stdout_stderr.side_effect = [
-            (0, "1000", None),
-            (0, "data1", None),
-            (0, "data2", None)
-        ]
-        res = collect.dump_D_process()
-        self.assertEqual(res, "Dump D-state process stack: 1\npid: 1000     comm: data1\ndata2\n\n")
-        mock_run_inst.get_stdout_stderr.assert_has_calls([
-            mock.call("ps aux|awk '$8 ~ /^D/{print $2}'"),
-            mock.call('cat /proc/1000/comm'),
-            mock.call('cat /proc/1000/stack')
             ])
 
     @mock.patch('logging.Logger.debug')

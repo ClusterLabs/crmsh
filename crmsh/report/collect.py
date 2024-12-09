@@ -65,9 +65,11 @@ def collect_ha_logs(context: core.Context) -> None:
     Collect pacemaker, corosync and extra logs
     """
     log_list = [get_pcmk_log(), get_corosync_log()] + context.extra_log_list
-    for log in log_list:
+    log_list = [os.path.expanduser(log) for log in log_list]
+    log_list_marked_same_basename = utils.mark_duplicate_basenames(log_list)
+    for log, same_basename in log_list_marked_same_basename:
         if log and os.path.isfile(log):
-            utils.dump_logset(context, log)
+            utils.dump_logset(context, log, create_dir=same_basename)
 
 
 def collect_journal_logs(context: core.Context) -> None:
@@ -92,28 +94,6 @@ def collect_journal_logs(context: core.Context) -> None:
         _file = os.path.join(context.work_dir, outf)
         crmutils.str2file(output, _file)
         logger.debug(f"Dump jounal log for {item} into {utils.real_path(_file)}")
-
-
-def dump_D_process() -> str:
-    """
-    Dump D-state process stack
-    """
-    out_string = ""
-
-    sh_utils_inst = ShellUtils()
-    _, out, _ = sh_utils_inst.get_stdout_stderr("ps aux|awk '$8 ~ /^D/{print $2}'")
-    len_D_process = len(out.split('\n')) if out else 0
-    out_string += f"Dump D-state process stack: {len_D_process}\n"
-    if len_D_process == 0:
-        return out_string
-
-    for pid in out.split('\n'):
-        _, cmd_out, _ = sh_utils_inst.get_stdout_stderr(f"cat /proc/{pid}/comm")
-        out_string += f"pid: {pid}     comm: {cmd_out}\n"
-        _, stack_out, _ = sh_utils_inst.get_stdout_stderr(f"cat /proc/{pid}/stack")
-        out_string += stack_out + "\n\n"
-
-    return out_string
 
 
 def collect_ratraces(context: core.Context) -> None:
