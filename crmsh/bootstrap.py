@@ -36,6 +36,7 @@ from . import lock
 from . import userdir
 from .constants import QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT,\
         REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX, CSYNC2_SERVICE, WAIT_TIMEOUT_MS_DEFAULT
+from . import ocfs2
 from . import qdevice
 from . import parallax
 from . import log
@@ -70,7 +71,7 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SBDManager.SYSCONFIG_SBD, PCMK_REMOTE_AUTH, watchdog.Watchdog.WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
 
-INIT_STAGES_EXTERNAL = ("ssh", "csync2", "corosync", "sbd", "cluster", "admin", "qdevice")
+INIT_STAGES_EXTERNAL = ("ssh", "csync2", "corosync", "sbd", "cluster", "ocfs2", "admin", "qdevice")
 INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote")
 INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
 JOIN_STAGES_EXTERNAL = ("ssh", "csync2", "ssh_merge", "cluster")
@@ -111,6 +112,9 @@ class Context(object):
         self.qdevice_heuristics = None
         self.qdevice_heuristics_mode = None
         self.qdevice_rm_flag = None
+        self.ocfs2_devices = []
+        self.use_cluster_lvm2 = None
+        self.mount_point = None
         self.cluster_node = None
         self.force = None
         self.arbitrator = None
@@ -269,7 +273,7 @@ class Context(object):
         if self.type == "init":
             if self.stage not in INIT_STAGES_ALL:
                 utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(INIT_STAGES_EXTERNAL)})")
-            if self.stage in ("admin", "qdevice") and not self.cluster_is_running:
+            if self.stage in ("admin", "qdevice", "ocfs2") and not self.cluster_is_running:
                 utils.fatal(f"Cluster is inactive, can't run '{self.stage}' stage")
             if self.stage in ("corosync", "cluster") and self.cluster_is_running:
                 utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
@@ -288,6 +292,8 @@ class Context(object):
         """
         if self.qdevice_inst:
             self.qdevice_inst.valid_qdevice_options()
+        if self.ocfs2_devices or self.stage == "ocfs2":
+            ocfs2.OCFS2Manager.verify_ocfs2(self)
         if not self.skip_csync2 and self.type == "init":
             self.skip_csync2 = utils.get_boolean(os.getenv("SKIP_CSYNC2_SYNC"))
         if self.skip_csync2 and self.stage:
@@ -1402,6 +1408,16 @@ def init_sbd():
     _context.sbd_manager.init_and_deploy_sbd()
 
 
+def init_ocfs2():
+    """
+    OCFS2 configure process
+    """
+    if not _context.ocfs2_devices:
+        return
+    ocfs2_manager = ocfs2.OCFS2Manager(_context)
+    ocfs2_manager.init_ocfs2()
+
+
 def init_cluster():
     """
     Initial cluster configuration.
@@ -2187,6 +2203,7 @@ def bootstrap_init(context):
                 init_cluster()
                 init_admin()
                 init_qdevice()
+                init_ocfs2()
         except lock.ClaimLockError as err:
             utils.fatal(err)
 
@@ -2284,6 +2301,7 @@ def bootstrap_join(context):
                     join_csync2(cluster_node, remote_user)
                 join_ssh_merge(cluster_node, remote_user)
                 probe_partitions()
+                join_ocfs2(cluster_node, remote_user)
                 join_cluster(cluster_node, remote_user)
         except (lock.SSHError, lock.ClaimLockError) as err:
             utils.fatal(err)
@@ -2293,6 +2311,14 @@ def bootstrap_join(context):
 
 def bootstrap_finished():
     logger.info("Done (log saved to %s on %s)", log.CRMSH_LOG_FILE, utils.this_node())
+
+
+def join_ocfs2(peer_host, peer_user):
+    """
+    If init node configured OCFS2 device, verify that device on join node
+    """
+    ocfs2_inst = ocfs2.OCFS2Manager(_context)
+    ocfs2_inst.join_ocfs2(peer_host)
 
 
 def remove_qdevice() -> None:
