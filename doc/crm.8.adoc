@@ -1718,7 +1718,9 @@ failcount <rsc> show <node>
 ...............
 Example:
 ...............
-failcount fs_0 delete node2
+failcount fs_0 set node1 0 monitor 10
+failcount fs_0 delete node1
+failcount fs_0 show node1
 ...............
 
 [[cmdhelp_resource_locate,show the location of resources]]
