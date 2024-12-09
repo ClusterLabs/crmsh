@@ -41,13 +41,18 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
             ])
         mock_read.assert_called_once_with(constants.PCMKCONF)
 
+    @mock.patch('crmsh.report.utils.mark_duplicate_basenames')
     @mock.patch('crmsh.report.utils.dump_logset')
     @mock.patch('os.path.isfile')
     @mock.patch('crmsh.report.collect.get_pcmk_log')
     @mock.patch('crmsh.report.collect.get_corosync_log')
-    def test_collect_ha_logs(self, mock_corosync_log, mock_get_log, mock_isfile, mock_dump):
+    def test_collect_ha_logs(self, mock_corosync_log, mock_get_log, mock_isfile, mock_dump, mock_mark):
         mock_corosync_log.return_value = "/var/log/cluster/corosync.log"
         mock_get_log.return_value = "/var/pacemaker.log"
+        mock_mark.return_value = [
+            (mock_get_log.return_value, False),
+            (mock_corosync_log.return_value, False)
+        ]
         mock_isfile.side_effect = [True, True]
         mock_ctx_inst = mock.Mock(extra_log_list=[])
 
@@ -59,8 +64,8 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
             mock.call(mock_corosync_log.return_value)
             ])
         mock_dump.assert_has_calls([
-            mock.call(mock_ctx_inst, mock_get_log.return_value),
-            mock.call(mock_ctx_inst, mock_corosync_log.return_value)
+            mock.call(mock_ctx_inst, mock_get_log.return_value, create_dir=False),
+            mock.call(mock_ctx_inst, mock_corosync_log.return_value, create_dir=False)
             ])
 
     @mock.patch('logging.Logger.warning')
