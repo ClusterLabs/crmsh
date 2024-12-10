@@ -844,7 +844,8 @@ to get the geo cluster configuration.""",
             case 'sles16':
                 try:
                     if parsed_args.fix:
-                        migration.migrate()
+                        logger.error('"--fix" is only available in SLES 16.')
+                        return False
                     else:
                         migration.check()
                     return True
