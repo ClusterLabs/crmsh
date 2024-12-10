@@ -198,7 +198,6 @@ test/unittests/test_gv.py
 test/unittests/test_handles.py
 test/unittests/test_lock.py
 test/unittests/test_objset.py
-test/unittests/test_ocfs2.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
 test/unittests/test_prun.py
