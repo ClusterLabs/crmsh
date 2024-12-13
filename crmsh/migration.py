@@ -1,10 +1,8 @@
 import argparse
-import itertools
 import json
 import logging
 import re
 import sys
-import threading
 import typing
 
 from crmsh import constants
@@ -98,28 +96,23 @@ def check(args: typing.Sequence[str]) -> int:
     parsed_args = parser.parse_args(args)
     ret = 0
     if not parsed_args.local and not parsed_args.json:
-        check_remote_yield = check_remote()
-        next(check_remote_yield)
+        remote_ret = check_remote()
         print('------ localhost ------')
     else:
-        check_remote_yield = itertools.repeat(0)
-    match parsed_args.json:
-        case 'oneline':
+        remote_ret = 0
+    if 'oneline' ==  parsed_args.json:
             handler = CheckResultJsonHandler()
-        case 'pretty':
+    elif 'pretty' == parsed_args.json:
             handler = CheckResultJsonHandler(indent=2)
-        case _:
+    else:
             handler = CheckResultInteractiveHandler()
     check_local(handler)
-    match handler:
-        case CheckResultJsonHandler():
+    if isinstance(handler, CheckResultJsonHandler):
             ret = 0 if handler.json_result["pass"] else 1
-        case CheckResultInteractiveHandler():
+    elif isinstance(handler, CheckResultInteractiveHandler):
             if handler.has_problems:
                 ret = 1
-    if check_remote_yield:
-        remote_ret = next(check_remote_yield)
-        if remote_ret > ret:
+    if remote_ret > ret:
             ret = remote_ret
     return ret
 
@@ -133,31 +126,24 @@ def check_local(handler: CheckResultHandler):
 
 def check_remote():
     handler = CheckResultInteractiveHandler()
-    class CheckRemoteThread(threading.Thread):
-        def run(self):
-            self.result = prun.prun({
-                node: 'crm cluster health sles16 --local --json=oneline'
-                for node in utils.list_cluster_nodes_except_me()
-            })
-    prun_thread = CheckRemoteThread()
-    prun_thread.start()
-    yield
-    prun_thread.join()
+    result = prun.prun({
+        node: 'crm cluster health sles16 --local --json=oneline'
+        for node in utils.list_cluster_nodes_except_me()
+    })
     ret = 0
-    for host, result in prun_thread.result.items():
-        match result:
-            case prun.SSHError() as e:
+    for host, result in result.items():
+        if isinstance(result, prun.SSHError):
                 handler.write_in_color(
                     sys.stdout, constants.YELLOW,
                     f'------ {host} ------\n',
                 )
                 handler.write_in_color(
                     sys.stdout, constants.YELLOW,
-                    str(e)
+                    str(result)
                 )
                 sys.stdout.write('\n')
                 ret = 255
-            case prun.ProcessResult() as result:
+        elif isinstance(result, prun.ProcessResult):
                 if result.returncode > 1:
                     handler.write_in_color(
                         sys.stdout, constants.YELLOW,
@@ -197,7 +183,7 @@ def check_remote():
                         handler.end()
                         if not passed:
                             ret = 1
-    yield ret
+    return ret
 
 
 def check_dependency_version(handler: CheckResultHandler):
