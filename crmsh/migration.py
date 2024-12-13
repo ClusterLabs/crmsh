@@ -32,6 +32,9 @@ class CheckResultHandler:
     def log_info(self, fmt: str, *args):
         raise NotImplementedError
 
+    def handle_tip(self, title: str, details: typing.Iterable[str]):
+        raise NotImplementedError
+
     def handle_problem(self, is_fatal: bool, title: str, detail: typing.Iterable[str]):
         raise NotImplementedError
 
@@ -45,9 +48,16 @@ class CheckResultJsonHandler(CheckResultHandler):
         self.json_result = {
             "pass": True,
             "problems": [],
+            "tips": [],
         }
     def log_info(self, fmt: str, *args):
         logger.debug(fmt, *args)
+
+    def handle_tip(self, title: str, details: typing.Iterable[str]):
+        self.json_result["tips"].append({
+            "title": title,
+            "descriptions": details if isinstance(details, list) else list(details),
+        })
 
     def handle_problem(self, is_fatal: bool, title: str, detail: typing.Iterable[str]):
         self.json_result["pass"] = False
@@ -84,6 +94,13 @@ class CheckResultInteractiveHandler(CheckResultHandler):
             print(line)
         if is_fatal:
             raise MigrationFailure('Unable to start migration.')
+
+    def handle_tip(self, title: str, details: typing.Iterable[str]):
+        self.write_in_color(sys.stdout, constants.YELLOW, '[WARN] ')
+        print(title)
+        for line in details:
+            sys.stdout.write('       ')
+            print(line)
 
     @staticmethod
     def write_in_color(f, color: str, text: str):
@@ -217,6 +234,8 @@ def check_remote():
                         handler = CheckResultInteractiveHandler()
                         for problem in result.get("problems", list()):
                             handler.handle_problem(False, problem.get("title", ""), problem.get("descriptions"))
+                        for tip in result.get("tips", list()):
+                            handler.handle_tip(tip.get("title", ""), tip.get("descriptions"))
                         handler.end()
                         if not passed:
                             ret = 1
@@ -246,7 +265,30 @@ def check_service_status(handler: CheckResultHandler):
 
 
 def check_unsupported_corosync_features(handler: CheckResultHandler):
-    pass
+    handler.log_info("Checking used corosync features...")
+    conf_path = corosync.conf()
+    with open(conf_path, 'r', encoding='utf-8') as f:
+        config = corosync_config_format.DomParser(f).dom()
+    if config['totem'].get('rrp_mode', None) in {'active', 'passive'}:
+        handler.handle_tip('Corosync RRP will be deprecated in corosync 3.', [
+            'Run "crm health sles16 --fix" to migrate it to knet multilink.',
+        ])
+    _check_unsupported_corosync_transport(handler, config)
+
+
+def _check_unsupported_corosync_transport(handler: CheckResultHandler, dom):
+    transport = dom['totem'].get('transport', None)
+    if transport == 'knet':
+        return
+    if transport is None:
+        try:
+            dom['totem']['interface'][0]['bindnetaddr']
+        except KeyError:
+            # looks like a corosync 3 config
+            return
+    handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in corosync 3.', [
+        'Run "crm health sles16 --fix" to migrate it to transport "knet".',
+    ])
 
 
 def migrate_corosync_conf():
