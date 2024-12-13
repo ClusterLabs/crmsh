@@ -210,11 +210,18 @@ def check_dependency_version(handler: CheckResultHandler):
     handler.log_info('Checking dependency version...')
     shell = sh.LocalShell()
     out = shell.get_stdout_or_raise_error(None, 'corosync -v')
-    match = re.search(r"version\s+'((\d+)(?:\.\d+)*)'", out)
-    if not match or match.group(2) != '3':
+    match = re.search(r"version\s+'(\d+(?:\.\d+)*)'", out)
+    corosync_supported = True
+    if not match:
+        corosync_supported = False
+    else:
+        version = tuple(int(x) for x in match.group(1).split('.'))
+        if not (2, 4, 6) <= version < (3,):
+            corosync_supported = False
+    if not corosync_supported:
         handler.handle_problem(
             False, 'Corosync version not supported', [
-                'Supported version: corosync >= 3',
+                'Supported version: 2.4.6 <= corosync < 3',
                 f'Actual version:    corosync == {match.group(1)}',
             ],
         )
