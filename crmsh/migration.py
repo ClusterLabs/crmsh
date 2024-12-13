@@ -6,6 +6,7 @@ import sys
 import typing
 
 from crmsh import constants
+from crmsh import corosync
 from crmsh import service_manager
 from crmsh import sh
 from crmsh import utils
@@ -22,6 +23,9 @@ class CheckResultHandler:
     def log_info(self, fmt: str, *args):
         raise NotImplementedError
 
+    def handle_tip(self, title: str, details: typing.Iterable[str]):
+        raise NotImplementedError
+
     def handle_problem(self, is_fatal: bool, title: str, detail: typing.Iterable[str]):
         raise NotImplementedError
 
@@ -35,9 +39,16 @@ class CheckResultJsonHandler(CheckResultHandler):
         self.json_result = {
             "pass": True,
             "problems": [],
+            "tips": [],
         }
     def log_info(self, fmt: str, *args):
         logger.debug(fmt, *args)
+
+    def handle_tip(self, title: str, details: typing.Iterable[str]):
+        self.json_result["tips"].append({
+            "title": title,
+            "descriptions": details if isinstance(details, list) else list(details),
+        })
 
     def handle_problem(self, is_fatal: bool, title: str, detail: typing.Iterable[str]):
         self.json_result["pass"] = False
@@ -74,6 +85,13 @@ class CheckResultInteractiveHandler(CheckResultHandler):
             print(line)
         if is_fatal:
             raise MigrationFailure('Unable to start migration.')
+
+    def handle_tip(self, title: str, details: typing.Iterable[str]):
+        self.write_in_color(sys.stdout, constants.YELLOW, '[WARN] ')
+        print(title)
+        for line in details:
+            sys.stdout.write('       ')
+            print(line)
 
     @staticmethod
     def write_in_color(f, color: str, text: str):
@@ -180,6 +198,8 @@ def check_remote():
                         handler = CheckResultInteractiveHandler()
                         for problem in result.get("problems", list()):
                             handler.handle_problem(False, problem.get("title", ""), problem.get("descriptions"))
+                        for tip in result.get("tips", list()):
+                            handler.handle_tip(tip.get("title", ""), tip.get("descriptions"))
                         handler.end()
                         if not passed:
                             ret = 1
@@ -209,4 +229,12 @@ def check_service_status(handler: CheckResultHandler):
 
 
 def check_unsupported_corosync_features(handler: CheckResultHandler):
-    pass
+    handler.log_info("Checking used corosync features...")
+    transport = 'udpu' if corosync.is_unicast() else 'udp'
+    handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in corosync 3.', [
+        'After migrating to SLES 16, run "crm cluster health sles16 --fix" to migrate it to transport "knet".',
+    ])
+    if corosync.get_value("totem.rrp_mode") in {'active', 'passive'}:
+        handler.handle_tip(f'Corosync RRP will be deprecated in corosync 3.', [
+            'After migrating to SLES 16, run "crm cluster health sles16 --fix" to migrate it to knet multilink.',
+        ])
