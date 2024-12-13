@@ -223,9 +223,9 @@ def check_dependency_version(handler: CheckResultHandler):
 def check_service_status(handler: CheckResultHandler):
     handler.log_info('Checking service status...')
     manager = service_manager.ServiceManager()
-    active_services = [x for x in ['corosync', 'pacemaker'] if manager.service_is_active(x)]
-    if active_services:
-        handler.handle_problem(False, 'Cluster services are running', (f'* {x}' for x in active_services))
+    inactive_services = [x for x in ['corosync', 'pacemaker'] if not manager.service_is_active(x)]
+    if any(inactive_services):
+        handler.handle_problem(False, 'Cluster services are not running', (f'* {x}' for x in inactive_services))
 
 
 def check_unsupported_corosync_features(handler: CheckResultHandler):
