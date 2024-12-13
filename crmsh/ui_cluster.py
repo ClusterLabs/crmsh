@@ -812,8 +812,7 @@ to get the geo cluster configuration.""",
         parser.add_argument('component', choices=['hawk2', 'sles16'])
         parser.add_argument('-f', '--fix', action='store_true')
         parsed_args, remaining_args = parser.parse_known_args(args)
-        match parsed_args.component:
-            case 'hawk2':
+        if 'hawk2' == parsed_args.component:
                 if remaining_args:
                     logger.error('Known arguments: %s', ' '.join(remaining_args))
                     return False
@@ -844,7 +843,7 @@ to get the geo cluster configuration.""",
                         logger.error("hawk2: passwordless ssh authentication: FAIL.")
                         logger.warning('Please run "crm cluster health hawk2 --fix"')
                         return False
-            case 'sles16':
+        elif 'sles16' == parsed_args.component:
                 try:
                     if parsed_args.fix:
                         logger.error('"--fix" is only available in SLES 16.')
@@ -854,7 +853,7 @@ to get the geo cluster configuration.""",
                 except migration.MigrationFailure as e:
                     logger.error('%s', e)
                     return False
-            case _:
+        else:
                 logger.error('Unknown component: %s', parsed_args.component)
                 return False
 
