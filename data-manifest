@@ -189,6 +189,7 @@ test/unittests/test_bootstrap.py
 test/unittests/test_bugs.py
 test/unittests/test_cib.py
 test/unittests/test_cliformat.py
+test/unittests/test_cluster_fs.py
 test/unittests/test.conf
 test/unittests/test_corosync.py
 test/unittests/test_crashtest_check.py
