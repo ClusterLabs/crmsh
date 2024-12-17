@@ -985,9 +985,7 @@ def append_file(dest, src):
 def get_dc(peer=None):
     cmd = "crmadmin -D -t 1"
     _, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
-    if not out:
-        return None
-    if not out.startswith("Designated"):
+    if not out or not out.startswith("Designated") or "not yet elected" in out:
         return None
     return out.split()[-1]
 
