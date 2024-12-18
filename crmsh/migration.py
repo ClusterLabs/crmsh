@@ -10,6 +10,7 @@ from crmsh import corosync
 from crmsh import service_manager
 from crmsh import sh
 from crmsh import utils
+from crmsh import xmlutil
 from crmsh.prun import prun
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,9 @@ class CheckResultInteractiveHandler(CheckResultHandler):
             f.write(text)
 
     def end(self):
-        if not self.has_problems:
+        if self.has_problems:
+            self.write_in_color(sys.stdout, constants.RED, '[FAIL]\n\n')
+        else:
             self.write_in_color(sys.stdout, constants.GREEN, '[PASS]\n\n')
 
 
@@ -112,19 +115,24 @@ def check(args: typing.Sequence[str]) -> int:
     parser.add_argument('--json', nargs='?', const='pretty', choices=['oneline', 'pretty'])
     parser.add_argument('--local', action='store_true')
     parsed_args = parser.parse_args(args)
+
+    if 'oneline' ==  parsed_args.json:
+        handler = CheckResultJsonHandler()
+    elif 'pretty' == parsed_args.json:
+        handler = CheckResultJsonHandler(indent=2)
+    else:
+        handler = CheckResultInteractiveHandler()
+
     ret = 0
     if not parsed_args.local and not parsed_args.json:
         remote_ret = check_remote()
         print('------ localhost ------')
+        check_local(handler)
+        check_global(handler)
     else:
         remote_ret = 0
-    if 'oneline' ==  parsed_args.json:
-            handler = CheckResultJsonHandler()
-    elif 'pretty' == parsed_args.json:
-            handler = CheckResultJsonHandler(indent=2)
-    else:
-            handler = CheckResultInteractiveHandler()
-    check_local(handler)
+        check_local(handler)
+    handler.end()
     if isinstance(handler, CheckResultJsonHandler):
             ret = 0 if handler.json_result["pass"] else 1
     elif isinstance(handler, CheckResultInteractiveHandler):
@@ -139,7 +147,6 @@ def check_local(handler: CheckResultHandler):
     check_dependency_version(handler)
     check_service_status(handler)
     check_unsupported_corosync_features(handler)
-    handler.end()
 
 
 def check_remote():
@@ -206,6 +213,10 @@ def check_remote():
     return ret
 
 
+def check_global(handler: CheckResultHandler):
+    check_unsupported_resource_agents(handler)
+
+
 def check_dependency_version(handler: CheckResultHandler):
     handler.log_info('Checking dependency version...')
     shell = sh.LocalShell()
@@ -244,4 +255,19 @@ def check_unsupported_corosync_features(handler: CheckResultHandler):
     if corosync.get_value("totem.rrp_mode") in {'active', 'passive'}:
         handler.handle_tip(f'Corosync RRP will be deprecated in corosync 3.', [
             'After migrating to SLES 16, run "crm health sles16 --fix" to migrate it to knet multilink.',
+        ])
+
+
+def check_unsupported_resource_agents(handler: CheckResultHandler):
+    handler.log_info("Checking used resource agents...")
+    crm_mon = xmlutil.CrmMonXmlParser()
+    resource_agents = crm_mon.get_configured_resource_agents()
+    _check_saphana_resource_agent(handler, resource_agents)
+
+
+def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: typing.Set[str]):
+    # "SAPHana" appears only in SAPHanaSR Classic
+    if 'ocf::suse:SAPHana' in resource_agents:
+        handler.handle_problem(False, 'Resource agent "ocf::suse:SAPHana" will be removed in SLES 16.', [
+            'Before migrating to SLES 16, replace it with SAPHanaSR-angi.',
         ])
