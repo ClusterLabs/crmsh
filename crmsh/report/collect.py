@@ -118,15 +118,15 @@ def dump_D_process() -> str:
     return out_string
 
 
-def lsof_ocfs2_device() -> str:
+def lsof_cluster_fs_device(fs_type: str) -> str:
     """
-    List open files for OCFS2 device
+    List open files for OCFS2/GFS2 device
     """
     out_string = ""
 
     sh_utils_inst = ShellUtils()
     _, out, _ = sh_utils_inst.get_stdout_stderr("mount")
-    dev_list = re.findall("^(.*) on .* type ocfs2 ", out, re.MULTILINE)
+    dev_list = re.findall(f"^(.*) on .* type {fs_type.lower()} ", out, re.M)
     for dev in dev_list:
         cmd = f"lsof {dev}"
         out_string += "\n\n#=====[ Command ] ==========================#\n"
@@ -138,9 +138,9 @@ def lsof_ocfs2_device() -> str:
     return out_string
 
 
-def ocfs2_commands_output() -> str:
+def cluster_fs_commands_output(fs_type: str) -> str:
     """
-    Run ocfs2 related commands, return outputs
+    Run OCFS2/GFS2 related commands, return outputs
     """
     out_string = ""
 
@@ -148,11 +148,16 @@ def ocfs2_commands_output() -> str:
         "dmesg",
         "ps -efL",
         "lsblk -o 'NAME,KNAME,MAJ:MIN,FSTYPE,LABEL,RO,RM,MODEL,SIZE,OWNER,GROUP,MODE,ALIGNMENT,MIN-IO,OPT-IO,PHY-SEC,LOG-SEC,ROTA,SCHED,MOUNTPOINT'",
-        "mounted.ocfs2 -f",
         "findmnt",
-        "mount",
-        "cat /sys/fs/ocfs2/cluster_stack"
+        "mount"
     ]
+
+    if fs_type.lower() == "ocfs2":
+        cmds.extend([
+            "mounted.ocfs2 -f",
+            "cat /sys/fs/ocfs2/cluster_stack"
+        ])
+
     for cmd in cmds:
         cmd_name = cmd.split()[0]
         if not shutil.which(cmd_name):
@@ -166,25 +171,38 @@ def ocfs2_commands_output() -> str:
     return out_string
 
 
-def collect_ocfs2_info(context: core.Context) -> None:
+def collect_cluster_fs_info(context: core.Context) -> None:
     """
-    Collects OCFS2 information
+    Collects OCFS2 and GFS2 information
     """
-    out_string = ""
-    rc, out, err = ShellUtils().get_stdout_stderr("mounted.ocfs2 -d")
-    if rc != 0:
-        out_string += f"Failed to run \"mounted.ocfs2 -d\": {err}"
-    # No ocfs2 device, just header line printed
-    elif len(out.split('\n')) == 1:
-        out_string += "No ocfs2 partitions found"
-    else:
-        out_string += dump_D_process()
-        out_string += lsof_ocfs2_device()
-        out_string += ocfs2_commands_output()
+    def collect_info(cmd: str, fs_type: str, output_file: str) -> None:
+        out_string = ""
+        no_partition_msg = f"No {fs_type} partitions found"
 
-    ocfs2_f = os.path.join(context.work_dir, constants.OCFS2_F)
-    logger.debug(f"Dump OCFS2 information into {utils.real_path(ocfs2_f)}")
-    crmutils.str2file(out_string, ocfs2_f)
+        rc, out, err = ShellUtils().get_stdout_stderr(cmd)
+        if rc != 0:
+            if fs_type == "OCFS2":
+                error_msg = f"Failed to run \"{cmd}\": {err}"
+                out_string += error_msg
+                logger.error(error_msg)
+            elif fs_type == "GFS2":
+                out_string += no_partition_msg
+        elif fs_type == "OCFS2" and len(out.split('\n')) == 1:
+            out_string += no_partition_msg
+        else:
+            out_string += dump_D_process()
+            out_string += lsof_cluster_fs_device(fs_type)
+            out_string += cluster_fs_commands_output(fs_type)
+
+        target_f = os.path.join(context.work_dir, output_file)
+        logger.debug("Dump %s information into %s", fs_type, utils.real_path(target_f))
+        crmutils.str2file(out_string, target_f)
+
+    # Collect OCFS2 information
+    collect_info("mounted.ocfs2 -d", "OCFS2", constants.OCFS2_F)
+
+    # Collect GFS2 information
+    collect_info('mount|grep "type gfs2"', "GFS2", constants.GFS2_F)
 
 
 def collect_ratraces(context: core.Context) -> None:

@@ -380,74 +380,6 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
         ])
         mock_logger.debug.assert_called_with(f'Dump RA trace files into {mock_real_path.return_value}')
 
-    @mock.patch('crmsh.report.collect.ShellUtils')
-    def test_lsof_ocfs2_device(self, mock_run):
-        mock_run_inst = mock.Mock()
-        mock_run.return_value = mock_run_inst
-        mount_data = """
-/dev/vda3 on /home type xfs (rw,relatime,attr2,inode64,logbufs=8,logbsize=32k,noquota)
-tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=169544k,nr_inodes=42386,mode=700,inode64)
-/dev/sda7 on /srv/clusterfs type ocfs2 (rw,relatime,heartbeat=non
-        """
-        mock_run_inst.get_stdout_stderr.side_effect = [(0, mount_data, None), (0, "data", None)]
-        res = collect.lsof_ocfs2_device()
-        self.assertEqual(res, "\n\n#=====[ Command ] ==========================#\n# lsof /dev/sda7\ndata")
-        mock_run_inst.get_stdout_stderr.assert_has_calls([
-            mock.call("mount"),
-            mock.call("lsof /dev/sda7")
-        ])
-
-    @mock.patch('crmsh.report.utils.get_cmd_output')
-    @mock.patch('os.path.exists')
-    @mock.patch('shutil.which')
-    def test_ocfs2_commands_output(self, mock_which, mock_exists, mock_run):
-        mock_which.side_effect = [False for i in range(5)] + [True, True]
-        mock_exists.return_value = False
-        mock_run.return_value = "data"
-        res = collect.ocfs2_commands_output()
-        self.assertEqual(res, "\n\n#===== [ Command ] ==========================#\n# mount\ndata")
-
-    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
-    @mock.patch('crmsh.utils.str2file')
-    @mock.patch('crmsh.report.collect.ShellUtils')
-    def test_collect_ocfs2_info_error(self, mock_run, mock_str2file, mock_debug2):
-        mock_run_inst = mock.Mock()
-        mock_run.return_value = mock_run_inst
-        mock_run_inst.get_stdout_stderr.return_value = (1, None, "error")
-        mock_ctx_inst = mock.Mock(work_dir="/opt/workdir")
-        collect.collect_ocfs2_info(mock_ctx_inst)
-        mock_str2file.assert_called_once_with('Failed to run "mounted.ocfs2 -d": error', '/opt/workdir/ocfs2.txt')
-
-    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
-    @mock.patch('crmsh.utils.str2file')
-    @mock.patch('crmsh.report.collect.ShellUtils')
-    def test_collect_ocfs2_info_no_found(self, mock_run, mock_str2file, mock_debug2):
-        mock_run_inst = mock.Mock()
-        mock_run.return_value = mock_run_inst
-        mock_run_inst.get_stdout_stderr.return_value = (0, "data", None)
-        mock_ctx_inst = mock.Mock(work_dir="/opt/workdir")
-        collect.collect_ocfs2_info(mock_ctx_inst)
-        mock_str2file.assert_called_once_with('No ocfs2 partitions found', '/opt/workdir/ocfs2.txt')
-
-    @mock.patch('crmsh.report.utils.real_path')
-    @mock.patch('crmsh.report.collect.ocfs2_commands_output')
-    @mock.patch('crmsh.report.collect.lsof_ocfs2_device')
-    @mock.patch('crmsh.report.collect.dump_D_process')
-    @mock.patch('crmsh.report.collect.logger', spec=crmsh.log.DEBUG2Logger)
-    @mock.patch('crmsh.utils.str2file')
-    @mock.patch('crmsh.report.collect.ShellUtils')
-    def test_collect_ocfs2_info(self, mock_run, mock_str2file, mock_debug2, mock_D, mock_lsof, mock_output, mock_real_path):
-        mock_real_path.return_value = constants.OCFS2_F
-        mock_run_inst = mock.Mock()
-        mock_run.return_value = mock_run_inst
-        mock_run_inst.get_stdout_stderr.return_value = (0, "line1\nline2", None)
-        mock_D.return_value = "data_D\n"
-        mock_lsof.return_value = "data_lsof\n"
-        mock_output.return_value = "data_output\n"
-        mock_ctx_inst = mock.Mock(work_dir="/opt/workdir")
-        collect.collect_ocfs2_info(mock_ctx_inst)
-        mock_str2file.assert_called_once_with('data_D\ndata_lsof\ndata_output\n', '/opt/workdir/ocfs2.txt')
-
     @mock.patch('crmsh.report.utils.real_path')
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.utils.str2file')
@@ -616,3 +548,87 @@ id            0x19041a12
         mock_real_path.return_value = "/opt/workdir/qdevice.txt"
         collect.collect_qdevice_info(mock_ctx_inst)
         mock_debug.assert_called_once_with(f"Dump quorum/qdevice/qnetd information into {mock_real_path.return_value}")
+
+    @mock.patch("logging.Logger.error")
+    @mock.patch('crmsh.utils.str2file')
+    @mock.patch("crmsh.report.utils.real_path")
+    @mock.patch("logging.Logger.debug")
+    @mock.patch("crmsh.report.collect.cluster_fs_commands_output")
+    @mock.patch("crmsh.report.collect.lsof_cluster_fs_device")
+    @mock.patch("crmsh.report.collect.dump_D_process")
+    @mock.patch("crmsh.report.collect.ShellUtils")
+    def test_collect_cluster_fs_info(self, mock_run, mock_dump, mock_lsof, mock_cluster, mock_debug, mock_real_path, mock_str2file, mock_error):
+        mock_run_inst = mock.Mock()
+        mock_run.return_value = mock_run_inst
+        mock_run_inst.get_stdout_stderr.side_effect = [
+            (1, None, "error"),
+            (0, "data", None)
+        ]
+        mock_dump.return_value = "dump_data\n"
+        mock_lsof.return_value = "lsof_data\n"
+        mock_cluster.return_value = "cluster_data"
+        mock_ctx_inst = mock.Mock(work_dir="/opt/work")
+        mock_real_path.side_effect = ["/path/ocfs2.txt", "/path/gfs2.txt"]
+
+        collect.collect_cluster_fs_info(mock_ctx_inst)
+
+        mock_debug.assert_has_calls([
+            mock.call('Dump %s information into %s', 'OCFS2', '/path/ocfs2.txt'),
+            mock.call('Dump %s information into %s', 'GFS2', '/path/gfs2.txt')
+        ])
+        mock_str2file.assert_has_calls([
+            mock.call('Failed to run "mounted.ocfs2 -d": error', '/opt/work/ocfs2.txt'),
+            mock.call('dump_data\nlsof_data\ncluster_data', '/opt/work/gfs2.txt')
+        ])
+
+    @mock.patch('crmsh.report.collect.ShellUtils')
+    def test_dump_D_process_empty(self, mock_run):
+        mock_run_inst = mock.Mock()
+        mock_run.return_value = mock_run_inst
+        mock_run_inst.get_stdout_stderr.return_value = (0, None, None)
+        res = collect.dump_D_process()
+        self.assertEqual(res, "Dump D-state process stack: 0\n")
+
+    @mock.patch('crmsh.report.collect.ShellUtils')
+    def test_dump_D_process(self, mock_run):
+        mock_run_inst = mock.Mock()
+        mock_run.return_value = mock_run_inst
+        mock_run_inst.get_stdout_stderr.side_effect = [
+            (0, "1000", None),
+            (0, "data1", None),
+            (0, "data2", None)
+        ]
+        res = collect.dump_D_process()
+        self.assertEqual(res, "Dump D-state process stack: 1\npid: 1000     comm: data1\ndata2\n\n")
+        mock_run_inst.get_stdout_stderr.assert_has_calls([
+            mock.call("ps aux|awk '$8 ~ /^D/{print $2}'"),
+            mock.call('cat /proc/1000/comm'),
+            mock.call('cat /proc/1000/stack')
+            ])
+
+    @mock.patch('crmsh.report.collect.ShellUtils')
+    def test_lsof_cluster_fs_device(self, mock_run):
+        mock_run_inst = mock.Mock()
+        mock_run.return_value = mock_run_inst
+        mount_data = """
+/dev/vda3 on /home type xfs (rw,relatime,attr2,inode64,logbufs=8,logbsize=32k,noquota)
+tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=169544k,nr_inodes=42386,mode=700,inode64)
+/dev/sda7 on /srv/clusterfs type ocfs2 (rw,relatime,heartbeat=non
+        """
+        mock_run_inst.get_stdout_stderr.side_effect = [(0, mount_data, None), (0, "data", None)]
+        res = collect.lsof_cluster_fs_device("OCFS2")
+        self.assertEqual(res, "\n\n#=====[ Command ] ==========================#\n# lsof /dev/sda7\ndata")
+        mock_run_inst.get_stdout_stderr.assert_has_calls([
+            mock.call("mount"),
+            mock.call("lsof /dev/sda7")
+        ])
+
+    @mock.patch('crmsh.report.utils.get_cmd_output')
+    @mock.patch('os.path.exists')
+    @mock.patch('shutil.which')
+    def test_cluster_fs_commands_output(self, mock_which, mock_exists, mock_run):
+        mock_which.side_effect = [False for i in range(5)] + [True, True]
+        mock_exists.return_value = False
+        mock_run.return_value = "data"
+        res = collect.cluster_fs_commands_output("OCFS2")
+        self.assertEqual(res, "\n\n#===== [ Command ] ==========================#\n# mounted.ocfs2 -f\ndata")

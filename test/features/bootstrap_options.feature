@@ -45,7 +45,7 @@ Feature: crmsh bootstrap process - options
   @clean
   Scenario: Stage validation
     When    Try "crm cluster init fdsf -y" on "hanode1"
-    Then    Expected "Invalid stage: fdsf(available stages: ssh, csync2, corosync, sbd, cluster, ocfs2, admin, qdevice)" in stderr
+    Then    Expected "Invalid stage: fdsf(available stages: ssh, csync2, corosync, sbd, cluster, ocfs2, gfs2, admin, qdevice)" in stderr
     When    Try "crm cluster join fdsf -y" on "hanode1"
     Then    Expected "Invalid stage: fdsf(available stages: ssh, csync2, ssh_merge, cluster)" in stderr
     When    Try "crm cluster join ssh -y" on "hanode1"
