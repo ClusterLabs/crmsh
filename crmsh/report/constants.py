@@ -28,7 +28,7 @@ Detailed description:
 
 """
 
-PACKAGES = "booth cluster-glue cluster-glue-libs corosync corosync-qdevice corosync-qnetd corosync-testagents crmsh crmsh-scripts csync2 doxygen2man drbd-utils gfs2-kmp-default gfs2-utils hawk-apiserver ldirectord libcfg6 libcmap4 libcorosync_common4 libcpg4 libdlm libdlm3 libqb-tools libqb100 libquorum5 libsam4 libtotem_pg5 libvotequorum8 linstor linstor-common linstor-controller linstor-satellite monitoring-plugins-metadata omping pacemaker pacemaker-cli pacemaker-cts pacemaker-libs pacemaker-remote pacemaker-schemas patterns-ha pssh python-pssh python3-linstor python3-linstor-client python3-pacemaker python3-parallax resource-agents resource-agents-zfs ruby2.5-rubygem-sass-listen ruby2.5-rubygem-sass-listen-doc sbd"
+PACKAGES = "booth cluster-glue cluster-glue-libs corosync corosync-qdevice corosync-qnetd corosync-testagents crmsh crmsh-scripts csync2 doxygen2man drbd-utils gfs2-kmp-default gfs2-utils hawk-apiserver ldirectord libcfg6 libcmap4 libcorosync_common4 libcpg4 libdlm libdlm3 libqb-tools libqb100 libquorum5 libsam4 libtotem_pg5 libvotequorum8 linstor linstor-common linstor-controller linstor-satellite monitoring-plugins-metadata o2locktop ocfs2-tools ocfs2-tools-o2cb omping pacemaker pacemaker-cli pacemaker-cts pacemaker-libs pacemaker-remote pacemaker-schemas patterns-ha pssh python-pssh python3-linstor python3-linstor-client python3-pacemaker python3-parallax resource-agents resource-agents-zfs ruby2.5-rubygem-sass-listen ruby2.5-rubygem-sass-listen-doc sbd"
 
 ANALYSIS_F = "analysis.txt"
 COREDUMP_F = "coredump_info.txt"
@@ -55,6 +55,8 @@ SBDCONF = "/etc/sysconfig/sbd"
 PCMKCONF = "/etc/sysconfig/pacemaker"
 SYSINFO_F = "sysinfo.txt"
 SYSSTATS_F = "sysstats.txt"
+OCFS2_F = "ocfs2.txt"
+GFS2_F = "gfs2.txt"
 SBD_F = "sbd.txt"
 QDEVICE_F = "quorum_qdevice_qnetd.txt"
 OSRELEASE = "/etc/os-release"

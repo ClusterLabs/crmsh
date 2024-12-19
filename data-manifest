@@ -81,7 +81,9 @@ test/features/crm_report_bugs.feature
 test/features/crm_report_normal.feature
 test/features/environment.py
 test/features/geo_setup.feature
+test/features/gfs2.feature
 test/features/healthcheck.feature
+test/features/ocfs2.feature
 test/features/qdevice_options.feature
 test/features/qdevice_setup_remove.feature
 test/features/qdevice_usercase.feature
@@ -186,6 +188,7 @@ test/unittests/test_bootstrap.py
 test/unittests/test_bugs.py
 test/unittests/test_cib.py
 test/unittests/test_cliformat.py
+test/unittests/test_cluster_fs.py
 test/unittests/test.conf
 test/unittests/test_corosync_config_format.py
 test/unittests/test_corosync.py
