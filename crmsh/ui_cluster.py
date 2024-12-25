@@ -326,6 +326,8 @@ Stage can be one of:
     corosync    Configure corosync
     sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
+    ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
+    gfs2        Configure GFS2 (requires -g <dev>) NOTE: this is a Technical Preview
     admin       Create administration virtual IP (optional)
     qdevice     Configure qdevice and qnetd
 
@@ -353,6 +355,18 @@ Examples:
   # Setup the cluster on the current node, with QDevice
   crm cluster init --qnetd-hostname <qnetd addr> -y
 
+  # Setup the cluster on the current node, with SBD+OCFS2
+  crm cluster init -s <share disk1> -o <share disk2> -y
+
+  # Setup the cluster on the current node, with SBD+GFS2
+  crm cluster init -s <share disk1> -g <share disk2> -y
+
+  # Setup the cluster on the current node, with SBD+OCFS2+Cluster LVM
+  crm cluster init -s <share disk1> -o <share disk2> -o <share disk3> -C -y
+
+  # Setup the cluster on the current node, with SBD+GFS2+Cluster LVM
+  crm cluster init -s <share disk1> -g <share disk2> -g <share disk3> -C -y
+
   # Add SBD on a running cluster
   crm cluster init sbd -s <share disk> -y
 
@@ -364,6 +378,12 @@ Examples:
 
   # Add QDevice on a running cluster
   crm cluster init qdevice --qnetd-hostname <qnetd addr> -y
+
+  # Add OCFS2+Cluster LVM on a running cluster
+  crm cluster init ocfs2 -o <share disk1> -o <share disk2> -C -y
+
+  # Add GFS2+Cluster LVM on a running cluster
+  crm cluster init gfs2 -g <share disk1> -g <share disk2> -C -y
 """, add_help=False, formatter_class=RawDescriptionHelpFormatter)
 
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
@@ -412,6 +432,14 @@ Examples:
         storage_group = parser.add_argument_group("Storage configuration", "Options for configuring shared storage.")
         storage_group.add_argument("-s", "--sbd-device", dest="sbd_devices", metavar="DEVICE", action=CustomAppendAction, default=[],
                                    help="Block device to use for SBD fencing, use \";\" as separator or -s multiple times for multi path (up to 3 devices)")
+        storage_group.add_argument("-o", "--ocfs2-device", dest="ocfs2_devices", metavar="DEVICE", action=CustomAppendAction, default=[],
+                help="Block device to use for OCFS2; When using Cluster LVM2 to manage the shared storage, user can specify one or multiple raw disks, use \";\" as separator or -o multiple times for multi path (must specify -C option) NOTE: this is a Technical Preview")
+        storage_group.add_argument("-g", "--gfs2-device", dest="gfs2_devices", metavar="DEVICE", action=CustomAppendAction, default=[],
+                help="Block device to use for GFS2; When using Cluster LVM2 to manage the shared storage, user can specify one or multiple raw disks, use \";\" as separator or -g multiple times for multi path (must specify -C option) NOTE: this is a Technical Preview")
+        storage_group.add_argument("-C", "--cluster-lvm2", action="store_true", dest="use_cluster_lvm2",
+                help="Use Cluster LVM2 (only valid together with -o or -g option) NOTE: this is a Technical Preview")
+        storage_group.add_argument("-m", "--mount-point", dest="mount_point", metavar="MOUNT", default="/srv/clusterfs",
+                help="Mount point for OCFS2 or GFS2 device (default is /srv/clusterfs, only valid together with -o or -g option) NOTE: this is a Technical Preview")
 
         options, args = parse_options(parser, args)
         if options is None or args is None:
