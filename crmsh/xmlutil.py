@@ -4,6 +4,8 @@
 
 import os
 import subprocess
+import typing
+
 from lxml import etree, doctestcompare
 import copy
 import bz2
@@ -1576,4 +1578,8 @@ class CrmMonXmlParser(object):
         """
         xpath = f'//resource[@resource_agent="{ra_type}"]'
         return [elem.get('id') for elem in self.xml_elem.xpath(xpath)]
+
+    def get_configured_resource_agents(self) -> typing.Set[str]:
+        xpath = '/*/resources/resource/@resource_agent'
+        return set(self.xml_elem.xpath(xpath))
 # vim:ts=4:sw=4:et:
