@@ -386,7 +386,8 @@ Examples:
         levels = levels[1:]     # drop the 1st element "root"
         levels.extend(args)
         h = help_module.help_contextual(levels)
-        h.paginate()
+        if h:
+            h.paginate()
         context.command_name = ""
 
     def get_completions(self):

@@ -37,6 +37,7 @@ from .utils import page_string
 from . import config
 from . import clidisplay
 from . import log
+from . import ra
 
 
 logger = log.setup_logger(__name__)
@@ -313,6 +314,10 @@ def _is_level(levels: typing.Sequence[str]):
     return node is not None and node.children
 
 
+def _is_property(levels: typing.Sequence[str]):
+    return len(levels) == 3 and levels[0] == 'configure' and levels[1] == 'property'
+
+
 def help_contextual(levels: typing.Sequence[str]):
     """
     Returns contextual help
@@ -324,6 +329,16 @@ def help_contextual(levels: typing.Sequence[str]):
         return help_topic(levels[0])
     elif _is_command(levels) or _is_level(levels):
         return help_command(levels[0:])
+    elif _is_property(levels):
+        agent = ra.get_properties_meta()
+        if agent:
+            all_properties = agent.params()
+            property_name = levels[-1]
+            if property_name in all_properties:
+                print(agent.meta_parameter(property_name))
+            else:
+                raise ValueError(f"Unknown property '{property_name}'")
+        return None
     else:
         topic = levels[0].lower()
         t = fuzzy_get(_TOPICS, topic)
