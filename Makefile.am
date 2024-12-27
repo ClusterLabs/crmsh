@@ -77,5 +77,10 @@ uninstall-local:
 	cat $(DESTDIR)$(pkgpythondir)/install_files.txt | xargs rm -rf
 	rm -rf $(DESTDIR)$(pkgpythondir)
 
+uninstall-hook:
+	@echo "Removing installed data files..."
+	rm -rf $(DESTDIR)$(datadir)/@PACKAGE@
+	@echo "Uninstallation complete."
+
 dist-clean-local:
 	rm -f autoconf automake autoheader
