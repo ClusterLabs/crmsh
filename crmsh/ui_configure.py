@@ -1131,6 +1131,9 @@ class CibConfig(command.UI):
     def do_property(self, context, *args):
         "usage: property [$id=<set_id>] <option>=<value>"
         self.__override_lower_level_attrs(*args)
+        if not args:
+            utils.multicolumn(ra.get_properties_list())
+            return
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('administrator')
