@@ -69,6 +69,7 @@ INFO: 37: "collocation" is accepted as "colocation"
 .INP: _test
 .INP: verify
 WARNING: 53: c2: resource d1 is grouped, constraints should apply to the group
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
@@ -194,6 +195,7 @@ WARNING: 55: c2: resource d1 is grouped, constraints should apply to the group
 INFO: 'maintenance' attribute already exists in d1. Remove it? [YES]
 INFO: 'maintenance' attribute already exists in g1. Remove it? [YES]
 INFO: 'maintenance' attribute already exists in node1. Remove it? [YES]
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata
