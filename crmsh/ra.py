@@ -186,24 +186,8 @@ def ra_meta(ra_class, ra_type, ra_provider):
 
 
 @utils.memoize
-def get_pe_meta():
-    return RAInfo(utils.pacemaker_schedulerd(), "metadata")
-
-
-@utils.memoize
-def get_crmd_meta():
-    return RAInfo(utils.pacemaker_controld(), "metadata",
-                  exclude_from_completion=constants.controld_metadata_do_not_complete)
-
-
-@utils.memoize
 def get_stonithd_meta():
     return RAInfo(utils.pacemaker_fenced(), "metadata")
-
-
-@utils.memoize
-def get_cib_meta():
-    return RAInfo(utils.pacemaker_based(), "metadata")
 
 
 @utils.memoize
@@ -213,12 +197,8 @@ def get_properties_meta():
         return RAInfo("cluster_option", None,
                       exclude_from_completion=constants.controld_metadata_do_not_complete,
                       meta_string=cluster_option_meta)
-    # get_xxx_meta() is a legacy code to get the metadata of the pacemaker daemons, 
-    # which will be dropped when we fully adopt to crmsh-5.x with pacemaker 3.x.
-    meta = copy.deepcopy(get_crmd_meta())
-    meta.add_ra_params(get_pe_meta())
-    meta.add_ra_params(get_cib_meta())
-    return meta
+    else:
+        raise ValueError("No cluster option metadata found")
 
 
 @utils.memoize

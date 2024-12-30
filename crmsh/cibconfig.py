@@ -24,7 +24,7 @@ from . import cibstatus
 from . import crm_gv
 from . import ui_utils
 from . import userdir
-from .ra import get_ra, get_properties_list, get_pe_meta, get_properties_meta, RAInfo, get_resource_meta_list
+from .ra import get_ra, get_properties_list, get_properties_meta, RAInfo, get_resource_meta_list
 from .utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from .utils import ask, lines2cli, olist
 from .utils import page_string, str2tmp, ensure_sudo_readable
