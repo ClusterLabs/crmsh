@@ -486,10 +486,15 @@ class Cib:
 def check_unsupported_resource_agents(handler: CheckResultHandler):
     handler.log_info("Checking used resource agents...")
     ocf_resource_agents = list()
+    stonith_resource_agents = list()
     cib = xmlutil.text2elem(sh.LocalShell().get_stdout_or_raise_error(None, 'crm configure show xml'))
     for resource_agent in cibquery.get_configured_resource_agents(cib):
         if resource_agent.m_class == 'ocf':
             ocf_resource_agents.append(resource_agent)
+        elif resource_agent.m_class == 'stonith':
+            stonith_resource_agents.append(resource_agent)
+        else:
+            raise ValueError(f'Unrecognized resource agent {resource_agent}')
     _check_saphana_resource_agent(handler, ocf_resource_agents)
     class TitledCheckResourceHandler(CheckResultHandler):
         def __init__(self, parent: CheckResultHandler, title: str):
@@ -506,6 +511,11 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
         TitledCheckResourceHandler(handler, "The following resource agents will be removed in SLES 16."),
         supported_resource_agents,
         (agent for agent in ocf_resource_agents if agent not in SAP_HANA_RESOURCE_AGENTS),
+    )
+    _check_removed_resource_agents(
+        TitledCheckResourceHandler(handler, "The following fence agents will be removed in SLES 16."),
+        supported_resource_agents,
+        stonith_resource_agents,
     )
 
 
