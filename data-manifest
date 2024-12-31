@@ -188,6 +188,7 @@ test/unittests/scripts/workflows/10-webserver.xml
 test/unittests/test_bootstrap.py
 test/unittests/test_bugs.py
 test/unittests/test_cib.py
+test/unittests/test_cibquery.py
 test/unittests/test_cliformat.py
 test/unittests/test_cluster_fs.py
 test/unittests/test.conf

@@ -206,7 +206,7 @@ class LocalShell:
             user: typing.Optional[str],
             cmd: str,
             success_exit_status: typing.Optional[typing.Set[int]] = None,
-    ):
+    ) -> str:
         result = self.su_subprocess_run(
             user, cmd,
             stdout=subprocess.PIPE,
