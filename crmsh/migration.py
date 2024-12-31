@@ -19,6 +19,13 @@ from crmsh.prun import prun
 logger = logging.getLogger(__name__)
 
 
+SAP_HANA_RESOURCE_AGENTS = {
+    cibquery.ResourceAgent('ocf', 'suse', 'SAPHana'),
+    cibquery.ResourceAgent('ocf', 'suse', 'SAPHanaController'),
+    cibquery.ResourceAgent('ocf', 'suse', 'SAPHanaTopology'),
+}
+
+
 class MigrationFailure(Exception):
     pass
 
@@ -264,11 +271,15 @@ def check_unsupported_corosync_features(handler: CheckResultHandler):
 def check_unsupported_resource_agents(handler: CheckResultHandler):
     handler.log_info("Checking used resource agents...")
     ocf_resource_agents = list()
+    stonith_resource_agents = list()
     cib = xmlutil.text2elem(sh.LocalShell().get_stdout_or_raise_error(None, 'crm configure show xml'))
     for resource_agent in cibquery.get_configured_resource_agents(cib):
         if resource_agent.m_class == 'ocf':
             ocf_resource_agents.append(resource_agent)
-    _check_saphana_resource_agent(handler, ocf_resource_agents)
+        elif resource_agent.m_class == 'stonith':
+            stonith_resource_agents.append(resource_agent)
+        else:
+            raise ValueError(f'Unrecognized resource agent {resource_agent}')
     class TitledCheckResourceHandler(CheckResultHandler):
         def __init__(self, parent: CheckResultHandler, title: str):
             self._parent = parent
@@ -280,20 +291,22 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
         def handle_tip(self, title: str, details: typing.Iterable[str]):
             return self._parent.handle_tip(self._title, details)
     supported_resource_agents = _load_supported_resource_agents()
+    _check_saphana_resource_agent(handler, ocf_resource_agents)
     _check_removed_resource_agents(
         TitledCheckResourceHandler(handler, "The following resource agents will be removed in SLES 16."),
         supported_resource_agents,
-        ocf_resource_agents,
+        (agent for agent in ocf_resource_agents if agent not in SAP_HANA_RESOURCE_AGENTS),
+    )
+    _check_removed_resource_agents(
+        TitledCheckResourceHandler(handler, "The following fence agents will be removed in SLES 16."),
+        supported_resource_agents,
+        stonith_resource_agents,
     )
 
 
 def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: typing.Iterable[cibquery.ResourceAgent]):
     # "SAPHana" appears only in SAPHanaSR Classic
-    has_sap_hana_sr_resources = any(agent in resource_agents for agent in [
-        cibquery.ResourceAgent('ocf', 'suse', 'SAPHana'),
-        cibquery.ResourceAgent('ocf', 'suse', 'SAPHanaController'),
-        cibquery.ResourceAgent('ocf', 'suse', 'SAPHanaTopology'),
-    ])
+    has_sap_hana_sr_resources = any(agent in SAP_HANA_RESOURCE_AGENTS for agent in resource_agents)
     if has_sap_hana_sr_resources:
         if 0 != subprocess.run(
             ['rpm', '-q', 'SAPHanaSR-angi'],
