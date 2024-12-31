@@ -32,6 +32,7 @@ from .utils import page_string
 from . import config
 from . import clidisplay
 from .ordereddict import odict
+from . import ra
 from . import log
 
 
@@ -261,11 +262,25 @@ def _is_level(level):
     return fuzzy_get(_LEVELS, level)
 
 
-def help_contextual(context, subject, subtopic):
+def _is_property(level, command, args):
+    return level == 'configure' and command == 'property' and len(args) == 1
+
+
+def help_contextual(context, subject, subtopic, args):
     """
     Returns contextual help
     """
     _load_help()
+    if _is_property(subject, subtopic, args):
+        property_name = args[0]
+        agent = ra.get_properties_meta()
+        if agent:
+            all_properties = agent.params()
+            if property_name in all_properties:
+                print(agent.meta_parameter(property_name))
+            else:
+                raise ValueError(f"Unknown property '{property_name}'")
+        return None
     if subject is None:
         if context == 'root':
             return help_overview()
