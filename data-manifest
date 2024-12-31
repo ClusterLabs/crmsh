@@ -200,6 +200,7 @@ test/unittests/test_crashtest_utils.py
 test/unittests/test_gv.py
 test/unittests/test_handles.py
 test/unittests/test_lock.py
+test/unittests/test_migration.py
 test/unittests/test_objset.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
