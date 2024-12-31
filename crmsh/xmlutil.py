@@ -4,6 +4,8 @@
 
 import os
 import subprocess
+import typing
+
 from lxml import etree, doctestcompare
 import copy
 import bz2
@@ -26,7 +28,7 @@ logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 
-def xmlparse(f):
+def xmlparse(f: typing.IO[typing.AnyStr]) -> etree.Element:
     try:
         cib_elem = etree.parse(f).getroot()
     except Exception as msg:
@@ -122,7 +124,7 @@ def cibdump2tmp():
     return None
 
 
-def text2elem(text):
+def text2elem(text: str) -> etree.Element:
     """
     Convert a text format CIB to
     an XML tree.
