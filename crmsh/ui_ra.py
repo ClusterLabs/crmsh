@@ -9,6 +9,10 @@ from . import utils
 from . import ra
 from . import constants
 from . import options
+from . import log
+
+
+logger = log.setup_logger(__name__)
 
 
 def complete_class_provider_type(args):
@@ -120,6 +124,13 @@ class RA(command.UI):
             else:
                 ra_type, ra_class, ra_provider = args[0], args[1], args[2]
         elif args[0] in constants.meta_progs:
+            if utils.is_min_pcmk_ver(constants.PCMK_MIN_VERSION_SUPPORT_LIST_OPTIONS):
+                if args[0] == "stonithd":
+                    alternative = r"`crm ra info pacemaker-fenced`"
+                else:
+                    alternative = r"`crm configure property <property_name> --help`"
+                warning_msg = f"`crm ra info {args[0]}` is deprecated and is replaced by {alternative} going forward."
+                logger.warning(warning_msg)
             ra_class, ra_provider, ra_type = args[0], None, None
         elif args[0] in constants.meta_progs_20:
             ra_class, ra_provider, ra_type = args[0], None, None

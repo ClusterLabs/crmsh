@@ -511,6 +511,8 @@ RSC_ROLE_UNPROMOTED = "Unpromoted"
 RSC_ROLE_PROMOTED_LEGACY = "Master"
 RSC_ROLE_UNPROMOTED_LEGACY = "Slave"
 PCMK_VERSION_DEFAULT = "2.0.0"
+# pacemaker 2.1.8 introduced `crm_attribute --list-options`
+PCMK_MIN_VERSION_SUPPORT_LIST_OPTIONS = "2.1.8"
 
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
 
