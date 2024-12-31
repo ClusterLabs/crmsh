@@ -269,6 +269,22 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
         if resource_agent.m_class == 'ocf':
             ocf_resource_agents.append(resource_agent)
     _check_saphana_resource_agent(handler, ocf_resource_agents)
+    class TitledCheckResourceHandler(CheckResultHandler):
+        def __init__(self, parent: CheckResultHandler, title: str):
+            self._parent = parent
+            self._title= title
+        def log_info(self, fmt: str, *args):
+            return self._parent.log_info(fmt, *args)
+        def handle_problem(self, is_fatal: bool, title: str, detail: typing.Iterable[str]):
+            return self._parent.handle_problem(is_fatal, self._title, detail)
+        def handle_tip(self, title: str, details: typing.Iterable[str]):
+            return self._parent.handle_tip(self._title, details)
+    supported_resource_agents = _load_supported_resource_agents()
+    _check_removed_resource_agents(
+        TitledCheckResourceHandler(handler, "The following resource agents will be removed in SLES 16."),
+        supported_resource_agents,
+        ocf_resource_agents,
+    )
 
 
 def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: typing.Iterable[cibquery.ResourceAgent]):
@@ -288,3 +304,29 @@ def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: 
             handler.handle_problem(False, 'SAPHanaSR Classic will be removed in SLES 16.', [
                 'Before migrating to SLES 16, replace it with SAPHanaSR-angi.',
             ])
+
+
+def _load_supported_resource_agents() -> typing.Set[cibparser.ResourceAgent]:
+    ret = set()
+    for line in pkgutil.get_data(
+        'crmsh', 'migration-supported-resource-agents.txt'
+    ).decode('ascii').splitlines():
+        parts = line.split(':', 3)
+        m_class = parts[0]
+        m_provider = parts[1] if len(parts) == 3 else None
+        m_type = parts[-1]
+        ret.add(cibparser.ResourceAgent(m_class, m_provider, m_type))
+    return ret
+
+
+
+def _check_removed_resource_agents(
+        handler: CheckResultHandler,
+        supported_resource_agents: typing.Set[cibparser.ResourceAgent],
+        resource_agents: typing.Iterable[cibparser.ResourceAgent],
+):
+    unsupported_resource_agents = [x for x in resource_agents if x not in supported_resource_agents]
+    if unsupported_resource_agents:
+        handler.handle_problem(False, '', [
+            '* ' + ':'.join(x for x in resource_agent if x is not None) for resource_agent in unsupported_resource_agents
+        ])
