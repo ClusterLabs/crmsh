@@ -7,6 +7,8 @@ import subprocess
 import sys
 import typing
 
+import lxml.etree
+
 from crmsh import cibquery
 from crmsh import constants
 from crmsh import corosync
@@ -302,6 +304,7 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
         supported_resource_agents,
         stonith_resource_agents,
     )
+    _check_ocfs2(handler, cib)
 
 
 def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: typing.Iterable[cibquery.ResourceAgent]):
@@ -319,7 +322,7 @@ def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: 
             ])
 
 
-def _load_supported_resource_agents() -> typing.Set[cibparser.ResourceAgent]:
+def _load_supported_resource_agents() -> typing.Set[cibquery.ResourceAgent]:
     ret = set()
     for line in pkgutil.get_data(
         'crmsh', 'migration-supported-resource-agents.txt'
@@ -328,18 +331,25 @@ def _load_supported_resource_agents() -> typing.Set[cibparser.ResourceAgent]:
         m_class = parts[0]
         m_provider = parts[1] if len(parts) == 3 else None
         m_type = parts[-1]
-        ret.add(cibparser.ResourceAgent(m_class, m_provider, m_type))
+        ret.add(cibquery.ResourceAgent(m_class, m_provider, m_type))
     return ret
 
 
 
 def _check_removed_resource_agents(
         handler: CheckResultHandler,
-        supported_resource_agents: typing.Set[cibparser.ResourceAgent],
-        resource_agents: typing.Iterable[cibparser.ResourceAgent],
+        supported_resource_agents: typing.Set[cibquery.ResourceAgent],
+        resource_agents: typing.Iterable[cibquery.ResourceAgent],
 ):
     unsupported_resource_agents = [x for x in resource_agents if x not in supported_resource_agents]
     if unsupported_resource_agents:
         handler.handle_problem(False, '', [
             '* ' + ':'.join(x for x in resource_agent if x is not None) for resource_agent in unsupported_resource_agents
         ])
+
+
+def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
+    if cibquery.has_primitive_filesystem_ocfs2(cib):
+       handler.handle_problem(False, 'OCFS2 is not supported in SLES 16.', [
+           '* Before migrating to SLES 16, replace it with GFS2.',
+       ])
