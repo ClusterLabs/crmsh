@@ -517,6 +517,7 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
         supported_resource_agents,
         stonith_resource_agents,
     )
+    _check_ocfs2(handler, cib)
 
 
 def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: typing.Iterable[cibquery.ResourceAgent]):
@@ -534,7 +535,7 @@ def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: 
             ])
 
 
-def _load_supported_resource_agents() -> typing.Set[cibparser.ResourceAgent]:
+def _load_supported_resource_agents() -> typing.Set[cibquery.ResourceAgent]:
     ret = set()
     with importlib.resources.files('crmsh').joinpath('migration-supported-resource-agents.txt').open(
             'r', encoding='ascii',
@@ -560,3 +561,10 @@ def _check_removed_resource_agents(
             '* ' + ':'.join(x for x in dataclasses.astuple(resource_agent) if x is not None)
             for resource_agent in unsupported_resource_agents
         ])
+
+
+def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
+    if cibquery.has_primitive_filesystem_ocfs2(cib):
+       handler.handle_problem(False, 'OCFS2 is not supported in SLES 16.', [
+           '* Before migrating to SLES 16, replace it with GFS2.',
+       ])
