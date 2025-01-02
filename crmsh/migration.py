@@ -266,14 +266,46 @@ def check_dependency_version(handler: CheckResultHandler):
     handler.log_info('Checking dependency version...')
     shell = sh.LocalShell()
     out = shell.get_stdout_or_raise_error(None, 'corosync -v')
-    match = re.search(r"version\s+'((\d+)(?:\.\d+)*)'", out)
-    if not match or match.group(2) != '3':
+    _check_version_range(
+        handler,
+        'Corosync', (3,),
+        re.compile(r"version\s+'(\d+(?:\.\d+)*)'"),
+        shell.get_stdout_or_raise_error(None, 'corosync -v'),
+    )
+    _check_version_range(
+        handler,
+        'Pacemaker', (3,),
+        re.compile(r"^Pacemaker\s+(\d+(?:\.\d+)*)"),
+        shell.get_stdout_or_raise_error(None, 'pacemakerd --version'),
+    )
+
+
+def _check_version_range(
+        handler: CheckResultHandler, component_name: str,
+        minimum: tuple,
+        pattern,
+        text: str,
+):
+    match = pattern.search(text)
+    if not match:
         handler.handle_problem(
-            False, 'Corosync version not supported', [
-                'Supported version: corosync >= 3',
-                f'Actual version:    corosync == {match.group(1)}',
+            False, f'{component_name} version not supported', [
+                'Unknown version:',
+                text,
             ],
         )
+    else:
+        version = tuple(int(x) for x in match.group(1).split('.'))
+        if not minimum <= version:
+            handler.handle_problem(
+                False, f'{component_name} version not supported', [
+                    'Supported version: {} <= {}'.format(
+                        '.'.join(str(x) for x in minimum),
+                        component_name,
+                    ),
+                    f'Actual version:    {component_name} == {match.group(1)}',
+                ],
+            )
 
 
 def check_service_status(handler: CheckResultHandler):

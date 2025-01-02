@@ -1,3 +1,4 @@
+import re
 import unittest
 from unittest import mock
 
@@ -21,3 +22,37 @@ class TestCheckRemovedResourceAgents(unittest.TestCase):
             [cibquery.ResourceAgent('foo', 'bar', 'qux')]
         )
         self._handler.handle_problem.assert_called()
+
+    def test_check_version_range(self):
+        def check_fn(x):
+            migration._check_version_range(
+                self._handler,
+                'foo',
+                (1, 1,),
+                re.compile(r'^foo\s+(\d+(?:.\d+)*)'),
+                x,
+            )
+        check_fn('foo 0')
+        self._handler.handle_problem.assert_called()
+        self._handler.handle_problem.reset_mock()
+        check_fn('foo 0.9')
+        self._handler.handle_problem.assert_called()
+        self._handler.handle_problem.reset_mock()
+        check_fn('foo 0.9.99')
+        self._handler.handle_problem.assert_called()
+        self._handler.handle_problem.reset_mock()
+        check_fn('foo 1')
+        self._handler.handle_problem.assert_called()
+        self._handler.handle_problem.reset_mock()
+        check_fn('foo 1.1')
+        self._handler.handle_problem.assert_not_called()
+        check_fn('foo 1.1.0')
+        self._handler.handle_problem.assert_not_called()
+        check_fn('foo 1.1.1')
+        self._handler.handle_problem.assert_not_called()
+        check_fn('foo 1.2')
+        self._handler.handle_problem.assert_not_called()
+        check_fn('foo 2')
+        self._handler.handle_problem.assert_not_called()
+        check_fn('foo 2.0')
+        self._handler.handle_problem.assert_not_called()
