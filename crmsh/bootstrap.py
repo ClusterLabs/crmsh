@@ -1882,9 +1882,22 @@ def sync_files_to_disk():
     """
     Sync file content to disk between cluster nodes
     """
-    files_string = ' '.join(filter(lambda f: os.path.isfile(f), FILES_TO_SYNC))
-    if files_string:
-        utils.cluster_run_cmd("sync {}".format(files_string.strip()))
+    target_files_str = ""
+
+    for f in FILES_TO_SYNC:
+        # check if the file exists on the local node
+        if not os.path.isfile(f):
+            continue
+        try:
+            # check if the file exists on the remote node
+            utils.cluster_run_cmd(f"test -f {f}")
+        except ValueError:
+            continue
+        else:
+            target_files_str += f + " "
+
+    if target_files_str:
+        utils.cluster_run_cmd(f"sync {target_files_str.strip()}")
 
 
 def detect_mountpoint(seed_host: str) -> None:
