@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 import sys
 import threading
 import tempfile
@@ -12,6 +13,7 @@ import typing
 
 import lxml.etree
 
+from crmsh import cibquery
 from crmsh import constants
 from crmsh import corosync
 from crmsh import corosync_config_format
@@ -19,6 +21,7 @@ from crmsh import parallax
 from crmsh import service_manager
 from crmsh import sh
 from crmsh import utils
+from crmsh import xmlutil
 from crmsh.prun import prun
 
 logger = logging.getLogger(__name__)
@@ -112,6 +115,10 @@ class CheckResultInteractiveHandler(CheckResultHandler):
             f.write(text)
 
     def end(self):
+        if self.has_problems:
+            self.write_in_color(sys.stdout, constants.RED, '[FAIL]\n\n')
+        else:
+            self.write_in_color(sys.stdout, constants.GREEN, '[PASS]\n\n')
         if not self.has_problems:
             self.write_in_color(sys.stdout, constants.GREEN, '[PASS]\n')
 
@@ -166,7 +173,6 @@ def check_local(handler: CheckResultHandler):
     check_dependency_version(handler)
     check_service_status(handler)
     check_unsupported_corosync_features(handler)
-    handler.end()
 
 
 def check_remote():
@@ -238,6 +244,10 @@ def check_remote():
                         if not passed:
                             ret = 1
     yield ret
+
+
+def check_global(handler: CheckResultHandler):
+    check_unsupported_resource_agents(handler)
 
 
 def check_dependency_version(handler: CheckResultHandler):
@@ -460,3 +470,33 @@ class Cib:
             assert uname
             result.append(Cib.Node(int(node_id), uname))
         return result
+
+
+def check_unsupported_resource_agents(handler: CheckResultHandler):
+    handler.log_info("Checking used resource agents...")
+    crm_mon = xmlutil.CrmMonXmlParser()
+    ocf_resource_agents = list()
+    cib = xmlutil.text2elem(sh.LocalShell().get_stdout_or_raise_error(None, 'crm configure show xml'))
+    for resource_agent in cibquery.get_configured_resource_agents(cib):
+        if resource_agent.m_class == 'ocf':
+            ocf_resource_agents.append(resource_agent)
+    _check_saphana_resource_agent(handler, ocf_resource_agents)
+
+
+def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: typing.Iterable[cibquery.ResourceAgent]):
+    # "SAPHana" appears only in SAPHanaSR Classic
+    has_sap_hana_sr_resources = any(agent in resource_agents for agent in [
+        cibquery.ResourceAgent('ocf', 'suse', 'SAPHana'),
+        cibquery.ResourceAgent('ocf', 'suse', 'SAPHanaController'),
+        cibquery.ResourceAgent('ocf', 'suse', 'SAPHanaTopology'),
+    ])
+    if has_sap_hana_sr_resources:
+        if 0 != subprocess.run(
+            ['rpm', '-q', 'SAPHanaSR-angi'],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode:
+            handler.handle_problem(False, 'SAPHanaSR Classic will be removed in SLES 16.', [
+                'Before migrating to SLES 16, replace it with SAPHanaSR-angi.',
+            ])
