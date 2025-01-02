@@ -3515,6 +3515,12 @@ When setting the +maintenance-mode+ property, it will
 inform the user if there are nodes or resources that
 have the +maintenance+ property.
 
+If no property name is passed to the command, the list of known
+cluster properties is printed.
+
+To print one property's help, use the +--help+ option; Or use <Tab>
+to complete the help text for the property on interactive mode.
+
 For more information on rule expressions, see
 <<topics_Syntax_RuleExpressions,Syntax: Rule expressions>>.
 
@@ -3524,6 +3530,7 @@ property [<set_id>:] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
+property stonith-enabled --help
 property stonith-enabled=true
 property rule date spec years=2014 stonith-enabled=false
 ...............
