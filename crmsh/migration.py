@@ -233,21 +233,47 @@ def check_dependency_version(handler: CheckResultHandler):
     handler.log_info('Checking dependency version...')
     shell = sh.LocalShell()
     out = shell.get_stdout_or_raise_error(None, 'corosync -v')
-    match = re.search(r"version\s+'(\d+(?:\.\d+)*)'", out)
-    corosync_supported = True
+    _check_version_range(
+        handler,
+        'Corosync', (2, 4, 6), (3,),
+        re.compile(r"version\s+'(\d+(?:\.\d+)*)'"),
+        shell.get_stdout_or_raise_error(None, 'corosync -v'),
+    )
+    _check_version_range(
+        handler,
+        'Pacemaker', (2, 1, 7), (3,),
+        re.compile(r"^Pacemaker\s+(\d+(?:\.\d+)*)"),
+        shell.get_stdout_or_raise_error(None, 'pacemakerd --version'),
+    )
+
+
+def _check_version_range(
+        handler: CheckResultHandler, component_name: str,
+        minimum: tuple, maximum: tuple,
+        pattern,
+        text: str,
+):
+    match = pattern.search(text)
     if not match:
-        corosync_supported = False
-    else:
-        version = tuple(int(x) for x in match.group(1).split('.'))
-        if not (2, 4, 6) <= version < (3,):
-            corosync_supported = False
-    if not corosync_supported:
         handler.handle_problem(
-            False, 'Corosync version not supported', [
-                'Supported version: 2.4.6 <= corosync < 3',
-                f'Actual version:    corosync == {match.group(1)}',
+            False, f'{component_name} version not supported', [
+                'Unknown version:',
+                text,
             ],
         )
+    else:
+        version = tuple(int(x) for x in match.group(1).split('.'))
+        if not minimum <= version < maximum:
+            handler.handle_problem(
+                False, f'{component_name} version not supported', [
+                    'Supported version: {} <= {} < {}'.format(
+                        '.'.join(str(x) for x in minimum),
+                        component_name,
+                        '.'.join(str(x) for x in maximum)
+                    ),
+                    f'Actual version:    {component_name} == {match.group(1)}',
+                ],
+            )
 
 
 def check_service_status(handler: CheckResultHandler):
