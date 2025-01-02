@@ -1,5 +1,7 @@
+import os
 import sys
 import datetime
+import tempfile
 from crmsh import config
 from crmsh import utils as crmutils
 from crmsh.report import utils, constants
@@ -807,24 +809,37 @@ pacemaker-schedulerd[5677]:  error: Resource"""
         self.assertIsNone(result_line)
 
     def test_findln_by_timestamp(self):
-        target_time = "Apr 03 13:10"
-        this_year = datetime.datetime.now().year
-        target_time_stamp = crmutils.parse_to_timestamp(target_time+' '+str(this_year))
-        with open('pacemaker.log') as f:
-            data = f.read()
-        constants.STAMP_TYPE = utils.determin_log_format(data)
-        pacemaker_file_path = "pacemaker.log"
-        result_line = utils.findln_by_timestamp(data, target_time_stamp, pacemaker_file_path)
-        result_line_stamp = utils.get_timestamp(data.split('\n')[result_line-1], pacemaker_file_path)
-        assert result_line_stamp > target_time_stamp
-        result_pre_line_stamp = utils.get_timestamp(data.split('\n')[result_line-2], pacemaker_file_path)
-        assert result_pre_line_stamp < target_time_stamp
+        data = """2024-04-03T11:01:00Z example-host app-name 1234 ID123 - - This is a log message before the target timestamp (11:01:19).
+2024-04-03T11:01:19Z example-host app-name 1234 ID123 - - This is the log message exactly at the target timestamp (11:01:19).
+2024-04-03T11:01:40Z example-host app-name 1234 ID123 - - This is a log message after the target timestamp (11:01:19).
+2024-04-03T13:09:50Z example-host app-name 1234 ID123 - - This is a log message before the target timestamp (13:10).
+2024-04-03T13:10:00Z example-host app-name 1234 ID123 - - This is the log message exactly at the target timestamp (13:10).
+2024-04-03T13:10:30Z example-host app-name 1234 ID123 - - This is a log message after the target timestamp (13:10)."""
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            temp_file_path = f.name
+            f.write(data.encode())
+        try:
+            target_time = "2024-04-03T13:00:20Z"
+            target_time_stamp = crmutils.parse_to_timestamp(target_time)
+            constants.STAMP_TYPE = utils.determin_log_format(data)
+            result_line = utils.findln_by_timestamp(data, target_time_stamp, temp_file_path)
+            assert result_line == 4
 
-        target_time = "Apr 03 11:01:19"
-        target_time_stamp = crmutils.parse_to_timestamp(target_time+' '+str(this_year))
-        result_line = utils.findln_by_timestamp(data, target_time_stamp, pacemaker_file_path)
-        result_time = ' '.join(data.split('\n')[result_line-1].split()[:3])
-        self.assertEqual(result_time, target_time)
+            line_data = data.split('\n')[result_line-1].split()[0]
+            result_line_stamp = crmutils.parse_to_timestamp(line_data)
+            assert result_line_stamp > target_time_stamp
+
+            pre_line_data = data.split('\n')[result_line-2].split()[0]
+            result_pre_line_stamp = crmutils.parse_to_timestamp(pre_line_data)
+            assert result_pre_line_stamp < target_time_stamp
+
+            target_time = "2024-04-03T11:01:19Z"
+            target_time_stamp = crmutils.parse_to_timestamp(target_time)
+            result_line = utils.findln_by_timestamp(data, target_time_stamp, temp_file_path)
+            line_data = data.split('\n')[result_line-1].split()[0]
+            self.assertEqual(line_data, target_time)
+        finally:
+            os.remove(temp_file_path)
 
     @mock.patch('crmsh.utils.parse_to_timestamp')
     def test_get_timestamp_from_time_line_not_syslog(self, mock_parse):
