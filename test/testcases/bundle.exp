@@ -18,6 +18,7 @@
 .INP: property stonith-enabled=true
 .INP: _test
 .INP: verify
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crmd metadata
 .EXT pengine metadata
 .EXT cib metadata

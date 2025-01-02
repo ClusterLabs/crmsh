@@ -337,7 +337,7 @@ meta_progs = ("crmd", "pengine", "stonithd", "cib")
 meta_progs_20 = ("pacemaker-controld", "pacemaker-schedulerd", "pacemaker-fenced", "pacemaker-based")
 
 # elide these properties from tab completion
-crmd_metadata_do_not_complete = ("dc-version",
+controld_metadata_do_not_complete = ("dc-version",
                                  "cluster-infrastructure",
                                  "crmd-integration-timeout",
                                  "crmd-finalization-timeout",
@@ -511,6 +511,8 @@ RSC_ROLE_UNPROMOTED = "Unpromoted"
 RSC_ROLE_PROMOTED_LEGACY = "Master"
 RSC_ROLE_UNPROMOTED_LEGACY = "Slave"
 PCMK_VERSION_DEFAULT = "2.0.0"
+# pacemaker 2.1.8 introduced `crm_attribute --list-options`
+PCMK_MIN_VERSION_SUPPORT_LIST_OPTIONS = "2.1.8"
 
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
 

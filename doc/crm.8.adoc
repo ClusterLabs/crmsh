@@ -3508,7 +3508,9 @@ primitive A ocf:pacemaker:Dummy \
 Set cluster configuration properties. To list the
 available cluster configuration properties, use the
 <<cmdhelp_ra_info,`ra info`>> command with +pengine+, +crmd+,
-+cib+ and +stonithd+ as arguments.
++cib+ and +stonithd+ as arguments; Since pacemaker 2.1.8,
+use the <<cmdhelp_ra_info,`ra info`>> command with +cluster+ as an argument.
+
 When setting the +maintenance-mode+ property, it will
 inform the user if there are nodes or resources that
 have the +maintenance+ property.
