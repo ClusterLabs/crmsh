@@ -1,5 +1,3 @@
-from __future__ import print_function
-from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
@@ -820,7 +818,7 @@ def test_unified():
     assert 'primitive bar IPaddr2 ip=192.168.0.15\ngroup g-foo foo bar' == actions[-1]['text'].strip()
 
 
-class TestPrinter(object):
+class UnitTestPrinter:
     def __init__(self):
         import types
         self.actions = []
@@ -860,7 +858,7 @@ def test_inline_script():
     assert len(actions) == 1
     assert actions[0]['name'] == 'call'
     assert actions[0]['value'] == '#!/bin/sh\necho "hello world"'
-    tp = TestPrinter()
+    tp = UnitTestPrinter()
     scripts.run(script_a,
                 {"foo": "hello world"}, tp)
 
