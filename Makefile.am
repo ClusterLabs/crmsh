@@ -67,14 +67,18 @@ install-exec-local:
 	$(INSTALL) -d -m 770 $(DESTDIR)/${localstatedir}/log/crmsh
 	-mkdir -p $(DESTDIR)$(pkgpythondir)
 	$(PYTHON) $(srcdir)/setup.py install \
-		--root $(DESTDIR)/// \
+		--root $(DESTDIR)/ \
 		$(python_prefix) \
 		--record $(DESTDIR)$(pkgpythondir)/install_files.txt \
 		--verbose
 	$(INSTALL) -d -m 770 $(DESTDIR)$(CRM_CACHE_DIR)
 
 uninstall-local:
-	cat $(DESTDIR)$(pkgpythondir)/install_files.txt | xargs rm -rf
+	rm -rf $(crmconfdir)
+	rm -rf $(docdir)
+	rm -rf $(DESTDIR)$(CRM_CACHE_DIR)
+	cat $(DESTDIR)$(pkgpythondir)/install_files.txt 2>/dev/null | xargs -r -i rm -rf $(DESTDIR)/{} 
+	rm -rf $(DESTDIR)/${localstatedir}/log/crmsh
 	rm -rf $(DESTDIR)$(pkgpythondir)
 
 uninstall-hook:
@@ -82,5 +86,10 @@ uninstall-hook:
 	rm -rf $(DESTDIR)$(datadir)/@PACKAGE@
 	@echo "Uninstallation complete."
 
-dist-clean-local:
+clean-local:
+	@echo "Removing intermediate python build files..."
+	(cd $(srcdir); $(PYTHON) setup.py clean --all)
+	@echo "Removing complete."
+
+dist-clean-local: clean-local
 	rm -f autoconf automake autoheader
