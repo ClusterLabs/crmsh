@@ -188,6 +188,7 @@ test/unittests/scripts/workflows/10-webserver.xml
 test/unittests/test_bootstrap.py
 test/unittests/test_bugs.py
 test/unittests/test_cib.py
+test/unittests/test_cibquery.py
 test/unittests/test_cliformat.py
 test/unittests/test_cluster_fs.py
 test/unittests/test.conf
@@ -199,6 +200,7 @@ test/unittests/test_crashtest_utils.py
 test/unittests/test_gv.py
 test/unittests/test_handles.py
 test/unittests/test_lock.py
+test/unittests/test_migration.py
 test/unittests/test_objset.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
