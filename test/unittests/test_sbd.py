@@ -725,18 +725,16 @@ class TestSBDManager(unittest.TestCase):
     @patch('crmsh.utils.delete_property')
     @patch('crmsh.utils.get_property')
     @patch('crmsh.sbd.sh.cluster_shell')
-    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
     @patch('crmsh.sbd.xmlutil.CrmMonXmlParser')
     @patch('crmsh.utils.set_property')
     @patch('crmsh.sbd.ServiceManager')
-    def test_configure_sbd(self, mock_ServiceManager, mock_set_property, mock_CrmMonXmlParser, mock_get_sbd_device_from_config, mock_cluster_shell, mock_get_property, mock_delete_property):
+    def test_configure_sbd(self, mock_ServiceManager, mock_set_property, mock_CrmMonXmlParser, mock_cluster_shell, mock_get_property, mock_delete_property):
         mock_get_property.return_value = -1
         mock_CrmMonXmlParser.return_value.is_resource_configured.return_value = False
-        mock_get_sbd_device_from_config.return_value = ['/dev/sbd_device']
         mock_cluster_shell.return_value.get_stdout_or_raise_error.return_value = "data"
         sbdmanager_instance = SBDManager()
         sbdmanager_instance.configure_sbd()
-        mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with("crm configure primitive stonith-sbd stonith:fence_sbd params devices=\"/dev/sbd_device\"")
+        mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with("crm configure primitive stonith-sbd stonith:fence_sbd")
 
 
 class TestOutterFunctions(unittest.TestCase):
