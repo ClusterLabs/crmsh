@@ -1305,7 +1305,11 @@ class TestBootstrap(unittest.TestCase):
         mock_isfile.side_effect = [True, True]
         bootstrap.sync_files_to_disk()
         mock_isfile.assert_has_calls([mock.call("file1"), mock.call("file2")])
-        mock_cluster_cmd.assert_called_once_with("sync file1 file2")
+        mock_cluster_cmd.assert_has_calls([
+            mock.call("test -f file1"),
+            mock.call("test -f file2"),
+            mock.call("sync file1 file2")
+        ])
 
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
