@@ -125,10 +125,10 @@ class CheckResultInteractiveHandler(CheckResultHandler):
 
 
 def check(args: typing.Sequence[str]) -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(args[0])
     parser.add_argument('--json', nargs='?', const='pretty', choices=['oneline', 'pretty'])
     parser.add_argument('--local', action='store_true')
-    parsed_args = parser.parse_args(args)
+    parsed_args = parser.parse_args(args[1:])
 
     if 'oneline' ==  parsed_args.json:
         handler = CheckResultJsonHandler()
