@@ -171,11 +171,8 @@ def check_remote():
     })
     ret = 0
     for host, result in result.items():
+        sys.stdout.write(f'------ {host} ------\n')
         if isinstance(result, prun.SSHError):
-                handler.write_in_color(
-                    sys.stdout, constants.YELLOW,
-                    f'------ {host} ------\n',
-                )
                 handler.write_in_color(
                     sys.stdout, constants.YELLOW,
                     str(result)
@@ -184,10 +181,6 @@ def check_remote():
                 ret = 255
         elif isinstance(result, prun.ProcessResult):
                 if result.returncode > 1:
-                    handler.write_in_color(
-                        sys.stdout, constants.YELLOW,
-                        f'------ {host} ------\n',
-                    )
                     print(result.stdout.decode('utf-8', 'backslashreplace'))
                     handler.write_in_color(
                         sys.stdout, constants.YELLOW,
@@ -199,10 +192,6 @@ def check_remote():
                     try:
                         result = json.loads(result.stdout.decode('utf-8'))
                     except (UnicodeDecodeError, json.JSONDecodeError):
-                        handler.write_in_color(
-                            sys.stdout, constants.YELLOW,
-                            f'\n------ {host} ------\n',
-                        )
                         print(result.stdout.decode('utf-8', 'backslashreplace'))
                         handler.write_in_color(
                             sys.stdout, constants.YELLOW,
@@ -212,10 +201,6 @@ def check_remote():
                         ret = result.returncode
                     else:
                         passed = result.get("pass", False)
-                        handler.write_in_color(
-                            sys.stdout, constants.GREEN if passed else constants.YELLOW,
-                            f'------ {host} ------\n',
-                        )
                         handler = CheckResultInteractiveHandler()
                         for problem in result.get("problems", list()):
                             handler.handle_problem(False, problem.get("title", ""), problem.get("descriptions"))
