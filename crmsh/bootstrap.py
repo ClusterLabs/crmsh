@@ -238,6 +238,8 @@ class Context(object):
         """
         Validate -N/--nodes option
         """
+        if self.user_at_node_list and not self.yes_to_all:
+            utils.fatal("Can't use -N/--nodes option without -y/--yes option")
         if self.user_at_node_list and self.stage:
             utils.fatal("Can't use -N/--nodes option and stage({}) together".format(self.stage))
         me = utils.this_node()
