@@ -828,7 +828,7 @@ to get the geo cluster configuration.""",
         '''
         if not args:
             return self._do_health_legacy(context, *args)
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser('health')
         parser.add_argument('component', choices=['hawk2', 'sles16'])
         parser.add_argument('-f', '--fix', action='store_true')
         parsed_args, remaining_args = parser.parse_known_args(args)
@@ -869,7 +869,7 @@ to get the geo cluster configuration.""",
                         logger.error('"--fix" is only available in SLES 16.')
                         return False
                     else:
-                        return 0 == migration.check(remaining_args)
+                        return 0 == migration.check(['sles16'] + remaining_args)
                 except migration.MigrationFailure as e:
                     logger.error('%s', e)
                     return False
