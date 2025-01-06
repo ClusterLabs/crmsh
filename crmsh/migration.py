@@ -117,9 +117,11 @@ class CheckResultInteractiveHandler(CheckResultHandler):
 
     def end(self):
         if self.has_problems:
-            self.write_in_color(sys.stdout, constants.RED, '[FAIL]\n\n')
+            self.write_in_color(sys.stdout, constants.RED, '[FAIL]')
+            sys.stdout.write(' Please fix all the "FAIL" problems above before migrating to SLES 16.\n\n')
         else:
-            self.write_in_color(sys.stdout, constants.GREEN, '[PASS]\n\n')
+            self.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
+            sys.stdout.write(' Good to migrate to SLES 16.\n\n')
 
 
 def check(args: typing.Sequence[str]) -> int:
