@@ -818,7 +818,10 @@ to get the geo cluster configuration.""",
         bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
-    @command.completers(compl.choice(['hawk2']))
+    @command.completers(compl.choice([
+        'hawk2',
+        'sles16',
+    ]))
     def do_health(self, context, *args):
         '''
         Extensive health check.
