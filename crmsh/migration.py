@@ -134,7 +134,7 @@ class CheckResultInteractiveHandler(CheckResultHandler):
 
 def migrate():
     try:
-        if 0 != check(list()):
+        if 0 != check(['']):
             raise MigrationFailure('Unable to start migration.')
         logger.info('Starting migration...')
         migrate_corosync_conf()
@@ -146,10 +146,17 @@ def migrate():
 
 
 def check(args: typing.Sequence[str]) -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(args[0])
     parser.add_argument('--json', nargs='?', const='pretty', choices=['oneline', 'pretty'])
     parser.add_argument('--local', action='store_true')
-    parsed_args = parser.parse_args(args)
+    parsed_args = parser.parse_args(args[1:])
+    ret = 0
+    if not parsed_args.local and not parsed_args.json:
+        check_remote_yield = check_remote()
+        next(check_remote_yield)
+        print('------ localhost ------')
+    else:
+        check_remote_yield = itertools.repeat(0)
     match parsed_args.json:
         case 'oneline':
             handler = CheckResultJsonHandler()
