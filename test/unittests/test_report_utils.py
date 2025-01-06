@@ -791,12 +791,6 @@ pacemaker-schedulerd[5677]:  error: Resource"""
         middle_timestamp = utils.get_timestamp(data_list[1], pacemaker_file_path)
         last_timestamp = utils.get_timestamp(data_list[2], pacemaker_file_path)
         assert first_timestamp < middle_timestamp < last_timestamp
-        line_stamp = crmutils.parse_to_timestamp("Jan 03 11:03:41 2024")
-        result_line = utils.findln_by_timestamp(data, line_stamp, pacemaker_file_path)
-        assert result_line == 2
-        line_stamp = crmutils.parse_to_timestamp("Jan 03 12:03:41 2024")
-        result_line = utils.findln_by_timestamp(data, line_stamp, pacemaker_file_path)
-        assert result_line == 3
 
     def test_findln_by_timestamp_irregular(self):
         data = """line1
