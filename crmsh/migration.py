@@ -268,7 +268,10 @@ def check_service_status(handler: CheckResultHandler):
     manager = service_manager.ServiceManager()
     inactive_services = [x for x in ['corosync', 'pacemaker'] if not manager.service_is_active(x)]
     if any(inactive_services):
-        handler.handle_problem(False, 'Cluster services are not running', (f'* {x}' for x in inactive_services))
+        handler.handle_tip(
+            'Cluster services are not running. Check results may be outdated or inaccurate.',
+            (f'* {x}' for x in inactive_services),
+        )
 
 
 def check_unsupported_corosync_features(handler: CheckResultHandler):
