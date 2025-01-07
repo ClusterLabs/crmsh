@@ -516,7 +516,12 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
         if resource_agent.m_class == 'ocf':
             ocf_resource_agents.append(resource_agent)
         elif resource_agent.m_class == 'stonith':
-            stonith_resource_agents.append(resource_agent)
+            if resource_agent.m_type == 'external/sbd':
+                handler.handle_tip('stonith:external/sbd will be removed.', [
+                    '* Please replace it with stonith:fence_sbd.'
+                ])
+            else:
+                stonith_resource_agents.append(resource_agent)
         else:
             raise ValueError(f'Unrecognized resource agent {resource_agent}')
     _check_saphana_resource_agent(handler, ocf_resource_agents)
