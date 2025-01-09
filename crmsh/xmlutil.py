@@ -84,7 +84,7 @@ def compressed_file_to_cib(s):
     return cib_elem
 
 
-cib_dump = "cibadmin -Ql"
+cib_dump = "cibadmin -Q"
 
 
 def sudocall(cmd):
