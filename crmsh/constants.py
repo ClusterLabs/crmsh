@@ -260,8 +260,6 @@ meta_progs_20 = ("pacemaker-controld", "pacemaker-schedulerd", "pacemaker-fenced
 # elide these properties from tab completion
 controld_metadata_do_not_complete = ("dc-version",
                                  "cluster-infrastructure",
-                                 "crmd-integration-timeout",
-                                 "crmd-finalization-timeout",
                                  "expected-quorum-votes")
 extra_cluster_properties = ("dc-version",
                             "cluster-infrastructure",
