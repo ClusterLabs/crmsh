@@ -47,6 +47,32 @@ class TestCibQuery(unittest.TestCase):
           <op name="stop" timeout="15" interval="0s" id="stonith-sbd-stop-0s"/>
         </operations>
       </primitive>
+      <clone id="ocfs2-clone">
+        <meta_attributes id="ocfs2-clone-meta_attributes">
+          <nvpair name="interleave" value="true" id="ocfs2-clone-meta_attributes-interleave"/>
+        </meta_attributes>
+        <group id="ocfs2-group">
+          <primitive id="ocfs2-dlm" class="ocf" provider="pacemaker" type="controld">
+            <operations>
+              <op name="start" timeout="90" interval="0s" id="ocfs2-dlm-start-0s"/>
+              <op name="stop" timeout="100" interval="0s" id="ocfs2-dlm-stop-0s"/>
+              <op name="monitor" interval="60" timeout="60" id="ocfs2-dlm-monitor-60"/>
+            </operations>
+          </primitive>
+          <primitive id="ocfs2-clusterfs" class="ocf" provider="heartbeat" type="Filesystem">
+            <instance_attributes id="ocfs2-clusterfs-instance_attributes">
+              <nvpair name="directory" value="/srv/clusterfs" id="ocfs2-clusterfs-instance_attributes-directory"/>
+              <nvpair name="fstype" value="ocfs2" id="ocfs2-clusterfs-instance_attributes-fstype"/>
+              <nvpair name="device" value="/dev/disk/by-partlabel/ocfs2-157" id="ocfs2-clusterfs-instance_attributes-device"/>
+            </instance_attributes>
+            <operations>
+              <op name="monitor" interval="20" timeout="40" id="ocfs2-clusterfs-monitor-20"/>
+              <op name="start" timeout="60" interval="0s" id="ocfs2-clusterfs-start-0s"/>
+              <op name="stop" timeout="60" interval="0s" id="ocfs2-clusterfs-stop-0s"/>
+            </operations>
+          </primitive>
+        </group>
+      </clone>
     </resources>
     <constraints/>
     <rsc_defaults>
@@ -73,9 +99,11 @@ class TestCibQuery(unittest.TestCase):
             {
                 ResourceAgent('ocf', 'heartbeat', 'IPaddr2'),
                 ResourceAgent('stonith', None, 'external/sbd'),
+                ResourceAgent('ocf', 'heartbeat', 'Filesystem'),
+                ResourceAgent('ocf', 'pacemaker', 'controld'),
             },
             cibquery.get_configured_resource_agents(self.cib),
         )
 
     def test_has_primitive_filesystem_ocfs2(self):
-        self.assertFalse(cibquery.has_primitive_filesystem_ocfs2(self.cib))
+        self.assertTrue(cibquery.has_primitive_filesystem_ocfs2(self.cib))
