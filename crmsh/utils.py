@@ -1034,12 +1034,11 @@ def wait_dc_stable(what="", show_progress=True):
     if not wait_for_dc():
         logger.warning("can't find DC")
         return False
-    cmd = "crm_attribute -Gq -t crm_config -n crmd-transition-delay 2> /dev/null"
-    delay = ShellUtils().get_stdout(add_sudo(cmd))[1]
+    delay = get_property("transition-delay")
     if delay:
         delaymsec = crm_msec(delay)
         if delaymsec > 0:
-            logger.info("The crmd-transition-delay is configured. Waiting %d msec before check DC status.", delaymsec)
+            logger.info("The transition-delay is configured. Waiting %d msec before check DC status.", delaymsec)
             time.sleep(delaymsec // 1000)
     cnt = 0
     output_started = 0
