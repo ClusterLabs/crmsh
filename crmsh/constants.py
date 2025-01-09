@@ -162,7 +162,7 @@ unary_ops = ('defined', 'not_defined')
 simple_date_ops = ('lt', 'gt')
 date_ops = ('lt', 'gt', 'in_range', 'date_spec')
 date_spec_names = '''hours monthdays weekdays yearsdays months \
-weeks years weekyears moon'''.split()
+weeks years weekyears'''.split()
 in_range_attrs = ('start', 'end')
 node_default_type = "normal"
 node_attributes_keyw = ("attributes", "utilization")

@@ -511,7 +511,6 @@ class BaseParser(object):
                      | weeks=<value>
                      | years=<value>
                      | weekyears=<value>
-                     | moon=<value>
         """
         boolop = None
         exprs = [self._match_simple_exp()]
