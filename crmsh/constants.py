@@ -133,8 +133,8 @@ rsc_meta_attributes = (
     "allow-migrate", "maintenance", "is-managed", "interval-origin",
     "migration-threshold", "priority", "multiple-active",
     "failure-timeout", "resource-stickiness", "target-role",
-    "restart-type", "description", "remote-node", "requires",
-    "provides", "remote-port", "remote-addr", "remote-connect-timeout",
+    "description", "remote-node", "requires", "provides",
+    "remote-port", "remote-addr", "remote-connect-timeout",
     "critical", "allow-unhealthy-nodes", "container-attribute-target"
 )
 common_meta_attributes = ("priority", "target-role", "is-managed")
