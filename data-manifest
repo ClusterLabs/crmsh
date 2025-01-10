@@ -81,6 +81,7 @@ test/features/environment.py
 test/features/geo_setup.feature
 test/features/gfs2.feature
 test/features/healthcheck.feature
+test/features/migration.feature
 test/features/ocfs2.feature
 test/features/qdevice_options.feature
 test/features/qdevice_setup_remove.feature

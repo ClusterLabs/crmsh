@@ -1,3 +1,4 @@
+import ast
 import re
 import time
 import os
@@ -17,8 +18,8 @@ import const
 
 
 def _parse_str(text):
-    return text[1:-1].encode('utf-8').decode('unicode_escape')
-_parse_str.pattern='".*"'
+    return ast.literal_eval(text)
+_parse_str.pattern='"([^"]|\\")*?"'
 
 
 behave.use_step_matcher("cfparse")
@@ -167,6 +168,13 @@ def step_impl(context, msg):
 def step_impl(context, msg):
     assert_in(msg, context.stderr)
     context.stderr = None
+
+
+@then('Expect stdout contains snippets [{snippets:str+}].')
+def step_impl(context, snippets):
+    for snippet in snippets:
+        assert_in(snippet, context.stdout)
+    context.stdout = None
 
 
 @then('Expected regex "{reg_str}" in stdout')
