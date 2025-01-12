@@ -101,8 +101,6 @@ def _advanced_completer(args):
             return_list = utils.filter_keys(constants.group_meta_attributes, args)
         if resource_type == "clone":
             return_list = utils.filter_keys(constants.clone_meta_attributes, args)
-        if resource_type in ["ms", "master"]:
-            return_list = utils.filter_keys(constants.ms_meta_attributes, args)
     return return_list + key_words
 
 
