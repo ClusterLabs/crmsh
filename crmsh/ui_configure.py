@@ -1055,18 +1055,6 @@ class CibConfig(command.UI):
         [meta <attribute>=<value> [<attribute>=<value>...]]"""
         return self.__conf_object(context.get_command_name(), *args)
 
-    @command.alias('master')
-    @command.skill_level('administrator')
-    @command.completers_repeating(compl.attr_id, _f_children_id_list, _advanced_completer)
-    def do_ms(self, context, *args):
-        """usage: ms <name> <rsc>
-        [params <param>=<value> [<param>=<value>...]]
-        [meta <attribute>=<value> [<attribute>=<value>...]]"""
-        format_str = " " if "meta" in args else " meta "
-        new_cmd_str = ' '.join(args) + "{}promotable=true".format(format_str)
-        logger.warning('"ms" is deprecated. Please use "clone {}"'.format(new_cmd_str))
-        return self.__conf_object(context.get_command_name(), *args)
-
     @command.skill_level('administrator')
     @command.completers_repeating(compl.attr_id, ui_ra.complete_class_provider_type,
                                   primitive_complete_complex)
