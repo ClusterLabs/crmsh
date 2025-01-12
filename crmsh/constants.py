@@ -442,9 +442,6 @@ CSYNC2_PORT = 30865
 HAWK_PORT = 7630
 DLM_PORT = 21064
 
-# Commands that are deprecated and hidden from UI
-HIDDEN_COMMANDS = {'ms'}
-
 NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
 
 PCMK_SERVICE = "pacemaker.service"
