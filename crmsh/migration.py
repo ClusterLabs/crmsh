@@ -154,6 +154,16 @@ def check(args: typing.Sequence[str]) -> int:
                 ret = 1
     if remote_ret > ret:
             ret = remote_ret
+    if not parsed_args.json:
+        print('****** summary ******')
+        if ret == 0:
+            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
+            sys.stdout.write(' Please run "crm cluster health sles16 --fix" on on any one of above nodes, after migrating all the nodes to SLES 16.\n')
+            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
+            sys.stdout.write(' This cluster is good to migrate to SLES 16.\n')
+        else:
+            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.RED, '[FAIL]')
+            sys.stdout.write(' Please fix all the "FAIL" problems above before migrating to SLES 16.\n')
     return ret
 
 
