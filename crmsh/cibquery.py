@@ -18,8 +18,8 @@ def get_configured_resource_agents(cib: lxml.etree.Element) -> typing.Set[Resour
     )
 
 
-def has_primitive_filesystem_ocfs2(cib: lxml.etree.Element) -> bool:
+def has_primitive_filesystem_with_fstype(cib: lxml.etree.Element, fstype: str) -> bool:
     return bool(cib.xpath(
         '/cib/configuration/resources//primitive[@class="ocf" and @provider="heartbeat" and @type="Filesystem"]'
-        '/instance_attributes/nvpair[@name="fstype" and @value="ocfs2"]'
+        f'/instance_attributes/nvpair[@name="fstype" and @value="{fstype}"]'
     ))
