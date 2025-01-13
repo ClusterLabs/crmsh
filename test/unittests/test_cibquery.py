@@ -105,5 +105,6 @@ class TestCibQuery(unittest.TestCase):
             cibquery.get_configured_resource_agents(self.cib),
         )
 
-    def test_has_primitive_filesystem_ocfs2(self):
-        self.assertTrue(cibquery.has_primitive_filesystem_ocfs2(self.cib))
+    def test_has_primitive_filesystem_with_fstype(self):
+        self.assertTrue(cibquery.has_primitive_filesystem_with_fstype(self.cib, 'ocfs2'))
+        self.assertFalse(cibquery.has_primitive_filesystem_with_fstype(self.cib, 'foo'))
