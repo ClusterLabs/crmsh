@@ -593,7 +593,7 @@ def _check_removed_resource_agents(
 
 
 def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
-    if cibquery.has_primitive_filesystem_ocfs2(cib):
+    if cibquery.has_primitive_filesystem_with_fstype(cib, 'ocfs2'):
        handler.handle_problem(False, 'OCFS2 is not supported in SLES 16.', [
            '* Before migrating to SLES 16, replace it with GFS2.',
        ])
