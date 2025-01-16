@@ -6,7 +6,7 @@
 
 # Shared storage based fencing.
 #
-# This template generates a single instance of external/sbd.
+# This template generates a single instance of fence_sbd.
 #
 # There is quite a bit more to do to make this stonith operational.
 # See http://www.linux-ha.org/wiki/SBD_Fencing for information.
@@ -19,16 +19,8 @@
 # %% id stonith-sbd
 %% id 
 
-# Name of the device (shared disk).
-# NB: Make sure that the device remains the same on reboots. It's
-# preferable to use udev generated names rather than the usual
-# /dev/sd?
-# %% sbd_device /dev/sda
-%% sbd_device 
-
 %generate
 
-primitive %_:id stonith:external/sbd
-	params sbd_device="%_:sbd_device"
+primitive %_:id stonith:fence_sbd
 	op monitor interval=15s timeout=60s
 	op start timeout=60s
