@@ -531,13 +531,16 @@ def collect_qdevice_info(context: core.Context) -> None:
     """
     Collect quorum/qdevice/qnetd information
     """
-    out_string = f"##### Quorum status #####\n"
+    service_manager = ServiceManager()
+    if not service_manager.service_is_active("corosync.service"):
+        return
+    out_string = "##### Quorum status #####\n"
     out_string += corosync.query_quorum_status() + "\n"
 
-    if ServiceManager().service_is_active("corosync-qdevice.service"):
-        out_string += f"\n##### Qdevice status #####\n"
+    if service_manager.service_is_active("corosync-qdevice.service"):
+        out_string += "\n##### Qdevice status #####\n"
         out_string += corosync.query_qdevice_status() + "\n"
-        out_string += f"\n##### Qnetd status #####\n"
+        out_string += "\n##### Qnetd status #####\n"
         out_string += corosync.query_qnetd_status() + "\n"
 
     _file = os.path.join(context.work_dir, constants.QDEVICE_F)
