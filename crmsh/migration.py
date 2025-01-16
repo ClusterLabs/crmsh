@@ -116,12 +116,7 @@ class CheckResultInteractiveHandler(CheckResultHandler):
             f.write(text)
 
     def end(self):
-        if self.has_problems:
-            self.write_in_color(sys.stdout, constants.RED, '[FAIL]')
-            sys.stdout.write(' Please fix all the "FAIL" problems above before migrating to SLES 16.\n\n')
-        else:
-            self.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
-            sys.stdout.write(' Good to migrate to SLES 16.\n\n')
+        sys.stdout.write('\n')
 
 
 def check(args: typing.Sequence[str]) -> int:
@@ -140,8 +135,9 @@ def check(args: typing.Sequence[str]) -> int:
     ret = 0
     if not parsed_args.local and not parsed_args.json:
         remote_ret = check_remote()
-        print('------ localhost ------')
+        print('------ corosync @ localhost ------')
         check_local(handler)
+        print('------ cib ------')
         check_global(handler)
     else:
         remote_ret = 0
@@ -163,7 +159,7 @@ def check(args: typing.Sequence[str]) -> int:
             sys.stdout.write(' This cluster is good to migrate to SLES 16.\n')
         else:
             CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.RED, '[FAIL]')
-            sys.stdout.write(' Please fix all the "FAIL" problems above before migrating to SLES 16.\n')
+            sys.stdout.write(' The pacemaker cluster stack can not migrate to SLES 16. Please fix all the "FAIL" problems above before migrating to SLES 16.\n')
     return ret
 
 
@@ -181,7 +177,7 @@ def check_remote():
     })
     ret = 0
     for host, result in result.items():
-        sys.stdout.write(f'------ {host} ------\n')
+        sys.stdout.write(f'------ corosync @ {host} ------\n')
         if isinstance(result, prun.SSHError):
                 handler.write_in_color(
                     sys.stdout, constants.YELLOW,
@@ -287,8 +283,7 @@ def check_service_status(handler: CheckResultHandler):
 def check_unsupported_corosync_features(handler: CheckResultHandler):
     handler.log_info("Checking used corosync features...")
     transport = 'udpu' if corosync.is_unicast() else 'udp'
-    handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in corosync 3.', [
-        'After migrating to SLES 16, run "crm cluster health sles16 --fix" to migrate it to transport "knet".',
+    handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in corosync 3. Please use "knet".', [
     ])
     if corosync.get_value("totem.rrp_mode") in {'active', 'passive'}:
         handler.handle_tip(f'Corosync RRP will be deprecated in corosync 3.', [
@@ -306,8 +301,7 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
             ocf_resource_agents.append(resource_agent)
         elif resource_agent.m_class == 'stonith':
             if resource_agent.m_type == 'external/sbd':
-                handler.handle_tip('stonith:external/sbd will be removed.', [
-                    '* After migrating to SLES 16, please replace it with stonith:fence_sbd.'
+                handler.handle_tip('stonith:external/sbd will be removed. Please use stonith:fence_sbd', [
                 ])
             else:
                 stonith_resource_agents.append(resource_agent)
@@ -381,6 +375,5 @@ def _check_removed_resource_agents(
 
 def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
     if cibquery.has_primitive_filesystem_with_fstype(cib, 'ocfs2'):
-       handler.handle_problem(False, 'OCFS2 is not supported in SLES 16.', [
-           '* Before migrating to SLES 16, replace it with GFS2.',
+       handler.handle_problem(False, 'OCFS2 is not supported in SLES 16. Please use GFS2.', [
        ])
