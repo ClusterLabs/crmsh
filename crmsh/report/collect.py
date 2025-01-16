@@ -536,10 +536,13 @@ def collect_qdevice_info(context: core.Context) -> None:
     """
     Collect quorum/qdevice/qnetd information
     """
+    service_manager = ServiceManager()
+    if not service_manager.service_is_active("corosync.service"):
+        return
     out_string = "##### Quorum status #####\n"
     out_string += corosync.query_quorum_status() + "\n"
 
-    if ServiceManager().service_is_active("corosync-qdevice.service"):
+    if service_manager.service_is_active("corosync-qdevice.service"):
         out_string += "\n##### Qdevice status #####\n"
         out_string += corosync.query_qdevice_status() + "\n"
         out_string += "\n##### Qnetd status #####\n"
