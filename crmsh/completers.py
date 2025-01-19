@@ -74,7 +74,3 @@ online_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(x), "onlin
 standby_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(x), "standby")
 
 shadows = call(xmlutil.listshadows)
-
-status_option = """full bynode inactive ops timing failcounts
-                   verbose quiet xml simple tickets noheaders
-                   detail brief""".split()
