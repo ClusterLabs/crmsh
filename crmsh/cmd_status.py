@@ -41,6 +41,22 @@ _ERRORS = ['not running',
            'Unknown',
            'OFFLINE',
            'Failed actions']
+CRM_MON_OPTIONS_MAP = {
+        "bynode": "-n",
+        "inactive": "-r",
+        "ops": "-o",
+        "timing": "-t",
+        "failcounts": "-f",
+        "verbose": "-V",
+        "quiet": "-Q",
+        "html": "--output-as html",
+        "xml": "--output-as xml",
+        "tickets": "-c",
+        "noheaders": "-D",
+        "detail": "-R",
+        "brief": "-b",
+        "full": "-ncrft",
+}
 
 
 class CrmMonFilter(object):
@@ -96,24 +112,7 @@ def cmd_status(args):
     Displays the output, paging if necessary.
     Raises IOError if crm_mon fails.
     '''
-    opts = {
-        "bynode": "-n",
-        "inactive": "-r",
-        "ops": "-o",
-        "timing": "-t",
-        "failcounts": "-f",
-        "verbose": "-V",
-        "quiet": "-Q",
-        "html": "--output-as html",
-        "xml": "--output-as xml",
-        "simple": "-s",
-        "tickets": "-c",
-        "noheaders": "-D",
-        "detail": "-R",
-        "brief": "-b",
-        "full": "-ncrft",
-    }
-    extra = ' '.join(opts.get(arg, arg) for arg in args)
+    extra = ' '.join(CRM_MON_OPTIONS_MAP.get(arg, arg) for arg in args)
     if not args:
         extra = "-r"
     rc, s, err = crm_mon(extra)
