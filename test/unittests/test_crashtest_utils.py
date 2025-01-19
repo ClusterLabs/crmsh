@@ -77,16 +77,20 @@ class TestFenceInfo(TestCase):
         mock_get_property.assert_called_once_with("stonith-enabled")
 
     @mock.patch('crmsh.crash_test.utils.msg_error')
+    @mock.patch('crmsh.ra.get_property_options')
     @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
-    def test_fence_action_none(self, mock_get_property, mock_error):
+    def test_fence_action_none(self, mock_get_property, mock_get_property_options, mock_error):
+        mock_get_property_options.return_value = ["off", "reboot"]
         mock_get_property.return_value = None
         res = self.fence_info_inst.fence_action
         self.assertEqual(res, None)
         mock_get_property.assert_called_once_with("stonith-action")
-        mock_error.assert_called_once_with('Cluster property "stonith-action" should be reboot|off|poweroff')
+        mock_error.assert_called_once_with('Cluster property "stonith-action" should be off|reboot')
 
+    @mock.patch('crmsh.ra.get_property_options')
     @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
-    def test_fence_action(self, mock_get_property):
+    def test_fence_action(self, mock_get_property, mock_get_property_options):
+        mock_get_property_options.return_value = ["off", "reboot"]
         mock_get_property.return_value = "reboot"
         res = self.fence_info_inst.fence_action
         self.assertEqual(res, "reboot")
