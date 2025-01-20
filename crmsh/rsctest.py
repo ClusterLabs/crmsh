@@ -4,7 +4,7 @@
 import os
 import sys
 from .utils import rmdir_r, quote, this_node, ext_cmd
-from .xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_ms_or_promotable_clone, is_cloned
+from .xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_promotable_clone, is_cloned
 from . import log
 
 
@@ -45,7 +45,7 @@ class RADriver(object):
         self.ec_l = {}
         self.ec_ok = self.unused
         self.ec_stopped = self.unused
-        self.ec_master = self.unused
+        self.ec_promoted = self.unused
         self.last_op = None
         self.last_rec = {}
         self.timeout = 20000
@@ -69,8 +69,8 @@ class RADriver(object):
     def debug(self, s):
         logger.debug("%s: %s", self.id_str(), s)
 
-    def is_ms_or_promotable_clone(self):
-        return is_ms_or_promotable_clone(get_topmost_rsc(self.rscdef_node))
+    def is_promotable_clone(self):
+        return is_promotable_clone(get_topmost_rsc(self.rscdef_node))
 
     def nvset2env(self, set_n):
         if set_n is None:
@@ -122,10 +122,6 @@ class RADriver(object):
     def is_ok(self, host):
         'Was last op successful?'
         return self.op_status(host) == self.ec_ok
-
-    def is_master(self, host):
-        'Only if last op was probe/monitor.'
-        return self.op_status(host) == self.ec_master
 
     def is_stopped(self, host):
         'Only if last op was probe/monitor.'
@@ -198,7 +194,7 @@ class RADriver(object):
         """
         Make sure resource is stopped on node.
         """
-        if self.is_ms_or_promotable_clone():
+        if self.is_promotable_clone():
             self.runop("demote", (node,))
         self.runop("stop", (node,))
         ok = self.is_ok(node)
@@ -212,7 +208,7 @@ class RADriver(object):
         Perform test of resource on node.
         """
         self.runop("start", (node,))
-        if self.is_ms_or_promotable_clone() and self.is_ok(node):
+        if self.is_promotable_clone() and self.is_ok(node):
             self.runop("promote", (node,))
         return self.is_ok(node)
 
@@ -230,8 +226,8 @@ class RADriver(object):
         if not stopped:
             if self.is_ok(node):
                 self.warn("resource running at %s" % (node))
-            elif self.is_ms_or_promotable_clone() and self.is_master(node):
-                self.warn("resource is master at %s" % (node))
+            elif self.is_promotable_clone():
+                self.warn("resource is promoted at %s" % (node))
             else:
                 self.warn("resource not clean at %s" % (node))
                 self.show_log(node)
@@ -251,14 +247,14 @@ class RAOCF(RADriver):
     OCF_ERR_INSTALLED = 5
     OCF_ERR_CONFIGURED = 6
     OCF_NOT_RUNNING = 7
-    OCF_RUNNING_MASTER = 8
-    OCF_FAILED_MASTER = 9
+    OCF_RUNNING_PROMOTED = 8
+    OCF_FAILED_PROMOTED = 9
 
     def __init__(self, *args):
         RADriver.__init__(self, *args)
         self.ec_ok = self.OCF_SUCCESS
         self.ec_stopped = self.OCF_NOT_RUNNING
-        self.ec_master = self.OCF_RUNNING_MASTER
+        self.ec_promoted = self.OCF_RUNNING_PROMOTED
 
     def set_rscenv(self, op):
         RADriver.set_rscenv(self, op)
@@ -295,7 +291,7 @@ class RALSB(RADriver):
         RADriver.__init__(self, *args)
         self.ec_ok = self.LSB_OK
         self.ec_stopped = self.LSB_STATUS_NOT_RUNNING
-        self.ec_master = self.unused
+        self.ec_promoted = self.unused
 
     def set_rscenv(self, op):
         RADriver.set_rscenv(self, op)
@@ -323,7 +319,7 @@ class RASystemd(RADriver):
         RADriver.__init__(self, *args)
         self.ec_ok = self.SYSD_OK
         self.ec_stopped = self.SYSD_NOT_RUNNING
-        self.ec_master = self.unused
+        self.ec_promoted = self.unused
 
     def set_rscenv(self, op):
         RADriver.set_rscenv(self, op)
