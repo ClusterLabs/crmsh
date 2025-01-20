@@ -3,5 +3,4 @@ ra
 providers IPaddr2
 providers Dummy
 info ocf:pacemaker:Dummy
-info stonith:external/ssh
 .
