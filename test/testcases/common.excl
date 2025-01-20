@@ -13,7 +13,7 @@ Error performing operation: Not connected
 .EXT crm_resource --list-ocf-alternatives Delay
 .EXT crm_resource --list-ocf-alternatives Dummy
 ^\.EXT crmd version
-^\.EXT cibadmin \-Ql
+^\.EXT cibadmin \-Q
 ^\.EXT crm_verify \-VV \-p
 ^\.EXT cibadmin \-p \-P
 ^\.EXT crm_diff \-\-help
