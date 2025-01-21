@@ -22,11 +22,6 @@ def _prettify(line, indent=0):
 def verify(cib):
     rc, _, stderr = ShellUtils().get_stdout_stderr(cib_verify, cib.encode('utf-8'))
     for i, line in enumerate(line for line in stderr.split('\n') if line):
-        if i == 0:
-            if "warning:" in line:
-                logger.warning(_prettify(line, 0))
-            else:
-                logger.error(_prettify(line, 0))
-        else:
-            logger.error(_prettify(line, 7))
+        indent = 0 if i == 0 else 7
+        print(_prettify(line, indent))
     return rc
