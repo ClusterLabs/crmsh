@@ -550,7 +550,9 @@ id            0x19041a12
     @mock.patch("crmsh.report.collect.lsof_cluster_fs_device")
     @mock.patch("crmsh.report.collect.dump_D_process")
     @mock.patch("crmsh.report.collect.ShellUtils")
-    def test_collect_cluster_fs_info(self, mock_run, mock_dump, mock_lsof, mock_cluster, mock_debug, mock_real_path, mock_str2file, mock_error):
+    @mock.patch("shutil.which")
+    def test_collect_cluster_fs_info(self, mock_which, mock_run, mock_dump, mock_lsof, mock_cluster, mock_debug, mock_real_path, mock_str2file, mock_error):
+        mock_which.return_value = True
         mock_run_inst = mock.Mock()
         mock_run.return_value = mock_run_inst
         mock_run_inst.get_stdout_stderr.side_effect = [
