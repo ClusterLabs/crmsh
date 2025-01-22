@@ -697,8 +697,10 @@ class TestSBDManager(unittest.TestCase):
     @patch('logging.Logger.debug')
     @patch('crmsh.sbd.sh.cluster_shell')
     @patch('crmsh.sbd.SBDManager.convert_timeout_dict_to_opt_str')
+    @patch('shutil.which')
     @patch('logging.Logger.info')
-    def test_initialize_sbd_diskbased(self, mock_logger_info, mock_convert_timeout_dict_to_opt_str, mock_cluster_shell, mock_logger_debug, mock_ServiceManager):
+    def test_initialize_sbd_diskbased(self, mock_logger_info, mock_which, mock_convert_timeout_dict_to_opt_str, mock_cluster_shell, mock_logger_debug, mock_ServiceManager):
+        mock_which.return_value = "/sbin/fence_sbd"
         sbdmanager_instance = SBDManager(device_list_to_init=['/dev/sbd_device'], timeout_dict={'watchdog': 5, 'msgwait': 10})
         sbdmanager_instance.initialize_sbd()
         mock_logger_info.assert_has_calls([
