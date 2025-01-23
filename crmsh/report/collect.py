@@ -199,7 +199,8 @@ def collect_cluster_fs_info(context: core.Context) -> None:
         crmutils.str2file(out_string, target_f)
 
     # Collect OCFS2 information
-    collect_info("mounted.ocfs2 -d", "OCFS2", constants.OCFS2_F)
+    if shutil.which("mounted.ocfs2"):
+        collect_info("mounted.ocfs2 -d", "OCFS2", constants.OCFS2_F)
 
     # Collect GFS2 information
     collect_info('mount|grep "type gfs2"', "GFS2", constants.GFS2_F)
