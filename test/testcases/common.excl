@@ -23,5 +23,5 @@ Error performing operation: Not connected
 ^\.EXT sed ["][^"]+
 ^\.EXT [a-zA-Z]+ validate-all
 ^[ ]+File ["][^"]+
-^.*\: ([0-9]+\: )?\(cluster\_status\) 	warning\: Fencing and resource management disabled due to lack of quorum
+\(cluster\_status\) 	warning\: Fencing and resource management disabled due to lack of quorum
 not fencing unseen nodes
