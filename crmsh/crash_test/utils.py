@@ -118,8 +118,9 @@ class FenceInfo(object):
     @property
     def fence_action(self):
         action_result = crmshutils.get_property("stonith-action")
-        if action_result is None or action_result not in ["off", "poweroff", "reboot"]:
-            msg_error("Cluster property \"stonith-action\" should be reboot|off|poweroff")
+        supported_actions = ("off", "reboot")
+        if action_result is None or action_result not in supported_actions:
+            msg_error(f"Cluster property \"stonith-action\" should be {'|'.join(supported_actions)}")
             return None
         return action_result
 

@@ -370,7 +370,7 @@ def dump_runtime_state(workdir: str) -> None:
 
     # Dump other runtime state files
     for cmd, f, desc in [
-        ("cibadmin -Ql", constants.CIB_F, "CIB contents"),
+        ("cibadmin -Q", constants.CIB_F, "CIB contents"),
         ("crm_node -p", constants.MEMBERSHIP_F, "members of this partition")
     ]:
         out = cluster_shell_inst.get_stdout_or_raise_error(cmd)

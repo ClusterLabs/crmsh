@@ -83,7 +83,7 @@ class TestFenceInfo(TestCase):
         res = self.fence_info_inst.fence_action
         self.assertEqual(res, None)
         mock_get_property.assert_called_once_with("stonith-action")
-        mock_error.assert_called_once_with('Cluster property "stonith-action" should be reboot|off|poweroff')
+        mock_error.assert_called_once_with('Cluster property "stonith-action" should be off|reboot')
 
     @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
     def test_fence_action(self, mock_get_property):

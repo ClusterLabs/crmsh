@@ -513,7 +513,7 @@ class RscMgmt(command.UI):
 
         if cmd == "set":
             # query the current failcount status
-            query_cmd = "cibadmin -Ql --xpath '/cib/status/node_state[@id='{}']'".format(nodeid)
+            query_cmd = "cibadmin -Q --xpath '/cib/status/node_state[@id='{}']'".format(nodeid)
             rc, out, err = ShellUtils().get_stdout_stderr(query_cmd)
             if rc != 0:
                 context.fatal_error(err)

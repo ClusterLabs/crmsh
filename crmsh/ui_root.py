@@ -173,7 +173,7 @@ Geo-cluster related management.
     def do_site(self):
         pass
 
-    @command.completers(compl.choice(compl.status_option))
+    @command.completers(compl.choice(cmd_status.CRM_MON_OPTIONS_MAP))
     @command.help('''show cluster status
 Show cluster status. The status is displayed by `crm_mon`. Supply
 additional arguments for more information or different format.

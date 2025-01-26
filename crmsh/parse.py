@@ -23,7 +23,7 @@ logger_utils = log.LoggerUtils(logger)
 
 _NVPAIR_RE = re.compile(r'([^=@$][^=]*)=(.*)$')
 _NVPAIR_ID_RE = re.compile(r'\$([^:=]+)(?::(.+))?=(.*)$')
-_NVPAIR_REF_RE = re.compile(r'@([^:]+)(?::(.+))?$')
+_NVPAIR_REF_RE = re.compile(r'@([^:]+)$')
 _NVPAIR_KEY_RE = re.compile(r'([^:=]+)$', re.IGNORECASE)
 _IDENT_RE = re.compile(r'([a-z0-9_#$-][^=]*)$', re.IGNORECASE)
 _DISPATCH_RE = re.compile(r'[a-z0-9_]+$', re.IGNORECASE)
@@ -301,8 +301,7 @@ class BaseParser(object):
             if tok is not None and tok.lower() in terminator:
                 break
             elif self.try_match(_NVPAIR_REF_RE):
-                ret.append(xmlutil.nvpair_ref(self.matched(1),
-                                              self.matched(2)))
+                ret.append(xmlutil.nvpair_ref(self.matched(1)))
             elif self.try_match(_NVPAIR_ID_RE):
                 ret.append(xmlutil.nvpair_id(self.matched(1),
                                              self.matched(2),
@@ -511,7 +510,6 @@ class BaseParser(object):
                      | weeks=<value>
                      | years=<value>
                      | weekyears=<value>
-                     | moon=<value>
         """
         boolop = None
         exprs = [self._match_simple_exp()]
