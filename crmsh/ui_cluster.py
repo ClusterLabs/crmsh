@@ -467,7 +467,7 @@ Examples:
         boot_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         boot_context.type = "init"
         boot_context.initialize_qdevice()
-        boot_context.validate_option()
+        boot_context.validate()
 
         bootstrap.bootstrap_init(boot_context)
         bootstrap.bootstrap_add(boot_context)
@@ -526,7 +526,7 @@ Examples:
         join_context.stage = stage
         join_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         join_context.type = "join"
-        join_context.validate_option()
+        join_context.validate()
 
         bootstrap.bootstrap_join(join_context)
 
