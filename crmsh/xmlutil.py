@@ -1450,14 +1450,12 @@ def nvpair_id(nvpairid, name, value):
     return new("nvpair", id=nvpairid, name=name, value=value)
 
 
-def nvpair_ref(idref, name=None):
+def nvpair_ref(idref):
     """
-    <nvpair id-ref=<idref> [name=<name>]/>
+    <nvpair id-ref=<idref>/>
     """
     nvp = new("nvpair")
     nvp.set('id-ref', idref)
-    if name is not None:
-        nvp.set('name', name)
     return nvp
 
 
