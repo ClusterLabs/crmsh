@@ -751,20 +751,6 @@ primitive dummy-1 params $dummy-state-on:state=1
 primitive dummy-2 params @dummy-state-on
 ............
 
-There is also the possibility that two resources both use the same
-attribute value but with different names. For example, a web server
-may have a parameter +server_ip+ for setting the IP address where it
-listens for incoming requests, and a virtual IP resource may have a
-parameter called +ip+ which sets the IP address it creates. To
-configure these two resources with an IP without repeating the value,
-the reference can be given a name using the syntax +@<id>:<name>+.
-
-Example:
-............
-primitive virtual-ip IPaddr2 params $vip:ip=192.168.1.100
-primitive webserver apache params @vip:server_ip
-............
-
 [[topics.Syntax.RuleExpressions,Syntax: Rule expressions]]
 === Syntax: Rule expressions
 
