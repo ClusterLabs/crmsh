@@ -210,13 +210,15 @@ class TestContext(unittest.TestCase):
 
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.bootstrap.Validation.valid_admin_ip')
-    def test_validate_option(self, mock_admin_ip, mock_warn):
+    @mock.patch('crmsh.utils.package_is_installed')
+    def test_validate(self, mock_installed, mock_admin_ip, mock_warning):
+        mock_installed.side_effect = [True, True]
         ctx = crmsh.bootstrap.Context()
         ctx.admin_ip = "10.10.10.123"
         ctx.qdevice_inst = mock.Mock()
         ctx._validate_sbd_option = mock.Mock()
         ctx._validate_nodes_option = mock.Mock()
-        ctx.validate_option()
+        ctx.validate()
         mock_admin_ip.assert_called_once_with("10.10.10.123")
         ctx.qdevice_inst.valid_qdevice_options.assert_called_once_with()
         ctx._validate_sbd_option.assert_called_once_with()
