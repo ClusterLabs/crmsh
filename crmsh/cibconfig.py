@@ -645,10 +645,9 @@ class CibObjectSetRaw(CibObjectSet):
         with clidisplay.nopretty():
             cib = self.repr(format_mode=-1)
         rc = cibverify.verify(cib)
-
-        if rc not in (0, 1):
+        if rc >= constants.VERIFY_NON_FATAL_ERROR:
             logger.debug("verify (rc=%s): %s", rc, cib)
-        return rc in (0, 1)
+        return rc
 
     def ptest(self, nograph, scores, utilization, actions, verbosity):
         if not cib_factory.is_cib_sane():
