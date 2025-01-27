@@ -2,8 +2,10 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import os
 import re
 import time
+from packaging import version
 from . import command
 from . import completers as compl
 from . import config
@@ -189,6 +191,23 @@ def ra_agent_for_cpt(cpt):
     if ra.ra_type_validate(cpt, ra_class, provider, rsc_type):
         agent = ra.RAInfo(ra_class, rsc_type, provider)
     return agent
+
+
+def schema_completer(args):
+    complete_results = []
+
+    directory = '/usr/share/pacemaker/'
+    version_pattern = re.compile(r'^pacemaker-(\d+\.\d+)')
+    for filename in os.listdir(directory):
+        if version_pattern.match(filename):
+            complete_results.append(filename.strip('.rng'))
+
+    if complete_results:
+        # Sort files using packaging.version
+        complete_results.sort(key=lambda x: version.parse(version_pattern.match(x).group(1)))
+        command.enable_custom_sort_order()
+
+    return complete_results
 
 
 class CompletionHelp(object):
@@ -952,6 +971,7 @@ class CibConfig(command.UI):
         return cib_factory.upgrade_validate_with(force=config.core.force or force)
 
     @command.skill_level('administrator')
+    @command.completers(schema_completer)
     def do_schema(self, context, schema_st=None):
         "usage: schema [<schema>]"
         if not schema_st:
