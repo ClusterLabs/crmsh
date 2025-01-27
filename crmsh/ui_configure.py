@@ -761,6 +761,8 @@ class CibConfig(command.UI):
         rc1 = set_obj_all.verify()
         if config.core.check_frequency != "never":
             rc2 = set_obj_semantic.semantic_check(set_obj_all)
+            if rc2 >= constants.SANITY_FATAL_RC:
+                raise utils.TerminateSubCommand
         else:
             rc2 = 0
         return rc1 and rc2 <= 1
@@ -940,7 +942,10 @@ class CibConfig(command.UI):
         rc1 = True
         if replace and not force:
             rc1 = cib_factory.is_current_cib_equal()
-        rc2 = self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
+        try:
+            rc2 = self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
+        except utils.TerminateSubCommand:
+            return False
         if rc1 and rc2:
             return cib_factory.commit(replace=replace)
         if force or config.core.force:
