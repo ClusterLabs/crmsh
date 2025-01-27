@@ -2,8 +2,10 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import os
 import re
 import time
+import glob
 from . import command
 from . import completers as compl
 from . import config
@@ -189,6 +191,11 @@ def ra_agent_for_cpt(cpt):
     if ra.ra_type_validate(cpt, ra_class, provider, rsc_type):
         agent = ra.RAInfo(ra_class, rsc_type, provider)
     return agent
+
+
+def schema_completer():
+    files = glob.glob(os.path.join('/usr/share/pacemaker/', 'pacemaker-*.rng'))
+    return [os.path.basename(f) for f in files]
 
 
 class CompletionHelp(object):
@@ -952,6 +959,7 @@ class CibConfig(command.UI):
         return cib_factory.upgrade_validate_with(force=config.core.force or force)
 
     @command.skill_level('administrator')
+    @command.completers(compl.choice(schema_completer()))
     def do_schema(self, context, schema_st=None):
         "usage: schema [<schema>]"
         if not schema_st:
