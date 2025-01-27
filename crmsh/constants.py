@@ -5,7 +5,6 @@ cib_cli_map = {
     "primitive": "primitive",
     "group": "group",
     "clone": "clone",
-    "master": "ms",
     "bundle": "bundle",
     "rsc_location": "location",
     "rsc_colocation": "colocation",
@@ -23,15 +22,15 @@ cib_cli_map = {
     "tag": "tag",
     "alert": "alert",
 }
-container_tags = ("group", "clone", "ms", "master", "bundle")
-clonems_tags = ("clone", "ms", "master")
-resource_tags = ("primitive", "group", "clone", "ms", "master", "template", "bundle")
+container_tags = ("group", "clone", "bundle")
+clone_tags = ("clone", )
+resource_tags = ("primitive", "group", "clone", "template", "bundle")
 constraint_tags = ("rsc_location", "rsc_colocation", "rsc_order", "rsc_ticket")
 constraint_rsc_refs = ("rsc", "with-rsc", "first", "then")
 children_tags = ("group", "primitive")
 nvpairs_tags = ("meta_attributes", "instance_attributes", "utilization")
 defaults_tags = ("rsc_defaults", "op_defaults")
-resource_cli_names = ("primitive", "group", "clone", "ms", "master", "rsc_template", "bundle")
+resource_cli_names = ("primitive", "group", "clone", "rsc_template", "bundle")
 constraint_cli_names = ("location", "colocation", "collocation", "order", "rsc_ticket")
 nvset_cli_names = ("property", "rsc_defaults", "op_defaults")
 op_cli_names = ("monitor",
@@ -114,8 +113,8 @@ lrm_exit_codes = {
     "installed": "5",
     "configured": "6",
     "not_running": "7",
-    "master": "8",
-    "failed_master": "9",
+    "promoted": "8",
+    "failed_promoted": "9",
 }
 lrm_status_codes = {
     "pending": "-1",
@@ -143,10 +142,6 @@ clone_meta_attributes = common_meta_attributes + (
     "ordered", "notify", "interleave", "globally-unique",
     "clone-max", "clone-node-max", "clone-state", "description",
     "clone-min", "promotable", "promoted-max", "promoted-node-max",
-)
-ms_meta_attributes = common_meta_attributes + (
-    "clone-max", "clone-node-max", "notify", "globally-unique", "ordered", 
-    "interleave", "master-max", "master-node-max", "description",
 )
 bundle_meta_attributes = common_meta_attributes
 alert_meta_attributes = (
@@ -218,9 +213,6 @@ graph = {
     },
     "clone": {
         "color": "#ec008c",
-    },
-    "ms": {
-        "color": "#f8981d",
     },
     "bundle": {
         "color": "#00aeef",
@@ -447,7 +439,7 @@ HAWK_PORT = 7630
 DLM_PORT = 21064
 
 # Commands that are deprecated and hidden from UI
-HIDDEN_COMMANDS = {'ms'}
+HIDDEN_COMMANDS = {}
 
 NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
 

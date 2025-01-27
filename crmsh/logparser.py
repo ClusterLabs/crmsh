@@ -238,7 +238,7 @@ class CibInfo(object):
         for grp in cib_elem.xpath("/cib/configuration/resources/group"):
             self.groups[grp.get("id")] = xmlutil.get_rsc_children_ids(grp)
 
-        for cln in cib_elem.xpath("/cib/configuration/resources/*[self::clone or self::master]"):
+        for cln in cib_elem.xpath("/cib/configuration/resources/*[self::clone]"):
             self.clones[cln.get("id")] = xmlutil.get_prim_children_ids(cln)
             self.cloned_resources.union(self.clones[cln.get("id")])
 

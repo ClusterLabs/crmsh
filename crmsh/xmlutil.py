@@ -239,14 +239,14 @@ class RscState(object):
         except (IndexError, AttributeError):
             return None
 
-    def is_ms_or_promotable_clone(self, ident):
+    def is_promotable_clone(self, ident):
         '''
-        Test if the resource is master-slave.
+        Test if the resource is promotable.
         '''
         rsc_node = self.rsc2node(ident)
         if rsc_node is None:
             return False
-        return is_ms_or_promotable_clone(rsc_node)
+        return is_promotable_clone(rsc_node)
 
     def rsc_clone(self, ident):
         '''
@@ -560,10 +560,8 @@ def is_attr_set(node, attr):
     return get_attr_value(get_child_nvset_node(node), attr) is not None
 
 
-def is_ms_or_promotable_clone(node):
-    is_promotable_type = is_boolean_true(is_attr_set(node, "promotable"))
-    is_ms_type = node.tag in ("master", "ms")
-    return is_ms_type or is_promotable_type
+def is_promotable_clone(node):
+    return is_boolean_true(is_attr_set(node, "promotable"))
 
 
 def is_clone(node):
@@ -571,13 +569,13 @@ def is_clone(node):
 
 
 def is_clonems(node):
-    return node.tag in constants.clonems_tags
+    return node.tag in constants.clone_tags
 
 
 def is_cloned(node):
-    return (node.getparent().tag in constants.clonems_tags or
+    return (node.getparent().tag in constants.clone_tags or
             (node.getparent().tag == "group" and
-             node.getparent().getparent().tag in constants.clonems_tags))
+             node.getparent().getparent().tag in constants.clone_tags))
 
 
 def is_container(node):
@@ -632,7 +630,7 @@ def is_related(rsc_id, node):
             return True
         return False
     if is_container(node):
-        for tag in ('primitive', 'group', 'clone', 'master'):
+        for tag in ('primitive', 'group', 'clone'):
             if len(node.xpath('.//%s[@id="%s"]' % (tag, rsc_id))) > 0:
                 return True
         return False
@@ -869,8 +867,7 @@ def make_sort_map(*order):
 
 
 _sort_xml_order = make_sort_map('node',
-                                'template', 'primitive', 'bundle', 'group', 'master', 'clone', 'op',
-                                'tag',
+                                'template', 'primitive', 'bundle', 'group', 'clone', 'op', 'tag',
                                 ['rsc_location', 'rsc_colocation', 'rsc_order'],
                                 ['rsc_ticket', 'fencing-topology'],
                                 'cluster_property_set', 'rsc_defaults', 'op_defaults',
@@ -879,7 +876,7 @@ _sort_xml_order = make_sort_map('node',
 
 _sort_cli_order = make_sort_map('node',
                                 'rsc_template', 'primitive', 'bundle', 'group',
-                                ['ms', 'master'], 'clone', 'op',
+                                'clone', 'op',
                                 'tag',
                                 ['location', 'colocation', 'collocation', 'order'],
                                 ['rsc_ticket', 'fencing_topology'],

@@ -574,7 +574,6 @@ primitive p2 ocf:heartbeat:Delay \
 primitive p3 ocf:pacemaker:Dummy
 primitive st stonith:null params hostlist=node1
 clone c1 p1
-ms m1 p2
 op_defaults timeout=60s
 """)
     assert ok
