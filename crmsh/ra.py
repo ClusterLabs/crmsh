@@ -592,8 +592,8 @@ class RAInfo(object):
             if self.ra_class == "stonith" and op in ("start", "stop"):
                 return rc
             if op not in self.actions():
-                logger.warning("%s: action '%s' not found in Resource Agent meta-data", ident, op)
-                rc |= 1
+                logger.error("Action '%s' not found in Resource Agent meta-data", op)
+                rc |= constants.SANITY_FATAL_RC
                 return rc
             rc |= sanity_check_op_interval(op, op_dict)
             rc |= sanity_check_op_timeout(op, op_dict)
