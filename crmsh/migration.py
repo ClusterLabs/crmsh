@@ -124,12 +124,7 @@ class CheckResultInteractiveHandler(CheckResultHandler):
             f.write(text)
 
     def end(self):
-        if self.has_problems:
-            self.write_in_color(sys.stdout, constants.RED, '[FAIL]\n\n')
-        else:
-            self.write_in_color(sys.stdout, constants.GREEN, '[PASS]\n\n')
-        if not self.has_problems:
-            self.write_in_color(sys.stdout, constants.GREEN, '[PASS]\n')
+        sys.stdout.write('\n')
 
 
 def migrate():
@@ -154,7 +149,6 @@ def check(args: typing.Sequence[str]) -> int:
     if not parsed_args.local and not parsed_args.json:
         check_remote_yield = check_remote()
         next(check_remote_yield)
-        print('------ localhost ------')
     else:
         check_remote_yield = itertools.repeat(0)
     match parsed_args.json:
@@ -171,8 +165,9 @@ def check(args: typing.Sequence[str]) -> int:
     else:
         check_remote_yield = check_remote()
         next(check_remote_yield)
-        print('------ corosync @ localhost ------')
+        print('------ node: localhost ------')
         check_local(handler)
+        print('\n------ cib ------')
         check_global(handler)
     handler.end()
     match handler:
@@ -189,12 +184,12 @@ def check(args: typing.Sequence[str]) -> int:
         print('****** summary ******')
         if ret == 0:
             CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
-            sys.stdout.write(' Please run "crm cluster health sles16 --fix" on on any one of above nodes, after migrating all the nodes to SLES 16.\n')
+            sys.stdout.write(' Please run "crm cluster health sles16 --fix" on on any one of above nodes.\n')
             CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
             sys.stdout.write(' This cluster is good to migrate to SLES 16.\n')
         else:
             CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.RED, '[FAIL]')
-            sys.stdout.write(' Please fix all the "FAIL" problems above before migrating to SLES 16.\n')
+            sys.stdout.write(' The pacemaker cluster stack can not migrate to SLES 16.\n')
     return ret
 
 
@@ -218,7 +213,7 @@ def check_remote():
     prun_thread.join()
     ret = 0
     for host, result in prun_thread.result.items():
-        sys.stdout.write(f'------ {host} ------\n')
+        sys.stdout.write(f'------ node: {host} ------\n')
         match result:
             case prun.SSHError() as e:
                 handler.write_in_color(
@@ -340,8 +335,7 @@ def _check_unsupported_corosync_transport(handler: CheckResultHandler, dom):
         except KeyError:
             # looks like a corosync 3 config
             return
-    handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in corosync 3.', [
-        'Run "crm health sles16 --fix" to migrate it to transport "knet".',
+    handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in corosync 3. Please use knet.', [
     ])
 
 
@@ -527,8 +521,9 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
             ocf_resource_agents.append(resource_agent)
         elif resource_agent.m_class == 'stonith':
             if resource_agent.m_type == 'external/sbd':
-                handler.handle_tip('stonith:external/sbd will be removed.', [
-                    '* Please replace it with stonith:fence_sbd.'
+                handler.handle_problem(
+                    False, False, handler.LEVEL_ERROR,
+                    'stonith:external/sbd will be removed. Please use stonith:fence_sbd', [
                 ])
             else:
                 stonith_resource_agents.append(resource_agent)
@@ -604,6 +599,5 @@ def _check_removed_resource_agents(
 
 def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
     if cibquery.has_primitive_filesystem_with_fstype(cib, 'ocfs2'):
-       handler.handle_problem(False, 'OCFS2 is not supported in SLES 16.', [
-           '* Before migrating to SLES 16, replace it with GFS2.',
+       handler.handle_problem(False, 'OCFS2 is not supported in SLES 16. Please use GFS2.', [
        ])
