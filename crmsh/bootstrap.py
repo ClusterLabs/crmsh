@@ -89,6 +89,7 @@ class Context(object):
     """
     DEFAULT_PROFILE_NAME = "default"
     S390_PROFILE_NAME = "s390"
+    CORE_PACKAGES = ("corosync", "pacemaker")
 
     def __init__(self):
         '''
@@ -275,10 +276,13 @@ class Context(object):
             if self.stage in ("cluster", ) and self.cluster_is_running:
                 utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
 
-    def validate_option(self):
+    def validate(self):
         """
-        Validate options
+        Validate packages and options
         """
+        for package in self.CORE_PACKAGES:
+            if not utils.package_is_installed(package):
+                utils.fatal(f"Package '{package}' is not installed")
         if self.admin_ip:
             Validation.valid_admin_ip(self.admin_ip)
         if self.qdevice_inst:
