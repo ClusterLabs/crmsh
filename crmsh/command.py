@@ -576,10 +576,7 @@ class ChildInfo(object):
         '''
         ret = []
         if self.completer is not None:
-            if sort_completion_inst is not None and sort_completion_inst.value == 0:
-                # Restore the original value of rl_sort_completion_matches
-                # before calling the completer again
-                sort_completion_inst.value = orig_sort_completion_value
+            disable_custom_sort_order()
             specs = inspect.getfullargspec(self.completer)
             if 'context' in specs.args:
                 ret = self.completer([self.name] + args, context)
@@ -605,6 +602,18 @@ def _check_args(fn, expected):
     if argnames != expected:
         raise ValueError(fn.__name__ +
                          ": Expected method with signature " + repr(expected))
+
+
+def enable_custom_sort_order():
+    if sort_completion_inst is not None:
+        sort_completion_inst.value = 0
+
+
+def disable_custom_sort_order():
+    if sort_completion_inst is not None and sort_completion_inst.value == 0:
+        # Restore the original value of rl_sort_completion_matches
+        # before calling the completer again
+        sort_completion_inst.value = orig_sort_completion_value
 
 
 readline_path = ctypes.util.find_library('readline')
