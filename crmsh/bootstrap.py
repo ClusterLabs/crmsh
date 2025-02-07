@@ -1824,10 +1824,7 @@ def join_ssh_merge(cluster_node, remote_user):
     """
     logger.info("Merging known_hosts")
 
-    hosts = utils.list_cluster_nodes()
-    if hosts is None:
-        hosts = list()
-    hosts.append(cluster_node)
+    hosts = _context.node_list_in_cluster + [utils.this_node()]
 
     # To create local entry in known_hosts
     rc, _, _ = utils.get_stdout_stderr_as_local_sudoer("ssh {} {} true".format(SSH_OPTION, utils.this_node()))
@@ -1836,7 +1833,6 @@ def join_ssh_merge(cluster_node, remote_user):
     known_hosts_new: set[str] = set()
 
     cat_cmd = "[ -e ~/.ssh/known_hosts ] && cat ~/.ssh/known_hosts || true"
-    #logger_utils.log_only_to_file("parallax.call {} : {}".format(hosts, cat_cmd))
     for host in hosts:
         known_hosts_content = utils.get_stdout_or_raise_error(cat_cmd, remote=host)
         if known_hosts_content:
