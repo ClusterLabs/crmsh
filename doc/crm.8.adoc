@@ -222,16 +222,19 @@ crm(live)configure# primitive fence-1 <TAB><TAB>
 ocf:      stonith:  systemd:
 
 crm(live)configure# primitive fence-1 stonith:<TAB><TAB>
-apcmaster                external/ippower9258     fence_legacy
-apcmastersnmp            external/kdumpcheck      ibmhmc
-apcsmart                 external/libvirt         ipmilan
+stonith:apcmaster               stonith:fence_compute           stonith:fence_ipmilanplus
+stonith:apcmastersnmp           stonith:fence_docker            stonith:fence_ironic
+stonith:apcsmart                stonith:fence_drac5             stonith:fence_kdump
+...
 
-crm(live)configure# primitive fence-1 stonith:ipmilan params <TAB><TAB>
-auth=      hostname=  ipaddr=    login=     password=  port=      priv=
+crm(live)configure# primitive fence-1 stonith:fence_ipmilan params <TAB><TAB>
+action=                ip=                    passwd=                pcmk_host_list=
+auth=                  ipaddr=                passwd_script=         pcmk_host_map=
+...
 
-crm(live)configure# primitive fence-1 stonith:ipmilan params auth=<TAB><TAB>
-auth* (string)
-    The authorization type of the IPMI session ("none", "straight", "md2", or "md5")
+crm(live)configure# primitive fence-1 stonith:fence_ipmilan params auth=<TAB><TAB>
+auth (select): IPMI Lan Auth type.
+    Allowed values: md5, password, none
 ...............
 
 `crmsh` also comes with bash completion usable directly from the

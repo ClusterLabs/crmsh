@@ -31,7 +31,7 @@ actions:
   - include: sbd-device
 
   - cib: |
-      primitive {{id}} stonith:external/sbd
+      primitive {{id}} stonith:fence_sbd
         pcmk_delay_max=30s
 
       property stonith-enabled=true
