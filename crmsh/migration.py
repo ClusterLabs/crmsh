@@ -269,12 +269,6 @@ def check_dependency_version(handler: CheckResultHandler):
         re.compile(r"version\s+'(\d+(?:\.\d+)*)'"),
         shell.get_stdout_or_raise_error(None, 'corosync -v'),
     )
-    _check_version_range(
-        handler,
-        'Pacemaker', (3,),
-        re.compile(r"^Pacemaker\s+(\d+(?:\.\d+)*)"),
-        shell.get_stdout_or_raise_error(None, 'pacemakerd --version'),
-    )
 
 
 def _check_version_range(
