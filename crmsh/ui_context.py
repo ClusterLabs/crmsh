@@ -143,12 +143,7 @@ class Context(object):
                         # use the completer for the command
                         ret = self.command_info.complete(self, tokens)
                         if tokens:
-                            last_token = tokens[-1]
-                            if last_token:
-                                ret = [t for t in ret if t.startswith(last_token)]
-                            elif len(tokens) > 1:
-                                # don't complete for the unknown token
-                                ret = [t for t in ret if t in tokens[:-1]]
+                            ret = [t for t in ret if t.startswith(tokens[-1])]
 
                         if not ret or self.command_info.aliases:
                             if not token in self.current_level().get_completions():
