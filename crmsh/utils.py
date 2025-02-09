@@ -271,7 +271,7 @@ def can_ask(background_wait=True):
     return can_ask
 
 
-def ask(msg, background_wait=True):
+def ask(msg, background_wait=True, cancel_option=False):
     """Ask for user confirmation.
 
     Parameters:
@@ -288,9 +288,10 @@ def ask(msg, background_wait=True):
     if not can_ask(background_wait):
         return False
 
+    option_str = "y/n" + "/c" if cancel_option else ""
     msg += ' '
     if msg.endswith('? '):
-        msg = msg[:-2] + ' (y/n)? '
+        msg = msg[:-2] + f'  ({option_str})? '
 
     while True:
         try:
@@ -299,6 +300,8 @@ def ask(msg, background_wait=True):
             ans = 'n'
         if ans:
             ans = ans[0].lower()
+            if ans == 'c':
+                raise TerminateSubCommand
             if ans in 'yn':
                 return ans == 'y'
 
