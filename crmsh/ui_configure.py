@@ -1274,7 +1274,10 @@ class CibConfig(command.UI):
         if cib_factory.has_cib_changed():
             if no_questions_asked or not options.interactive:
                 ok = self._commit()
-            elif utils.ask("There are changes pending. Do you want to commit them?"):
-                ok = self._commit()
+            else:
+                confirm_msg = "There are changes pending. Do you want to commit them, or cancel the operation?"
+                rc = utils.ask(confirm_msg, cancel_option=True)
+                if rc:
+                    ok = self._commit()
         cib_factory.reset()
         return ok
