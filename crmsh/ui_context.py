@@ -345,7 +345,10 @@ class Context(object):
         '''
         Exit from the top level
         '''
-        ok = self.current_level().end_game()
+        try:
+            ok = self.current_level().end_game()
+        except utils.TerminateSubCommand:
+            return
         if options.interactive and not options.batch:
             if constants.need_reset:
                 utils.ext_cmd("reset")
