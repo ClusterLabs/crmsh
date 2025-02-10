@@ -216,24 +216,29 @@ class Context(object):
         """
         Validate sbd options
         """
-        with_sbd_option = self.sbd_devices or self.diskless_sbd
-        sbd_installed = utils.package_is_installed("sbd")
-
-        if with_sbd_option and not sbd_installed:
-            utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
         if self.sbd_devices and self.diskless_sbd:
             utils.fatal("Can't use -s and -S options together")
         if self.sbd_devices:
             SBDUtils.verify_sbd_device(self.sbd_devices)
+
+        with_sbd_option = self.sbd_devices or self.diskless_sbd
+
         if self.stage == "sbd":
-            if not sbd_installed:
+            if self.cluster_is_running:
+                utils.check_all_nodes_reachable()
+                for node in utils.list_cluster_nodes():
+                    if not utils.package_is_installed("sbd", node):
+                        utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
+            elif not utils.package_is_installed("sbd"):
                 utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
+
             if not with_sbd_option and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
             if ServiceManager().service_is_active(constants.SBD_SERVICE) and not config.core.force:
                 utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
-            if self.cluster_is_running:
-                utils.check_all_nodes_reachable()
+
+        elif with_sbd_option and not utils.package_is_installed("sbd"):
+            utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
 
     def _validate_nodes_option(self):
         """

@@ -166,20 +166,26 @@ class TestContext(unittest.TestCase):
         mock_error.assert_called_once_with("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
         mock_active.assert_called_once_with("sbd.service")
 
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_validate_sbd_option_error_sbd_stage(self, mock_active, mock_check_all, mock_installed):
+    def test_validate_sbd_option_error_sbd_stage(self, mock_check_all, mock_installed, mock_list, mock_fatal):
+        mock_fatal.side_effect = ValueError
+        mock_list.return_value = ["node1", "node2"]
         options = mock.Mock(stage="sbd", diskless_sbd=True, cluster_is_running=True)
-        mock_installed.return_value = True
+        mock_installed.side_effect = [True, False]
         ctx = crmsh.bootstrap.Context()
         ctx.stage = "sbd"
         ctx.diskless_sbd = True
         ctx.cluster_is_running = True
-        mock_active.return_value = False
-        ctx._validate_sbd_option()
-        mock_active.assert_called_once_with("sbd.service")
+        with self.assertRaises(ValueError):
+            ctx._validate_sbd_option()
         mock_check_all.assert_called_once_with()
+        mock_installed.assert_has_calls([
+            mock.call("sbd", "node1"),
+            mock.call("sbd", "node2")
+        ])
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('socket.gethostbyname')

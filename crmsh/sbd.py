@@ -436,7 +436,7 @@ class SBDManager:
     NO_SBD_WARNING = "Not configuring SBD - STONITH will be disabled."
     DISKLESS_SBD_MIN_EXPECTED_VOTE = 3
     DISKLESS_SBD_WARNING = "Diskless SBD requires cluster with three or more nodes. If you want to use diskless SBD for 2-node cluster, should be combined with QDevice."
-    SBD_NOT_INSTALLED_MSG = "Package sbd is not installed."
+    SBD_NOT_INSTALLED_MSG = "Package sbd is not installed"
     FENCE_SBD_NOT_EXISTED_MSG = "fence_sbd command does not exist."
     SBD_RA = "stonith:fence_sbd"
     SBD_RA_ID = "stonith-sbd"
