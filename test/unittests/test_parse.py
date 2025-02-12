@@ -222,11 +222,10 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('class'), 'ocf')
         self.assertEqual(['foo'], out.xpath('.//nvpair/@id-ref'))
 
-        out = self._parse('primitive dummy-0 Dummy params @fiz:buz')
+        out = self._parse('primitive dummy-0 Dummy params @fiz')
         self.assertEqual(out.get('id'), 'dummy-0')
         self.assertEqual(out.get('class'), 'ocf')
         self.assertEqual(['fiz'], out.xpath('.//nvpair/@id-ref'))
-        self.assertEqual(['buz'], out.xpath('.//nvpair/@name'))
 
     @mock.patch('logging.Logger.error')
     def test_location(self, mock_error):

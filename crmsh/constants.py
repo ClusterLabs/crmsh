@@ -133,8 +133,8 @@ rsc_meta_attributes = (
     "allow-migrate", "maintenance", "is-managed", "interval-origin",
     "migration-threshold", "priority", "multiple-active",
     "failure-timeout", "resource-stickiness", "target-role",
-    "restart-type", "description", "remote-node", "requires",
-    "provides", "remote-port", "remote-addr", "remote-connect-timeout",
+    "description", "remote-node", "requires", "provides",
+    "remote-port", "remote-addr", "remote-connect-timeout",
     "critical", "allow-unhealthy-nodes", "container-attribute-target"
 )
 common_meta_attributes = ("priority", "target-role", "is-managed")
@@ -162,7 +162,7 @@ unary_ops = ('defined', 'not_defined')
 simple_date_ops = ('lt', 'gt')
 date_ops = ('lt', 'gt', 'in_range', 'date_spec')
 date_spec_names = '''hours monthdays weekdays yearsdays months \
-weeks years weekyears moon'''.split()
+weeks years weekyears'''.split()
 in_range_attrs = ('start', 'end')
 node_default_type = "normal"
 node_attributes_keyw = ("attributes", "utilization")
@@ -258,11 +258,7 @@ simulate_programs = {
 meta_progs_20 = ("pacemaker-controld", "pacemaker-schedulerd", "pacemaker-fenced", "pacemaker-based")
 
 # elide these properties from tab completion
-controld_metadata_do_not_complete = ("dc-version",
-                                 "cluster-infrastructure",
-                                 "crmd-integration-timeout",
-                                 "crmd-finalization-timeout",
-                                 "expected-quorum-votes")
+controld_metadata_do_not_complete = ("dc-version", "cluster-infrastructure")
 extra_cluster_properties = ("dc-version",
                             "cluster-infrastructure",
                             "last-lrm-refresh",

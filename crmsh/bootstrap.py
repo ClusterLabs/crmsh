@@ -1458,7 +1458,7 @@ def init_cluster():
     logger.info("Loading initial cluster configuration")
 
     crm_configure_load("update", """property cib-bootstrap-options: stonith-enabled=false
-op_defaults op-options: timeout=600 record-pending=true
+op_defaults op-options: timeout=600
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 

@@ -114,7 +114,7 @@ def test_comment2():
 
 def test_nvpair_ref1():
     factory.create_from_cli("primitive dummy-0 Dummy params $fiz:buz=bin")
-    roundtrip('primitive dummy-1 Dummy params @fiz:boz')
+    roundtrip('primitive dummy-1 Dummy params @fiz')
 
 
 def test_idresolve():

@@ -202,6 +202,11 @@ def get_properties_meta():
 
 
 @utils.memoize
+def get_property_options(property_name):
+    return get_properties_meta().param_options(property_name)
+
+
+@utils.memoize
 def get_properties_list():
     try:
         return list(get_properties_meta().params().keys())
@@ -363,6 +368,7 @@ class RAInfo(object):
                 "unique": unique,
                 "type": typ,
                 "default": default,
+                "options": self.get_selecte_value_list(c)
             }
         items = list(d.items())
         # Sort the dictionary by required and then alphabetically
@@ -402,6 +408,16 @@ class RAInfo(object):
                 actions_dict[name] = d
 
         return cache.store(ident, actions_dict)
+
+    def param_options(self, pname):
+        '''
+        Return parameter's option values if available
+        '''
+        d = self.params()
+        try:
+            return d[pname]["options"]
+        except:
+            return None
 
     def param_default(self, pname):
         '''
