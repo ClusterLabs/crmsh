@@ -1,13 +1,10 @@
 session Configuration bugs
 options
-sort_elements false
+sort-elements false
 up
 configure
 erase
-primitive st stonith:null \
-	params hostlist='node1' \
-	meta requires=nothing \
-	op monitor interval=60m
+property stonith-enabled=false
 primitive p4 Dummy
 primitive p3 Dummy
 primitive p2 Dummy
@@ -30,7 +27,7 @@ show
 .
 session Unordered load file
 options
-sort_elements false
+sort-elements false
 up
 configure
 load update bugs-test.txt
@@ -42,10 +39,7 @@ verify
 session Unknown properties
 configure
 erase
-primitive st stonith:null \
-	params hostlist='node1' \
-	meta requires=nothing \
-	op monitor interval=60m
+property stonith-enabled=false
 property SAPHanaSR: \
     hana_ha1_site_lss_WDF1=4
 show
@@ -63,11 +57,8 @@ verify
 session template
 configure
 erase
+property stonith-enabled=false
 node node1
-primitive st stonith:null \
-	params hostlist='node1' \
-	meta requires=nothing \
-	op monitor interval=60m
 template
 new vip virtual-ip params ip=10.10.10.123
 load vip

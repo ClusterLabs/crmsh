@@ -3,7 +3,7 @@
   <configuration>
     <crm_config>
       <cluster_property_set id="cib-bootstrap-options">
-        <nvpair name="stonith-enabled" value="true" id="cib-bootstrap-options-stonith-enabled"/>
+        <nvpair name="stonith-enabled" value="false" id="cib-bootstrap-options-stonith-enabled"/>
       </cluster_property_set>
       <cluster_property_set id="cpset2">
         <nvpair name="maintenance-mode" value="true" id="cpset2-maintenance-mode"/>
@@ -22,30 +22,6 @@
       </node>
     </nodes>
     <resources>
-      <primitive id="st" class="stonith" type="ssh">
-        <instance_attributes id="st-instance_attributes">
-          <nvpair name="hostlist" value="node1 node2" id="st-instance_attributes-hostlist"/>
-        </instance_attributes>
-        <meta_attributes id="st-meta_attributes">
-          <nvpair name="target-role" value="Started" id="st-meta_attributes-target-role"/>
-          <nvpair name="requires" value="nothing" id="st-meta_attributes-requires"/>
-        </meta_attributes>
-        <operations>
-          <op name="start" timeout="60s" interval="0s" id="st-start-0s"/>
-          <op name="monitor" interval="60m" timeout="60s" id="st-monitor-60m"/>
-          <op name="stop" timeout="15s" interval="0s" id="st-stop-0s"/>
-        </operations>
-      </primitive>
-      <primitive id="st2" class="stonith" type="ssh">
-        <instance_attributes id="st2-instance_attributes">
-          <nvpair name="hostlist" value="node1 node2" id="st2-instance_attributes-hostlist"/>
-        </instance_attributes>
-        <operations>
-          <op name="monitor" timeout="20s" interval="3600s" id="st2-monitor-3600s"/>
-          <op name="start" timeout="20s" interval="0s" id="st2-start-0s"/>
-          <op name="stop" timeout="15s" interval="0s" id="st2-stop-0s"/>
-        </operations>
-      </primitive>
       <group id="g1">
         <primitive id="d1" class="ocf" provider="pacemaker" type="Dummy">
           <operations id="d1-ops">
@@ -183,13 +159,13 @@
       <rsc_order id="o3" kind="Serialize" first="m5" then="m6"/>
       <rsc_order id="o4" kind="Mandatory" first="m5" then="m6"/>
       <rsc_ticket id="ticket-A_m6" ticket="ticket-A" rsc="m6"/>
-      <rsc_ticket id="ticket-B_m6_m5" ticket="ticket-B" loss-policy="fence">
+      <rsc_ticket id="ticket-B_m6_m5" ticket="ticket-B" loss-policy="stop">
         <resource_set id="ticket-B_m6_m5-0">
           <resource_ref id="m6"/>
           <resource_ref id="m5"/>
         </resource_set>
       </rsc_ticket>
-      <rsc_ticket id="ticket-C_master" ticket="ticket-C" loss-policy="fence">
+      <rsc_ticket id="ticket-C_master" ticket="ticket-C" loss-policy="stop">
         <resource_set id="ticket-C_master-0">
           <resource_ref id="m6"/>
         </resource_set>
@@ -198,12 +174,6 @@
         </resource_set>
       </rsc_ticket>
     </constraints>
-    <fencing-topology>
-      <fencing-level target="node1" index="1" devices="st" id="fencing"/>
-      <fencing-level target="node1" index="2" devices="st2" id="fencing-0"/>
-      <fencing-level target="node2" index="1" devices="st" id="fencing-1"/>
-      <fencing-level target="node2" index="2" devices="st2" id="fencing-2"/>
-    </fencing-topology>
     <rsc_defaults>
       <meta_attributes id="rsc-options">
         <nvpair name="failure-timeout" value="10m" id="rsc-options-failure-timeout"/>

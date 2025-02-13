@@ -3,11 +3,9 @@
 .INP: _regtest on
 .INP: erase
 .INP: erase nodes
+.INP: property stonith-enabled=false
 .INP: node node1
 .INP: property enable-acl=true
-.INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" requires=nothing 	op start timeout=60s 	op monitor interval=60m timeout=60s
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
 .INP: primitive d0 ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .INP: primitive d1 ocf:pacemaker:Dummy
@@ -34,13 +32,8 @@ primitive d1 ocf:pacemaker:Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
         op stop timeout=20s interval=0s
-primitive st stonith:ssh \
-	params hostlist=node1 \
-	meta target-role=Started requires=nothing \
-	op start timeout=60s interval=0s \
-	op monitor interval=60m timeout=60s \
-	op stop timeout=15s interval=0s
 property cib-bootstrap-options: \
+	stonith-enabled=false \
 	enable-acl=true
 role basic-read \
 	read status \

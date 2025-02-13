@@ -1,14 +1,10 @@
 .TRY Configuration bugs
 .INP: options
-.INP: sort_elements false
-WARNING: 2: This command 'sort_elements' is deprecated, please use 'sort-elements'
-INFO: 2: "sort_elements" is accepted as "sort-elements"
+.INP: sort-elements false
 .INP: up
 .INP: configure
 .INP: erase
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta requires=nothing 	op monitor interval=60m
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
+.INP: property stonith-enabled=false
 .INP: primitive p4 Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: primitive p3 Dummy
@@ -28,12 +24,6 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 .INP: clone cl-p5 p5
 .INP: show
 node node1
-primitive st stonith:null \
-	params hostlist=node1 \
-	meta requires=nothing \
-	op monitor interval=60m timeout=20s \
-        op start timeout=20s interval=0s \
-        op stop timeout=15s interval=0s
 primitive p4 Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
@@ -61,18 +51,15 @@ primitive p6 Dummy \
 clone cl-p5 p5 \
        meta interleave=true
 colocation c2 inf: ( p1 p2 ) p3 p4
+property cib-bootstrap-options: \
+	stonith-enabled=false
 .INP: commit
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: _test
 .INP: verify
 .INP: show
 node node1
-primitive st stonith:null \
-	params hostlist=node1 \
-	meta requires=nothing \
-	op monitor interval=60m timeout=20s \
-        op start timeout=20s interval=0s \
-        op stop timeout=15s interval=0s
 primitive p4 Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
@@ -100,19 +87,17 @@ primitive p5 Dummy \
 clone cl-p5 p5 \
        meta interleave=true
 colocation c2 inf: ( p1 p2 ) p3 p4
+property cib-bootstrap-options: \
+	stonith-enabled=false
 .TRY Unordered load file
 .INP: options
-.INP: sort_elements false
-WARNING: 2: This command 'sort_elements' is deprecated, please use 'sort-elements'
-INFO: 2: "sort_elements" is accepted as "sort-elements"
+.INP: sort-elements false
 .INP: up
 .INP: configure
 .INP: load update bugs-test.txt
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: show
 node node1
-primitive st stonith:null \
-	params hostlist=node1
 primitive p4 Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
@@ -149,62 +134,51 @@ clone cl-p5 p5 \
 colocation c2 inf: ( p1 p2 ) p3 p4
 location loc1 g1 \
 	rule 200: #uname eq node1
+property cib-bootstrap-options: \
+	stonith-enabled=false
 op_defaults op-options: \
 	timeout=60s
 .INP: commit
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: _test
 .INP: verify
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .TRY Unknown properties
 .INP: configure
 .INP: erase
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: modified location:loc1 from g1 to gr2
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta requires=nothing 	op monitor interval=60m
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
+.INP: property stonith-enabled=false
 .INP: property SAPHanaSR:     hana_ha1_site_lss_WDF1=4
 .INP: show
 node node1
-primitive st stonith:null \
-	params hostlist=node1 \
-	meta requires=nothing \
-	op monitor interval=60m timeout=20s \
-        op start timeout=20s interval=0s \
-        op stop timeout=15s interval=0s
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
+property cib-bootstrap-options: \
+	stonith-enabled=false
 .INP: commit
-.EXT crm_resource --list-options=primitive --all --output-as=xml
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: _test
 .INP: verify
 .INP: property SAPHanaSR_2:     hana_ha1_site_iss_WDF1=cde     hana_ha1_site_bss_WDF1=abc
 .INP: show
 node node1
-primitive st stonith:null \
-	params hostlist=node1 \
-	meta requires=nothing \
-	op monitor interval=60m timeout=20s \
-        op start timeout=20s interval=0s \
-        op stop timeout=15s interval=0s
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
 property SAPHanaSR_2: \
 	hana_ha1_site_iss_WDF1=cde \
 	hana_ha1_site_bss_WDF1=abc
+property cib-bootstrap-options: \
+	stonith-enabled=false
 .INP: commit
 .INP: _test
 .INP: verify
 .TRY template
 .INP: configure
 .INP: erase
+.INP: property stonith-enabled=false
 .INP: node node1
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta requires=nothing 	op monitor interval=60m
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
 .INP: template
 .INP: new vip virtual-ip params ip=10.10.10.123
 INFO: 6: pulling in template virtual-ip
@@ -214,6 +188,7 @@ INFO: 6: pulling in template virtual-ip
 .EXT crm_resource --list-ocf-alternatives IPaddr2
 .INP: up
 .INP: commit
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: _test
 .INP: verify

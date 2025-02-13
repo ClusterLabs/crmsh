@@ -39,7 +39,7 @@ Feature: crm report functional test for common cases
   Scenario: Run history and script
     When    Run "crm history info" on "hanode1"
     When    Run "crm history refresh" on "hanode1"
-    When    Try "crm history peinputs|grep "pengine/pe-input-0""
+    When    Try "crm history peinputs|grep -E "pengine/pe-.*-0""
     Then    Expected return code is "0"
     When    Try "crm history info|grep "Nodes: hanode1 hanode2""
     Then    Expected return code is "0"

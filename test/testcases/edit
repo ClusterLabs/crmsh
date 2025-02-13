@@ -2,10 +2,6 @@ show Configuration editing
 op_defaults timeout=2m
 node node1 \
 	attributes mem=16G
-primitive st stonith:null \
-	params hostlist='node1' \
-	meta description="some description here" requires=nothing \
-	op monitor interval=60m
 primitive p1 ocf:heartbeat:Dummy \
 	op monitor interval=60m \
 	op monitor interval=120m OCF_CHECK_LEVEL=10
@@ -47,13 +43,10 @@ modgroup g1 remove c1
 modgroup g1 remove nosuch
 modgroup g1 add c1
 modgroup g1 add nosuch
-filter "sed 's/^/# this is a comment\\n/'" loc-d1
 rsc_defaults $id="rsc_options" failure-timeout=10m
 filter "sed 's/2m/60s/'" op-options
 show op-options
-property stonith-enabled=true
 show cib-bootstrap-options
-filter 'sed "s/stonith-enabled=true//"'
 show cib-bootstrap-options
 primitive d4 ocf:heartbeat:Dummy
 primitive d5 ocf:heartbeat:Dummy

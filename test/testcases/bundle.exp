@@ -3,19 +3,15 @@
 .INP: _regtest on
 .INP: erase
 .INP: erase nodes
+.INP: property stonith-enabled=false
 .INP: node node1
 .INP: delete node1
 .INP: node node1 	attributes mem=16G
 .INP: node node2 utilization cpu=4
-.INP: primitive st stonith:ssh 	params hostlist='node1 node2' 	meta target-role="Started" requires=nothing 	op start timeout=60s 	op monitor interval=60m timeout=60s
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
-.INP: primitive st2 stonith:ssh 	params hostlist='node1 node2'
 .INP: bundle id=bundle-test1 docker image=test network ip-range-start=10.10.10.123 port-mapping id=port1 port=80 storage storage-mapping id=storage1 target-dir=test source-dir=test meta target-role=Stopped
 .INP: primitive id=dummy ocf:heartbeat:Dummy op monitor interval=10 meta target-role=Stopped
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: bundle id=bundle-test2 docker image=test network ip-range-start=10.10.10.123 primitive dummy meta target-role=Stopped priority=1
-.INP: property stonith-enabled=true
 .INP: _test
 .INP: verify
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
@@ -30,17 +26,6 @@ primitive dummy Dummy \
 	op monitor interval=10s timeout=20s \
 	op start timeout=20s interval=0s \
 	op stop timeout=20s interval=0s
-primitive st stonith:ssh \
-       params hostlist="node1 node2" \
-	meta target-role=Started requires=nothing \
-	op start timeout=60s interval=0s \
-	op monitor interval=60m timeout=60s \
-	op stop timeout=15s interval=0s
-primitive st2 stonith:ssh \
-	params hostlist="node1 node2" \
-	op monitor timeout=20s interval=3600s \
-	op start timeout=20s interval=0s \
-	op stop timeout=15s interval=0s
 bundle bundle-test1 \
 	docker image=test \
 	network ip-range-start=10.10.10.123 \
@@ -54,5 +39,5 @@ bundle bundle-test2 \
 	primitive dummy \
 	meta target-role=Stopped priority=1
 property cib-bootstrap-options: \
-	stonith-enabled=true
+	stonith-enabled=false
 .INP: commit

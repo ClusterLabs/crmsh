@@ -3,19 +3,13 @@ configure
 # erase to start from scratch
 erase
 erase nodes
+property stonith-enabled=false
 node node1
-# create one stonith so that verify does not complain
-primitive st stonith:ssh \
-	params hostlist='node1' \
-	meta target-role="Started" requires=nothing \
-	op start timeout=60s \
-	op monitor interval=60m timeout=60s
 primitive p0 Dummy params $p0-state:state=1
 primitive p1 Dummy params \
     rule role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01 \
     state=2
 primitive p2 Dummy params @p0-state
-property rule #uname eq node1 stonith-enabled=no
 tag tag1: p0 p1 p2
 tag tag2 p0 p1 p2
 location l1 { p0 p1 p2 } inf: node1

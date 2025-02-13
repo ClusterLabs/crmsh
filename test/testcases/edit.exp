@@ -3,11 +3,9 @@
 .INP: _regtest on
 .INP: erase
 .INP: erase nodes
+.INP: property stonith-enabled=false
 .INP: op_defaults timeout=2m
 .INP: node node1 	attributes mem=16G
-.INP: primitive st stonith:null 	params hostlist='node1' 	meta description="some description here" requires=nothing 	op monitor interval=60m
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
 .INP: primitive p1 ocf:heartbeat:Dummy 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: filter "sed '$aprimitive p2 ocf:heartbeat:Dummy'"
@@ -22,13 +20,9 @@ primitive p1 Dummy \
 	op start timeout=20s interval=0s \
 	op stop timeout=20s interval=0s
 primitive p2 Dummy
-primitive st stonith:null \
-	params hostlist=node1 \
-	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20s \
-	op start timeout=20s interval=0s \
-	op stop timeout=15s interval=0s
 group g1 p1 p2
+property cib-bootstrap-options: \
+	stonith-enabled=false
 op_defaults op-options: \
 	timeout=2m
 .INP: filter "sed 's/p2/p3/;$aprimitive p3 ocf:heartbeat:Dummy'" g1
@@ -43,13 +37,9 @@ primitive p1 Dummy \
 	op stop timeout=20s interval=0s
 primitive p2 Dummy
 primitive p3 Dummy
-primitive st stonith:null \
-	params hostlist=node1 \
-	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20s \
-	op start timeout=20s interval=0s \
-	op stop timeout=15s interval=0s
 group g1 p1 p3
+property cib-bootstrap-options: \
+	stonith-enabled=false
 op_defaults op-options: \
 	timeout=2m
 .INP: filter "sed '$aclone c1 p2'"
@@ -103,19 +93,17 @@ ValueError: nosuch is not member of g1
 ERROR: 41: a group may contain only primitives; c1 is clone
 .INP: modgroup g1 add nosuch
 ERROR: 42: g1 refers to missing object nosuch
-.INP: filter "sed 's/^/# this is a comment\n/'" loc-d1
 .INP: rsc_defaults $id="rsc_options" failure-timeout=10m
 .INP: filter "sed 's/2m/60s/'" op-options
 .INP: show op-options
 op_defaults op-options: \
 	timeout=60s
-.INP: property stonith-enabled=true
 .INP: show cib-bootstrap-options
 property cib-bootstrap-options: \
-	stonith-enabled=true
-.INP: filter 'sed "s/stonith-enabled=true//"'
+	stonith-enabled=false
 .INP: show cib-bootstrap-options
-property cib-bootstrap-options:
+property cib-bootstrap-options: \
+	stonith-enabled=false
 .INP: primitive d4 ocf:heartbeat:Dummy
 .INP: primitive d5 ocf:heartbeat:Dummy
 .INP: primitive d6 ocf:heartbeat:Dummy
@@ -166,12 +154,6 @@ primitive p1 Dummy \
 	op stop timeout=20s interval=0s
 primitive p2 Dummy
 primitive p3 Dummy
-primitive st stonith:null \
-	params hostlist=node1 \
-	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20s \
-	op start timeout=20s interval=0s \
-	op stop timeout=15s interval=0s
 group g1 p1 p2 d3
 group g2 d1 d2
 clone c1 g1
@@ -183,7 +165,8 @@ location loc-d1-2 d1 \
 	rule webserver: defined webserver
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1
-property cib-bootstrap-options:
+property cib-bootstrap-options: \
+	stonith-enabled=false
 rsc_defaults rsc_options: \
 	failure-timeout=10m
 op_defaults op-options: \
@@ -294,12 +277,6 @@ primitive p1 Dummy \
 	op stop timeout=20s interval=0s
 primitive p2 Dummy
 primitive p3 Dummy
-primitive st stonith:null \
-	params hostlist=node1 \
-	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20s \
-	op start timeout=20s interval=0s \
-	op stop timeout=15s interval=0s
 group as a0 a1 a9 a2 a3 a4 a5 a6 a7 a8 aErr
 group g1 p1 p2 d3
 group g2 d1 d2
@@ -312,14 +289,15 @@ location loc-d1-2 d1 \
 	rule webserver: defined webserver
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1
-property cib-bootstrap-options:
+property cib-bootstrap-options: \
+	stonith-enabled=false
 rsc_defaults rsc_options: \
 	failure-timeout=10m
 op_defaults op-options: \
 	timeout=60s
 .INP: commit
-INFO: 85: apparently there is nothing to commit
-INFO: 85: try changing something first
+INFO: 82: apparently there is nothing to commit
+INFO: 82: try changing something first
 .INP: _test
 .INP: verify
 .INP: show
@@ -401,12 +379,6 @@ primitive p1 Dummy \
 	op stop timeout=20s interval=0s
 primitive p2 Dummy
 primitive p3 Dummy
-primitive st stonith:null \
-	params hostlist=node1 \
-	meta description="some description here" requires=nothing \
-	op monitor interval=60m timeout=20s \
-	op start timeout=20s interval=0s \
-	op stop timeout=15s interval=0s
 group as a0 a1 a9 a2 a3 a4 a5 a6 a7 a8 aErr
 group g1 p1 p2 d3
 group g2 d1 d2
@@ -419,11 +391,12 @@ location loc-d1-2 d1 \
 	rule webserver: defined webserver
 order o-d456 d4 d5 d6
 order o1 Mandatory: p3 c1
-property cib-bootstrap-options:
+property cib-bootstrap-options: \
+	stonith-enabled=false
 rsc_defaults rsc_options: \
 	failure-timeout=10m
 op_defaults op-options: \
 	timeout=60s
 .INP: commit
-INFO: 89: apparently there is nothing to commit
-INFO: 89: try changing something first
+INFO: 86: apparently there is nothing to commit
+INFO: 86: try changing something first

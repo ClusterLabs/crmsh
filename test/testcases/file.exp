@@ -18,15 +18,12 @@ primitive p3 ocf:pacemaker:Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
         op stop timeout=20s interval=0s
-primitive st stonith:null \
-	params hostlist=node1 \
-        op monitor timeout=20s interval=3600s \
-	op start timeout=20s interval=0s \
-	op stop timeout=15s interval=0s
 clone c1 p1 \
        meta interleave=true
 clone m1 p2 \
        meta promotable=true interleave=true
+property cib-bootstrap-options: \
+	stonith-enabled=false
 rsc_defaults build-resource-defaults: \
        resource-stickiness=1
 op_defaults op-options: \
@@ -35,9 +32,8 @@ op_defaults op-options: \
 .TRY configure load replace sample.txt
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
 .EXT crm_resource --list-options=primitive --all --output-as=xml
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT sed -i 's/60s/2m/' sample.txt
 .EXT sed -i '8a # comment' sample.txt
 .TRY Load update
@@ -62,12 +58,8 @@ primitive p3 ocf:pacemaker:Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
         op stop timeout=20s interval=0s
-primitive st stonith:null \
-	params hostlist=node1 \
-        op monitor timeout=20s interval=3600s \
-	op start timeout=20s interval=0s \
-	op stop timeout=15s interval=0s
 property cib-bootstrap-options: \
+	stonith-enabled=false \
 	cluster-recheck-interval=10m
 rsc_defaults build-resource-defaults: \
        resource-stickiness=1

@@ -3,10 +3,8 @@
 .INP: _regtest on
 .INP: erase
 .INP: erase nodes
+.INP: property stonith-enabled=false
 .INP: node node1
-.INP: primitive st stonith:ssh 	params hostlist='node1' 	op start timeout=60s
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
 .INP: primitive d1 ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .INP: primitive d2 ocf:heartbeat:Dummy
@@ -40,6 +38,7 @@ colocation c3 inf: d3 d1
 order o1 Serialize: d1 d3
 .INP: _test
 .INP: verify
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: show
 node node1
@@ -55,13 +54,10 @@ primitive d5 Dummy \
 	op monitor timeout=20s interval=10s \
 	op start timeout=20s interval=0s \
 	op stop timeout=20s interval=0s
-primitive st stonith:ssh \
-	params hostlist=node1 \
-	op start timeout=60s interval=0s \
-	op monitor timeout=20s interval=3600s \
-	op stop timeout=15s interval=0s
 colocation c1 inf: ( d1 d3 )
 colocation c2 inf: d3 d1
 colocation c3 inf: d3 d1
 order o1 Serialize: d1 d3
+property cib-bootstrap-options: \
+	stonith-enabled=false
 .INP: commit

@@ -1,9 +1,5 @@
 show Commits of all kinds
 op_defaults timeout=2m
-primitive st stonith:null \
-	params hostlist='node1' \
-	meta yoyo-meta="yoyo 2" requires=nothing \
-	op monitor interval=60m
 commit
 node node1 \
 	attributes mem=16G

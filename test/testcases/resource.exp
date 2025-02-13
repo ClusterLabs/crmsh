@@ -1123,15 +1123,11 @@ INFO: Stop tracing p0 for operation stop
 
 .SETENV showobj=
 .TRY configure rename p3 p4
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .TRY configure primitive p3 Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --list-options=primitive --all --output-as=xml
@@ -1145,14 +1141,13 @@ INFO: "rm" is accepted as "delete"
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .TRY resource scores
 .EXT crm_simulate -sUL
-2 of 6 resource instances DISABLED and 0 BLOCKED from further action due to failure
+2 of 5 resource instances DISABLED and 0 BLOCKED from further action due to failure
 
 Current cluster status:
   * Node List:
-    * Node node1: UNCLEAN (offline)
+    * OFFLINE: [ node1 ]
 
   * Full List of Resources:
-    * st	(stonith:null):	 Stopped
     * Clone Set: c1 [p1] (unmanaged):
       * Stopped: [ node1 ]
     * Clone Set: m1 [p2] (promotable):
@@ -1163,7 +1158,6 @@ Current cluster status:
 
 Assignment Scores and Utilization Information:
   * Original: node1 capacity:
-  * pcmk__primitive_assign: st allocation score on node1: 0
   * pcmk__clone_assign: c1 allocation score on node1: 0
   * pcmk__clone_assign: p1:0 allocation score on node1: 0
   * pcmk__primitive_assign: p1:0 allocation score on node1: -INFINITY
@@ -1188,8 +1182,6 @@ Transition Summary:
 .SETENV showobj=
 .TRY configure primitive p5 Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
-.EXT crm_resource --show-metadata stonith:null
-.EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --list-options=primitive --all --output-as=xml

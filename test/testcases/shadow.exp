@@ -4,7 +4,7 @@
 .EXT >/dev/null </dev/null crm_shadow -b -c 'regtest' --force
 INFO: 2: cib.new: regtest shadow CIB created
 .INP: reset regtest
-.EXT >/dev/null </dev/null crm_shadow -b -r 'regtest'
+.EXT >/dev/null </dev/null crm_shadow -b -r 'regtest' --force
 INFO: 3: cib.reset: copied live CIB to regtest
 .INP: use regtest
 .INP: commit regtest
