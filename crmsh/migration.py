@@ -129,7 +129,7 @@ class CheckResultInteractiveHandler(CheckResultHandler):
 
 def migrate():
     try:
-        if 0 != check(['']):
+        if 0 != _check_impl(local=False, json='', summary=False):
             raise MigrationFailure('Unable to start migration.')
         logger.info('Starting migration...')
         migrate_corosync_conf()
@@ -145,13 +145,30 @@ def check(args: typing.Sequence[str]) -> int:
     parser.add_argument('--json', nargs='?', const='pretty', choices=['oneline', 'pretty'])
     parser.add_argument('--local', action='store_true')
     parsed_args = parser.parse_args(args[1:])
+    ret = _check_impl(parsed_args.local or parsed_args.json is not None, parsed_args.json, parsed_args.json is None)
+    if not parsed_args.json:
+        print('****** summary ******')
+        if ret == 0:
+            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
+            sys.stdout.write(' Please run "crm cluster health sles16 --fix" on on any one of above nodes.\n')
+            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
+            sys.stdout.write(' This cluster is good to migrate to SLES 16.\n')
+        else:
+            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.RED, '[FAIL]')
+            sys.stdout.write(' The pacemaker cluster stack can not migrate to SLES 16.\n')
+    return ret
+
+
+def _check_impl(local: bool, json: str, summary: bool):
+    assert not summary or not bool(json)
+    assert local or not bool(json)
     ret = 0
-    if not parsed_args.local and not parsed_args.json:
+    if not local:
         check_remote_yield = check_remote()
         next(check_remote_yield)
     else:
         check_remote_yield = itertools.repeat(0)
-    match parsed_args.json:
+    match json:
         case 'oneline':
             handler = CheckResultJsonHandler()
         case 'pretty':
@@ -159,7 +176,7 @@ def check(args: typing.Sequence[str]) -> int:
         case _:
             handler = CheckResultInteractiveHandler()
     ret = 0
-    if parsed_args.local or parsed_args.json:
+    if local:
         check_remote_yield = itertools.repeat(0)
         check_local(handler)
     else:
@@ -180,16 +197,6 @@ def check(args: typing.Sequence[str]) -> int:
         remote_ret = next(check_remote_yield)
         if remote_ret > ret:
             ret = remote_ret
-    if not parsed_args.json:
-        print('****** summary ******')
-        if ret == 0:
-            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
-            sys.stdout.write(' Please run "crm cluster health sles16 --fix" on on any one of above nodes.\n')
-            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
-            sys.stdout.write(' This cluster is good to migrate to SLES 16.\n')
-        else:
-            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.RED, '[FAIL]')
-            sys.stdout.write(' The pacemaker cluster stack can not migrate to SLES 16.\n')
     return ret
 
 
