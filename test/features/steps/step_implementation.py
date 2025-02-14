@@ -605,3 +605,20 @@ def step_impl(context, nodes):
 EOF''',
             user='root',
         )
+
+
+@then('Test schema change')
+def step_impl(context):
+    rc, schema, _ = ShellUtils().get_stdout_stderr("crm configure schema")
+    if rc != 0 or not schema:
+        return False
+    ver = re.search(r'pacemaker-(\d+\.\d+)', schema).group(1)
+    expected_ver = float(ver) - 0.1
+    expected_schema = f"pacemaker-{expected_ver:.1f}"
+    rc, _, _ = ShellUtils().get_stdout_stderr(f"crm configure schema {expected_schema}")
+    if rc != 0:
+        return False
+    rc, schema, _ = ShellUtils().get_stdout_stderr("crm configure schema")
+    if rc != 0 or not schema:
+        return False
+    assert schema == expected_schema
