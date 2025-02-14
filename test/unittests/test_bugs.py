@@ -572,7 +572,6 @@ primitive p1 ocf:pacemaker:Dummy
 primitive p2 ocf:heartbeat:Delay \
     params startdelay=2 mondelay=2 stopdelay=2
 primitive p3 ocf:pacemaker:Dummy
-primitive st stonith:null params hostlist=node1
 clone c1 p1
 ms m1 p2
 op_defaults timeout=60s
@@ -584,10 +583,6 @@ op_defaults timeout=60s
     ok = obj.save("""op_defaults timeout=2m
 node node1 \
     attributes mem=16G
-primitive st stonith:null \
-    params hostlist='node1' \
-    meta description="some description here" requires=nothing \
-    op monitor interval=60m
 primitive p1 ocf:heartbeat:Dummy \
     op monitor interval=60m \
     op monitor interval=120m OCF_CHECK_LEVEL=10
@@ -703,8 +698,6 @@ primitive d0 Dummy \
 primitive d1 Dummy
 primitive d2 Dummy
 # Never use this STONITH agent in production!
-primitive development-stonith stonith:null \
-	params hostlist="webui node1 node2 node3"
 primitive proxy systemd:haproxy \
 	op monitor interval=10s
 primitive proxy-vip IPaddr2 \
@@ -778,8 +771,8 @@ def test_bug_110():
     """
     configuring attribute-based fencing-topology
     """
-    factory.create_object(*"primitive stonith-libvirt stonith:null".split())
-    factory.create_object(*"primitive fence-nova stonith:null".split())
+    factory.create_object(*"primitive stonith-libvirt stonith:fence_sbd".split())
+    factory.create_object(*"primitive fence-nova stonith:fence_sbd".split())
     cmd = "fencing_topology attr:OpenStack-role=compute stonith-libvirt,fence-nova".split()
     ok = factory.create_object(*cmd)
     assert ok
