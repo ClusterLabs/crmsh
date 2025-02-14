@@ -5,9 +5,9 @@ CMD ["/usr/lib/systemd/systemd", "--system"]
 
 RUN zypper -n install systemd openssh \
         firewalld iptables iptables-backend-nft \
-        make autoconf automake vim which libxslt-tools mailx iproute2 iputils bzip2 tar file glibc-locale-base libopenssl1_1 dos2unix cpio gawk \
-        python3 python3-pip python3-lxml python3-python-dateutil python3-setuptools python3-PyYAML python3-curses python3-behave python3-coverage python3-packaging \
-        csync2 libglue-devel corosync corosync-qdevice pacemaker booth corosync-qnetd
+        make autoconf automake vim which libxslt-tools mailx iproute2 iputils bzip2 tar file glibc-locale-base dos2unix cpio gawk \
+        python311 python311-pip python311-lxml python311-python-dateutil python311-setuptools python311-PyYAML python311-curses python311-behave python311-coverage python311-packaging \
+        csync2 corosync corosync-qdevice pacemaker booth corosync-qnetd
 
 RUN ssh-keygen -t rsa -f /root/.ssh/id_rsa -N '' && \
     cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys && \
