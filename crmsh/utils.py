@@ -288,7 +288,7 @@ def ask(msg, background_wait=True, cancel_option=False):
     if not can_ask(background_wait):
         return False
 
-    option_str = "y/n" + "/c" if cancel_option else ""
+    option_str = "y/n" + ("/c" if cancel_option else "")
     msg += ' '
     if msg.endswith('? '):
         msg = msg[:-2] + f'  ({option_str})? '
