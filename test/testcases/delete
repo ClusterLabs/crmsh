@@ -3,13 +3,8 @@ configure
 # erase to start from scratch
 erase
 erase nodes
+property stonith-enabled=false
 node node1
-# create one stonith so that verify does not complain
-primitive st stonith:ssh \
-	params hostlist='node1' \
-	meta target-role="Started" \
-	op start timeout=60s \
-	op monitor interval=60m timeout=60s
 primitive d1 ocf:pacemaker:Dummy
 primitive d2 ocf:pacemaker:Dummy
 location d1-pref d1 100: node1

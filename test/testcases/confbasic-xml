@@ -4,13 +4,6 @@ delete node1
 node node1 \
 	attributes mem=16G
 node node2 utilization cpu=4
-primitive st stonith:ssh \
-	params hostlist='node1 node2' \
-	meta target-role=Started requires=nothing \
-	op start timeout=60s \
-	op monitor interval=60m timeout=60s
-primitive st2 stonith:ssh \
-	params hostlist='node1 node2'
 primitive d1 ocf:pacemaker:Dummy \
 	operations $id=d1-ops \
 	op monitor interval=60m \
@@ -60,10 +53,8 @@ order o2 Optional: d1:start m5:promote
 order o3 Serialize: m5 m6
 order o4 Mandatory: m5 m6
 rsc_ticket ticket-A_m6 ticket-A: m6
-rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence
-rsc_ticket ticket-C_master ticket-C: m6 m5:Promoted loss-policy=fence
-fencing_topology st st2
-property stonith-enabled=true
+rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=stop
+rsc_ticket ticket-C_master ticket-C: m6 m5:Promoted loss-policy=stop
 property $id=cpset2 maintenance-mode=true
 rsc_defaults failure-timeout=10m
 op_defaults $id=opsdef2 record-pending=true

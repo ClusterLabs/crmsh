@@ -5,7 +5,6 @@ list all
 list names
 list names all
 list all names
-list bogus
 show mailto
 verify mailto id=foo email=test@example.com subject=hello
 run mailto id=foo email=test@example.com subject=hello nodes=node1 dry_run=true

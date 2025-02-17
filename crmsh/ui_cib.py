@@ -129,7 +129,7 @@ class CibShadow(command.UI):
         "usage: reset <shadow_cib>"
         if not utils.is_filename_sane(name):
             context.fatal_error("Bad filename: " + name)
-        if utils.ext_cmd("%s -r '%s'" % (self.extcmd, name)) == 0:
+        if utils.ext_cmd(f"{self.extcmd} -r '{name}' --force") == 0:
             context.info("copied live CIB to %s" % name)
         else:
             context.fatal_error("failed to copy live CIB to %s" % name)

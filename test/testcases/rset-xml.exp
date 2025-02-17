@@ -1,21 +1,15 @@
 <?xml version="1.0" ?>
 <cib>
   <configuration>
-    <crm_config/>
+    <crm_config>
+      <cluster_property_set id="cib-bootstrap-options">
+        <nvpair name="stonith-enabled" value="false" id="cib-bootstrap-options-stonith-enabled"/>
+      </cluster_property_set>
+    </crm_config>
     <nodes>
       <node uname="node1" id="node1"/>
     </nodes>
     <resources>
-      <primitive id="st" class="stonith" type="ssh">
-        <instance_attributes id="st-instance_attributes">
-          <nvpair name="hostlist" value="node1" id="st-instance_attributes-hostlist"/>
-        </instance_attributes>
-        <operations>
-          <op name="start" timeout="60s" interval="0s" id="st-start-0s"/>
-          <op name="monitor" timeout="20s" interval="3600s" id="st-monitor-3600s"/>
-          <op name="stop" timeout="15s" interval="0s" id="st-stop-0s"/>
-        </operations>
-      </primitive>
       <primitive id="d1" class="ocf" provider="pacemaker" type="Dummy">
         <operations>
           <op name="monitor" timeout="20s" interval="10s" id="d1-monitor-10s"/>

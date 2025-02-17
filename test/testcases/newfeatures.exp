@@ -3,16 +3,12 @@
 .INP: # erase to start from scratch
 .INP: erase
 .INP: erase nodes
+.INP: property stonith-enabled=false
 .INP: node node1
-.INP: # create one stonith so that verify does not complain
-.INP: primitive st stonith:ssh 	params hostlist='node1' 	meta target-role="Started" requires=nothing 	op start timeout=60s 	op monitor interval=60m timeout=60s
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
 .INP: primitive p0 Dummy params $p0-state:state=1
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: primitive p1 Dummy params     rule role=Started date in start=2009-05-26 end=2010-05-26 or date gt 2014-01-01     state=2
 .INP: primitive p2 Dummy params @p0-state
-.INP: property rule #uname eq node1 stonith-enabled=no
 .INP: tag tag1: p0 p1 p2
 .INP: tag tag2 p0 p1 p2
 .INP: location l1 { p0 p1 p2 } inf: node1
@@ -50,19 +46,12 @@ primitive p2 Dummy \
         op monitor timeout=20s interval=10s \
         op start timeout=20s interval=0s \
         op stop timeout=20s interval=0s
-primitive st stonith:ssh \
-	params hostlist=node1 \
-	meta target-role=Started requires=nothing \
-	op start timeout=60s interval=0s \
-	op monitor interval=60m timeout=60s \
-	op stop timeout=15s interval=0s
 tag ones l1 p1
 tag tag1 p0 p1 p2
 tag tag2 p0 p1 p2
 location l1 { p0 p1 p2 } inf: node1
 property cib-bootstrap-options: \
-	rule #uname eq node1 \
-	stonith-enabled=no
+	stonith-enabled=false
 alert notify_10 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
 	attributes trap_add_hires_timestamp_oid=false \
         select attributes { master-prmStateful test1 } \

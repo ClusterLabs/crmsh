@@ -1,5 +1,5 @@
+property stonith-enabled=false
 node node1
-primitive st stonith:null params hostlist=node1
 op_defaults timeout=60s
 group g1 gr1 gr2
 group g2 gr3

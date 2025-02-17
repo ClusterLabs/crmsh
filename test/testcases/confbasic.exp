@@ -3,14 +3,11 @@
 .INP: _regtest on
 .INP: erase
 .INP: erase nodes
+.INP: property stonith-enabled=false
 .INP: node node1
 .INP: delete node1
 .INP: node node1 	attributes mem=16G
 .INP: node node2 utilization cpu=4
-.INP: primitive st stonith:ssh 	params hostlist='node1 node2' 	meta target-role="Started" 	op start timeout=60s 	op monitor interval=60m timeout=60s
-.EXT crm_resource --show-metadata stonith:ssh
-.EXT stonithd metadata
-.INP: primitive st2 stonith:ssh 	params hostlist='node1 node2'
 .INP: primitive d1 ocf:pacemaker:Dummy 	operations $id=d1-ops 	op monitor interval=60m 	op monitor interval=120m OCF_CHECK_LEVEL=10
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .INP: monitor d1 60s:30s
@@ -46,10 +43,8 @@
 .INP: order o3 Serialize: m5 m6
 .INP: order o4 Mandatory: m5 m6
 .INP: rsc_ticket ticket-A_m6 ticket-A: m6
-.INP: rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence
-.INP: rsc_ticket ticket-C_master ticket-C: m6 m5:Promoted loss-policy=fence
-.INP: fencing_topology st st2
-.INP: property stonith-enabled=true
+.INP: rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=stop
+.INP: rsc_ticket ticket-C_master ticket-C: m6 m5:Promoted loss-policy=stop
 .INP: property $id=cpset2 maintenance-mode=true
 .INP: rsc_defaults failure-timeout=10m
 .INP: op_defaults $id=opsdef2 rule 100: #uname eq node1 record-pending=true
@@ -116,17 +111,6 @@ primitive s6 ocf:pacemaker:Stateful \
 	op stop timeout=20s interval=0s \
         op promote timeout=10s interval=0s \
         op demote timeout=10s interval=0s
-primitive st stonith:ssh \
-	params hostlist="node1 node2" \
-	meta target-role=Started \
-	op start timeout=60s interval=0s \
-	op monitor interval=60m timeout=60s \
-	op stop timeout=15s interval=0s
-primitive st2 stonith:ssh \
-	params hostlist="node1 node2" \
-	op monitor timeout=20s interval=3600s \
-	op start timeout=20s interval=0s \
-	op stop timeout=15s interval=0s
 group g1 d1 d2
 clone c d3 \
 	meta clone-max=1 interleave=true
@@ -162,12 +146,11 @@ order o1 Mandatory: m5 m6
 order o2 Optional: g1:start m5:promote
 order o3 Serialize: m5 m6
 order o4 Mandatory: m5 m6
-fencing_topology st st2
 rsc_ticket ticket-A_m6 ticket-A: m6
-rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence
-rsc_ticket ticket-C_master ticket-C: m6 m5:Promoted loss-policy=fence
+rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=stop
+rsc_ticket ticket-C_master ticket-C: m6 m5:Promoted loss-policy=stop
 property cib-bootstrap-options: \
-	stonith-enabled=true
+	stonith-enabled=false
 property cpset2: \
 	maintenance-mode=true
 rsc_defaults rsc-options: \

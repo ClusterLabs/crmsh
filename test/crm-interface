@@ -25,12 +25,12 @@ crm_mksample() {
 	$CRM_NO_REG -c $CIB<<EOF
 configure
 node node1
+property stonith-enabled=false
 primitive p0 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy
 primitive p2 ocf:heartbeat:Delay \
 	params startdelay=2 mondelay=2 stopdelay=2
 primitive p3 ocf:pacemaker:Dummy
-primitive st stonith:null params hostlist=node1
 clone c1 p1
 clone m1 p2 meta promotable=true
 op_defaults timeout=60s
@@ -44,6 +44,7 @@ configure
 _regtest on
 erase
 erase nodes
+property stonith-enabled=false
 `cat`
 show
 commit
@@ -55,6 +56,7 @@ configure
 _regtest on
 erase
 erase nodes
+property stonith-enabled=false
 `cat`
 show xml
 commit
