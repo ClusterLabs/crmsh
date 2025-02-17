@@ -978,7 +978,8 @@ class CibConfig(command.UI):
     @command.completers(schema_completer)
     def do_schema(self, context, schema_st=None):
         "usage: schema [<schema>]"
-        if not schema_st:
+        utils.load_cib_file_env()
+        if not schema_st and cib_factory.is_cib_sane():
             print(cib_factory.get_schema())
             return True
         return cib_factory.change_schema(schema_st)
