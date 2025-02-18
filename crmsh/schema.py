@@ -8,6 +8,7 @@ from . import log
 
 
 logger = log.setup_logger(__name__)
+PCMK_MIN_SCHEMA_VERSION = 1.0
 
 
 def is_supported(name):
@@ -23,8 +24,8 @@ def is_supported(name):
     """
     name = re.match(r'pacemaker-(\d+\.\d+)$', name)
     if name:
-        return float(name.group(1)) > 0.9
-    return True
+        return float(name.group(1)) >= PCMK_MIN_SCHEMA_VERSION
+    return False
 
 
 def get_attrs(schema, name):

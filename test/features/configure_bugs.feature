@@ -52,3 +52,16 @@ Feature: Functional test for configure sub level
     And     Try "crm configure show|grep -E "@vip.0|qwertyui""
     Then    Expected return code is "1"
     And     Show crm configure
+
+  @clean
+  Scenario: Setting schema
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    Then    Test schema change
+    When    Try "crm configure schema xxx" on "hanode1"
+    Then    Except "schema xxx is not supported" in stderr
