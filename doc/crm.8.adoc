@@ -3799,24 +3799,26 @@ save web-server server-config.txt
 ==== `schema`
 
 CIB's content is validated by a RNG schema. Pacemaker supports
-several, depending on version. At least the following schemas are
-accepted by `crmsh`:
+several, depending on version. You can see all supported schemas by
+typing +<TAB><TAB>+ after `crm configure schema`.
 
-* +pacemaker-1.0+
-* +pacemaker-1.1+
-* +pacemaker-1.2+
-* +pacemaker-1.3+
-* +pacemaker-2.0+
-
-Use this command to display or switch to another RNG schema.
+Note that it is highly recommended to use the latest schema version.
 
 Usage:
 ...............
-schema [<schema>]
+schema [<pacemaker-schema_version>]
 ...............
 Example:
 ...............
-schema pacemaker-1.1
+# To get the schema version of the current CIB, or the latest version if no cluster configured yet
+schema
+
+# To set the new schema version
+schema pacemaker-4.0
+
+# Then need to run `commit` to make the change effective
+# if it's on interactive mode
+commit
 ...............
 
 [[cmdhelp_configure_set,set an attribute value]]

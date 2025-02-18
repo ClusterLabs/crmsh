@@ -2518,7 +2518,8 @@ class CibFactory(object):
             logger.info("already using schema %s", schema_st)
             return True
         if not schema.is_supported(schema_st):
-            logger.warning("schema %s is not supported by the shell", schema_st)
+            logger.error("schema %s is not supported", schema_st)
+            return False
         self.cib_elem.set("validate-with", schema_st)
         if not schema.test_schema(self.cib_elem):
             self.cib_elem.set("validate-with", self.get_schema())
@@ -3367,7 +3368,7 @@ class CibFactory(object):
         elif not self.is_cib_sane():
             return False
         else:
-            return self.modified_elems() or self.remove_queue
+            return self.modified_elems() or self.remove_queue or self.new_schema
 
     def ensure_cib_updated(self):
         if options.interactive and not self.has_cib_changed():
