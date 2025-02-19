@@ -178,17 +178,26 @@ class Cluster(command.UI):
         except utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster start' on each node")
-            return
+            return False
         if not node_list:
-            return
+            return False
 
         if start_qdevice:
             service_manager.start_service("corosync-qdevice", node_list=node_list)
-        node_list = bootstrap.start_pacemaker(node_list)
-        if start_qdevice:
-            qdevice.QDevice.check_qdevice_vote()
+
+        success_flag = True
+        success_list = bootstrap.start_pacemaker(node_list=node_list)
         for node in node_list:
-            logger.info("The cluster stack started on {}".format(node))
+            if node not in success_list:
+                success_flag = False
+                logger.error("The cluster stack failed to start on %s", node)
+                continue
+            logger.info("The cluster stack started on %s", node)
+
+        if start_qdevice and success_list:
+            qdevice.QDevice.check_qdevice_vote()
+
+        return success_flag
 
     @staticmethod
     def _node_ready_to_stop_cluster_service(node):
