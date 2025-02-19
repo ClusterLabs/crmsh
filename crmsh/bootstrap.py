@@ -777,7 +777,8 @@ def init_cluster_local():
     if pass_msg:
         logger.warning("You should change the hacluster password to something more secure!")
 
-    start_pacemaker(enable_flag=True)
+    if not start_pacemaker(enable_flag=True):
+        utils.fatal("Failed to start cluster services")
     wait_for_cluster()
 
 
