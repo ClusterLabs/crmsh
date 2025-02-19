@@ -17,6 +17,8 @@ Feature: migration
     And     Run "crm cluster stop --all" on "hanode2"
     And     Try "crm cluster health sles16" on "hanode1"
     Then    Expected return code is "0"
+    And     Expected "[INFO] This cluster works on SLES 16. No migration is needed." in stdout
+
 
   Scenario: Should run fixes.
     When    Try "crm cluster health sles16 --fix" on "hanode1"
