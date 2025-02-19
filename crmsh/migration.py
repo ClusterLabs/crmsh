@@ -92,6 +92,7 @@ class CheckResultJsonHandler(CheckResultHandler):
 class CheckResultInteractiveHandler(CheckResultHandler):
     def __init__(self):
         self.has_problems = False
+        self.has_tips = False
 
     def log_info(self, fmt: str, *args):
         self.write_in_color(sys.stdout, constants.GREEN, '[INFO] ')
@@ -108,6 +109,7 @@ class CheckResultInteractiveHandler(CheckResultHandler):
             raise MigrationFailure('Unable to start migration.')
 
     def handle_tip(self, title: str, details: typing.Iterable[str]):
+        self.has_tips = True
         self.write_in_color(sys.stdout, constants.YELLOW, '[WARN] ')
         print(title)
         for line in details:
@@ -129,12 +131,17 @@ class CheckResultInteractiveHandler(CheckResultHandler):
 
 def migrate():
     try:
-        if 0 != _check_impl(local=False, json='', summary=False):
-            raise MigrationFailure('Unable to start migration.')
-        logger.info('Starting migration...')
-        migrate_corosync_conf()
-        logger.info('Finished migration.')
-        return 0
+        match _check_impl(local=False, json='', summary=False):
+            case 0:
+                logger.info("This cluster works on SLES 16. No migration is needed.")
+                return 0
+            case 1:
+                logger.info('Starting migration...')
+                migrate_corosync_conf()
+                logger.info('Finished migration.')
+                return 0
+            case _:
+                raise MigrationFailure('Unable to start migration.')
     except MigrationFailure as e:
         logger.error('%s', e)
         return 1
@@ -148,18 +155,26 @@ def check(args: typing.Sequence[str]) -> int:
     ret = _check_impl(parsed_args.local or parsed_args.json is not None, parsed_args.json, parsed_args.json is None)
     if not parsed_args.json:
         print('****** summary ******')
-        if ret == 0:
-            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
-            sys.stdout.write(' Please run "crm cluster health sles16 --fix" on on any one of above nodes.\n')
-            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
-            sys.stdout.write(' This cluster is good to migrate to SLES 16.\n')
-        else:
-            CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.RED, '[FAIL]')
-            sys.stdout.write(' The pacemaker cluster stack can not migrate to SLES 16.\n')
+        match ret:
+            case 0:
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
+                sys.stdout.write(' This cluster works on SLES 16. No migration is needed.\n')
+            case 1:
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
+                sys.stdout.write(' Please run "crm cluster health sles16 --fix" on on any one of above nodes.\n')
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
+                sys.stdout.write(' This cluster is good to migrate to SLES 16.\n')
+            case _:
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.RED, '[FAIL]')
+                sys.stdout.write(' The pacemaker cluster stack can not migrate to SLES 16.\n')
     return ret
 
 
-def _check_impl(local: bool, json: str, summary: bool):
+def _check_impl(local: bool, json: str, summary: bool) -> int:
+    """Return:
+    * 0 if the cluster is already on SLES 16.
+    * 1 if the cluster is good to migrate to SLES 16.
+    * 2 if the cluster is not good to migrate to SLES 16."""
     assert not summary or not bool(json)
     assert local or not bool(json)
     ret = 0
@@ -189,10 +204,19 @@ def _check_impl(local: bool, json: str, summary: bool):
     handler.end()
     match handler:
         case CheckResultJsonHandler():
-            ret = 0 if handler.json_result["pass"] else 1
+            if not handler.json_result["pass"]:
+                ret = 2
+            elif handler.json_result['tips']:
+                ret = 1
+            else:
+                ret = 0
         case CheckResultInteractiveHandler():
             if handler.has_problems:
+                ret = 2
+            elif handler.has_tips:
                 ret = 1
+            else:
+                ret = 0
     if check_remote_yield:
         remote_ret = next(check_remote_yield)
         if remote_ret > ret:
@@ -230,35 +254,33 @@ def check_remote():
                 sys.stdout.write('\n')
                 ret = 255
             case prun.ProcessResult() as result:
-                if result.returncode > 1:
+                try:
+                    check_result = json.loads(result.stdout.decode('utf-8'))
+                except (UnicodeDecodeError, json.JSONDecodeError):
                     print(result.stdout.decode('utf-8', 'backslashreplace'))
                     handler.write_in_color(
-                        sys.stdout, constants.YELLOW,
+                        sys.stderr, constants.YELLOW,
                         result.stderr.decode('utf-8', 'backslashreplace')
                     )
                     sys.stdout.write('\n')
-                    ret = result.returncode
+                    # cannot pass the exit status through,
+                    # as all failed exit status become 1 in ui_context.Context.run()
+                    ret = 2
                 else:
-                    try:
-                        result = json.loads(result.stdout.decode('utf-8'))
-                    except (UnicodeDecodeError, json.JSONDecodeError):
-                        print(result.stdout.decode('utf-8', 'backslashreplace'))
-                        handler.write_in_color(
-                            sys.stdout, constants.YELLOW,
-                            result.stdout.decode('utf-8', 'backslashreplace')
-                        )
-                        sys.stdout.write('\n')
-                        ret = result.returncode
+                    passed = check_result.get("pass", False)
+                    handler = CheckResultInteractiveHandler()
+                    for problem in check_result.get("problems", list()):
+                        handler.handle_problem(False, problem.get("title", ""), problem.get("descriptions"))
+                    tips = check_result.get('tips', list())
+                    for tip in tips:
+                        handler.handle_tip(tip.get("title", ""), tip.get("descriptions"))
+                    handler.end()
+                    if not passed:
+                        ret = 2
+                    elif tips:
+                        ret = 1
                     else:
-                        passed = result.get("pass", False)
-                        handler = CheckResultInteractiveHandler()
-                        for problem in result.get("problems", list()):
-                            handler.handle_problem(False, problem.get("title", ""), problem.get("descriptions"))
-                        for tip in result.get("tips", list()):
-                            handler.handle_tip(tip.get("title", ""), tip.get("descriptions"))
-                        handler.end()
-                        if not passed:
-                            ret = 1
+                        ret = result.returncode
     yield ret
 
 
