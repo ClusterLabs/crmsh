@@ -41,13 +41,13 @@ class MigrationFailure(Exception):
 
 
 class CheckResultHandler:
+    LEVEL_ERROR = 1
+    LEVEL_WARN = 2
+
     def log_info(self, fmt: str, *args):
         raise NotImplementedError
 
-    def handle_tip(self, title: str, details: typing.Iterable[str]):
-        raise NotImplementedError
-
-    def handle_problem(self, is_fatal: bool, title: str, detail: typing.Iterable[str]):
+    def handle_problem(self, is_blocker: bool, level: int, title: str, detail: typing.Iterable[str]):
         raise NotImplementedError
 
     def end(self):
@@ -60,21 +60,16 @@ class CheckResultJsonHandler(CheckResultHandler):
         self.json_result = {
             "pass": True,
             "problems": [],
-            "tips": [],
         }
+
     def log_info(self, fmt: str, *args):
         logger.debug(fmt, *args)
 
-    def handle_tip(self, title: str, details: typing.Iterable[str]):
-        self.json_result["tips"].append({
-            "title": title,
-            "descriptions": details if isinstance(details, list) else list(details),
-        })
-
-    def handle_problem(self, is_fatal: bool, title: str, detail: typing.Iterable[str]):
-        self.json_result["pass"] = False
+    def handle_problem(self, is_blocker: bool, level: int, title: str, detail: typing.Iterable[str]):
+        self.json_result["pass"] = self.json_result["pass"] and not is_blocker
         self.json_result["problems"].append({
-            "is_fatal": is_fatal,
+            "is_blocker": is_blocker,
+            "level": level,
             "title": title,
             "descriptions": detail if isinstance(detail, list) else list(detail),
         })
@@ -91,26 +86,21 @@ class CheckResultJsonHandler(CheckResultHandler):
 
 class CheckResultInteractiveHandler(CheckResultHandler):
     def __init__(self):
+        self.block_migration = False
         self.has_problems = False
-        self.has_tips = False
 
     def log_info(self, fmt: str, *args):
         self.write_in_color(sys.stdout, constants.GREEN, '[INFO] ')
         print(fmt % args)
 
-    def handle_problem(self, is_fatal: bool, title: str, details: typing.Iterable[str]):
+    def handle_problem(self, is_blocker: bool, level:int, title: str, details: typing.Iterable[str]):
         self.has_problems = True
-        self.write_in_color(sys.stdout, constants.YELLOW, '[FAIL] ')
-        print(title)
-        for line in details:
-            sys.stdout.write('       ')
-            print(line)
-        if is_fatal:
-            raise MigrationFailure('Unable to start migration.')
-
-    def handle_tip(self, title: str, details: typing.Iterable[str]):
-        self.has_tips = True
-        self.write_in_color(sys.stdout, constants.YELLOW, '[WARN] ')
+        self.block_migration = self.block_migration or is_blocker
+        match level:
+            case self.LEVEL_ERROR:
+                self.write_in_color(sys.stdout, constants.YELLOW, '[FAIL] ')
+            case self.LEVEL_WARN:
+                self.write_in_color(sys.stdout, constants.YELLOW, '[WARN] ')
         print(title)
         for line in details:
             sys.stdout.write('       ')
@@ -206,14 +196,14 @@ def _check_impl(local: bool, json: str, summary: bool) -> int:
         case CheckResultJsonHandler():
             if not handler.json_result["pass"]:
                 ret = 2
-            elif handler.json_result['tips']:
+            elif handler.json_result['problems']:
                 ret = 1
             else:
                 ret = 0
         case CheckResultInteractiveHandler():
-            if handler.has_problems:
+            if handler.block_migration:
                 ret = 2
-            elif handler.has_tips:
+            elif handler.has_problems:
                 ret = 1
             else:
                 ret = 0
@@ -269,15 +259,16 @@ def check_remote():
                 else:
                     passed = check_result.get("pass", False)
                     handler = CheckResultInteractiveHandler()
-                    for problem in check_result.get("problems", list()):
-                        handler.handle_problem(False, problem.get("title", ""), problem.get("descriptions"))
-                    tips = check_result.get('tips', list())
-                    for tip in tips:
-                        handler.handle_tip(tip.get("title", ""), tip.get("descriptions"))
+                    problems = check_result.get("problems", list())
+                    for problem in problems:
+                        handler.handle_problem(
+                            problem.get("is_blocker", False), problem.get("level", handler.LEVEL_ERROR),
+                            problem.get("title", ""), problem.get("descriptions"),
+                        )
                     handler.end()
                     if not passed:
                         ret = 2
-                    elif tips:
+                    elif problems:
                         ret = 1
                     else:
                         ret = result.returncode
@@ -309,7 +300,9 @@ def _check_version_range(
     match = pattern.search(text)
     if not match:
         handler.handle_problem(
-            False, f'{component_name} version not supported', [
+            True, handler.LEVEL_ERROR,
+            f'{component_name} version not supported',
+            [
                 'Unknown version:',
                 text,
             ],
@@ -318,7 +311,8 @@ def _check_version_range(
         version = tuple(int(x) for x in match.group(1).split('.'))
         if not minimum <= version:
             handler.handle_problem(
-                False, f'{component_name} version not supported', [
+                True,  handler.LEVEL_ERROR,
+                f'{component_name} version not supported', [
                     'Supported version: {} <= {}'.format(
                         '.'.join(str(x) for x in minimum),
                         component_name,
@@ -333,7 +327,10 @@ def check_service_status(handler: CheckResultHandler):
     manager = service_manager.ServiceManager()
     active_services = [x for x in ['corosync', 'pacemaker'] if manager.service_is_active(x)]
     if active_services:
-        handler.handle_problem(False, 'Cluster services are running', (f'* {x}' for x in active_services))
+        handler.handle_problem(
+            True, handler.LEVEL_ERROR,
+            'Cluster services are running', (f'* {x}' for x in active_services),
+        )
 
 
 def check_unsupported_corosync_features(handler: CheckResultHandler):
@@ -342,9 +339,12 @@ def check_unsupported_corosync_features(handler: CheckResultHandler):
     with open(conf_path, 'r', encoding='utf-8') as f:
         config = corosync_config_format.DomParser(f).dom()
     if config['totem'].get('rrp_mode', None) in {'active', 'passive'}:
-        handler.handle_tip('Corosync RRP will be deprecated in corosync 3.', [
-            'Run "crm health sles16 --fix" to migrate it to knet multilink.',
-        ])
+        handler.handle_problem(
+            False, handler.LEVEL_WARN,
+            'Corosync RRP will be deprecated in corosync 3.', [
+                'Run "crm health sles16 --fix" to migrate it to knet multilink.',
+            ],
+        )
     _check_unsupported_corosync_transport(handler, config)
 
 
@@ -358,8 +358,10 @@ def _check_unsupported_corosync_transport(handler: CheckResultHandler, dom):
         except KeyError:
             # looks like a corosync 3 config
             return
-    handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in corosync 3. Please use knet.', [
-    ])
+    handler.handle_problem(
+        False, handler.LEVEL_WARN,
+        f'Corosync transport "{transport}" will be deprecated in corosync 3. Please use knet.', [],
+    )
 
 
 def migrate_corosync_conf():
@@ -559,10 +561,8 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
             self._title= title
         def log_info(self, fmt: str, *args):
             return self._parent.log_info(fmt, *args)
-        def handle_problem(self, is_fatal: bool, title: str, detail: typing.Iterable[str]):
-            return self._parent.handle_problem(is_fatal, self._title, detail)
-        def handle_tip(self, title: str, details: typing.Iterable[str]):
-            return self._parent.handle_tip(self._title, details)
+        def handle_problem(self, is_blocker: bool, level: int, title: str, detail: typing.Iterable[str]):
+            return self._parent.handle_problem(is_blocker, level, self._title, detail)
     supported_resource_agents = _load_supported_resource_agents()
     _check_removed_resource_agents(
         TitledCheckResourceHandler(handler, "The following resource agents will be removed in SLES 16."),
@@ -587,9 +587,12 @@ def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: 
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         ).returncode:
-            handler.handle_problem(False, 'SAPHanaSR Classic will be removed in SLES 16.', [
-                'Before migrating to SLES 16, replace it with SAPHanaSR-angi.',
-            ])
+            handler.handle_problem(
+                True, handler.LEVEL_ERROR,
+                'SAPHanaSR Classic will be removed in SLES 16.', [
+                    'Before migrating to SLES 16, replace it with SAPHanaSR-angi.',
+                ],
+            )
 
 
 def _load_supported_resource_agents() -> typing.Set[cibquery.ResourceAgent]:
@@ -614,13 +617,18 @@ def _check_removed_resource_agents(
 ):
     unsupported_resource_agents = [x for x in resource_agents if x not in supported_resource_agents]
     if unsupported_resource_agents:
-        handler.handle_problem(False, '', [
-            '* ' + ':'.join(x for x in dataclasses.astuple(resource_agent) if x is not None)
-            for resource_agent in unsupported_resource_agents
-        ])
+        handler.handle_problem(
+            True, handler.LEVEL_ERROR,
+            '', [
+                '* ' + ':'.join(x for x in dataclasses.astuple(resource_agent) if x is not None)
+                for resource_agent in unsupported_resource_agents
+            ],
+        )
 
 
 def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
     if cibquery.has_primitive_filesystem_with_fstype(cib, 'ocfs2'):
-       handler.handle_problem(False, 'OCFS2 is not supported in SLES 16. Please use GFS2.', [
-       ])
+       handler.handle_problem(
+           True, handler.LEVEL_ERROR,
+           'OCFS2 is not supported in SLES 16. Please use GFS2.', [],
+       )
