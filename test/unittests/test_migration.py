@@ -2,6 +2,8 @@ import re
 import unittest
 from unittest import mock
 
+import lxml.etree
+
 from crmsh import migration, cibquery
 
 
@@ -56,3 +58,24 @@ class TestCheckRemovedResourceAgents(unittest.TestCase):
         self._handler.handle_problem.assert_not_called()
         check_fn('foo 2.0')
         self._handler.handle_problem.assert_not_called()
+
+    @mock.patch('glob.iglob')
+    def test_get_latest_cib_schema_version(self, mock_iglob: mock.MagicMock):
+        mock_iglob.return_value = iter([
+            'pacemaker-0.1.rng', 'pacemaker-1.9.rng', 'pacemaker-1.11.rng', 'pacemaker-next.rng',
+        ])
+        self.assertEqual((1, 11), migration._get_latest_cib_schema_version())
+
+    @mock.patch('crmsh.migration._get_latest_cib_schema_version')
+    def test_check_cib_schema_version(self, mock_get_latest_cib_schema_version):
+        cib = lxml.etree.fromstring('<cib crm_feature_set="3.16.1" validate-with="pacemaker-3.9" epoch="7" num_updates="0" admin_epoch="0" cib-last-written="Fri Jan  3 13:35:49 2025" update-origin="ha-1-2" update-client="cibadmin" update-user="root" have-quorum="1" dc-uuid="1"/>')
+        mock_get_latest_cib_schema_version.return_value = (3, 10)
+        handler = mock.Mock(migration.CheckResultHandler)
+        migration.check_cib_schema_version(handler, cib)
+        handler.handle_problem.assert_called_with(
+            False, handler.LEVEL_WARN,
+            "The CIB is not validated with the latest schema version.", [
+                '* Latest version:  3.10',
+                '* Current version: 3.9',
+            ]
+        )
