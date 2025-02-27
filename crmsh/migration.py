@@ -1,5 +1,6 @@
 import argparse
 import dataclasses
+import glob
 import importlib.resources
 import itertools
 import json
@@ -276,7 +277,9 @@ def check_remote():
 
 
 def check_global(handler: CheckResultHandler):
-    check_unsupported_resource_agents(handler)
+    cib = xmlutil.text2elem(sh.LocalShell().get_stdout_or_raise_error(None, 'crm configure show xml'))
+    check_cib_schema_version(handler, cib)
+    check_unsupported_resource_agents(handler, cib)
 
 
 def check_dependency_version(handler: CheckResultHandler):
@@ -536,11 +539,10 @@ class Cib:
         return result
 
 
-def check_unsupported_resource_agents(handler: CheckResultHandler):
+def check_unsupported_resource_agents(handler: CheckResultHandler, cib: lxml.etree.Element):
     handler.log_info("Checking used resource agents...")
     ocf_resource_agents = list()
     stonith_resource_agents = list()
-    cib = xmlutil.text2elem(sh.LocalShell().get_stdout_or_raise_error(None, 'crm configure show xml'))
     for resource_agent in cibquery.get_configured_resource_agents(cib):
         if resource_agent.m_class == 'ocf':
             ocf_resource_agents.append(resource_agent)
@@ -632,3 +634,36 @@ def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
            True, handler.LEVEL_ERROR,
            'OCFS2 is not supported in SLES 16. Please use GFS2.', [],
        )
+
+def check_cib_schema_version(handler: CheckResultHandler, cib: lxml.etree.Element):
+    schema_version = cib.get('validate-with')
+    if schema_version is None:
+        handler.handle_problem(
+            False, handler.LEVEL_WARN,
+            "The CIB is validated with unknown schema version.", []
+        )
+        return
+    version_match = re.match(r'^pacemaker-(\d+)\.(\d+)$', schema_version)
+    if version_match is None:
+        handler.handle_problem(
+            False, handler.LEVEL_WARN,
+            f"The CIB is validated with unknown schema version {schema_version}", []
+        )
+        return
+    version = tuple(int(x) for x in version_match.groups())
+    latest_schema_version = _get_latest_cib_schema_version()
+    if version != latest_schema_version:
+        handler.handle_problem(
+            False, handler.LEVEL_WARN,
+            "The CIB is not validated with the latest schema version.", [
+                f'* Latest version:  {".".join(str(i) for i in latest_schema_version)}',
+                f'* Current version: {".".join(str(i) for i in version)}',
+            ]
+        )
+
+
+def _get_latest_cib_schema_version() -> tuple[int, int]:
+    return max(tuple(int(s) for s in x.groups()) for x in (
+        re.match(r'^pacemaker-(\d+)\.(\d+)\.rng$', filename)
+        for filename in glob.iglob('pacemaker-*.rng', root_dir='/usr/share/pacemaker')
+    ) if x is not None)
