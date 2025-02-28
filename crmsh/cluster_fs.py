@@ -58,7 +58,7 @@ class ClusterFSManager(object):
             # Consider such issue might not be fixed in the local pacemaker version
             # https://github.com/ClusterLabs/pacemaker/pull/3766
             # DLM RA's id shouldn avoid using 'gfs' as prefix
-            self.DLM_RA_ID = "dlm"
+            self.DLM_RA_ID = "dlm-controld-ra"
             self.FS_RA_ID = f"{prefix}-clusterfs"
             self.LVMLOCKD_RA_ID = f"{prefix}-lvmlockd"
             self.LVMACTIVATE_RA_ID = f"{prefix}-lvmactivate"

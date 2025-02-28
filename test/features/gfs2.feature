@@ -25,7 +25,7 @@ Scenario: Configure gfs2 along with init process
   Then    Cluster service is "started" on "hanode1"
   And     Service "sbd" is "started" on "hanode1"
   And     Resource "stonith-sbd" type "fence_sbd" is "Started"
-  And     Resource "dlm" type "pacemaker:controld" is "Started"
+  And     Resource "dlm-controld-ra" type "pacemaker:controld" is "Started"
   And     Resource "gfs2-clusterfs" type "heartbeat:Filesystem" is "Started"
 
 @clean
@@ -37,7 +37,7 @@ Scenario: Configure cluster lvm2 + gfs2 with init process
   Then    Cluster service is "started" on "hanode1"
   And     Service "sbd" is "started" on "hanode1"
   And     Resource "stonith-sbd" type "fence_sbd" is "Started"
-  And     Resource "dlm" type "pacemaker:controld" is "Started"
+  And     Resource "dlm-controld-ra" type "pacemaker:controld" is "Started"
   And     Resource "gfs2-lvmlockd" type "heartbeat:lvmlockd" is "Started"
   And     Resource "gfs2-lvmactivate" type "heartbeat:LVM-activate" is "Started"
   And     Resource "gfs2-clusterfs" type "heartbeat:Filesystem" is "Started"
@@ -55,7 +55,7 @@ Scenario: Add gfs2 alone on a running cluster
   And     Service "sbd" is "started" on "hanode2"
   And     Resource "stonith-sbd" type "fence_sbd" is "Started"
   When    Run "crm cluster init gfs2 -g /dev/sda2 -y" on "hanode1"
-  Then    Resource "dlm" type "pacemaker:controld" is "Started"
+  Then    Resource "dlm-controld-ra" type "pacemaker:controld" is "Started"
   And     Resource "gfs2-clusterfs" type "heartbeat:Filesystem" is "Started"
 
 @clean
@@ -71,7 +71,7 @@ Scenario: Add cluster lvm2 + gfs2 on a running cluster
   And     Service "sbd" is "started" on "hanode2"
   And     Resource "stonith-sbd" type "fence_sbd" is "Started"
   When    Run "crm cluster init gfs2 -g /dev/sda2 -C -y" on "hanode1"
-  Then    Resource "dlm" type "pacemaker:controld" is "Started"
+  Then    Resource "dlm-controld-ra" type "pacemaker:controld" is "Started"
   And     Resource "gfs2-lvmlockd" type "heartbeat:lvmlockd" is "Started"
   And     Resource "gfs2-lvmactivate" type "heartbeat:LVM-activate" is "Started"
   And     Resource "gfs2-clusterfs" type "heartbeat:Filesystem" is "Started"
