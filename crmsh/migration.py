@@ -301,7 +301,10 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
             ocf_resource_agents.append(resource_agent)
         elif resource_agent.m_class == 'stonith':
             if resource_agent.m_type == 'external/sbd':
-                handler.handle_tip('stonith:external/sbd will be removed. Please use stonith:fence_sbd', [
+                handler.handle_problem(
+                    False,
+                    'stonith:external/sbd will be removed in SLES 16.', [
+                        'Before migrating to SLES 16, replace it with stonith:fence_sbd.',
                 ])
             else:
                 stonith_resource_agents.append(resource_agent)
