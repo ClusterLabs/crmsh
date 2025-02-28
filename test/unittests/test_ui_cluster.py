@@ -58,27 +58,31 @@ class TestCluster(unittest.TestCase):
 
     @mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
     @mock.patch('crmsh.bootstrap.start_pacemaker')
+    @mock.patch('logging.Logger.error')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
-    def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_start_pacemaker, mock_check_qdevice):
+    def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_error, mock_start_pacemaker, mock_check_qdevice):
         context_inst = mock.Mock()
         mock_start_pacemaker.return_value = ["node1"]
-        mock_parse_nodes.return_value = ["node1"]
-        mock_active.side_effect = [False, False]
+        mock_parse_nodes.return_value = ["node1", "node2"]
+        mock_active.side_effect = [False, False, False, False]
         mock_qdevice_configured.return_value = True
 
-        self.ui_cluster_inst.do_start(context_inst, "node1")
+        self.ui_cluster_inst.do_start(context_inst, "node1", "node2")
 
         mock_active.assert_has_calls([
             mock.call("pacemaker.service", remote_addr="node1"),
-            mock.call("corosync-qdevice.service", remote_addr="node1")
+            mock.call("corosync-qdevice.service", remote_addr="node1"),
+            mock.call("pacemaker.service", remote_addr="node2"),
+            mock.call("corosync-qdevice.service", remote_addr="node2")
             ])
-        mock_start.assert_called_once_with("corosync-qdevice", node_list=["node1"])
+        mock_start.assert_called_once_with("corosync-qdevice", node_list=["node1", "node2"])
         mock_qdevice_configured.assert_called_once_with()
-        mock_info.assert_called_once_with("The cluster stack started on node1")
+        mock_info.assert_called_once_with("The cluster stack started on %s", "node1")
+        mock_error.assert_called_once_with("The cluster stack failed to start on %s", "node2")
 
     @mock.patch('crmsh.utils.wait_for_dc')
     @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')

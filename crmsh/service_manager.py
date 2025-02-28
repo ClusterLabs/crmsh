@@ -2,6 +2,7 @@ import typing
 
 import crmsh.parallax
 import crmsh.sh
+from crmsh import utils
 
 
 class ServiceManager(object):
@@ -52,7 +53,7 @@ class ServiceManager(object):
         else:
             rc = self._run_on_single_host(cmd, remote_addr)
             if rc == 0:
-                return [remote_addr]
+                return [remote_addr or utils.this_node()]
             else:
                 return list()
 
