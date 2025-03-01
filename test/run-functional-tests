@@ -228,8 +228,6 @@ deploy_ha_node() {
 
 
 create_node() {
-	info "Loading container image $CONTAINER_IMAGE..."
-
         echo 16777216 > /proc/sys/net/core/rmem_max
         echo 16777216 > /proc/sys/net/core/wmem_max
         info "Create ha specific container networks..."
