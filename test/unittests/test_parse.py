@@ -171,21 +171,6 @@ class TestCliParser(unittest.TestCase):
         out = self._parse('primitive st stonith:fence_sbd meta')
         self.assertEqual(out.get('id'), 'st')
 
-        out = self._parse('ms m0 resource params a=b')
-        self.assertEqual(out.get('id'), 'm0')
-        print(xml_tostring(out))
-        self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
-        self.assertEqual(['b'], out.xpath('instance_attributes/nvpair[@name="a"]/@value'))
-
-        out2 = self._parse('ms m0 resource a=b')
-        self.assertEqual(out.get('id'), 'm0')
-        self.assertEqual(xml_tostring(out), xml_tostring(out2))
-
-        out = self._parse('master ma resource meta a=b')
-        self.assertEqual(out.get('id'), 'ma')
-        self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
-        self.assertEqual(['b'], out.xpath('meta_attributes/nvpair[@name="a"]/@value'))
-
         out = self._parse('clone clone-1 resource meta a=b')
         self.assertEqual(out.get('id'), 'clone-1')
         self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
@@ -647,13 +632,10 @@ class TestCliParser(unittest.TestCase):
             """clone c d3 \
             meta clone-max=1""",
             """primitive d4 ocf:pacemaker:Dummy""",
-            """ms m d4""",
             """primitive s5 ocf:pacemaker:Stateful \
             operations $id-ref=d1-ops""",
             """primitive s6 ocf:pacemaker:Stateful \
             operations $id-ref=d1""",
-            """ms m5 s5""",
-            """ms m6 s6""",
             """location l1 g1 100: node1""",
             """location l2 c \
             rule $id=l2-rule1 100: #uname eq node1""",
@@ -700,11 +682,8 @@ class TestCliParser(unittest.TestCase):
             '<primitive id="d3" class="ocf" provider="pacemaker" type="Dummy"/>',
             '<clone id="c"><meta_attributes><nvpair name="clone-max" value="1"/></meta_attributes><crmsh-ref id="d3"/></clone>',
             '<primitive id="d4" class="ocf" provider="pacemaker" type="Dummy"/>',
-            '<master id="m"><crmsh-ref id="d4"/></master>',
             '<primitive id="s5" class="ocf" provider="pacemaker" type="Stateful"><operations id-ref="d1-ops"/></primitive>',
             '<primitive id="s6" class="ocf" provider="pacemaker" type="Stateful"><operations id-ref="d1"/></primitive>',
-            '<master id="m5"><crmsh-ref id="s5"/></master>',
-            '<master id="m6"><crmsh-ref id="s6"/></master>',
             '<rsc_location id="l1" rsc="g1" score="100" node="node1"/>',
             '<rsc_location id="l2" rsc="c"><rule id="l2-rule1" score="100"><expression operation="eq" attribute="#uname" value="node1"/></rule></rsc_location>',
             '<rsc_location id="l3" rsc="m5"><rule score="INFINITY"><expression operation="eq" attribute="#uname" value="node1"/><expression operation="gt" attribute="pingd" value="0"/></rule></rsc_location>',
