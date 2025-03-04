@@ -9,8 +9,8 @@ Feature: migration
     And     Cluster service is "stopped" on "hanode2"
     And     Run "crm cluster init -y -N hanode2" OK on "hanode1"
     When    Try "crm cluster health sles16" on "hanode1"
-    Then    Expected return code is "1"
-    And     Expected "[FAIL] Cluster services are running" in stdout
+    Then    Expected return code is "0"
+    And     Expected "[INFO] This cluster works on SLES 16. No migration is needed." in stdout
 
   Scenario: Run pre-migration checks with cluster services stopped.
     When    Run "crm cluster stop --all" on "hanode1"
