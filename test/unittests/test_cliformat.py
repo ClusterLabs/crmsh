@@ -208,20 +208,6 @@ target-pattern="red.*"></fencing-level>
     assert obj.cli_use_validate()
 
 
-def test_master():
-    xml = """<master id="ms-1">
-    <crmsh-ref id="dummy3" />
-    </master>
-    """
-    data = etree.fromstring(xml)
-    factory.create_from_cli("primitive dummy3 ocf:pacemaker:Dummy")
-    data, _, _ = cibconfig.postprocess_cli(data)
-    print("after postprocess:", etree.tostring(data))
-    obj = factory.create_from_node(data)
-    assert_is_not_none(obj)
-    assert obj.cli_use_validate()
-
-
 def test_param_rules():
     roundtrip('primitive foo Dummy ' +
               'params rule #uname eq wizbang laser=yes ' +

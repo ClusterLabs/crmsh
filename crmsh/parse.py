@@ -884,7 +884,7 @@ def parse_node(self, cmd):
     return out
 
 
-@parser_for('primitive', 'group', 'clone', 'ms', 'master', 'rsc_template', 'bundle')
+@parser_for('primitive', 'group', 'clone', 'rsc_template', 'bundle')
 class ResourceParser(BaseParser):
     def match_ra_type(self, out):
         "[<class>:[<provider>:]]<type>"
@@ -935,11 +935,9 @@ class ResourceParser(BaseParser):
     parse_primitive = _primitive_or_template
     parse_rsc_template = _primitive_or_template
 
-    def _master_or_clone(self):
+    def parse_clone(self):
         if self.matched(0).lower() == 'clone':
             out = xmlutil.new('clone')
-        else:
-            out = xmlutil.new('master')
         out.set('id', self.match_identifier())
 
         child = xmlutil.new('crmsh-ref', id=self.match_resource())
@@ -948,10 +946,6 @@ class ResourceParser(BaseParser):
                                    'meta': 'meta_attributes'}, implicit_initial='params')
         out.append(child)
         return out
-
-    parse_master = _master_or_clone
-    parse_ms = _master_or_clone
-    parse_clone = _master_or_clone
 
     def _try_group_resource(self):
         t = self.current_token()

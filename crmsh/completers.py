@@ -52,7 +52,7 @@ def resources(args=None):
     rsc_id_list = [x.get("id") for x in nodes if xmlutil.is_resource(x)]
     if args:
         if args[0] in ('promote', 'demote'):
-            rsc_id_list = [item for item in rsc_id_list if xmlutil.RscState().is_ms_or_promotable_clone(item)]
+            rsc_id_list = [item for item in rsc_id_list if xmlutil.RscState().is_promotable_clone(item)]
         elif args[0] == "start":
             rsc_id_list = [item for item in rsc_id_list if not xmlutil.RscState().is_running(item)]
         elif args[0] == "stop":

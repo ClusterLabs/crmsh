@@ -338,7 +338,7 @@ class RscMgmt(command.UI):
         "usage: promote <rsc>"
         if not utils.is_name_sane(rsc):
             return False
-        if not xmlutil.RscState().is_ms_or_promotable_clone(rsc):
+        if not xmlutil.RscState().is_promotable_clone(rsc):
             logger.error("%s is not a promotable resource", rsc)
             return False
         role = utils.handle_role_for_ocf_1_1(constants.RSC_ROLE_PROMOTED)
@@ -367,7 +367,7 @@ class RscMgmt(command.UI):
         "usage: demote <rsc>"
         if not utils.is_name_sane(rsc):
             return False
-        if not xmlutil.RscState().is_ms_or_promotable_clone(rsc):
+        if not xmlutil.RscState().is_promotable_clone(rsc):
             logger.error("%s is not a promotable resource", rsc)
             return False
         role = utils.handle_role_for_ocf_1_1(constants.RSC_ROLE_UNPROMOTED)
@@ -667,7 +667,7 @@ class RscMgmt(command.UI):
                 context.fatal_error("Failed to add trace for %s:%s" % (rsc_id, name))
         trace('start')
         trace('stop')
-        if xmlutil.is_ms_or_promotable_clone(rsc.node):
+        if xmlutil.is_promotable_clone(rsc.node):
             trace('promote')
             trace('demote')
         for op_node in op_nodes:

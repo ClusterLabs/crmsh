@@ -31,7 +31,7 @@ from .utils import page_string, str2tmp, ensure_sudo_readable
 from .utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
 from .xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
 from .xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
-from .xmlutil import rename_rscref, is_ms_or_promotable_clone, silly_constraint, is_container, fix_comments
+from .xmlutil import rename_rscref, is_promotable_clone, silly_constraint, is_container, fix_comments
 from .xmlutil import sanity_check_nvpairs, merge_nodes, op2list, mk_rsc_type, is_resource
 from .xmlutil import stuff_comments, is_comment, is_constraint, read_cib, processing_sort_cli
 from .xmlutil import find_operation, get_rsc_children_ids, is_primitive, referenced_resources
@@ -676,7 +676,6 @@ def fix_node_ids(node, oldnode):
         'node': 'node',
         'primitive': 'rsc',
         'template': 'rsc',
-        'master': 'grp',
         'group': 'grp',
         'clone': 'grp',
         'rsc_location': 'location',
@@ -940,7 +939,7 @@ class CibObject(object):
             return "%s %s" % (h, cli_format(l, break_lines=(format_mode > 0), xml=True))
 
     def _gv_rsc_id(self):
-        if self.parent and self.parent.obj_type in constants.clonems_tags:
+        if self.parent and self.parent.obj_type in constants.clone_tags:
             return "%s:%s" % (self.parent.obj_type, self.obj_id)
         return self.obj_id
 
@@ -1644,7 +1643,7 @@ class CibPrimitive(CibObject):
             self._set_gv_attrs(gv_obj)
             self._set_gv_attrs(gv_obj, "class:%s" % ra_class)
             # if it's clone/ms, then get parent graph attributes
-            if self.parent and self.parent.obj_type in constants.clonems_tags:
+            if self.parent and self.parent.obj_type in constants.clone_tags:
                 self._set_gv_attrs(gv_obj, self.parent.obj_type)
 
             template_ref = self.node.get("template")
@@ -1669,7 +1668,7 @@ class CibPrimitive(CibObject):
             self._set_gv_attrs(gv_obj)
             self._set_gv_attrs(gv_obj, "class:%s" % ra_class)
             # if it's clone/ms, then get parent graph attributes
-            if self.parent and self.parent.obj_type in constants.clonems_tags:
+            if self.parent and self.parent.obj_type in constants.clone_tags:
                 self._set_gv_attrs(gv_obj, self.parent.obj_type)
 
 
@@ -1688,7 +1687,7 @@ class CibContainer(CibObject):
             if (self.obj_type == "group" and is_primitive(c)) or \
                     is_child_rsc(c):
                 children.append(clidisplay.rscref(c.get("id")))
-            elif self.obj_type in constants.clonems_tags and is_child_rsc(c):
+            elif self.obj_type in constants.clone_tags and is_child_rsc(c):
                 children.append(clidisplay.rscref(c.get("id")))
         s = clidisplay.keyword(self.obj_type)
         ident = clidisplay.ident(self.obj_id)
@@ -1704,8 +1703,6 @@ class CibContainer(CibObject):
         l = get_resource_meta_list()
         if self.obj_type == "clone":
             l += constants.clone_meta_attributes
-        elif self.obj_type == "ms":
-            l += constants.clone_meta_attributes + constants.ms_meta_attributes
         elif self.obj_type == "group":
             l += constants.group_meta_attributes
         rc = sanity_check_meta(self.obj_id, self.node, l)
@@ -1714,7 +1711,7 @@ class CibContainer(CibObject):
     def repr_gv(self, gv_obj, from_grp=False):
         '''
         A group is a subgraph.
-        Clones and ms just get different attributes.
+        Clones just get different attributes.
         '''
         if self.obj_type != "group":
             return
@@ -1722,7 +1719,7 @@ class CibContainer(CibObject):
                               "cluster_%s" % self.obj_id)
         sg_obj.new_graph_attr('label', self._gv_rsc_id())
         self._set_sg_attrs(sg_obj, self.obj_type)
-        if self.parent and self.parent.obj_type in constants.clonems_tags:
+        if self.parent and self.parent.obj_type in constants.clone_tags:
             self._set_sg_attrs(sg_obj, self.parent.obj_type)
         for child_rsc in self.children:
             child_rsc.repr_gv(sg_obj, from_grp=True)
@@ -2283,7 +2280,6 @@ cib_object_map = {
     "primitive": ("primitive", CibPrimitive, "resources"),
     "group": ("group", CibContainer, "resources"),
     "clone": ("clone", CibContainer, "resources"),
-    "master": ("ms", CibContainer, "resources"),
     "template": ("rsc_template", CibPrimitive, "resources"),
     "bundle": ("bundle", CibBundle, "resources"),
     "rsc_location": ("location", CibLocation, "constraints"),
@@ -2967,7 +2963,7 @@ class CibFactory(object):
         return [_id for _id in self.fence_id_list() if _id not in self.fence_id_list_with_pcmk_delay()]
 
     def children_id_list(self):
-        "List of child ids (for clone/master completion)."
+        "List of child ids (for clone completion)."
         return [x.obj_id for x in self.cib_objects if x.obj_type in constants.children_tags]
 
     def rsc_id_list(self):
@@ -3007,7 +3003,7 @@ class CibFactory(object):
                 if x.obj_type == "rsc_template"]
 
     def f_children_id_list(self):
-        "List of possible child ids (for clone/master completion)."
+        "List of possible child ids (for clone completion)."
         return [x.obj_id for x in self.cib_objects
                 if x.obj_type in constants.children_tags and not x.parent]
 
@@ -3087,7 +3083,7 @@ class CibFactory(object):
                             implied_actions.remove(op)
                         elif can_migrate(r_node) and op in implied_migrate_actions:
                             implied_migrate_actions.remove(op)
-                        elif is_ms_or_promotable_clone(obj.node.getparent()) and op in implied_ms_actions:
+                        elif is_promotable_clone(obj.node.getparent()) and op in implied_ms_actions:
                             implied_ms_actions.remove(op)
                         elif op not in other_actions:
                             continue
@@ -3101,7 +3097,7 @@ class CibFactory(object):
             l = implied_actions
             if can_migrate(r_node):
                 l += implied_migrate_actions
-            if is_ms_or_promotable_clone(obj.node.getparent()):
+            if is_promotable_clone(obj.node.getparent()):
                 l += implied_ms_actions
             for op in l:
                 adv_timeout = ra.get_op_attr_value(op, "timeout")
@@ -3790,7 +3786,7 @@ class CibFactory(object):
     def _add_children(self, obj_type, node):
         """
         Called from create_from_node
-        In case this is a clone/group/master create from XML,
+        In case this is a clone/group create from XML,
         and the child node(s) haven't been added as a separate objects.
         """
         if obj_type not in constants.container_tags:
