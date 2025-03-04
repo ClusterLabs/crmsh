@@ -217,7 +217,6 @@ def _check_impl(local: bool, json: str, summary: bool) -> int:
 
 def check_local(handler: CheckResultHandler):
     check_dependency_version(handler)
-    check_service_status(handler)
     check_unsupported_corosync_features(handler)
 
 
@@ -323,17 +322,6 @@ def _check_version_range(
                     f'Actual version:    {component_name} == {match.group(1)}',
                 ],
             )
-
-
-def check_service_status(handler: CheckResultHandler):
-    handler.log_info('Checking service status...')
-    manager = service_manager.ServiceManager()
-    active_services = [x for x in ['corosync', 'pacemaker'] if manager.service_is_active(x)]
-    if active_services:
-        handler.handle_problem(
-            True, handler.LEVEL_ERROR,
-            'Cluster services are running', (f'* {x}' for x in active_services),
-        )
 
 
 def check_unsupported_corosync_features(handler: CheckResultHandler):
