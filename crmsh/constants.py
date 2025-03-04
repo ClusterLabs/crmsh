@@ -449,4 +449,6 @@ NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mo
 
 PCMK_SERVICE = "pacemaker.service"
 SBD_SERVICE = "sbd.service"
+
+SANITY_FATAL_RC = 100
 # vim:ts=4:sw=4:et:
