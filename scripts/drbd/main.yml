@@ -38,4 +38,4 @@ actions:
         op monitor interval="29s" role="Master"
         op monitor interval="31s" role="Slave"
       ms ms-{{id}} {{id}}
-        meta master-max=1 master-node-max=1 clone-max=2 clone-node-max=1 notify=true
+        meta promoted-max=1 promoted-node-max=1 clone-max=2 clone-node-max=1 notify=true
