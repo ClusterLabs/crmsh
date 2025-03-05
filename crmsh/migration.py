@@ -380,7 +380,10 @@ def migrate_corosync_conf():
     with utils.open_atomic(conf_path, 'w', fsync=True, encoding='utf-8') as f:
         corosync_config_format.DomSerializer(config, f)
         os.fchmod(f.fileno(), 0o644)
-    logger.info('Finish migrating corosync configuration.')
+    logger.info(
+        'Finish migrating corosync configuration. The original configuration is renamed to %s.bak',
+        os.path.basename(conf_path),
+    )
     for host, result in prun.pcopy_to_remote(conf_path, utils.list_cluster_nodes_except_me(), conf_path).items():
         match result:
             case None:
