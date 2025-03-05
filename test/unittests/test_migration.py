@@ -73,7 +73,7 @@ class TestCheckRemovedResourceAgents(unittest.TestCase):
         handler = mock.Mock(migration.CheckResultHandler)
         migration.check_cib_schema_version(handler, cib)
         handler.handle_problem.assert_called_with(
-            False, handler.LEVEL_WARN,
+            False, False, handler.LEVEL_WARN,
             "The CIB is not validated with the latest schema version.", [
                 '* Latest version:  3.10',
                 '* Current version: 3.9',

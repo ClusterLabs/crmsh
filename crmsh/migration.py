@@ -1,5 +1,6 @@
 import argparse
 import dataclasses
+import enum
 import glob
 import importlib.resources
 import itertools
@@ -41,6 +42,14 @@ class MigrationFailure(Exception):
     pass
 
 
+class CheckReturnCode(enum.IntEnum):
+    ALREADY_MIGRATED = 0
+    PASS_NO_AUTO_FIX = 1
+    PASS_NEED_AUTO_FIX = 2
+    BLOCKED_NEED_MANUAL_FIX = 3
+    SSH_ERROR = 255
+
+
 class CheckResultHandler:
     LEVEL_ERROR = 1
     LEVEL_WARN = 2
@@ -48,10 +57,13 @@ class CheckResultHandler:
     def log_info(self, fmt: str, *args):
         raise NotImplementedError
 
-    def handle_problem(self, is_blocker: bool, level: int, title: str, detail: typing.Iterable[str]):
+    def handle_problem(self, need_auto_fix: bool, is_blocker: bool, level: int, title: str, detail: typing.Iterable[str]):
         raise NotImplementedError
 
     def end(self):
+        raise NotImplementedError
+
+    def to_check_return_code(self) -> CheckReturnCode:
         raise NotImplementedError
 
 
@@ -59,16 +71,15 @@ class CheckResultJsonHandler(CheckResultHandler):
     def __init__(self, indent: typing.Optional[int] = None):
         self._indent = indent
         self.json_result = {
-            "pass": True,
             "problems": [],
         }
 
     def log_info(self, fmt: str, *args):
         logger.debug(fmt, *args)
 
-    def handle_problem(self, is_blocker: bool, level: int, title: str, detail: typing.Iterable[str]):
-        self.json_result["pass"] = self.json_result["pass"] and not is_blocker
+    def handle_problem(self, need_auto_fix: bool, is_blocker: bool, level: int, title: str, detail: typing.Iterable[str]):
         self.json_result["problems"].append({
+            "need_auto_fix": need_auto_fix,
             "is_blocker": is_blocker,
             "level": level,
             "title": title,
@@ -84,19 +95,32 @@ class CheckResultJsonHandler(CheckResultHandler):
         )
         sys.stdout.write('\n')
 
+    def to_check_return_code(self) -> CheckReturnCode:
+        ret = CheckReturnCode.ALREADY_MIGRATED
+        for problem in self.json_result['problems']:
+            if problem.get('is_blocker', False):
+                ret = max(CheckReturnCode.BLOCKED_NEED_MANUAL_FIX, ret)
+            elif problem.get('need_auto_fix'):
+                ret = max(CheckReturnCode.PASS_NEED_AUTO_FIX, ret)
+            else:
+                ret = max(CheckReturnCode.PASS_NO_AUTO_FIX, ret)
+        return ret
+
 
 class CheckResultInteractiveHandler(CheckResultHandler):
     def __init__(self):
         self.block_migration = False
         self.has_problems = False
+        self.need_auto_fix = False
 
     def log_info(self, fmt: str, *args):
         self.write_in_color(sys.stdout, constants.GREEN, '[INFO] ')
         print(fmt % args)
 
-    def handle_problem(self, is_blocker: bool, level:int, title: str, details: typing.Iterable[str]):
+    def handle_problem(self, need_auto_fix: bool, is_blocker: bool, level:int, title: str, details: typing.Iterable[str]):
         self.has_problems = True
         self.block_migration = self.block_migration or is_blocker
+        self.need_auto_fix = self.need_auto_fix or need_auto_fix
         match level:
             case self.LEVEL_ERROR:
                 self.write_in_color(sys.stdout, constants.YELLOW, '[FAIL] ')
@@ -119,14 +143,28 @@ class CheckResultInteractiveHandler(CheckResultHandler):
     def end(self):
         sys.stdout.write('\n')
 
+    def to_check_return_code(self) -> CheckReturnCode:
+        if self.block_migration:
+            ret = CheckReturnCode.BLOCKED_NEED_MANUAL_FIX
+        elif self.need_auto_fix:
+            ret = CheckReturnCode.PASS_NEED_AUTO_FIX
+        elif self.has_problems:
+            ret = CheckReturnCode.PASS_NO_AUTO_FIX
+        else:
+            ret = CheckReturnCode.ALREADY_MIGRATED
+        return ret
+
 
 def migrate():
     try:
         match _check_impl(local=False, json='', summary=False):
-            case 0:
+            case CheckReturnCode.ALREADY_MIGRATED:
                 logger.info("This cluster works on SLES 16. No migration is needed.")
                 return 0
-            case 1:
+            case CheckReturnCode.PASS_NO_AUTO_FIX:
+                logger.info("This cluster works on SLES 16 with some warnings. Please fix the remaining warnings manually.")
+                return 0
+            case CheckReturnCode.PASS_NEED_AUTO_FIX:
                 logger.info('Starting migration...')
                 migrate_corosync_conf()
                 logger.info('Finished migration.')
@@ -147,10 +185,13 @@ def check(args: typing.Sequence[str]) -> int:
     if not parsed_args.json:
         print('****** summary ******')
         match ret:
-            case 0:
+            case CheckReturnCode.ALREADY_MIGRATED:
                 CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
                 sys.stdout.write(' This cluster works on SLES 16. No migration is needed.\n')
-            case 1:
+            case CheckReturnCode.PASS_NO_AUTO_FIX:
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
+                sys.stdout.write(' This cluster works on SLES 16 with some warnings. Please fix the remaining warnings manually.\n')
+            case CheckReturnCode.PASS_NEED_AUTO_FIX:
                 CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
                 sys.stdout.write(' Please run "crm cluster health sles16 --fix" on on any one of above nodes.\n')
                 CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
@@ -161,14 +202,9 @@ def check(args: typing.Sequence[str]) -> int:
     return ret
 
 
-def _check_impl(local: bool, json: str, summary: bool) -> int:
-    """Return:
-    * 0 if the cluster is already on SLES 16.
-    * 1 if the cluster is good to migrate to SLES 16.
-    * 2 if the cluster is not good to migrate to SLES 16."""
+def _check_impl(local: bool, json: str, summary: bool) -> CheckReturnCode:
     assert not summary or not bool(json)
     assert local or not bool(json)
-    ret = 0
     if not local:
         check_remote_yield = check_remote()
         next(check_remote_yield)
@@ -181,7 +217,6 @@ def _check_impl(local: bool, json: str, summary: bool) -> int:
             handler = CheckResultJsonHandler(indent=2)
         case _:
             handler = CheckResultInteractiveHandler()
-    ret = 0
     if local:
         check_remote_yield = itertools.repeat(0)
         check_local(handler)
@@ -193,25 +228,10 @@ def _check_impl(local: bool, json: str, summary: bool) -> int:
         print('\n------ cib ------')
         check_global(handler)
     handler.end()
-    match handler:
-        case CheckResultJsonHandler():
-            if not handler.json_result["pass"]:
-                ret = 2
-            elif handler.json_result['problems']:
-                ret = 1
-            else:
-                ret = 0
-        case CheckResultInteractiveHandler():
-            if handler.block_migration:
-                ret = 2
-            elif handler.has_problems:
-                ret = 1
-            else:
-                ret = 0
+    ret = handler.to_check_return_code()
     if check_remote_yield:
         remote_ret = next(check_remote_yield)
-        if remote_ret > ret:
-            ret = remote_ret
+        ret = max(remote_ret, ret)
     return ret
 
 
@@ -232,7 +252,7 @@ def check_remote():
     prun_thread.start()
     yield
     prun_thread.join()
-    ret = 0
+    ret = CheckReturnCode.ALREADY_MIGRATED
     for host, result in prun_thread.result.items():
         sys.stdout.write(f'------ node: {host} ------\n')
         match result:
@@ -242,7 +262,7 @@ def check_remote():
                     str(e)
                 )
                 sys.stdout.write('\n')
-                ret = 255
+                ret = CheckReturnCode.SSH_ERROR
             case prun.ProcessResult() as result:
                 try:
                     check_result = json.loads(result.stdout.decode('utf-8'))
@@ -255,23 +275,18 @@ def check_remote():
                     sys.stdout.write('\n')
                     # cannot pass the exit status through,
                     # as all failed exit status become 1 in ui_context.Context.run()
-                    ret = 2
+                    ret = CheckReturnCode.BLOCKED_NEED_MANUAL_FIX
                 else:
-                    passed = check_result.get("pass", False)
                     handler = CheckResultInteractiveHandler()
                     problems = check_result.get("problems", list())
                     for problem in problems:
                         handler.handle_problem(
-                            problem.get("is_blocker", False), problem.get("level", handler.LEVEL_ERROR),
+                            problem.get("need_auto_fix", False), problem.get("is_blocker", False),
+                            problem.get("level", handler.LEVEL_ERROR),
                             problem.get("title", ""), problem.get("descriptions"),
                         )
                     handler.end()
-                    if not passed:
-                        ret = 2
-                    elif problems:
-                        ret = 1
-                    else:
-                        ret = result.returncode
+                    ret = handler.to_check_return_code()
     yield ret
 
 
@@ -302,7 +317,7 @@ def _check_version_range(
     match = pattern.search(text)
     if not match:
         handler.handle_problem(
-            True, handler.LEVEL_ERROR,
+            True, True, handler.LEVEL_ERROR,
             f'{component_name} version not supported',
             [
                 'Unknown version:',
@@ -313,7 +328,7 @@ def _check_version_range(
         version = tuple(int(x) for x in match.group(1).split('.'))
         if not minimum <= version:
             handler.handle_problem(
-                True,  handler.LEVEL_ERROR,
+                True, True,  handler.LEVEL_ERROR,
                 f'{component_name} version not supported', [
                     'Supported version: {} <= {}'.format(
                         '.'.join(str(x) for x in minimum),
@@ -331,7 +346,7 @@ def check_unsupported_corosync_features(handler: CheckResultHandler):
         config = corosync_config_format.DomParser(f).dom()
     if config['totem'].get('rrp_mode', None) in {'active', 'passive'}:
         handler.handle_problem(
-            False, handler.LEVEL_WARN,
+            True, False, handler.LEVEL_WARN,
             'Corosync RRP will be deprecated in corosync 3.', [
                 'Run "crm health sles16 --fix" to migrate it to knet multilink.',
             ],
@@ -350,7 +365,7 @@ def _check_unsupported_corosync_transport(handler: CheckResultHandler, dom):
             # looks like a corosync 3 config
             return
     handler.handle_problem(
-        False, handler.LEVEL_WARN,
+        True, False, handler.LEVEL_WARN,
         f'Corosync transport "{transport}" will be deprecated in corosync 3. Please use knet.', [],
     )
 
@@ -551,8 +566,8 @@ def check_unsupported_resource_agents(handler: CheckResultHandler, cib: lxml.etr
             self._title= title
         def log_info(self, fmt: str, *args):
             return self._parent.log_info(fmt, *args)
-        def handle_problem(self, is_blocker: bool, level: int, title: str, detail: typing.Iterable[str]):
-            return self._parent.handle_problem(is_blocker, level, self._title, detail)
+        def handle_problem(self, need_auto_fix: bool, is_blocker: bool, level: int, title: str, detail: typing.Iterable[str]):
+            return self._parent.handle_problem(need_auto_fix, is_blocker, level, self._title, detail)
     supported_resource_agents = _load_supported_resource_agents()
     _check_removed_resource_agents(
         TitledCheckResourceHandler(handler, "The following resource agents will be removed in SLES 16."),
@@ -578,7 +593,7 @@ def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: 
             stderr=subprocess.DEVNULL,
         ).returncode:
             handler.handle_problem(
-                True, handler.LEVEL_ERROR,
+                False, True, handler.LEVEL_ERROR,
                 'SAPHanaSR Classic will be removed in SLES 16.', [
                     'Before migrating to SLES 16, replace it with SAPHanaSR-angi.',
                 ],
@@ -608,7 +623,7 @@ def _check_removed_resource_agents(
     unsupported_resource_agents = [x for x in resource_agents if x not in supported_resource_agents]
     if unsupported_resource_agents:
         handler.handle_problem(
-            True, handler.LEVEL_ERROR,
+            False, True, handler.LEVEL_ERROR,
             '', [
                 '* ' + ':'.join(x for x in dataclasses.astuple(resource_agent) if x is not None)
                 for resource_agent in unsupported_resource_agents
@@ -619,7 +634,7 @@ def _check_removed_resource_agents(
 def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
     if cibquery.has_primitive_filesystem_with_fstype(cib, 'ocfs2'):
        handler.handle_problem(
-           True, handler.LEVEL_ERROR,
+           False, True, handler.LEVEL_ERROR,
            'OCFS2 is not supported in SLES 16. Please use GFS2.', [],
        )
 
@@ -627,14 +642,14 @@ def check_cib_schema_version(handler: CheckResultHandler, cib: lxml.etree.Elemen
     schema_version = cib.get('validate-with')
     if schema_version is None:
         handler.handle_problem(
-            False, handler.LEVEL_WARN,
+            False, False, handler.LEVEL_WARN,
             "The CIB is validated with unknown schema version.", []
         )
         return
     version_match = re.match(r'^pacemaker-(\d+)\.(\d+)$', schema_version)
     if version_match is None:
         handler.handle_problem(
-            False, handler.LEVEL_WARN,
+            False, False, handler.LEVEL_WARN,
             f"The CIB is validated with unknown schema version {schema_version}", []
         )
         return
@@ -642,7 +657,7 @@ def check_cib_schema_version(handler: CheckResultHandler, cib: lxml.etree.Elemen
     latest_schema_version = _get_latest_cib_schema_version()
     if version != latest_schema_version:
         handler.handle_problem(
-            False, handler.LEVEL_WARN,
+            False, False, handler.LEVEL_WARN,
             "The CIB is not validated with the latest schema version.", [
                 f'* Latest version:  {".".join(str(i) for i in latest_schema_version)}',
                 f'* Current version: {".".join(str(i) for i in version)}',
