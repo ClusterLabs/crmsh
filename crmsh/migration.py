@@ -330,9 +330,9 @@ def _check_version_range(
             handler.handle_problem(
                 True, True,  handler.LEVEL_ERROR,
                 f'{component_name} version not supported', [
-                    'Supported version: {} <= {}'.format(
-                        '.'.join(str(x) for x in minimum),
+                    'Supported version: {} >= {}'.format(
                         component_name,
+                        '.'.join(str(x) for x in minimum),
                     ),
                     f'Actual version:    {component_name} == {match.group(1)}',
                 ],
