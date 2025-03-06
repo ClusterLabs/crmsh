@@ -3,6 +3,7 @@ import dataclasses
 import enum
 import glob
 import importlib.resources
+import ipaddress
 import itertools
 import json
 import logging
@@ -21,6 +22,7 @@ from crmsh import cibquery
 from crmsh import constants
 from crmsh import corosync
 from crmsh import corosync_config_format
+from crmsh import iproute2
 from crmsh import parallax
 from crmsh import sh
 from crmsh import utils
@@ -458,6 +460,11 @@ def migrate_multicast(dom):
     cib_nodes = cib.nodes()
     assert 'nodelist' not in dom
     nodelist = list()
+    node_interfaces = {
+        x[0]: iproute2.IPAddr(json.loads(x[1][1]))
+        for x in parallax.parallax_call([x.uname for x in cib_nodes], 'ip -j addr')
+        if x[1][0] == 0
+    }
     with tempfile.TemporaryDirectory(prefix='crmsh-migration-') as dir_name:
         node_configs = {
             x[0]: x[1]
@@ -465,11 +472,12 @@ def migrate_multicast(dom):
         }
         for node in cib_nodes:
             assert node.uname in node_configs
+            bindnetaddr_fixer = _BindnetaddrFixer(node_interfaces[node.uname].interfaces())
             with open(node_configs[node.uname], 'r', encoding='utf-8') as f:
                 root = corosync_config_format.DomParser(f).dom()
                 corosync.ConfParser.transform_dom_with_list_schema(root)
                 interfaces = root['totem']['interface']
-                addresses = {f'ring{i}_addr': x['bindnetaddr'] for i, x in enumerate(interfaces)}
+                addresses = {f'ring{i}_addr': bindnetaddr_fixer.fix_bindnetaddr(x['bindnetaddr']) for i, x in enumerate(interfaces)}
                 logger.info("Node %s: %s: %s", node.node_id, node.uname, addresses)
                 nodelist.append({
                     'nodeid': node.node_id,
@@ -480,6 +488,19 @@ def migrate_multicast(dom):
         dom['quorum'].pop('expected_votes', None)
         logger.info("Unset quorum.expected_votes.")
     logger.info("Upgrade totem.transport to knet.")
+
+
+class _BindnetaddrFixer:
+    # crmsh generates incorrect bindnetaddr when joining a corosync 2 multicast cluster
+    def __init__(self, interfaces: typing.Iterable[iproute2.IPInterface]):
+        self._interface_addresses = {addr_info for interface in interfaces for addr_info in interface.addr_info}
+
+    def fix_bindnetaddr(self, bindnetaddr: str):
+        bind_address = ipaddress.ip_address(bindnetaddr)
+        for interface_address in self._interface_addresses:
+            if bind_address in interface_address.network:
+                return str(interface_address.ip)
+        return bindnetaddr
 
 
 def migrate_crypto(dom):

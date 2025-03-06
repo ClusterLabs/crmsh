@@ -96,6 +96,60 @@ Feature: migration
     When    Try "crm cluster health sles16 --fix" on "hanode1"
     Then    Expected return code is "0"
 
+  Scenario: Run fixes against multicast corosync.conf containing incorrect bindnetaddr.
+    When    Run "rm -f /etc/corosync/corosync.conf" on "hanode1"
+    And     Write multi lines to file "/etc/corosync/corosync.conf" on "hanode1"
+      """
+      # Please read the corosync.conf.5 manual page
+      totem {
+              version: 2
+              cluster_name: hacluster
+              clear_node_high_bit: yes
+              interface {
+                      ringnumber: 0
+                      bindnetaddr: @hanode1.ip.0
+                      mcastaddr: 239.247.90.152
+                      mcastport: 5405
+                      ttl: 1
+              }
+
+              crypto_hash: sha1
+              crypto_cipher: aes256
+              token: 5000
+              join: 60
+              max_messages: 20
+              token_retransmits_before_loss_const: 10
+      }
+
+      logging {
+              fileline: off
+              to_stderr: no
+              to_logfile: no
+              logfile: /var/log/cluster/corosync.log
+              to_syslog: yes
+              debug: off
+              timestamp: on
+              logger_subsys {
+                      subsys: QUORUM
+                      debug: off
+              }
+
+      }
+
+      quorum {
+
+              # Enable and configure quorum subsystem (default: off)
+              # see also corosync.conf.5 and votequorum.5
+              provider: corosync_votequorum
+              expected_votes: 2
+              two_node: 1
+      }
+      """
+    And     Run "crm cluster copy /etc/corosync/corosync.conf" on "hanode1"
+    And     Try "crm cluster health sles16 --fix" on "hanode1"
+    Then    Expected return code is "0"
+    And     Run "grep -F 'ring0_addr: @hanode2.ip.0' /etc/corosync/corosync.conf" OK
+
   Scenario: Run pre-migration checks when some of the nodes are offline.
     When    Run "systemctl stop sshd" on "hanode2"
     And     Try "crm cluster health sles16" on "hanode1"
