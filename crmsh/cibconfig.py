@@ -2509,7 +2509,9 @@ class CibFactory(object):
         else:
             logger.warning("bad parameter for regtest: %s", param)
 
-    def get_schema(self):
+    def get_schema(self, refresh=False):
+        if refresh:
+            self.refresh()
         return self.cib_attrs["validate-with"]
 
     def change_schema(self, schema_st):
@@ -2571,7 +2573,7 @@ class CibFactory(object):
         if not self.is_cib_sane():
             return False
         validator = self.cib_elem.get("validate-with")
-        if force or not validator or re.match("0[.]6", validator):
+        if force or not validator:
             return ext_cmd("cibadmin --upgrade --force") == 0
 
     def _import_cib(self, cib_elem):
