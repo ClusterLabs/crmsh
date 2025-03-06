@@ -22,7 +22,6 @@ from crmsh import constants
 from crmsh import corosync
 from crmsh import corosync_config_format
 from crmsh import parallax
-from crmsh import service_manager
 from crmsh import sh
 from crmsh import utils
 from crmsh import xmlutil
@@ -344,6 +343,7 @@ def check_unsupported_corosync_features(handler: CheckResultHandler):
     conf_path = corosync.conf()
     with open(conf_path, 'r', encoding='utf-8') as f:
         config = corosync_config_format.DomParser(f).dom()
+        corosync.ConfParser.transform_dom_with_list_schema(config)
     if config['totem'].get('rrp_mode', None) in {'active', 'passive'}:
         handler.handle_problem(
             True, False, handler.LEVEL_WARN,
@@ -374,6 +374,7 @@ def migrate_corosync_conf():
     conf_path = corosync.conf()
     with open(conf_path, 'r', encoding='utf-8') as f:
         config = corosync_config_format.DomParser(f).dom()
+        corosync.ConfParser.transform_dom_with_list_schema(config)
     logger.info('Migrating corosync configuration...')
     migrate_corosync_conf_impl(config)
     shutil.copy(conf_path, conf_path + '.bak')
