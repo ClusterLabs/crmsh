@@ -430,14 +430,7 @@ def migrate_udpu(dom):
     dom['totem']['transport'] = 'knet'
     if 'interface' in dom['totem']:
         for interface in dom['totem']['interface']:
-            # remove udp-only items
-            interface.pop('mcastaddr', None)
-            interface.pop('bindnetaddr', None)
-            interface.pop('broadcast', None)
-            interface.pop('ttl', None)
-            ringnumber = interface.pop('ringnumber', None)
-            if ringnumber is not None:
-                interface['linknumber'] = ringnumber
+            _migrate_totem_interface(interface)
     if 'quorum' in dom:
         dom['quorum'].pop('expected_votes', None)
     logger.info("Upgrade totem.transport to knet.")
@@ -446,14 +439,7 @@ def migrate_udpu(dom):
 def migrate_multicast(dom):
     dom['totem']['transport'] = 'knet'
     for interface in dom['totem']['interface']:
-        # remove udp-only items
-        interface.pop('mcastaddr', None)
-        interface.pop('bindnetaddr', None)
-        interface.pop('broadcast', None)
-        interface.pop('ttl', None)
-        ringnumber = interface.pop('ringnumber', None)
-        if ringnumber is not None:
-            interface['linknumber'] = ringnumber
+        _migrate_totem_interface(interface)
     logger.info("Generating nodelist according to CIB...")
     with open(constants.CIB_RAW_FILE, 'rb') as f:
         cib = lxml.etree.parse(f)
@@ -488,6 +474,17 @@ def migrate_multicast(dom):
         dom['quorum'].pop('expected_votes', None)
         logger.info("Unset quorum.expected_votes.")
     logger.info("Upgrade totem.transport to knet.")
+
+
+def _migrate_totem_interface(interface):
+    # remove udp-only items
+    interface.pop('mcastaddr', None)
+    interface.pop('bindnetaddr', None)
+    interface.pop('broadcast', None)
+    interface.pop('ttl', None)
+    ringnumber = interface.pop('ringnumber', None)
+    if ringnumber is not None:
+        interface['linknumber'] = ringnumber
 
 
 class _BindnetaddrFixer:
