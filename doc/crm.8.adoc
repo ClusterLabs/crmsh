@@ -3984,13 +3984,11 @@ version. Commonly, this is required if the error
 `CIB not supported` occurs. It typically means that the
 active CIB version is coming from an older release.
 
-As a safety precaution, the force argument is required if the
-+validation-with+ attribute is set to anything other than
-+0.6+. Thus in most cases, it is required.
+As a safety precaution, the 'force' argument is required.
 
 Usage:
 ...............
-upgrade [force]
+upgrade <force>
 ...............
 
 Example:
