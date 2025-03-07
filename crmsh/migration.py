@@ -456,8 +456,8 @@ def migrate_multicast(dom):
             interface['linknumber'] = ringnumber
     logger.info("Generating nodelist according to CIB...")
     with open(constants.CIB_RAW_FILE, 'rb') as f:
-        cib = Cib(f)
-    cib_nodes = cib.nodes()
+        cib = lxml.etree.parse(f)
+    cib_nodes = cibquery.get_cluster_nodes(cib)
     assert 'nodelist' not in dom
     nodelist = list()
     node_interfaces = {
@@ -536,35 +536,11 @@ def migrate_rrp(dom):
 def populate_node_name(nodelist):
     # cannot use utils.list_cluster_nodes, as pacemaker is not running
     with open(constants.CIB_RAW_FILE, 'rb') as f:
-        cib = Cib(f)
-    cib_nodes = {node.node_id: node for node in cib.nodes()}
+        cib = lxml.etree.parse(f)
+    cib_nodes = {node.node_id: node for node in cibquery.get_cluster_nodes(cib)}
     for node in nodelist:
         node_id = int(node['nodeid'])
         node['name'] = cib_nodes[node_id].uname
-
-
-class Cib:
-    class Node:
-        def __init__(self, node_id: int, uname: str):
-            self.node_id = node_id
-            self.uname = uname
-
-    def __init__(self, f: typing.IO):
-        self._dom = lxml.etree.parse(f)
-
-    def nodes(self):
-        result = list()
-        for element in self._dom.xpath(constants.XML_NODE_PATH):
-            if element.get('type') == 'remote':
-                xpath = f"//primitive[@provider='pacemaker' and @type='remote']/instance_attributes/nvpair[@name='server' and @value='{name}']"
-                if self._dom.xpath(xpath):
-                    continue
-            node_id = element.get('id')
-            uname = element.get('uname')
-            assert node_id
-            assert uname
-            result.append(Cib.Node(int(node_id), uname))
-        return result
 
 
 def check_unsupported_resource_agents(handler: CheckResultHandler, cib: lxml.etree.Element):

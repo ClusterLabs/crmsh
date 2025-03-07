@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 #
@@ -7,7 +6,6 @@ from __future__ import unicode_literals
 import os
 import socket
 import re
-import subprocess
 import unittest
 import pytest
 import logging
@@ -1068,21 +1066,24 @@ Quorate:          Yes
     mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-quorumtool -s", None, success_exit_status={0, 2})
 
 
+@mock.patch('crmsh.cibquery.get_cluster_nodes')
 @mock.patch('crmsh.utils.etree.fromstring')
 @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-def test_list_cluster_nodes_none(mock_run, mock_etree):
+def test_list_cluster_nodes_none(mock_run, mock_etree, mock_get_cluster_nodes):
     mock_run.return_value = (0, "data", None)
     mock_etree.return_value = None
     res = utils.list_cluster_nodes()
     assert res is None
     mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=False)
     mock_etree.assert_called_once_with("data")
+    mock_get_cluster_nodes.assert_not_called()
 
 
+@mock.patch('crmsh.cibquery.get_cluster_nodes')
 @mock.patch('os.path.isfile')
 @mock.patch('os.getenv')
 @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-def test_list_cluster_nodes_cib_not_exist(mock_run, mock_env, mock_isfile):
+def test_list_cluster_nodes_cib_not_exist(mock_run, mock_env, mock_isfile, mock_get_cluster_nodes):
     mock_run.return_value = (1, None, None)
     mock_env.return_value = constants.CIB_RAW_FILE
     mock_isfile.return_value = False
@@ -1091,35 +1092,28 @@ def test_list_cluster_nodes_cib_not_exist(mock_run, mock_env, mock_isfile):
     mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=False)
     mock_env.assert_called_once_with("CIB_file", constants.CIB_RAW_FILE)
     mock_isfile.assert_called_once_with(constants.CIB_RAW_FILE)
+    mock_get_cluster_nodes.assert_not_called()
 
 
+@mock.patch('crmsh.cibquery.get_cluster_nodes')
 @mock.patch('crmsh.xmlutil.file2cib_elem')
 @mock.patch('os.path.isfile')
 @mock.patch('os.getenv')
 @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem):
+def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem, mock_get_cluster_nodes):
     mock_run.return_value = (1, None, None)
     mock_env.return_value = constants.CIB_RAW_FILE
     mock_isfile.return_value = True
     mock_cib_inst = mock.Mock()
     mock_file2elem.return_value = mock_cib_inst
-    mock_node_inst1 = mock.Mock()
-    mock_node_inst2 = mock.Mock()
-    mock_node_inst1.get.side_effect = ["node1", "remote"]
-    mock_node_inst2.get.side_effect = ["node2", "member"]
-    mock_cib_inst.xpath.side_effect = [[mock_node_inst1, mock_node_inst2], "data"]
 
     res = utils.list_cluster_nodes()
-    assert res == ["node2"]
 
     mock_run.assert_called_once_with(constants.CIB_QUERY, no_reg=False)
     mock_env.assert_called_once_with("CIB_file", constants.CIB_RAW_FILE)
     mock_isfile.assert_called_once_with(constants.CIB_RAW_FILE)
     mock_file2elem.assert_called_once_with(constants.CIB_RAW_FILE)
-    mock_cib_inst.xpath.assert_has_calls([
-        mock.call(constants.XML_NODE_PATH),
-        mock.call("//primitive[@provider='pacemaker' and @type='remote']/instance_attributes/nvpair[@name='server' and @value='node1']")
-        ])
+    mock_get_cluster_nodes.assert_called_once_with(mock_cib_inst)
 
 
 @mock.patch('os.getenv')
