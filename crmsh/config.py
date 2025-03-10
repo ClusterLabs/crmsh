@@ -256,7 +256,6 @@ DEFAULTS = {
         'ignore_missing_metadata': opt_boolean('no'),
         'report_tool_options': opt_string(''),
         'lock_timeout': opt_string('120'),
-        'OCF_1_1_SUPPORT': opt_boolean('yes'),
         'no_ssh': opt_boolean('no'),
         'has_ra_advised_op': opt_boolean('no'),
         'has_fa_advised_op': opt_boolean('no'),
