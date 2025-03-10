@@ -1207,7 +1207,6 @@ def test_is_larger_than_min_version():
 @mock.patch('crmsh.utils.is_larger_than_min_version')
 @mock.patch('crmsh.cibconfig.cib_factory')
 def test_is_ocf_1_1_cib_schema_detected(mock_cib, mock_larger):
-    config.core.OCF_1_1_SUPPORT = True
     mock_cib.get_schema = mock.Mock()
     mock_cib.get_schema.return_value = "pacemaker-3.5"
     mock_larger.return_value = True
@@ -1228,7 +1227,6 @@ def test_handle_role_for_ocf_1_1(mock_support, mock_warn):
 @mock.patch('logging.Logger.info')
 @mock.patch('crmsh.utils.is_ocf_1_1_cib_schema_detected')
 def test_handle_role_for_ocf_1_1_convert_new(mock_support, mock_info):
-    config.core.OCF_1_1_SUPPORT = True
     mock_support.return_value = True
     utils.auto_convert_role = True
     assert utils.handle_role_for_ocf_1_1("Master") == "Promoted"
