@@ -90,7 +90,7 @@ Feature: migration
     And Run "crm cluster copy /etc/corosync/corosync.conf" on "hanode1"
     And Try "crm cluster health sles16" on "hanode1"
     Then    Expected return code is "1"
-    And     Expect stdout contains snippets ["[PASS] This cluster is good to migrate to SLES 16.", "[INFO] Please run \"crm cluster health sles16 --fix\" on on any one of above nodes.", "[WARN] Corosync transport \"udpu\" will be deprecated in corosync 3. Please use knet.", "----- node: localhost -----", "----- node: hanode2 -----"].
+    And     Expect stdout contains snippets ["[PASS] This cluster is good to migrate to SLES 16.", "[INFO] Please run \"crm cluster health sles16 --fix\" on on any one of above nodes.", "[WARN] Corosync transport \"udpu\" is deprecated in corosync 3. Please use knet.", "----- node: localhost -----", "----- node: hanode2 -----"].
 
   Scenario: Run fixes against corosync.conf generated in crmsh-4.6
     When    Try "crm cluster health sles16 --fix" on "hanode1"

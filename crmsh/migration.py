@@ -349,7 +349,7 @@ def check_unsupported_corosync_features(handler: CheckResultHandler):
     if config['totem'].get('rrp_mode', None) in {'active', 'passive'}:
         handler.handle_problem(
             True, False, handler.LEVEL_WARN,
-            'Corosync RRP will be deprecated in corosync 3.', [
+            'Corosync RRP is deprecated in corosync 3.', [
                 'Run "crm health sles16 --fix" to migrate it to knet multilink.',
             ],
         )
@@ -368,7 +368,7 @@ def _check_unsupported_corosync_transport(handler: CheckResultHandler, dom):
             return
     handler.handle_problem(
         True, False, handler.LEVEL_WARN,
-        f'Corosync transport "{transport}" will be deprecated in corosync 3. Please use knet.', [],
+        f'Corosync transport "{transport}" is deprecated in corosync 3. Please use knet.', [],
     )
 
 
@@ -551,7 +551,7 @@ def check_unsupported_resource_agents(handler: CheckResultHandler, cib: lxml.etr
             if resource_agent.m_type == 'external/sbd':
                 handler.handle_problem(
                     False, False, handler.LEVEL_ERROR,
-                    'stonith:external/sbd will be removed. Please use stonith:fence_sbd', [
+                    'stonith:external/sbd is removed. Please use stonith:fence_sbd', [
                 ])
             else:
                 stonith_resource_agents.append(resource_agent)
@@ -568,12 +568,12 @@ def check_unsupported_resource_agents(handler: CheckResultHandler, cib: lxml.etr
             return self._parent.handle_problem(need_auto_fix, is_blocker, level, self._title, detail)
     supported_resource_agents = _load_supported_resource_agents()
     _check_removed_resource_agents(
-        TitledCheckResourceHandler(handler, "The following resource agents will be removed in SLES 16."),
+        TitledCheckResourceHandler(handler, "The following resource agents is removed in SLES 16."),
         supported_resource_agents,
         (agent for agent in ocf_resource_agents if agent not in SAP_HANA_RESOURCE_AGENTS),
     )
     _check_removed_resource_agents(
-        TitledCheckResourceHandler(handler, "The following fence agents will be removed in SLES 16."),
+        TitledCheckResourceHandler(handler, "The following fence agents is removed in SLES 16."),
         supported_resource_agents,
         stonith_resource_agents,
     )
@@ -592,7 +592,7 @@ def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: 
         ).returncode:
             handler.handle_problem(
                 False, True, handler.LEVEL_ERROR,
-                'SAPHanaSR Classic will be removed in SLES 16.', [
+                'SAPHanaSR Classic is removed in SLES 16.', [
                     'Before migrating to SLES 16, replace it with SAPHanaSR-angi.',
                 ],
             )
