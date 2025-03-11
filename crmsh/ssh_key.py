@@ -232,7 +232,8 @@ class KeyFileManager:
         * is_generated: whether a new keypair is generated
         * list_of_public_keys: all public keys of known types, including the newly generated one
         """
-        script = '''if [ ! \\( {condition} \\) ]; then
+        script = '''set -e
+if [ ! \\( {condition} \\) ]; then
     ssh-keygen -t {key_type} -f ~/.ssh/id_{key_type} -q -C "Cluster internal on $(hostname)" -N '' <> /dev/null
     echo 'GENERATED=1'
 fi
