@@ -9,6 +9,7 @@ from behave import given, when, then
 import behave_agent
 from crmsh import corosync, sbd, userdir, bootstrap
 from crmsh import utils as crmutils
+from crmsh import ui_configure
 from crmsh.sh import ShellUtils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
@@ -599,18 +600,41 @@ EOF''',
         )
 
 
-@then('Test schema change')
+@when('Set to previous schema version')
+def step_impl(context):
+    _, current_schema, _ = ShellUtils().get_stdout_stderr("crm configure schema")
+    assert current_schema
+    schema_list = ui_configure.schema_completer(None)
+    assert schema_list
+    assert current_schema in schema_list
+    previous_schema = schema_list[schema_list.index(current_schema) - 1]
+    context.previous_schema = previous_schema
+    rc, _, _ = ShellUtils().get_stdout_stderr(f"crm configure schema {previous_schema}")
+    assert rc == 0
+
+
+@then('The schema version is the previous')
 def step_impl(context):
     rc, schema, _ = ShellUtils().get_stdout_stderr("crm configure schema")
-    if rc != 0 or not schema:
-        return False
-    ver = re.search(r'pacemaker-(\d+\.\d+)', schema).group(1)
-    expected_ver = float(ver) - 0.1
-    expected_schema = f"pacemaker-{expected_ver:.1f}"
-    rc, _, _ = ShellUtils().get_stdout_stderr(f"crm configure schema {expected_schema}")
-    if rc != 0:
-        return False
+    assert rc == 0
+    assert schema == context.previous_schema
+
+
+@given('Get the latest schema version')
+def step_impl(context):
+    schema_list = ui_configure.schema_completer(None)
+    assert schema_list
+    context.schema_latest = schema_list[-1]
+
+
+@when('Use crm configure upgrade to upgrade the schema')
+def step_impl(context):
+    rc, _, _ = ShellUtils().get_stdout_stderr("crm configure upgrade force")
+    assert rc == 0
+
+
+@then('The schema version is the latest')
+def step_impl(context):
     rc, schema, _ = ShellUtils().get_stdout_stderr("crm configure schema")
-    if rc != 0 or not schema:
-        return False
-    assert schema == expected_schema
+    assert rc == 0
+    assert schema == context.schema_latest
