@@ -28,9 +28,6 @@
 ; For fence agent, automatically add the advised values for operation, default is no.
 ; has_fa_advised_op = no
 
-; set OCF_1_1_SUPPORT to yes is to fully turn on OCF 1.1 feature once the corresponding CIB detected.
-; OCF_1_1_SUPPORT = yes
-
 ; obscure_pattern option is the persisent configuration of CLI.
 ; Example, for the high security concern, obscure_pattern = passw* | ip
 ; which makes `crm configure show` is equal to
