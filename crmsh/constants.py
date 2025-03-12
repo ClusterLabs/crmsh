@@ -517,4 +517,6 @@ PCMK_MIN_VERSION_SUPPORT_LIST_OPTIONS = "2.1.8"
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
 
 NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
+
+SANITY_FATAL_RC = 100
 # vim:ts=4:sw=4:et:
