@@ -1,5 +1,6 @@
 # runner.py - fork and exec multiple child processes concurrently
 import asyncio
+import contextlib
 import fcntl
 import os
 import select
@@ -46,16 +47,18 @@ class Runner:
         self._tasks.append(task)
 
     def run(self, timeout_seconds: int = -1):
-        awaitable = asyncio.gather(
-            *[
-                self._concurrency_limit(self._concurrency_limiter, self._run(task))
-                for task in self._tasks
-            ],
-            return_exceptions=True,
-        )
-        if timeout_seconds > 0:
-            awaitable = self._timeout_limit(timeout_seconds, awaitable)
-        return asyncio.get_event_loop_policy().get_event_loop().run_until_complete(awaitable)
+        with contextlib.closing(asyncio.new_event_loop()) as event_loop:
+            asyncio.set_event_loop(event_loop)
+            awaitable = asyncio.gather(
+                *[
+                    self._concurrency_limit(self._concurrency_limiter, self._run(task))
+                    for task in self._tasks
+                ],
+                return_exceptions=True,
+            )
+            if timeout_seconds > 0:
+                awaitable = self._timeout_limit(timeout_seconds, awaitable)
+            return event_loop.run_until_complete(awaitable)
 
     async def _timeout_limit(self, timeout_seconds: int, awaitable: typing.Awaitable):
         assert timeout_seconds > 0

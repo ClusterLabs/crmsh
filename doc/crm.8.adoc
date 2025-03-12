@@ -996,13 +996,33 @@ See "crm cluster help geo_join" or "crm cluster geo_join --help"
 [[cmdhelp.cluster.health,Cluster health check]]
 ==== `health`
 
+Usage 1: General Health Check
+
 Runs a larger set of tests and queries on all nodes in the cluster to
 verify the general system health and detect potential problems.
 
-Usage:
 ...............
 health
 ...............
+
+Usage 2: Topic-Specified Health Check
+
+Verifies the health of a specified topic.
+
+...............
+health hawk2|sles16 [--fix]
+...............
+
+* `hawk2`: check or fix key-based ssh authentication for user hacluster, which
+is needed by hawk2.
+* `sles16`: check whether the cluster is good to migrate to SLES 16.
+
+The optional `--fix` argument attempts to automatically resolve any detected
+issues.
+
+.Note on sles16
+****************************
+`--fix` is only available after the OS is migrated to SLES 16.
 
 [[cmdhelp.cluster.init,Initializes a new HA cluster,From Code]]
 ==== `init`

@@ -36,7 +36,7 @@ from packaging import version
 
 import crmsh.parallax
 import crmsh.user_of_host
-from . import config, sh, corosync
+from . import config, sh, corosync, cibquery
 from . import userdir
 from . import constants
 from . import options
@@ -1731,12 +1731,11 @@ def get_address_list_from_corosync_conf():
     return corosync.get_values("nodelist.node.ring0_addr")
 
 
-def list_cluster_nodes(no_reg=False):
+def list_cluster_nodes(no_reg=False) -> list[str]:
     '''
     Returns a list of nodes in the cluster.
     '''
     from . import xmlutil
-    cib = None
     rc, out, err = ShellUtils().get_stdout_stderr(constants.CIB_QUERY, no_reg=no_reg)
     # When cluster service running
     if rc == 0:
@@ -1749,17 +1748,7 @@ def list_cluster_nodes(no_reg=False):
         cib = xmlutil.file2cib_elem(cib_path)
     if cib is None:
         return None
-
-    node_list = []
-    for node in cib.xpath(constants.XML_NODE_PATH):
-        name = node.get('uname') or node.get('id')
-        # exclude remote node
-        if node.get('type') == 'remote':
-            xpath = f"//primitive[@provider='pacemaker' and @type='remote']/instance_attributes/nvpair[@name='server' and @value='{name}']"
-            if cib.xpath(xpath):
-                continue
-        node_list.append(name)
-    return node_list
+    return [x.uname for x in cibquery.get_cluster_nodes(cib)]
 
 
 def cluster_run_cmd(cmd, node_list=[]):
