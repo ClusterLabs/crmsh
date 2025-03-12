@@ -203,6 +203,8 @@ deploy_ha_node() {
 		user_add="groupadd -r haclient -g 90 && useradd -r -g haclient -u 90 -s /sbin/nologin -c \"cluster user\" hacluster"
 		podman_exec $node_name "$user_del" &> /dev/null
 		podman_exec $node_name "$user_add" &> /dev/null
+		work_around="usermod -d /var/lib/pacemaker hacluster"
+		podman_exec $node_name "$work_around" &> /dev/null
 	fi
 	podman_exec $node_name "rm -rf /run/nologin"
 	podman_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
