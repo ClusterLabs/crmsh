@@ -199,6 +199,10 @@ deploy_ha_node() {
 	if [ "$node_name" != "qnetd-node" ];then
 		rm_qnetd_cmd="rpm -q corosync-qnetd && rpm -e corosync-qnetd"
 		podman_exec $node_name "$rm_qnetd_cmd" &> /dev/null
+		user_del="userdel hacluster && groupdel haclient"
+		user_add="groupadd -r haclient -g 90 && useradd -r -g haclient -u 90 -s /sbin/nologin -c \"cluster user\" hacluster"
+		podman_exec $node_name "$user_del" &> /dev/null
+		podman_exec $node_name "$user_add" &> /dev/null
 	fi
 	podman_exec $node_name "rm -rf /run/nologin"
 	podman_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
