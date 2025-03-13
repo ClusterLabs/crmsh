@@ -3985,6 +3985,7 @@ version. Commonly, this is required if the error
 active CIB version is coming from an older release.
 
 As a safety precaution, the 'force' argument is required.
+Or, you can use crm `-F` option to do the force upgrade.
 
 Usage:
 ...............
