@@ -71,7 +71,6 @@ crm_daemon_user = hacluster
 ocf_root = /usr/lib/ocf
 crm_dtd_dir = /usr/share/pacemaker
 pe_state_dir = /var/lib/pacemaker/pengine
-heartbeat_dir = /var/lib/heartbeat
 hb_delnode = /usr/share/heartbeat/hb_delnode
 nagios_plugins = /usr/lib64/nagios/plugins
 

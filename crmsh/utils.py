@@ -3200,4 +3200,13 @@ def load_cib_file_env():
         raise ValueError(f"Cannot find cib file: {cib_file}")
 
 
+def get_variable_value_from_script(script_path, var_name):
+    """
+    source a script and get the value of a variable
+    """
+    cmd = f"source {script_path} && echo ${var_name}"
+    rc, out, _ = ShellUtils().get_stdout_stderr(cmd)
+    if rc == 0 and out:
+        return out.strip()
+    return None
 # vim:ts=4:sw=4:et:
