@@ -963,10 +963,10 @@ class CibConfig(command.UI):
     @command.completers(compl.choice(['force']))
     def do_upgrade(self, context, force=None):
         "usage: upgrade <force>"
-        if not force or force != "force":
+        if (not force or force != "force") and not config.core.force:
             context.fatal_error("'force' option is required")
         cib_factory.ensure_cib_updated()
-        if cib_factory.upgrade_validate_with(force):
+        if cib_factory.upgrade_validate_with(force or config.core.force):
             logger.info("Current schema version is %s", cib_factory.get_schema(refresh=True))
             return True
         return False
