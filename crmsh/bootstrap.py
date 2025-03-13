@@ -138,7 +138,7 @@ class Context(object):
         self.default_nic = None
         self.default_ip_list = []
         self.rm_list = [SBDManager.SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
-                COROSYNC_AUTH, "/var/lib/heartbeat/crm/*", "/var/lib/pacemaker/cib/*",
+                COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
                 "/var/lib/csync2/*", "~/.config/crm/*"]
         self.use_ssh_agent = None
@@ -762,7 +762,7 @@ def init_cluster_local():
             pass_msg = ", password 'linux'"
 
     # evil, but necessary
-    invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
+    invoke("rm -f /var/lib/pacemaker/cib/*")
 
     # only try to start hawk if hawk is installed
     service_manager = ServiceManager()
@@ -1980,7 +1980,7 @@ def join_cluster(seed_host, remote_user):
             ringXaddr_res.append(ringXaddr)
             break
     print("")
-    invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
+    invoke("rm -f /var/lib/pacemaker/cib/*")
     try:
         corosync.add_node_config(ringXaddr_res)
     except corosync.IPAlreadyConfiguredError as e:
