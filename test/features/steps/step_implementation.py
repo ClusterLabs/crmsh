@@ -554,8 +554,9 @@ def step_impl(context, count, node):
         index += 1
     return False
 
-@then('Check passwordless for hacluster between "{nodelist}"')
-def step_impl(context, nodelist):
+@then('Check passwordless for hacluster between "{nodelist}" "{result}"')
+def step_impl(context, nodelist, result):
+    assert result in ("successfully", "failed")
     if userdir.getuser() != 'root' or userdir.get_sudoer():
         return True
     failed = False
@@ -570,7 +571,10 @@ def step_impl(context, nodelist):
             if rc != 0:
                 failed = True
                 context.logger.error(f"There is no passwordless configured from {nodes[i]} to {nodes[j]} under 'hacluster'")
-    assert not failed
+    if result == "successfully":
+        assert not failed
+    else:
+        assert failed
 
 
 @then('Check user shell for hacluster between "{nodelist}"')
