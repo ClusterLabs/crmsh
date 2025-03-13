@@ -3209,4 +3209,15 @@ def is_subdict(sub_dict, main_dict):
     Check if sub_dict is a sub-dictionary of main_dict
     """
     return all(main_dict.get(k) == v for k, v in sub_dict.items())
+
+
+def get_variable_value_from_script(script_path, var_name):
+    """
+    source a script and get the value of a variable
+    """
+    cmd = f"source {script_path} && echo ${var_name}"
+    rc, out, _ = ShellUtils().get_stdout_stderr(cmd)
+    if rc == 0 and out:
+        return out.strip()
+    return None
 # vim:ts=4:sw=4:et:

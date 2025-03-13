@@ -53,7 +53,6 @@ crm_daemon_user = @CRM_DAEMON_USER@
 ocf_root = @OCF_ROOT_DIR@
 ; crm_dtd_dir = <detected>
 ; pe_state_dir = <detected>
-; heartbeat_dir = <detected>
 
 ; [color]
 ; style = color

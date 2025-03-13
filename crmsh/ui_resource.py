@@ -704,6 +704,19 @@ class RscMgmt(command.UI):
     @command.completers(compl.primitives, _raoperations)
     def do_trace(self, context, rsc_id, *args):
         'usage: trace <rsc> [<op>] [<interval>] [<log-dir>]'
+        def get_ha_varlib_value():
+            """
+            Find the value of HA_VARLIB, which should be defined in ocf-directories
+            """
+            _, out, _ = ShellUtils().get_stdout_stderr("rpm -ql resource-agents")
+            if not out:
+                return None
+            re_pattern = re.compile(r"/ocf-directories$")
+            ocf_directory_path = next((line for line in out.splitlines() if re_pattern.search(line)), None)
+            if not ocf_directory_path:
+                return None
+            return utils.get_variable_value_from_script(ocf_directory_path, "HA_VARLIB")
+
         usage='usage: trace <rsc> [<op>] [<interval>] [<log-dir>]'
         rsc = self._get_trace_rsc(rsc_id)
         if not rsc:
@@ -713,14 +726,14 @@ class RscMgmt(command.UI):
         force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
         if len(argl) > 3:
             context.fatal_error(usage)
-        op=None
-        interval=None
-        dir=None
+        op = None
+        interval = None
+        trace_dir = None
         for arg in argl:
             if arg[0] == '/':
-                if dir is not None:
+                if trace_dir is not None:
                     context.fatal_error(usage)
-                dir = arg
+                trace_dir = arg
             elif arg.isnumeric():
                 if interval is not None:
                     context.fatal_error(usage)
@@ -735,16 +748,24 @@ class RscMgmt(command.UI):
             if interval is None:
                 interval = "0"
         if op is None:
-            self._trace_resource(context, rsc_id, rsc, dir)
+            self._trace_resource(context, rsc_id, rsc, trace_dir)
         elif interval is None:
-            self._trace_op(context, rsc_id, rsc, op, dir)
+            self._trace_op(context, rsc_id, rsc, op, trace_dir)
         else:
-            self._trace_op_interval(context, rsc_id, rsc, op, interval, dir)
+            self._trace_op_interval(context, rsc_id, rsc, op, interval, trace_dir)
         if not cib_factory.commit():
             return False
+
         rsc_type = rsc.node.get("type")
-        trace_dir = "{}/{}".format(dir, rsc_type) if dir else "{}/trace_ra/{}".format(config.path.heartbeat_dir, rsc_type)
-        logger.info("Trace for %s%s is written to %s", rsc_id, ":"+op if op else "", trace_dir)
+        if trace_dir:
+            trace_path = f"{trace_dir}/{rsc_type}"
+        else:
+            ha_varlib_path = get_ha_varlib_value()
+            if not ha_varlib_path:
+                context.fatal_error("Failed to get HA_VARLIB value")
+            trace_path = f"{ha_varlib_path}/trace_ra/{rsc_type}"
+
+        logger.info("Trace for %s%s is written to %s", rsc_id, ":"+op if op else "", trace_path)
         if op is not None and op != "monitor":
             logger.info("Trace set, restart %s to trace the %s operation", rsc_id, op)
         else:
