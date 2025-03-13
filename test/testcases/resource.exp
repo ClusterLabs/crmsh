@@ -397,6 +397,8 @@ Deleted 'p0' option: id=p0-meta_attributes-m0 name=m0
 </cib>
 
 .TRY resource trace p0 probe
+.EXT rpm -ql resource-agents
+.EXT source /usr/lib/ocf/lib/heartbeat/ocf-directories && echo $HA_VARLIB
 INFO: Trace for p0:monitor is written to /var/lib/heartbeat/trace_ra/Dummy
 INFO: Trace set, restart p0 to trace non-monitor operations
 .INP: configure
@@ -428,6 +430,8 @@ INFO: Trace set, restart p0 to trace non-monitor operations
 </cib>
 
 .TRY resource trace p0 start
+.EXT rpm -ql resource-agents
+.EXT source /usr/lib/ocf/lib/heartbeat/ocf-directories && echo $HA_VARLIB
 INFO: Trace for p0:start is written to /var/lib/heartbeat/trace_ra/Dummy
 INFO: Trace set, restart p0 to trace the start operation
 .INP: configure
@@ -463,6 +467,8 @@ INFO: Trace set, restart p0 to trace the start operation
 </cib>
 
 .TRY resource trace p0 stop
+.EXT rpm -ql resource-agents
+.EXT source /usr/lib/ocf/lib/heartbeat/ocf-directories && echo $HA_VARLIB
 INFO: Trace for p0:stop is written to /var/lib/heartbeat/trace_ra/Dummy
 INFO: Trace set, restart p0 to trace the stop operation
 .INP: configure
