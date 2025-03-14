@@ -54,7 +54,7 @@ Feature: Functional test for configure sub level
     And     Show crm configure
 
   @clean
-  Scenario: Setting schema
+  Scenario: Setting schema and upgrade
     Given   Cluster service is "stopped" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -y" on "hanode1"
@@ -62,6 +62,14 @@ Feature: Functional test for configure sub level
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
-    Then    Test schema change
     When    Try "crm configure schema xxx" on "hanode1"
     Then    Except "schema xxx is not supported" in stderr
+    # test for 'configure schema'
+    When    Set to previous schema version
+    Then    The schema version is the previous
+    # test for 'configure upgrade'
+    When    Try "crm configure upgrade" on "hanode1"
+    Then    Except "'force' option is required" in stderr
+    Given   Get the latest schema version
+    When    Use crm configure upgrade to upgrade the schema
+    Then    The schema version is the latest
