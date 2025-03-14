@@ -5,9 +5,9 @@ import platform
 import socket
 import crm_script
 
-PACKAGES = ['booth', 'cluster-glue', 'corosync', 'crmsh', 'csync2', 'drbd',
+PACKAGES = ['booth', 'corosync', 'crmsh', 'csync2', 'drbd',
             'fence-agents', 'gfs2', 'gfs2-utils', 'hawk', 'ocfs2',
-            'ocfs2-tools', 'pacemaker', 'pacemaker-mgmt',
+            'ocfs2-tools', 'pacemaker',
             'resource-agents', 'sbd']
 SERVICES = ['sshd', 'ntp', 'corosync', 'pacemaker', 'hawk']
 SSH_KEY = os.path.expanduser('~/.ssh/id_rsa')
