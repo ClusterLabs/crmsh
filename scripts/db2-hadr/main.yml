@@ -37,7 +37,7 @@ actions:
   - include: virtual-ip
   - include: db2
   - cib: |
-      ms ms-{{db2:id}} {{db2:id}}
-        meta target-role=Stopped notify=true
+      clone promotable-{{db2:id}} {{db2:id}}
+        meta target-role=Stopped notify=true promotable=true
       colocation {{virtual-ip:id}}-with-master inf: {{virtual-ip:id}}:Started ms-{{db2:id}}:Master
       order {{virtual-ip:id}}-after-master Mandatory: ms-{{db2:id}}:promote {{virtual-ip:id}}:start

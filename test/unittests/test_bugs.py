@@ -573,7 +573,6 @@ primitive p2 ocf:heartbeat:Delay \
     params startdelay=2 mondelay=2 stopdelay=2
 primitive p3 ocf:pacemaker:Dummy
 clone c1 p1
-ms m1 p2
 op_defaults timeout=60s
 """)
     assert ok

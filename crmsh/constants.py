@@ -114,8 +114,8 @@ lrm_exit_codes = {
     "installed": "5",
     "configured": "6",
     "not_running": "7",
-    "master": "8",
-    "failed_master": "9",
+    "promoted": "8",
+    "failed_promoted": "9",
 }
 lrm_status_codes = {
     "pending": "-1",
@@ -441,9 +441,6 @@ COROSYNC_PORT = 5405
 CSYNC2_PORT = 30865
 HAWK_PORT = 7630
 DLM_PORT = 21064
-
-# Commands that are deprecated and hidden from UI
-HIDDEN_COMMANDS = {'ms'}
 
 NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
 
