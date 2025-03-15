@@ -2036,7 +2036,8 @@ stop <rsc> [<rsc> ...]
 ==== `trace`
 
 Start tracing RA for the given operation. When `[<log-dir>]`
-is not specified the trace files are stored in `$HA_VARLIB/trace_ra`.
+is not specified, the trace files are stored in `$HA_VARLIB/trace_ra`.
+If $HA_VARLIB is not defined, it defaults to `/var/lib/heartbeat`.
 If the operation to be traced is monitor, note that the number
 of trace files can grow very quickly.
 

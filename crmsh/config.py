@@ -270,7 +270,6 @@ DEFAULTS = {
         'ocf_root': opt_dir('%(libdir)s/ocf'),
         'crm_dtd_dir': opt_dir('%(datadir)s/pacemaker'),
         'pe_state_dir': opt_dir('%(varlib)s/pacemaker/pengine'),
-        'heartbeat_dir': opt_dir('%(varlib)s/heartbeat'),
         'hawk_wizards': opt_dir('%(wwwdir)s/hawk/config/wizard'),
     },
     'color': {
