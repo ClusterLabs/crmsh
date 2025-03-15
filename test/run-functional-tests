@@ -196,6 +196,10 @@ deploy_ha_node() {
 	podman run --rm -d $podman_options $podman_capabilties $podman_security $CONTAINER_IMAGE > /dev/null
         podman network connect ha_network_second $node_name
 
+	for pkg in cluster-glue cluster-glue-libs;do
+		podman_exec $node_name "rpm -q $pkg && rpm -e $pkg --nodeps" &> /dev/null
+	done
+
 	if [ "$node_name" != "qnetd-node" ];then
 		rm_qnetd_cmd="rpm -q corosync-qnetd && rpm -e corosync-qnetd"
 		podman_exec $node_name "$rm_qnetd_cmd" &> /dev/null

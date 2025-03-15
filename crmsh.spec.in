@@ -117,11 +117,6 @@ Requires(post): python3-dateutil
 Requires(post): python3-tox
 Requires(post): pacemaker
 BuildArch:      noarch
-%if 0%{?suse_version}
-Requires(post): libglue-devel
-%else
-Requires(post): cluster-glue-libs-devel
-%endif
 Requires(post): python3-PyYAML
 %endif
 
