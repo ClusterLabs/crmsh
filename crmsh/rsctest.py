@@ -45,7 +45,7 @@ class RADriver(object):
         self.ec_l = {}
         self.ec_ok = self.unused
         self.ec_stopped = self.unused
-        self.ec_master = self.unused
+        self.ec_promoted = self.unused
         self.last_op = None
         self.last_rec = {}
         self.timeout = 20000
@@ -123,9 +123,9 @@ class RADriver(object):
         'Was last op successful?'
         return self.op_status(host) == self.ec_ok
 
-    def is_master(self, host):
+    def is_promoted(self, host):
         'Only if last op was probe/monitor.'
-        return self.op_status(host) == self.ec_master
+        return self.op_status(host) == self.ec_promoted
 
     def is_stopped(self, host):
         'Only if last op was probe/monitor.'
@@ -230,8 +230,8 @@ class RADriver(object):
         if not stopped:
             if self.is_ok(node):
                 self.warn("resource running at %s" % (node))
-            elif self.is_ms_or_promotable_clone() and self.is_master(node):
-                self.warn("resource is master at %s" % (node))
+            elif self.is_ms_or_promotable_clone() and self.is_promoted(node):
+                self.warn("resource is promoted at %s" % (node))
             else:
                 self.warn("resource not clean at %s" % (node))
                 self.show_log(node)
@@ -251,14 +251,14 @@ class RAOCF(RADriver):
     OCF_ERR_INSTALLED = 5
     OCF_ERR_CONFIGURED = 6
     OCF_NOT_RUNNING = 7
-    OCF_RUNNING_MASTER = 8
-    OCF_FAILED_MASTER = 9
+    OCF_RUNNING_PROMOTED = 8
+    OCF_FAILED_PROMOTED = 9
 
     def __init__(self, *args):
         RADriver.__init__(self, *args)
         self.ec_ok = self.OCF_SUCCESS
         self.ec_stopped = self.OCF_NOT_RUNNING
-        self.ec_master = self.OCF_RUNNING_MASTER
+        self.ec_promoted = self.OCF_RUNNING_PROMOTED
 
     def set_rscenv(self, op):
         RADriver.set_rscenv(self, op)
@@ -295,7 +295,7 @@ class RALSB(RADriver):
         RADriver.__init__(self, *args)
         self.ec_ok = self.LSB_OK
         self.ec_stopped = self.LSB_STATUS_NOT_RUNNING
-        self.ec_master = self.unused
+        self.ec_promoted = self.unused
 
     def set_rscenv(self, op):
         RADriver.set_rscenv(self, op)
@@ -323,7 +323,7 @@ class RASystemd(RADriver):
         RADriver.__init__(self, *args)
         self.ec_ok = self.SYSD_OK
         self.ec_stopped = self.SYSD_NOT_RUNNING
-        self.ec_master = self.unused
+        self.ec_promoted = self.unused
 
     def set_rscenv(self, op):
         RADriver.set_rscenv(self, op)

@@ -20,8 +20,7 @@ _WARNS = ['pending',
           'Stopped',
           'standby',
           'WITHOUT quorum']
-_OKS = ['Masters', 'Slaves', 'Started', 'Master', 'Slave', 'Online', 'online', 'ok', 'master',
-        'with quorum']
+_OKS = ['Started', 'Online', 'online', 'ok', 'with quorum', 'Promoted', 'Unpromoted']
 _ERRORS = ['not running',
            'unknown error',
            'invalid parameter',
@@ -30,13 +29,13 @@ _ERRORS = ['not running',
            'not installed',
            'not configured',
            'not running',
-           r'master \(failed\)',
+           'promoted (failed)',
            'OCF_SIGNAL',
            'OCF_NOT_SUPPORTED',
            'OCF_TIMEOUT',
            'OCF_OTHER_ERROR',
            'OCF_DEGRADED',
-           'OCF_DEGRADED_MASTER',
+           'OCF_DEGRADED_PROMOTED',
            'unknown',
            'Unknown',
            'OFFLINE',
@@ -67,7 +66,7 @@ class CrmMonFilter(object):
     _RESOURCES = re.compile(r'(\d+ Resources configured)')
 
     _RESOURCE = re.compile(r'(\S+)(\s+)\((\S+:\S+)\):')
-    _GROUP = re.compile(r'((?:Resource Group)|(?:Clone Set)|(?:Master/Slave Set)): (\S+)')
+    _GROUP = re.compile(r'((?:Resource Group)|(?:Clone Set)): (\S+)')
 
     def _filter(self, line):
         line = self._RESOURCE.sub("%s%s(%s):" % (clidisplay.help_header(r'\1'),

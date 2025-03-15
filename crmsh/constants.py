@@ -114,8 +114,8 @@ lrm_exit_codes = {
     "installed": "5",
     "configured": "6",
     "not_running": "7",
-    "master": "8",
-    "failed_master": "9",
+    "promoted": "8",
+    "failed_promoted": "9",
 }
 lrm_status_codes = {
     "pending": "-1",
