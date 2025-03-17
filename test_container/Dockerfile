@@ -6,7 +6,7 @@ CMD ["/usr/lib/systemd/systemd", "--system"]
 RUN zypper -n install systemd openssh \
         firewalld iptables iptables-backend-nft \
         make autoconf automake vim which libxslt-tools mailx iproute2 iputils bzip2 tar file glibc-locale-base dos2unix cpio gawk \
-        python311 python311-pip python311-lxml python311-python-dateutil python311-setuptools python311-PyYAML python311-curses python311-behave python311-coverage python311-packaging \
+        python313 python313-pip python313-lxml python313-python-dateutil python313-setuptools python313-PyYAML python313-curses python313-behave python313-coverage python313-packaging \
         csync2 corosync corosync-qdevice pacemaker booth corosync-qnetd
 
 RUN ssh-keygen -t rsa -f /root/.ssh/id_rsa -N '' && \

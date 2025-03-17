@@ -193,12 +193,12 @@ deploy_ha_node() {
 	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
-	podman run --rm -d $podman_options $podman_capabilties $podman_security $CONTAINER_IMAGE > /dev/null
+	podman run --rm -d $podman_options $podman_capabilties $podman_security $CONTAINER_IMAGE
         podman network connect ha_network_second $node_name
 
 	if [ "$node_name" != "qnetd-node" ];then
 		rm_qnetd_cmd="rpm -q corosync-qnetd && rpm -e corosync-qnetd"
-		podman_exec $node_name "$rm_qnetd_cmd" &> /dev/null
+		podman_exec $node_name "$rm_qnetd_cmd"
 	fi
 	podman_exec $node_name "rm -rf /run/nologin"
 	podman_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
@@ -207,7 +207,7 @@ deploy_ha_node() {
 	if [ "$node_name" != "qnetd-node" ];then
 	  podman cp $PROJECT_PATH $node_name:/opt/crmsh
 	  info "Building crmsh on \"$node_name\"..."
-	  podman_exec $node_name "$make_cmd" 1> /dev/null || \
+	  podman_exec $node_name "$make_cmd" || \
 		fatal "Building failed on $node_name!"
 	  podman_exec $node_name "chown hacluster:haclient -R /var/log/crmsh"
 	  podman_exec $node_name "chmod g+w -R /var/log/crmsh"
@@ -276,7 +276,7 @@ config_cluster() {
 
 start_cluster() {
 	for node in $*;do
-		podman_exec $node "crm cluster enable && crm cluster start" 1> /dev/null
+		podman_exec $node "crm cluster enable && crm cluster start"
 		if [ "$?" -eq 0 ];then
 			info "Cluster service started on \"$node\""
 		else
