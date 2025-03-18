@@ -14,10 +14,10 @@ INFO: 5: cib.commit: committed 'regtest' shadow CIB to the cluster
 ERROR: 6: cib.delete: regtest shadow CIB is in use
 Traceback (most recent call last):
     rv = self.execute_command() is not False
-         ^^^^^^^^^^^^^^^^^^^^^^
+    	 ~~~~~~~~~~~~~~~~~~~~^^
     rv = self.command_info.function(*arglist)
-    	 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     context.fatal_error("%s shadow CIB is in use" % name)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     raise ValueError(msg)
 ValueError: regtest shadow CIB is in use
 .INP: use
