@@ -300,36 +300,21 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
         if resource_agent.m_class == 'ocf':
             ocf_resource_agents.append(resource_agent)
         elif resource_agent.m_class == 'stonith':
-            if resource_agent.m_type == 'external/sbd':
-                handler.handle_problem(
-                    False,
-                    'stonith:external/sbd will be removed in SLES 16.', [
-                        'Before migrating to SLES 16, replace it with stonith:fence_sbd.',
-                ])
-            else:
-                stonith_resource_agents.append(resource_agent)
+            stonith_resource_agents.append(resource_agent)
         else:
             raise ValueError(f'Unrecognized resource agent {resource_agent}')
-    class TitledCheckResourceHandler(CheckResultHandler):
-        def __init__(self, parent: CheckResultHandler, title: str):
-            self._parent = parent
-            self._title= title
-        def log_info(self, fmt: str, *args):
-            return self._parent.log_info(fmt, *args)
-        def handle_problem(self, is_fatal: bool, title: str, detail: typing.Iterable[str]):
-            return self._parent.handle_problem(is_fatal, self._title, detail)
-        def handle_tip(self, title: str, details: typing.Iterable[str]):
-            return self._parent.handle_tip(self._title, details)
-    supported_resource_agents = _load_supported_resource_agents()
+    unsupported_resource_agents = _load_unsupported_resource_agents()
     _check_saphana_resource_agent(handler, ocf_resource_agents)
     _check_removed_resource_agents(
-        TitledCheckResourceHandler(handler, "The following resource agents will be removed in SLES 16."),
-        supported_resource_agents,
+        handler,
+        "resource agents",
+        unsupported_resource_agents,
         (agent for agent in ocf_resource_agents if agent not in SAP_HANA_RESOURCE_AGENTS),
     )
     _check_removed_resource_agents(
-        TitledCheckResourceHandler(handler, "The following fence agents will be removed in SLES 16."),
-        supported_resource_agents,
+        handler,
+        "fence agents",
+        unsupported_resource_agents,
         stonith_resource_agents,
     )
     _check_ocfs2(handler, cib)
@@ -350,29 +335,58 @@ def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: 
             ])
 
 
-def _load_supported_resource_agents() -> typing.Set[cibquery.ResourceAgent]:
-    ret = set()
-    for line in pkgutil.get_data(
-        'crmsh', 'migration-supported-resource-agents.txt'
-    ).decode('ascii').splitlines():
-        parts = line.split(':', 3)
+def _load_unsupported_resource_agents() -> typing.Mapping[cibquery.ResourceAgent, cibquery.ResourceAgent]:
+    def resource_agent_from_str(s: str):
+        parts = s.split(':', 3)
         m_class = parts[0]
         m_provider = parts[1] if len(parts) == 3 else None
         m_type = parts[-1]
-        ret.add(cibquery.ResourceAgent(m_class, m_provider, m_type))
+        return cibquery.ResourceAgent(m_class, m_provider, m_type)
+    ret = dict()
+    for line in pkgutil.get_data(
+        'crmsh', 'migration-unsupported-resource-agents.txt'
+    ).decode('ascii').splitlines():
+        parts = line.split(',', 2)
+        unsupported = parts[0]
+        if len(parts) == 2:
+            alternative = parts[1]
+        else:
+            alternative = None
+        if alternative is not None:
+            ret[resource_agent_from_str(unsupported)] = resource_agent_from_str(alternative)
+        else:
+            ret[resource_agent_from_str(unsupported)] = None
     return ret
 
 
 
 def _check_removed_resource_agents(
         handler: CheckResultHandler,
-        supported_resource_agents: typing.Set[cibquery.ResourceAgent],
+        agent_type_message: str,
+        unsupported_resource_agents: typing.Mapping[cibquery.ResourceAgent, cibquery.ResourceAgent],
         resource_agents: typing.Iterable[cibquery.ResourceAgent],
 ):
-    unsupported_resource_agents = [x for x in resource_agents if x not in supported_resource_agents]
-    if unsupported_resource_agents:
-        handler.handle_problem(False, '', [
-            '* ' + ':'.join(x for x in resource_agent if x is not None) for resource_agent in unsupported_resource_agents
+    unsupported: typing.List[cibquery.ResourceAgent] = list()
+    replaced: typing.List[typing.Tuple[cibquery.ResourceAgent, cibquery.ResourceAgent]] = list()
+    for x in resource_agents:
+        if x in unsupported_resource_agents:
+            alternative = unsupported_resource_agents[x]
+            if alternative is None:
+                unsupported.append(x)
+            else:
+                replaced.append((x, alternative))
+    if unsupported:
+        handler.handle_problem(False, f'The following {agent_type_message} will be removed in SLES 16.', [
+            '* ' + ':'.join(x for x in resource_agent if x is not None)
+            for resource_agent in unsupported
+        ])
+    if replaced:
+        handler.handle_problem(False, f'The following {agent_type_message} will be replaced in SLES 16.', [
+            '* {}: please replace it with {}.'.format(
+                ':'.join(x for x in resource_agent if x is not None),
+                ':'.join(x for x in alternative if x is not None),
+            )
+            for resource_agent, alternative in replaced
         ])
 
 
