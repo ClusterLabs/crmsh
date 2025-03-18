@@ -16,12 +16,12 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
-  -f FILE, --file FILE  Load commands from the given file. If a dash (-) is
+  -f, --file FILE       Load commands from the given file. If a dash (-) is
                         used in place of a file name, crm will read commands
                         from the shell standard input (stdin).
-  -c CIB, --cib CIB     Start the session using the given shadow CIB file.
+  -c, --cib CIB         Start the session using the given shadow CIB file.
                         Equivalent to `cib use <CIB>`.
-  -D OUTPUT_TYPE, --display OUTPUT_TYPE
+  -D, --display OUTPUT_TYPE
                         Choose one of the output options: plain, color-always,
                         color, or uppercase. The default is color if the
                         terminal emulation supports colors, else plain.
@@ -33,7 +33,7 @@ options:
   -w, --wait            Make crm wait for the cluster transition to finish
                         (for the changes to take effect) after each processed
                         line.
-  -H DIR|FILE|SESSION, --history DIR|FILE|SESSION
+  -H, --history DIR|FILE|SESSION
                         A directory or file containing a cluster report to
                         load into history, or the name of a previously saved
                         history session.
@@ -46,7 +46,7 @@ options:
                         or a list of directories separated by semi-colons
                         (e.g. /dir1;/dir2;etc.).
   -X PROFILE            Collect profiling data and save in PROFILE.
-  -o OPTION=VALUE, --opt OPTION=VALUE
+  -o, --opt OPTION=VALUE
                         Set crmsh option temporarily. If the options are saved
                         using+options save+ then the value passed here will
                         also be saved.Multiple options can be set by using
@@ -68,14 +68,14 @@ options:
   -y, --yes             Answer "yes" to all prompts (use with caution, this is
                         destructive, especially those storage related
                         configurations and stages.)
-  -n NAME, --name NAME  Set the name of the configured cluster.
-  -N [USER@]HOST, --node [USER@]HOST
+  -n, --name NAME       Set the name of the configured cluster.
+  -N, --node [USER@]HOST
                         The member node of the cluster. Note: the current node
                         is always get initialized during bootstrap in the
                         beginning.
   -S, --enable-sbd      Enable SBD even if no SBD device is configured
                         (diskless mode)
-  -w WATCHDOG, --watchdog WATCHDOG
+  -w, --watchdog WATCHDOG
                         Use the given watchdog device or driver name
   -x, --skip-csync2-sync
                         Skip csync2 initialization (an experimental option)
@@ -85,17 +85,16 @@ options:
 Network configuration:
   Options for configuring the network and messaging layer.
 
-  -i IF, --interface IF
-                        Bind to IP address on interface IF. Allowed value is
+  -i, --interface IF    Bind to IP address on interface IF. Allowed value is
                         nic name or IP address. If a nic name is provided, the
                         first IP of that nic will be used. Use multiple -i for
                         more links. Note: Only one link is allowed for the non
                         knet transport type
-  -t TRANSPORT, --transport TRANSPORT
+  -t, --transport TRANSPORT
                         The transport mechanism. Allowed value is
                         knet(kronosnet)/udpu(unicast)/udp(multicast). Default
                         is knet
-  -A IP, --admin-ip IP  Configure IP address as an administration virtual IP
+  -A, --admin-ip IP     Configure IP address as an administration virtual IP
   -I, --ipv6            Configure corosync use IPv6
 
 QDevice configuration:
@@ -130,17 +129,17 @@ QDevice configuration:
 Storage configuration:
   Options for configuring shared storage.
 
-  -s DEVICE, --sbd-device DEVICE
+  -s, --sbd-device DEVICE
                         Block device to use for SBD fencing, use ";" as
                         separator or -s multiple times for multi path (up to 3
                         devices)
-  -o DEVICE, --ocfs2-device DEVICE
+  -o, --ocfs2-device DEVICE
                         Block device to use for OCFS2; When using Cluster LVM2
                         to manage the shared storage, user can specify one or
                         multiple raw disks, use ";" as separator or -o
                         multiple times for multi path (must specify -C option)
                         NOTE: this is a Technical Preview
-  -g DEVICE, --gfs2-device DEVICE
+  -g, --gfs2-device DEVICE
                         Block device to use for GFS2; When using Cluster LVM2
                         to manage the shared storage, user can specify one or
                         multiple raw disks, use ";" as separator or -g
@@ -148,7 +147,7 @@ Storage configuration:
                         NOTE: this is a Technical Preview
   -C, --cluster-lvm2    Use Cluster LVM2 (only valid together with -o or -g
                         option) NOTE: this is a Technical Preview
-  -m MOUNT, --mount-point MOUNT
+  -m, --mount-point MOUNT
                         Mount point for OCFS2 or GFS2 device (default is
                         /srv/clusterfs, only valid together with -o or -g
                         option) NOTE: this is a Technical Preview
@@ -238,12 +237,11 @@ options:
 Network configuration:
   Options for configuring the network and messaging layer.
 
-  -c [USER@]HOST, --cluster-node [USER@]HOST
+  -c, --cluster-node [USER@]HOST
                         User and host to login to an existing cluster node.
                         The host can be specified with either a hostname or an
                         IP.
-  -i IF, --interface IF
-                        Bind to IP address on interface IF. Allowed value is
+  -i, --interface IF    Bind to IP address on interface IF. Allowed value is
                         nic name or IP address. If a nic name is provided, the
                         first IP of that nic will be used. Use multiple -i for
                         more links. Note: Only one link is allowed for the non
@@ -281,7 +279,7 @@ options:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
-  -c HOST, --cluster-node HOST
+  -c, --cluster-node HOST
                         IP address or hostname of cluster node which will be
                         deleted
   -F, --force           Remove current node
@@ -302,12 +300,10 @@ options:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
-  -a [USER@]HOST, --arbitrator [USER@]HOST
+  -a, --arbitrator [USER@]HOST
                         Geo cluster arbitrator
-  -s DESC, --clusters DESC
-                        Geo cluster description (see details below)
-  -t LIST, --tickets LIST
-                        Tickets to create (space-separated)
+  -s, --clusters DESC   Geo cluster description (see details below)
+  -t, --tickets LIST    Tickets to create (space-separated)
 
 Cluster Description
 
@@ -342,10 +338,9 @@ options:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
-  -c [USER@]HOST, --cluster-node [USER@]HOST
+  -c, --cluster-node [USER@]HOST
                         An already-configured geo cluster or arbitrator
-  -s DESC, --clusters DESC
-                        Geo cluster description (see geo-init for details)
+  -s, --clusters DESC   Geo cluster description (see geo-init for details)
   --use-ssh-agent       Use an existing key from ssh-agent instead of creating
                         new key pairs'''
 
@@ -362,7 +357,7 @@ options:
   -h, --help            Show this help message
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
-  -c [USER@]HOST, --cluster-node [USER@]HOST
+  -c, --cluster-node [USER@]HOST
                         An already-configured geo cluster
   --use-ssh-agent       Use an existing key from ssh-agent instead of creating
                         new key pairs'''

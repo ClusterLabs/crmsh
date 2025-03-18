@@ -73,20 +73,20 @@ ERROR: 1: syntax in group: child p1 listed more than once in group g1 parsing 'g
 ERROR: 39: configure.modgroup: c1 is not member of g1
 Traceback (most recent call last):
     rv = self.execute_command() is not False
-         ^^^^^^^^^^^^^^^^^^^^^^
+         ~~~~~~~~~~~~~~~~~~~~^^
     rv = self.command_info.function(*arglist)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     context.fatal_error("%s is not member of %s" % (prim_id, group_id))
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     raise ValueError(msg)
 ValueError: c1 is not member of g1
 .INP: modgroup g1 remove nosuch
 ERROR: 40: configure.modgroup: nosuch is not member of g1
 Traceback (most recent call last):
     rv = self.execute_command() is not False
-         ^^^^^^^^^^^^^^^^^^^^^^
+         ~~~~~~~~~~~~~~~~~~~~^^
     rv = self.command_info.function(*arglist)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     context.fatal_error("%s is not member of %s" % (prim_id, group_id))
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     raise ValueError(msg)
 ValueError: nosuch is not member of g1
 .INP: modgroup g1 add c1
