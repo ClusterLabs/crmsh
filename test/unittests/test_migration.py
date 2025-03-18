@@ -11,11 +11,26 @@ class TestCheckRemovedResourceAgents(unittest.TestCase):
     def setUp(self):
         self._handler = mock.Mock(migration.CheckResultHandler)
 
-    def test_load_supported_resource_agents(self):
-        s = migration._load_supported_resource_agents()
-        self.assertIn(cibquery.ResourceAgent('ocf', 'heartbeat', 'IPaddr2'), s)
-        self.assertIn(cibquery.ResourceAgent('stonith', None, 'fence_sbd'), s)
-        self.assertNotIn(cibquery.ResourceAgent('foo', None, 'bar'), s)
+    def test_load_unsupported_resource_agents(self):
+        s = migration._load_unsupported_resource_agents()
+        self.assertIn((
+                cibquery.ResourceAgent('ocf', 'heartbeat', 'IPaddr'),
+                cibquery.ResourceAgent('ocf', 'heartbeat', 'IPaddr2'),
+            ),
+            s.items(),
+        )
+        self.assertIn((
+                cibquery.ResourceAgent('stonith', None, 'external/sbd'),
+                cibquery.ResourceAgent('stonith', None, 'fence_sbd'),
+            ),
+            s.items(),
+        )
+        self.assertIn((
+                cibquery.ResourceAgent('ocf', 'heartbeat', 'rkt'),
+                None,
+            ),
+            s.items(),
+        )
 
     def test_check_removed_resource_agents(self):
         migration._check_removed_resource_agents(
