@@ -544,13 +544,16 @@ def check_unsupported_resource_agents(handler: CheckResultHandler, cib: lxml.etr
     handler.log_info("Checking used resource agents...")
     ocf_resource_agents = list()
     stonith_resource_agents = list()
+    lsb_or_service_resource_agents = list()
     for resource_agent in cibquery.get_configured_resource_agents(cib):
         if resource_agent.m_class == 'ocf':
             ocf_resource_agents.append(resource_agent)
         elif resource_agent.m_class == 'stonith':
             stonith_resource_agents.append(resource_agent)
+        elif resource_agent.m_class == 'lsb' or resource_agent.m_class == 'service':
+            lsb_or_service_resource_agents.append(resource_agent)
         else:
-            raise ValueError(f'Unrecognized resource agent {resource_agent}')
+            logger.debug('Unrecognized resource agent class: %s', resource_agent)
     unsupported_resource_agents = _load_unsupported_resource_agents()
     _check_saphana_resource_agent(handler, ocf_resource_agents)
     _check_removed_resource_agents(
@@ -565,6 +568,12 @@ def check_unsupported_resource_agents(handler: CheckResultHandler, cib: lxml.etr
         unsupported_resource_agents,
         stonith_resource_agents,
     )
+    if lsb_or_service_resource_agents:
+        handler.handle_problem(
+            False, True, handler.LEVEL_ERROR,
+            'The following resource agents from class "lsb" or "service" are not supported in SLES 16.',
+            ('* ' + ':'.join(x for x in dataclasses.astuple(resource_agent) if x is not None) for resource_agent in lsb_or_service_resource_agents)
+        )
     _check_ocfs2(handler, cib)
 
 
