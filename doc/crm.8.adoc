@@ -1023,6 +1023,7 @@ issues.
 .Note on sles16
 ****************************
 `--fix` is only available after the OS is migrated to SLES 16.
+****************************
 
 [[cmdhelp.cluster.init,Initializes a new HA cluster,From Code]]
 ==== `init`
