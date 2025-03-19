@@ -65,6 +65,7 @@ def new(node, pfx):
             node_id = pfx
     if is_used(node_id):
         node_id = _gen_free_id(node_id)
+    node_id = re.sub(r'#', '.', node_id)
     save(node_id)
     return node_id
 
