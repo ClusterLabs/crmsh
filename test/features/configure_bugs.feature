@@ -73,3 +73,11 @@ Feature: Functional test for configure sub level
     Given   Get the latest schema version
     When    Use crm configure upgrade to upgrade the schema
     Then    The schema version is the latest
+
+  @clean
+  Scenario: Edit attributes starts with a hashtag (bsc#1239782)
+    Given   Cluster service is "stopped" on "hanode1"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm node attribute hanode1 set cpu 2" on "hanode1"
+    Then    Run "crm -F configure filter "sed 's/cpu=/#cpu='/g"" OK on "hanode1"
