@@ -5,12 +5,12 @@ ocf:heartbeat:Evmsd
 ocf:heartbeat:ICP
 ocf:heartbeat:IPaddr,ocf:heartbeat:IPaddr2
 ocf:heartbeat:IPv6addr,ocf:heartbeat:IPaddr2
-ocf:heartbeat:LVM
+ocf:heartbeat:LVM,ocf:heartbeat:LVM-activate,deprecated
 ocf:heartbeat:LinuxSCSI
 ocf:heartbeat:ManageRAID
 ocf:heartbeat:ManageVE
 ocf:heartbeat:Pure-FTPd
-ocf:heartbeat:Raid1
+ocf:heartbeat:Raid1,ocf:heartbeat:mdraid,deprecated
 ocf:heartbeat:ServeRAID
 ocf:heartbeat:SphinxSearchDaemon
 ocf:heartbeat:SysInfo
