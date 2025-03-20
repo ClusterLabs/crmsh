@@ -10,15 +10,16 @@ ocf:heartbeat:LinuxSCSI
 ocf:heartbeat:ManageRAID
 ocf:heartbeat:ManageVE
 ocf:heartbeat:Pure-FTPd
+ocf:heartbeat:Raid1
 ocf:heartbeat:ServeRAID
 ocf:heartbeat:SphinxSearchDaemon
 ocf:heartbeat:SysInfo
 ocf:heartbeat:VIPArip
 ocf:heartbeat:WinPopup
 ocf:heartbeat:Xen
-ocf:heartbeat:anything
 ocf:heartbeat:asterisk
 ocf:heartbeat:clvm
+ocf:heartbeat:conntrackd
 ocf:heartbeat:dnsupdate
 ocf:heartbeat:dovecot
 ocf:heartbeat:eDir88
@@ -40,7 +41,7 @@ ocf:heartbeat:openstack-info
 ocf:heartbeat:openstack-virtual-ip
 ocf:heartbeat:lxd-info
 ocf:heartbeat:machine-info
-ocf:heartbeat:pingd
+ocf:heartbeat:pingd,ocf:pacemaker:ping
 ocf:heartbeat:pound
 ocf:heartbeat:proftpd
 ocf:heartbeat:rkt
