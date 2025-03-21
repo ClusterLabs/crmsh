@@ -5,6 +5,7 @@
 import os
 import re
 import time
+import difflib
 from packaging import version
 from . import command
 from . import completers as compl
@@ -578,6 +579,20 @@ class CibConfig(command.UI):
     def do_assist(self):
         pass
 
+    def _show_diff(self):
+        obj_orig = mkset_obj("orig")
+        obj_orig_str = obj_orig.repr()
+        obj_changed = mkset_obj()
+        obj_changed_str = obj_changed.repr()
+
+        diff = difflib.unified_diff(obj_orig_str.splitlines(), obj_changed_str.splitlines())
+        diff = [
+                line for line in diff
+                if not line.startswith('+++ ') and not line.startswith('--- ')
+        ]
+
+        utils.page_string('\n'.join(diff))
+
     @command.skill_level('administrator')
     @command.completers_repeating(_id_show_list)
     def do_show(self, context, *args):
@@ -594,6 +609,9 @@ class CibConfig(command.UI):
         args = [arg for arg in args if not arg.startswith('obscure:')]
         cib_factory.ensure_cib_updated()
         with obscure(osargs):
+            if args and args[0] == "changed":
+                self._show_diff()
+                return True
             set_obj = mkset_obj(*args)
             return set_obj.show()
 
@@ -1277,7 +1295,9 @@ class CibConfig(command.UI):
             if no_questions_asked or not options.interactive:
                 ok = self._commit()
             else:
-                confirm_msg = "There are changes pending. Do you want to commit them, or cancel the operation?"
+                print("There are changes pending:")
+                self._show_diff()
+                confirm_msg = "Do you want to commit them, or cancel the operation?"
                 rc = utils.ask(confirm_msg, cancel_option=True)
                 if rc:
                     ok = self._commit()

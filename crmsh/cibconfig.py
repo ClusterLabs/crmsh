@@ -2814,6 +2814,8 @@ class CibFactory(object):
         for obj in self.cib_objects:
             self._update_links(obj)
 
+        self.cib_objects_orig = copy.deepcopy(self.cib_objects)
+
     def cli_use_validate_all(self):
         for obj in self.cib_objects:
             if not obj.cli_use_validate():
@@ -2847,6 +2849,7 @@ class CibFactory(object):
         self.cib_orig = None     # the CIB which we loaded
         self.cib_attrs = {}      # cib version dictionary
         self.cib_objects = []    # a list of cib objects
+        self.cib_objects_orig = []  # a list of cib objects (original)
         self.remove_queue = []   # a list of cib objects to be removed
         self.id_refs = {}        # dict of id-refs
         self.new_schema = False  # schema changed
@@ -3315,6 +3318,8 @@ class CibFactory(object):
         """
         if not filters:
             return True, copy.copy(self.cib_objects)
+        if filters[0] == 'orig':
+            return True, copy.copy(self.cib_objects_orig)
         if filters[0] == 'NOOBJ':
             return True, orderedset.oset([])
         obj_set = orderedset.oset([])
