@@ -9,11 +9,36 @@ class TestCheckRemovedResourceAgents(unittest.TestCase):
     def setUp(self):
         self._handler = mock.Mock(migration.CheckResultHandler)
 
-    def test_load_supported_resource_agents(self):
-        s = migration._load_supported_resource_agents()
-        self.assertIn(cibquery.ResourceAgent('ocf', 'heartbeat', 'IPaddr2'), s)
-        self.assertIn(cibquery.ResourceAgent('stonith', None, 'fence_sbd'), s)
-        self.assertNotIn(cibquery.ResourceAgent('foo', None, 'bar'), s)
+    def test_load_unsupported_resource_agents(self):
+        s = migration.UnsupportedResourceAgentDetector()
+        self.assertEqual(
+            migration.UnsupportedResourceAgentDetector.UnsupportedState(
+                cibquery.ResourceAgent('ocf', 'heartbeat', 'IPaddr2'),
+                False,
+            ),
+            s.get_unsupported_state(cibquery.ResourceAgent('ocf', 'heartbeat', 'IPaddr'))
+        )
+        self.assertEqual(
+            migration.UnsupportedResourceAgentDetector.UnsupportedState(
+                cibquery.ResourceAgent('stonith', None, 'fence_sbd'),
+                False,
+            ),
+            s.get_unsupported_state(cibquery.ResourceAgent('stonith', None, 'external/sbd'))
+        )
+        self.assertEqual(
+            migration.UnsupportedResourceAgentDetector.UnsupportedState(
+                None,
+                False,
+            ),
+            s.get_unsupported_state(cibquery.ResourceAgent('ocf', 'heartbeat', 'rkt'))
+        )
+        self.assertEqual(
+            migration.UnsupportedResourceAgentDetector.UnsupportedState(
+                cibquery.ResourceAgent('ocf', 'heartbeat', 'LVM-activate'),
+                True,
+            ),
+            s.get_unsupported_state(cibquery.ResourceAgent('ocf', 'heartbeat', 'LVM'))
+        )
 
     def test_check_version_range(self):
         def check_fn(x):
