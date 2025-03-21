@@ -554,7 +554,7 @@ def check_unsupported_resource_agents(handler: CheckResultHandler, cib: lxml.etr
             lsb_or_service_resource_agents.append(resource_agent)
         else:
             logger.debug('Unrecognized resource agent class: %s', resource_agent)
-    unsupported_resource_agents = _load_unsupported_resource_agents()
+    unsupported_resource_agents = UnsupportedResourceAgentDetector()
     _check_saphana_resource_agent(handler, ocf_resource_agents)
     _check_removed_resource_agents(
         handler,
@@ -595,66 +595,82 @@ def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: 
             )
 
 
-def _load_unsupported_resource_agents() -> typing.Mapping[cibquery.ResourceAgent, cibquery.ResourceAgent]:
-    def resource_agent_from_str(s: str):
+class UnsupportedResourceAgentDetector:
+    @dataclasses.dataclass(frozen=True)
+    class UnsupportedState:
+        alternative: typing.Optional[cibquery.ResourceAgent]
+        is_deprecated: bool
+
+    def __init__(self):
+        self._unsupported = dict()
+        with importlib.resources.files('crmsh').joinpath('migration-unsupported-resource-agents.txt').open(
+                'r', encoding='ascii',
+        ) as r:
+            for line in r:
+                parts = line.strip().split(',', 3)
+                parts.extend(itertools.repeat('', 2))
+                unsupported = self.__resource_agent_from_str(parts[0])
+                alternative = parts[1]
+                is_deprecated = parts[2] == "deprecated"
+                self._unsupported[unsupported] = self.UnsupportedState(
+                    self.__resource_agent_from_str(alternative) if alternative != '' else None,
+                    is_deprecated,
+                )
+
+    def get_unsupported_state(self, resource_agent):
+        return self._unsupported.get(resource_agent)
+
+    @staticmethod
+    def __resource_agent_from_str(s: str):
         parts = s.split(':', 3)
         m_class = parts[0]
         m_provider = parts[1] if len(parts) == 3 else None
         m_type = parts[-1]
         return cibquery.ResourceAgent(m_class, m_provider, m_type)
-    ret = dict()
-    with importlib.resources.files('crmsh').joinpath('migration-unsupported-resource-agents.txt').open(
-            'r', encoding='ascii',
-    ) as r:
-        for line in r:
-            parts = line.strip().split(',', 2)
-            unsupported = parts[0]
-            if len(parts) == 2:
-                alternative = parts[1]
-            else:
-                alternative = None
-            if alternative is not None:
-                ret[resource_agent_from_str(unsupported)] = resource_agent_from_str(alternative)
-            else:
-                ret[resource_agent_from_str(unsupported)] = None
-    return ret
-
 
 
 def _check_removed_resource_agents(
         handler: CheckResultHandler,
         agent_type_message: str,
-        unsupported_resource_agents: typing.Mapping[cibquery.ResourceAgent, cibquery.ResourceAgent],
+        unsupported_resource_agents: UnsupportedResourceAgentDetector,
         resource_agents: typing.Iterable[cibquery.ResourceAgent],
 ):
-    unsupported: typing.List[cibquery.ResourceAgent] = list()
-    replaced: typing.List[typing.Tuple[cibquery.ResourceAgent, cibquery.ResourceAgent]] = list()
+    unsupported: typing.List[
+        typing.Tuple[cibquery.ResourceAgent, UnsupportedResourceAgentDetector.UnsupportedState]] = list()
+    deprecated: typing.List[
+        typing.Tuple[cibquery.ResourceAgent, UnsupportedResourceAgentDetector.UnsupportedState]] = list()
     for x in resource_agents:
-        if x in unsupported_resource_agents:
-            alternative = unsupported_resource_agents[x]
-            if alternative is None:
-                unsupported.append(x)
-            else:
-                replaced.append((x, alternative))
+        unsupported_state = unsupported_resource_agents.get_unsupported_state(x)
+        if unsupported_state is None:
+            pass
+        elif unsupported_state.is_deprecated:
+            deprecated.append((x, unsupported_state))
+        else:
+            unsupported.append((x, unsupported_state))
     if unsupported:
         handler.handle_problem(
-            False, True,
+            False, True, handler.LEVEL_ERROR,
             f'The following {agent_type_message} are removed in SLES 16.', [
-                '* ' + ':'.join(x for x in dataclasses.astuple(resource_agent) if x is not None)
-                for resource_agent in unsupported
-            ]
-        )
-    if replaced:
-        handler.handle_problem(
-            False, False,
-            f'The following {agent_type_message} are replaced in SLES 16.', [
-                '* {}: please replace it with {}.'.format(
+                '* {}{}'.format(
                     ':'.join(x for x in dataclasses.astuple(resource_agent) if x is not None),
-                    ':'.join(x for x in dataclasses.astuple(alternative) if x is not None),
-                )
-                for resource_agent, alternative in replaced
-            ]
-        )
+                    ': please replace it with {}'.format(
+                        ':'.join(x for x in dataclasses.astuple(unsupported_state.alternative) if x is not None)
+                ) if unsupported_state.alternative is not None else ''
+            )
+            for resource_agent, unsupported_state in unsupported
+        ])
+    if deprecated:
+        handler.handle_problem(
+            False, False, handler.LEVEL_WARN,
+            f'The following {agent_type_message} are deprecated in SLES 16.', [
+            '* {}{}'.format(
+                ':'.join(x for x in dataclasses.astuple(resource_agent) if x is not None),
+                ': please replace it with {}'.format(
+                    ':'.join(x for x in dataclasses.astuple(unsupported_state.alternative) if x is not None)
+                ) if unsupported_state.alternative is not None else ''
+            )
+            for resource_agent, unsupported_state in deprecated
+        ])
 
 
 def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
