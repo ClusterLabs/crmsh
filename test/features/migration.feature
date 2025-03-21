@@ -12,7 +12,16 @@ Feature: migration
     Then    Expected return code is "0"
     And     Expected "[INFO] This cluster works on SLES 16. No migration is needed." in stdout
 
+  Scenario: Run pre-migration checks against unsupported primitives
+    When    Run "crm --force configure primitive testVip IPaddr ip=192.0.2.100" on "hanode1"
+    And     Run "crm --force configure primitive testService service:testService" on "hanode1"
+    And     Try "crm cluster health sles16" on "hanode1"
+    Then    Expected return code is "1"
+    And     Expect stdout contains snippets ["[FAIL] The pacemaker cluster stack can not migrate to SLES 16", "* ocf:heartbeat:IPaddr: please replace it with ocf:heartbeat:IPaddr2", "* service:testService"].
+
   Scenario: Run pre-migration checks with cluster services stopped.
+    Given   Run "crm configure delete testVip" OK on "hanode1"
+    And     Run "crm configure delete testService" OK on "hanode1"
     When    Run "crm cluster stop --all" on "hanode1"
     And     Run "crm cluster stop --all" on "hanode2"
     And     Try "crm cluster health sles16" on "hanode1"
@@ -24,7 +33,7 @@ Feature: migration
     When    Try "crm cluster health sles16 --fix" on "hanode1"
     Then    Expected return code is "0"
 
-  Scenario: run pre-migration checks against corosync.conf generated in crmsh-4.6
+  Scenario: Run pre-migration checks against corosync.conf generated in crmsh-4.6
     When    Run "rm -f /etc/corosync/corosync.conf" on "hanode1"
     And     Write multi lines to file "/etc/corosync/corosync.conf" on "hanode1"
       """
