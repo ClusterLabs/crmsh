@@ -416,6 +416,7 @@ INFO: Trace set, restart p0 to trace non-monitor operations
           <op name="monitor" interval="0" id="p0-monitor-0">
             <instance_attributes id="p0-monitor-0-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-monitor-0-instance_attributes-trace_ra"/>
+	      <nvpair name="trace_dir" value="/var/lib/heartbeat/trace_ra" id="p0-monitor-0-instance_attributes-trace_dir"/>
             </instance_attributes>
           </op>
         </operations>
@@ -446,11 +447,13 @@ INFO: Trace set, restart p0 to trace the start operation
           <op name="monitor" interval="0" id="p0-monitor-0">
             <instance_attributes id="p0-monitor-0-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-monitor-0-instance_attributes-trace_ra"/>
+	      <nvpair name="trace_dir" value="/var/lib/heartbeat/trace_ra" id="p0-monitor-0-instance_attributes-trace_dir"/>
             </instance_attributes>
           </op>
           <op name="start" timeout="20s" interval="0s" id="p0-start-0s">
             <instance_attributes id="p0-start-0s-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-start-0s-instance_attributes-trace_ra"/>
+	      <nvpair name="trace_dir" value="/var/lib/heartbeat/trace_ra" id="p0-start-0s-instance_attributes-trace_dir"/>
             </instance_attributes>
           </op>
         </operations>
@@ -480,16 +483,19 @@ INFO: Trace set, restart p0 to trace the stop operation
           <op name="monitor" interval="0" id="p0-monitor-0">
             <instance_attributes id="p0-monitor-0-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-monitor-0-instance_attributes-trace_ra"/>
+	      <nvpair name="trace_dir" value="/var/lib/heartbeat/trace_ra" id="p0-monitor-0-instance_attributes-trace_dir"/>
             </instance_attributes>
           </op>
           <op name="start" timeout="20s" interval="0s" id="p0-start-0s">
             <instance_attributes id="p0-start-0s-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-start-0s-instance_attributes-trace_ra"/>
+	      <nvpair name="trace_dir" value="/var/lib/heartbeat/trace_ra" id="p0-start-0s-instance_attributes-trace_dir"/>
             </instance_attributes>
           </op>
           <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s">
             <instance_attributes id="p0-stop-0s-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-stop-0s-instance_attributes-trace_ra"/>
+	      <nvpair name="trace_dir" value="/var/lib/heartbeat/trace_ra" id="p0-stop-0s-instance_attributes-trace_dir"/>
             </instance_attributes>
           </op>
         </operations>
@@ -518,11 +524,13 @@ INFO: Stop tracing p0 for operation monitor
           <op name="start" timeout="20s" interval="0s" id="p0-start-0s">
             <instance_attributes id="p0-start-0s-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-start-0s-instance_attributes-trace_ra"/>
+	      <nvpair name="trace_dir" value="/var/lib/heartbeat/trace_ra" id="p0-start-0s-instance_attributes-trace_dir"/>
             </instance_attributes>
           </op>
           <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s">
             <instance_attributes id="p0-stop-0s-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-stop-0s-instance_attributes-trace_ra"/>
+	      <nvpair name="trace_dir" value="/var/lib/heartbeat/trace_ra" id="p0-stop-0s-instance_attributes-trace_dir"/>
             </instance_attributes>
           </op>
         </operations>
@@ -551,6 +559,7 @@ INFO: Stop tracing p0 for operation start
           <op name="stop" timeout="20s" interval="0s" id="p0-stop-0s">
             <instance_attributes id="p0-stop-0s-instance_attributes">
               <nvpair name="trace_ra" value="1" id="p0-stop-0s-instance_attributes-trace_ra"/>
+	      <nvpair name="trace_dir" value="/var/lib/heartbeat/trace_ra" id="p0-stop-0s-instance_attributes-trace_dir"/>
             </instance_attributes>
           </op>
           <op name="start" timeout="20s" interval="0s" id="p0-start-0s"/>
