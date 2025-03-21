@@ -155,17 +155,17 @@ def read_cib(fun, params=None):
 
 
 def sanity_check_nvpairs(ident, node, attr_list):
-    rc = 0
+    rc = constants.VERIFY_SUCCESS
     for nvpair in node.iterchildren("nvpair"):
         n = nvpair.get("name")
         if n and n not in attr_list:
             logger.warning("%s: unknown attribute '%s'", ident, n)
-            rc |= 1
+            rc |= constants.VERIFY_WARNING
     return rc
 
 
 def sanity_check_meta(ident, node, attr_list):
-    rc = 0
+    rc = constants.VERIFY_SUCCESS
     if node is None or not attr_list:
         return rc
     for c in node.iterchildren():
