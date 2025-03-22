@@ -61,9 +61,8 @@ and call:
 
 `crmsh` also comes with a comprehensive regression test suite. The regression tests need
 to run after installation, on a system which has both crmsh and pacemaker installed. You
-will also need to install +pacemaker+ and the +cluster-glue+ development headers.
+will also need to install +pacemaker+ development headers.
 
-* link:http://hg.linux-ha.org/glue[cluster-glue]
 * link:https://github.com/ClusterLabs/pacemaker[pacemaker]
 
 To execute the tests, call:

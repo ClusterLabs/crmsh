@@ -154,7 +154,7 @@ Feature: crmsh bootstrap process - init, join and remove
 
   Scenario: Check hacluster's passwordless configuration on 2 nodes
     Then    Check user shell for hacluster between "hanode1 hanode2"
-    Then    Check passwordless for hacluster between "hanode1 hanode2"
+    Then    Check passwordless for hacluster between "hanode1 hanode2" "successfully"
 
   Scenario: Check hacluster's passwordless configuration in old cluster, 2 nodes
     When    Run "crm cluster stop --all" on "hanode1"
@@ -162,11 +162,12 @@ Feature: crmsh bootstrap process - init, join and remove
     And     Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    When    Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode1"
+    When    Run "rm -rf /var/lib/pacemaker/.ssh" on "hanode1"
+    Then    Check passwordless for hacluster between "hanode1 hanode2" "failed"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Online nodes are "hanode1 hanode2"
-    And     Check passwordless for hacluster between "hanode1 hanode2"
+    And     Check passwordless for hacluster between "hanode1 hanode2" "successfully"
 
   Scenario: Check hacluster's passwordless configuration on 3 nodes
     Given   Cluster service is "stopped" on "hanode3"
@@ -174,13 +175,14 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Cluster service is "started" on "hanode3"
     And     Online nodes are "hanode1 hanode2 hanode3"
     And     Check user shell for hacluster between "hanode1 hanode2 hanode3"
-    And     Check passwordless for hacluster between "hanode1 hanode2 hanode3"
+    And     Check passwordless for hacluster between "hanode1 hanode2 hanode3" "successfully"
 
   Scenario: Check hacluster's passwordless configuration in old cluster, 3 nodes
     Given   Cluster service is "stopped" on "hanode3"
-    When    Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode1"
-    And     Run "rm -rf /var/lib/heartbeat/cores/hacluster/.ssh" on "hanode2"
+    When    Run "rm -rf /var/lib/pacemaker/.ssh" on "hanode1"
+    And     Run "rm -rf /var/lib/pacemaker/.ssh" on "hanode2"
+    Then    Check passwordless for hacluster between "hanode1 hanode2 hanode3" "failed"
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     And     Online nodes are "hanode1 hanode2 hanode3"
-    And     Check passwordless for hacluster between "hanode1 hanode2 hanode3"
+    And     Check passwordless for hacluster between "hanode1 hanode2 hanode3" "successfully"
