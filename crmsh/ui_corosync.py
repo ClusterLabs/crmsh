@@ -216,7 +216,7 @@ class Link(command.UI):
     @command.completer(completers.call(lambda: [
         str(link.linknumber)
         for link in corosync.LinkManager.load_config_file().links()
-        if link.linknumber != 0
+        if link and link.linknumber != 0
     ]))
     def do_remove(self, context, linknumber: str):
         if not linknumber.isdecimal():
