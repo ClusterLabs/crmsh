@@ -820,10 +820,10 @@ def _keys_from_ssh_agent() -> typing.List[ssh_key.Key]:
     try:
         keys = ssh_key.AgentClient().list()
         logger.info("Using public keys from ssh-agent...")
+        return keys
     except ssh_key.Error:
-        logger.error("Cannot get a public key from ssh-agent.")
-        raise
-    return keys
+        logger.debug("Cannot get a public key from ssh-agent.", exc_info=True)
+        return list()
 
 
 def init_ssh():
@@ -856,6 +856,7 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
         logger.info("Adding public keys to authorized_keys for user %s...", local_user)
         for key in ssh_public_keys:
             authorized_key_manager.add(None, local_user, key)
+            logger.info("Added public key %s.", key.fingerprint())
     else:
         configure_ssh_key(local_user)
     configure_ssh_key('hacluster')
@@ -1021,6 +1022,7 @@ def configure_ssh_key(user):
     if is_generated:
         logger.info("A new ssh keypair is generated for user %s.", user)
     authorized_key_manager.add(None, user, keys[0])
+    logger.info("A public key is added to authorized_keys for user %s: %s", user, keys[0].fingerprint())
 
 
 def generate_ssh_key_pair_on_remote(
