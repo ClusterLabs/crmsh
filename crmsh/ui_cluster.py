@@ -410,8 +410,8 @@ Examples:
                             help="Use the given watchdog device or driver name")
         parser.add_argument("-x", "--skip-csync2-sync", dest="skip_csync2", action="store_true",
                             help="Skip csync2 initialization (an experimental option)")
-        parser.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
-                            help="Use an existing key from ssh-agent instead of creating new key pairs")
+        parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
+                            help="Try to use an existing key from ssh-agent")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-i", "--interface", dest="nic_addr_list", metavar="IF", action=CustomAppendAction, default=[], help=constants.INTERFACE_HELP)
@@ -513,8 +513,8 @@ Examples:
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
-        parser.add_argument('--use-ssh-agent', action='store_true', dest='use_ssh_agent',
-                            help="Use an existing key from ssh-agent instead of creating new key pairs")
+        parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
+                            help="Try to use an existing key from ssh-agent")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument(
