@@ -4,6 +4,7 @@ import asyncio
 import errno
 import os
 import sys
+import tempfile
 import typing
 from tempfile import mkstemp
 import subprocess
@@ -134,24 +135,6 @@ def user_pair_for_ssh(host):
         return crmsh.user_of_host.instance().user_pair_for_ssh(host)
     except crmsh.user_of_host.UserNotFoundError:
         raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
-
-
-def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalShell = None):
-    if shell is None:
-        shell = sh.LocalShell()
-    if check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
-        local_public_key = ssh_key.fetch_public_key_file_list(None, local_user)[0]
-        logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
-        cmd = f"ssh-copy-id -i {local_public_key} '{remote_user}@{remote_node}' &> /dev/null"
-        result = shell.su_subprocess_run(local_user, cmd, tty=True)
-        return result.returncode
-    else:
-        return 0
-
-
-def ssh_copy_id(local_user, remote_user, remote_node):
-    if 0 != ssh_copy_id_no_raise(local_user, remote_user, remote_node):
-        fatal("Failed to login to remote host {}@{}".format(remote_user, remote_node))
 
 
 @memoize

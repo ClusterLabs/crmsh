@@ -310,7 +310,7 @@ def fetch_public_key_file_list(
         host: typing.Optional[str],
         user: str,
         generate_key_pair: bool = False
-) -> typing.List[str]:
+) -> typing.List[KeyFile]:
     """
     Fetch the public key file list for the specified user on the specified host.
 
@@ -330,7 +330,7 @@ def fetch_public_key_file_list(
     if not public_keys:
         host_str = f'@{host}' if host else ' locally'
         raise Error(f'No public key file found for {user}{host_str}')
-    return public_keys
+    return [KeyFile(p) for p in public_keys]
 
 
 def fetch_public_key_content_list(
