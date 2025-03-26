@@ -464,14 +464,8 @@ class RAInfo(object):
         def unreq_param(p):
             '''
             Allow for some exceptions.
-
-            - the rhcs stonith agents sometimes require "action" (in
-              the meta-data) and "port", but they're automatically
-              supplied by stonithd
             '''
-            if self.ra_class == "stonith" and \
-                (self.ra_type.startswith("rhcs/") or
-                 self.ra_type.startswith("fence_")):
+            if self.ra_class == "stonith" and self.ra_type.startswith("fence_"):
                 if p in ("action", "port"):
                     return True
             return False
