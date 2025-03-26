@@ -630,11 +630,6 @@ def check_prereqs():
         logger.warning("{} is not configured to start at system boot.".format(timekeeper))
         warned = True
 
-    if _context.use_ssh_agent == False and 'SSH_AUTH_SOCK' in os.environ:
-        msg = "$SSH_AUTH_SOCK is detected. As a tip, using the --use-ssh-agent option could avoid generate local root ssh keys on cluster nodes."
-        logger.warning(msg)
-        warned = True
-
     if warned:
         if not confirm("Do you want to continue anyway?"):
             return False
