@@ -363,9 +363,9 @@ class RAStonith(RADriver):
         """
         Run test for stonith resource
         """
-        for prefix in ['rhcs/', 'fence_']:
+        for prefix in ['fence_', ]:
             if self.ra_type.startswith(prefix):
-                self.err("Cannot test RHCS STONITH resources!")
+                self.err("Cannot test STONITH resources!")
                 return False
         return RADriver.test_resource(self, node)
 
