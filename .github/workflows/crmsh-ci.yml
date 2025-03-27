@@ -7,6 +7,7 @@ name: crmsh CI
 on:
   - pull_request
   - workflow_call
+  - workflow_dispatch
 
 env:
   CONTAINER_SCRIPT: sudo ./test/run-functional-tests
