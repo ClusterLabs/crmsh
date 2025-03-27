@@ -12,6 +12,7 @@ from crmsh import completers
 from crmsh import sh
 from crmsh import xmlutil
 from crmsh import constants
+from crmsh import cibquery
 from crmsh.service_manager import ServiceManager
 
 
@@ -88,8 +89,8 @@ class SBD(command.UI):
     - sbd purge
     '''
     name = "sbd"
-    TIMEOUT_TYPES = ("watchdog", "allocate", "loop", "msgwait")
-    DISKLESS_TIMEOUT_TYPES = ("watchdog",)
+    TIMEOUT_TYPES = ("watchdog", "allocate", "loop", "msgwait", "crashdump-watchdog")
+    DISKLESS_TIMEOUT_TYPES = ("watchdog", "crashdump-watchdog")
     SHOW_TYPES = ("disk_metadata", "sysconfig", "property")
     DISKLESS_SHOW_TYPES = ("sysconfig", "property")
     PCMK_ATTRS = (
@@ -102,7 +103,7 @@ class SBD(command.UI):
     PCMK_ATTRS_DISKLESS = ('stonith-watchdog-timeout',)
     PARSE_RE = re.compile(
 		# Match keys with non-empty values, capturing possible suffix
-        r'(\w+)(?:-(\w+))?=("[^"]+"|[\w/\d;]+)'
+        r'([\w-]+)-([\w-]+)=([\w/\d]+)'
     )
 
     class SyntaxError(Exception):
@@ -287,6 +288,40 @@ class SBD(command.UI):
             timeout_dict["watchdog"] = watchdog_timeout
             logger.info("No watchdog timeout specified, use msgwait timeout/2: %s", watchdog_timeout)
             return timeout_dict
+        return timeout_dict
+
+    def _configure_crashdump_watchdog(self, timeout: int):
+        '''
+        '''
+        def set_crashdump_option() -> bool:
+            shell = sh.LocalShell()
+            cib = xmlutil.text2elem(shell.get_stdout_or_raise_error(None, 'crm configure show xml'))
+            ra = cibquery.ResourceAgent("stonith", "", "fence_sbd")
+            res_id_list = cibquery.has_primitive(cib, ra)
+            if not res_id_list:
+                logger.error("No fence_sbd resource found")
+                return False
+            crashdump_value = cibquery.get_parameter_value(cib, res_id_list[0], "crashdump")
+            if utils.is_boolean_false(crashdump_value):
+                cmd = f"crm resource param {res_id_list[0]} set crashdump 1"
+                shell.get_stdout_or_raise_error(None, cmd)
+            logger.info("Set crashdump option for fence_sbd resource")
+            return True
+
+        logger.info("Configure crashdump watchdog timeout")
+
+        if not utils.is_kdump_enabled():
+            logger.error("kdump is not enabled")
+            return
+
+        update_dict = {"SBD_TIMEOUT_ACTION": "flush,crashdump"}
+        if sbd.SBDUtils.is_using_disk_based_sbd():
+            if not set_crashdump_option():
+                return
+            update_dict["SBD_OPTS"] = f"-C {timeout}"
+        elif sbd.SBDUtils.is_using_diskless_sbd():
+            update_dict["SBD_OPTS"] = f"-C {timeout} -Z"
+        sbd.SBDManager.update_sbd_configuration(update_dict)
 
     def _configure_diskbase(self, parameter_dict: dict):
         '''
@@ -300,7 +335,7 @@ class SBD(command.UI):
         is_subdict_timeout = utils.is_subdict(timeout_dict, self.device_meta_dict_runtime)
 
         if is_subdict_timeout and not update_dict:
-            logger.info("No change in SBD configuration")
+            logger.info("No metadata of SBD device changed")
             return
 
         if not is_subdict_timeout:
@@ -426,11 +461,15 @@ class SBD(command.UI):
             if args[0] == "show":
                 self._configure_show(args)
                 return True
+
             parameter_dict = self._parse_args(args)
+            crashdump_watchdog_timeout = parameter_dict.pop("crashdump-watchdog", None)
             if sbd.SBDUtils.is_using_disk_based_sbd():
                 self._configure_diskbase(parameter_dict)
             elif sbd.SBDUtils.is_using_diskless_sbd():
                 self._configure_diskless(parameter_dict)
+            if crashdump_watchdog_timeout:
+                self._configure_crashdump_watchdog(crashdump_watchdog_timeout)
             return True
 
         except self.SyntaxError as e:
