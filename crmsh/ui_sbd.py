@@ -12,6 +12,7 @@ from crmsh import completers
 from crmsh import sh
 from crmsh import xmlutil
 from crmsh import constants
+from crmsh import cibquery
 from crmsh.service_manager import ServiceManager
 
 
@@ -88,8 +89,8 @@ class SBD(command.UI):
     - sbd purge
     '''
     name = "sbd"
-    TIMEOUT_TYPES = ("watchdog", "allocate", "loop", "msgwait")
-    DISKLESS_TIMEOUT_TYPES = ("watchdog",)
+    TIMEOUT_TYPES = ("watchdog", "allocate", "loop", "msgwait", "crashdump-watchdog")
+    DISKLESS_TIMEOUT_TYPES = ("watchdog", "crashdump-watchdog")
     SHOW_TYPES = ("disk_metadata", "sysconfig", "property")
     DISKLESS_SHOW_TYPES = ("sysconfig", "property")
     PCMK_ATTRS = (
@@ -102,10 +103,13 @@ class SBD(command.UI):
     PCMK_ATTRS_DISKLESS = ('stonith-watchdog-timeout',)
     PARSE_RE = re.compile(
 		# Match keys with non-empty values, capturing possible suffix
-        r'(\w+)(?:-(\w+))?=("[^"]+"|[\w/\d;]+)'
+        r'([\w-]+)-([\w-]+)=([\w/\d]+)'
     )
 
     class SyntaxError(Exception):
+        pass
+
+    class MissingRequiredException(Exception):
         pass
 
     def __init__(self):
@@ -287,6 +291,29 @@ class SBD(command.UI):
             timeout_dict["watchdog"] = watchdog_timeout
             logger.info("No watchdog timeout specified, use msgwait timeout/2: %s", watchdog_timeout)
             return timeout_dict
+        return timeout_dict
+
+    def _set_crashdump_option(self):
+        '''
+        Set crashdump option for fence_sbd resource
+        '''
+        shell = sh.LocalShell()
+        cib = xmlutil.text2elem(shell.get_stdout_or_raise_error(None, 'crm configure show xml'))
+        ra = cibquery.ResourceAgent("stonith", "", "fence_sbd")
+        res_id_list = cibquery.get_primitives_with_ra(cib, ra)
+        if not res_id_list:
+            logger.error("No fence_sbd resource found")
+            raise self.MissingRequiredException
+        crashdump_value = cibquery.get_parameter_value(cib, res_id_list[0], "crashdump")
+        if utils.is_boolean_false(crashdump_value):
+            cmd = f"crm resource param {res_id_list[0]} set crashdump 1"
+            shell.get_stdout_or_raise_error(None, cmd)
+        logger.info("Set crashdump option for fence_sbd resource")
+
+    def _check_kdump_service(self):
+        for node in self.cluster_nodes:
+            if not self.service_manager.service_is_active("kdump.service", node):
+                logger.warning("Kdump service is not active on %s", node)
 
     def _configure_diskbase(self, parameter_dict: dict):
         '''
@@ -296,17 +323,27 @@ class SBD(command.UI):
         watchdog_device = parameter_dict.get("watchdog-device")
         if watchdog_device != self.watchdog_device_from_config:
             update_dict["SBD_WATCHDOG_DEV"] = watchdog_device
-        timeout_dict = {k: v for k, v in parameter_dict.items() if k in self.TIMEOUT_TYPES}
-        is_subdict_timeout = utils.is_subdict(timeout_dict, self.device_meta_dict_runtime)
 
-        if is_subdict_timeout and not update_dict:
+        timeout_dict = {
+            k: v for k, v in parameter_dict.items()
+            if k in self.TIMEOUT_TYPES and k != "crashdump-watchdog"
+        }
+        timeout_dict = self._adjust_timeout_dict(timeout_dict)
+        # merge runtime timeout dict into parameter timeout dict without overwriting
+        timeout_dict = {**self.device_meta_dict_runtime, **timeout_dict}
+
+        crashdump_watchdog_timeout = parameter_dict.get("crashdump-watchdog")
+        if crashdump_watchdog_timeout:
+            self._check_kdump_service()
+            self._set_crashdump_option()
+            timeout_dict["msgwait"] = 2*timeout_dict["watchdog"] + crashdump_watchdog_timeout
+            logger.info("Set msgwait-timeout to 2*watchdog-timeout + crashdump-watchdog-timeout: %s", timeout_dict["msgwait"])
+            update_dict["SBD_TIMEOUT_ACTION"] = "flush,crashdump"
+            update_dict["SBD_OPTS"] = f"-C {crashdump_watchdog_timeout}"
+
+        if timeout_dict == self.device_meta_dict_runtime and not update_dict:
             logger.info("No change in SBD configuration")
             return
-
-        if not is_subdict_timeout:
-            timeout_dict = self._adjust_timeout_dict(timeout_dict)
-            # merge runtime timeout dict into parameter timeout dict without overwriting
-            timeout_dict = {**self.device_meta_dict_runtime, **timeout_dict}
 
         sbd_manager = sbd.SBDManager(
             device_list_to_init=self.device_list_from_config,
@@ -320,17 +357,28 @@ class SBD(command.UI):
         Configure diskless SBD based on input parameters and runtime config
         '''
         update_dict = {}
+        timeout_dict = {}
         watchdog_timeout = parameter_dict.get("watchdog")
         if watchdog_timeout and watchdog_timeout != self.watchdog_timeout_from_config:
             update_dict["SBD_WATCHDOG_TIMEOUT"] = str(watchdog_timeout)
         watchdog_device = parameter_dict.get("watchdog-device")
         if watchdog_device != self.watchdog_device_from_config:
             update_dict["SBD_WATCHDOG_DEV"] = watchdog_device
+        crashdump_watchdog_timeout = parameter_dict.get("crashdump-watchdog")
+        if crashdump_watchdog_timeout:
+            self._check_kdump_service()
+            update_dict["SBD_TIMEOUT_ACTION"] = "flush,crashdump"
+            update_dict["SBD_OPTS"] = f"-C {crashdump_watchdog_timeout} -Z"
+            sbd_watchdog_timeout = watchdog_timeout or self.watchdog_timeout_from_config
+            stonith_watchdog_timeout = sbd_watchdog_timeout + crashdump_watchdog_timeout
+            logger.info("Set stonith-watchdog-timeout to SBD_WATCHDOG_TIMEOUT + crashdump-watchdog-timeout: %s", stonith_watchdog_timeout)
+            timeout_dict["stonith-watchdog"] = stonith_watchdog_timeout
         if not update_dict:
             logger.info("No change in SBD configuration")
             return
 
         sbd_manager = sbd.SBDManager(
+            timeout_dict=timeout_dict,
             update_dict=update_dict,
             diskless_sbd=True
         )
@@ -426,6 +474,7 @@ class SBD(command.UI):
             if args[0] == "show":
                 self._configure_show(args)
                 return True
+
             parameter_dict = self._parse_args(args)
             if sbd.SBDUtils.is_using_disk_based_sbd():
                 self._configure_diskbase(parameter_dict)
@@ -438,6 +487,8 @@ class SBD(command.UI):
             usage = self.configure_usage
             if usage:
                 print(usage)
+            return False
+        except self.MissingRequiredException:
             return False
 
     def do_purge(self, context) -> bool:

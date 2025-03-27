@@ -3202,11 +3202,4 @@ def strip_ansi_escape_sequences(text):
     """
     ansi_escape_pattern = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
     return ansi_escape_pattern.sub('', text)
-
-
-def is_subdict(sub_dict, main_dict):
-    """
-    Check if sub_dict is a sub-dictionary of main_dict
-    """
-    return all(main_dict.get(k) == v for k, v in sub_dict.items())
 # vim:ts=4:sw=4:et:

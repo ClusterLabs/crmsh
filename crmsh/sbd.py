@@ -559,7 +559,8 @@ class SBDManager:
         Configure fence_sbd resource and related properties
         '''
         if self.diskless_sbd:
-            utils.set_property("stonith-watchdog-timeout", SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT)
+            swt_value = self.timeout_dict.get("stonith-watchdog", SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT)
+            utils.set_property("stonith-watchdog-timeout", swt_value)
         else:
             if utils.get_property("stonith-watchdog-timeout", get_default=False):
                 utils.delete_property("stonith-watchdog-timeout")
