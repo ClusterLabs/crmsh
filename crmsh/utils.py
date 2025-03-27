@@ -3209,4 +3209,8 @@ def is_subdict(sub_dict, main_dict):
     Check if sub_dict is a sub-dictionary of main_dict
     """
     return all(main_dict.get(k) == v for k, v in sub_dict.items())
+
+
+def is_kdump_enabled():
+    return True
 # vim:ts=4:sw=4:et:
