@@ -242,11 +242,11 @@ date_ops = ('lt', 'gt', 'in_range', 'date_spec')
 date_spec_names = '''hours monthdays weekdays yearsdays months \
 weeks years weekyears moon'''.split()
 in_range_attrs = ('start', 'end')
-node_default_type = "normal"
+node_default_type = "member"
 node_attributes_keyw = ("attributes", "utilization")
 shadow_envvar = "CIB_shadow"
 attr_defaults = {
-    "node": {"type": "normal"},
+    "node": {"type": "member"},
     "resource_set": {"sequential": "true", "require-all": "true"},
     "rule": {"boolean-op": "and"},
 }

@@ -41,7 +41,7 @@ _UNARYOP_RE = re.compile(r'(%s)$' % ('|'.join(constants.unary_ops)), re.IGNORECA
 _ACL_RIGHT_RE = re.compile(r'(%s)$' % ('|'.join(constants.acl_rule_names)), re.IGNORECASE)
 _ROLE_REF_RE = re.compile(r'role:(.+)$', re.IGNORECASE)
 _PERM_RE = re.compile(r"([^:]+)(?::(.+))?$", re.I)
-_UNAME_RE = re.compile(r'([^:]+)(:(normal|member|ping|remote))?$', re.IGNORECASE)
+_UNAME_RE = re.compile(r'([^:]+)(:(member|ping|remote))?$', re.IGNORECASE)
 _TEMPLATE_RE = re.compile(r'@(.+)$')
 _RA_TYPE_RE = re.compile(r'[a-z0-9_:-]+$', re.IGNORECASE)
 _TAG_RE = re.compile(r"([a-zA-Z_][^\s:]*):?$")
@@ -866,7 +866,7 @@ def parse_node(self, cmd):
       [attributes <param>=<value> [<param>=<value>...]]
       [utilization <param>=<value> [<param>=<value>...]]
 
-    type :: normal | member | ping | remote
+    type :: member | ping | remote
     """
     self.begin(cmd, min_args=1)
     self.match('node')
