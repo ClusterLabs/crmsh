@@ -14,7 +14,7 @@ of whether it is running or not, and can be configured so that actions fail or
 take a long time. Its purpose is primarily for testing, and to serve as a
 template for resource agent writers.
 
-Parameters (*: required, []: default):
+## Parameters (type, [default]):
 
 state (string, [state-file]): State file
     Location to store the resource state in.
@@ -37,7 +37,7 @@ fail_start_on (string): Report bogus start failure on specified host
 envfile (string): Environment dump file
     If this is set, the environment will be dumped to this file for every call.
 
-Operations' defaults (advisory minimum):
+## Operations' defaults (advisory minimum):
 
     start         timeout=20s
     stop          timeout=20s
