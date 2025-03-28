@@ -132,10 +132,10 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('id'), 'testid')
         self.assertEqual(out.get('uname'), 'node-1')
 
-        out = self._parse('node $id=testid node-1:ping')
+        out = self._parse('node $id=testid node-1:remote')
         self.assertEqual(out.get('id'), 'testid')
         self.assertEqual(out.get('uname'), 'node-1')
-        self.assertEqual(out.get('type'), 'ping')
+        self.assertEqual(out.get('type'), 'remote')
 
         out = self._parse('node node-1:unknown')
         self.assertFalse(out)

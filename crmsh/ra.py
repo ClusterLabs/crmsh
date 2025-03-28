@@ -15,7 +15,6 @@ from . import userdir
 from . import utils
 from .sh import ShellUtils
 from .utils import stdout2list, is_program, to_ascii
-from .utils import os_types_list
 from .utils import crm_msec, crm_time_cmp
 from . import log
 
@@ -36,23 +35,14 @@ def crm_resource(opts):
     return l
 
 
-@utils.memoize
-def can_use_crm_resource():
-    _rc, s = ShellUtils().get_stdout("crm_resource --list-ocf-providers", stderr_on=False)
-    return s != ""
-
-
 def ra_classes():
     '''
     List of RA classes.
     '''
     if cache.is_cached("ra_classes"):
         return cache.retrieve("ra_classes")
-    if can_use_crm_resource():
-        l = crm_resource("--list-standards")
-        l = [x for x in l if x not in ("lsb", "service")]
-    else:
-        l = ["ocf", "stonith", "systemd"]
+    l = crm_resource("--list-standards")
+    l = [x for x in l if x not in ("lsb", "service")]
     l.sort()
     return cache.store("ra_classes", l)
 
@@ -62,18 +52,10 @@ def ra_providers(ra_type, ra_class="ocf"):
     ident = "ra_providers-%s-%s" % (ra_class, ra_type)
     if cache.is_cached(ident):
         return cache.retrieve(ident)
-    if can_use_crm_resource():
-        if ra_class != "ocf":
-            logger.error("no providers for class %s", ra_class)
-            return []
-        l = crm_resource("--list-ocf-alternatives %s" % ra_type)
-    else:
-        l = []
-        if ra_class == "ocf":
-            for s in glob.glob("%s/resource.d/*/%s" % (os.environ["OCF_ROOT"], ra_type)):
-                a = s.split("/")
-                if len(a) == 7:
-                    l.append(a[5])
+    if ra_class != "ocf":
+        logger.error("no providers for class %s", ra_class)
+        return []
+    l = crm_resource("--list-ocf-alternatives %s" % ra_type)
     l.sort()
     return cache.store(ident, l)
 
@@ -94,45 +76,6 @@ def ra_providers_all(ra_class="ocf"):
     return []
 
 
-def os_types(ra_class):
-    'List of types for a class.'
-    def stonith_types():
-        rc, l = stdout2list("stonith -L")
-        if rc != 0:
-            # stonith(8) may not be installed
-            logger.debug("stonith exited with code %d", rc)
-            l = []
-        for ra in os_types_list("/usr/sbin/fence_*"):
-            if ra not in ("fence_ack_manual", "fence_pcmk", "fence_legacy"):
-                l.append(ra)
-        return l
-
-    def systemd_types():
-        l = []
-        rc, lines = stdout2list("systemctl list-unit-files --full")
-        if rc != 0:
-            return l
-        t = re.compile(r'^(.+)\.service')
-        for line in lines:
-            m = t.search(line)
-            if m:
-                l.append(m.group(1))
-        return l
-
-    l = []
-    if ra_class == "ocf":
-        l = os_types_list("%s/resource.d/*/*" % (os.environ["OCF_ROOT"]))
-    elif ra_class == "lsb":
-        l = os_types_list("/etc/init.d/*")
-    elif ra_class == "stonith":
-        l = stonith_types()
-    elif ra_class == "systemd":
-        l = systemd_types()
-    l = list(set(l))
-    l.sort()
-    return l
-
-
 def ra_types(ra_class="ocf", ra_provider=""):
     '''
     List of RA type for a class.
@@ -142,11 +85,7 @@ def ra_types(ra_class="ocf", ra_provider=""):
         """
         Actually go out and ask for the types of a class.
         """
-        if can_use_crm_resource():
-            l = crm_resource("--list-agents %s" % ra_class)
-        else:
-            l = os_types(ra_class)
-        return l
+        return crm_resource("--list-agents %s" % ra_class)
 
     if not ra_class:
         ra_class = "ocf"
@@ -168,21 +107,9 @@ def ra_meta(ra_class, ra_type, ra_provider):
     """
     Return metadata for the given class/type/provider
     """
-    if can_use_crm_resource():
-        if ra_provider:
-            return crm_resource("--show-metadata %s:%s:%s" % (ra_class, ra_provider, ra_type))
-        return crm_resource("--show-metadata %s:%s" % (ra_class, ra_type))
-    else:
-        l = []
-        if ra_class == "ocf":
-            _rc, l = stdout2list("%s/resource.d/%s/%s meta-data" %
-                                 (os.environ["OCF_ROOT"], ra_provider, ra_type))
-        elif ra_class == "stonith":
-            if ra_type.startswith("fence_") and os.path.exists("/usr/sbin/%s" % ra_type):
-                _rc, l = stdout2list("/usr/sbin/%s -o metadata" % ra_type)
-            else:
-                _rc, l = stdout2list("stonith -m -t %s" % ra_type)
-        return l
+    if ra_provider:
+        return crm_resource("--show-metadata %s:%s:%s" % (ra_class, ra_provider, ra_type))
+    return crm_resource("--show-metadata %s:%s" % (ra_class, ra_type))
 
 
 @utils.memoize
@@ -464,14 +391,8 @@ class RAInfo(object):
         def unreq_param(p):
             '''
             Allow for some exceptions.
-
-            - the rhcs stonith agents sometimes require "action" (in
-              the meta-data) and "port", but they're automatically
-              supplied by stonithd
             '''
-            if self.ra_class == "stonith" and \
-                (self.ra_type.startswith("rhcs/") or
-                 self.ra_type.startswith("fence_")):
+            if self.ra_class == "stonith" and self.ra_type.startswith("fence_"):
                 if p in ("action", "port"):
                     return True
             return False

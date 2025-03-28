@@ -440,15 +440,6 @@ class olist(list):
         super(olist, self).append(key.lower())
 
 
-def os_types_list(path):
-    l = []
-    for f in glob.glob(path):
-        if os.access(f, os.X_OK) and os.path.isfile(f):
-            a = f.split("/")
-            l.append(a[-1])
-    return l
-
-
 def listtemplates():
     l = []
     templates_dir = os.path.join(config.path.sharedir, 'templates')
