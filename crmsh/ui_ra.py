@@ -137,8 +137,6 @@ class RA(command.UI):
         else:
             ra_class, ra_provider, ra_type = ra.disambiguate_ra_type(args[0])
         agent = ra.RAInfo(ra_class, ra_type, ra_provider)
-        if agent.mk_ra_node() is None:
-            return False
         try:
             utils.page_string(agent.meta_pretty())
         except Exception as msg:
