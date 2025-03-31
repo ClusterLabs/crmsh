@@ -868,14 +868,7 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
     user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
     user_by_host.save_local()
     if user_node_list:
-        print()
-        if ssh_public_keys:
-            for user, node in user_node_list:
-                logger.info("Adding public keys to authorized_keys on %s@%s", user, node)
-                for key in ssh_public_keys:
-                    authorized_key_manager.add(node, local_user, key)
-        else:
-            _init_ssh_on_remote_nodes(local_user, user_node_list)
+        _init_ssh_on_remote_nodes(local_shell, local_user, user_node_list)
         for user, node in user_node_list:
             if user != 'root' and 0 != shell.subprocess_run_without_input(
                     node, user, 'sudo true',
@@ -901,28 +894,38 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
 
 
 def _init_ssh_on_remote_nodes(
+        local_shell: sh.LocalShell,
         local_user: str,
         user_node_list: typing.List[typing.Tuple[str, str]],
 ):
     # Swap public ssh key between remote node and local
+    ssh_shell = sh.SSHShell(local_shell, local_user)
+    authorized_key_manager = ssh_key.AuthorizedKeyManager(ssh_shell)
     public_key_list = list()
+    for user, node in user_node_list:
+        logger.info("Adding public keys to authorized_keys on %s@%s", user, node)
+        result = ssh_copy_id_no_raise(local_user, user, node, local_shell)
+        if result.returncode != 0:
+            utils.fatal("Failed to login to remote host {}@{}".format(user, node))
+        elif isinstance(result.public_key, ssh_key.KeyFile):
+            public_key = ssh_key.InMemoryPublicKey(generate_ssh_key_pair_on_remote(local_user, node, user, user))
+            public_key_list.append(public_key)
+            authorized_key_manager.add(node, user, public_key)
+            authorized_key_manager.add(None, local_user, public_key)
+    shell_script = _merge_line_into_file(
+        '~/.ssh/authorized_keys',
+        (key.public_key() for key in public_key_list),
+    ).encode('utf-8')
     for i, (remote_user, node) in enumerate(user_node_list):
-        ssh_copy_id(local_user, remote_user, node)
-        # After this, login to remote_node is passwordless
-        public_key_list.append(swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user))
-    if len(user_node_list) > 1:
-        shell = sh.LocalShell()
-        shell_script = _merge_line_into_file('~/.ssh/authorized_keys', public_key_list).encode('utf-8')
-        for i, (remote_user, node) in enumerate(user_node_list):
-            result = shell.su_subprocess_run(
-                local_user,
-                'ssh {} {}@{} /bin/sh'.format(constants.SSH_OPTION, remote_user, node),
-                input=shell_script,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
-            if result.returncode != 0:
-                utils.fatal('Failed to add public keys to {}@{}: {}'.format(remote_user, node, result.stdout))
+        result = local_shell.su_subprocess_run(
+            local_user,
+            'ssh {} {}@{} /bin/sh'.format(constants.SSH_OPTION, remote_user, node),
+            input=shell_script,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        if result.returncode != 0:
+            utils.fatal('Failed to add public keys to {}@{}: {}'.format(remote_user, node, result.stdout))
 
 
 def _init_ssh_for_secondary_user_on_remote_nodes(
@@ -2306,8 +2309,8 @@ def bootstrap_add(context):
         options += '-i {} '.format(nic)
     options = " {}".format(options.strip()) if options else ""
 
-    if context.use_ssh_agent:
-        options += ' --use-ssh-agent'
+    if not context.use_ssh_agent:
+        options += ' --no-use-ssh-agent'
 
     shell = sh.ClusterShell(sh.LocalShell(), UserOfHost.instance(), _context.use_ssh_agent)
     for (user, node) in (_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list):
