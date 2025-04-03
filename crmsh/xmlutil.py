@@ -324,8 +324,8 @@ def resources_xml():
     return cibdump2elem("resources")
 
 
-def is_normal_node(n):
-    return n.tag == "node" and (n.get("type") in (None, "normal", "member", ""))
+def is_member_node(n):
+    return n.tag == "node" and (n.get("type") in (None, "member", ""))
 
 
 def unique_ra(typ, klass, provider):

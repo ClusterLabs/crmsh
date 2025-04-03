@@ -1258,7 +1258,7 @@ class CibConfig(command.UI):
                     rsc_l += el.node.findall("primitive")
                 else:
                     rsc_l.append(el.node)
-            elif xmlutil.is_normal_node(el.node):
+            elif xmlutil.is_member_node(el.node):
                 current = "n"
                 node_l.append(el.node.get("uname"))
             else:
