@@ -832,7 +832,9 @@ def get_check_rc():
     return 2 which is the code for error. Otherwise, we
     pretend that errors are warnings.
     '''
-    return 2 if config.core.check_mode == "strict" else 1
+    if config.core.check_mode == "strict":
+        return constants.VERIFY_NON_FATAL_ERROR
+    return constants.VERIFY_WARNING
 
 
 _LOCKDIR = ".lockdir"
