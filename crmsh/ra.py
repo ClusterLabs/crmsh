@@ -461,7 +461,7 @@ class RAInfo(object):
             """
             Helper method used by sanity_check_op_timeout, to check operation's timeout
             """
-            rc = 0
+            rc = constants.VERIFY_SUCCESS
             if "timeout" in item_dict:
                 actual_timeout = item_dict["timeout"]
                 timeout_string = "specified timeout"
@@ -471,14 +471,14 @@ class RAInfo(object):
             if actual_timeout and crm_time_cmp(adv_timeout, actual_timeout) > 0:
                 logger.warning("%s: %s %s for %s is smaller than the advised %s",
                         ident, timeout_string, actual_timeout, op, adv_timeout)
-                rc |= 1
+                rc |= constants.VERIFY_WARNING
             return rc
 
         def sanity_check_op_timeout(op, op_dict):
             """
             Helper method used by sanity_check_op, to check operation's timeout
             """
-            rc = 0
+            rc = constants.VERIFY_SUCCESS
             role = None
             depth = None
             if op == "monitor":
@@ -496,7 +496,7 @@ class RAInfo(object):
             """
             Helper method used by sanity_check_op, to check operation's interval
             """
-            rc = 0
+            rc = constants.VERIFY_SUCCESS
             prev_intervals = []
             if op == "monitor":
                 for monitor_item in op_dict[op]:
@@ -507,10 +507,10 @@ class RAInfo(object):
                     actual_interval_msec = crm_msec(monitor_item["interval"])
                     if actual_interval_msec == 0:
                         logger.warning("%s: interval in monitor should be larger than 0, advised is %s", ident, adv_interval)
-                        rc |= 1
+                        rc |= constants.VERIFY_WARNING
                     elif actual_interval_msec in prev_intervals:
                         logger.warning("%s: interval in monitor must be unique, advised is %s", ident, adv_interval)
-                        rc |= 1
+                        rc |= constants.VERIFY_WARNING
                     else:
                         prev_intervals.append(actual_interval_msec)
             elif "interval" in op_dict[op]:
@@ -518,26 +518,26 @@ class RAInfo(object):
                 value_msec = crm_msec(value)
                 if op in self.no_interval_ops and value_msec != 0:
                     logger.warning("%s: Specified interval for %s is %s, it must be 0", ident, op, value)
-                    rc |= 1
+                    rc |= constants.VERIFY_WARNING
             return rc
 
         def sanity_check_op(op, op_dict):
             """
             Helper method used by sanity_check_ops.
             """
-            rc = 0
+            rc = constants.VERIFY_SUCCESS
             if self.ra_class == "stonith" and op in ("start", "stop"):
                 return rc
             if op not in self.actions():
-                logger.warning("%s: action '%s' not found in Resource Agent meta-data", ident, op)
-                rc |= 1
+                logger.error("Action '%s' not found in Resource Agent meta-data", op)
+                rc |= constants.VERIFY_FATAL_ERROR
                 return rc
             rc |= sanity_check_op_interval(op, op_dict)
             rc |= sanity_check_op_timeout(op, op_dict)
             return rc
 
 
-        rc = 0
+        rc = constants.VERIFY_SUCCESS
         op_dict = {}
         op_dict["monitor"] = []
         # ops example:
