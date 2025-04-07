@@ -27,7 +27,7 @@ import socket
 from string import Template
 from lxml import etree
 
-from . import config, constants, ssh_key, sh
+from . import config, constants, ssh_key, sh, cibquery, user_of_host
 from . import utils
 from . import xmlutil
 from .cibconfig import cib_factory
@@ -1041,7 +1041,9 @@ def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalSh
     if utils.check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
         public_key = None
         try:
-            public_key = ssh_key.AgentClient().list()[0]
+            public_key = ssh_key.AgentClient(
+                shell.additional_environ.get('SSH_AUTH_SOCK') if shell.additional_environ is not None else None
+            ).list()[0]
         except ssh_key.Error:
             logger.debug('No public key in ssh-agent.', exc_info=True)
         if public_key is not None:
@@ -1863,27 +1865,14 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
     """
     # Fetch cluster nodes list
     local_user = _context.current_user
-    shell = sh.cluster_shell()
-    rc, out, err = shell.get_rc_stdout_stderr_without_input(init_node, 'crm_node -l')
+    local_shell = sh.LocalShell(
+        additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _context.use_ssh_agent else ''},
+    )
+    shell = sh.ClusterShell(local_shell, user_of_host.UserOfHost.instance(), _context.use_ssh_agent, True)
+    rc, out, err = shell.get_rc_stdout_stderr_without_input(init_node, constants.CIB_QUERY)
     if rc != 0:
         utils.fatal("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
-    cluster_nodes_list = []
-    for line in out.splitlines():
-        # Parse line in format: <id> <nodename> <state>, and collect the
-        # nodename.
-        tokens = line.split()
-        if len(tokens) == 0:
-            pass  # Skip any spurious empty line.
-        elif len(tokens) < 3:
-            logger.warning("Unable to configure passwordless ssh with nodeid {}. The "
-                 "node has no known name and/or state information".format(
-                     tokens[0]))
-        elif tokens[2] != "member":
-            logger.warning("Skipping configuration of passwordless ssh with node {} in "
-                 "state '{}'. The node is not a current member".format(
-                     tokens[1], tokens[2]))
-        else:
-            cluster_nodes_list.append(tokens[1])
+    cluster_node_list = [x.uname for x in cibquery.get_cluster_nodes(etree.fromstring(out))]
     user_by_host = utils.HostUserConfig()
     user_by_host.add(local_user, utils.this_node())
     try:
@@ -1899,22 +1888,22 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
     rc, out, err = shell.get_rc_stdout_stderr_without_input(init_node, 'hostname')
     if rc != 0:
         utils.fatal("Can't fetch hostname of {}: {}".format(init_node, err))
+    init_node_hostname = out
     # Swap ssh public key between join node and other cluster nodes
-    if not _context.use_ssh_agent:
-        for node in (node for node in cluster_nodes_list if node != out):
-            remote_user_to_swap = utils.user_of(node)
-            remote_privileged_user = remote_user_to_swap
-            ssh_copy_id(local_user, remote_privileged_user, node)
-            swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
-            if local_user != 'hacluster':
-                change_user_shell('hacluster', node)
-                swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user)
+    for node in (node for node in cluster_node_list if node != init_node_hostname):
+        remote_user_to_swap = utils.user_of(node)
+        remote_privileged_user = remote_user_to_swap
+        result = ssh_copy_id_no_raise(local_user, remote_privileged_user, node, local_shell)
+        if result.returncode != 0:
+            utils.fatal("Failed to login to remote host {}@{}".format(remote_user_to_swap, node))
+        swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
         if local_user != 'hacluster':
-            swap_key_for_hacluster(cluster_nodes_list)
-    else:
-        swap_key_for_hacluster(cluster_nodes_list)
+            change_user_shell('hacluster', node)
+            swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user)
+    if local_user != 'hacluster':
+        swap_key_for_hacluster(cluster_node_list)
 
-    user_by_host.save_remote(cluster_nodes_list)
+    user_by_host.save_remote(cluster_node_list)
 
 
 def swap_key_for_hacluster(other_node_list):
