@@ -907,7 +907,9 @@ def _init_ssh_on_remote_nodes(
         result = ssh_copy_id_no_raise(local_user, user, node, local_shell)
         if result.returncode != 0:
             utils.fatal("Failed to login to remote host {}@{}".format(user, node))
-        elif isinstance(result.public_key, ssh_key.KeyFile):
+        elif not result.public_keys:
+            pass
+        elif isinstance(result.public_keys[0], ssh_key.KeyFile):
             public_key = ssh_key.InMemoryPublicKey(generate_ssh_key_pair_on_remote(local_user, node, user, user))
             public_key_list.append(public_key)
             authorized_key_manager.add(node, user, public_key)
@@ -1032,37 +1034,33 @@ def configure_ssh_key(user):
 @dataclasses.dataclass(frozen=True)
 class SshCopyIdResult:
     returncode: int
-    public_key: typing.Optional[ssh_key.Key]
+    public_keys: list[ssh_key.Key]
 
 
 def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalShell = None) -> SshCopyIdResult:
     if shell is None:
         shell = sh.LocalShell()
     if utils.check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
-        public_key = None
+        public_keys = list()
         try:
-            public_key = ssh_key.AgentClient(
+            public_keys = ssh_key.AgentClient(
                 shell.additional_environ.get('SSH_AUTH_SOCK') if shell.additional_environ is not None else None
-            ).list()[0]
+            ).list()
         except ssh_key.Error:
             logger.debug('No public key in ssh-agent.', exc_info=True)
-        if public_key is not None:
-            with tempfile.NamedTemporaryFile('w', encoding='utf-8', suffix='.pub') as tmp:
-                os.fchmod(tmp.fileno(), 0o0644)
-                tmp.write(public_key.public_key())
-                tmp.flush()
-                logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
-                cmd = f"ssh-copy-id -i {tmp.name} '{remote_user}@{remote_node}' &> /dev/null"
-                result = shell.su_subprocess_run(local_user, cmd, tty=True)
+        if public_keys:
+            logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
+            cmd = f"ssh-copy-id '{remote_user}@{remote_node}' &> /dev/null"
+            result = shell.su_subprocess_run(local_user, cmd, tty=True)
         else:
             configure_ssh_key(local_user)
-            public_key = ssh_key.fetch_public_key_file_list(None, local_user)[0]
+            public_keys = ssh_key.fetch_public_key_file_list(None, local_user)
             logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
-            cmd = f"ssh-copy-id -i {public_key.public_key_file()} '{remote_user}@{remote_node}' &> /dev/null"
+            cmd = f"ssh-copy-id -i {public_keys[0].public_key_file()} '{remote_user}@{remote_node}' &> /dev/null"
             result = shell.su_subprocess_run(local_user, cmd, tty=True)
-        return SshCopyIdResult(result.returncode, public_key)
+        return SshCopyIdResult(result.returncode, public_keys)
     else:
-        return SshCopyIdResult(0, None)
+        return SshCopyIdResult(0, list())
 
 
 def ssh_copy_id(local_user, remote_user, remote_node):
@@ -1700,13 +1698,15 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     # From here, login to remote_node is passwordless
     ssh_shell = sh.SSHShell(local_shell, local_user)
     authorized_key_manager = ssh_key.AuthorizedKeyManager(ssh_shell)
-    if isinstance(result.public_key, ssh_key.KeyFile):
+    if not result.public_keys:
+        pass
+    elif isinstance(result.public_keys[0], ssh_key.KeyFile):
         public_key = ssh_key.InMemoryPublicKey(generate_ssh_key_pair_on_remote(local_user, seed_host, seed_user, seed_user))
         authorized_key_manager.add( None, local_user, public_key)
         logger.info('A public key is added to authorized_keys for user %s: %s', local_user, public_key.fingerprint())
-    elif isinstance(result.public_key, ssh_key.InMemoryPublicKey):
-        authorized_key_manager.add(None, local_user, result.public_key)
-        logger.info('A public key is added to authorized_keys for user %s: %s', local_user, result.public_key.fingerprint())
+    elif isinstance(result.public_keys[0], ssh_key.InMemoryPublicKey):
+        authorized_key_manager.add(None, local_user, result.public_keys[0])
+        logger.info('A public key is added to authorized_keys for user %s: %s', local_user, result.public_keys[0].fingerprint())
     # else is not None do nothing
     if seed_user != 'root' and 0 != ssh_shell.subprocess_run_without_input(
             seed_host, seed_user, 'sudo true',

@@ -204,7 +204,9 @@ class AgentClient:
             self.socket_path = None
         else:
             self.socket_path = socket_path
-        self.shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': self.socket_path} if self.socket_path else None)
+        self.shell = sh.LocalShell(
+            additional_environ={'SSH_AUTH_SOCK': self.socket_path} if self.socket_path is not None else None,
+        )
 
     def list(self) -> typing.List[Key]:
         cmd = 'ssh-add -L'
