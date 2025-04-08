@@ -976,6 +976,20 @@ def append_file(dest, src):
         return False
 
 
+def is_dc_idle():
+    dc = get_dc()
+    if not dc:
+        return False
+    cmd = f"crmadmin -S {dc}"
+    rc, out, err = ShellUtils().get_stdout_stderr(cmd)
+    if rc != 0 and err:
+        logger.error("Failed to get DC status: %s", err)
+        return False
+    if not out:
+        return False
+    return "ok" in out and "S_IDLE" in out
+
+
 def get_dc(peer=None):
     cmd = "crmadmin -D -t 1"
     _, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)

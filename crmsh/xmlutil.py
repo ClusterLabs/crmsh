@@ -1573,4 +1573,23 @@ class CrmMonXmlParser(object):
         """
         xpath = f'//resource[@resource_agent="{ra_type}"]'
         return [elem.get('id') for elem in self.xml_elem.xpath(xpath)]
+
+    def get_all_ra_status(self) -> dict[str, str]:
+        resources = self.xml_elem.xpath('//resource')
+        return {elem.get('id'): elem.get('role') for elem in resources}
+
+    @classmethod
+    def are_all_resources_started(cls) -> bool:
+        """
+        Check if all resources are started
+        """
+        all_resources = cls().get_all_ra_status()
+        # if no resources are configured, treat it as True
+        if not all_resources:
+            return True
+        for ra_id, ra_status in all_resources.items():
+            if ra_status != 'Started':
+                logger.warning("Resource %s is %s", ra_id, ra_status)
+                return False
+        return True
 # vim:ts=4:sw=4:et:

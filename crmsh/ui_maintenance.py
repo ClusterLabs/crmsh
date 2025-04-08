@@ -7,7 +7,9 @@ from . import config
 from .cibconfig import cib_factory
 from . import utils
 from . import xmlutil
+from . import log
 
+logger = log.setup_logger(__name__)
 _compl_actions = compl.choice(['start', 'stop', 'monitor', 'meta-data', 'validate-all',
                                'promote', 'demote', 'notify', 'reload', 'migrate_from',
                                'migrate_to', 'recover'])
@@ -42,6 +44,12 @@ class Maintenance(command.UI):
         '''
         Enable maintenance mode (for the optional resource or for everything)
         '''
+        if not utils.is_dc_idle():
+            logger.error("Cannot set maintenance mode while DC is not idle")
+            return False
+        if not xmlutil.CrmMonXmlParser.are_all_resources_started() and not config.core.force:
+            logger.warning("Please use crm -F/--force option to set maintenance mode")
+            return False
         return self._onoff(resource, 'true')
 
     @command.skill_level('administrator')
