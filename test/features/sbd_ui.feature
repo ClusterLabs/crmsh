@@ -38,7 +38,7 @@ Feature: crm sbd ui test cases
     When    Try "crm sbd configure watchdog-timeout=f"
     Then    Except "ERROR: Invalid timeout value: f"
     When    Try "crm sbd configure name=testing"
-    Then    Except "ERROR: Unknown argument: name=testing"
+    Then    Except "ERROR: Invalid argument: name=testing"
     When    Try "crm sbd device add /dev/sda6 /dev/sda6"
     Then    Expected "Duplicated device path detected" in stderr
     When    Try "crm sbd device add /dev/sda6 /dev/sda7 /dev/sda8"
@@ -49,6 +49,26 @@ Feature: crm sbd ui test cases
     When    Run "crm sbd configure watchdog-timeout=30 msgwait-timeout=60" on "hanode1"
     Then    Run "crm sbd configure show disk_metadata|grep -E "watchdog.*30"" OK
     Then    Run "crm sbd configure show disk_metadata|grep -E "msgwait.*60"" OK
+    When    Run "crm sbd configure watchdog-timeout=30 msgwait-timeout=60" on "hanode1"
+    Then    Expected "No change in SBD configuration" in stdout
+
+  Scenario: sbd configure for crashdump, disk-based sbd case
+    When    Run "crm sbd configure crashdump-watchdog-timeout=60" on "hanode1"
+    Then    Run "crm sbd configure show disk_metadata|grep -E "watchdog.*30"" OK
+    Then    Run "crm sbd configure show disk_metadata|grep -E "msgwait.*120"" OK
+    Then    Run "crm configure show stonith-sbd|grep crashdump=1" OK
+    Then    Run "crm sbd configure show sysconfig |grep SBD_TIMEOUT_ACTION=flush,crashdump" OK
+    Then    Run "crm sbd configure show sysconfig |grep "SBD_OPTS=\"-C 60\""" OK
+    When    Run "crm sbd configure crashdump-watchdog-timeout=60" on "hanode1"
+    Then    Expected "No change in SBD configuration" in stdout
+    # Purge crashdump
+    When    Run "crm sbd purge crashdump" on "hanode1"
+    And     Try "crm configure show stonith-sbd|grep crashdump"
+    Then    Expected return code is "1"
+    When    Try "crm sbd configure show sysconfig |grep SBD_TIMEOUT_ACTION=flush,crashdump"
+    Then    Expected return code is "1"
+    When    Try "crm sbd configure show sysconfig |grep "SBD_OPTS=\"-C 60\"""
+    Then    Expected return code is "1"
 
   Scenario: sbd device add and remove
     # Add a sbd disk
@@ -57,7 +77,7 @@ Feature: crm sbd ui test cases
     Then    Run "crm sbd configure show sysconfig|grep -E "SBD_DEVICE=\"/dev/sda5;/dev/sda6\""" OK
     Then    Run "crm sbd configure show sysconfig|grep -E "SBD_DEVICE=\"/dev/sda5;/dev/sda6\""" OK on "hanode2"
     And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda6'|grep -E "watchdog.*30"" OK
-    And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda6'|grep -E "msgwait.*60"" OK
+    And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda6'|grep -E "msgwait.*120"" OK
     When    Run "crm cluster restart --all" on "hanode1"
     And     Wait for DC
     # Remove a sbd disk
@@ -71,7 +91,7 @@ Feature: crm sbd ui test cases
     Then    Run "crm sbd configure show sysconfig|grep -E "SBD_DEVICE=\"/dev/sda6;/dev/sda7\""" OK
     Then    Run "crm sbd configure show sysconfig|grep -E "SBD_DEVICE=\"/dev/sda6;/dev/sda7\""" OK on "hanode2"
     And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda7'|grep -E "watchdog.*30"" OK
-    And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda7'|grep -E "msgwait.*60"" OK
+    And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda7'|grep -E "msgwait.*120"" OK
     When    Run "crm cluster restart --all" on "hanode1"
     And     Wait for DC
     # Purge sbd from cluster
@@ -92,6 +112,20 @@ Feature: crm sbd ui test cases
     And     Resource "stonith:fence_sbd" not configured
     # Shoud not has any sbd device configured
     When    Try "crm sbd configure show sysconfig|grep -E "SBD_DEVICE=.+""
+    Then    Expected return code is "1"
+    # enable crashdump
+    Then    Run "crm sbd configure show sysconfig |grep SBD_WATCHDOG_TIMEOUT=15" OK
+    When    Run "crm sbd configure crashdump-watchdog-timeout=60" on "hanode1"
+    Then    Run "crm sbd configure show sysconfig |grep SBD_TIMEOUT_ACTION=flush,crashdump" OK
+    Then    Run "crm sbd configure show sysconfig |grep "SBD_OPTS=\"-C 60 -Z\""" OK
+    Then    Run "crm sbd configure show property |grep stonith-watchdog-timeout=75" OK
+    When    Run "crm sbd configure crashdump-watchdog-timeout=60" on "hanode1"
+    Then    Expected "No change in SBD configuration" in stdout
+    # Purge crashdump
+    When    Run "crm sbd purge crashdump" on "hanode1"
+    When    Try "crm sbd configure show sysconfig |grep SBD_TIMEOUT_ACTION=flush,crashdump"
+    Then    Expected return code is "1"
+    When    Try "crm sbd configure show sysconfig |grep "SBD_OPTS=\"-C 60 -Z\"""
     Then    Expected return code is "1"
     # Purge sbd from cluster
     When    Run "crm sbd purge" on "hanode1"
