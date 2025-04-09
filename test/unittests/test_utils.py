@@ -1340,9 +1340,3 @@ def test_check_user_access_cluster(mock_user, mock_in, mock_sudo, mock_error):
     with pytest.raises(utils.TerminateSubCommand) as err:
         utils.check_user_access('cluster')
     mock_error.assert_called_once_with('Operation is denied. The current user lacks the necessary privilege.')
-
-
-def test_is_subdict():
-    d1 = {"a": 1, "b": 2}
-    d2 = {"a": 1}
-    assert utils.is_subdict(d2, d1) is True
