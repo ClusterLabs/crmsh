@@ -327,9 +327,9 @@ class RAInfo(object):
         self.meta_string = meta_string
 
     def __str__(self):
-        return "%s:%s:%s" % (self.ra_class, self.ra_provider, self.ra_type) \
-            if self.ra_class == "ocf" \
-               else "%s:%s" % (self.ra_class, self.ra_type)
+        if self.ra_class == "ocf":
+            return f"{self.ra_class}:{self.ra_provider}:{self.ra_type}"
+        return f"{self.ra_class}:{self.ra_type}"
 
     def error(self, s):
         logger.error("%s: %s", self, s)
@@ -359,7 +359,7 @@ class RAInfo(object):
         for n in ra.ra_elem.xpath("//parameters/parameter"):
             params_node.append(copy.deepcopy(n))
 
-    def mk_ra_node(self):
+    def mk_ra_node(self) -> etree._Element:
         '''
         Return the resource_agent node.
         '''
@@ -393,30 +393,50 @@ class RAInfo(object):
         completion:
         If true, filter some (advanced) parameters out.
         '''
-        ident = "ra_params-%s" % self
+        ident = f"ra_params-{self}"
         if cache.is_cached(ident):
             return cache.retrieve(ident)
+
         if self.mk_ra_node() is None:
             return None
-        d = {}
-        for c in self.ra_elem.xpath("//parameters/parameter"):
-            name = c.get("name")
+
+        params_dict = {}
+        for param in self.ra_elem.xpath("//parameters/parameter"):
+            name = param.get("name")
             if not name or name in self.excluded_from_completion:
                 continue
-            required = c.get("required") if not (c.get("deprecated") or c.get("obsoletes")) else "0"
-            unique = c.get("unique")
-            typ, default = _param_type_default(c)
-            d[name] = {
+
+            deprecated = param.get("deprecated", "0")
+            required = param.get("required", "0") if deprecated != "1" else "0"
+            obsoletes = param.get("obsoletes")
+            advanced = param.get("advanced", "0")
+            generated = param.get("generated", "0")
+            unique = param.get("unique")
+            param_type, param_default = _param_type_default(param)
+
+            params_dict[name] = {
                 "required": required,
+                "deprecated": deprecated,
+                "obsoletes": obsoletes,
+                "advanced": advanced,
+                "generated": generated,
                 "unique": unique,
-                "type": typ,
-                "default": default,
+                "type": param_type,
+                "default": param_default,
+                "options": self.get_selecte_value_list(param),
+                "shortdesc": self.get_shortdesc(param),
+                "longdesc": get_nodes_text(param, "longdesc")
             }
-        items = list(d.items())
-        # Sort the dictionary by required and then alphabetically
-        items.sort(key=lambda item: (item[1]["required"] != '1', item[0]))
-        d = dict(items)
-        return cache.store(ident, d)
+
+        items = list(params_dict.items())
+        # Sort the dictionary by:
+        # 1. Required parameters first
+        # 2. Alphabetically by name
+        # 3. Deprecated parameters last
+        items.sort(key=lambda x: (x[1]["deprecated"] == "1", x[1]["required"] != "1", x[0]))
+        params_dict = dict(items)
+
+        return cache.store(ident, params_dict)
 
     def actions(self):
         '''
@@ -710,73 +730,89 @@ class RAInfo(object):
         '''
         Print the RA meta-data in a human readable form.
         '''
+        # get self.ra_elem
         if self.mk_ra_node() is None:
             return ''
         l = []
-        title = self.meta_title()
-        l.append(title)
+        # get title
+        l.append(self.meta_title())
+        # get longdesc
         longdesc = get_nodes_text(self.ra_elem, "longdesc")
         if longdesc:
             l.append(longdesc)
-        if self.ra_class != "heartbeat":
-            params = self.meta_parameters()
-            if params:
-                l.append(params.rstrip())
+        # get parameters
+        params = self.meta_parameters()
+        if params:
+            l.append(params.rstrip())
+        # get actions
         actions = self.meta_actions()
         if actions:
             l.append(actions)
+
         return '\n\n'.join(l)
 
-    def get_shortdesc(self, n):
-        name = n.get("name")
-        shortdesc = get_nodes_text(n, "shortdesc")
-        longdesc = get_nodes_text(n, "longdesc")
-        if shortdesc and shortdesc not in (name, longdesc, self.ra_type):
-            return shortdesc
+    def get_shortdesc(self, n) -> str:
+        shortdesc_in_attr = n.get("shortdesc")
+        if shortdesc_in_attr:
+            return shortdesc_in_attr
+        shortdesc_in_content = get_nodes_text(n, "shortdesc")
+        if shortdesc_in_content:
+            return shortdesc_in_content
         return ''
 
     def meta_title(self):
-        s = str(self)
+        name = str(self)
         shortdesc = self.get_shortdesc(self.ra_elem)
-        if shortdesc:
-            s = "%s (%s)" % (shortdesc, s)
-        return s
+        return f"{name} - {shortdesc}" if shortdesc else name
 
-    def format_parameter(self, n):
-        def meta_param_head():
-            name = n.get("name")
-            if not name:
-                return None
-            s = name
-            if n.get("required") == "1":
-                s = s + "*"
-            typ, default = _param_type_default(n)
+    def format_parameter(self, name: str, parameter_dict: dict) -> str:
+
+        def format_header(name: str, parameter_dict: dict) -> str:
+            header_str = f"{name}"
+            if parameter_dict.get("required") == "1":
+                header_str += "*"
+            if parameter_dict.get("deprecated") == "1":
+                header_str += " (deprecated)"
+            obsoletes = parameter_dict.get("obsoletes")
+            if obsoletes:
+                header_str += f" (obsoletes: {obsoletes})"
+
+            typ, default = parameter_dict.get("type"), parameter_dict.get("default")
             if typ and default:
-                s = "%s (%s, [%s])" % (s, typ, default)
+                header_str += f" ({typ}, [{default}]):"
             elif typ:
-                s = "%s (%s)" % (s, typ)
-            shortdesc = self.get_shortdesc(n)
-            s = "%s: %s" % (s, shortdesc)
-            return s
-        head = meta_param_head()
-        if not head:
-            self.error("no name attribute for parameter")
-            return ""
-        l = [head]
-        longdesc = get_nodes_text(n, "longdesc")
-        select_values = self.get_selecte_value_list(n)
-        if n.get("advanced") == "1":
-            l.append(self.ra_tab + "*** Advanced Use Only ***")
-        if n.get("generated") == "1":
-            l.append(self.ra_tab + "*** Automatically generated by pacemaker ***")
-        if n.find("deprecated") is not None:
-            l.append(self.ra_tab + "*** Deprecated ***")
+                header_str += f" ({typ}):"
+
+            attr_str_map = {
+                "advanced": "Advanced Use Only",
+                "generated": "Automatically generated by pacemaker"
+            }
+            attr_str_list = [
+                desc for attr, desc in attr_str_map.items()
+                if parameter_dict.get(attr) == "1"
+            ]
+            if attr_str_list:
+                header_str += f" *** {'; '.join(attr_str_list)} ***"
+
+            shortdesc = parameter_dict.get("shortdesc")
+            if shortdesc:
+                header_str += f" {shortdesc}"
+
+            return header_str
+
+        header_str = format_header(name, parameter_dict)
+        details = [header_str]
+
+        longdesc = parameter_dict.get("longdesc")
         if longdesc:
-            l.append(self.ra_tab + longdesc.replace("\n", "\n" + self.ra_tab))
+            details.append(self.ra_tab + longdesc.replace("\n", "\n" + self.ra_tab))
+
+        select_values = parameter_dict.get("options")
         if select_values:
-            l.append(self.ra_tab + "Allowed values: " + ', '.join(select_values))
-        l.append('')
-        return '\n'.join(l)
+            details.append(self.ra_tab + "Allowed values: " + ', '.join(select_values))
+
+        details.append('')
+        return '\n'.join(details)
 
     def get_selecte_value_list(self, node):
         """
@@ -787,23 +823,25 @@ class RAInfo(object):
             return []
         return [x.get("value") for x in content.findall("option")]
 
-    def meta_parameter(self, param):
-        if self.mk_ra_node() is None:
+    def meta_parameter(self, param) -> str:
+        parameters_dict = self.params()
+        if not parameters_dict:
             return ''
-        for c in self.ra_elem.xpath("//parameters/parameter"):
-            if c.get("name") == param:
-                return self.format_parameter(c)
+        if param in parameters_dict:
+            return self.format_parameter(param, parameters_dict[param])
+        return ''
 
-    def meta_parameters(self):
-        if self.mk_ra_node() is None:
+    def meta_parameters(self) -> str:
+        parameters_dict = self.params()
+        if not parameters_dict:
             return ''
-        l = []
-        for c in self.ra_elem.xpath("//parameters/parameter"):
-            s = self.format_parameter(c)
-            if s:
-                l.append(s)
-        if l:
-            return "Parameters (*: required, []: default):\n\n" + '\n'.join(l)
+        parameter_str_list = []
+        for name, parameter_dict in parameters_dict.items():
+            res = self.format_parameter(name, parameter_dict)
+            if res:
+                parameter_str_list.append(res)
+        if parameter_str_list:
+            return "## Parameters (*: required, []: default):\n\n" + '\n'.join(parameter_str_list)
 
     def meta_actions(self):
         def meta_action_head(n):
@@ -825,7 +863,7 @@ class RAInfo(object):
                 l.append(self.ra_tab + s)
         if not l:
             return None
-        return "Operations' defaults (advisory minimum):\n\n" + '\n'.join(l)
+        return "## Operations' defaults (advisory minimum):\n\n" + '\n'.join(l)
 
 
 def get_ra(r):
