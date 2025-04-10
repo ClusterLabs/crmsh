@@ -952,7 +952,8 @@ def _init_ssh_for_secondary_user_on_remote_nodes(
 
 
 def _merge_line_into_file(path: str, lines: typing.Iterable[str]) -> str:
-    shell_script = '''[ -e "$path" ] || echo '# created by crmsh' > "$path"
+    shell_script = '''set -e
+[ -e "$path" ] || echo '# created by crmsh' > "$path"
 for key in "${keys[@]}"; do
     grep -F "$key" "$path" > /dev/null || sed -i "\\$a $key" "$path"
 done'''
@@ -1896,7 +1897,7 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
         result = ssh_copy_id_no_raise(local_user, remote_privileged_user, node, local_shell)
         if result.returncode != 0:
             utils.fatal("Failed to login to remote host {}@{}".format(remote_user_to_swap, node))
-        swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
+        _merge_ssh_authorized_keys(cluster_node_list)
         if local_user != 'hacluster':
             change_user_shell('hacluster', node)
             swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user)
@@ -1904,6 +1905,18 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
         swap_key_for_hacluster(cluster_node_list)
 
     user_by_host.save_remote(cluster_node_list)
+
+
+def _merge_ssh_authorized_keys(nodes: typing.Sequence[str]):
+    keys = set()
+    with tempfile.TemporaryDirectory(prefix='crmsh-bootstrap-') as tmpdir:
+        # sftp does not accept `~`
+        for host, file in parallax.parallax_slurp(nodes, tmpdir, '.ssh/authorized_keys'):
+            with open(file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.startswith('ssh-'):
+                        keys.add(line.rstrip())
+    parallax.parallax_run(nodes, _merge_line_into_file('~/.ssh/authorized_keys', keys))
 
 
 def swap_key_for_hacluster(other_node_list):
