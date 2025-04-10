@@ -910,7 +910,9 @@ def _init_ssh_on_remote_nodes(
         elif not result.public_keys:
             pass
         elif isinstance(result.public_keys[0], ssh_key.KeyFile):
-            public_key = ssh_key.InMemoryPublicKey(generate_ssh_key_pair_on_remote(local_user, node, user, user))
+            public_key = ssh_key.InMemoryPublicKey(
+                generate_ssh_key_pair_on_remote(local_shell, local_user, node, user, user),
+            )
             public_key_list.append(public_key)
             authorized_key_manager.add(node, user, public_key)
             authorized_key_manager.add(None, local_user, public_key)
@@ -1070,12 +1072,12 @@ def ssh_copy_id(local_user, remote_user, remote_node):
 
 
 def generate_ssh_key_pair_on_remote(
+        shell: sh.LocalShell,
         local_sudoer: str,
         remote_host: str, remote_sudoer: str,
-        remote_user: str
+        remote_user: str,
 ) -> str:
     """generate a key pair on remote and return the public key"""
-    shell = sh.LocalShell()
     # pass cmd through stdin rather than as arguments. It seems sudo has its own argument parsing mechanics,
     # which breaks shell expansion used in cmd
     generate_key_script = f'''
@@ -1131,7 +1133,11 @@ done
     return result.stdout.decode('utf-8').strip()
 
 
-def export_ssh_key_non_interactive(local_user_to_export, remote_user_to_swap, remote_node, local_sudoer, remote_sudoer):
+def export_ssh_key_non_interactive(
+        shell: sh.LocalShell,
+        local_user_to_export, remote_user_to_swap,
+        remote_node, local_sudoer, remote_sudoer,
+):
     """Copy ssh key from local to remote's authorized_keys. Require a configured non-interactive ssh authentication."""
     # ssh-copy-id will prompt for the password of the destination user
     # this is unwanted, so we write to the authorised_keys file ourselve
@@ -1141,7 +1147,7 @@ def export_ssh_key_non_interactive(local_user_to_export, remote_user_to_swap, re
 {key}
 EOF
 '''.format(user=remote_user_to_swap, key=public_key)
-    result = sh.LocalShell().su_subprocess_run(
+    result = shell.su_subprocess_run(
         local_sudoer,
         'ssh {} {}@{} sudo /bin/sh'.format(constants.SSH_OPTION, remote_sudoer, remote_node),
         input=cmd.encode('utf-8'),
@@ -1702,7 +1708,9 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     if not result.public_keys:
         pass
     elif isinstance(result.public_keys[0], ssh_key.KeyFile):
-        public_key = ssh_key.InMemoryPublicKey(generate_ssh_key_pair_on_remote(local_user, seed_host, seed_user, seed_user))
+        public_key = ssh_key.InMemoryPublicKey(
+            generate_ssh_key_pair_on_remote(local_shell, local_user, seed_host, seed_user, seed_user),
+        )
         authorized_key_manager.add( None, local_user, public_key)
         logger.info('A public key is added to authorized_keys for user %s: %s', local_user, public_key.fingerprint())
     elif isinstance(result.public_keys[0], ssh_key.InMemoryPublicKey):
@@ -1765,16 +1773,26 @@ def swap_public_ssh_key(
         local_user_to_swap,
         remote_user_to_swap,
         local_sudoer,
-        remote_sudoer
+        remote_sudoer,
+        local_shell: sh.LocalShell = None,  # FIXME: should not have default value
 ):
     """
     Swap public ssh key between remote_node and local
     """
+    if local_shell is None:
+        local_shell = sh.LocalShell()
     # Detect whether need password to login to remote_node
-    if utils.check_ssh_passwd_need(local_user_to_swap, remote_user_to_swap, remote_node):
-        export_ssh_key_non_interactive(local_user_to_swap, remote_user_to_swap, remote_node, local_sudoer, remote_sudoer)
+    if utils.check_ssh_passwd_need(local_user_to_swap, remote_user_to_swap, remote_node, local_shell):
+        export_ssh_key_non_interactive(
+            local_shell,
+            local_user_to_swap, remote_user_to_swap,
+            remote_node, local_sudoer, remote_sudoer,
+        )
 
-    public_key = generate_ssh_key_pair_on_remote(local_sudoer, remote_node, remote_sudoer, remote_user_to_swap)
+    public_key = generate_ssh_key_pair_on_remote(
+        local_shell,
+        local_sudoer, remote_node, remote_sudoer, remote_user_to_swap,
+    )
     ssh_key.AuthorizedKeyManager(sh.SSHShell(sh.LocalShell(), local_user_to_swap)).add(
         None, local_user_to_swap, ssh_key.InMemoryPublicKey(public_key),
     )
@@ -1900,7 +1918,7 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
         _merge_ssh_authorized_keys(cluster_node_list)
         if local_user != 'hacluster':
             change_user_shell('hacluster', node)
-            swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user)
+            swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user, local_shell)
     if local_user != 'hacluster':
         swap_key_for_hacluster(cluster_node_list)
 
