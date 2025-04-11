@@ -2703,18 +2703,12 @@ def bootstrap_join_geo(context):
     user, node = utils.parse_user_at_host(_context.cluster_node)
     if not sh.cluster_shell().can_run_as(node, 'root'):
         local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
-        if context.use_ssh_agent:
-            keys = _keys_from_ssh_agent()
-            local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
-            join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
-        else:
-            configure_ssh_key(local_user)
-            if 0 != ssh_copy_id_no_raise(
-                    local_user, remote_user, node,
-                    sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''}),
-            ).returncode:
-                raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
-            swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user)
+        local_shell = sh.LocalShell(additional_environ={
+            'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _context.use_ssh_agent else '',
+        })
+        result = ssh_copy_id_no_raise(local_user, remote_user, node, local_shell)
+        if 0 != result.returncode:
+            raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
         user_by_host = utils.HostUserConfig()
         user_by_host.add(local_user, utils.this_node())
         user_by_host.add(remote_user, node)
@@ -2742,18 +2736,12 @@ def bootstrap_arbitrator(context):
     user_by_host.save_local()
     if not sh.cluster_shell().can_run_as(node, 'root'):
         local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
-        if context.use_ssh_agent:
-            keys = _keys_from_ssh_agent()
-            local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
-            join_ssh_with_ssh_agent(local_shell, local_user, node, remote_user, keys)
-        else:
-            configure_ssh_key(local_user)
-            if 0 != ssh_copy_id_no_raise(
-                    local_user, remote_user, node,
-                    sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''}),
-            ).returncode:
-                raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
-            swap_public_ssh_key(node, local_user, remote_user, local_user, remote_user)
+        local_shell = sh.LocalShell(additional_environ={
+            'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _context.use_ssh_agent else '',
+        })
+        result = ssh_copy_id_no_raise(local_user, remote_user, node, local_shell)
+        if 0 != result.returncode:
+            raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
         user_by_host.add(local_user, utils.this_node())
         user_by_host.add(remote_user, node)
         user_by_host.set_no_generating_ssh_key(context.use_ssh_agent)
