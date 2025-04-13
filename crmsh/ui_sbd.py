@@ -102,8 +102,11 @@ class SBD(command.UI):
     )
     PCMK_ATTRS_DISKLESS = ('stonith-watchdog-timeout',)
     PARSE_RE = re.compile(
-		# Match keys with non-empty values, capturing possible suffix
-        r'([\w-]+)-([\w-]+)=([\w/\d]+)'
+        # To extract key, suffix and value from these possible arguments:
+        # watchdog-timeout=30
+        # crashdump-watchdog-timeout=120
+        # watchdog-device=/dev/watchdog
+        r'([\w-]+)-([\w]+)=([\w/]+)'
     )
 
     class SyntaxError(Exception):
