@@ -51,7 +51,7 @@ class UserOfHost:
         local_user = None
         remote_user = None
         try:
-            local_user = 'root' if self.use_ssh_agent() else self.user_of(self.this_node())
+            local_user = self.user_of(self.this_node())
             remote_user = self.user_of(host)
             return local_user, remote_user
         except UserNotFoundError:

@@ -406,12 +406,6 @@ def find_ssh_user(context: Context) -> None:
         if ret is not None:
             logger.debug("passwordless ssh to %s is OK", n)
             context.passwordless_shell_for_nodes[n] = ret
-        elif user_of_host.use_ssh_agent() and 'SSH_AUTH_SOCK' not in os.environ:
-            with StringIO() as buf:
-                buf.write('Environment variable SSH_AUTH_SOCK does not exist.')
-                if 'SUDO_USER' in os.environ:
-                    buf.write(' Please check whether ssh-agent is available and consider using "sudo --preserve-env=SSH_AUTH_SOCK".')
-                logger.warning('%s', buf.getvalue())
         else:
             logger.warning("passwordless ssh to node %s does not work", n)
             if not crmutils.can_ask():

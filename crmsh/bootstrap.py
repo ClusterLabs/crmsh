@@ -1593,39 +1593,31 @@ def configure_qdevice_interactive():
 def _setup_passwordless_ssh_for_qnetd(cluster_node_list: typing.List[str]):
     local_user, qnetd_user, qnetd_addr = _select_user_pair_for_ssh_for_secondary_components(_context.qnetd_addr_input)
     # Configure ssh passwordless to qnetd if detect password is needed
-    if UserOfHost.instance().use_ssh_agent():
-        logger.info("Adding public keys to authorized_keys for user root...")
-        for key in ssh_key.AgentClient().list():
-            ssh_key.AuthorizedKeyManager(sh.SSHShell(
-                sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')}),
-                'root',
-            )).add(qnetd_addr, qnetd_user, key)
-    else:
-        if 0 != ssh_copy_id_no_raise(
-                local_user, qnetd_user, qnetd_addr,
-                sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''}),
-        ).returncode:
-            msg = f"Failed to login to {qnetd_user}@{qnetd_addr}. Please check the credentials."
-            sudoer = userdir.get_sudoer()
-            if sudoer and qnetd_user != sudoer:
-                args = ['sudo crm']
-                args += [x for x in sys.argv[1:]]
-                for i, arg in enumerate(args):
-                    if arg == '--qnetd-hostname' and i + 1 < len(args):
-                        if '@' not in args[i + 1]:
-                            args[i + 1] = f'{sudoer}@{qnetd_addr}'
-                            msg += '\nOr, run "{}".'.format(' '.join(args))
-            raise ValueError(msg)
+    if 0 != ssh_copy_id_no_raise(
+            local_user, qnetd_user, qnetd_addr,
+            sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '')}),
+    ).returncode:
+        msg = f"Failed to login to {qnetd_user}@{qnetd_addr}. Please check the credentials."
+        sudoer = userdir.get_sudoer()
+        if sudoer and qnetd_user != sudoer:
+            args = ['sudo crm']
+            args += [x for x in sys.argv[1:]]
+            for i, arg in enumerate(args):
+                if arg == '--qnetd-hostname' and i + 1 < len(args):
+                    if '@' not in args[i + 1]:
+                        args[i + 1] = f'{sudoer}@{qnetd_addr}'
+                        msg += '\nOr, run "{}".'.format(' '.join(args))
+        raise ValueError(msg)
 
-        cluster_shell = sh.cluster_shell()
-        # Add other nodes' public keys to qnetd's authorized_keys
-        for node in cluster_node_list:
-            if node == utils.this_node():
-                continue
-            local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
-            remote_key_content = ssh_key.fetch_public_key_content_list(node, remote_user)[0]
-            in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
-            ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
+    cluster_shell = sh.cluster_shell()
+    # Add other nodes' public keys to qnetd's authorized_keys
+    for node in cluster_node_list:
+        if node == utils.this_node():
+            continue
+        local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
+        remote_key_content = ssh_key.fetch_public_key_content_list(node, remote_user)[0]
+        in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
+        ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
 
     user_by_host = utils.HostUserConfig()
     user_by_host.add(local_user, utils.this_node())
@@ -2332,7 +2324,11 @@ def bootstrap_add(context):
     if not context.use_ssh_agent:
         options += ' --no-use-ssh-agent'
 
-    shell = sh.ClusterShell(sh.LocalShell(), UserOfHost.instance(), _context.use_ssh_agent)
+    shell = sh.ClusterShell(
+        sh.LocalShell({'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _context.use_ssh_agent else ''}),
+        UserOfHost.instance(),
+        _context.use_ssh_agent,
+    )
     for (user, node) in (_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list):
         print()
         logger.info("Adding node {} to cluster".format(node))
