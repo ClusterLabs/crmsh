@@ -314,9 +314,13 @@ class SBD(command.UI):
         logger.info("Set crashdump option for fence_sbd resource")
 
     def _check_kdump_service(self):
+        no_kdump = False
         for node in self.cluster_nodes:
             if not self.service_manager.service_is_active("kdump.service", node):
                 logger.warning("Kdump service is not active on %s", node)
+                no_kdump = True
+        if no_kdump:
+            logger.warning("Kdump service is required for crashdump")
 
     def _configure_diskbase(self, parameter_dict: dict):
         '''
