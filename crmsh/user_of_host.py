@@ -72,10 +72,6 @@ class UserOfHost:
                 return cached
 
     @staticmethod
-    def use_ssh_agent() -> bool:
-        return config.get_option('core', 'no_generating_ssh_key')
-
-    @staticmethod
     def _get_user_of_host_from_config(host):
         try:
             canonical, aliases, _ = socket.gethostbyaddr(host)

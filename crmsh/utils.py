@@ -4,12 +4,10 @@ import asyncio
 import errno
 import os
 import sys
-import tempfile
 import typing
 from tempfile import mkstemp
 import subprocess
 import re
-import glob
 import time
 import datetime
 import shutil
@@ -42,8 +40,6 @@ from . import userdir
 from . import constants
 from . import options
 from . import term
-from . import ssh_key
-from .constants import SSH_OPTION
 from . import log
 from .prun import prun
 from .sh import ShellUtils
@@ -3005,12 +3001,10 @@ class HostUserConfig:
     """
     def __init__(self):
         self._hosts_users = dict()
-        self._no_generating_ssh_key = False
         self.load()
 
     def load(self):
         self._load_hosts_users()
-        self._load_no_generating_ssh_key()
 
     def _load_hosts_users(self):
         users = list()
@@ -3027,13 +3021,9 @@ class HostUserConfig:
             hosts.append(parts[1])
         self._hosts_users = {host: user for user, host in zip(users, hosts)}
 
-    def _load_no_generating_ssh_key(self):
-        self._no_generating_ssh_key = config.get_option('core', 'no_generating_ssh_key')
-
     def save_local(self):
         value = [f'{user}@{host}' for host, user in sorted(self._hosts_users.items(), key=lambda x: x[0])]
         config.set_option('core', 'hosts', value)
-        config.set_option('core', 'no_generating_ssh_key', self._no_generating_ssh_key)
         debug_on = config.get_option('core', 'debug')
         if debug_on:
             config.set_option('core', 'debug', 'false')
@@ -3045,13 +3035,9 @@ class HostUserConfig:
         self.save_local()
         value = [f'{user}@{host}' for host, user in sorted(self._hosts_users.items(), key=lambda x: x[0])]
         crmsh.parallax.parallax_call(remote_hosts, "crm options set core.hosts '{}'".format(', '.join(value)))
-        crmsh.parallax.parallax_call(remote_hosts, "crm options set core.no_generating_ssh_key '{}'".format(
-            'yes' if self._no_generating_ssh_key else 'no'
-        ))
 
     def clear(self):
         self._hosts_users = dict()
-        self._no_generating_ssh_key = False
 
     def get(self, host):
         return self._hosts_users[host]
@@ -3059,11 +3045,6 @@ class HostUserConfig:
     def add(self, user, host):
         self._hosts_users[host] = user
 
-    def set_no_generating_ssh_key(self, value: bool):
-        self._no_generating_ssh_key = value
-
-    def get_no_generating_ssh_key(self) -> bool:
-        return self._no_generating_ssh_key
 
 def parse_user_at_host(s: str):
     i = s.find('@')

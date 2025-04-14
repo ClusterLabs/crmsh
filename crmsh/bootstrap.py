@@ -865,7 +865,6 @@ def init_ssh_impl(local_user: str, ssh_public_keys: typing.List[ssh_key.Key], us
 
     user_by_host = utils.HostUserConfig()
     user_by_host.clear()
-    user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
     user_by_host.save_local()
     if user_node_list:
         _init_ssh_on_remote_nodes(local_shell, local_user, user_node_list)
@@ -1720,7 +1719,6 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     user_by_host.clear()
     user_by_host.add(seed_user, seed_host)
     user_by_host.add(local_user, utils.this_node())
-    user_by_host.set_no_generating_ssh_key(bool(ssh_public_keys))
     user_by_host.save_local()
     detect_cluster_service_on_node(seed_host)
     user_by_host.add(seed_user, get_node_canonical_hostname(seed_host))
@@ -2708,7 +2706,6 @@ def bootstrap_join_geo(context):
         user_by_host = utils.HostUserConfig()
         user_by_host.add(local_user, utils.this_node())
         user_by_host.add(remote_user, node)
-        user_by_host.set_no_generating_ssh_key(context.use_ssh_agent)
         user_by_host.save_local()
     geo_fetch_config(node)
     logger.info("Sync booth configuration across cluster")
@@ -2740,7 +2737,6 @@ def bootstrap_arbitrator(context):
             raise ValueError(f"Failed to login to {remote_user}@{node}. Please check the credentials.")
         user_by_host.add(local_user, utils.this_node())
         user_by_host.add(remote_user, node)
-        user_by_host.set_no_generating_ssh_key(context.use_ssh_agent)
         user_by_host.save_local()
     geo_fetch_config(node)
     if not os.path.isfile(BOOTH_CFG):
