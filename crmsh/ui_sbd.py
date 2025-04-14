@@ -324,6 +324,21 @@ class SBD(command.UI):
         if no_kdump:
             logger.warning("Kdump service is required for crashdump")
 
+    def _should_configure_crashdump(
+            self,
+            crashdump_watchdog_timeout,
+            watchdog_timeout,
+            diskless=False
+        ) -> bool:
+        if not crashdump_watchdog_timeout and not self.crashdump_watchdog_timeout_from_config:
+            return False
+        ct_updated = crashdump_watchdog_timeout and \
+                crashdump_watchdog_timeout != self.crashdump_watchdog_timeout_from_config
+        watchdog_timeout_configured = self.watchdog_timeout_from_config if diskless \
+                else self.device_meta_dict_runtime.get("watchdog")
+        wt_updated = watchdog_timeout and watchdog_timeout != watchdog_timeout_configured
+        return ct_updated or wt_updated
+
     def _configure_diskbase(self, parameter_dict: dict):
         '''
         Configure disk-based SBD based on input parameters and runtime config
@@ -341,8 +356,8 @@ class SBD(command.UI):
         # merge runtime timeout dict into parameter timeout dict without overwriting
         timeout_dict = {**self.device_meta_dict_runtime, **timeout_dict}
 
-        crashdump_watchdog_timeout = parameter_dict.get("crashdump-watchdog")
-        if crashdump_watchdog_timeout and crashdump_watchdog_timeout != self.crashdump_watchdog_timeout_from_config:
+        crashdump_watchdog_timeout = parameter_dict.get("crashdump-watchdog", self.crashdump_watchdog_timeout_from_config)
+        if self._should_configure_crashdump(crashdump_watchdog_timeout, timeout_dict.get("watchdog")):
             self._check_kdump_service()
             self._set_crashdump_option()
             timeout_dict["msgwait"] = 2*timeout_dict["watchdog"] + crashdump_watchdog_timeout
@@ -367,14 +382,16 @@ class SBD(command.UI):
         '''
         update_dict = {}
         timeout_dict = {}
+
         watchdog_timeout = parameter_dict.get("watchdog")
         if watchdog_timeout and watchdog_timeout != self.watchdog_timeout_from_config:
             update_dict["SBD_WATCHDOG_TIMEOUT"] = str(watchdog_timeout)
         watchdog_device = parameter_dict.get("watchdog-device")
         if watchdog_device != self.watchdog_device_from_config:
             update_dict["SBD_WATCHDOG_DEV"] = watchdog_device
-        crashdump_watchdog_timeout = parameter_dict.get("crashdump-watchdog")
-        if crashdump_watchdog_timeout and crashdump_watchdog_timeout != self.crashdump_watchdog_timeout_from_config:
+
+        crashdump_watchdog_timeout = parameter_dict.get("crashdump-watchdog", self.crashdump_watchdog_timeout_from_config)
+        if self._should_configure_crashdump(crashdump_watchdog_timeout, watchdog_timeout, diskless=True):
             self._check_kdump_service()
             update_dict["SBD_TIMEOUT_ACTION"] = "flush,crashdump"
             update_dict["SBD_OPTS"] = f"-C {crashdump_watchdog_timeout} -Z"
