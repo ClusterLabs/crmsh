@@ -119,6 +119,7 @@ class SBD(command.UI):
         self.device_list_from_config: list[str] = None
         self.device_meta_dict_runtime: dict[str, int] = None
         self.watchdog_timeout_from_config: int = None
+        self.crashdump_watchdog_timeout_from_config: int = None
         self.watchdog_device_from_config: str = None
         self.service_manager: ServiceManager = None
         self.cluster_shell: sh.cluster_shell = None
@@ -137,6 +138,7 @@ class SBD(command.UI):
         except Exception:
             self.watchdog_timeout_from_config = None
         self.watchdog_device_from_config = watchdog.Watchdog.get_watchdog_device_from_sbd_config()
+        self.crashdump_watchdog_timeout_from_config = sbd.SBDUtils.get_crashdump_watchdog_timeout()
 
         self.service_manager = ServiceManager()
         self.cluster_shell = sh.cluster_shell()
@@ -340,7 +342,7 @@ class SBD(command.UI):
         timeout_dict = {**self.device_meta_dict_runtime, **timeout_dict}
 
         crashdump_watchdog_timeout = parameter_dict.get("crashdump-watchdog")
-        if crashdump_watchdog_timeout:
+        if crashdump_watchdog_timeout and crashdump_watchdog_timeout != self.crashdump_watchdog_timeout_from_config:
             self._check_kdump_service()
             self._set_crashdump_option()
             timeout_dict["msgwait"] = 2*timeout_dict["watchdog"] + crashdump_watchdog_timeout
@@ -372,7 +374,7 @@ class SBD(command.UI):
         if watchdog_device != self.watchdog_device_from_config:
             update_dict["SBD_WATCHDOG_DEV"] = watchdog_device
         crashdump_watchdog_timeout = parameter_dict.get("crashdump-watchdog")
-        if crashdump_watchdog_timeout:
+        if crashdump_watchdog_timeout and crashdump_watchdog_timeout != self.crashdump_watchdog_timeout_from_config:
             self._check_kdump_service()
             update_dict["SBD_TIMEOUT_ACTION"] = "flush,crashdump"
             update_dict["SBD_OPTS"] = f"-C {crashdump_watchdog_timeout} -Z"
@@ -434,6 +436,7 @@ class SBD(command.UI):
         '''
         Implement sbd device command
         '''
+        self._load_attributes()
         if not self.service_is_active(constants.PCMK_SERVICE):
             return False
         if not sbd.SBDUtils.is_using_disk_based_sbd():
@@ -472,6 +475,7 @@ class SBD(command.UI):
         Implement sbd configure command
         '''
         try:
+            self._load_attributes()
             for service in (constants.PCMK_SERVICE, constants.SBD_SERVICE):
                 if not self.service_is_active(service):
                     return False
@@ -502,6 +506,7 @@ class SBD(command.UI):
         '''
         Implement sbd purge command
         '''
+        self._load_attributes()
         if not self.service_is_active(constants.SBD_SERVICE):
             return False
         sbd.purge_sbd_from_cluster()
@@ -602,6 +607,7 @@ done
         '''
         Implement sbd status command
         '''
+        self._load_attributes()
         self._print_sbd_type()
         self._print_sbd_status()
         self._print_sbd_cgroup_status()

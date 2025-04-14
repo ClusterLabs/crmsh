@@ -81,6 +81,14 @@ class SBDUtils:
         return utils.parse_sysconfig(SBDManager.SYSCONFIG_SBD).get(key)
 
     @staticmethod
+    def get_crashdump_watchdog_timeout() -> typing.Optional[int]:
+        res = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
+        if not res:
+            return None
+        matched = re.search(r"-C\s+(\d+)", res)
+        return int(matched.group(1)) if matched else None
+
+    @staticmethod
     def get_sbd_device_from_config():
         '''
         Get sbd device list from config
