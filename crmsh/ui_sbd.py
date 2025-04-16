@@ -96,9 +96,7 @@ class SBD(command.UI):
     PCMK_ATTRS = (
         "have-watchdog",
         "stonith-timeout",
-        "stonith-enabled",
-        "priority-fencing-delay",
-        "pcmk_delay_max"
+        "stonith-enabled"
     )
     PCMK_ATTRS_DISKLESS = ('stonith-watchdog-timeout',)
     PARSE_RE = re.compile(
@@ -227,6 +225,13 @@ class SBD(command.UI):
         matches = re.findall(regex, out)
         for match in matches:
             print(f"{match[0]}={match[1]}")
+
+        cmd = "crm configure show related:fence_sbd"
+        out = self.cluster_shell.get_stdout_or_raise_error(cmd)
+        if out:
+            print()
+            logger.info('%s', cmd)
+            print(out)
 
         print()
         logger.info('%s', sbd.SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD)
@@ -540,15 +545,14 @@ class SBD(command.UI):
         '''
         try:
             self._load_attributes()
-            for service in (constants.PCMK_SERVICE, constants.SBD_SERVICE):
-                if not self.service_is_active(service):
-                    return False
             if not args:
                 raise self.SyntaxError("No argument")
-
             if args[0] == "show":
                 self._configure_show(args)
                 return True
+            for service in (constants.PCMK_SERVICE, constants.SBD_SERVICE):
+                if not self.service_is_active(service):
+                    return False
 
             parameter_dict = self._parse_args(args)
             if sbd.SBDUtils.is_using_disk_based_sbd():
