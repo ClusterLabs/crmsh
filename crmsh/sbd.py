@@ -81,6 +81,14 @@ class SBDUtils:
         return utils.parse_sysconfig(SBDManager.SYSCONFIG_SBD).get(key)
 
     @staticmethod
+    def get_crashdump_watchdog_timeout() -> typing.Optional[int]:
+        res = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
+        if not res:
+            return None
+        matched = re.search(r"-C\s+(\d+)", res)
+        return int(matched.group(1)) if matched else None
+
+    @staticmethod
     def get_sbd_device_from_config():
         '''
         Get sbd device list from config
@@ -559,7 +567,8 @@ class SBDManager:
         Configure fence_sbd resource and related properties
         '''
         if self.diskless_sbd:
-            utils.set_property("stonith-watchdog-timeout", SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT)
+            swt_value = self.timeout_dict.get("stonith-watchdog", SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT)
+            utils.set_property("stonith-watchdog-timeout", swt_value)
         else:
             if utils.get_property("stonith-watchdog-timeout", get_default=False):
                 utils.delete_property("stonith-watchdog-timeout")

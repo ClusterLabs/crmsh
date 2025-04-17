@@ -97,6 +97,18 @@ class TestSBDUtils(unittest.TestCase):
         result = SBDUtils.get_sbd_device_from_config()
         self.assertEqual(result, ['/dev/sbd_device', '/dev/another_sbd_device'])
 
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_get_crashdump_watchdog_timeout_none(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = None
+        result = SBDUtils.get_crashdump_watchdog_timeout()
+        self.assertIsNone(result)
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_get_crashdump_watchdog_timeout(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-C 60 -Z"
+        result = SBDUtils.get_crashdump_watchdog_timeout()
+        self.assertEqual(result, 60)
+
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
     @patch('crmsh.service_manager.ServiceManager.service_is_active')
     def test_is_using_diskless_sbd(self, mock_service_is_active, mock_get_sbd_device_from_config):

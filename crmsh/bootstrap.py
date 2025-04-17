@@ -2725,12 +2725,12 @@ def adjust_pcmk_delay_max(is_2node_wo_qdevice):
         for res in cib_factory.fence_id_list_without_pcmk_delay():
             cmd = "crm resource param {} set pcmk_delay_max {}s".format(res, PCMK_DELAY_MAX)
             shell.get_stdout_or_raise_error(cmd)
-            logger.debug("Add parameter 'pcmk_delay_max={}s' for resource '{}'".format(PCMK_DELAY_MAX, res))
+            logger.info("Add parameter 'pcmk_delay_max={}s' for resource '{}'".format(PCMK_DELAY_MAX, res))
     else:
         for res in cib_factory.fence_id_list_with_pcmk_delay():
             cmd = "crm resource param {} delete pcmk_delay_max".format(res)
             shell.get_stdout_or_raise_error(cmd)
-            logger.debug("Delete parameter 'pcmk_delay_max' for resource '{}'".format(res))
+            logger.info("Delete parameter 'pcmk_delay_max' for resource '{}'".format(res))
 
 
 def adjust_stonith_timeout():

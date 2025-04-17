@@ -2136,6 +2136,7 @@ Main functionailities include:
 - Show contents of /etc/sysconfig/sbd
 - Show SBD related cluster properties
 - Update the SBD related configuration parameters
+- NOTE: sbd crashdump is used for debugging. Understand the risks and run `crm sbd purge crashdump` afterward
 
 For more details on SBD and related parameters, please see man sbd(8).
 
@@ -2143,11 +2144,11 @@ Usage:
 ...............
 # For disk-based SBD
 crm sbd configure show [disk_metadata|sysconfig|property]
-crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [watchdog-device=<device>]
+crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device>]
 
 # For disk-less SBD
 crm sbd configure show [sysconfig|property]
-crm sbd configure [watchdog-timeout=<integer>] [watchdog-device=<device>]
+crm sbd configure [watchdog-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device>]
 ...............
 
 example:
@@ -2189,10 +2190,13 @@ status
 
 Disable the systemd sbd.service on all cluster nodes,
 move the sbd sysconfig to .bak and adjust SBD related cluster properties.
+If `crashdump` is specified, the crashdump related configurations will be
+removed.
 
 Usage:
 ...............
 purge
+purge crashdump
 ...............
 
 [[cmdhelp.node,Node management]]

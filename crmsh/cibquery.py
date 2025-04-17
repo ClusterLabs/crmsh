@@ -33,6 +33,26 @@ def has_primitive_filesystem_with_fstype(cib: lxml.etree.Element, fstype: str) -
         f'/instance_attributes/nvpair[@name="fstype" and @value="{fstype}"]'
     ))
 
+
+def get_primitives_with_ra(cib: lxml.etree.Element, ra: ResourceAgent) -> list[str]:
+    """
+    Given cib and ResourceAgent instance, return id list of primitives that matched
+    consider provider as optional
+    """
+    provider_condition = f' and @provider="{ra.m_provider}"' if ra.m_provider else ""
+    return cib.xpath(
+        f'/cib/configuration/resources//primitive[@class="{ra.m_class}"{provider_condition} and @type="{ra.m_type}"]/@id'
+    )
+
+
+def get_parameter_value(cib: lxml.etree.Element, res_id: str, param_name: str) -> typing.Optional[str]:
+    result = cib.xpath(
+        f'/cib/configuration/resources//primitive[@id="{res_id}"]'
+        f'/instance_attributes/nvpair[@name="{param_name}"]/@value'
+    )
+    return result[0] if result else None
+
+
 def get_cluster_nodes(cib: lxml.etree.Element) -> list[ClusterNode]:
     """Return a list of cluster nodes, excluding pacemaker-remote nodes"""
     result = list()
