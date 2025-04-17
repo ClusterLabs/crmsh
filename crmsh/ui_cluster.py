@@ -180,7 +180,7 @@ class Cluster(command.UI):
             logger.info("Please try 'crm cluster start' on each node")
             return False
         if not node_list:
-            return False
+            return
 
         if start_qdevice:
             service_manager.start_service("corosync-qdevice", node_list=node_list)
