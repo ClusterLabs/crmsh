@@ -86,5 +86,5 @@ Feature: cluster testing with ssh blocked
     Then    Directory "/tmp/report/hanode2" not created
     Then    Expected "ERROR: ssh-related operations are disabled. crmsh works in local mode." in stderr
     Then    Run "crm status" OK on "hanode1"
-    When    Run "crm cluster stop --all" on "hanode1"
-    Then    Expected "ERROR: ssh-related operations are disabled. crmsh works in local mode." in stderr
+    When    Try "crm cluster stop --all"
+    Then    Except "ERROR: ssh-related operations are disabled. crmsh works in local mode." in stderr
