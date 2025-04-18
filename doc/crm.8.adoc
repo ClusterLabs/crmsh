@@ -2126,6 +2126,11 @@ Additionally, it manages the configuration file for both disk-based and diskless
 as well as the on-disk metadata for the disk-based scenario.
 Currently, SBD management requires a running cluster.
 
+When run with `crm -F` or `--force` option, the `sbd` subcommand will leverage maintenance mode
+for any changes that require restarting sbd.service.
+WARNING: Understand risks that running RA has no cluster protection while the cluster is
+in maintenance mode and restarting
+
 [[cmdhelp.sbd.configure,configure SBD]]
 ==== `configure`
 
