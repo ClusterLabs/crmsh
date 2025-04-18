@@ -413,7 +413,11 @@ class TestSBDManager(unittest.TestCase):
         mock_CrmMonXmlParser.return_value.is_any_resource_running.return_value = True
         SBDManager.restart_cluster_if_possible()
         mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
-        mock_logger_warning.assert_called_once_with("Resource is running, need to restart cluster service manually on each node")
+        mock_logger_warning.assert_has_calls([
+            call("Resource is running, need to restart cluster service manually on each node"),
+            call("Or, run with `crm -F` or `--force` option, the `sbd` subcommand will leverage maintenance mode for any changes that require restarting sbd.service"),
+            call("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
+        ])
 
     @patch('crmsh.bootstrap.restart_cluster')
     @patch('logging.Logger.warning')
