@@ -296,12 +296,12 @@ class SBD(command.UI):
             return timeout_dict
         if watchdog_timeout and not msgwait_timeout:
             timeout_dict["msgwait"] = 2*watchdog_timeout
-            logger.info("No msgwait timeout specified, use 2*watchdog timeout: %s", 2*watchdog_timeout)
+            logger.info("No 'msgwait-timeout=' specified in the command, use 2*watchdog timeout: %s", 2*watchdog_timeout)
             return timeout_dict
         if msgwait_timeout and not watchdog_timeout:
             watchdog_timeout = msgwait_timeout//2
             timeout_dict["watchdog"] = watchdog_timeout
-            logger.info("No watchdog timeout specified, use msgwait timeout/2: %s", watchdog_timeout)
+            logger.info("No 'watchdog-timeout=' specified in the command, use msgwait timeout/2: %s", watchdog_timeout)
             return timeout_dict
         return timeout_dict
 
