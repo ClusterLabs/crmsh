@@ -249,7 +249,7 @@ class Cluster(command.UI):
         except utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster stop' on each node")
-            return
+            return False
         if not node_list:
             return
         logger.debug(f"stop node list: {node_list}")
