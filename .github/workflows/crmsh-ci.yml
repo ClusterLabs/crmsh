@@ -14,7 +14,7 @@ env:
 
 jobs:
   general_check:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - name: check data-manifest
@@ -29,7 +29,7 @@ jobs:
         }
 
   unit_test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python-version: ['3.6', '3.8', '3.10']
@@ -37,24 +37,21 @@ jobs:
     timeout-minutes: 5
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Run unit tests in Python container
       run: |
-        python -m pip install --upgrade pip
-        pip install tox
-    - name: Test with pytest in tox
-      run: |
+        docker run --rm -v ${{ github.workspace }}:/app -w /app python:${{ matrix.python-version }} bash -c "
+        python -m pip install --upgrade pip &&
+        pip install tox &&
         tox -v -e${{ matrix.python-version }}
+        "
+
     - uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: unit
 
   functional_test_crm_report_bugs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -70,7 +67,7 @@ jobs:
         flags: integration
 
   functional_test_crm_report_normal:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -86,7 +83,7 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_bugs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -102,7 +99,7 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_bugs_non_root:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -118,7 +115,7 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_common:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -134,7 +131,7 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_common_non_root:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -150,7 +147,7 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_options:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -166,7 +163,7 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_options_non_root:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -182,7 +179,7 @@ jobs:
         flags: integration
 
   functional_test_qdevice_setup_remove:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -198,7 +195,7 @@ jobs:
         flags: integration
 
   functional_test_qdevice_setup_remove_non_root:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -214,7 +211,7 @@ jobs:
         flags: integration
 
   functional_test_qdevice_options:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -230,7 +227,7 @@ jobs:
         flags: integration
 
   functional_test_qdevice_validate:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -246,7 +243,7 @@ jobs:
         flags: integration
 
   functional_test_qdevice_validate_non_root:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -262,7 +259,7 @@ jobs:
         flags: integration
 
   functional_test_qdevice_user_case:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -278,7 +275,7 @@ jobs:
         flags: integration
 
   functional_test_resource_failcount:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -294,7 +291,7 @@ jobs:
         flags: integration
 
   functional_test_resource_set:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -310,7 +307,7 @@ jobs:
         flags: integration
 
   functional_test_resource_set_non_root:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -326,7 +323,7 @@ jobs:
         flags: integration
 
   functional_test_configure_sublevel:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -342,7 +339,7 @@ jobs:
         flags: integration
 
   functional_test_constraints_bugs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -358,7 +355,7 @@ jobs:
         flags: integration
 
   functional_test_geo_cluster:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -390,7 +387,7 @@ jobs:
         flags: integration
 
   functional_test_cluster_api:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -405,7 +402,7 @@ jobs:
         flags: integration
 
   functional_test_user_access:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -420,7 +417,7 @@ jobs:
         flags: integration
 
   functional_test_ssh_agent:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
@@ -450,7 +447,7 @@ jobs:
         flags: integration
 
   original_regression_test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v4
