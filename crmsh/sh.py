@@ -57,13 +57,7 @@ class AuthorizationError(Error):
         self.user = user
 
     def diagnose(self) -> str:
-        with StringIO() as buf:
-            if user_of_host.instance().use_ssh_agent():
-                if 'SSH_AUTH_SOCK' not in os.environ:
-                    buf.write('Environment variable SSH_AUTH_SOCK does not exist.')
-                    if 'SUDO_USER' in os.environ:
-                        buf.write(' Please check whether ssh-agent is available and consider using "sudo --preserve-env=SSH_AUTH_SOCK".')
-            return buf.getvalue()
+        return ''
 
 
 class NonInteractiveSSHAuthorizationError(AuthorizationError):
@@ -511,5 +505,10 @@ class ClusterShellAdaptorForLocalShell(ClusterShell):
 
 
 def cluster_shell():
-    return ClusterShell(LocalShell(), user_of_host.instance(), raise_ssh_error=True)
+    return ClusterShell(
+        LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '')}),
+        user_of_host.instance(),
+        forward_ssh_agent=True,
+        raise_ssh_error=True,
+    )
 
