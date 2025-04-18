@@ -130,3 +130,13 @@ Feature: Functional test to cover SAP clusterAPI
     And     Directory "hanode2" in "/tmp/report.tar.bz2"
     And     File "pacemaker.log" in "/tmp/report.tar.bz2"
     And     File "corosync.conf" in "/tmp/report.tar.bz2"
+
+  @clean
+  Scenario: crm cluster start should return 0 for successful repeated execution (bsc#1241358)
+    When    Run "crm cluster start" on "hanode1"
+    Then    Expected return code is "0"
+    Then    Expected "The cluster stack already started on hanode1" in stdout
+    When    Run "crm cluster stop" on "hanode1"
+    And     Run "crm cluster stop" on "hanode1"
+    Then    Expected return code is "0"
+    Then    Expected "The cluster stack already stopped on hanode1" in stdout
