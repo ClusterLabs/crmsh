@@ -1340,3 +1340,54 @@ def test_check_user_access_cluster(mock_user, mock_in, mock_sudo, mock_error):
     with pytest.raises(utils.TerminateSubCommand) as err:
         utils.check_user_access('cluster')
     mock_error.assert_called_once_with('Operation is denied. The current user lacks the necessary privilege.')
+
+
+@mock.patch('logging.Logger.warning')
+@mock.patch('crmsh.utils.is_dc_idle')
+def test_leverage_maintenance_mode_skip(mock_idle, mock_warn):
+    config.core.force = True
+    mock_idle.return_value = False
+    with utils.leverage_maintenance_mode() as result:
+        assert result is False
+    mock_warn.assert_called_once_with("Pacemaker state transition is in progress. Skip restarting cluster in maintenance mode.")
+
+
+@mock.patch('crmsh.utils.delete_property')
+@mock.patch('crmsh.utils.set_property')
+@mock.patch('logging.Logger.info')
+@mock.patch('crmsh.utils.is_dc_idle')
+def test_leverage_maintenance_mode(mock_idle, mock_info, mock_set, mock_delete):
+    config.core.force = True
+    mock_idle.return_value = True
+    with utils.leverage_maintenance_mode() as result:
+        assert result is True
+    mock_set.assert_called_once_with("maintenance-mode", "true")
+    mock_delete.assert_called_once_with("maintenance-mode")
+
+
+@mock.patch('crmsh.utils.get_dc')
+def test_is_dc_idle_no_dc(mock_dc):
+    mock_dc.return_value = None
+    assert utils.is_dc_idle() is False
+
+
+@mock.patch('logging.Logger.error')
+@mock.patch('crmsh.utils.ShellUtils')
+@mock.patch('crmsh.utils.get_dc')
+def test_is_dc_idle_failed_get_dc_status(mock_dc, mock_shell, mock_error):
+    mock_dc.return_value = "test"
+    mock_shell_inst = mock.Mock()
+    mock_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_stdout_stderr.return_value = (1, None, "error")
+    assert utils.is_dc_idle() is False
+    mock_error.assert_called_once_with("Failed to get DC status: %s", "error")
+
+
+@mock.patch('crmsh.utils.ShellUtils')
+@mock.patch('crmsh.utils.get_dc')
+def test_is_dc_idle(mock_dc, mock_shell):
+    mock_dc.return_value = "test"
+    mock_shell_inst = mock.Mock()
+    mock_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_stdout_stderr.return_value = (0, "in S_IDLE: ok", None)
+    assert utils.is_dc_idle() is True

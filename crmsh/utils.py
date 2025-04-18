@@ -976,6 +976,20 @@ def append_file(dest, src):
         return False
 
 
+def is_dc_idle():
+    dc = get_dc()
+    if not dc:
+        return False
+    cmd = f"crmadmin -S {dc}"
+    rc, out, err = ShellUtils().get_stdout_stderr(cmd)
+    if rc != 0 and err:
+        logger.error("Failed to get DC status: %s", err)
+        return False
+    if not out:
+        return False
+    return "ok" in out and "S_IDLE" in out
+
+
 def get_dc(peer=None):
     cmd = "crmadmin -D -t 1"
     _, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
@@ -2786,6 +2800,25 @@ def delete_property(name, property_type="crm_config") -> bool:
     elif stderr:
         logger.error(stderr)
     return False
+
+
+@contextmanager
+def leverage_maintenance_mode() -> bool:
+    if not config.core.force:
+        yield False
+        return
+
+    if is_dc_idle():
+        try:
+            logger.info("Set cluster to maintenance mode")
+            set_property("maintenance-mode", "true")
+            yield True
+        finally:
+            logger.info("Set cluster from maintenance mode to normal")
+            delete_property("maintenance-mode")
+    else:
+        logger.warning("Pacemaker state transition is in progress. Skip restarting cluster in maintenance mode.")
+        yield False
 
 
 def check_no_quorum_policy_with_dlm():
