@@ -159,7 +159,7 @@ class SBD(command.UI):
             return False
         return True
 
-    def service_is_active(self, service: str) -> bool:
+    def _service_is_active(self, service: str) -> bool:
         if not self.service_manager.service_is_active(service):
             logger.error("%s is not active", service)
             return False
@@ -362,7 +362,8 @@ class SBD(command.UI):
             value_for_diskless = " -Z" if diskless else ""
             value_for_sbd_opts = f"-C {crashdump_watchdog_timeout}{value_for_diskless}"
             sbd_opts = sbd.SBDUtils.get_sbd_value_from_config("SBD_OPTS")
-            sbd_opts = re.sub(self.SBD_OPTS_RE, '', sbd_opts)
+            if sbd_opts:
+                sbd_opts = re.sub(self.SBD_OPTS_RE, '', sbd_opts)
             update_dict["SBD_OPTS"] = f"{' '.join(sbd_opts.split())} {value_for_sbd_opts}" if sbd_opts else value_for_sbd_opts
 
         return update_dict
@@ -506,7 +507,7 @@ class SBD(command.UI):
         Implement sbd device command
         '''
         self._load_attributes()
-        if not self.service_is_active(constants.PCMK_SERVICE):
+        if not self._service_is_active(constants.PCMK_SERVICE):
             return False
         if not sbd.SBDUtils.is_using_disk_based_sbd():
             logger.error("Only works for disk-based SBD")
@@ -551,7 +552,7 @@ class SBD(command.UI):
                 self._configure_show(args)
                 return True
             for service in (constants.PCMK_SERVICE, constants.SBD_SERVICE):
-                if not self.service_is_active(service):
+                if not self._service_is_active(service):
                     return False
 
             parameter_dict = self._parse_args(args)
@@ -576,7 +577,7 @@ class SBD(command.UI):
         Implement sbd purge command
         '''
         self._load_attributes()
-        if not self.service_is_active(constants.SBD_SERVICE):
+        if not self._service_is_active(constants.SBD_SERVICE):
             return False
 
         if args and args[0] == "crashdump":
