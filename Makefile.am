@@ -57,27 +57,19 @@ install-data-hook:
 
 # Python module installation
 all-local:
-	(cd $(srcdir); $(PYTHON) setup.py build \
-		--build-base $(shell readlink -f $(builddir))/build \
-		--verbose)
+	cd $(srcdir); python3 -m build --outdir $(shell readlink -f $(builddir))/dist --wheel --sdist --verbose
 
 python_prefix = --prefix=$(prefix)
 
 install-exec-local:
 	$(INSTALL) -d -m 770 $(DESTDIR)/${localstatedir}/log/crmsh
-	-mkdir -p $(DESTDIR)$(pkgpythondir)
-	$(PYTHON) $(srcdir)/setup.py install \
-		--root $(DESTDIR)/ \
-		$(python_prefix) \
-		--record $(DESTDIR)$(pkgpythondir)/install_files.txt \
-		--verbose
+	python3 -m pip install --prefix=$(prefix) $(shell readlink -f $(builddir))/dist/*.whl
 	$(INSTALL) -d -m 770 $(DESTDIR)$(CRM_CACHE_DIR)
 
 uninstall-local:
 	rm -rf $(crmconfdir)
 	rm -rf $(docdir)
 	rm -rf $(DESTDIR)$(CRM_CACHE_DIR)
-	cat $(DESTDIR)$(pkgpythondir)/install_files.txt 2>/dev/null | xargs -r -i rm -rf $(DESTDIR)/{} 
 	rm -rf $(DESTDIR)/${localstatedir}/log/crmsh
 	rm -rf $(DESTDIR)$(pkgpythondir)
 
@@ -88,7 +80,8 @@ uninstall-hook:
 
 clean-local:
 	@echo "Removing intermediate python build files..."
-	(cd $(srcdir); $(PYTHON) setup.py clean --all)
+	rm -rf $(builddir)/dist
+	rm -rf $(builddir)/build
 	@echo "Removing complete."
 
 dist-clean-local: clean-local
