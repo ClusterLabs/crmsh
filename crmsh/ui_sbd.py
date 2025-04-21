@@ -112,9 +112,6 @@ class SBD(command.UI):
     class SyntaxError(Exception):
         pass
 
-    class MissingRequiredException(Exception):
-        pass
-
     def __init__(self):
         self.device_list_from_config: list[str] = None
         self.device_meta_dict_runtime: dict[str, int] = None
@@ -125,10 +122,12 @@ class SBD(command.UI):
         self.cluster_shell: sh.cluster_shell = None
         self.cluster_nodes: list[str] = None
 
-        self._load_attributes()
         command.UI.__init__(self)
 
     def _load_attributes(self):
+        if not os.path.isfile(sbd.SBDManager.SYSCONFIG_SBD):
+            logger.error("SBD configuration file %s not found", sbd.SBDManager.SYSCONFIG_SBD)
+            raise utils.TerminateSubCommand
         self.device_list_from_config = sbd.SBDUtils.get_sbd_device_from_config()
         self.device_meta_dict_runtime = {}
         if self.device_list_from_config:
@@ -316,7 +315,7 @@ class SBD(command.UI):
             if delete:
                 return
             logger.error("No fence_sbd resource found")
-            raise self.MissingRequiredException
+            raise utils.TerminateSubCommand
 
         crashdump_value = cibquery.get_parameter_value(cib, res_id_list[0], "crashdump")
         cmd = ""
@@ -567,8 +566,6 @@ class SBD(command.UI):
             usage = self.configure_usage
             if usage:
                 print(usage)
-            return False
-        except self.MissingRequiredException:
             return False
 
     @command.completers(completers.choice(['crashdump']))
