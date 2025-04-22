@@ -1729,7 +1729,7 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     swap_public_ssh_key_for_secondary_user(sh.cluster_shell(), seed_host, 'hacluster')
 
     if _context.stage:
-        setup_passwordless_with_other_nodes(seed_host, seed_user)
+        setup_passwordless_with_other_nodes(seed_host)
 
 
 def join_ssh_with_ssh_agent(
@@ -1866,7 +1866,7 @@ def join_ssh_merge(cluster_node, remote_user):
             shell.get_stdout_or_raise_error(script, host)
 
 
-def setup_passwordless_with_other_nodes(init_node, remote_user):
+def setup_passwordless_with_other_nodes(init_node):
     """
     Setup passwordless with other cluster nodes
 
@@ -2389,7 +2389,7 @@ def bootstrap_join(context):
             with lock_inst.lock():
                 service_manager = ServiceManager()
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
-                setup_passwordless_with_other_nodes(cluster_node, remote_user)
+                setup_passwordless_with_other_nodes(cluster_node)
                 _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
                 if _context.skip_csync2:
                     service_manager.stop_service(CSYNC2_SERVICE, disable=True)
