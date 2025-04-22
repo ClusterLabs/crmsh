@@ -5,6 +5,7 @@ from unittest import mock
 from crmsh import ui_sbd
 from crmsh import constants
 from crmsh import sbd
+from crmsh import utils
 
 
 class TestOutterFunctions(unittest.TestCase):
@@ -101,27 +102,21 @@ class TestOutterFunctions(unittest.TestCase):
 
 class TestSBD(unittest.TestCase):
 
-    @mock.patch('crmsh.utils.node_reachable_check')
-    @mock.patch('crmsh.utils.list_cluster_nodes')
-    @mock.patch('crmsh.ui_sbd.sh.cluster_shell')
-    @mock.patch('crmsh.ui_sbd.ServiceManager')
-    @mock.patch('crmsh.watchdog.Watchdog.get_watchdog_device_from_sbd_config')
-    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
-    @mock.patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata')
-    @mock.patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
-    def setUp(self, mock_get_sbd_device_from_config, mock_get_sbd_device_metadata, mock_get_sbd_watchdog_timeout, mock_get_watchdog_device_from_sbd_config, mock_ServiceManager, mock_cluster_shell, mock_list_cluster_nodes, mock_node_reachable_check):
-
-        mock_list_cluster_nodes.return_value = ["node1", "node2"]
-        mock_get_sbd_device_from_config.return_value = ["/dev/sda1"]
-        mock_get_watchdog_device_from_sbd_config.return_value = "/dev/watchdog0"
-        mock_get_sbd_watchdog_timeout.return_value = 10
-        mock_get_sbd_device_metadata.return_value = {"watchdog": 10, "allocate": 5, "loop": 5, "msgwait": 20}
+    def setUp(self):
         self.sbd_instance_diskbased = ui_sbd.SBD()
-        self.sbd_instance_diskbased._load_attributes()
+        self.sbd_instance_diskbased.cluster_nodes = ["node1", "node2"]
+        self.sbd_instance_diskbased.device_list_from_config = ["/dev/sda1"]
+        self.sbd_instance_diskbased.watchdog_device_from_config = "/dev/watchdog0"
+        self.sbd_instance_diskbased.device_meta_dict_runtime = {"watchdog": 10, "allocate": 5, "loop": 5, "msgwait": 20}
+        self.sbd_instance_diskbased.cluster_shell = mock.Mock()
+        self.sbd_instance_diskbased.service_manager = mock.Mock()
 
-        mock_get_sbd_device_from_config.return_value = []
         self.sbd_instance_diskless = ui_sbd.SBD()
-        self.sbd_instance_diskless._load_attributes()
+        self.sbd_instance_diskless.cluster_nodes = ["node1", "node2"]
+        self.sbd_instance_diskless.watchdog_device_from_config = "/dev/watchdog0"
+        self.sbd_instance_diskless.watchdog_timeout_from_config = 10
+        self.sbd_instance_diskless.cluster_shell = mock.Mock()
+        self.sbd_instance_diskless.service_manager = mock.Mock()
 
     @mock.patch('logging.Logger.error')
     @mock.patch('crmsh.utils.package_is_installed')
@@ -136,13 +131,13 @@ class TestSBD(unittest.TestCase):
     @mock.patch('logging.Logger.error')
     def test_service_is_active_false(self, mock_logger_error):
         self.sbd_instance_diskbased.service_manager.service_is_active = mock.Mock(return_value=False)
-        self.assertFalse(self.sbd_instance_diskbased.service_is_active(constants.PCMK_SERVICE))
+        self.assertFalse(self.sbd_instance_diskbased._service_is_active(constants.PCMK_SERVICE))
         mock_logger_error.assert_called_once_with("%s is not active", constants.PCMK_SERVICE)
 
     @mock.patch('logging.Logger.error')
     def test_service_is_active_true(self, mock_logger_error):
         self.sbd_instance_diskbased.service_manager.service_is_active = mock.Mock(return_value=True)
-        self.assertTrue(self.sbd_instance_diskbased.service_is_active(constants.PCMK_SERVICE))
+        self.assertTrue(self.sbd_instance_diskbased._service_is_active(constants.PCMK_SERVICE))
         mock_logger_error.assert_not_called()
 
     @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
@@ -197,7 +192,8 @@ class TestSBD(unittest.TestCase):
         self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error.assert_called_with("sbd -d /dev/sda1 dump")
 
     def test_do_configure_no_service(self):
-        self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=False)
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
+        self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=False)
         res = self.sbd_instance_diskbased.do_configure(mock.Mock(), "test")
         self.assertFalse(res)
 
@@ -321,7 +317,7 @@ class TestSBD(unittest.TestCase):
         mock_ResourceAgent.return_value = mock_ra_instance
         mock_get_primitives_with_ra.return_value = []
 
-        with self.assertRaises(ui_sbd.SBD.MissingRequiredException):
+        with self.assertRaises(utils.TerminateSubCommand):
             self.sbd_instance_diskbased._set_crashdump_option()
 
         self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error.assert_called_once_with("crm configure show xml")
@@ -484,16 +480,20 @@ class TestSBD(unittest.TestCase):
         mock_logger_info.assert_called_once_with("Remove devices: %s", "/dev/sda1")
 
     def test_do_device_no_service(self):
-        self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=False)
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
+        self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=False)
         res = self.sbd_instance_diskbased.do_device(mock.Mock())
         self.assertFalse(res)
+        self.sbd_instance_diskbased._load_attributes.assert_called_once()
+        self.sbd_instance_diskbased._service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
 
     @mock.patch('logging.Logger.info')
     @mock.patch('logging.Logger.error')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
     def test_do_device_no_diskbase(self, mock_is_using_disk_based_sbd, mock_logger_error, mock_logger_info):
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
         mock_is_using_disk_based_sbd.return_value = False
-        self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=True)
+        self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         res = self.sbd_instance_diskbased.do_device(mock.Mock())
         self.assertFalse(res)
         mock_logger_error.assert_called_once_with("Only works for disk-based SBD")
@@ -503,8 +503,9 @@ class TestSBD(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
     def test_do_device_no_args(self, mock_is_using_disk_based_sbd, mock_logger_info, mock_logger_error):
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
         mock_is_using_disk_based_sbd.return_value = True
-        self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=True)
+        self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         res = self.sbd_instance_diskbased.do_device(mock.Mock())
         self.assertFalse(res)
         mock_logger_error.assert_called_once_with('%s', "No argument")
@@ -514,8 +515,9 @@ class TestSBD(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
     def test_do_device_invalid_args(self, mock_is_using_disk_based_sbd, mock_logger_info, mock_logger_error):
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
         mock_is_using_disk_based_sbd.return_value = True
-        self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=True)
+        self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         res = self.sbd_instance_diskbased.do_device(mock.Mock(), "arg1")
         self.assertFalse(res)
         mock_logger_error.assert_called_once_with('%s', "Invalid argument: arg1")
@@ -525,8 +527,9 @@ class TestSBD(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
     def test_do_device_no_device(self, mock_is_using_disk_based_sbd, mock_logger_info, mock_logger_error):
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
         mock_is_using_disk_based_sbd.return_value = True
-        self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=True)
+        self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         res = self.sbd_instance_diskbased.do_device(mock.Mock(), "add")
         self.assertFalse(res)
         mock_logger_error.assert_called_once_with('%s', "No device specified")
@@ -558,17 +561,22 @@ class TestSBD(unittest.TestCase):
 
     @mock.patch('crmsh.sbd.purge_sbd_from_cluster')
     def test_do_purge_no_service(self, mock_purge_sbd_from_cluster):
-        self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=False)
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
+        self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=False)
         res = self.sbd_instance_diskbased.do_purge(mock.Mock())
         self.assertFalse(res)
         mock_purge_sbd_from_cluster.assert_not_called()
 
     @mock.patch('crmsh.sbd.purge_sbd_from_cluster')
     def test_do_purge(self, mock_purge_sbd_from_cluster):
-        self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=True)
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
+        self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         res = self.sbd_instance_diskbased.do_purge(mock.Mock())
         self.assertTrue(res)
         mock_purge_sbd_from_cluster.assert_called_once()
+        self.sbd_instance_diskbased._load_attributes.assert_called_once()
+        self.sbd_instance_diskbased._service_is_active.assert_called_once_with(constants.SBD_SERVICE)
+        mock_purge_sbd_from_cluster.assert_called_once_with()
 
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_print_sbd_agent_status(self, mock_CrmMonXmlParser):
@@ -661,6 +669,7 @@ Driver: iTCO_wdt
         self.sbd_instance_diskbased._print_watchdog_info()
 
     def test_do_status(self):
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._print_sbd_type = mock.Mock()
         self.sbd_instance_diskbased._print_sbd_status = mock.Mock()
         self.sbd_instance_diskbased._print_watchdog_info = mock.Mock()
@@ -668,3 +677,9 @@ Driver: iTCO_wdt
         self.sbd_instance_diskbased._print_sbd_cgroup_status = mock.Mock()
         mock_context = mock.Mock()
         self.sbd_instance_diskbased.do_status(mock_context)
+        self.sbd_instance_diskbased._load_attributes.assert_called_once()
+        self.sbd_instance_diskbased._print_sbd_type.assert_called_once()
+        self.sbd_instance_diskbased._print_sbd_status.assert_called_once()
+        self.sbd_instance_diskbased._print_watchdog_info.assert_called_once()
+        self.sbd_instance_diskbased._print_sbd_agent_status.assert_called_once()
+        self.sbd_instance_diskbased._print_sbd_cgroup_status.assert_called_once()
