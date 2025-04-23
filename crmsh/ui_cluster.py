@@ -180,7 +180,7 @@ class Cluster(command.UI):
             logger.info("Please try 'crm cluster start' on each node")
             return False
         if not node_list:
-            return False
+            return
 
         if start_qdevice:
             service_manager.start_service("corosync-qdevice", node_list=node_list)
@@ -265,7 +265,7 @@ class Cluster(command.UI):
         except utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster stop' on each node")
-            return
+            return False
         if not node_list:
             return
         logger.debug(f"stop node list: {node_list}")
