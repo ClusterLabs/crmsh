@@ -2803,7 +2803,18 @@ def delete_property(name, property_type="crm_config") -> bool:
 
 
 @contextmanager
-def leverage_maintenance_mode() -> bool:
+def leverage_maintenance_mode() -> typing.Generator[bool, None, None]:
+    """
+    Set cluster to maintenance mode, and set it back to normal when exiting
+
+    Yield True if cluster is in maintenance mode or already in maintenance mode
+    Yield False if not using -F/--force option or DC is not IDLE
+    """
+    maintenance_mode = get_property("maintenance-mode")
+    if maintenance_mode and is_boolean_true(maintenance_mode):
+        logger.info("Cluster is already in maintenance mode")
+        yield True
+        return
     if not config.core.force:
         yield False
         return
