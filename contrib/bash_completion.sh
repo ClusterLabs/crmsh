@@ -253,4 +253,4 @@ _crm() {
 
 	__crm_compgen
 } &&
-complete -o bashdefault -o default -o nospace -F _crm crm || complete -o default -o nospace -F _crm crm
+complete -o bashdefault -o default -o nospace -o nosort -F _crm crm || complete -o default -o nospace -o nosort -F _crm crm
