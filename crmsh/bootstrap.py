@@ -1043,23 +1043,11 @@ def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalSh
     if shell is None:
         shell = sh.LocalShell()
     if utils.check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
-        public_keys = list()
-        try:
-            public_keys = ssh_key.AgentClient(
-                shell.additional_environ.get('SSH_AUTH_SOCK') if shell.additional_environ is not None else None
-            ).list()
-        except ssh_key.Error:
-            logger.debug('No public key in ssh-agent.', exc_info=True)
-        if public_keys:
-            logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
-            cmd = f"ssh-copy-id '{remote_user}@{remote_node}' &> /dev/null"
-            result = shell.su_subprocess_run(local_user, cmd, tty=True)
-        else:
-            configure_ssh_key(local_user)
-            public_keys = ssh_key.fetch_public_key_file_list(None, local_user)
-            logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
-            cmd = f"ssh-copy-id -i {public_keys[0].public_key_file()} '{remote_user}@{remote_node}' &> /dev/null"
-            result = shell.su_subprocess_run(local_user, cmd, tty=True)
+        configure_ssh_key(local_user)
+        public_keys = ssh_key.fetch_public_key_file_list(None, local_user)
+        logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
+        cmd = f"ssh-copy-id -i {public_keys[0].public_key_file()} '{remote_user}@{remote_node}' &> /dev/null"
+        result = shell.su_subprocess_run(local_user, cmd, tty=True)
         return SshCopyIdResult(result.returncode, public_keys)
     else:
         return SshCopyIdResult(0, list())
