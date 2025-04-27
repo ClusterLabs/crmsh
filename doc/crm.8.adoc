@@ -1380,10 +1380,10 @@ Displays the corosync configuration on the current node.
 show
 .........
 
-[[cmdhelp.corosync.status,Display the corosync status]]
+[[cmdhelp.corosync.status,Display the corosync ring/quorum/qdevice/qnetd/cpg status]]
 ==== `status`
 
-Displays the corosync ring status(default), also can display quorum/qdevice/qnetd/cpg status.
+Default is `ring`.
 
 Usage:
 .........
