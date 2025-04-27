@@ -132,6 +132,28 @@ Feature: Functional test to cover SAP clusterAPI
     And     File "corosync.conf" in "/tmp/report.tar.bz2"
 
   @clean
+  Scenario: crm configure verify return code
+    When    Run "crm configure verify" on "hanode1"
+    Then    Expected return code is "0"
+    When    Try "crm -F configure property stonith-enabled=true"
+    Then    Expected return code is "0"
+    When    Try "crm configure verify"
+    Then    Expected return code is "1"
+    Then    Expected "Errors found during check" in stdout
+    When    Run "crm configure property stonith-enabled=false" on "hanode1"
+    Then    Expected return code is "0"
+
+    When    Run "crm -F configure primitive d-require-fence Dummy meta requires=fencing" on "hanode1"
+    When    Try "crm configure verify"
+    Then    Expected return code is "1"
+    Then    Expected "Warnings found during check" in stdout
+
+    When    Try "crm -F configure primitive d-unknown-param Dummy params xxx=xxx"
+    When    Try "crm configure verify"
+    Then    Expected return code is "1"
+    Then    Expected "parameter "xxx" is not known" in stderr
+
+  @clean
   Scenario: crm cluster start should return 0 for successful repeated execution (bsc#1241358)
     When    Run "crm cluster start" on "hanode1"
     Then    Expected return code is "0"
