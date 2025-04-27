@@ -773,13 +773,12 @@ class CibConfig(command.UI):
             set_obj = mkset_obj(*args)
         return set_obj.edit()
 
-    def _verify(self, set_obj_semantic, set_obj_all):
+    def _verify(self, set_obj_semantic, set_obj_all) -> utils.VerifyResult:
         rc1 = set_obj_all.verify()
+        rc2 = utils.VerifyResult.SUCCESS
         if config.core.check_frequency != "never":
             rc2 = set_obj_semantic.semantic_check(set_obj_all)
-        else:
-            rc2 = 0
-        return rc1 and rc2 <= 1
+        return rc1 | rc2
 
     @command.skill_level('administrator')
     def do_verify(self, context):
@@ -787,7 +786,8 @@ class CibConfig(command.UI):
         utils.load_cib_file_env()
         cib_factory.ensure_cib_updated()
         set_obj_all = mkset_obj("xml")
-        return self._verify(set_obj_all, set_obj_all)
+        verify_result = self._verify(set_obj_all, set_obj_all)
+        return bool(verify_result)
 
     @command.name('validate-all')
     @command.alias('validate_all')
@@ -956,8 +956,12 @@ class CibConfig(command.UI):
         rc1 = True
         if replace and not force:
             rc1 = cib_factory.is_current_cib_equal()
-        rc2 = self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
-        if rc1 and rc2:
+
+        verify_result = self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
+        if utils.VerifyResult.FATAL_ERROR in verify_result:
+            return False
+
+        if rc1 and bool(verify_result):
             return cib_factory.commit(replace=replace)
         if force or config.core.force:
             logger.info("commit forced")

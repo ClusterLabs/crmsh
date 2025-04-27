@@ -29,6 +29,7 @@ from .utils import ext_cmd, safe_open_w, pipe_string, safe_close_w, crm_msec
 from .utils import ask, lines2cli, olist
 from .utils import page_string, str2tmp, ensure_sudo_readable
 from .utils import run_ptest, is_id_valid, edit_file, get_boolean, filter_string
+from .utils import VerifyResult
 from .xmlutil import is_child_rsc, rsc_constraint, sanitize_cib, rename_id, get_interesting_nodes
 from .xmlutil import is_pref_location, get_topnode, new_cib, get_rscop_defaults_meta_node
 from .xmlutil import rename_rscref, is_ms_or_promotable_clone, silly_constraint, is_container, fix_comments
@@ -638,16 +639,16 @@ class CibObjectSetRaw(CibObjectSet):
             self._initialize()
         return rc
 
-    def verify(self):
+    def verify(self) -> VerifyResult:
         if not self.obj_set:
-            return True
+            return VerifyResult.SUCCESS
         with clidisplay.nopretty():
             cib = self.repr(format_mode=-1)
         rc = cibverify.verify(cib)
-
         if rc not in (0, 1):
             logger.debug("verify (rc=%s): %s", rc, cib)
-        return rc in (0, 1)
+            return VerifyResult.NON_FATAL_ERROR
+        return VerifyResult.SUCCESS
 
     def ptest(self, nograph, scores, utilization, actions, verbosity):
         if not cib_factory.is_cib_sane():
