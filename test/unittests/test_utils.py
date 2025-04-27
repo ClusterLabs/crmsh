@@ -1404,3 +1404,24 @@ def test_get_reachable_node_list(mock_reachable, mock_warn):
         mock.call("node2"),
         mock.call("node3")
     ])
+
+
+def test_verify_result():
+    rc1 = utils.VerifyResult.SUCCESS
+    rc2 = utils.VerifyResult.WARNING
+    rc3 = utils.VerifyResult.NON_FATAL_ERROR
+    rc4 = utils.VerifyResult.FATAL_ERROR
+
+    rc = rc1
+    assert bool(rc) is True
+    rc = rc2
+    assert bool(rc) is True
+    rc = rc1 | rc2
+    assert bool(rc) is True
+    rc = rc3
+    assert bool(rc) is False
+    rc = rc3 | rc4
+    assert bool(rc) is False
+    rc = rc1 | rc2 | rc3
+    assert bool(rc) is False
+    assert utils.VerifyResult.NON_FATAL_ERROR in rc
