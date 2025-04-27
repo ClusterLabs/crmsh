@@ -7,37 +7,37 @@ heartbeat
 heartbeat pacemaker
 .INP: info ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
-Example stateless resource agent (ocf:pacemaker:Dummy)
+ocf:pacemaker:Dummy - Example stateless resource agent
 
 This is a dummy OCF resource agent. It does absolutely nothing except keep track
 of whether it is running or not, and can be configured so that actions fail or
 take a long time. Its purpose is primarily for testing, and to serve as a
 template for resource agent writers.
 
-Parameters (*: required, []: default):
+## Parameters (*: required, []: default):
 
-state (string, [state-file]): State file
-    Location to store the resource state in.
-
-passwd (string): Password
-    Fake password field
-
-fake (string, [dummy]): 
-    Fake attribute that can be changed to cause an agent reload
-
-op_sleep (string, [0]): Operation sleep duration in seconds.
-    Number of seconds to sleep during operations.  This can be used to test how
-    the cluster reacts to operation timeouts.
+envfile (string): Environment dump file
+    If this is set, the environment will be dumped to this file for every call.
 
 fail_start_on (string): Report bogus start failure on specified host
     Start, migrate_from, and reload-agent actions will return failure if running on
     the host specified here, but the resource will run successfully anyway (future
     monitor calls will find it running). This can be used to test on-fail=ignore.
 
-envfile (string): Environment dump file
-    If this is set, the environment will be dumped to this file for every call.
+fake (string, [dummy]): Fake attribute that can be changed to cause an agent reload
+    Fake attribute that can be changed to cause an agent reload
 
-Operations' defaults (advisory minimum):
+op_sleep (string, [0]): Operation sleep duration in seconds.
+    Number of seconds to sleep during operations.  This can be used to test how
+    the cluster reacts to operation timeouts.
+
+passwd (string): Password
+    Fake password field
+
+state (string, [state-file]): State file
+    Location to store the resource state in.
+
+## Operations' defaults (advisory minimum):
 
     start         timeout=20s
     stop          timeout=20s
