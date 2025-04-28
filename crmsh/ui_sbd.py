@@ -142,12 +142,7 @@ class SBD(command.UI):
         self.service_manager = ServiceManager()
         self.cluster_shell = sh.cluster_shell()
         self.cluster_nodes = utils.list_cluster_nodes() or [utils.this_node()]
-        for node in self.cluster_nodes[:]:
-            try:
-                utils.node_reachable_check(node)
-            except Exception as e:
-                logger.error(e)
-                self.cluster_nodes.remove(node)
+        self.cluster_nodes = utils.get_reachable_node_list(self.cluster_nodes)
 
     def requires(self) -> bool:
         '''
