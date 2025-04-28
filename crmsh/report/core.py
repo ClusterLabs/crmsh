@@ -348,14 +348,7 @@ def process_node_list(context: Context) -> None:
         if not context.node_list:
             raise utils.ReportGenericError("Could not figure out a list of nodes; is this a cluster node?")
 
-    for node in context.node_list[:]:
-        if node == context.me:
-            continue
-        try:
-            crmutils.node_reachable_check(node)
-        except Exception as err:
-            logger.error(str(err))
-            context.node_list.remove(node)
+    context.node_list = crmutils.get_reachable_node_list(context.node_list)
 
 
 def process_arguments(context: Context) -> None:
