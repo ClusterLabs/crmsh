@@ -540,6 +540,7 @@ class ChildInfo(object):
                 ret = self.completer([self.name] + args, context)
             else:
                 ret = self.completer([self.name] + args)
+            ret = ret if already_used_custom_sort_order() else sorted(ret)
         return ret
 
     def __repr__(self):
@@ -567,8 +568,12 @@ def enable_custom_sort_order():
         sort_completion_inst.value = 0
 
 
+def already_used_custom_sort_order():
+    return sort_completion_inst is not None and sort_completion_inst.value == 0
+
+
 def disable_custom_sort_order():
-    if sort_completion_inst is not None and sort_completion_inst.value == 0:
+    if already_used_custom_sort_order():
         # Restore the original value of rl_sort_completion_matches
         # before calling the completer again
         sort_completion_inst.value = orig_sort_completion_value
