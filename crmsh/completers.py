@@ -4,6 +4,7 @@
 # Helper completers
 
 from . import xmlutil
+from . import utils
 
 
 def choice(lst):
@@ -69,9 +70,10 @@ def primitives(args):
     return [x.get("id") for x in nodes if xmlutil.is_primitive(x)]
 
 
-nodes = call(xmlutil.listnodes)
-online_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(x), "online")
-standby_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(x), "standby")
+nodes = call(utils.list_cluster_nodes)
+nodes_with_remote = call(xmlutil.CrmMonXmlParser().get_node_list, True)
+online_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list_with_attr(x), "online")
+standby_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list_with_attr(x), "standby")
 
 shadows = call(xmlutil.listshadows)
 
