@@ -466,21 +466,22 @@ class TestRun(unittest.TestCase):
             core.process_node_list(mock_ctx_inst)
             self.assertEqual("Could not figure out a list of nodes; is this a cluster node?", str(err.exception))
 
+    @mock.patch('crmsh.utils.get_reachable_node_list')
     @mock.patch('crmsh.report.core.local_mode')
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    def test_process_node_list_single(self, mock_list_nodes, mock_local_mode):
+    def test_process_node_list_single(self, mock_list_nodes, mock_local_mode, mock_reachable):
         mock_local_mode.return_value = True
         mock_ctx_inst = mock.Mock(node_list=["node1", "node2"], single=True, me="node1")
         core.process_node_list(mock_ctx_inst)
 
+    @mock.patch('crmsh.utils.get_reachable_node_list')
     @mock.patch('crmsh.report.core.local_mode')
     @mock.patch('logging.Logger.error')
-    @mock.patch('crmsh.utils.node_reachable_check')
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    def test_process_node_list(self, mock_list_nodes, mock_reachable, mock_error, mock_local_mode):
+    def test_process_node_list(self, mock_list_nodes, mock_error, mock_local_mode, mock_reachable):
         mock_local_mode.return_value = False
         mock_ctx_inst = mock.Mock(node_list=["node1", "node2"], single=False, me="node1")
-        mock_reachable.side_effect = ValueError("error")
+        mock_reachable.return_value = ["node1"]
         core.process_node_list(mock_ctx_inst)
         self.assertEqual(mock_ctx_inst.node_list, ["node1"])
 

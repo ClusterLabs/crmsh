@@ -1454,3 +1454,16 @@ def test_check_user_access_cluster(mock_user, mock_in, mock_sudo, mock_error):
     with pytest.raises(utils.TerminateSubCommand) as err:
         utils.check_user_access('cluster')
     mock_error.assert_called_once_with('Operation is denied. The current user lacks the necessary privilege.')
+
+
+@mock.patch('logging.Logger.warning')
+@mock.patch('crmsh.utils.node_reachable_check')
+def test_get_reachable_node_list(mock_reachable, mock_warn):
+    mock_reachable.side_effect = [False, True, ValueError("error for node3")]
+    assert utils.get_reachable_node_list(["node1", "node2", "node3"]) == ["node2"]
+    mock_warn.assert_called_once_with("error for node3")
+    mock_reachable.assert_has_calls([
+        mock.call("node1"),
+        mock.call("node2"),
+        mock.call("node3")
+    ])
