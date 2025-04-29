@@ -2518,6 +2518,17 @@ def node_reachable_check(node, ping_count=1, port=22, timeout=3):
     raise ValueError(f"host \"{node}\" is unreachable")
 
 
+def get_reachable_node_list(node_list: typing.List[str]) -> typing.List[str]:
+    reachable_node_list = []
+    for node in node_list:
+        try:
+            if node_reachable_check(node):
+                reachable_node_list.append(node)
+        except ValueError as e:
+            logger.warning(str(e))
+    return reachable_node_list
+
+
 def calculate_quorate_status(expected_votes, actual_votes):
     """
     Given expected votes and actual votes, calculate if is quorated
