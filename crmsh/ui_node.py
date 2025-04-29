@@ -254,13 +254,7 @@ keep the node in standby after reboot. The life time defaults to
             context.fatal_error(f"Node '{node}' is not a member of the cluster")
 
     node_list = member_list if options.all else args
-    for node in node_list:
-        try:
-            utils.node_reachable_check(node)
-        except ValueError as err:
-            logger.warning(str(err))
-            node_list.remove(node)
-    return node_list
+    return utils.get_reachable_node_list(node_list)
 
 
 class NodeMgmt(command.UI):

@@ -1391,3 +1391,16 @@ def test_is_dc_idle(mock_dc, mock_shell):
     mock_shell.return_value = mock_shell_inst
     mock_shell_inst.get_stdout_stderr.return_value = (0, "in S_IDLE: ok", None)
     assert utils.is_dc_idle() is True
+
+
+@mock.patch('logging.Logger.warning')
+@mock.patch('crmsh.utils.node_reachable_check')
+def test_get_reachable_node_list(mock_reachable, mock_warn):
+    mock_reachable.side_effect = [False, True, ValueError("error for node3")]
+    assert utils.get_reachable_node_list(["node1", "node2", "node3"]) == ["node2"]
+    mock_warn.assert_called_once_with("error for node3")
+    mock_reachable.assert_has_calls([
+        mock.call("node1"),
+        mock.call("node2"),
+        mock.call("node3")
+    ])
