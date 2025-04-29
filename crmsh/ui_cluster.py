@@ -291,14 +291,17 @@ class Cluster(command.UI):
         for node in node_list:
             logger.info("The cluster stack stopped on {}".format(node))
 
+        return True
+
     @command.skill_level('administrator')
     def do_restart(self, context, *args):
         '''
         Restarts the cluster stack on all nodes or specific node(s)
         '''
-        parse_option_for_nodes(context, *args)
-        self.do_stop(context, *args)
-        self.do_start(context, *args)
+        stop_rc = self.do_stop(context, *args)
+        if stop_rc is False:
+            return False
+        return self.do_start(context, *args)
 
     @command.skill_level('administrator')
     def do_enable(self, context, *args):
