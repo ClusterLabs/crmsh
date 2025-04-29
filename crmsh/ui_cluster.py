@@ -411,7 +411,7 @@ Examples:
         parser.add_argument("-x", "--skip-csync2-sync", dest="skip_csync2", action="store_true",
                             help="Skip csync2 initialization (an experimental option)")
         parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
-                            help="Try to use an existing key from ssh-agent")
+                            help="Try to use an existing key from ssh-agent (default)")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-i", "--interface", dest="nic_addr_list", metavar="IF", action=CustomAppendAction, default=[], help=constants.INTERFACE_HELP)
@@ -514,7 +514,7 @@ Examples:
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
-                            help="Try to use an existing key from ssh-agent")
+                            help="Try to use an existing key from ssh-agent (default)")
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument(
@@ -730,7 +730,7 @@ an existing cluster.""",
         parser.add_argument("-c", "--cluster-node", metavar="[USER@]HOST", help="An already-configured geo cluster or arbitrator", dest="cluster_node")
         parser.add_argument("-s", "--clusters", help="Geo cluster description (see geo-init for details)", dest="clusters", metavar="DESC")
         parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
-                            help="Try to use an existing key from ssh-agent")
+                            help="Try to use an existing key from ssh-agent (default)")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
@@ -769,7 +769,7 @@ to get the geo cluster configuration.""",
         parser.add_argument("-y", "--yes", help='Answer "yes" to all prompts (use with caution)', action="store_true", dest="yes_to_all")
         parser.add_argument("-c", "--cluster-node", metavar="[USER@]HOST", help="An already-configured geo cluster", dest="cluster_node")
         parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
-                            help="Try to use an existing key from ssh-agent")
+                            help="Try to use an existing key from ssh-agent (default)")
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return

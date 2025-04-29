@@ -267,7 +267,7 @@ class Context(object):
                 # self.cluster_node might be hostname or IP address
                 ip_addr = socket.gethostbyname(node)
                 if utils.InterfacesInfo.ip_in_local(ip_addr):
-                    utils.fatal("Please specify peer node's hostname or IP address")
+                    utils.fatal(f"\"{node}\" is the local node. Please specify peer node's hostname or IP address")
             except socket.gaierror as err:
                 utils.fatal(f"\"{node}\": {err}")
 
@@ -820,7 +820,6 @@ def _parse_user_at_host(s: str, default_user: str) -> typing.Tuple[str, str]:
 def _keys_from_ssh_agent() -> typing.List[ssh_key.Key]:
     try:
         keys = ssh_key.AgentClient().list()
-        logger.info("Using public keys from ssh-agent...")
         return keys
     except ssh_key.Error:
         logger.debug("Cannot get a public key from ssh-agent.", exc_info=True)

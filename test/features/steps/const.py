@@ -80,7 +80,7 @@ options:
   -x, --skip-csync2-sync
                         Skip csync2 initialization (an experimental option)
   --use-ssh-agent, --no-use-ssh-agent
-                        Try to use an existing key from ssh-agent
+                        Try to use an existing key from ssh-agent (default)
 
 Network configuration:
   Options for configuring the network and messaging layer.
@@ -232,7 +232,7 @@ options:
   -q, --quiet           Be quiet (don't describe what's happening, just do it)
   -y, --yes             Answer "yes" to all prompts (use with caution)
   --use-ssh-agent, --no-use-ssh-agent
-                        Try to use an existing key from ssh-agent
+                        Try to use an existing key from ssh-agent (default)
 
 Network configuration:
   Options for configuring the network and messaging layer.
@@ -342,7 +342,7 @@ options:
                         An already-configured geo cluster or arbitrator
   -s, --clusters DESC   Geo cluster description (see geo-init for details)
   --use-ssh-agent, --no-use-ssh-agent
-                        Try to use an existing key from ssh-agent'''
+                        Try to use an existing key from ssh-agent (default)'''
 
 
 CRM_CLUSTER_GEO_INIT_ARBIT_H_OUTPUT = '''Initialize node as geo cluster arbitrator
@@ -360,7 +360,7 @@ options:
   -c, --cluster-node [USER@]HOST
                         An already-configured geo cluster
   --use-ssh-agent, --no-use-ssh-agent
-                        Try to use an existing key from ssh-agent'''
+                        Try to use an existing key from ssh-agent (default)'''
 
 CRM_CONF_CONTENT_POSIONED = '''[core]
 hosts = alan@hanode1, claude@hanode2, john@hanode3'''

@@ -200,7 +200,7 @@ class TestContext(unittest.TestCase):
         mock_ip_in_local.return_value = True
         with self.assertRaises(SystemExit):
             ctx._validate_cluster_node()
-        mock_fatal.assert_called_once_with("Please specify peer node's hostname or IP address")
+        mock_fatal.assert_called_once_with("\"me\" is the local node. Please specify peer node's hostname or IP address")
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('socket.gethostbyname')
