@@ -31,6 +31,7 @@ from collections import defaultdict
 from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from lxml import etree
+from enum import IntFlag, auto
 
 import crmsh.parallax
 import crmsh.user_of_host
@@ -832,7 +833,9 @@ def get_check_rc():
     return 2 which is the code for error. Otherwise, we
     pretend that errors are warnings.
     '''
-    return 2 if config.core.check_mode == "strict" else 1
+    if config.core.check_mode == "strict":
+        return VerifyResult.NON_FATAL_ERROR
+    return VerifyResult.WARNING
 
 
 _LOCKDIR = ".lockdir"
@@ -3211,4 +3214,12 @@ def load_cib_file_env():
         raise ValueError(f"Cannot find cib file: {cib_file}")
 
 
+class VerifyResult(IntFlag):
+    SUCCESS = auto()
+    WARNING = auto()
+    NON_FATAL_ERROR = auto()
+    FATAL_ERROR = auto()
+
+    def __bool__(self):
+        return self in self.SUCCESS | self.WARNING
 # vim:ts=4:sw=4:et:

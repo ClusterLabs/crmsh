@@ -19,6 +19,7 @@ from .sh import ShellUtils
 from .utils import add_sudo, str2file, str2tmp, get_boolean, handle_role_for_ocf_1_1, copy_local_file, rmfile
 from .utils import stdout2list, crm_msec, crm_time_cmp
 from .utils import olist, get_cib_in_use, get_tempdir, to_ascii, is_boolean_true
+from .utils import VerifyResult
 from . import log
 
 
@@ -155,17 +156,17 @@ def read_cib(fun, params=None):
 
 
 def sanity_check_nvpairs(ident, node, attr_list):
-    rc = 0
+    rc = VerifyResult.SUCCESS
     for nvpair in node.iterchildren("nvpair"):
         n = nvpair.get("name")
         if n and n not in attr_list:
             logger.warning("%s: unknown attribute '%s'", ident, n)
-            rc |= 1
+            rc |= VerifyResult.WARNING
     return rc
 
 
 def sanity_check_meta(ident, node, attr_list):
-    rc = 0
+    rc = VerifyResult.SUCCESS
     if node is None or not attr_list:
         return rc
     for c in node.iterchildren():
