@@ -33,6 +33,7 @@ from contextlib import contextmanager, closing
 from stat import S_ISBLK
 from lxml import etree
 from packaging import version
+from enum import IntFlag, auto
 
 import crmsh.parallax
 import crmsh.user_of_host
@@ -839,7 +840,9 @@ def get_check_rc():
     return 2 which is the code for error. Otherwise, we
     pretend that errors are warnings.
     '''
-    return 2 if config.core.check_mode == "strict" else 1
+    if config.core.check_mode == "strict":
+        return VerifyResult.NON_FATAL_ERROR
+    return VerifyResult.WARNING
 
 
 _LOCKDIR = ".lockdir"
@@ -3248,4 +3251,14 @@ def strip_ansi_escape_sequences(text):
     """
     ansi_escape_pattern = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
     return ansi_escape_pattern.sub('', text)
+
+
+class VerifyResult(IntFlag):
+    SUCCESS = auto()
+    WARNING = auto()
+    NON_FATAL_ERROR = auto()
+    FATAL_ERROR = auto()
+
+    def __bool__(self):
+        return self in self.SUCCESS | self.WARNING
 # vim:ts=4:sw=4:et:

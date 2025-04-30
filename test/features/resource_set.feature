@@ -201,3 +201,11 @@ Feature: Use "crm configure set" to update attributes and operations
     And     Run "crm configure load xml update /tmp/d.xml" on "hanode1"
     And     Try "crm configure show|grep -E "^xml <primitive""
     Then    Expected return code is "1"
+
+  @clean
+  Scenario: Prevent adding unknown operation (bsc#1236442)
+    When    Try "crm configure primitive stateful-1 ocf:pacemaker:Stateful op monitor_Slave interval=10s op monitor_Master interval=5s" on "hanode1"
+    Then    Expected return code is "1"
+    Then    Expected "not found in Resource Agent meta-data" in stderr
+    When    Try "crm configure show stateful-1" on "hanode1"
+    Then    Expected "object stateful-1 does not exist" in stderr
