@@ -522,7 +522,7 @@ class RAInfo(object):
                     return True
             return False
 
-        rc = 0
+        rc = VerifyResult.SUCCESS
         d = {}
         for nvp in nvpairs:
             if 'name' in nvp.attrib:
