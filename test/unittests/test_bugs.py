@@ -9,7 +9,7 @@ except ImportError:
 
 from crmsh import cibconfig
 from lxml import etree
-from crmsh import xmlutil
+from crmsh import xmlutil, utils
 
 factory = cibconfig.cib_factory
 
@@ -472,7 +472,7 @@ def test_group_constraint_location():
     factory.create_object('group', 'g1', 'p1', 'p2')
     factory.create_object('location', 'loc-p1', 'p1', 'inf:', 'node1')
     c = factory.find_object('loc-p1')
-    assert c and c.check_sanity() == 0
+    assert c and c.check_sanity() == utils.VerifyResult.SUCCESS
 
 
 def test_group_constraint_colocation():
@@ -484,7 +484,8 @@ def test_group_constraint_colocation():
     factory.create_object('group', 'g1', 'p1', 'p2')
     factory.create_object('colocation', 'coloc-p1-p2', 'inf:', 'p1', 'p2')
     c = factory.find_object('coloc-p1-p2')
-    assert c and c.check_sanity() > 0
+    rc = c.check_sanity()
+    assert c and bool(rc) is True and utils.VerifyResult.WARNING in rc
 
 
 def test_group_constraint_colocation_rscset():
@@ -497,7 +498,8 @@ def test_group_constraint_colocation_rscset():
     factory.create_object('group', 'g1', 'p1', 'p2')
     factory.create_object('colocation', 'coloc-p1-p2-p3', 'inf:', 'p1', 'p2', 'p3')
     c = factory.find_object('coloc-p1-p2-p3')
-    assert c and c.check_sanity() > 0
+    rc = c.check_sanity()
+    assert c and bool(rc) is True and utils.VerifyResult.WARNING in rc
 
 
 def test_clone_constraint_colocation_rscset():
@@ -510,7 +512,8 @@ def test_clone_constraint_colocation_rscset():
     factory.create_object('clone', 'c1', 'p1')
     factory.create_object('colocation', 'coloc-p1-p2-p3', 'inf:', 'p1', 'p2', 'p3')
     c = factory.find_object('coloc-p1-p2-p3')
-    assert c and c.check_sanity() > 0
+    rc = c.check_sanity()
+    assert c and bool(rc) is True and utils.VerifyResult.WARNING in rc
 
 
 def test_existing_node_resource():
@@ -780,7 +783,7 @@ def test_bug_110():
 
     for o in obj.obj_set:
         if o.node.tag == 'fencing-topology':
-            assert o.check_sanity() == 0
+            assert o.check_sanity() == utils.VerifyResult.SUCCESS
 
 
 @mock.patch("crmsh.log.LoggerUtils.line_number")
