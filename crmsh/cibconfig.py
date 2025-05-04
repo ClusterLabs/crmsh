@@ -1703,14 +1703,21 @@ class CibContainer(CibObject):
         if self.node is None:  # eh?
             logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
+
+        rc = VerifyResult.SUCCESS
         l = constants.rsc_meta_attributes
         if self.obj_type == "clone":
             l += constants.clone_meta_attributes
         elif self.obj_type == "ms":
             l += constants.clone_meta_attributes + constants.ms_meta_attributes
         elif self.obj_type == "group":
+            for c in self.node.iterchildren():
+                if c.tag == "primitive" and c.get("class") == "ocf" and c.get("type") == "remote":
+                    logger.error("Cannot put remote resource '%s' in a group", c.get("id"))
+                    rc |= VerifyResult.FATAL_ERROR
             l += constants.group_meta_attributes
-        return sanity_check_meta(self.obj_id, self.node, l)
+        rc |= sanity_check_meta(self.obj_id, self.node, l)
+        return rc
 
     def repr_gv(self, gv_obj, from_grp=False):
         '''
@@ -1773,6 +1780,21 @@ def _check_if_constraint_ref_is_child(obj) -> VerifyResult:
         elif tgt.parent and tgt.parent.obj_type in constants.container_tags:
             logger.warning("%s: resource %s ambiguous, apply constraints to container", obj.obj_id, rscid)
             rc = VerifyResult.WARNING
+    return rc
+
+
+def _check_if_primitive_in_constraint_is_remote(obj) -> VerifyResult:
+    rc = VerifyResult.SUCCESS
+    primitives = []
+    if obj.obj_type == "colocation":
+        primitives = [obj.node.get("rsc"), obj.node.get("with-rsc")]
+    elif obj.obj_type == "order":
+        primitives = [obj.node.get("first"), obj.node.get("then")]
+    for rscid in primitives:
+        tgt = cib_factory.find_object(rscid)
+        if tgt and tgt.node.get("class") == "ocf" and tgt.node.get("type") == "remote":
+            logger.error("Cannot put remote resource '%s' in %s constraint", rscid, obj.obj_type)
+            rc |= VerifyResult.FATAL_ERROR
     return rc
 
 
@@ -2002,7 +2024,9 @@ class CibSimpleConstraint(CibObject):
         if self.node is None:
             logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
-        return _check_if_constraint_ref_is_child(self)
+        rc1 = _check_if_constraint_ref_is_child(self)
+        rc2 = _check_if_primitive_in_constraint_is_remote(self)
+        return rc1 | rc2
 
 
 class CibRscTicket(CibSimpleConstraint):
