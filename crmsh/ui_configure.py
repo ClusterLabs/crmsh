@@ -1142,7 +1142,11 @@ class CibConfig(command.UI):
 
     @command.skill_level('administrator')
     @command.completers_repeating(compl.attr_id,
-                                  compl.call(schema.rng_attr_values, 'rsc_order', 'kind'),
+                                  compl.call(
+                                      lambda *args: [v + ":" for v in schema.rng_attr_values(*args)],
+                                      'rsc_order',
+                                      'kind'
+                                  ),
                                   top_rsc_tmpl_id_list)
     def do_order(self, context, *args):
         """usage: order <id> [kind]: <rsc>[:<action>] <rsc>[:<action>] ...
