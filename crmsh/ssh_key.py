@@ -48,11 +48,15 @@ class Key:
     def public_key(self) -> str:
         raise NotImplementedError
 
+    def fingerprint(self) -> str:
+        raise NotImplementedError
+
 
 class KeyFile(Key):
     def __init__(self, path: str):
         self._path = os.path.realpath(path)
         self._public_key = None
+        self._fingerprint = None
 
     def public_key_file(self) -> typing.Optional[str]:
         return self._path
@@ -65,6 +69,21 @@ class KeyFile(Key):
                 self._public_key = f.read().strip()
             return self._public_key
 
+    def fingerprint(self) -> str:
+        if self._fingerprint:
+            return self._fingerprint
+        else:
+            result = subprocess.run(
+                ['ssh-keygen', '-l', '-f', self.public_key_file()],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+            )
+            if result.returncode == 0:
+                self._fingerprint = result.stdout.decode('utf-8', 'backslashreplace').strip()
+                return self._fingerprint
+            else:
+                raise ValueError(f'Failed to generate fingerprint: {result.returncode}.')
+
     def __eq__(self, other):
         return isinstance(other, KeyFile) and self._path == other._path and self.public_key() == other.public_key()
 
@@ -75,9 +94,26 @@ class KeyFile(Key):
 class InMemoryPublicKey(Key):
     def __init__(self, content: str):
         self.content = content.strip()
+        self._fingerprint = None
 
     def public_key(self) -> str:
         return self.content
+
+    def fingerprint(self) -> str:
+        if self._fingerprint:
+            return self._fingerprint
+        else:
+            child = subprocess.Popen(
+                ['ssh-keygen', '-l', '-f', '/dev/stdin'],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
+            stdout, _ = child.communicate(self.public_key().encode('utf-8'))
+            if child.returncode == 0:
+                self._fingerprint = stdout.decode('utf-8', 'backslashreplace').strip()
+                return self._fingerprint
+            else:
+                raise ValueError(f'Failed to generate fingerprint: {child.returncode}.')
 
     def __eq__(self, other):
         return isinstance(other, InMemoryPublicKey) and self.content == other.content
@@ -168,7 +204,9 @@ class AgentClient:
             self.socket_path = None
         else:
             self.socket_path = socket_path
-        self.shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': self.socket_path} if self.socket_path else None)
+        self.shell = sh.LocalShell(
+            additional_environ={'SSH_AUTH_SOCK': self.socket_path} if self.socket_path is not None else None,
+        )
 
     def list(self) -> typing.List[Key]:
         cmd = 'ssh-add -L'
@@ -274,7 +312,7 @@ def fetch_public_key_file_list(
         host: typing.Optional[str],
         user: str,
         generate_key_pair: bool = False
-) -> typing.List[str]:
+) -> typing.List[KeyFile]:
     """
     Fetch the public key file list for the specified user on the specified host.
 
@@ -294,7 +332,7 @@ def fetch_public_key_file_list(
     if not public_keys:
         host_str = f'@{host}' if host else ' locally'
         raise Error(f'No public key file found for {user}{host_str}')
-    return public_keys
+    return [KeyFile(p) for p in public_keys]
 
 
 def fetch_public_key_content_list(

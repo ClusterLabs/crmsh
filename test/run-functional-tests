@@ -372,7 +372,7 @@ run_origin_regression_test() {
 
 prepare_coverage_env() {
 	for node in $*; do
-            podman cp "$PROJECT_PATH"/test/features/coverage/sitecustomize.py "$node":/usr/lib/python3.11/site-packages/sitecustomize.py
+            podman cp "$PROJECT_PATH"/test/features/coverage/sitecustomize.py "$node":/usr/lib/python3.13/site-packages/sitecustomize.py
 	done
 }
 

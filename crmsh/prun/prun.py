@@ -12,7 +12,7 @@ from crmsh.sh import Utils
 
 _DEFAULT_CONCURRENCY = 32
 
-_SUDO_SFTP_SERVER = 'sudo PATH=/usr/lib/ssh:/usr/lib/openssh:/usr/libexec/ssh:/usr/libexec/openssh /bin/sh -c "exec sftp-server"'
+_SUDO_SFTP_SERVER = 'sudo --preserve-env=SSH_AUTH_SOCK PATH=/usr/lib/ssh:/usr/lib/openssh:/usr/libexec/ssh:/usr/libexec/openssh /bin/sh -c "exec sftp-server"'
 
 
 class ProcessResult:
@@ -117,11 +117,11 @@ def _build_run_task(remote: str, cmdline: str) -> Task:
         )
     else:
         local_sudoer, remote_sudoer = UserOfHost.instance().user_pair_for_ssh(remote)
-        shell = 'ssh {} {}@{} sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION, remote_sudoer, remote)
+        shell = 'ssh -A {} {}@{} sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION, remote_sudoer, remote)
         if local_sudoer == crmsh.userdir.getuser():
             args = ['/bin/sh', '-c', shell]
         elif os.geteuid() == 0:
-            args = ['su', local_sudoer, '--login', '-c', shell]
+            args = ['su', local_sudoer, '--login', '-c', shell, '-w', 'SSH_AUTH_SOCK']
         else:
             raise AssertionError('trying to run su as a non-root user')
         return Task(
@@ -171,7 +171,7 @@ def pcopy_to_remote(
             ssh = tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False)
             os.fchmod(ssh.fileno(), 0o700)
             ssh.write(f'''#!/bin/sh
-exec sudo -u {local_sudoer} ssh "$@"''')
+exec sudo --preserve-env=SSH_AUTH_SOCK -u {local_sudoer} ssh "$@"''')
         # It is necessary to close the file before executing, or we will get an EBUSY.
             ssh.close()
             tasks = [_build_copy_task("-S '{}'".format(ssh.name), script, host) for host in hosts]
@@ -233,7 +233,7 @@ def pfetch_from_remote(
             ssh = tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False)
             os.fchmod(ssh.fileno(), 0o700)
             ssh.write(f'''#!/bin/sh
-    exec sudo -u {local_sudoer} ssh "$@"''')
+    exec sudo --preserve-env=SSH_AUTH_SOCK -u {local_sudoer} ssh "$@"''')
             # It is necessary to close the file before executing
             ssh.close()
             tasks = [_build_fetch_task("-S '{}'".format(ssh.name), host, src, dst, flags) for host in hosts]

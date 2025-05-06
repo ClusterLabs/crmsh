@@ -40,14 +40,14 @@ class TestPrun(unittest.TestCase):
         ])
         mock_runner_add_task.assert_has_calls([
             mock.call(TaskArgumentsEq(
-                ['su', 'alice', '--login', '-c', 'ssh {} bob@host1 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION)],
+                ['su', 'alice', '--login', '-c', 'ssh -A {} bob@host1 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION), '-w', 'SSH_AUTH_SOCK'],
                 b'foo',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,
                 context={"host": 'host1', "ssh_user": 'bob'},
             )),
             mock.call(TaskArgumentsEq(
-                ['su', 'alice', '--login', '-c', 'ssh {} bob@host2 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION)],
+                ['su', 'alice', '--login', '-c', 'ssh -A {} bob@host2 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION), '-w', 'SSH_AUTH_SOCK'],
                 b'bar',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,
@@ -90,14 +90,14 @@ class TestPrun(unittest.TestCase):
         ])
         mock_runner_add_task.assert_has_calls([
             mock.call(TaskArgumentsEq(
-                ['/bin/sh', '-c', 'ssh {} root@host1 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION)],
+                ['/bin/sh', '-c', 'ssh -A {} root@host1 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION)],
                 b'foo',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,
                 context={"host": 'host1', "ssh_user": 'root'},
             )),
             mock.call(TaskArgumentsEq(
-                ['/bin/sh', '-c', 'ssh {} root@host2 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION)],
+                ['/bin/sh', '-c', 'ssh -A {} root@host2 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION)],
                 b'bar',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,
@@ -155,3 +155,6 @@ class TaskArgumentsEq(crmsh.prun.runner.Task):
             and self.stdout_config == other.stdout_config \
             and self.stderr_config == other.stderr_config \
             and self.context == other.context
+
+    def __repr__(self):
+        return f"TaskArgumentsEq({self.args}, {self.input}, {self.stdout_config}, {self.stderr_config}, {self.context}"

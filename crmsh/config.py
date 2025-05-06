@@ -240,7 +240,7 @@ DEFAULTS = {
         'pager': opt_program('PAGER', ('less', 'more', 'pg')),
         'user': opt_string(''),
         'hosts': opt_list([]), # 'alice@host1, bob@host2'
-        'no_generating_ssh_key': opt_boolean('no'),
+        'no_generating_ssh_key': opt_boolean('no'), # deprecated
         'skill_level': opt_choice('expert', ('operator', 'administrator', 'expert')),
         'sort_elements': opt_boolean('yes'),
         'check_frequency': opt_choice('always', ('always', 'on-verify', 'never')),
