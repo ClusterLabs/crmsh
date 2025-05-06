@@ -703,6 +703,7 @@ def check_cib_schema_version(handler: CheckResultHandler, cib: lxml.etree.Elemen
             "The CIB is not validated with the latest schema version.", [
                 f'* Latest version:  {".".join(str(i) for i in latest_schema_version)}',
                 f'* Current version: {".".join(str(i) for i in version)}',
+                'Please run "crm configure upgrade force" to upgrade to the latest version.',
             ]
         )
 

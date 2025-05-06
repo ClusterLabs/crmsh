@@ -111,5 +111,6 @@ class TestCheckRemovedResourceAgents(unittest.TestCase):
             "The CIB is not validated with the latest schema version.", [
                 '* Latest version:  3.10',
                 '* Current version: 3.9',
+                'Please run "crm configure upgrade force" to upgrade to the latest version.',
             ]
         )
