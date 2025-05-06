@@ -493,24 +493,24 @@ class CibObjectSet(object):
                          for o in self.obj_set
                          if o.obj_type == "primitive"])
         if not check_set:
-            return 0
+            return VerifyResult.SUCCESS
         clash_dict = collections.defaultdict(list)
         for obj in set_obj_all.obj_set:
             node = obj.node
             if is_primitive(node):
                 process_primitive(node, clash_dict)
         # but we only warn if a 'new' object is involved
-        rc = 0
+        rc = VerifyResult.SUCCESS
         for param, resources in list(clash_dict.items()):
             # at least one new object must be involved
             if len(resources) > 1 and len(set(resources) & check_set) > 0:
-                rc = 2
+                rc = VerifyResult.WARNING
                 msg = 'Resources %s violate uniqueness for parameter "%s": "%s"' % (
                     ",".join(sorted(resources)), param[3], param[4])
                 logger.warning(msg)
         return rc
 
-    def semantic_check(self, set_obj_all):
+    def semantic_check(self, set_obj_all) -> VerifyResult:
         '''
         Test objects for sanity. This is about semantics.
         '''
@@ -1205,7 +1205,7 @@ class CibObject(object):
         Check if all operation attributes are supported by the
         schema.
         '''
-        rc = 0
+        rc = VerifyResult.SUCCESS
         op_id = op_node.get("name")
         for name in list(op_node.keys()):
             vals = schema.rng_attr_values(op_node.tag, name)
@@ -1214,26 +1214,26 @@ class CibObject(object):
             v = op_node.get(name)
             if v not in vals:
                 logger.warning("%s: op '%s' attribute '%s' value '%s' not recognized", self.obj_id, op_id, name, v)
-                rc = 1
+                rc = VerifyResult.WARNING
         return rc
 
     def _check_ops_attributes(self):
         '''
         Check if operation attributes settings are valid.
         '''
-        rc = 0
+        rc = VerifyResult.SUCCESS
         if self.node is None:
             return rc
         for op_node in self.node.xpath("operations/op"):
             rc |= self._verify_op_attributes(op_node)
         return rc
 
-    def check_sanity(self):
+    def check_sanity(self) -> VerifyResult:
         '''
         Right now, this is only for primitives.
         And groups/clones/ms and cluster properties.
         '''
-        return 0
+        return VerifyResult.SUCCESS
 
     def reset_updated(self):
         self.updated = False
@@ -1585,7 +1585,7 @@ class CibPrimitive(CibObject):
         ra = get_ra(r_node)
         ra.normalize_parameters(r_node)
 
-    def check_sanity(self):
+    def check_sanity(self) -> VerifyResult:
         '''
         Check operation timeouts and if all required parameters
         are defined.
@@ -1696,7 +1696,7 @@ class CibContainer(CibObject):
         ident = clidisplay.ident(self.obj_id)
         return "%s %s %s" % (s, ident, ' '.join(children))
 
-    def check_sanity(self):
+    def check_sanity(self) -> VerifyResult:
         '''
         Check meta attributes.
         '''
@@ -1710,8 +1710,7 @@ class CibContainer(CibObject):
             l += constants.clone_meta_attributes + constants.ms_meta_attributes
         elif self.obj_type == "group":
             l += constants.group_meta_attributes
-        rc = sanity_check_meta(self.obj_id, self.node, l)
-        return rc
+        return sanity_check_meta(self.obj_id, self.node, l)
 
     def repr_gv(self, gv_obj, from_grp=False):
         '''
@@ -1755,25 +1754,25 @@ class CibBundle(CibObject):
         return self._attr_set_str(c)
 
 
-def _check_if_constraint_ref_is_child(obj):
+def _check_if_constraint_ref_is_child(obj) -> VerifyResult:
     """
     Used by check_sanity for constraints to verify
     that referenced resources are not children in
     a container.
     """
-    rc = 0
+    rc = VerifyResult.SUCCESS
     for rscid in obj.referenced_resources():
         tgt = cib_factory.find_object(rscid)
         if not tgt:
             logger.warning("%s: resource %s does not exist", obj.obj_id, rscid)
-            rc = 1
+            rc = VerifyResult.WARNING
         elif tgt.parent and tgt.parent.obj_type == "group":
             if obj.obj_type == "colocation":
                 logger.warning("%s: resource %s is grouped, constraints should apply to the group", obj.obj_id, rscid)
-                rc = 1
+                rc = VerifyResult.WARNING
         elif tgt.parent and tgt.parent.obj_type in constants.container_tags:
             logger.warning("%s: resource %s ambiguous, apply constraints to container", obj.obj_id, rscid)
-            rc = 1
+            rc = VerifyResult.WARNING
     return rc
 
 
@@ -1816,38 +1815,36 @@ class CibLocation(CibObject):
             return "%s %s" % \
                 (clidisplay.keyword("rule"), cli_rule(c))
 
-    def check_sanity(self):
+    def check_sanity(self) -> VerifyResult:
         '''
         Check if node references match existing nodes.
         '''
         if self.node is None:  # eh?
             logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
-        rc = 0
+        rc = VerifyResult.SUCCESS
         uname = self.node.get("node")
         if uname and uname.lower() not in [ident.lower() for ident in cib_factory.node_id_list()]:
             logger.warning("%s: referenced node %s does not exist", self.obj_id, uname)
-            rc = 1
+            rc = VerifyResult.WARNING
         pattern = self.node.get("rsc-pattern")
         if pattern:
             try:
                 re.compile(pattern)
             except IndexError as e:
                 logger.warning("%s: '%s' may not be a valid regular expression (%s)", self.obj_id, pattern, e)
-                rc = 1
+                rc = VerifyResult.WARNING
             except re.error as e:
                 logger.warning("%s: '%s' may not be a valid regular expression (%s)", self.obj_id, pattern, e)
-                rc = 1
+                rc = VerifyResult.WARNING
         for enode in self.node.xpath("rule/expression"):
             if enode.get("attribute") == "#uname":
                 uname = enode.get("value")
                 ids = [i.lower() for i in cib_factory.node_id_list()]
                 if uname and uname.lower() not in ids:
                     logger.warning("%s: referenced node %s does not exist", self.obj_id, uname)
-                    rc = 1
-        rc2 = _check_if_constraint_ref_is_child(self)
-        if rc2 > rc:
-            rc = rc2
+                    rc = VerifyResult.WARNING
+        rc |= _check_if_constraint_ref_is_child(self)
         return rc
 
     def referenced_resources(self):
@@ -2001,7 +1998,7 @@ class CibSimpleConstraint(CibObject):
         elif self.node.get("rsc"):
             return [self.node.get("rsc")]
 
-    def check_sanity(self):
+    def check_sanity(self) -> VerifyResult:
         if self.node is None:
             logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
@@ -2047,7 +2044,7 @@ class CibProperty(CibObject):
         else:
             return ''
 
-    def check_sanity(self):
+    def check_sanity(self) -> VerifyResult:
         '''
         Match properties with PE metadata.
         '''
@@ -2061,15 +2058,14 @@ class CibProperty(CibObject):
             # some resource agents such as mysql to store RA
             # specific state
             if self.obj_id != cib_object_map[self.xml_obj_type][3]:
-                return 0
+                return VerifyResult.SUCCESS
             l = get_properties_list()
             l += constants.extra_cluster_properties
         elif self.obj_type == "op_defaults":
             l = schema.get('attr', 'op', 'a')
         elif self.obj_type == "rsc_defaults":
             l = constants.rsc_meta_attributes
-        rc = sanity_check_nvpairs(self.obj_id, self.node, l)
-        return rc
+        return sanity_check_nvpairs(self.obj_id, self.node, l)
 
 
 def is_stonith_rsc(xmlnode):
@@ -2138,19 +2134,19 @@ class CibFencingOrder(CibObject):
     def _repr_cli_child(self, c, format_mode):
         pass  # no children here
 
-    def check_sanity(self):
+    def check_sanity(self) -> VerifyResult:
         '''
         Targets are nodes and resource are stonith resources.
         '''
         if self.node is None:  # eh?
             logger.error("%s: no xml (strange)", self.obj_id)
             return utils.get_check_rc()
-        rc = 0
+        rc = VerifyResult.SUCCESS
         nl = self.node.findall("fencing-level")
         for target in [x.get("target") for x in nl if x.get("target") is not None]:
             if target.lower() not in [ident.lower() for ident in cib_factory.node_id_list()]:
                 logger.warning("%s: target %s not a node", self.obj_id, target)
-                rc = 1
+                rc = VerifyResult.WARNING
         stonith_rsc_l = [x.obj_id for x in
                          cib_factory.get_elems_on_type("type:primitive")
                          if is_stonith_rsc(x.node)]
@@ -2158,10 +2154,10 @@ class CibFencingOrder(CibObject):
             for dev in devices.split(","):
                 if not cib_factory.find_object(dev):
                     logger.warning("%s: resource %s does not exist", self.obj_id, dev)
-                    rc = 1
+                    rc = VerifyResult.WARNING
                 elif dev not in stonith_rsc_l:
                     logger.warning("%s: %s not a stonith resource", self.obj_id, dev)
-                    rc = 1
+                    rc = VerifyResult.WARNING
         return rc
 
 
@@ -3776,7 +3772,7 @@ class CibFactory(object):
         if obj.xml_obj_type not in constants.defaults_tags:
             if not self._verify_element(obj):
                 return False
-        if utils.is_check_always() and obj.check_sanity() > 1:
+        if utils.is_check_always() and not bool(obj.check_sanity()):
             return False
         return True
 
