@@ -362,18 +362,6 @@ def mk_rsc_type(n):
     return ''.join((s1, s2, ra_type))
 
 
-def listnodes(include_remote_nodes=True):
-    cib = cibdump2elem()
-    if cib is None:
-        return []
-    local_nodes = cib.xpath('/cib/configuration/nodes/node/@uname')
-    if include_remote_nodes:
-        remote_nodes = cib.xpath('/cib/status/node_state[@remote_node="true"]/@uname')
-    else:
-        remote_nodes = []
-    return list(set([n for n in local_nodes + remote_nodes if n]))
-
-
 def is_our_node(s):
     '''
     Check if s is in a list of our nodes (ignore case).
@@ -381,7 +369,7 @@ def is_our_node(s):
 
     Includes remote nodes as well
     '''
-    for n in listnodes():
+    for n in CrmMonXmlParser().get_node_list(with_remote=True):
         if n.lower() == s.lower():
             return True
     return False
@@ -1525,7 +1513,7 @@ class CrmMonXmlParser(object):
         Load xml output of crm_mon
         """
         _, output, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.peer, constants.CRM_MON_XML_OUTPUT)
-        return text2elem(output)
+        return text2elem(output) if output else None
 
     def is_node_online(self, node):
         """
@@ -1534,7 +1522,13 @@ class CrmMonXmlParser(object):
         xpath = f'//node[@name="{node}" and @online="true"]'
         return bool(self.xml_elem.xpath(xpath))
 
-    def get_node_list(self, attr=None):
+    def get_node_list(self, with_remote=False):
+        xpath_str = '//nodes/node'
+        if not with_remote:
+            xpath_str += '[@type!="remote"]'
+        return [e.get('name') for e in self.xml_elem.xpath(xpath_str)]
+
+    def get_node_list_with_attr(self, attr=None):
         """
         Get a list of nodes based on the given attribute
         """
@@ -1542,8 +1536,12 @@ class CrmMonXmlParser(object):
             'standby': '[@standby="true"]',
             'online': '[@standby="false"]'
         }
-        xpath_str = f'//node{attr_dict.get(attr, "")}'
-        return [e.get('name') for e in self.xml_elem.xpath(xpath_str)]
+        xpath_str = f'//nodes/node{attr_dict.get(attr, "")}'
+        return [
+            e.get('name')
+            for e in self.xml_elem.xpath(xpath_str)
+            if e.get('type') != 'remote'
+        ]
 
     def is_resource_configured(self, ra_type):
         """
