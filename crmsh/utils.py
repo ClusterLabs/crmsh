@@ -2758,15 +2758,6 @@ def is_2node_cluster_without_qdevice():
     return (current_num + qdevice_num) == 2
 
 
-def get_pcmk_delay_max(two_node_without_qdevice=False):
-    """
-    Get value of pcmk_delay_max
-    """
-    if ServiceManager().service_is_active("pacemaker.service") and two_node_without_qdevice:
-        return constants.PCMK_DELAY_MAX
-    return 0
-
-
 def get_property(name, property_type="crm_config", peer=None, get_default=True):
     """
     Get cluster properties
