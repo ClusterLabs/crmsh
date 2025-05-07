@@ -2869,6 +2869,11 @@ def get_property(name, property_type="crm_config", peer=None):
     return stdout if rc == 0 else None
 
 
+def is_cluster_in_maintenance_mode() -> bool:
+    maintenance_mode = get_property("maintenance-mode")
+    return maintenance_mode and is_boolean_true(maintenance_mode)
+
+
 def check_no_quorum_policy_with_dlm():
     """
     Give warning when no-quorum-policy not freeze while configured DLM

@@ -270,6 +270,11 @@ class Cluster(command.UI):
             return
         logger.debug(f"stop node list: {node_list}")
 
+        if utils.is_cluster_in_maintenance_mode() and utils.is_dlm_running():
+            logger.info("The cluster is in maintenance mode")
+            logger.error("Stopping pacemaker/corosync will trigger unexpected node fencing when 'dlm_controld' is running in maintenance mode.")
+            return False
+
         self._wait_for_dc(node_list[0])
 
         self._set_dlm(node_list[0])
@@ -286,14 +291,17 @@ class Cluster(command.UI):
         for node in node_list:
             logger.info("The cluster stack stopped on {}".format(node))
 
+        return True
+
     @command.skill_level('administrator')
     def do_restart(self, context, *args):
         '''
         Restarts the cluster stack on all nodes or specific node(s)
         '''
-        parse_option_for_nodes(context, *args)
-        self.do_stop(context, *args)
-        self.do_start(context, *args)
+        stop_rc = self.do_stop(context, *args)
+        if stop_rc is False:
+            return False
+        return self.do_start(context, *args)
 
     @command.skill_level('administrator')
     def do_enable(self, context, *args):
