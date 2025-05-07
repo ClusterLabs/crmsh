@@ -285,7 +285,7 @@ def check_service_status(handler: CheckResultHandler):
 def check_unsupported_corosync_features(handler: CheckResultHandler):
     handler.log_info("Checking used corosync features...")
     transport = 'udpu' if corosync.is_unicast() else 'udp'
-    handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in corosync 3. Please use "knet".', [
+    handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in favor of "knet" in corosync 3.', [
     ])
     if corosync.get_value("totem.rrp_mode") in {'active', 'passive'}:
         handler.handle_tip(f'Corosync RRP will be deprecated in corosync 3.', [
