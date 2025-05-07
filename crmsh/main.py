@@ -282,6 +282,12 @@ def compgen():
     # point = int(args[0])
     line = args[1]
 
+    exclude_flag_options = ('-F', '-n', '-w', '-d', '--force', '--no', '--wait', '--debug')
+    for opt in exclude_flag_options:
+        pattern = f'{opt} '
+        if pattern in line:
+            line = line.replace(pattern, '')
+
     # remove [*]crm from commandline
     idx = line.find('crm')
     if idx >= 0:
