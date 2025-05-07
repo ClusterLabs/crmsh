@@ -59,3 +59,8 @@ Scenario: Add cluster lvm2 + ocfs2 on a running cluster
   And     Resource "ocfs2-lvmlockd" type "heartbeat:lvmlockd" is "Started"
   And     Resource "ocfs2-lvmactivate" type "heartbeat:LVM-activate" is "Started"
   And     Resource "ocfs2-clusterfs" type "heartbeat:Filesystem" is "Started"
+  # When cluster in maintenance mode and dlm is running, cannot do stop
+  When    Run "crm maintenance on" on "hanode1"
+  And     Try "crm cluster stop" on "hanode1"
+  Then    Expected return code is "1"
+  Then    Expected "Stopping pacemaker/corosync will trigger unexpected node fencing" in stderr
