@@ -32,6 +32,9 @@ helpdir     = $(datadir)/$(PACKAGE)
 asciiman	= doc/crm.8.adoc doc/crmsh_crm_report.8.adoc doc/profiles.adoc
 help_DATA	= doc/crm.8.adoc
 
+firewalld_servicedir=$(prefix)/lib/firewalld/services
+firewalld_service_DATA=high-availability.xml
+
 generated_docs	=
 generated_mans	=
 if BUILD_ASCIIDOC
@@ -54,6 +57,9 @@ install-data-hook:
 	install -D -m $$(test -x $$d && echo 0755 || echo 0644) $$d $(DESTDIR)$(datadir)/@PACKAGE@/$$d; done; \
 	mv $(DESTDIR)$(datadir)/@PACKAGE@/test $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/configbasic-xml.filter
+	if [ -d $(DESTDIR)$(firewalld_servicedir) ]; then \
+		install -D -m 0644 $(srcdir)/$(firewalld_service_DATA) $(DESTDIR)$(firewalld_servicedir)/$(firewalld_service_DATA); \
+	fi
 
 # Python module installation
 all-local:
@@ -76,6 +82,7 @@ uninstall-local:
 uninstall-hook:
 	@echo "Removing installed data files..."
 	rm -rf $(DESTDIR)$(datadir)/@PACKAGE@
+	rm -f $(DESTDIR)$(firewalld_servicedir)/$(firewalld_service_DATA)
 	@echo "Uninstallation complete."
 
 clean-local:
