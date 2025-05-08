@@ -32,6 +32,8 @@
 %define pkg_group Productivity/Clustering/HA
 %endif
 
+%define _fwdefdir %{_prefix}/lib/firewalld/services
+
 Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0-or-later
@@ -221,12 +223,43 @@ if [ -f %{buildroot}%{_bindir}/crm ]; then
 	rm %{buildroot}%{_bindir}/crm
 fi
 
+install -Dm0644 high-availability.xml \
+	%{buildroot}%{_fwdefdir}/high-availability.xml
+
 %if 0%{?suse_version}
 %fdupes %{buildroot}
 %endif
 
 %post
 %tmpfiles_create %{_tmpfilesdir}/%{name}.conf
+# Install the high-availability service in firewalld
+if [ -x %{_bindir}/firewall-cmd ]; then
+  if firewall-cmd --state &> /dev/null; then
+    echo "Adding high-availability service to firewalld"
+    # Make sure firewalld knows about the new service
+    firewall-cmd --reload &> /dev/null
+    firewall-cmd --permanent --zone=public --add-service=high-availability
+    firewall-cmd --reload &> /dev/null
+  else
+    echo "Firewalld is not running, adding high-availability service to offline firewalld"
+    firewall-offline-cmd --zone=public --add-service=high-availability
+  fi
+fi
+
+%postun
+# Remove the high-availability service in firewalld
+# Only when the package is removed
+if [ $1 -eq 0 ]; then
+  if [ -x %{_bindir}/firewall-cmd ]; then
+    if firewall-cmd --state &> /dev/null; then
+      firewall-cmd --query-service=high-availability &> /dev/null && {
+        echo "Removing high-availability service from firewalld"
+        firewall-cmd --permanent --zone=public --remove-service=high-availability
+        firewall-cmd --reload &> /dev/null
+      }
+    fi
+  fi
+fi
 
 %if %{with regression_tests}
 # Run regression tests after installing the package
@@ -274,6 +307,10 @@ result2=$?
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
 %dir %attr (770, %{uname}, %{gname}) %{_var}/log/crmsh
 %{_datadir}/bash-completion/completions/crm
+
+%dir %{_prefix}/lib/firewalld
+%dir %{_fwdefdir}
+%{_fwdefdir}/high-availability.xml
 
 %files scripts
 %defattr(-,root,root)
