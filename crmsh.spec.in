@@ -32,6 +32,8 @@
 %define pkg_group Productivity/Clustering/HA
 %endif
 
+%define _fwdefdir %{_prefix}/lib/firewalld/services
+
 Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0-or-later
@@ -41,6 +43,7 @@ Release:        0
 URL:            http://crmsh.github.io
 Source0:        %{name}-%{version}.tar.bz2
 Source1:        %{name}.tmpfiles.d.conf
+Source2:        high-availability.xml
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version}
@@ -90,6 +93,7 @@ BuildRequires:  python3
 # libxslt-tools as of openSUSE 12.2.  Possibly strictly should be
 # required by asciidoc
 BuildRequires:  libxslt-tools
+BuildRequires:  firewall-macros
 %endif
 
 %if 0%{?suse_version} || 0%{?fedora_version} || 0%{?centos_version} || 0%{?rhel_version} || 0%{?rhel} || 0%{?fedora}
@@ -221,12 +225,16 @@ if [ -f %{buildroot}%{_bindir}/crm ]; then
 	rm %{buildroot}%{_bindir}/crm
 fi
 
+# install firewalld service
+install -Dm0644 %{SOURCE2} %{buildroot}%{_fwdefdir}/high-availability.xml
+
 %if 0%{?suse_version}
 %fdupes %{buildroot}
 %endif
 
 %post
 %tmpfiles_create %{_tmpfilesdir}/%{name}.conf
+%firewalld_reload
 
 %if %{with regression_tests}
 # Run regression tests after installing the package
@@ -274,6 +282,10 @@ result2=$?
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
 %dir %attr (770, %{uname}, %{gname}) %{_var}/log/crmsh
 %{_datadir}/bash-completion/completions/crm
+
+%dir %{_prefix}/lib/firewalld
+%dir %{_fwdefdir}
+%{_fwdefdir}/high-availability.xml
 
 %files scripts
 %defattr(-,root,root)
