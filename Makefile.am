@@ -55,20 +55,24 @@ install-data-hook:
 	mkdir -p $(DESTDIR)$(datadir)/@PACKAGE@/; \
 	for d in $$(cat data-manifest); do \
 	install -D -m $$(test -x $$d && echo 0755 || echo 0644) $$d $(DESTDIR)$(datadir)/@PACKAGE@/$$d; done; \
+	rm -rf $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	mv $(DESTDIR)$(datadir)/@PACKAGE@/test $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/configbasic-xml.filter
 	if [ -d $(DESTDIR)$(firewalld_servicedir) ]; then \
 		install -D -m 0644 $(srcdir)/$(firewalld_service_DATA) $(DESTDIR)$(firewalld_servicedir)/$(firewalld_service_DATA); \
 	fi
 
-# Python module installation
-all-local:
+# Build Python wheel
+$(builddir)/dist/crmsh-$(VERSION)-py3-none-any.whl $(builddir)/build:
 	cd $(srcdir); python3 -m build --outdir $(shell readlink -f $(builddir))/dist --wheel --sdist --verbose
+
+all-local: $(builddir)/dist/crmsh-$(VERSION)-py3-none-any.whl $(builddir)/build
 
 python_prefix = --prefix=$(prefix)
 
+# Python module installation
 install-exec-local:
-	$(INSTALL) -d -m 770 $(DESTDIR)/${localstatedir}/log/crmsh
+	$(INSTALL) -d -m 770 $(DESTDIR)${localstatedir}/log/crmsh
 	python3 -m pip install --prefix=$(prefix) $(shell readlink -f $(builddir))/dist/*.whl
 	$(INSTALL) -d -m 770 $(DESTDIR)$(CRM_CACHE_DIR)
 
@@ -76,8 +80,8 @@ uninstall-local:
 	rm -rf $(crmconfdir)
 	rm -rf $(docdir)
 	rm -rf $(DESTDIR)$(CRM_CACHE_DIR)
-	rm -rf $(DESTDIR)/${localstatedir}/log/crmsh
-	rm -rf $(DESTDIR)$(pkgpythondir)
+	python3 -m pip uninstall --yes @PACKAGE@
+	rm -rf $(DESTDIR)${localstatedir}/log/crmsh
 
 uninstall-hook:
 	@echo "Removing installed data files..."
