@@ -1398,7 +1398,9 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
-    def test_remove_node_from_cluster_rm_failed(self, mock_get_ip, mock_stop, mock_invoke, mock_error):
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_remove_node_from_cluster_rm_failed(self, mock_is_active, mock_get_ip, mock_stop, mock_invoke, mock_error):
+        mock_is_active.return_value = False
         mock_invoke.return_value = (False, None, "error")
         mock_error.side_effect = SystemExit
 
@@ -1416,7 +1418,9 @@ class TestValidation(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
-    def test_remove_node_from_cluster_rm_node_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error):
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_remove_node_from_cluster_rm_node_failed(self, mock_is_active, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error):
+        mock_is_active.return_value = False
         mock_invoke.side_effect = [(True, None, None), (False, None, "error data")]
         mock_error.side_effect = SystemExit
 
@@ -1439,7 +1443,9 @@ class TestValidation(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
-    def test_remove_node_from_cluster_rm_csync_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_invokerc, mock_error):
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_remove_node_from_cluster_rm_csync_failed(self, mock_is_active, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_invokerc, mock_error):
+        mock_is_active.return_value = False
         mock_invoke.side_effect = [(True, None, None), (True, None, None)]
         mock_invokerc.return_value = False
         mock_error.side_effect = SystemExit
@@ -1470,8 +1476,10 @@ class TestValidation(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.set_cluster_node_ip')
-    def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
+    @mock.patch('crmsh.utils.service_is_active')
+    def test_remove_node_from_cluster_hostname(self, mock_is_active, mock_get_ip, mock_stop, mock_status,
             mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_decrease, mock_csync2):
+        mock_is_active.return_value = False
         mock_invoke.side_effect = [(True, None, None), (True, None, None), (True, None, None)]
         mock_invokerc.return_value = True
         mock_get_values.return_value = ["10.10.10.1"]
