@@ -16,7 +16,7 @@ env:
 
 jobs:
   integration:
-    if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.6'
+    if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.5'
     uses: ./.github/workflows/crmsh-ci.yml
     secrets: inherit
 
