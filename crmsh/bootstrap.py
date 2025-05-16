@@ -635,7 +635,6 @@ def check_prereqs():
         if not confirm("Do you want to continue anyway?"):
             return False
 
-    firewall_open_basic_ports()
     return True
 
 
@@ -665,84 +664,10 @@ def init_network():
         _context.default_ip_list = [_context.interfaces_inst.nic_first_ip(_context.default_nic)]
 
 
-def configure_firewall(tcp=None, udp=None):
-    if tcp is None:
-        tcp = []
-    if udp is None:
-        udp = []
-
-    def init_firewall_firewalld(tcp, udp):
-        has_firewalld = ServiceManager().service_is_active("firewalld")
-        cmdbase = 'firewall-cmd --zone=public --permanent ' if has_firewalld else 'firewall-offline-cmd --zone=public '
-
-        def cmd(args):
-            if not invokerc(cmdbase + args):
-                utils.fatal("Failed to configure firewall.")
-
-        for p in tcp:
-            cmd("--add-port={}/tcp".format(p))
-
-        for p in udp:
-            cmd("--add-port={}/udp".format(p))
-
-        if has_firewalld:
-            if not invokerc("firewall-cmd --reload"):
-                utils.fatal("Failed to reload firewall configuration.")
-
-    def init_firewall_ufw(tcp, udp):
-        """
-        try configuring firewall with ufw
-        """
-        for p in tcp:
-            if not invokerc("ufw allow {}/tcp".format(p)):
-                utils.fatal("Failed to configure firewall (ufw)")
-        for p in udp:
-            if not invokerc("ufw allow {}/udp".format(p)):
-                utils.fatal("Failed to configure firewall (ufw)")
-
-    if utils.package_is_installed("firewalld"):
-        init_firewall_firewalld(tcp, udp)
-    elif utils.package_is_installed("ufw"):
-        init_firewall_ufw(tcp, udp)
-
-
-def firewall_open_basic_ports():
-    """
-    Open ports for csync2, hawk & dlm respectively
-    """
-    configure_firewall(tcp=[
-        constants.CSYNC2_PORT,
-        constants.HAWK_PORT,
-        constants.DLM_PORT
-        ])
-
-
-def firewall_open_corosync_ports():
-    """
-    Have to do this separately, as we need general firewall config early
-    so csync2 works, but need corosync config *after* corosync.conf has
-    been created/updated.
-
-    Please note corosync uses two UDP ports mcastport (for mcast
-    receives) and mcastport - 1 (for mcast sends).
-
-    Also open QNetd/QDevice port if configured.
-    """
-    # all mcastports defined in corosync config
-    udp = corosync.get_values("totem.interface.mcastport") or [constants.COROSYNC_PORT]
-    udp.extend([str(int(p) - 1) for p in udp])
-
-    tcp = corosync.get_values("totem.quorum.device.net.port")
-
-    configure_firewall(tcp=tcp, udp=udp)
-
-
 def init_cluster_local():
     # Caller should check this, but I'm paranoid...
     if ServiceManager().service_is_active("corosync.service"):
         utils.fatal("corosync service is running!")
-
-    firewall_open_corosync_ports()
 
     # reset password, but only if it's not already set
     # (We still need the hacluster for the hawk).

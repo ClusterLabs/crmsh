@@ -437,11 +437,6 @@ Use multiple -i for more links. Note: Only one link is allowed for the non knet 
 
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
 
-COROSYNC_PORT = 5405
-CSYNC2_PORT = 30865
-HAWK_PORT = 7630
-DLM_PORT = 21064
-
 NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
 
 PCMK_SERVICE = "pacemaker.service"
