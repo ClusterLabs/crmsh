@@ -1983,6 +1983,7 @@ class TestValidation(unittest.TestCase):
             ])
         mock_error.assert_called_once_with("Removing the node node1 from {} failed".format(bootstrap.CSYNC2_CFG))
 
+    @mock.patch('crmsh.bootstrap.FirewallManager')
     @mock.patch.object(NodeMgmt, 'call_delnode')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.rm_configuration_files')
@@ -1999,13 +2000,16 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
     def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
             mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_csync2,
-            mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode):
+            mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall):
         mock_get_ip.return_value = "10.10.10.1"
         mock_cal_delnode.return_value = True
         mock_invoke.side_effect = [(True, None, None)]
         mock_invokerc.return_value = True
         mock_get_values.return_value = ["10.10.10.1"]
         mock_is_active.return_value = False
+        mock_firewall_inst = mock.Mock()
+        mock_firewall.return_value = mock_firewall_inst
+        mock_firewall_inst.remove_service = mock.Mock()
 
         bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
         bootstrap.remove_node_from_cluster('node1')
@@ -2028,3 +2032,93 @@ class TestValidation(unittest.TestCase):
             mock.call(bootstrap.CSYNC2_CFG),
             mock.call("/etc/corosync/corosync.conf")
             ])
+
+
+class TestFirewallManager(unittest.TestCase):
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.package_is_installed')
+    @mock.patch('crmsh.sh.cluster_shell')
+    def setUp(self, mock_shell, mock_installed, mock_this_node):
+        mock_shell_inst = mock.Mock()
+        mock_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.return_value = (0, '', '')
+        mock_installed.return_value = True
+        mock_this_node.return_value = "node1"
+        self.firewall_manager_inst = bootstrap.FirewallManager()
+
+    @mock.patch('logging.Logger.warning')
+    def test_service_is_available_false(self, mock_warning):
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.return_value = (1, '', '')
+        self.assertFalse(self.firewall_manager_inst._service_is_available())
+        mock_warning.assert_called_once_with('Firewalld service %s is not available %s', 'high-availability', 'on node1')
+
+    def test_service_is_available_true(self):
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.return_value = (0, '', '')
+        self.assertTrue(self.firewall_manager_inst._service_is_available())
+
+    def test_add_service_not_available(self):
+        self.firewall_manager_inst._service_is_available = mock.Mock(return_value=False)
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input = mock.Mock()
+        self.firewall_manager_inst.add_service()
+        self.firewall_manager_inst._service_is_available.assert_called_once_with()
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.assert_not_called()
+
+    @mock.patch('logging.Logger.error')
+    def test_add_service_error(self, mock_error):
+        self.firewall_manager_inst._service_is_available = mock.Mock(return_value=True)
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.return_value = (1, '', 'error')
+        self.firewall_manager_inst.add_service()
+        mock_error.assert_called_once_with('Failed to add firewalld service %s %s: %s', 'high-availability', 'on node1', 'error')
+
+    @mock.patch('logging.Logger.info')
+    def test_add_service_success(self, mock_info):
+        self.firewall_manager_inst._service_is_available = mock.Mock(return_value=True)
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.side_effect = [(0, '', ''), (0, '', '')]
+        self.firewall_manager_inst.add_service()
+        mock_info.assert_called_once_with('Added firewalld service %s %s', 'high-availability', 'on node1')
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.assert_has_calls([
+            mock.call(None, 'firewall-cmd --permanent --add-service=high-availability'),
+            mock.call(None, 'firewall-cmd --add-service=high-availability')
+        ])
+
+    def test_remove_service_not_available(self):
+        self.firewall_manager_inst._service_is_available = mock.Mock(return_value=False)
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input = mock.Mock()
+        self.firewall_manager_inst.remove_service()
+        self.firewall_manager_inst._service_is_available.assert_called_once_with()
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.assert_not_called()
+
+    @mock.patch('logging.Logger.error')
+    def test_remove_service_error(self, mock_error):
+        self.firewall_manager_inst._service_is_available = mock.Mock(return_value=True)
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.return_value = (1, '', 'error')
+        self.firewall_manager_inst.remove_service()
+        mock_error.assert_called_once_with('Failed to remove firewalld service %s %s: %s', 'high-availability', 'on node1', 'error')
+
+    @mock.patch('logging.Logger.info')
+    def test_remove_service_success(self, mock_info):
+        self.firewall_manager_inst._service_is_available = mock.Mock(return_value=True)
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.side_effect = [(0, '', ''), (0, '', '')]
+        self.firewall_manager_inst.remove_service()
+        mock_info.assert_called_once_with('Removed firewalld service %s %s', 'high-availability', 'on node1')
+        self.firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.assert_has_calls([
+            mock.call(None, 'firewall-cmd --permanent --remove-service=high-availability'),
+            mock.call(None, 'firewall-cmd --remove-service=high-availability')
+        ])
+
+    @staticmethod
+    def test_firewalld_stage_finished_not_installed():
+        firewall_manager_inst = mock.Mock()
+        firewall_manager_inst.firewalld_installed = False
+        res = bootstrap.FirewallManager.firewalld_stage_finished()
+        assert res is True
+
+    @staticmethod
+    def test_firewalld_stage_finished():
+        firewall_manager_inst = mock.Mock()
+        firewall_manager_inst.firewalld_installed = True
+        firewall_manager_inst._service_is_available = mock.Mock(return_value=True)
+        firewall_manager_inst.shell.get_rc_stdout_stderr_without_input.return_value = (0, 'server1 high-availability server2', '')
+        res = bootstrap.FirewallManager.firewalld_stage_finished()
+        assert res is True
