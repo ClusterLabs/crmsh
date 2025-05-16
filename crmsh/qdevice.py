@@ -590,6 +590,23 @@ class QDevice(object):
             if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
                 utils.cluster_run_cmd("crm corosync reload")
 
+    def config_qnetd_port(self):
+        """
+        Enable qnetd port in firewalld
+        """
+        if not ServiceManager().service_is_active("firewalld.service", self.qnetd_addr):
+            return
+        if utils.check_port_open(self.qnetd_addr, self.port):
+            return
+        shell = sh.cluster_shell()
+        cmd = f"firewall-cmd --add-port={self.port}/tcp --permanent"
+        rc, out, err = shell.get_rc_stdout_stderr_without_input(self.qnetd_addr, cmd)
+        if rc != 0 and err:
+            logger.error("Failed to add port {} to firewalld on {}: {}".format(self.port, self.qnetd_addr, err))
+            return
+        logger.info("Add port {} to firewalld on {}".format(self.port, self.qnetd_addr))
+        shell.get_stdout_or_raise_error("firewall-cmd --reload", self.qnetd_addr)
+
     def start_qdevice_service(self):
         """
         Start qdevice and qnetd service
@@ -635,6 +652,7 @@ class QDevice(object):
         self.adjust_sbd_watchdog_timeout_with_qdevice()
         self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, self.using_diskless_sbd, self.is_stage)
         self.config_qdevice()
+        self.config_qnetd_port()
         self.start_qdevice_service()
 
     @staticmethod
