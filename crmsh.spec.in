@@ -32,7 +32,10 @@
 %define pkg_group Productivity/Clustering/HA
 %endif
 
+%define use_firewalld 1
+%if %{use_firewalld}
 %define _fwdefdir %{_prefix}/lib/firewalld/services
+%endif
 
 Name:           crmsh
 Summary:        High Availability cluster command-line interface
@@ -65,6 +68,9 @@ BuildRequires:  python3-wheel
 # only require csync2 on SUSE since bootstrap
 # only works for SUSE at the moment anyway
 Requires:       csync2
+%if %{use_firewalld}
+BuildRequires:  firewall-macros
+%endif
 %endif
 
 %if 0%{?suse_version}
@@ -223,8 +229,10 @@ if [ -f %{buildroot}%{_bindir}/crm ]; then
 	rm %{buildroot}%{_bindir}/crm
 fi
 
+%if %{use_firewalld}
 install -Dm0644 high-availability.xml \
 	%{buildroot}%{_fwdefdir}/high-availability.xml
+%endif
 
 %if 0%{?suse_version}
 %fdupes %{buildroot}
@@ -232,34 +240,9 @@ install -Dm0644 high-availability.xml \
 
 %post
 %tmpfiles_create %{_tmpfilesdir}/%{name}.conf
-# Install the high-availability service in firewalld
-if [ -x %{_bindir}/firewall-cmd ]; then
-  if firewall-cmd --state &> /dev/null; then
-    echo "Adding high-availability service to firewalld"
-    # Make sure firewalld knows about the new service
-    firewall-cmd --reload &> /dev/null
-    firewall-cmd --permanent --zone=public --add-service=high-availability
-    firewall-cmd --reload &> /dev/null
-  else
-    echo "Firewalld is not running, adding high-availability service to offline firewalld"
-    firewall-offline-cmd --zone=public --add-service=high-availability
-  fi
-fi
-
-%postun
-# Remove the high-availability service in firewalld
-# Only when the package is removed
-if [ $1 -eq 0 ]; then
-  if [ -x %{_bindir}/firewall-cmd ]; then
-    if firewall-cmd --state &> /dev/null; then
-      firewall-cmd --query-service=high-availability &> /dev/null && {
-        echo "Removing high-availability service from firewalld"
-        firewall-cmd --permanent --zone=public --remove-service=high-availability
-        firewall-cmd --reload &> /dev/null
-      }
-    fi
-  fi
-fi
+%if %{use_firewalld}
+%firewalld_reload
+%endif
 
 %if %{with regression_tests}
 # Run regression tests after installing the package
@@ -308,9 +291,11 @@ result2=$?
 %dir %attr (770, %{uname}, %{gname}) %{_var}/log/crmsh
 %{_datadir}/bash-completion/completions/crm
 
+%if %{use_firewalld}
 %dir %{_prefix}/lib/firewalld
 %dir %{_fwdefdir}
 %{_fwdefdir}/high-availability.xml
+%endif
 
 %files scripts
 %defattr(-,root,root)
