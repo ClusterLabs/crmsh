@@ -59,6 +59,7 @@ Requires:       python3 >= 3.10
 Requires:       python3-PyYAML
 Requires:       python3-lxml
 Requires:       python3-packaging
+Recommends:     bash-completion
 BuildRequires:  python3-lxml
 BuildRequires:  python3-setuptools
 BuildRequires:  python3-pip
