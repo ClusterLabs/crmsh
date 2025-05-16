@@ -58,6 +58,8 @@ install-data-hook:
 	rm -rf $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	mv $(DESTDIR)$(datadir)/@PACKAGE@/test $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/configbasic-xml.filter
+	mkdir -p $(DESTDIR)$(datadir)/bash-completion/completions/; \
+	$(INSTALL) -D -m 0755 contrib/bash_completion.sh $(DESTDIR)$(datadir)/bash-completion/completions/crm; \
 	if [ -d $(DESTDIR)$(firewalld_servicedir) ]; then \
 		install -D -m 0644 $(srcdir)/$(firewalld_service_DATA) $(DESTDIR)$(firewalld_servicedir)/$(firewalld_service_DATA); \
 	fi
@@ -86,6 +88,7 @@ uninstall-local:
 uninstall-hook:
 	@echo "Removing installed data files..."
 	rm -rf $(DESTDIR)$(datadir)/@PACKAGE@
+	rm -f $(DESTDIR)$(datadir)/bash-completion/completions/crm
 	rm -f $(DESTDIR)$(firewalld_servicedir)/$(firewalld_service_DATA)
 	@echo "Uninstallation complete."
 
