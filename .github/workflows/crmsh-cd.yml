@@ -23,7 +23,7 @@ jobs:
   delivery:
     if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.6'
     needs: integration
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
   submit:
     if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-4.6'
     needs: delivery
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
