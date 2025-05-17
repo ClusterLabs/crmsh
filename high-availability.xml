@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>SUSE High Availability Cluster ports</short>
+  <description>This allows you to open various ports related to SUSE High Availability Cluster. Ports are opened for pacemaker-remote, qnetd, corosync, hawk2, booth, dlm, csync2, fence_kdump_send and drbd.</description>
+  <port protocol="tcp" port="3121"/> <!-- pacemaker-remote -->
+  <port protocol="tcp" port="5403"/> <!-- corosync qnetd-->
+  <port protocol="udp" port="5404"/> <!-- corosync -->
+  <port protocol="udp" port="5405-5412"/> <!-- corosync -->
+  <port protocol="tcp" port="7630"/> <!-- hawk2 -->
+  <port protocol="tcp" port="9929"/> <!-- booth -->
+  <port protocol="udp" port="9929"/> <!-- booth -->
+  <port protocol="tcp" port="21064"/> <!-- dlm -->
+  <port protocol="sctp" port="21064"/> <!-- dlm -->
+  <port protocol="tcp" port="30865"/> <!-- csync2 -->
+  <port protocol="udp" port="7410"/> <!-- fence_kdump_send -->
+  <port protocol="tcp" port="7788-7789"/> <!-- drbd -->
+</service>

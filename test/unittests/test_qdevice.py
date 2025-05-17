@@ -790,6 +790,7 @@ Membership information
         mock_status_long.return_value.__exit__ = mock.Mock()
         self.qdevice_with_ip.certificate_process_on_init = mock.Mock()
         self.qdevice_with_ip.adjust_sbd_watchdog_timeout_with_qdevice = mock.Mock()
+        self.qdevice_with_ip.config_qnetd_port = mock.Mock()
         self.qdevice_with_ip.config_qdevice = mock.Mock()
         self.qdevice_with_ip.start_qdevice_service = mock.Mock()
 
@@ -801,6 +802,40 @@ Membership information
         self.qdevice_with_ip.adjust_sbd_watchdog_timeout_with_qdevice.assert_called_once_with()
         self.qdevice_with_ip.config_qdevice.assert_called_once_with()
         self.qdevice_with_ip.start_qdevice_service.assert_called_once_with()
+
+    @mock.patch('crmsh.utils.check_port_open')
+    @mock.patch('crmsh.qdevice.ServiceManager')
+    def test_config_qnetd_port_no_firewall(self, mock_service, mock_check_port):
+        mock_service_instance = mock.Mock()
+        mock_service.return_value = mock_service_instance
+        mock_service_instance.service_is_active.return_value = False
+
+        self.qdevice_with_ip.config_qnetd_port()
+
+        mock_service_instance.service_is_active.assert_called_once_with("firewalld.service", "10.10.10.123")
+        mock_check_port.assert_not_called()
+
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.sh.cluster_shell')
+    @mock.patch('crmsh.utils.check_port_open')
+    @mock.patch('crmsh.qdevice.ServiceManager')
+    def test_config_qnetd_port(self, mock_service, mock_check_port, mock_cluster_shell, mock_info):
+        mock_service_instance = mock.Mock()
+        mock_service.return_value = mock_service_instance
+        mock_service_instance.service_is_active.return_value = True
+        mock_check_port.return_value = False
+        mock_cluster_shell_instance = mock.Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_instance
+        mock_cluster_shell_instance.get_rc_stdout_stderr_without_input = mock.Mock(return_value=(0, None, None))
+        mock_cluster_shell_instance.get_stdout_or_raise_error = mock.Mock(return_value=None)
+        self.qdevice_with_ip.port = 5403
+
+        self.qdevice_with_ip.config_qnetd_port()
+
+        mock_service_instance.service_is_active.assert_called_once_with("firewalld.service", "10.10.10.123")
+        mock_check_port.assert_called_once_with("10.10.10.123", 5403)
+        mock_info.assert_called_once_with("Add port 5403 to firewalld on 10.10.10.123")
+        mock_cluster_shell_instance.get_stdout_or_raise_error.assert_called_once_with("firewall-cmd --reload", "10.10.10.123")
 
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_timeout')

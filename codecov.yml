@@ -8,7 +8,7 @@ coverage:
         threshold: 0.35%
 codecov:
   notify:
-    after_n_builds: 30
+    after_n_builds: 31
 comment:
-  after_n_builds: 30
+  after_n_builds: 31
   layout: "condensed_header, flags, files, condensed_footer"

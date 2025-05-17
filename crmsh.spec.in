@@ -32,6 +32,11 @@
 %define pkg_group Productivity/Clustering/HA
 %endif
 
+%define use_firewalld 1
+%if %{use_firewalld}
+%define _fwdefdir %{_prefix}/lib/firewalld/services
+%endif
+
 Name:           crmsh
 Summary:        High Availability cluster command-line interface
 License:        GPL-2.0-or-later
@@ -63,6 +68,9 @@ BuildRequires:  python3-wheel
 # only require csync2 on SUSE since bootstrap
 # only works for SUSE at the moment anyway
 Requires:       csync2
+%if %{use_firewalld}
+BuildRequires:  firewall-macros
+%endif
 %endif
 
 %if 0%{?suse_version}
@@ -221,12 +229,20 @@ if [ -f %{buildroot}%{_bindir}/crm ]; then
 	rm %{buildroot}%{_bindir}/crm
 fi
 
+%if %{use_firewalld}
+install -Dm0644 high-availability.xml \
+	%{buildroot}%{_fwdefdir}/high-availability.xml
+%endif
+
 %if 0%{?suse_version}
 %fdupes %{buildroot}
 %endif
 
 %post
 %tmpfiles_create %{_tmpfilesdir}/%{name}.conf
+%if %{use_firewalld}
+%firewalld_reload
+%endif
 
 %if %{with regression_tests}
 # Run regression tests after installing the package
@@ -274,6 +290,12 @@ result2=$?
 %dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
 %dir %attr (770, %{uname}, %{gname}) %{_var}/log/crmsh
 %{_datadir}/bash-completion/completions/crm
+
+%if %{use_firewalld}
+%dir %{_prefix}/lib/firewalld
+%dir %{_fwdefdir}
+%{_fwdefdir}/high-availability.xml
+%endif
 
 %files scripts
 %defattr(-,root,root)

@@ -112,7 +112,7 @@ def run_command_local_or_remote(context, cmd, addr, exit_on_fail=True):
                 context.logger.error("Failed to run %s on %s@%s :%s", cmd, os.geteuid(), host, err)
                 raise ValueError("{}".format(err))
             else:
-                return
+                return rc, out, err
     return 0, out, err
 
 
@@ -175,3 +175,11 @@ def assert_in(expected, actual):
               "\033[32m" "Expected:" "\033[0m" " {}\n" \
               "\033[31m" "Actual:" "\033[0m" " {}".format(expected, actual)
         raise AssertionError(msg)
+
+
+def firewalld_service_is_available(context, service_name, node):
+    rc, _, _ = run_command_local_or_remote(context, "firewall-cmd --state", node, exit_on_fail=False)
+    firewall_cmd = "firewall-cmd" if rc == 0 else "firewall-offline-cmd"
+    cmd = f"{firewall_cmd} --info-service={service_name}"
+    rc, _, _ = run_command_local_or_remote(context, cmd, node, exit_on_fail=False)
+    return rc == 0

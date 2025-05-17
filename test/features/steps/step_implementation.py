@@ -15,7 +15,8 @@ from crmsh import ui_configure
 from crmsh.sh import ShellUtils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
-                  assert_eq, is_unclean, assert_in
+                  assert_eq, is_unclean, assert_in, \
+                  firewalld_service_is_available
 import const
 
 
@@ -658,3 +659,9 @@ def step_impl(context):
     rc, schema, _ = ShellUtils().get_stdout_stderr("crm configure schema")
     assert rc == 0
     assert schema == context.schema_latest
+
+
+@given('The "{service}" firewalld service is available on "{node}"')
+def step_impl(context, service, node):
+    rc = firewalld_service_is_available(context, service, node)
+    assert rc is True
