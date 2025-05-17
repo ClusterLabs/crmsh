@@ -112,7 +112,7 @@ def run_command_local_or_remote(context, cmd, addr, exit_on_fail=True):
                 context.logger.error("Failed to run %s on %s@%s :%s", cmd, os.geteuid(), host, err)
                 raise ValueError("{}".format(err))
             else:
-                return
+                return rc, out, err
     return 0, out, err
 
 
