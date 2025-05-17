@@ -9,7 +9,7 @@ import typing
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
-from . import command, sh, healthcheck
+from . import command, sh, healthcheck, migration
 from . import utils
 from . import scripts
 from . import completers as compl
@@ -818,45 +818,64 @@ to get the geo cluster configuration.""",
         bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
-    @command.completers(compl.choice(['hawk2']))
+    @command.completers(compl.choice([
+        'hawk2',
+        'sles16',
+    ]))
     def do_health(self, context, *args):
         '''
         Extensive health check.
         '''
         if not args:
             return self._do_health_legacy(context, *args)
-        parser = argparse.ArgumentParser()
-        parser.add_argument('component', choices=['hawk2'])
+        parser = argparse.ArgumentParser('health')
+        parser.add_argument('component', choices=['hawk2', 'sles16'])
         parser.add_argument('-f', '--fix', action='store_true')
-        parsed_args = parser.parse_args(args)
-        if parsed_args.component == 'hawk2':
-            nodes = utils.list_cluster_nodes()
-            if parsed_args.fix:
-                if not healthcheck.feature_full_check(healthcheck.PasswordlessPrimaryUserAuthenticationFeature(), nodes):
+        parsed_args, remaining_args = parser.parse_known_args(args)
+        if 'hawk2' == parsed_args.component:
+                if remaining_args:
+                    logger.error('Known arguments: %s', ' '.join(remaining_args))
+                    return False
+                nodes = utils.list_cluster_nodes()
+                if parsed_args.fix:
+                    if not healthcheck.feature_full_check(healthcheck.PasswordlessPrimaryUserAuthenticationFeature(), nodes):
+                        try:
+                            healthcheck.feature_fix(
+                                healthcheck.PasswordlessPrimaryUserAuthenticationFeature(),
+                                nodes,
+                                utils.ask,
+                            )
+                        except healthcheck.FixFailure:
+                            logger.error('Cannot fix automatically.')
+                            return False
                     try:
-                        healthcheck.feature_fix(
-                            healthcheck.PasswordlessPrimaryUserAuthenticationFeature(),
-                            nodes,
-                            utils.ask,
-                        )
+                        healthcheck.feature_fix(healthcheck.PasswordlessHaclusterAuthenticationFeature(), nodes, utils.ask)
+                        logger.info("hawk2: passwordless ssh authentication: OK.")
+                        return True
                     except healthcheck.FixFailure:
-                        logger.error('Cannot fix automatically.')
+                        logger.error("hawk2: passwordless ssh authentication: FAIL.")
                         return False
-                try:
-                    healthcheck.feature_fix(healthcheck.PasswordlessHaclusterAuthenticationFeature(), nodes, utils.ask)
-                    logger.info("hawk2: passwordless ssh authentication: OK.")
-                    return True
-                except healthcheck.FixFailure:
-                    logger.error("hawk2: passwordless ssh authentication: FAIL.")
-                    return False
-            else:
-                if healthcheck.feature_full_check(healthcheck.PasswordlessHaclusterAuthenticationFeature(), nodes):
-                    logger.info("hawk2: passwordless ssh authentication: OK.")
-                    return True
                 else:
-                    logger.error("hawk2: passwordless ssh authentication: FAIL.")
-                    logger.warning('Please run "crm cluster health hawk2 --fix"')
+                    if healthcheck.feature_full_check(healthcheck.PasswordlessHaclusterAuthenticationFeature(), nodes):
+                        logger.info("hawk2: passwordless ssh authentication: OK.")
+                        return True
+                    else:
+                        logger.error("hawk2: passwordless ssh authentication: FAIL.")
+                        logger.warning('Please run "crm cluster health hawk2 --fix"')
+                        return False
+        elif 'sles16' == parsed_args.component:
+                try:
+                    if parsed_args.fix:
+                        logger.error('"--fix" is only available in SLES 16.')
+                        return False
+                    else:
+                        return 0 == migration.check(['sles16'] + remaining_args)
+                except migration.MigrationFailure as e:
+                    logger.error('%s', e)
                     return False
+        else:
+                logger.error('Unknown component: %s', parsed_args.component)
+                return False
 
     def _do_health_legacy(self, context, *args):
         params = self._args_implicit(context, args, 'nodes')

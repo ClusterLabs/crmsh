@@ -9,6 +9,7 @@ import re
 import stat
 import pwd
 import datetime
+import subprocess
 from subprocess import TimeoutExpired
 from typing import List
 
@@ -547,3 +548,14 @@ def collect_qdevice_info(context: core.Context) -> None:
     _file = os.path.join(context.work_dir, constants.QDEVICE_F)
     crmutils.str2file(out_string, _file)
     logger.debug(f"Dump quorum/qdevice/qnetd information into {utils.real_path(_file)}")
+
+
+def collect_pre_migration_info(context: core.Context) -> None:
+    cmd = "crm cluster health sles16"
+    target_file = os.path.join(context.work_dir, constants.PRE_MIGRATION_F)
+    with open(target_file, 'w') as f:
+        f.write(f"#### Run command: {cmd} ####\n")
+        f.flush()
+        process = subprocess.Popen(cmd, shell=True, stdout=f, stderr=subprocess.STDOUT)
+        process.communicate()
+    logger.debug(f"Dump pre-migration information into {utils.real_path(target_file)}")
