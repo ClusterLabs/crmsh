@@ -52,17 +52,23 @@ install-data-hook:
 	mkdir -p $(DESTDIR)$(datadir)/@PACKAGE@/; \
 	for d in $$(cat data-manifest); do \
 	install -D -m $$(test -x $$d && echo 0755 || echo 0644) $$d $(DESTDIR)$(datadir)/@PACKAGE@/$$d; done; \
+	rm -rf $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	mv $(DESTDIR)$(datadir)/@PACKAGE@/test $(DESTDIR)$(datadir)/@PACKAGE@/tests; \
 	cp test/testcases/xmlonly.sh $(DESTDIR)$(datadir)/@PACKAGE@/tests/testcases/configbasic-xml.filter
+	mkdir -p $(DESTDIR)$(datadir)/bash-completion/completions/; \
+	$(INSTALL) -D -m 0755 contrib/bash_completion.sh $(DESTDIR)$(datadir)/bash-completion/completions/crm
 
-# Python module installation
-all-local:
+# Build Python wheel
+$(builddir)/dist/crmsh-$(VERSION)-py3-none-any.whl $(builddir)/build:
 	cd $(srcdir); python3 -m build --outdir $(shell readlink -f $(builddir))/dist --wheel --sdist --verbose
+
+all-local: $(builddir)/dist/crmsh-$(VERSION)-py3-none-any.whl $(builddir)/build
 
 python_prefix = --prefix=$(prefix)
 
+# Python module installation
 install-exec-local:
-	$(INSTALL) -d -m 770 $(DESTDIR)/${localstatedir}/log/crmsh
+	$(INSTALL) -d -m 770 $(DESTDIR)${localstatedir}/log/crmsh
 	python3 -m pip install --prefix=$(prefix) $(shell readlink -f $(builddir))/dist/*.whl
 	$(INSTALL) -d -m 770 $(DESTDIR)$(CRM_CACHE_DIR)
 
@@ -70,12 +76,13 @@ uninstall-local:
 	rm -rf $(crmconfdir)
 	rm -rf $(docdir)
 	rm -rf $(DESTDIR)$(CRM_CACHE_DIR)
-	rm -rf $(DESTDIR)/${localstatedir}/log/crmsh
-	rm -rf $(DESTDIR)$(pkgpythondir)
+	python3 -m pip uninstall --yes @PACKAGE@
+	rm -rf $(DESTDIR)${localstatedir}/log/crmsh
 
 uninstall-hook:
 	@echo "Removing installed data files..."
 	rm -rf $(DESTDIR)$(datadir)/@PACKAGE@
+	rm -f $(DESTDIR)$(datadir)/bash-completion/completions/crm
 	@echo "Uninstallation complete."
 
 clean-local:
