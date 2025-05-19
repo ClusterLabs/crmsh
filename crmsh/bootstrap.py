@@ -1231,11 +1231,6 @@ class FirewallManager:
             return False
         return True
 
-    def _reload_firewalld(self):
-        if not self.firewalld_running:
-            return
-        self.shell.get_rc_stdout_stderr_without_input(self.peer, "firewall-cmd --reload")
-
     def add_service(self):
         if not self.firewalld_installed or not self._service_is_available():
             return
@@ -1244,8 +1239,10 @@ class FirewallManager:
         if rc != 0:
             logger.error("Failed to add firewalld service %s %s: %s", self.SERVICE_NAME, self.peer_msg, err)
             return
+        if self.firewalld_running:
+            cmd = f"{self.firewall_cmd} --add-service={self.SERVICE_NAME}"
+            self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
         logger.info("Added firewalld service %s %s", self.SERVICE_NAME, self.peer_msg)
-        self._reload_firewalld()
 
     def remove_service(self):
         if not self.firewalld_installed or not self._service_is_available():
@@ -1255,8 +1252,10 @@ class FirewallManager:
         if rc != 0:
             logger.error("Failed to remove firewalld service %s %s: %s", self.SERVICE_NAME, self.peer_msg, err)
             return
+        if self.firewalld_running:
+            cmd = f"{self.firewall_cmd} --remove-service={self.SERVICE_NAME}"
+            self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
         logger.info("Removed firewalld service %s %s", self.SERVICE_NAME, self.peer_msg)
-        self._reload_firewalld()
 
     @classmethod
     def firewalld_stage_finished(cls) -> bool:
