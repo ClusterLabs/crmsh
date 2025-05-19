@@ -2734,6 +2734,7 @@ def bootstrap_arbitrator(context):
         user_by_host.add(local_user, utils.this_node())
         user_by_host.add(remote_user, node)
         user_by_host.save_local()
+    init_firewalld()
     geo_fetch_config(node)
     if not os.path.isfile(BOOTH_CFG):
         utils.fatal("Failed to copy {} from {}".format(BOOTH_CFG, _context.cluster_node))
