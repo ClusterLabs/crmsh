@@ -154,6 +154,7 @@ Storage configuration:
 
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
+    firewalld   Add high-availability service to firewalld
     csync2      Configure csync2
     corosync    Configure corosync
     sbd         Configure SBD (requires -s <dev>)
@@ -249,6 +250,7 @@ Network configuration:
 
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
+    firewalld   Add high-availability service to firewalld
     csync2      Configure csync2 (requires -c <host>)
     ssh_merge   Merge root's SSH known_hosts across all nodes (csync2 must
                 already be configured).
