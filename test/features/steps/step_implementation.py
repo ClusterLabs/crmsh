@@ -658,3 +658,47 @@ def step_impl(context):
     rc, schema, _ = ShellUtils().get_stdout_stderr("crm configure schema")
     assert rc == 0
     assert schema == context.schema_latest
+
+
+def firewall_cmd(context, node):
+    rc, _, _ = run_command_local_or_remote(context, "firewall-cmd --state", node, exit_on_fail=False)
+    return "firewall-cmd" if rc == 0 else "firewall-offline-cmd"
+
+
+@then('Port "{port}" protocol "{proto}" is opened on "{node}"')
+def step_impl(context, port, proto, node):
+    cmd = f"{firewall_cmd(context, node)} --list-ports"
+    rc, out, _ = run_command_local_or_remote(context, cmd, node, exit_on_fail=False)
+    assert rc == 0
+    assert f"{port}/{proto}" in out.split()
+
+
+@given('The "{service}" firewalld service is available on "{node}"')
+def step_impl(context, service, node):
+    cmd = f"{firewall_cmd(context, node)} --info-service={service}"
+    rc, _, _ = run_command_local_or_remote(context, cmd, node, exit_on_fail=False)
+    assert rc == 0
+
+
+def firewalld_list_services(context, node):
+    cmd = f"{firewall_cmd(context, node)} --list-services"
+    _, out, _ = run_command_local_or_remote(context, cmd, node, exit_on_fail=False)
+    return out or ""
+
+
+@then('The "{service}" firewalld service is added on "{node}"')
+def step_impl(context, service, node):
+    services = firewalld_list_services(context, node)
+    assert service in services.split()
+
+
+@then('The "{service}" firewalld service is not added on "{node}"')
+def step_impl(context, service, node):
+    services = firewalld_list_services(context, node)
+    assert service not in services.split()
+
+
+@given('The "{service}" firewalld service is not added on "{node}"')
+def step_impl(context, service, node):
+    services = firewalld_list_services(context, node)
+    assert service not in services.split()

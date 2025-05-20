@@ -72,10 +72,10 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SBDManager.SYSCONFIG_SBD, PCMK_REMOTE_AUTH, watchdog.Watchdog.WATCHDOG_CFG,
         PROFILES_FILE, CRM_CFG, SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
 
-INIT_STAGES_EXTERNAL = ("ssh", "csync2", "corosync", "sbd", "cluster", "ocfs2", "gfs2", "admin", "qdevice")
+INIT_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "corosync", "sbd", "cluster", "ocfs2", "gfs2", "admin", "qdevice")
 INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote")
 INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
-JOIN_STAGES_EXTERNAL = ("ssh", "csync2", "ssh_merge", "cluster")
+JOIN_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "ssh_merge", "cluster")
 
 
 class Context(object):
@@ -635,7 +635,6 @@ def check_prereqs():
         if not confirm("Do you want to continue anyway?"):
             return False
 
-    firewall_open_basic_ports()
     return True
 
 
@@ -665,84 +664,10 @@ def init_network():
         _context.default_ip_list = [_context.interfaces_inst.nic_first_ip(_context.default_nic)]
 
 
-def configure_firewall(tcp=None, udp=None):
-    if tcp is None:
-        tcp = []
-    if udp is None:
-        udp = []
-
-    def init_firewall_firewalld(tcp, udp):
-        has_firewalld = ServiceManager().service_is_active("firewalld")
-        cmdbase = 'firewall-cmd --zone=public --permanent ' if has_firewalld else 'firewall-offline-cmd --zone=public '
-
-        def cmd(args):
-            if not invokerc(cmdbase + args):
-                utils.fatal("Failed to configure firewall.")
-
-        for p in tcp:
-            cmd("--add-port={}/tcp".format(p))
-
-        for p in udp:
-            cmd("--add-port={}/udp".format(p))
-
-        if has_firewalld:
-            if not invokerc("firewall-cmd --reload"):
-                utils.fatal("Failed to reload firewall configuration.")
-
-    def init_firewall_ufw(tcp, udp):
-        """
-        try configuring firewall with ufw
-        """
-        for p in tcp:
-            if not invokerc("ufw allow {}/tcp".format(p)):
-                utils.fatal("Failed to configure firewall (ufw)")
-        for p in udp:
-            if not invokerc("ufw allow {}/udp".format(p)):
-                utils.fatal("Failed to configure firewall (ufw)")
-
-    if utils.package_is_installed("firewalld"):
-        init_firewall_firewalld(tcp, udp)
-    elif utils.package_is_installed("ufw"):
-        init_firewall_ufw(tcp, udp)
-
-
-def firewall_open_basic_ports():
-    """
-    Open ports for csync2, hawk & dlm respectively
-    """
-    configure_firewall(tcp=[
-        constants.CSYNC2_PORT,
-        constants.HAWK_PORT,
-        constants.DLM_PORT
-        ])
-
-
-def firewall_open_corosync_ports():
-    """
-    Have to do this separately, as we need general firewall config early
-    so csync2 works, but need corosync config *after* corosync.conf has
-    been created/updated.
-
-    Please note corosync uses two UDP ports mcastport (for mcast
-    receives) and mcastport - 1 (for mcast sends).
-
-    Also open QNetd/QDevice port if configured.
-    """
-    # all mcastports defined in corosync config
-    udp = corosync.get_values("totem.interface.mcastport") or [constants.COROSYNC_PORT]
-    udp.extend([str(int(p) - 1) for p in udp])
-
-    tcp = corosync.get_values("totem.quorum.device.net.port")
-
-    configure_firewall(tcp=tcp, udp=udp)
-
-
 def init_cluster_local():
     # Caller should check this, but I'm paranoid...
     if ServiceManager().service_is_active("corosync.service"):
         utils.fatal("corosync service is running!")
-
-    firewall_open_corosync_ports()
 
     # reset password, but only if it's not already set
     # (We still need the hacluster for the hawk).
@@ -1275,6 +1200,83 @@ def generate_pacemaker_remote_auth():
         logger.warning("Failed to create pacemaker authkey: {}".format(PCMK_REMOTE_AUTH))
     utils.chown(PCMK_REMOTE_AUTH, _context.current_user, "haclient")
     utils.chmod(PCMK_REMOTE_AUTH, 0o640)
+
+
+class FirewallManager:
+
+    SERVICE_NAME = "high-availability"
+
+    def __init__(self, peer=None):
+        self.shell = None
+        self.peer = peer
+        self.firewalld_running = False
+        self.firewall_cmd = None
+        self.firewall_cmd_permanent_option = ""
+        self.peer_msg = ""
+        self.firewalld_installed = utils.package_is_installed("firewalld", self.peer)
+
+        if self.firewalld_installed:
+            self.shell = sh.cluster_shell()
+            rc, _, _ = self.shell.get_rc_stdout_stderr_without_input(self.peer, "firewall-cmd --state")
+            self.firewalld_running = rc == 0
+            self.firewall_cmd = "firewall-cmd" if self.firewalld_running else "firewall-offline-cmd"
+            self.firewall_cmd_permanent_option = " --permanent" if self.firewalld_running else ""
+            self.peer_msg = f"on {self.peer}" if self.peer else f"on {utils.this_node()}"
+
+    def _service_is_available(self) -> bool:
+        cmd = f"{self.firewall_cmd} --info-service={self.SERVICE_NAME}"
+        rc, _, _ = self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        if rc != 0:
+            logger.warning("Firewalld service %s is not available %s", self.SERVICE_NAME, self.peer_msg)
+            return False
+        return True
+
+    def add_service(self):
+        if not self.firewalld_installed or not self._service_is_available():
+            return
+        cmd = f"{self.firewall_cmd}{self.firewall_cmd_permanent_option} --add-service={self.SERVICE_NAME}"
+        rc, _, err = self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        if rc != 0:
+            logger.error("Failed to add firewalld service %s %s: %s", self.SERVICE_NAME, self.peer_msg, err)
+            return
+        if self.firewalld_running:
+            cmd = f"{self.firewall_cmd} --add-service={self.SERVICE_NAME}"
+            self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        logger.info("Added firewalld service %s %s", self.SERVICE_NAME, self.peer_msg)
+
+    def remove_service(self):
+        if not self.firewalld_installed or not self._service_is_available():
+            return
+        cmd = f"{self.firewall_cmd}{self.firewall_cmd_permanent_option} --remove-service={self.SERVICE_NAME}"
+        rc, _, err = self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        if rc != 0:
+            logger.error("Failed to remove firewalld service %s %s: %s", self.SERVICE_NAME, self.peer_msg, err)
+            return
+        if self.firewalld_running:
+            cmd = f"{self.firewall_cmd} --remove-service={self.SERVICE_NAME}"
+            self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        logger.info("Removed firewalld service %s %s", self.SERVICE_NAME, self.peer_msg)
+
+    @classmethod
+    def firewalld_stage_finished(cls) -> bool:
+        inst = cls()
+        if not inst.firewalld_installed or not inst._service_is_available():
+            return True
+        cmd = f"{inst.firewall_cmd} --list-services"
+        _, outp, _ = inst.shell.get_rc_stdout_stderr_without_input(None, cmd)
+        return inst.SERVICE_NAME in outp.split()
+
+
+def init_firewalld():
+    if _context.cluster_is_running:
+        for node in utils.list_cluster_nodes():
+            FirewallManager(node).add_service()
+    else:
+        FirewallManager().add_service()
+
+
+def join_firewalld(*_):
+    FirewallManager().add_service()
 
 
 class Validation(object):
@@ -2183,6 +2185,8 @@ def remove_node_from_cluster(node):
     # Trigger corosync config reload to ensure expected_votes is propagated
     invoke("corosync-cfgtool -R")
 
+    FirewallManager(peer=node).remove_service()
+
 
 def ssh_stage_finished():
     """
@@ -2208,6 +2212,7 @@ def corosync_stage_finished():
 
 INIT_STAGE_CHECKER = {
         "ssh": ssh_stage_finished,
+        "firewalld": FirewallManager.firewalld_stage_finished,
         "csync2": csync2_stage_finished,
         "corosync": corosync_stage_finished,
         "sbd": lambda: True,
@@ -2217,6 +2222,7 @@ INIT_STAGE_CHECKER = {
 
 JOIN_STAGE_CHECKER = {
         "ssh": ssh_stage_finished,
+        "firewalld": FirewallManager.firewalld_stage_finished,
         "csync2": csync2_stage_finished,
         "ssh_merge": lambda: True,
         "cluster": is_online
@@ -2270,6 +2276,7 @@ def bootstrap_init(context):
         globals()["init_" + stage]()
     else:
         init_ssh()
+        init_firewalld()
         if _context.skip_csync2:
             ServiceManager().stop_service(CSYNC2_SERVICE, disable=True)
         else:
@@ -2378,6 +2385,7 @@ def bootstrap_join(context):
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node)
                 _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
+                join_firewalld()
                 if _context.skip_csync2:
                     service_manager.stop_service(CSYNC2_SERVICE, disable=True)
                     retrieve_all_config_files(cluster_node)
@@ -2518,6 +2526,7 @@ def remove_self(force_flag=False):
         qdevice.QDevice.remove_certification_files_on_qnetd()
         qdevice.QDevice.remove_qdevice_db([utils.this_node()])
         rm_configuration_files()
+        FirewallManager().remove_service()
 
 
 def init_common_geo():
@@ -2725,6 +2734,7 @@ def bootstrap_arbitrator(context):
         user_by_host.add(local_user, utils.this_node())
         user_by_host.add(remote_user, node)
         user_by_host.save_local()
+    init_firewalld()
     geo_fetch_config(node)
     if not os.path.isfile(BOOTH_CFG):
         utils.fatal("Failed to copy {} from {}".format(BOOTH_CFG, _context.cluster_node))

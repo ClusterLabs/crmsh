@@ -66,6 +66,7 @@ test/defaults
 test/descriptions
 test/evaltest.sh
 test/features/bootstrap_bugs.feature
+test/features/bootstrap_firewalld.feature
 test/features/bootstrap_init_join_remove.feature
 test/features/bootstrap_options.feature
 test/features/bootstrap_sbd_delay.feature
