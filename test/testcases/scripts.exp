@@ -28,13 +28,10 @@ oracle           Oracle Database
 
 Filesystem:
 
-clvm             Cluster-aware LVM (lvmlockd)
-clvm-vg          Cluster-aware LVM (auto activation)
 drbd             DRBD Block Device
 filesystem       File System (mount point)
 gfs2             GFS2 File System (Cloned)
 lvm-drbd         LVM Group on DRBD
-ocfs2            OCFS2 File System
 raid-lvm         RAID Hosting LVM
 
 NFS:
@@ -83,13 +80,10 @@ oracle           Oracle Database
 
 Filesystem:
 
-clvm             Cluster-aware LVM (lvmlockd)
-clvm-vg          Cluster-aware LVM (auto activation)
 drbd             DRBD Block Device
 filesystem       File System (mount point)
 gfs2             GFS2 File System (Cloned)
 lvm-drbd         LVM Group on DRBD
-ocfs2            OCFS2 File System
 raid-lvm         RAID Hosting LVM
 
 NFS:
@@ -134,8 +128,6 @@ cryptctl         A utility for setting up LUKS-based disk encryption
 
 .INP: list names
 apache
-clvm
-clvm-vg
 cryptctl
 database
 db2
@@ -152,7 +144,6 @@ mailto
 nfsserver
 nfsserver-lvm-drbd
 nginx
-ocfs2
 oracle
 raid-lvm
 sap-as
@@ -166,8 +157,6 @@ vmware
 .INP: list names all
 apache
 check-uptime
-clvm
-clvm-vg
 cryptctl
 database
 db2
@@ -186,7 +175,6 @@ mailto
 nfsserver
 nfsserver-lvm-drbd
 nginx
-ocfs2
 oracle
 raid-lvm
 raid1
@@ -204,8 +192,6 @@ vmware
 .INP: list all names
 apache
 check-uptime
-clvm
-clvm-vg
 cryptctl
 database
 db2
@@ -224,7 +210,6 @@ mailto
 nfsserver
 nfsserver-lvm-drbd
 nginx
-ocfs2
 oracle
 raid-lvm
 raid1
