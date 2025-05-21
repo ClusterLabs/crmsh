@@ -81,7 +81,8 @@ def configure_two_node(removing: bool = False, qdevice_adding: bool = False) -> 
         expected_votes -= 1
     if qdevice_adding and expected_votes > 1:
         expected_votes += 1
-    set_value("quorum.two_node", 1 if expected_votes == 2 else 0)
+    need_two_node = expected_votes == 2 and not is_qdevice_configured()
+    set_value("quorum.two_node", 1 if need_two_node else 0)
 
 
 def conf():

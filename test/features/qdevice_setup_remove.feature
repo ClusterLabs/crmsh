@@ -75,6 +75,29 @@ Feature: corosync qdevice/qnetd setup/remove process
     And     Show corosync qdevice configuration
 
   @clean
+  Scenario: Remove one node from a two-node+qdevice cluster
+    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    And     Service "corosync-qdevice" is "started" on "hanode2"
+    And     two_node in corosync.conf is "0"
+
+    When    Run "crm cluster remove hanode2 -y" on "hanode1"
+    Then    Cluster service is "stopped" on "hanode2"
+    And     Service "corosync-qdevice" is "stopped" on "hanode2"
+    And     two_node in corosync.conf is "0"
+    When    Run "crm cluster restart" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Service "corosync-qdevice" is "started" on "hanode2"
+    And     two_node in corosync.conf is "0"
+
+  @clean
   Scenario: Setup qdevice on multi nodes
     When    Run "crm cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
