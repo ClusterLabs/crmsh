@@ -2,8 +2,6 @@ scripts/apache/main.yml
 scripts/check-uptime/fetch.py
 scripts/check-uptime/main.yml
 scripts/check-uptime/report.py
-scripts/clvm/main.yml
-scripts/clvm-vg/main.yml
 scripts/cryptctl/main.yml
 scripts/cryptctl/README.md
 scripts/database/main.yml
@@ -27,7 +25,6 @@ scripts/mailto/main.yml
 scripts/nfsserver-lvm-drbd/main.yml
 scripts/nfsserver/main.yml
 scripts/nginx/main.yml
-scripts/ocfs2/main.yml
 scripts/oracle/main.yml
 scripts/raid1/main.yml
 scripts/raid-lvm/main.yml
@@ -43,11 +40,9 @@ scripts/sbd/main.yml
 scripts/virtual-ip/main.yml
 scripts/vmware/main.yml
 templates/apache
-templates/clvm
 templates/filesystem
 templates/gfs2
 templates/gfs2-base
-templates/ocfs2
 templates/sbd
 templates/virtual-ip
 test/bugs-test.txt
