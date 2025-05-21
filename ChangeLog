@@ -1,3 +1,70 @@
+* Mon Mar 4 2024 Xin Liang <XLiang@suse.com>
+- Release 5.0.0-pre
+- Dev: utils: Add IP.is_valid_ip back
+- Dev: report: Add config.report.compress_prog option
+- Dev: utils: Add functools.wraps to memoize decorator
+- Fix: add diagnostic messages when crm report cannot find ssh-agent (bsc#1219538)
+- Dev: use ClusterShell for the changes in the previous commit
+- Fix: crm report hangs in the root passwordless with ssh-agent
+- Fix: report: use ClusterShell for ssh (bsc#1220170)
+- Dev: Add 'packaging' dependency to crmsh for version comparison
+- Dev: utils: Replace LooseVersion with packaging.version
+- Fix: ui_node: clearstate command needs adjustment (bsc#1219831)
+- Fix: bootstrap: fail to join a cluster with hostname alias
+- Fix: bootstrap: clear stall data about ssh users left possiblely from previous setups (bsc#1219476)
+- Fix: report: Escape special characters in pattern (bsc#1220022)
+- Dev: ui_configure: verify all cib objects even if there is no primitive resource configured
+- Dev: ui_configure: bundle: support podman container
+- Dev: constants: Update the bundle help text
+- Dev: parse: Assign meaningful id to the bundle's port-mapping and storage-mapping
+- Dev: cibconfig: Hide the id of bundle port-mapping and storage-mapping
+- Dev: cibconfig: Change the multiline format for bundle
+- Dev: utils: Return empty list if corosync.conf does not exist
+- Dev: report: Enable crm report even cib.xml does not exist
+- Dev: utils: Query pacemaker_remote node correctly
+- Import missing sys library in config.py
+- Fix: ui_cluster: Can't start cluster with --all option if no cib (bsc#1219052)
+- Fix: bootstrap: ssh key of the init node is duplicated in the authorized_keys files of other node (bsc#1218940)
+- Fix: sh: guide users to setup key-based ssh authentication when non-interactive authentcation fails (bsc#1219045)
+- Fix: parse: Automatically append 's' as default time unit for timeout and interval (#1304)
+- Dev: ui_configure: Update the operation id after the monitor interval changed
+- Add profile for AWS and GCP with recommended corosync token timeout
+- Dev: utils: To prevent shell injection, manipulate the argument array instead of the command line string
+- Dev: report: Redirect warning and error from remote node into stderr
+- Fix: utils: Add 'sudo' only when there is a sudoer(bsc#1215549)
+- Dev: xmlutil: refactor class CrmMonXmlParser
+- Dev: completers: Add online_nodes and standby_nodes
+- Dev: cmd_status: Show error correctly for crm status
+- Dev: ui_utils: Supports '=' when setting node/resource attributes
+- Fix: constants: Add several resource meta attributes (bsc#1215319)
+- Dev: bootstrap: Check if the join side provides the corresponding network interface
+- Dev: bootstrap: Move detect/create mountpoint code to a specific function
+- Dev: bootstrap: A scaffold for crmsh to configure cluster with corosync3
+- Dev: profiles: Add new 'knet-default' profile type to keep knet only parameters
+- Dev: bootstrap: Validate network potions
+- Dev: ui_cluster: Add -t/--transport option and change -i/--interface option
+- Dev: Add new parser to parse corosync.conf
+- Dev: bootstrap: Remove bootstrap.update_expected_votes
+- Dev: ui_cluster: Drop deprecated options
+- Dev: utils: strip new line when get_stdout_or_raise_error returns
+- Dev: corosync: Enable logging.to_logfile
+- Fix: prun: setsid to prevent ssh from asking a password from terminal
+- Fix: upgradeutil: reduce the timeout for getting sequence from remote node (bsc#1213797)
+- Fix: userdir: Get the effictive user name instead of using getpass.getuser (bsc#1213821)
+- Dev: requirements: remove parallax
+- Fix: upgradeutil: support the change of path of upgrade_seq in crmsh-4.5 (bsc#1213050)
+- Fix: ui_context: wait4dc should assume a subcommand completes successfully if no exceptions are raised (bsc#1212992)
+- Fix: upgradeutil: do not tried to upgrade when the cluster is partially set up
+- Fix: bootstrap: fix the validation of option -N and -c (bsc#1212436)
+- medium: ui_node: fix cib rollback race on node standby
+- Dev: ui_cluster: Use 'CustomAppendAction' instead of 'append' argparse action
+- Fix: geo_cluster: the behavior of choosing a default user in geo_join/geo_init_arbitrator is different with `cluster join` (bsc#1211817)
+- Fix: utils: do not use sudoer user to create ssh session unless it is specified explicitly (bsc#1211817)
+- Dev: bootstrap: Configure ssh key when fetch geo config
+- Dev: ui_corosync: Remove add-node and del-node subcommands
+- Dev: cmd_status: Use --output-as option instead of deprecated --as-html and --as-xml options
+- Dev: cmd_status: Append 'with quorum' and 'WITHOUT quorum' to display keyword list
+
 * Tue Jan 9 2024 Xin Liang <XLiang@suse.com>
 - Release 4.6.0
 - Fix: report: Unable to gather log files that are in the syslog format (bsc#1218491)
