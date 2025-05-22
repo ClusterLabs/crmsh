@@ -1,3 +1,504 @@
+* Wed May 21 2025 Xin Liang <XLiang@suse.com>
+- Release 5.0.0 rc1
+- Dev: Drop scripts and templates which include unsupported RAs (jsc#PED-8924) (#1800)
+- Dev: sbd: Remove pcmk_delay_max while cacaulating stonith timeout value (#1740)
+- Fix: corosync: Don't set quorum.two_node to 1 if qdevice configured (#1797)
+- Dev: ui_cluster: Add firewalld stage to crm cluster init help info (#1796)
+- Dev: Refactor code to manage high-availability service in firewalld (#1781)
+- Dev: bootstrap: Add high-availability firewalld service on geo arbitrator
+- Dev: bootstrap: Apply firewalld changes to both runtime and permanent configurations without reload
+- Dev: bootstrap: Manage high-availability service in firewalld (bsc#1242494)
+- Dev: qdevice: Enable qnetd port in firewalld
+- Dev: bootstrap: Remove codes of configuring ports in firewalld
+- Dev: Add high-availability.xml for service of firewalld (bsc#1242494)
+- Dev: ui_configure: Add ':' suffix to order kind completer (#1775)
+- Dev: main: Ignore crm flag option to get completion (#1753)
+- Dev: ui_cluster: Skip stopping cluster if dlm_controld is running in maintenance mode (#1771)
+- Dev: ui_cluster: Refactor the `do_restart` function
+- Dev: ui_cluster: Skip stopping cluster if dlm_controld is running in maintenance mode
+- Dev: migration: add a message about how to upgrade cib schema version (jsc#PED-8252) (#1770)
+- Dev: cibconfig: Use VerifyResult to define the return value of sanity check related functions (#1773)
+- Dev: bootstrap: use ssh agent by default (#1728)
+- Fix: ra: Prevent to add unknown operation (bsc#1236442) (#1679)
+- Dev: Refactored node reachability handling in multiple modules (#1765)
+- Dev: bash_completion.sh: Add nosort option to disable sorting (#1761)
+- Dev: doc: Adjust help of `corosync status` command (#1763)
+- Dev: command: Sort the completion results for non-interactive mode
+- Dev: ra: Show parameters more clearly (#1733)
+- Dev: boostrap: ssh_copy_id should not use keys from ssh-agent (#1663)
+- Dev: remove use_ssh_ssh_agent() and always relay SSH_AUTH_SOCK (#1663)
+- Dev: bootstrap geo: allow to fallback to keyfile when login with ssh-agent fails (#1663)
+- Dev: bootstrap: should pass SSH_AUTH_SOCK when swapping keys (#1633)
+- Dev: bootstrap join: implement setup_passwordless_with_other_nodes by merging authorized_keys (#1663)
+- Fix: ssh_key: should not use ssh-copy-id -i when using keys from ssh-agent (#1633)
+- Dev: bootstrap join: allow to fallback to keyfile when login with ssh-agent fails (#1663)
+- Dev: bootstrap init -N: do not raise an error when no ssh key is available (#1663)
+- Dev: bootstrap join: do not raise an error when no ssh key is available (#1663)
+- Dev: ui_cluster: add `--no-use-ssh-agent` (#1663)
+- Dev: utils: Enhance maintenance mode management with detection and type hints (#1760)
+- Dev: ra: Refactor the code about how to show parameters
+- Dev: ra: Show parameters more clear
+- Dev: ui_sbd: Raise TerminateSubCommand if /etc/sysconfig/sbd is not found (#1755)
+- Fix: ui_cluster: Return when cluster service on all nodes are already startd (bsc#1241358) (#1746)
+- Dev: main: Ignore crm flag options to get completion
+- Dev: ui_sbd: Raise utils.TerminateSubCommand if /etc/sysconfig/sbd is not found
+- Dev: ui_cluster: Return False when run `crm cluster stop` raise NoSSHError
+- Dev: sbd: Leverage maintenance mode when need to restart cluster (#1744)
+- Dev: ui_sbd: Improve log info when adjust sbd related timeout
+- Dev: doc: Update crm.8.adoc for using -F/--force option for leveraging maintenance mode
+- Dev: ui_sbd: Configure crashdump watchdog timeout (#1732)
+- Dev: ui_sbd: Show fence_sbd parameter in 'sbd configure show'
+- Dev: doc: Update doc/crm.8.adoc to add crashdump option
+- Dev: ui_sbd: Add 'crashdump' option for 'sbd purge' command
+- Dev: ui_sbd: Refactor the condition for configuring crashdump
+- Dev: ui_sbd: Compare crashdump watchdog timeout value if configured
+- Dev: ui_sbd: Add warning to emphasize that kdump service is required
+- Dev: ui_sbd: Update the re pattern to match the possible arguments
+- Dev: ui_configure: Show the changes with diff like format (#1730)
+- Dev: ra: Drop legacy codes to fetch ra informations
+- Dev: Remove codes that include rhcs term
+- Dev: Drop node type normal and ping
+- Dev: Drop cluster-glue in multiple places (jsc#PED-8733) (#1712)
+- Dev: pre-migration: use a unsupported list instead of supported list (jsc#PED-11808) (#1720)
+- Dev: ui_corosync: fix completer for link remove (#1721)
+- Dev: pre-migration: add checks for deprecated resource agents (jsc#PED-11808)
+- Dev: pre-migration: update the unsupported list
+- Dev: pre-migration: check lsb or service resource agents (jsc#PED-11808)
+- Dev: ui_resource: Refactor do_trace function (#1709)
+- Fix: idmgmt: Replace hashtag('#') with point('.') in id (bsc#1239782) (#1718)
+- Dev: doc: Update the default value of <heartbeat_dir> in the documentation
+- Dev: cibverify: Print output of crm_verify directly (#1673)
+- Dev: bootstrap: Drop /var/lib/heartbeat in source code (jsc#PED-8733)
+- Dev: ui_configure: Remove 'ms' sub-command (jsc#PED-8231) (#1663)
+- Dev: Replace 'Master/Slave' with 'Promoted/Unpromoted' in multiple files
+- Dev: scripts: Use promotable clone instead of ms command
+- Dev: ui_configure: Enable -F option for 'configure upgrade' (#1710)
+- Dev: doc: Mention that 'configure upgrade' supports -F option
+- Dev: migration: implement corosync.conf migration for corosync 3 (jsc#PED-8252) (#1422)
+- Drop OCF_1_1_SUPPORT option in crm.conf (jsc#PED-8550) (#1703)
+- Dev: utils: Ignore config.core.OCF_1_1_SUPPORT option
+- Dev: etc: Drop OCF_1_1_SUPPORT option in crm.conf (jsc#PED-8550)
+- Dev: ssh_key: more robust error handling in KeyFileManager (bsc#1239084) (#1706)
+- Dev: ui_configure: Improve 'configure upgrade' command (#1701)
+- Refactor: migration: extract a function _migrate_totem_interface (jsc#PED-8252)
+- Refactor: cibquery: extract a function to get cluster nodes without side effects (jsc#PED-8252)
+- Dev: migration: fix incorrect bindnetaddr when migrating a multicast cluster (jsc#PED-8252)
+- Fix: migration: IndexError when there is only one interface (jsc#PED-8252)
+- Dev: migration: refine the message about unsupported component version (jsc#PED-8252)
+- Dev: migration: add a message about corosync.conf.bak (jsc#PED-82582)
+- Fix: migration: should not report need migration when the cluster has some non-fatal problems which need manual fix (jsc#PED-8252)
+- Dev: migration: no need to check if cluster services is stopped (jsc#PED-8252)
+- Dev: migration: add a checker for cib schema version (jsc#PED-8252)
+- Dev: migration: split problem level and is_blocker (jsc#PED-8252)
+- Dev: migration: check if the cluster is already migrated to SLES 16 (jsc#PED-8252)
+- Fix: migration: should not show pre-migration check summary when called with `--fix` (jsc#PED-8252)
+- Dev: migration: do not check pacemaker version (jsc#PED-8252)
+- Dev: migration: refine message wording (jsc#PED-11808)
+- Dev: pre-migration: add summary section to output (jsc#PED-11808)
+- Refactor: cibquery: has_primitive_filesystem_ocfs2 to has_primitive_filesystem_with_fstype
+- Fix: cibquery: grouped primitives is missing from query results (jsc#PED-11808)
+- Doc: ui_cluster: add document for `crm cluster health hawk2|sles16`
+- Dev: pre-migration: add message about removing stonith:external/sbd (jsc#PED-11808)
+- Fix: ui_cluster: fix do_health usage output
+- Dev: pre-migration: add completer for 'crm cluster health sles16' (jsc#PED-11808)
+- Dev: pre-migration: do not colorize hostname header (jsc#PED-11808)
+- Dev: add pre-migration checks for pacemaker version (jsc#PED-11808)
+- Dev: pre-migration: check if ocfs2 is used (jsc#PED-11808)
+- Dev: pre-migration: check removed fence agents (jsc#PED-11808)
+- Dev: pre-migration: check removed resource agents (jsc#PED-11808)
+- Dev: pre-migration: check SAPHanaSR Classic resource agents (jsc#PED-11808)
+- Dev: pre-migration: add checks for used corosync features (jsc#PED-11808)
+- Dev: migration: copy migrated corosync.conf to remote nodes (jsc#PED-8252)
+- Dev: migration: run checks on remote nodes (jsc#PED-8252)
+- Dev: prun: create event loop manually
+- Dev: ui_cluster: add 'crm cluster health sles [--fix]' (jsc#PED-8252)
+- Dev: profiles: set default crypto_hash to sha256 to follow corosync default
+- Dev: migration: implement multicast to knet migration (jsc#PED-8252)
+- Fix: corosync: use os.env instead of os.getenv for consistency (bsc#1205925)
+- Dev: migration: populate node name in corosync node list for knet multilink (jsc#PED-8252)
+- Dev: doc: Update the doc of 'configure upgrade' command
+- Dev: utils: Add parentheses to if else statements (#1698)
+- Change default DLM RA name (#1696)
+- Dev: cluster_fs: Use 'dlm-controld-ra' as the default dlm ra name
+- Dev: Add error log when cluster services fail to start (#1692)
+- Improve `configure schema` command (#1690)
+- Dev: doc: Improve documentation for `configure schema` command
+- Dev: ui_configure: Get schema statically when cluster is not running
+- Dev: schema: Make sure schema changed after setting new schema by `configure schema`
+- Dev: ui_cib: crm_shadow reset requires '--force' option
+- Fix: ci: test container image build failure in tumbleweed (#1689)
+- Dev: doc: Drop the syntax mention of '@<id>:name' in crm.8.adoc
+- Dev: Improve options of 'crm status' command (jsc#PED-8231)
+- Dev: constants: Drop deprecated 'restart-type' resource option (jsc#PED-8231)
+- Dev: Drop unsupported 'moon' in date_spec (jsc#PED-8231)
+- Dev: Remove deprecated cibadmin --local option (jsc#PED-8231)
+- Dev: crash_test.utils: Drop deprecated 'poweroff' value of 'stonith-action' option (jsc#PED-8231)
+- Dev: constants: Drop deprecated "crmd-integration-timeout" and "crmd-finalization-timeout" (jsc#PED-8231)
+- Dev: utils: Make change since 'crmd-transition-delay' already renamed to 'transition-delay' (jsc#PED-8231)
+- Dev: bootstrap: Drop 'record-pending' operation option (jsc#PED-8231)
+- Dev: Add cancel option when confirming to commit for the pending changes (#1686)
+- Fix: sbd: Detect if sbd package is missing on peer nodes (#1636)
+- Dev: ui_configure: Add completer for 'configure schema' command (#1677)
+- Revert "Fix: ui_context: Don't complete for unknown argument" (#1682)
+- Dev: Refactor: Introduce custom sort order enable/disable functions
+- Dev: Replace "stonith:external/<agent>" to fence_agents in multiple places (jsc#PED-8733) (#1667)
+- Fix: bootstrap: Local joining node should be included when merging known_hosts (bsc#1229419) (#1639)
+- Dev: bootstrap: Check if core packages like corosync/pacemaker are installed (#1675)
+- Fix: report: Check if mounted.ocfs2 command exists before using it (bsc#1236220) (#1669)
+- Fix: sbd: Check if fence_sbd command exists before initializing device (bsc#1236184) (#1671)
+- Dev: sbd: Remove the 'devices' parameter for fence_sbd agent (#1655)
+- Fix: ui_context: crmsh still complete even for unknown command (#1618)
+- Dev: bootstrap: Option -N should require option -y (#1656)
+- Fix: report: Check corosync.service status before querying quorum status (bsc#1235930) (#1665)
+- Fix: bootstrap: Improve sync_files_to_disk function (bsc#1219537) (#1653)
+- Dev: ra: Drop legacy code to get metadata of the pacemaker daemons (#1647)
+- Dev: help: Support '--help' option for cluster properties (#1643)
+- Dev: ui_configure: Print all properties if no property is specified
+- Dev: bootstrap: add gfs2 stage functionality (Technical Preview) (#1628)
+- Dev: report: Support crm report to collect GFS2 information
+- Dev: Rename ocfs2.py as cluster_fs.py
+- Revert "Dev: ocfs2: Drop support for configuring ocfs2 (jsc#PED-11038)"
+- Dev: utils: Change `get_dc` function as the behavior of `crmadmin -D` changed (#1632)
+- Dev: ui_resource: Refine 'do_failcount' function (#1624)
+- Collect ~/.config/crm/crm.conf in crm report result (#1622)
+- Dev: doc: Add examples for the 'failcount' command
+- Dev: report: Handle collect files with the same name
+- Dev: report: Add ~/.config/crm/crm.conf to the list of collected files
+- Add 'crm sbd' sub-level (jsc#PED-8256) (#1491)
+- Dev: ui_sbd: Don't show stonith-watchdog-timeout for disk-based SBD
+- Dev: sbd: Delete stonith-watchdog-timeout property when configuring
+- Dev: sbd: Remove sbd delay start related diretories when running sbd purge
+- Dev: Don't set and show SBD_WATCHDOG_TIMEOUT for disk-based SBD
+- Dev: ui_sbd: Adjust output of `sbd status`
+- Dev: ui_sbd: Adjust sbd configure subcommand
+- Dev: ui_sbd: Print sbd cmdline content in `sbd status` command
+- Dev: sbd: Split get_sbd_device_interactive into smaller functions
+- Dev: doc: Upadate crm.8.adoc for SBD help text
+- Dev: ui_sbd: Replace 'sbd disable' as 'sbd purge'
+- Dev: sh: Add get_rc_output_without_input in ClusterShell
+- Dev: sbd: Move constants.SHOW_SBD_START_TIMEOUT_CMD to sbd.py
+- Dev: ui_sbd: Check if node is reachable when getting the node list
+- Dev: ui_sbd: Reuse sbd.SBDManager.restart_cluster_if_possible
+- Dev: bootstrap: Add a log info when starting pacemaker.service
+- Dev: ui_sbd: Check if the adding device is already initialized
+- Dev: ui_sbd: Adjust sbd confiure interface
+- Dev: ui_sbd: Replace sbd remove as sbd disable sub-command
+- Dev: ui_sbd: Add sbd device sub command
+- Fix: ui_context: Don't complete for unknown argument
+- Fix: ui_context: Don't complete for unknown command
+- Dev: ui_sbd: No need to specify device="" when trying to modify properties under diskless sbd
+- Dev: report: Dump output of 'crm sbd configure show' and 'crm sbd status' to the report result
+- Dev: Refactor the code to avoid circular import
+- Dev: ui_sbd: Refactor do_status method
+- Dev: bootstrap: Check if sbd package is installed in the right place
+- Dev: ui_sbd: Clean up existing fence_sbd resource before configure diskless SBD
+- Dev: ui_sbd: Update regex for parsing SBD device by partlabel
+- Dev: ui_sbd: Catch both stderr and stdout for crm resource status
+- Dev: ui_sbd: No need to consider static case when calling crm configure show
+- Dev: ui_sbd: Add property/sysconfig section header for sbd configure show
+- Dev: doc: Add help info for crm sbd sublevel
+- Dev: ui_sbd: Add new 'crm sbd' sublevel (jsc#PED-8256)
+- Dev: utils: Introduced `detect_duplicate_device_path` function in utils
+- Dev: utils: Avoid hardcoding the ssh key type as RSA (#1600)
+- Dev: bootstrap: Remove import_ssh_key function
+- Dev: ssh_key: Split fetch_public_key_list into two functions
+- Dev: bootstrap: Improve shell script in generate_ssh_key_pair_on_remote
+- Dev: bootstrap: Reuse AuthorizedKeyManager to add key to authorized_keys
+- Dev: bootstrap: Adjust the docstring of configure_ssh_key function
+- Dev: bootstrap: Change the parameter name in swap_public_ssh_key function
+- Dev: bootstrap: Avoid hardcoding the ssh key type as RSA
+- Dev: ssh_key: Avoid hardcoding the ssh key type as RSA
+- Dev: bootstrap: more robust implementation for ssh_merge (bsc#1230530) (#1610)
+- Fix: log: The report DEBUG log message is not displayed in the log file (#1608)
+- Fix: report.utils: Fix the performance issue (bsc#1232821) (#1606)
+- Dev: report.utils: For a sequence of archived log files, check the modify time
+- Dev: report.utils: Add debug info for the log file types
+- Fix: report.collect: Make sure the log is not None before using it (bsc#1232821)
+- Dev: add pylint to check ill-formated string literals (#1603)
+- Fix: Python 3.12: SyntaxWarning: invalid escape sequence (#1601)
+- Dev: bootstrap: Refine remote_auth stage (#1598)
+- Fix: scripts: health: failed to extract report when it is compressed in bz2 (#1595)
+- Dev: beahve: refine messages in the test runner script
+- Dev: test_container: replace iptables with iptables-nft (#1572)
+- Fix: hahealth: return fail when report failed (bsc#1231840) (#1589)
+- Dev: ocfs2: Drop support for configuring ocfs2 (jsc#PED-11038) (#1574)
+- Fix: cibconfig: Disable auto add advise values for operations (bsc#1231386) (#1579)
+- Fix: ui_cluster: Stop renaming cluster name when using qdevice (#1573)
+- Dev: utils: Check node is reachable by using both ping and ssh (#1563)
+- Fix: help: crm help <topic> does not work (#1567) (#1568)
+- Fix: report: find_shell should accept hacluster user (bsc#1228899) (#1564)
+- Dev: report: do not capture stderr when unarchiving tarballs
+- Dev: report: make error messages easier to parse for hawk2 (bsc#1228899)
+- Dev: ui_cluster: Change the completer for crm cluster health
+- Dev: remove `upgradeutil` and add `crm cluster health hawk2 [--fix]` (bsc#1228899) (#1558)
+- Fix: command: `do_help` does not work as a 3rd level subcommand (#1560)
+- Dev: report: add a reminder to use `crm cluster health` (bsc#1228899)
+- Dev: ui_cluster: add a reminder to use "crm cluster init/join ssh" to initialize ssh (bsc#1228899)
+- Dev: scripts: add a reminder to use `crm cluster health` to fix hacluster passwordless ssh authentication (bsc#1228899)
+- Dev: scripts: generate readable messages when ssh authentication fails (bsc#1228899)
+- Fix: report: should not try interactive authentication when stdin is not a tty (bsc#1228899)
+- Dev: main: remove upgradeutil (bsc#1228899)
+- Fix: bootstrap: check is_nologin more robustly (bsc#1228251) (#1553)
+- Dev: utils: Catch PermissionError when reading files (#1543)
+- Fix: corosync: fix linknumber validation (#1546) (#1549)
+- Fix: doc: fix broken links in crm.8.adoc (#1546) (#1548)
+- Fix: ui_corosync: should raise LinkArgumentParser.SyntaxException when fails to validate linknumber (#1546)
+- Fix: corosync: should validate linknumber (#1546)
+- Dev: completers: Reuse node completer for cluster remove and health
+- Dev: bootstrap: Enhance log clarity during crm cluster remove process
+- Dev: corosync: add subcommands 'crm corosync link ...' for managing multi-links in knet (jsc#PED-8083) (#1471)
+- Dev: ui_corosync: use corosync-cfgtool instead of corosync-cmaptool to retreive link status (jsc#PED-8083)
+- Dev: ui_corosync: reject to remove a link if removing it breaks the cluster (jsc#PED-8083)
+- Dev: corosync: allow linknumber not to start with 0
+- Dev: ui_corosync: refine the error messages for missing or duplicated nodes (jsc#PED-8083)
+- Dev: ui_corosync: sync and reload corosync.conf after changes (jsc#PED-8083)
+- Dev: ui_corosync: refactor to reuse configuration loading and saving code
+- Dev: bootstrap: refactor to reuse KNET_LINK_NUM_LIMIT from corosync module
+- Dev: corosync: add the list of updatable options in the error message when an not updatable option is specified
+- Fix: ui_corosync: should not allow empty option values when adding new links
+- Dev: docs: add documents for `crm corosync link`
+- Fix: corosync: does not detect last link correctly
+- Dev: corosync_config_format: sort keys to put `ringX_addr`s together (jsc#PED-8083)
+- Dev: ui_corosync: print a message when running link update without any arguement
+- Fix: ui_corosync: should detect unconfigured addresses when adding/updating links
+- Fix: corosync: show detect duplicated addresses when adding/updating links
+- Dev: ui_corosync: add subcommand 'crm corosync link add' (jsc#PED-8083)
+- Dev: corosync: implement adding links (jsc#PED-8083)
+- Dev: corosync: implement removing links (jsc#PED-8083)
+- Dev: corosync: implement updating node addresses (jsc#ped-8083)
+- Dev: ui_corosync: add subcommand 'crm corosync link update' (jsc#PED-8083)
+- Dev: corosync: implement updating link options (jsc#PED-8083)
+- Dev: ui_corosync: add subcommand 'crm corosync link show' (jsc#PED-8083)
+- Dev: corosync: implement collecting link info from config (jsc#PED-8083)
+- Dev: corosync: refactor COROSYNC_KNOWN_SEC_NAMES_WITH_LIST
+- Dev: help: support multi level subcommands (#1542)
+- Dev: ui_node: Improve command 'clearstate <node>' (#1534)
+- Refactor: help: rename HelpEntry.long to HelEntry.long_help
+- Dev: help: capture error messages when `--help` fails rather
+- Fix: help: should retrieve help for intermediate levels from _COMMAND_TREE
+- Fix: help: append subcommand list to long descriptions
+- Dev: help: add support for subcommand aliases
+- Dev: help: multilevel subcommand tree rendering in help_overview()
+- Dev: command: adapt annotation `command.help` to multilevel help
+- Dev: help: use tree struture to store the help of subcommands
+- Dev: help: replace seperator '_' in anchors with '.'
+- Dev: help: refactor HelpEntry to put lazy loading implementation to a separated subclass
+- Fix: Add a new option 'has_fa_advised_op' (bsc#1228858) (#1539)
+- Fix: utils: Stop providing the detailed and precise sudoer rules to "hack" the privilege (bsc#1229093) (#1536)
+- Dev: utils: Load CIB_file env before some readonly commands (#1540)
+- Dev: Rename variables to make them look like boolean type
+- Dev: Rename the option 'add_advised_op_values' to 'ra_advised_op_values'
+- Dev: Add a new internal flag to control auto add time units on operation
+- Fix: Add a new option 'fa_advised_op_values' (bsc#1228858)
+- Fix: Raise an exception as a rapid return of ssh-related operations to prevent hang (bsc#1228899) (#1520)
+- Fix: bootstrap: ssh public key should be copied to qnetd node when ssh-agent feature is not enabled (bsc#1228950) (#1516)
+- Fix: hawk2 cannot call crm script as user hacluster (bsc#1228271) (#1533)
+- Fix: completers: deferring calls to crm_mon until envsetup() is called (bsc#1228271)
+- Fix: utils: allow haclient group to use cluster level commands (bsc#1228271)
+- Fix: scripts: call commands as current user when running as hacluster (bsc#1228271)
+- Fix: prun: allow pcopy_to_remote to use intercept (bsc#1228271)
+- Fix: Don't add time units to values for existing CIB (bsc#1228817) (#1530)
+- Fix: utils: group check failure when os.getgroups() returns empty (bsc#1229030) (#1529)
+- Fix: report: When 'core.no_ssh' set to 'yes', crm report works in local mode (bsc#1228899)
+- Fix: report: crm report will hang if CIB contains invalid configuraions (bsc#1229686) (#1519)
+- Fix: upgradeutil: Immdiately return if config.core.no_ssh is set (bsc#1228899)
+- Fix: ui_cluster: Handle 'crm cluster start --all' command (bsc#1228899)
+- Fix: ui_cluster: Handle 'crm cluster stop --all' command (bsc#1228899)
+- Fix: utils: Define utils.NoSSHError exception and ssh wrapper function (bsc#1228899)
+- Fix: config: Add 'core.no_ssh' option (bsc#1228899)
+- Dev: sh: Ensure CommandFailure Exception is Picklable Across Processes (bsc#1229686)
+- Fix: report: Error output of crm_verify should be recorded in report result (bsc#1229686)
+- Revert "Dev: ui_configure: Deprecate configure erase sub-command" (bsc#1228713) (#1501)
+- Fix: bootstrap: drop environ SSH_AUTH_SOCK before checking passwordless ssh when it is not enabled (bsc#1228950)
+- Fix: bootstrap: should check if sudo is available when running `cluster join -c` with a non-root destination user (bsc#1228950)
+- Fix: bootstrap: should check if sudo is available when running `cluster init -N` with a non-root destination user (bsc#1228950)
+- Add an option 'add_advised_op_values' to disable adding advised op values (#1494)
+- Dev: Add option core.add_advised_op_values, default value is 'yes'
+- Dev: Rename variable 'add_default_op_values' to 'add_advised_op_values'
+- Dev: scripts/health/collect: use ansible to get sysinfo (#1500)
+- Revert "Dev: doc: Add deprecated note for 'crm configure erase'"
+- Fix: ui_context: enter_level() should not check requirements for non-functional subcommands (#1498)
+- Dev: crm_rpmcheck: use ansible to get package versions (#1497)
+- Fix: ui_context: enter_level() should not check requirements for non-functional subcommands
+- Fix: DC lost during wait (#1483)
+- Fix: qnetd fails to start when TLS is disabled (bsc#1227649) (#1489)
+- Dev: qdevice: numbers automatically the steps to generate client certs
+- Fix: cibconfig: Disable auto complete advised operation values when adding a rsc_template (#1454)
+- Dev: Rename variables to distinguish the concept of adding default
+- Dev: prun: add more possible libexec PATH for sftp-server
+- Fix: qdevice: config "tls" should accept value "required" (bsc#1227649)
+- Fix: bootstrap: refine the wording in the question asking TLS config for qdevice (bsc#1227649)
+- Fix: qdevice: TLS certs should always be generated for qnetd (bsc#1227649)
+- Dev: prun: replace deprecated stdlib API asyncio.get_event_loop()
+- Dev: ui_cluster: refactor Cluster._wait_for_dc()
+- Dev: utils: revert previous changes to get_dc()
+- Dev: utils: rename wait4dc to wait_dc_stable
+- Dev: Remove crmsh/ordereddict.py (#1485)
+- Dev: bootstrap: Use the existing function to query cluster property (#1479)
+- Fix: cibconfig: Disable complete advised operation values when adding a rsc_template
+- Dev: refine change detection for `crm configure` (#1466) (#1486)
+- Fix: cli: loading cib should be a soft depenedency
+- Dev: ui_context: refactor NON_FUNCTIONAL_COMMAND and NON_FUNCTIONAL_OPTIONS
+- Revert changes to `quit` and `up` in ui_context from #1300 (#1466)
+- Fix: cibconfig: do not load cib to check if cib is changed (#1466)
+- Dev: ui_configure: Complete required parameters first (#1461)
+- Fix: ui_context: crm configure up prompt #1466 (#1481)
+- Fix: ui_context: crm configure delete autocompletion #1403 #1460 (#1469)
+- Dev: ra: Refine RAInfo.params interface to exclude some completion results
+- Dev: ui_context: Don't append space when completion ends with equal sign
+- Fix: ui_context: crm cluster delete autocompletion #1403 #1460
+- Dev: sbd: Replace external/sbd as fence_sbd (#1462)
+- Dev: Drop rkt container type in bundle (jsc#PED-5577) (#1427)
+- Dev: ra: Guess stonith class type when using fence agents (#1463)
+- Fix: upgradeutil: refine error handling (bsc#1226147, bsc#1223371) (#1456)
+- Dev: doc: Adjust doc for deprecated multi-rule within a location constraint
+- Dev: ui_corosync: Improve corosync.show and corosync.edit subcommands (#1264)
+- Dev: doc: Remove 'moon' from doc
+- Dev: Hide 'configure ms' command (jsc#PED-8550) (#1450)
+- Dev: doc: Drop help info of 'configure ms' command
+- Dev: doc: Move 'id-ref' usage into help primitive section
+- Dev: Hide 'configure ms' command from UI (jsc#PED-8550)
+- Dev: bootstrap: warn about cleartext traffic in corosync (#1448)
+- Dev: Hide lsb and service resource agent class type from UI and doc (#1423)
+- Dev: ui_resource: Improve completers for 'crm resource' command (#1443)
+- Dev: ui_resource: Set role as Promoted/Unpromoted when promote/demote (jsc#PED-8550) (#1445)
+- Dev: Parsing resource meta attributes dynamically (#1424)
+- Dev: crash_test.utils: Reuse color constants from crmsh.constants
+- Dev: config: Set OCF_1_1_SUPPORT to yes (jsc#PED-8550) (#1434)
+- Fix: cmd_status: call crm_mon without shell (#1429) (#1430)
+- interface network option improvement (#1421)
+- Dev: log an error when fencing node without stonith device configured and running (#1425)
+- Dev: bootstrap: Minor refactoring of the get_address_list function
+- Dev: bootstrap: On join side, adjust the condition of comparing the link number
+- Dev: utils: Give valid value list for the -i option when the value is invalid
+- Fix: healthcheck: KeyError when local nodename not found in cib (bsc#1223438)
+- Dev: Change the RA name string format (jsc#PED-106)
+- Dev: utils: Add info when property is newly added
+- Dev: corosync_config_format: Enable to parse comments
+- Dev: corosync_config_format: Add new line between sections
+- Dev: Drop nagios related code, the help text, and the man page (jsc#PED-8259, jsc#PED-8232)
+- Fix: bootstrap: open corosync ports in firewalld
+- Dev: Drop SuSEfirewall2 support
+- Dev: corosync: Show corosync cpg status in `crm corosync status cpg`
+- Fix: doc/toolchain: fix missing anchor in generated AIO doc (#1409)
+- Dev: corosync: Add corosync.is_valid_corosync_conf function
+- Fix: ui_cluster: do_start should parse cmdline args before doing any checks
+- Revert "Fix: corosync: should not raise ValueError when failing to open config file"
+- Dev: ui_context: make help subcommands to exit with 0 (#1374)
+- Fix: corosync: should not raise ValueError when failing to open config file
+- Dev: ui_context: ignore requirements when option --help is specified
+- Fix: corosync: ConfigParser.get_all(nonexsistent) should return an empty list
+- Dev: ui_context: Skip querying CIB when in a sublevel or help command
+- Refactor: corosync: move conf_parser.ConfParser to corosync.ConfParser
+- Dev: ui_corosync: add completer for `corosync get` and `corosync set`
+- Dev: conf_parser: use the new implementation
+- Fix: open_atomic: no need to fsync on exception
+- Dev: corosync_config_format: new parser and serializer for corosync configuration file
+- Dev: bootstrap: Setup the stage dependency on init and join side (bsc#1175865, bsc#1219940)
+- Dev: bootstrap: Enhance stage validation
+- Fix: healthcheck: Add crmsh.constants.SSH_OPTION when doing ssh in check_local
+- Fix: healthcheck: Missing 'id_' prefix while checking the ssh key existence
+- Dev: doc: Don't show the usage of 'crm ra info cluster'
+- Fix: main: Set PATH environment first
+- Dev: bash_completion: Enable complete 'id=' on non-interactive mode
+- Dev: doc: update howto build the website (#1374)
+- Dev: doc/toolchain: add asciidoc-py (#1374)
+- Dev: doc/toolchain: implement adocaio (#1374)
+- Dev: doc/toolchain: add asciidoctor (#1374)
+- Dev: doc/toolchain: implement generating include statement for asciidoc (#1374)
+- Dev: doc/toolchain: add Containerfile (#1374)
+- Dev: doc/toolchain: implement adocxt (#1374)
+- Dev: doc/toolchain: implement help2adoc (#1374)
+- Fix: bootstrap: Detect cluster service on init node before saving the canonical hostname (bsc#1222714)
+- Dev: doc: Drop the options for the old daemon names, pengine, crmd, cib and stonithd in the help/man
+- Dev: ra: Show related info when "advanced", "generated" and "deprecated" detected in metadata
+- Dev: ra: Parsing select values in cluster option metadata
+- Dev: ra: Get cluster option metadata from crm_attribute command (jsc#PED-8037, jsc#PED-8016)
+- Fix: ui_node: When `utils.list_cluster_nodes` return None, try to get ip list from corosync.conf
+- Dev: report: Collect quorum/qdevice/qnetd status
+- Dev: bootstrap: Add all nodes' keys to qnetd authroized_keys even init
+- Dev: bootstrap: Give a warning when detecting $SSH_AUTH_SOCK but not use --use-ssh-agent option
+- Dev: qdevice: Refactor init_qdevice function
+- Dev: qdevice: Add all nodes' keys to qnetd authorized_keys
+- Fix: sh: Return the value of AuthorizationError.diagnose if it is not None
+- Dev: log: Set the log format for crmsh.log as rfc5424
+- Fix: utils: set env `CIB_shadow` using `os.environ` (bsc#1205925)
+- Fix: pass env to child process explicitly (bsc#1205925)
+- Fix: term: unset env `COLUMNS` and `ROWS` (bsc#1205925)
+- Fix: sh: pass env to child process explicitly (bsc#1205925)
+- Dev: ssh_key: Extract duplicate code about list keys from ssh-agent to a function
+- Dev: bootstrap: Refactor qdevice user parsing and finding
+- Fix: report: Show different perspectives of cluster
+- Fix: ui_node: prevent traceback on node online
+- Fix: ui_node: prevent traceback on node standby
+
+* Mon Mar 4 2024 Xin Liang <XLiang@suse.com>
+- Release 5.0.0-pre
+- Dev: utils: Add IP.is_valid_ip back
+- Dev: report: Add config.report.compress_prog option
+- Dev: utils: Add functools.wraps to memoize decorator
+- Fix: add diagnostic messages when crm report cannot find ssh-agent (bsc#1219538)
+- Dev: use ClusterShell for the changes in the previous commit
+- Fix: crm report hangs in the root passwordless with ssh-agent
+- Fix: report: use ClusterShell for ssh (bsc#1220170)
+- Dev: Add 'packaging' dependency to crmsh for version comparison
+- Dev: utils: Replace LooseVersion with packaging.version
+- Fix: ui_node: clearstate command needs adjustment (bsc#1219831)
+- Fix: bootstrap: fail to join a cluster with hostname alias
+- Fix: bootstrap: clear stall data about ssh users left possiblely from previous setups (bsc#1219476)
+- Fix: report: Escape special characters in pattern (bsc#1220022)
+- Dev: ui_configure: verify all cib objects even if there is no primitive resource configured
+- Dev: ui_configure: bundle: support podman container
+- Dev: constants: Update the bundle help text
+- Dev: parse: Assign meaningful id to the bundle's port-mapping and storage-mapping
+- Dev: cibconfig: Hide the id of bundle port-mapping and storage-mapping
+- Dev: cibconfig: Change the multiline format for bundle
+- Dev: utils: Return empty list if corosync.conf does not exist
+- Dev: report: Enable crm report even cib.xml does not exist
+- Dev: utils: Query pacemaker_remote node correctly
+- Import missing sys library in config.py
+- Fix: ui_cluster: Can't start cluster with --all option if no cib (bsc#1219052)
+- Fix: bootstrap: ssh key of the init node is duplicated in the authorized_keys files of other node (bsc#1218940)
+- Fix: sh: guide users to setup key-based ssh authentication when non-interactive authentcation fails (bsc#1219045)
+- Fix: parse: Automatically append 's' as default time unit for timeout and interval (#1304)
+- Dev: ui_configure: Update the operation id after the monitor interval changed
+- Add profile for AWS and GCP with recommended corosync token timeout
+- Dev: utils: To prevent shell injection, manipulate the argument array instead of the command line string
+- Dev: report: Redirect warning and error from remote node into stderr
+- Fix: utils: Add 'sudo' only when there is a sudoer(bsc#1215549)
+- Dev: xmlutil: refactor class CrmMonXmlParser
+- Dev: completers: Add online_nodes and standby_nodes
+- Dev: cmd_status: Show error correctly for crm status
+- Dev: ui_utils: Supports '=' when setting node/resource attributes
+- Fix: constants: Add several resource meta attributes (bsc#1215319)
+- Dev: bootstrap: Check if the join side provides the corresponding network interface
+- Dev: bootstrap: Move detect/create mountpoint code to a specific function
+- Dev: bootstrap: A scaffold for crmsh to configure cluster with corosync3
+- Dev: profiles: Add new 'knet-default' profile type to keep knet only parameters
+- Dev: bootstrap: Validate network potions
+- Dev: ui_cluster: Add -t/--transport option and change -i/--interface option
+- Dev: Add new parser to parse corosync.conf
+- Dev: bootstrap: Remove bootstrap.update_expected_votes
+- Dev: ui_cluster: Drop deprecated options
+- Dev: utils: strip new line when get_stdout_or_raise_error returns
+- Dev: corosync: Enable logging.to_logfile
+- Fix: prun: setsid to prevent ssh from asking a password from terminal
+- Fix: upgradeutil: reduce the timeout for getting sequence from remote node (bsc#1213797)
+- Fix: userdir: Get the effictive user name instead of using getpass.getuser (bsc#1213821)
+- Dev: requirements: remove parallax
+- Fix: upgradeutil: support the change of path of upgrade_seq in crmsh-4.5 (bsc#1213050)
+- Fix: ui_context: wait4dc should assume a subcommand completes successfully if no exceptions are raised (bsc#1212992)
+- Fix: upgradeutil: do not tried to upgrade when the cluster is partially set up
+- Fix: bootstrap: fix the validation of option -N and -c (bsc#1212436)
+- medium: ui_node: fix cib rollback race on node standby
+- Dev: ui_cluster: Use 'CustomAppendAction' instead of 'append' argparse action
+- Fix: geo_cluster: the behavior of choosing a default user in geo_join/geo_init_arbitrator is different with `cluster join` (bsc#1211817)
+- Fix: utils: do not use sudoer user to create ssh session unless it is specified explicitly (bsc#1211817)
+- Dev: bootstrap: Configure ssh key when fetch geo config
+- Dev: ui_corosync: Remove add-node and del-node subcommands
+- Dev: cmd_status: Use --output-as option instead of deprecated --as-html and --as-xml options
+- Dev: cmd_status: Append 'with quorum' and 'WITHOUT quorum' to display keyword list
+
 * Tue Jan 9 2024 Xin Liang <XLiang@suse.com>
 - Release 4.6.0
 - Fix: report: Unable to gather log files that are in the syslog format (bsc#1218491)
