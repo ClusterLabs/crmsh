@@ -4,14 +4,16 @@
 
 import sys
 import re
+import argparse
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from . import command
+from . import command, healthcheck
 from . import utils
 from . import scripts
 from . import completers as compl
 from . import bootstrap
 from . import corosync
 from . import qdevice
+from . import migration
 from .cibconfig import cib_factory
 from . import constants
 
@@ -777,11 +779,35 @@ to get the geo cluster configuration.""",
         bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
-    @command.completers_repeating(compl.call(scripts.param_completion_list, 'health'))
+    @command.completers(compl.choice([
+        'hawk2',
+        'sles16',
+    ]))
     def do_health(self, context, *args):
         '''
         Extensive health check.
         '''
+        if not args:
+            return self._do_health_legacy(context, *args)
+        parser = argparse.ArgumentParser('health')
+        parser.add_argument('component', choices=['hawk2', 'sles16'])
+        parser.add_argument('-f', '--fix', action='store_true')
+        parsed_args, remaining_args = parser.parse_known_args(args)
+        if 'sles16' == parsed_args.component:
+                try:
+                    if parsed_args.fix:
+                        logger.error('"--fix" is only available in SLES 16.')
+                        return False
+                    else:
+                        return 0 == migration.check(['sles16'] + remaining_args)
+                except migration.MigrationFailure as e:
+                    logger.error('%s', e)
+                    return False
+        else:
+                logger.error('Unknown component: %s', parsed_args.component)
+                return False
+
+    def _do_health_legacy(self, context, *args):
         params = self._args_implicit(context, args, 'nodes')
         script = scripts.load_script('health')
         if script is None:

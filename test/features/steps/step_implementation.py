@@ -1,15 +1,39 @@
+import ast
 import re
 import time
 import os
 import datetime
 import yaml
+import behave
 from behave import given, when, then
-from crmsh import corosync, parallax, sbd
+from crmsh import corosync, parallax, sbd, userdir
 from crmsh import utils as crmutils
 from utils import check_cluster_state, check_service_state, online, run_command, me, \
                   run_command_local_or_remote, file_in_archive, \
-                  assert_eq
+                  assert_eq, assert_in
 import const
+
+
+def _parse_str(text):
+    return ast.literal_eval(text)
+_parse_str.pattern='"([^"]|\\")*?"'
+
+
+behave.use_step_matcher("cfparse")
+behave.register_type(str=_parse_str)
+
+
+@when('Write multi lines to file "{f}" on "{addr}"')
+def step_impl(context, f, addr):
+    data_list = context.text.split('\n')
+    for line in data_list:
+        echo_option = " -n" if line == data_list[-1] else ""
+        cmd = "echo{} \"{}\"|sudo tee -a {}".format(echo_option, line, f)
+        if addr != me():
+            sudoer = userdir.get_sudoer()
+            user = f"{sudoer}@" if sudoer else ""
+            cmd = f"ssh {user}{addr} '{cmd}'"
+        run_command(context, cmd)
 
 @when('Write multi lines to file "{f}"')
 def step_impl(context, f):
@@ -116,6 +140,14 @@ def step_impl(context, msg):
     context.stderr = None
 
 
+@then('Expect stdout contains snippets [{snippets:str+}].')
+def step_impl(context, snippets):
+    for snippet in snippets:
+        assert_in(snippet, context.stdout)
+    context.stdout = None
+
+
+@then('Expected regex "{reg_str}" in stdout')
 @then('Expected regrex "{reg_str}" in stdout')
 def step_impl(context, reg_str):
     res = re.search(reg_str, context.stdout)
