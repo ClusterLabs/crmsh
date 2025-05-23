@@ -266,9 +266,6 @@ deploy_ha_node() {
 
 
 create_node() {
-	info "Loading docker image $DOCKER_IMAGE..."
-        docker pull $DOCKER_IMAGE &> /dev/null
-
 	for index in ${!HA_NETWORK_ARRAY[@]};do
 		network=${HA_NETWORK_ARRAY[$index]}
 		info "Create ha specific docker network \"$network\"..."
