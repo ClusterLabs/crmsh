@@ -435,7 +435,7 @@ class RscMgmt(command.UI):
     @command.alias('migrate')
     @command.skill_level('administrator')
     @command.wait
-    @command.completers_repeating(compl.resources, compl.nodes)
+    @command.completers_repeating(compl.resources, compl.nodes_with_remote)
     def do_move(self, context, rsc, *args):
         """usage: move <rsc> [<node>] [<lifetime>] [force]"""
         return self.move_or_ban(context, rsc, *args)
@@ -443,7 +443,7 @@ class RscMgmt(command.UI):
 
     @command.skill_level('administrator')
     @command.wait
-    @command.completers_repeating(compl.resources, compl.nodes)
+    @command.completers_repeating(compl.resources, compl.nodes_with_remote)
     def do_ban(self, context, rsc, *args):
         """usage: ban <rsc> [<node>] [<lifetime>] [force]"""
         return self.move_or_ban(context, rsc, *args)
@@ -486,7 +486,7 @@ class RscMgmt(command.UI):
         return utils.ext_cmd("crm_resource -a -r '%s'" % (resource))
 
     @command.wait
-    @command.completers(compl.resources, _attrcmds, compl.nodes)
+    @command.completers(compl.resources, _attrcmds, compl.nodes_with_remote)
     def do_failcount(self, context, rsc, cmd, node, value=None, operation=None, interval=None):
         """usage:
         failcount <rsc> set <node> <value> [operation] [interval]
