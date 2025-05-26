@@ -1,5 +1,6 @@
 # prun.py - run command or copy files on multiple hosts concurrently
 import os
+import random
 import socket
 import tempfile
 import typing
@@ -147,6 +148,7 @@ def pcopy_to_remote(
         hosts: typing.Sequence[str], dst: str,
         recursive: bool = False,
         *,
+        atomic_write: bool = False,
         timeout_seconds: int = -1,
         concurrency: int = _DEFAULT_CONCURRENCY,
         interceptor: PRunInterceptor = PRunInterceptor(),
@@ -161,7 +163,11 @@ def pcopy_to_remote(
             return {x: None for x in hosts}
     flags = '-pr' if recursive else '-p'
     local_sudoer, _ = UserOfHost.instance().user_pair_for_ssh(hosts[0])
-    script = "put {} '{}' '{}'\n".format(flags, src, dst)
+    if atomic_write:
+        suffix = '{:x}-{}'.format(random.SystemRandom().getrandbits(64), socket.gethostname())
+        script = f"put {flags} '{src}' '{dst}.{suffix}'\nrename '{dst}.{suffix}' '{dst}'\n"
+    else:
+        script = "put {} '{}' '{}'\n".format(flags, src, dst)
     ssh = None
     try:
         # sftp -S does not parse args, it accepts only a single executable. So we create one.

@@ -387,7 +387,11 @@ def migrate_corosync_conf():
         'Finish migrating corosync configuration. The original configuration is renamed to %s.bak',
         os.path.basename(conf_path),
     )
-    for host, result in prun.pcopy_to_remote(conf_path, utils.list_cluster_nodes_except_me(), conf_path).items():
+    for host, result in prun.pcopy_to_remote(
+            conf_path,
+            utils.list_cluster_nodes_except_me(), conf_path,
+            atomic_write=True,
+    ).items():
         match result:
             case None:
                 pass
