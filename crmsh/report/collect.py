@@ -166,6 +166,8 @@ def collect_config():
     if os.path.isfile(os.path.join(workdir, constants.CIB_F)):
         cmd = "crm_verify -V -x %s" % os.path.join(workdir, constants.CIB_F)
         crmutils.str2file(utillib.get_command_info(cmd)[1], os.path.join(workdir, constants.CRM_VERIFY_F))
+        cmd = r"CIB_file=%s/%s crm configure show" % (workdir, constants.CIB_F)
+        crmutils.str2file(utillib.get_command_info(cmd)[1], os.path.join(workdir, constants.CIB_TXT_F))
 
 
 def collect_dc_file():
@@ -174,13 +176,6 @@ def collect_dc_file():
     node = crmutils.get_dc()
     if node and node == constants.WE:
         open(os.path.join(constants.WORKDIR, "DC"), 'w')
-
-
-def collect_crm_config():
-    workdir = constants.WORKDIR
-    if os.path.isfile(os.path.join(workdir, constants.CIB_F)):
-        cmd = r"CIB_file=%s/%s crm configure show" % (workdir, constants.CIB_F)
-        crmutils.str2file(utillib.get_command_info(cmd)[1], os.path.join(workdir, constants.CIB_TXT_F))
 
 
 def collect_pe_inputs():
