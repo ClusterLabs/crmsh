@@ -501,12 +501,12 @@ class ConfParser(object):
         return inst.get_all(path)
 
     @classmethod
-    def set_value(cls, path, value, index=0):
+    def set_value(cls, path, value, index=0, config_file=None):
         """
         Class method to set value for path
         Then write back to config file
         """
-        inst = cls()
+        inst = cls(config_file=config_file)
         inst.set(path, value, index)
         inst.save()
 

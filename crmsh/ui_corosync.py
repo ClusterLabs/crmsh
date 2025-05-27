@@ -6,8 +6,10 @@ import ipaddress
 import json
 import re
 import subprocess
+import os
 import sys
 import typing
+import shutil
 
 from . import command, sh, parallax, iproute2
 from . import completers
@@ -417,12 +419,16 @@ class Corosync(command.UI):
     @command.completers(completers.call(corosync.get_all_paths))
     def do_set(self, context, path, value, index: int = 0):
         """Set a corosync configuration value"""
-        corosync.set_value(path, value, int(index))
-        if corosync.is_valid_corosync_conf():
-            self._note_for_push()
-            return True
-        else:
-            return False
+        corosync_conf_file = corosync.conf()
+        with utils.create_tempfile(dir=os.path.dirname(corosync_conf_file)) as temp_file:
+            shutil.copyfile(corosync_conf_file, temp_file)
+            corosync.ConfParser.set_value(path, value, index=index, config_file=temp_file)
+            if corosync.is_valid_corosync_conf(temp_file):
+                os.rename(temp_file, corosync_conf_file)
+                self._note_for_push()
+                return True
+            else:
+                return False
 
     @command.level(Link)
     def do_link(self):
