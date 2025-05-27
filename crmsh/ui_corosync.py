@@ -369,6 +369,13 @@ class Corosync(command.UI):
             nodes = utils.list_cluster_nodes()
         return corosync.diff_configuration(nodes, checksum=checksum)
 
+    @staticmethod
+    def _note_for_push():
+        if len(utils.list_cluster_nodes()) > 1:
+            logger.warning("\"%s\" has changed, should be synced with other nodes", corosync.conf())
+            logger.info("Use \"crm corosync diff\" to show the difference")
+            logger.info("Use \"crm corosync push\" to sync")
+
     @command.skill_level('administrator')
     def do_edit(self, context):
         '''
@@ -377,10 +384,8 @@ class Corosync(command.UI):
         cfg = corosync.conf()
         try:
             rc = utils.edit_file_ext(cfg, corosync.is_valid_corosync_conf)
-            if rc and len(utils.list_cluster_nodes()) > 1:
-                logger.warning(f"\"{cfg}\" has changed, should be synced with other nodes")
-                logger.info("Use \"crm corosync diff\" to show the difference")
-                logger.info("Use \"crm corosync push\" to sync")
+            if rc:
+                self._note_for_push()
         except IOError as e:
             context.fatal_error(str(e))
 
@@ -412,8 +417,12 @@ class Corosync(command.UI):
     @command.completers(completers.call(corosync.get_all_paths))
     def do_set(self, context, path, value, index: int = 0):
         """Set a corosync configuration value"""
-        corosync.set_value(path, value, index)
-        return corosync.is_valid_corosync_conf()
+        corosync.set_value(path, value, int(index))
+        if corosync.is_valid_corosync_conf():
+            self._note_for_push()
+            return True
+        else:
+            return False
 
     @command.level(Link)
     def do_link(self):
