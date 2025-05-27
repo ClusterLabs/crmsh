@@ -413,6 +413,7 @@ class Corosync(command.UI):
     def do_set(self, context, path, value, index: int = 0):
         """Set a corosync configuration value"""
         corosync.set_value(path, value, index)
+        return corosync.is_valid_corosync_conf()
 
     @command.level(Link)
     def do_link(self):
