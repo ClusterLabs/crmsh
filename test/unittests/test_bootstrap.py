@@ -1789,7 +1789,7 @@ class TestValidation(unittest.TestCase):
         mock_self.assert_called_once_with(True)
         mock_run.assert_called_once_with('rm -rf /var/lib/crmsh', 'node1')
 
-    @mock.patch('crmsh.xmlutil.listnodes')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
@@ -1825,7 +1825,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.utils.fetch_cluster_node_list_from_node')
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
-    @mock.patch('crmsh.xmlutil.listnodes')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
@@ -1861,7 +1861,7 @@ class TestValidation(unittest.TestCase):
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')
-    @mock.patch('crmsh.xmlutil.listnodes')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.this_node')
     def test_remove_self_other_nodes(self, mock_this_node, mock_list, mock_run, mock_error):
         mock_this_node.return_value = 'node1'
@@ -1873,7 +1873,7 @@ class TestValidation(unittest.TestCase):
             bootstrap._context = mock.Mock(cluster_node="node1", yes_to_all=True)
             bootstrap.remove_self()
 
-        mock_list.assert_called_once_with(include_remote_nodes=False)
+        mock_list.assert_called_once_with()
         mock_run.assert_called_once_with("node2", "crm cluster remove -y -c node1")
         mock_error.assert_called_once_with("Failed to remove this node from node2: err")
 
