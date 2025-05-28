@@ -36,6 +36,9 @@ class CheckResultHandler:
     def log_info(self, fmt: str, *args):
         raise NotImplementedError
 
+    def print(self, s: str):
+        raise NotImplementedError
+
     def handle_tip(self, title: str, details: typing.Iterable[str]):
         raise NotImplementedError
 
@@ -54,8 +57,13 @@ class CheckResultJsonHandler(CheckResultHandler):
             "problems": [],
             "tips": [],
         }
+
     def log_info(self, fmt: str, *args):
         logger.debug(fmt, *args)
+
+    def print(self, s: str):
+        # do not print anything when the output format is json
+        pass
 
     def handle_tip(self, title: str, details: typing.Iterable[str]):
         self.json_result["tips"].append({
@@ -88,6 +96,9 @@ class CheckResultInteractiveHandler(CheckResultHandler):
     def log_info(self, fmt: str, *args):
         self.write_in_color(sys.stdout, constants.GREEN, '[INFO] ')
         print(fmt % args)
+
+    def print(self, s: str):
+        print(s)
 
     def handle_problem(self, is_fatal: bool, title: str, details: typing.Iterable[str]):
         self.has_problems = True
@@ -123,6 +134,7 @@ def check(args: typing.Sequence[str]) -> int:
     parser = argparse.ArgumentParser(args[0])
     parser.add_argument('--json', nargs='?', const='pretty', choices=['oneline', 'pretty'])
     parser.add_argument('--local', action='store_true')
+    parser.add_argument('--no-check-cib', action='store_true')
     parsed_args = parser.parse_args(args[1:])
 
     if 'oneline' ==  parsed_args.json:
@@ -133,15 +145,16 @@ def check(args: typing.Sequence[str]) -> int:
         handler = CheckResultInteractiveHandler()
 
     ret = 0
-    if not parsed_args.local and not parsed_args.json:
-        remote_ret = check_remote()
-        print('------ corosync @ localhost ------')
-        check_local(handler)
-        print('------ cib ------')
-        check_global(handler)
-    else:
+    if parsed_args.local:
         remote_ret = 0
         check_local(handler)
+    else:
+        remote_ret = check_remote()
+        handler.print('------ corosync @ localhost ------')
+        check_local(handler)
+    if not parsed_args.no_check_cib:
+        handler.print('------ cib ------')
+        check_cib(handler)
     handler.end()
     if isinstance(handler, CheckResultJsonHandler):
             ret = 0 if handler.json_result["pass"] else 1
@@ -172,7 +185,7 @@ def check_local(handler: CheckResultHandler):
 def check_remote():
     handler = CheckResultInteractiveHandler()
     result = prun.prun({
-        node: 'crm cluster health sles16 --local --json=oneline'
+        node: 'crm cluster health sles16 --local --no-check-cib --json=oneline'
         for node in utils.list_cluster_nodes_except_me()
     })
     ret = 0
@@ -218,7 +231,7 @@ def check_remote():
     return ret
 
 
-def check_global(handler: CheckResultHandler):
+def check_cib(handler: CheckResultHandler):
     check_unsupported_resource_agents(handler)
 
 
