@@ -73,7 +73,7 @@ pcmk_action_limit (integer, [1]): The maximum number of actions can be performed
 pcmk_delay_base (string, [0s]): Enable a base delay for fencing actions and specify base delay value.
     This enables a static delay for fencing actions, which can help avoid "death matches" where two nodes try to fence each other at the same time. If pcmk_delay_max  is also used, a random delay will be added such that the total delay is kept below that value.This can be set to a single time value to apply to any node targeted by this device (useful if a separate device is configured for each target), or to a node map (for example, "node1:1s;node2:5") to set a different value per target.
 
-pcmk_delay_max (time, [0s]): Enable a base delay for fencing actions and specify base delay value.
+pcmk_delay_max (time, [0s]): Enable a delay of no more than the time specified before executing fencing actions.
     Enable a delay of no more than the time specified before executing fencing actions. Pacemaker derives the overall delay by taking the value of pcmk_delay_base and adding a random delay value such that the sum is kept below this maximum.
 
 pcmk_host_argument (string, [port]): Advanced use only: An alternate parameter to supply instead of 'port'
@@ -144,7 +144,7 @@ pcmk_status_timeout (time, [60s]): Advanced use only: Specify an alternate timeo
 
 ## Operations' defaults (advisory minimum):
 
-    start         timeout=20
+    start         timeout=20s
     stop          timeout=15
-    status        timeout=20
-    monitor       timeout=20 interval=3600
+    status        timeout=20s
+    monitor       timeout=20s interval=3600

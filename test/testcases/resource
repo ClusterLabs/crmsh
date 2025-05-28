@@ -48,18 +48,6 @@ configure rename p3 p4
 configure primitive p3 Dummy
 resource stop p3
 resource start p3
-resource cleanup
-resource cleanup p3
-resource cleanup p3 node1
-resource cleanup force
-resource cleanup p3 force
-resource cleanup p3 node1 force
-resource refresh
-resource refresh p3
-resource refresh p3 node1
-resource refresh force
-resource refresh p3 force
-resource refresh p3 node1 force
 resource stop p3
 configure rm cg
 configure ms msg g
