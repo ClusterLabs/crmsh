@@ -1,5 +1,5 @@
 #!/bin/bash
-DOCKER_IMAGE=${DOCKER_IMAGE:-"nyang23/haleap:15.5"}
+DOCKER_IMAGE=${DOCKER_IMAGE:-"liangxin1300/haleap:15.6"}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
 DOCKER_SERVICE="docker.service"
@@ -244,7 +244,7 @@ deploy_ha_node() {
 	docker_exec $node_name "rm -rf /run/nologin"
 	docker_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
 
-	if [ "$node_name" != "qnetd-node" ];then
+	if [[ "$node_name" != "qnetd-node" && ! "$node_name" =~ ^pcmk-remote-node[0-9]$ ]];then
 	  docker cp $PROJECT_PATH $node_name:/opt/crmsh
 	  info "Building crmsh on \"$node_name\"..."
 	  docker_exec $node_name "$make_cmd" 1> /dev/null || \
