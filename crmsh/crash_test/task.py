@@ -1,11 +1,12 @@
 import os
-import re
 import time
 import threading
 import shutil
 import tempfile
+from datetime import datetime
 from contextlib import contextmanager
 from crmsh import utils as crmshutils
+from crmsh import xmlutil
 from crmsh import log
 from . import utils
 from . import config
@@ -27,6 +28,7 @@ class Task(object):
     REBOOT_WARNING = """!!! WARNING WARNING WARNING !!!
 THIS CASE MAY LEAD TO NODE BE FENCED.
 TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
+    TIME_STR_FORMAT = '%Y/%m/%d %H:%M:%S'
 
     def __init__(self, description, flush=False, quiet=False):
         """
@@ -37,7 +39,7 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
         self.force = False
         self.quiet = quiet
         self.messages = []
-        self.timestamp = utils.now()
+        self.timestamp = datetime.now()
         self.description = description
         utils.msg_info(self.description, to_stdout=False)
         self.flush = flush
@@ -81,7 +83,7 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
         Build base results
         """
         self.result = {
-            "Timestamp": self.timestamp,
+            "Timestamp": self.timestamp.strftime(self.TIME_STR_FORMAT),
             "Description": self.description,
             "Messages": ["{} {}:{}".format(m[2], m[0].upper(), m[1])
                          for m in self.messages]
@@ -128,36 +130,24 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
         1. There is one latest fence action successfully done
         2. No fence action during fence timeout, thread_stop_event triggered by main thread
         """
-        target_node = None
-        from_node = None
-        fence_timestamp = None
-
         # Try to find out which node fire the fence action
         while not self.thread_stop_event.is_set():
-            rc, out, _ = ShellUtils().get_stdout_stderr("crm_mon -1|grep -A1 \"Fencing Actions:\"")
-            if rc == 0 and out:
-                match = re.search(r"of (.*) pending: .*origin=(.*)$", out)
-                if match:
-                    target_node, from_node = match.groups()
-                    self.info("Node \"{}\" will be fenced by \"{}\"!".format(target_node, from_node))
+            fence_event_dict = xmlutil.CrmMonXmlParser().get_last_fence_event_info()
+            if fence_event_dict:
+                target_node = fence_event_dict.get('target')
+                origin_node = fence_event_dict.get('origin')
+                complete_time = fence_event_dict.get('completed')
+                status = fence_event_dict.get('status')
+                if status == "pending" and not self.fence_start_event.is_set():
+                    self.info(f"Node \"{target_node}\" will be fenced by \"{origin_node}\"!")
                     self.fence_start_event.set()
-                    break
-            time.sleep(1)
-
-        # Try to find out proof that fence happened
-        while not self.thread_stop_event.is_set():
-            rc, out, _ = ShellUtils().get_stdout_stderr(config.FENCE_HISTORY.format(node=target_node))
-            if rc == 0 and out:
-                match = re.search(r"Node {} last fenced at: (.*)".format(target_node), out)
-                if match:
-                    fence_timestamp = match.group(1)
-                    task_timestamp_dt = utils.str_to_datetime(self.timestamp, '%Y/%m/%d %H:%M:%S')
-                    fence_timestamp_dt = utils.str_to_datetime(fence_timestamp, '%a %b %d %H:%M:%S %Y')
-                    # If the fence action timestamp larger than this task's timestamp
-                    # That is the proof
-                    if task_timestamp_dt < fence_timestamp_dt:
-                        self.info("Node \"{}\" was successfully fenced by \"{}\"".format(target_node, from_node))
-                        # Tell main thread fence happened
+                # Try to find out proof that fence happened
+                elif status == "success":
+                    task_timestamp = self.timestamp.timestamp()
+                    complete_timestamp = datetime.fromisoformat(complete_time).timestamp()
+                    # This success event should after the task started
+                    if task_timestamp < complete_timestamp:
+                        self.info(f"Node \"{target_node}\" was fenced by \"{origin_node}\" at {complete_time}")
                         self.fence_finish_event.set()
                         break
             time.sleep(1)
@@ -259,7 +249,7 @@ class TaskCheck(Task):
                 message = "{} [{}]".format(self.description, utils.CGREEN + "Pass" + utils.CEND)
             else:
                 message = "{} [{}]".format(self.description, utils.CRED + "Fail" + utils.CEND)
-            logger.info(message, extra={'timestamp': '[{}]'.format(self.timestamp)})
+            logger.info(message, extra={'timestamp': '[{}]'.format(self.timestamp.strftime(self.TIME_STR_FORMAT))})
 
             for msg in self.messages:
                 logger.log(utils.LEVEL[msg[0]], msg[1], extra={'timestamp': '  '})
