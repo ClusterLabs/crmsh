@@ -203,14 +203,14 @@ class TestTaskCheck(TestCase):
         """
 
     @mock.patch('crmsh.crash_test.utils.msg_info')
-    @mock.patch('crmsh.crash_test.utils.now')
-    def setUp(self, mock_now, mock_msg_info):
+    def setUp(self, mock_msg_info):
         """
         Test setUp.
         """
-        mock_now.return_value = "2019/07/10 01:15:15"
+        fake_timedate = datetime(2019, 7, 10, 1, 15, 15)
         main.ctx = mock.Mock(task_list=[{"process_name": "xin", "age": 38}])
         self.task_check_inst = task.TaskCheck("task check job1", quiet=False)
+        self.task_check_inst.timestamp = fake_timedate
         self.task_check_inst_quiet = task.TaskCheck("task check job1", quiet=True)
 
     def tearDown(self):
@@ -559,15 +559,14 @@ class TestTask(TestCase):
         """
 
     @mock.patch('crmsh.crash_test.utils.msg_info')
-    @mock.patch('crmsh.crash_test.utils.now')
-    def setUp(self, mock_now, mock_info):
+    def setUp(self, mock_info):
         """
         Test setUp.
         """
-        mock_now.return_value = "2019/07/10 01:15:15"
+        fake_now = datetime(2019, 7, 10, 1, 15, 15)
         main.ctx = mock.Mock(task_list={"process_name": "xin", "age": 38})
         self.task_inst = task.Task("task description", flush=True)
-        mock_now.assert_called_once_with()
+        self.task_inst.timestamp = fake_now
 
     def tearDown(self):
         """
@@ -647,7 +646,7 @@ class TestTask(TestCase):
     def test_build_base_result(self):
         self.task_inst.build_base_result()
         expected_result = {
-            "Timestamp": self.task_inst.timestamp,
+            "Timestamp": '2019/07/10 01:15:15',
             "Description": self.task_inst.description,
             "Messages": []
         }
@@ -666,44 +665,32 @@ class TestTask(TestCase):
         mock_ask.assert_called_once_with(task.Task.REBOOT_WARNING)
         self.task_inst.info.assert_called_once_with("Testcase cancelled")
 
-    @mock.patch('crmsh.crash_test.utils.str_to_datetime')
     @mock.patch('time.sleep')
     @mock.patch('crmsh.crash_test.task.Task.info')
-    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-    def test_fence_action_monitor(self, mock_run, mock_info, mock_sleep, mock_datetime):
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_fence_action_monitor(self, mock_parser, mock_info, mock_sleep):
         self.task_inst.thread_stop_event = mock.Mock()
-        self.task_inst.thread_stop_event.is_set.side_effect = [False, False, False, False]
+        self.task_inst.thread_stop_event.is_set.side_effect = [False, False]
         self.task_inst.fence_start_event = mock.Mock()
+        self.task_inst.fence_start_event.is_set.side_effect = [False, True]
         self.task_inst.fence_finish_event = mock.Mock()
-        output = "Pending Fencing Actions:\n  * reboot of 15sp2-2 pending: client=pacemaker-controld.2430, origin=15sp2-1"
-        output2 = "Node 15sp2-2 last fenced at: Tue Jan 19 16:08:37 2021"
-        mock_run.side_effect = [(1, None, None), (0, output, None), (1, None, None), (0, output2, None)]
-        self.task_inst.timestamp = "2021/01/19 16:08:24"
-        mock_datetime.side_effect = [
-            datetime.strptime(self.task_inst.timestamp, '%Y/%m/%d %H:%M:%S'),
-            datetime.strptime("Tue Jan 19 16:08:37 2021", '%a %b %d %H:%M:%S %Y')
+        mock_parser_inst = mock.Mock()
+        mock_parser.return_value = mock_parser_inst
+        mock_parser_inst.get_last_fence_event_info.side_effect = [
+            {"target": "node2", "origin": "node1", "status": "pending", "completed": ""},
+            {"target": "node2", "origin": "node1", "status": "success", "completed": "2025-05-30 10:41:58.376958 +08:00"},
         ]
 
         self.task_inst.fence_action_monitor()
 
-        self.task_inst.thread_stop_event.is_set.assert_has_calls([
-            mock.call(),
-            mock.call(),
-            mock.call(),
-            mock.call()
-            ])
-        mock_run.assert_has_calls([
-            mock.call("crm_mon -1|grep -A1 \"Fencing Actions:\""),
-            mock.call("crm_mon -1|grep -A1 \"Fencing Actions:\""),
-            mock.call(config.FENCE_HISTORY.format(node="15sp2-2")),
-            mock.call(config.FENCE_HISTORY.format(node="15sp2-2"))
-            ])
+        self.task_inst.thread_stop_event.is_set.assert_has_calls([mock.call(), mock.call()])
         mock_info.assert_has_calls([
-            mock.call("Node \"15sp2-2\" will be fenced by \"15sp2-1\"!"),
-            mock.call("Node \"15sp2-2\" was successfully fenced by \"15sp2-1\"")
+            mock.call("Node \"node2\" will be fenced by \"node1\"!"),
+            mock.call("Node \"node2\" was fenced by \"node1\" at 2025-05-30 10:41:58.376958 +08:00")
             ])
         self.task_inst.fence_start_event.set.assert_called_once_with()
         self.task_inst.fence_finish_event.set.assert_called_once_with()
+
 
 class TestFixSBD(TestCase):
     """
