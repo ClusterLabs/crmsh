@@ -1,5 +1,5 @@
 #!/bin/bash
-DOCKER_IMAGE=${DOCKER_IMAGE:-"nyang23/haleap:15.5"}
+DOCKER_IMAGE=${DOCKER_IMAGE:-"liangxin1300/haleap:15.6"}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
 DOCKER_SERVICE="docker.service"
