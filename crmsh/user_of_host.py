@@ -2,6 +2,7 @@ import logging
 import os
 import socket
 import subprocess
+import time
 import typing
 
 from . import config
@@ -102,6 +103,7 @@ class UserOfHost:
             args.extend(['-o', 'BatchMode=yes', host, 'sudo', 'true'])
         else:
             args.extend(['-o', 'BatchMode=yes', host, 'true'])
+        logger.debug("subprocess.call(%s)", args)
         rc = subprocess.call(
             args,
             stdin=subprocess.DEVNULL,
@@ -113,6 +115,7 @@ class UserOfHost:
             user = userdir.getuser()
             return user, user
         else:
+            time.sleep(5)    # bsc#1243141: sshd PerSourcePenalties
             return None
 
 

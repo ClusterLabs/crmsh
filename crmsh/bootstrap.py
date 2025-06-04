@@ -18,6 +18,7 @@ import sys
 import re
 import tempfile
 import time
+from time import sleep
 import readline
 import shutil
 import typing
@@ -552,14 +553,6 @@ def pick_default_value(default_list, prev_list):
     return ""
 
 
-def sleep(t):
-    """
-    Sleep for t seconds.
-    """
-    t = float(t)
-    time.sleep(t)
-
-
 def status_progress(progress_bar):
     if not _context or not _context.quiet:
         progress_bar.progress()
@@ -969,6 +962,7 @@ def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalSh
     if utils.check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
         configure_ssh_key(local_user)
         public_keys = ssh_key.fetch_public_key_file_list(None, local_user)
+        sleep(5)    # bsc#1243141: sshd PerSourcePenalties
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
         cmd = f"ssh-copy-id -i {public_keys[0].public_key_file()} '{remote_user}@{remote_node}' &> /dev/null"
         result = shell.su_subprocess_run(local_user, cmd, tty=True)
