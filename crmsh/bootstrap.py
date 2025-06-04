@@ -459,7 +459,7 @@ def crm_configure_load(action, configuration):
     sh.cluster_shell().get_stdout_or_raise_error(f"crm -F configure load {action} {configuration_tmpfile}")
 
 
-def wait_for_resource(message, resource, timeout_ms=WAIT_TIMEOUT_MS_DEFAULT):
+def wait_for_resource(message, resource, timeout_ms=WAIT_TIMEOUT_MS_DEFAULT, fatal_on_timeout=True):
     """
     Wait for resource started
     """
@@ -470,7 +470,12 @@ def wait_for_resource(message, resource, timeout_ms=WAIT_TIMEOUT_MS_DEFAULT):
                 break
             status_progress(progress_bar)
             if 0 < timeout_ms <= (int(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000) - start_time):
-                utils.fatal('Time out waiting for resource.')
+                error_msg = f'Time out waiting for resource "{resource}" to start.'
+                if fatal_on_timeout:
+                    utils.fatal(error_msg)
+                else:
+                    logger.error(error_msg)
+                    break
             sleep(1)
 
 
@@ -1580,7 +1585,12 @@ def init_admin():
         adminaddr = prompt_for_string('Virtual IP', valid_func=Validation.valid_admin_ip)
 
     crm_configure_load("update", 'primitive admin-ip IPaddr2 ip=%s op monitor interval=10 timeout=20' % (utils.doublequote(adminaddr)))
-    wait_for_resource("Configuring virtual IP ({})".format(adminaddr), "admin-ip")
+    wait_for_resource(
+        f"Configuring virtual IP ({adminaddr})",
+        "admin-ip",
+        timeout_ms=5000,
+        fatal_on_timeout=False
+    )
 
 
 def configure_qdevice_interactive():
