@@ -964,7 +964,9 @@ def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalSh
         public_keys = ssh_key.fetch_public_key_file_list(None, local_user)
         sleep(5)    # bsc#1243141: sshd PerSourcePenalties
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user, remote_node))
-        cmd = f"ssh-copy-id -i {public_keys[0].public_key_file()} '{remote_user}@{remote_node}' &> /dev/null"
+        cmd = f"ssh-copy-id -i {public_keys[0].public_key_file()} '{remote_user}@{remote_node}'"
+        if not config.core.debug:
+            cmd += ' &> /dev/null'
         result = shell.su_subprocess_run(local_user, cmd, tty=True)
         return SshCopyIdResult(result.returncode, public_keys)
     else:
