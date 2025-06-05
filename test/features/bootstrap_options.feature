@@ -7,7 +7,7 @@ Feature: crmsh bootstrap process - options
       "-n":      Set the name of the configured cluster
       "-A":      Configure IP address as an administration virtual IP
   Tag @clean means need to stop cluster service if the service is available
-  Need nodes: hanode1 hanode2 hanode3
+  Need nodes: hanode1 hanode2 hanode3 qnetd-node
 
   @clean
   Scenario: Check help output
@@ -134,6 +134,13 @@ Feature: crmsh bootstrap process - options
     And     Cluster name is "hatest"
     And     Cluster virtual IP is "@vip.0"
     And     Show cluster status on "hanode1"
+
+  @clean
+  Scenario: Invalid virtual IP address wouldn't block cluster init
+    Given   Cluster service is "stopped" on "hanode1"
+    When    Run "crm cluster init -A 60.60.60.6 --qnetd-hostname qnetd-node -y" on "hanode1"
+    Then    Expected "Time out waiting for resource "admin-ip" to start" in stderr
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
  
   @clean
   Scenario: Detect multi IP in the same NIC
