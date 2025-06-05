@@ -10,7 +10,7 @@ Feature: crmsh bootstrap process - options
       "-u":      Configure corosync to communicate over unicast
       "-U":      Configure corosync to communicate over multicast
   Tag @clean means need to stop cluster service if the service is available
-  Need nodes: hanode1 hanode2 hanode3
+  Need nodes: hanode1 hanode2 hanode3 qnetd-node
 
   @clean
   Scenario: Check help output
@@ -114,6 +114,13 @@ Feature: crmsh bootstrap process - options
     When    Try "crm cluster init cluster -y" on "hanode1"
     Then    Expected "Cluster is active, can't run 'cluster' stage" in stderr
 
+  @clean
+  Scenario: Invalid virtual IP address wouldn't block cluster init
+    Given   Cluster service is "stopped" on "hanode1"
+    When    Run "crm cluster init -A 60.60.60.6 --qnetd-hostname qnetd-node -y" on "hanode1"
+    Then    Expected "Time out waiting for resource "admin-ip" to start" in stderr
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+ 
   @clean
   Scenario: Init cluster service with udpu using "-u" option
     Given   Cluster service is "stopped" on "hanode1"
