@@ -248,6 +248,13 @@ def step_impl(context, nodelist):
     assert online(context, nodelist) is True
 
 
+@then('Remote online nodes are "{nodelist}"')
+def step_impl(context, nodelist):
+    _, out, _ = run_command(context, 'crm_mon -1|grep RemoteOnline:')
+    for node in nodelist.split():
+        assert node in out, "Node {} not found in {}".format(node, out)
+
+
 @then('Node "{node}" is standby')
 def step_impl(context, node):
     assert crmutils.is_standby(node) is True
