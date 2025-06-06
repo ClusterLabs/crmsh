@@ -48,3 +48,19 @@ Feature: crm corosync ui test cases
     Then    Expected "Duplicated" in stderr
     When    Try "crm corosync link add hanode1=192.0.2.101 hanode2=192.0.2.102 options knet_link_priority=10" on "hanode1"
     Then    Expected "not a configured interface address" in stderr
+
+  Scenario: corosync set
+    Given   Nodes ["hanode1", "hanode2"] are cleaned up
+    And     Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    When    Try "crm corosync set totem.version 3" on "hanode1"
+    Then    Expected "parse error in config" in stderr
+    When    Run "crm corosync get totem.version" on "hanode1"
+    Then    Expected "2" in stdout
+    When    Run "crm corosync set totem.token 6000" on "hanode1"
+    Then    Expected "Use "crm corosync push" to sync" in stdout

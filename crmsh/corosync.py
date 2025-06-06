@@ -359,6 +359,8 @@ def is_valid_corosync_conf(config_file=None) -> bool:
     """
     try:
         ConfParser(config_file=config_file)
+        corosync_verify_cmd = f"corosync -c {config_file} -t" if config_file else "corosync -t"
+        sh.cluster_shell().get_stdout_or_raise_error(corosync_verify_cmd)
     except ValueError as e:
         logger.error("Invalid %s: %s", config_file or conf(), e)
         return False
@@ -499,12 +501,12 @@ class ConfParser(object):
         return inst.get_all(path)
 
     @classmethod
-    def set_value(cls, path, value, index=0):
+    def set_value(cls, path, value, index=0, config_file=None):
         """
         Class method to set value for path
         Then write back to config file
         """
-        inst = cls()
+        inst = cls(config_file=config_file)
         inst.set(path, value, index)
         inst.save()
 

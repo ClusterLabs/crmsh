@@ -186,6 +186,8 @@ class DomQuery:
             match node:
                 case dict(_):
                     for key, value in node.items():
+                        if key.startswith(COMMENT_PREFIX):
+                            continue
                         queue.append((value, (*path, key)))
                 case list(_) as li:
                     for item in li:
