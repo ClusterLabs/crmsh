@@ -3220,4 +3220,23 @@ class VerifyResult(IntFlag):
 
     def __bool__(self):
         return self in self.SUCCESS | self.WARNING
+
+
+def offline_node_check(action_to_do: str, peer_node: str = None):
+    """
+    Check if there are offline nodes while are unreachable
+    """
+    dead_nodes = []
+    for node in xmlutil.CrmMonXmlParser(peer_node).get_offline_nodes():
+        try:
+            node_reachable_check(node)
+        except ValueError:
+            dead_nodes.append(node)
+    if dead_nodes:
+        # dead nodes bring risk to cluster, either bring them online or remove them
+        msg = f"""There are offline nodes in the cluster: {dead_nodes}.
+Please bring them online before {action_to_do}.
+Or use `crm cluster remove <offline_node> --force` to remove the offline node.
+        """
+        fatal(msg)
 # vim:ts=4:sw=4:et:

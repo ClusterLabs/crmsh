@@ -1571,4 +1571,11 @@ class CrmMonXmlParser(object):
         """
         xpath = f'//resource[@resource_agent="{ra_type}"]'
         return [elem.get('id') for elem in self.xml_elem.xpath(xpath)]
+
+    def get_offline_nodes(self) -> list[str]:
+        """
+        Get a list of offline nodes
+        """
+        xpath = '//node[@online="false"]'
+        return [elem.get('name') for elem in self.xml_elem.xpath(xpath)]
 # vim:ts=4:sw=4:et:
