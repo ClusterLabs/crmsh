@@ -1536,16 +1536,20 @@ class CrmMonXmlParser(object):
         xpath = f'//node[@name="{node}" and @online="true"]'
         return bool(self.xml_elem.xpath(xpath))
 
-    def get_node_list(self, attr=None):
+    def get_node_list(self, online=True, standby=False, exclude_remote=True) -> typing.List[str]:
         """
         Get a list of nodes based on the given attribute
         """
-        attr_dict = {
-            'standby': '[@standby="true"]',
-            'online': '[@standby="false"]'
-        }
-        xpath_str = f'//node{attr_dict.get(attr, "")}'
-        return [e.get('name') for e in self.xml_elem.xpath(xpath_str)]
+        xpath_str = '//nodes/node'
+        conditions = []
+        online_value = "true" if online else "false"
+        conditions.append(f'@online="{online_value}"')
+        standby_value = "true" if standby else "false"
+        conditions.append(f'@standby="{standby_value}"')
+        if exclude_remote:
+            conditions.append('@type="member"')
+        xpath_str += '[' + ' and '.join(conditions) + ']'
+        return [elem.get('name') for elem in self.xml_elem.xpath(xpath_str)]
 
     def is_resource_configured(self, ra_type):
         """
