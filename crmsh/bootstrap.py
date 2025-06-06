@@ -2498,7 +2498,13 @@ def bootstrap_remove(context):
         utils.fatal("No existing IP/hostname specified (use -c option)")
 
     remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
-    cluster_node = get_node_canonical_hostname(cluster_node)
+
+    if service_manager.service_is_active("pacemaker.service", cluster_node):
+        cluster_node = get_node_canonical_hostname(cluster_node)
+    else:
+        configured_nodes = utils.list_cluster_nodes()
+        if cluster_node not in configured_nodes:
+            utils.fatal(f"Node {cluster_node} is not configured in cluster! (valid nodes: {', '.join(configured_nodes)})")
 
     if not force_flag and not confirm("Removing node \"{}\" from the cluster: Are you sure?".format(cluster_node)):
         return
