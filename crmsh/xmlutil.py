@@ -18,10 +18,7 @@ from . import schema
 from . import constants
 from . import userdir
 from .sh import ShellUtils
-from .utils import add_sudo, str2file, str2tmp, get_boolean, handle_role_for_ocf_1_1, copy_local_file, rmfile
-from .utils import stdout2list, crm_msec, crm_time_cmp
-from .utils import olist, get_cib_in_use, get_tempdir, to_ascii, is_boolean_true
-from .utils import VerifyResult
+from . import utils
 from . import log
 
 
@@ -53,14 +50,14 @@ def file2cib_elem(s):
         # because xmlparse function requires the function descriptor not the plain text
         # and this would be so much work to redo it.
         # It's not too bad, but it's still a workaround and better be refactored, so FIXME!
-        copy_local_file(s, cib_tmp_copy)
+        utils.copy_local_file(s, cib_tmp_copy)
         f = open(cib_tmp_copy, 'r')
         logger.debug("{} successfully read the cib.xml".format(userdir.getuser()))
 
     cib_elem = xmlparse(f)
     f.close()
     if cib_tmp_copy != '':
-        rmfile(cib_tmp_copy)
+        utils.rmfile(cib_tmp_copy)
     if options.regression_tests and cib_elem is None:
         print("Failed to read CIB from file: %s" % (s))
     return cib_elem
@@ -91,7 +88,7 @@ cib_dump = "cibadmin -Q"
 
 
 def sudocall(cmd):
-    cmd = add_sudo(cmd)
+    cmd = utils.add_sudo(cmd)
     if options.regression_tests:
         print(".EXT", cmd)
     p = subprocess.Popen(
@@ -102,7 +99,7 @@ def sudocall(cmd):
     try:
         outp, errp = p.communicate()
         p.wait()
-        return p.returncode, to_ascii(outp), to_ascii(errp)
+        return p.returncode, utils.to_ascii(outp), utils.to_ascii(errp)
     except IOError as msg:
         logger.error("running %s: %s", cmd, msg)
         return None, None, None
@@ -111,7 +108,7 @@ def sudocall(cmd):
 def cibdump2file(fname):
     _, outp, _ = sudocall(cib_dump)
     if outp is not None:
-        return str2file(outp, fname)
+        return utils.str2file(outp, fname)
     return None
 
 
@@ -119,7 +116,7 @@ def cibdump2tmp():
     try:
         _, outp, _ = sudocall(cib_dump)
         if outp is not None:
-            return str2tmp(outp)
+            return utils.str2tmp(outp)
     except IOError as msg:
         logger.error(msg)
     return None
@@ -158,17 +155,17 @@ def read_cib(fun, params=None):
 
 
 def sanity_check_nvpairs(ident, node, attr_list):
-    rc = VerifyResult.SUCCESS
+    rc = utils.VerifyResult.SUCCESS
     for nvpair in node.iterchildren("nvpair"):
         n = nvpair.get("name")
         if n and n not in attr_list:
             logger.warning("%s: unknown attribute '%s'", ident, n)
-            rc |= VerifyResult.WARNING
+            rc |= utils.VerifyResult.WARNING
     return rc
 
 
 def sanity_check_meta(ident, node, attr_list):
-    rc = VerifyResult.SUCCESS
+    rc = utils.VerifyResult.SUCCESS
     if node is None or not attr_list:
         return rc
     for c in node.iterchildren():
@@ -397,7 +394,7 @@ def is_remote_node(n):
 
 def is_live_cib():
     '''We working with the live cluster?'''
-    return not get_cib_in_use() and not os.getenv("CIB_file")
+    return not utils.get_cib_in_use() and not os.getenv("CIB_file")
 
 
 def is_crmuser():
@@ -413,14 +410,14 @@ def cib_shadow_dir():
     home = userdir.gethomedir(config.core.user)
     if home and home.startswith(os.path.sep):
         return os.path.join(home, ".cib")
-    return get_tempdir()
+    return utils.get_tempdir()
 
 
 def listshadows():
     d = cib_shadow_dir()
     if not os.path.isdir(d):
         return []
-    rc, l = stdout2list("ls %s | fgrep shadow. | sed 's/^shadow\\.//'" % d)
+    rc, l = utils.stdout2list("ls %s | fgrep shadow. | sed 's/^shadow\\.//'" % d)
     return l
 
 
@@ -564,7 +561,7 @@ def is_attr_set(node, attr):
 
 
 def is_ms_or_promotable_clone(node):
-    is_promotable_type = is_boolean_true(is_attr_set(node, "promotable"))
+    is_promotable_type = utils.is_boolean_true(is_attr_set(node, "promotable"))
     is_ms_type = node.tag in ("master", "ms")
     return is_ms_type or is_promotable_type
 
@@ -826,9 +823,9 @@ def find_operation(rsc_node, name, interval=None):
     interval = interval or "0"
     for op in matching_name:
         opint = op.get("interval")
-        if interval == "non-0" and crm_msec(opint) > 0:
+        if interval == "non-0" and utils.crm_msec(opint) > 0:
             return op
-        if crm_time_cmp(opint, interval) == 0:
+        if utils.crm_time_cmp(opint, interval) == 0:
             return op
     return None
 
@@ -837,7 +834,7 @@ def get_op_timeout(rsc_node, op, default_timeout):
     interval = (op == "monitor" and "non-0" or "0")
     op_n = find_operation(rsc_node, op == "probe" and "monitor" or op, interval)
     timeout = op_n is not None and op_n.get("timeout") or default_timeout
-    return crm_msec(timeout)
+    return utils.crm_msec(timeout)
 
 
 def op2list(node):
@@ -926,11 +923,11 @@ def processing_sort_cli(nl):
 
 
 def is_resource_cli(s):
-    return s in olist(constants.resource_cli_names)
+    return s in utils.olist(constants.resource_cli_names)
 
 
 def is_constraint_cli(s):
-    return s in olist(constants.constraint_cli_names)
+    return s in utils.olist(constants.constraint_cli_names)
 
 
 def referenced_resources(node):
@@ -1015,7 +1012,7 @@ def delete_rscref_rset(c_obj, rsc_id):
             l.append(rset)
             c_obj.updated = True
             c_modified = True
-        elif not get_boolean(rset.get("sequential"), True) and rref_cnt > 1:
+        elif not utils.get_boolean(rset.get("sequential"), True) and rref_cnt > 1:
             nonseq_rset = True
         cnt += rref_cnt
     rmnodes(l)
@@ -1440,7 +1437,7 @@ def nvpair(name, value):
     """
     <nvpair name="" value="" />
     """
-    value = handle_role_for_ocf_1_1(value, name=name)
+    value = utils.handle_role_for_ocf_1_1(value, name=name)
     return new("nvpair", name=name, value=value)
 
 
