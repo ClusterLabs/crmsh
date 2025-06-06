@@ -42,6 +42,7 @@ from . import constants
 from . import options
 from . import term
 from . import log
+from . import xmlutil
 from .prun import prun
 from .sh import ShellUtils
 from .service_manager import ServiceManager
@@ -1722,7 +1723,6 @@ def list_cluster_nodes(no_reg=False) -> list[str]:
     '''
     Returns a list of nodes in the cluster.
     '''
-    from . import xmlutil
     rc, out, err = ShellUtils().get_stdout_stderr(constants.CIB_QUERY, no_reg=no_reg)
     # When cluster service running
     if rc == 0:
