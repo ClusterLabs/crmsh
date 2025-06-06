@@ -227,7 +227,7 @@ class Context(object):
 
         if self.stage == "sbd":
             if self.cluster_is_running:
-                utils.check_all_nodes_reachable()
+                utils.check_all_nodes_reachable("setup SBD")
                 for node in utils.list_cluster_nodes():
                     if not utils.package_is_installed("sbd", node):
                         utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
@@ -1630,6 +1630,7 @@ def init_qdevice():
         return
 
     logger.info("""Configure Qdevice/Qnetd:""")
+    utils.check_all_nodes_reachable("setup Qdevice")
     cluster_node_list = utils.list_cluster_nodes()
     for node in cluster_node_list:
         if not ServiceManager().service_is_available("corosync-qdevice.service", node):
@@ -2398,6 +2399,7 @@ def bootstrap_join(context):
         try:
             with lock_inst.lock():
                 service_manager = ServiceManager()
+                utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node)
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node)
                 _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
@@ -2439,7 +2441,7 @@ def remove_qdevice() -> None:
     if not confirm("Removing QDevice service and configuration from cluster: Are you sure?"):
         return
 
-    utils.check_all_nodes_reachable()
+    utils.check_all_nodes_reachable("removing QDevice from the cluster")
     qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
 
     logger.info("Disable corosync-qdevice.service")
@@ -2502,6 +2504,8 @@ def bootstrap_remove(context):
 
     if not _context.cluster_node:
         utils.fatal("No existing IP/hostname specified (use -c option)")
+
+    utils.check_all_nodes_reachable("removing a node from the cluster")
 
     remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
 
