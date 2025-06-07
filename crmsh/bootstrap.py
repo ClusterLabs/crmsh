@@ -2493,6 +2493,8 @@ def bootstrap_remove(context):
     if not _context.cluster_node:
         utils.fatal("No existing IP/hostname specified (use -c option)")
 
+    utils.offline_node_check("removing a node from the cluster")
+
     remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
     cluster_node = get_node_canonical_hostname(cluster_node)
 
