@@ -205,3 +205,16 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Cluster service is "started" on "hanode3"
     And     Online nodes are "hanode1 hanode2 hanode3"
     And     Check passwordless for hacluster between "hanode1 hanode2 hanode3" "successfully"
+
+  @skip_non_root
+  Scenario: Remove offline and unreachable node
+    When    Run "init 0" on "hanode2"
+    Then    Online nodes are "hanode1"
+    When    Run "sleep 10" on "hanode1"
+    When    Try "crm cluster remove hanode2 -y" on "hanode1"
+    Then    Expected "There are offline nodes also unreachable: hanode2" in stderr
+    When    Try "crm status|grep "OFFLINE.*hanode2"" on "hanode1"
+    Then    Expected return code is "0"
+    When    Run "crm cluster remove hanode2 -y --force" on "hanode1"
+    When    Try "crm status|grep "OFFLINE.*hanode2"" on "hanode1"
+    Then    Expected return code is "1"
