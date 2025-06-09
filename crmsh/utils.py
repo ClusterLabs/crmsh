@@ -2547,7 +2547,13 @@ def get_quorum_votes_dict(remote=None):
     return dict(re.findall("(Expected|Total) votes:\s+(\d+)", out))
 
 
-def check_all_nodes_reachable(action_to_do :str, peer_node :str = None):
+class DeadNodeError(ValueError):
+    def __init__(self, msg: str, dead_nodes=None):
+        super().__init__(msg)
+        self.dead_nodes = dead_nodes or []
+
+
+def check_all_nodes_reachable(action_to_do: str, peer_node: str = None):
     """
     Check if all cluster nodes are reachable
     """
@@ -2566,7 +2572,7 @@ def check_all_nodes_reachable(action_to_do :str, peer_node :str = None):
 Please bring them online before {action_to_do}.
 Or use `crm cluster remove <offline_node> --force` to remove the offline node.
         """
-        fatal(msg)
+        raise DeadNodeError(msg, dead_nodes)
 
     for node in online_nodes:
         node_reachable_check(node)
