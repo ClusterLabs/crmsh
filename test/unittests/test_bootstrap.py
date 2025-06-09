@@ -1839,7 +1839,7 @@ class TestValidation(unittest.TestCase):
             mock_list, mock_remove, mock_fetch, mock_run):
         mock_context_inst = mock.Mock(cluster_node="node2", qdevice_rm_flag=None, force=True)
         mock_context.return_value = mock_context_inst
-        mock_active.side_effect = [True, False]
+        mock_active.side_effect = [True, False, True]
         mock_hostname.return_value = "node2"
         mock_this_node.return_value = "node1"
         mock_list.return_value = ["node1", "node2"]
@@ -1850,7 +1850,8 @@ class TestValidation(unittest.TestCase):
         mock_init.assert_called_once_with()
         mock_active.assert_has_calls([
             mock.call("corosync.service"),
-            mock.call("csync2.socket")
+            mock.call("csync2.socket"),
+            mock.call("pacemaker.service", "node2")
             ])
         mock_qdevice.assert_not_called()
         mock_hostname.assert_called_once_with('node2')

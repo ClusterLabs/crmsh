@@ -74,6 +74,23 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Directory "/var/lib/pacemaker/pengine/" is empty on "hanode2"
     Then    Directory "/var/lib/corosync/" is empty on "hanode2"
 
+  Scenario: Remove peer node when cluster is not running
+    Then    File "/etc/corosync/authkey" exists on "hanode2"
+    Then    File "/etc/corosync/corosync.conf" exists on "hanode2"
+    Then    File "/etc/pacemaker/authkey" exists on "hanode2"
+    Then    Directory "/var/lib/pacemaker/cib/" not empty on "hanode2"
+    Then    Directory "/var/lib/corosync/" not empty on "hanode2"
+    When    Run "crm cluster stop" on "hanode2"
+    When    Try "crm cluster remove @hanode2.ip.0 -y" on "hanode1"
+    Then    Expected "Node @hanode2.ip.0 is not configured in cluster! (valid nodes: hanode1, hanode2)" in stderr
+    When    Run "crm cluster remove hanode2 -y" on "hanode1"
+    Then    File "/etc/corosync/authkey" not exist on "hanode2"
+    Then    File "/etc/corosync/corosync.conf" not exist on "hanode2"
+    Then    File "/etc/pacemaker/authkey" not exist on "hanode2"
+    Then    Directory "/var/lib/pacemaker/cib/" is empty on "hanode2"
+    Then    Directory "/var/lib/pacemaker/pengine/" is empty on "hanode2"
+    Then    Directory "/var/lib/corosync/" is empty on "hanode2"
+
   Scenario: Remove local node "hanode1"
     When    Run "crm configure primitive d1 Dummy" on "hanode1"
     When    Run "crm configure primitive d2 Dummy" on "hanode1"
