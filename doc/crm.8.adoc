@@ -1366,9 +1366,14 @@ Sets the value identified by the given path. If the value does not
 exist in the configuration file, it will be added. However, if the
 section containing the value does not exist, the command will fail.
 
+If there are multiple entries with the same path, you can specify index
+`set <path> <value> <index>` to set a specific entry.
+The default index is `0`.
+
 Usage:
 .........
 set quorum.expected_votes 2
+set nodelist.node.nodeid 3 1
 .........
 
 [[cmdhelp.corosync.show,Display the corosync configuration]]
