@@ -2168,14 +2168,15 @@ def rm_configuration_files(remote=None):
         shell.get_stdout_or_raise_error(cmd, remote)
 
 
-def remove_node_from_cluster(node):
+def remove_node_from_cluster(node, dead_node=False):
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
     """
     node_ip = get_cluster_node_ip(node)
-    stop_services(SERVICES_STOP_LIST, remote_addr=node)
-    qdevice.QDevice.remove_qdevice_db([node])
-    rm_configuration_files(node)
+    if not dead_node:
+        stop_services(SERVICES_STOP_LIST, remote_addr=node)
+        qdevice.QDevice.remove_qdevice_db([node])
+        rm_configuration_files(node)
 
     # execute the command : crm node delete $HOSTNAME
     logger.info("Removing node %s from CIB", node)
@@ -2198,7 +2199,8 @@ def remove_node_from_cluster(node):
 
     sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
 
-    FirewallManager(peer=node).remove_service()
+    if not dead_node:
+        FirewallManager(peer=node).remove_service()
 
     user_by_host = utils.HostUserConfig()
     user_by_host.remove(node)
@@ -2505,9 +2507,17 @@ def bootstrap_remove(context):
     if not _context.cluster_node:
         utils.fatal("No existing IP/hostname specified (use -c option)")
 
-    utils.check_all_nodes_reachable("removing a node from the cluster")
-
     remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
+
+    try:
+        utils.check_all_nodes_reachable("removing a node from the cluster")
+    except utils.DeadNodeError as e:
+        if force_flag and cluster_node in e.dead_nodes:
+            remove_node_from_cluster(cluster_node, dead_node=True)
+            bootstrap_finished()
+            return
+        else:
+            raise
 
     if service_manager.service_is_active("pacemaker.service", cluster_node):
         cluster_node = get_node_canonical_hostname(cluster_node)
