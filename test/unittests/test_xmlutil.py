@@ -41,8 +41,8 @@ class TestCrmMonXmlParser(unittest.TestCase):
         assert self.parser_inst.is_node_online("tbw-2") is False
 
     def test_get_node_list(self):
-        assert self.parser_inst.get_node_list("standby") == ['tbw-1']
-        assert self.parser_inst.get_node_list("online") == ['tbw-2']
+        assert self.parser_inst.get_node_list(standby=True) == ['tbw-1']
+        assert self.parser_inst.get_node_list(online=False) == ['tbw-2']
 
     def test_is_resource_configured(self):
         assert self.parser_inst.is_resource_configured("test") is False
