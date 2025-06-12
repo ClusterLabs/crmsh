@@ -87,6 +87,10 @@ Feature: crm report functional test for common cases
 
     When    Run "crm report -d /tmp/report" on "hanode1"
     Then    Directory "/tmp/report" created
+    Then    Directory "/tmp/report/hanode1/crm.conf.d/root/.config/crm" created
+    Then    Directory "/tmp/report/hanode1/crm.conf.d/etc/crm" created
+    Then    Directory "/tmp/report/hanode2/crm.conf.d/root/.config/crm" created
+    Then    Directory "/tmp/report/hanode2/crm.conf.d/etc/crm" created
     When    Try "crm report -d /tmp/report" on "hanode1"
     Then    Expected "Destination directory /tmp/report exists, please cleanup or use -Z option" in stderr
     When    Run "crm report -d -Z /tmp/report" on "hanode1"
