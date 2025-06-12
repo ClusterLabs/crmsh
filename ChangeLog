@@ -1,3 +1,99 @@
+* Wed Jun 11 2025 Xin Liang <XLiang@suse.com>
+- Release 4.6.2
+- Dev: bootstrap: Improve node removal handling and messaging
+- Dev: bootstrap: Improve configuration for admin IP
+- Dev: doc: update doc about `crm cluster health sles16` (jsc#PED-11808)
+- Dev: pre-migration: run cib check in local mode (jsc#PED-11808)
+- Dev: migration: refine the message about deprecating udpu/udp in favor of knet (PED#11808)
+- Dev: pre-migration: add checks for deprecated resource agents (jsc#PED-11808)
+- Dev: pre-migration: update the unsupported list
+- Dev: pre-migration: check lsb or service resource agents (jsc#PED-11808)
+- Dev: pre-migration: use a unsupported list instead of supported list (jsc#PED-11808)
+- Dev: pre-migration: report "cannot migrate" if using external_sbd (jsc#PED-11808)
+- Dev: report: Collect pre-migration check info in crm report result
+- Dev: migration: refine message wording (jsc#PED-11808)
+- Dev: pre-migration: add summary section to output (jsc#PED-11808)
+- Refactor: cibquery: has_primitive_filesystem_ocfs2 to has_primitive_filesystem_with_fstype
+- Fix: cibquery: grouped primitives is missing from query results (jsc#PED-11808)
+- Doc: ui_cluster: add document for `crm cluster health hawk2|sles16`
+- Dev: pre-migration: refine the message for stopped cluster services (jsc#PED-11808)
+- Dev: pre-migration: add message about removing stonith:external/sbd (jsc#PED-11808)
+- Fix: ui_cluster: fix do_health usage output
+- Dev: pre-migration: add completer for 'crm cluster health sles16' (jsc#PED-11808)
+- Dev: pre-migration: do not colorize hostname header (jsc#PED-11808)
+- Dev: pre-migration: better PASS/FAIL messages (jsc#PED-11808)
+- Dev: add pre-migration checks for pacemaker version (jsc#PED-11808)
+- Dev: pre-migration: check if ocfs2 is used (jsc#PED-11808)
+- Dev: pre-migration: check removed fence agents (jsc#PED-11808)
+- Dev: pre-migration: check removed resource agents (jsc#PED-11808)
+- Dev: pre-migration: check SAPHanaSR Classic resource agents (jsc#PED-11808)
+- Dev: pre-migration: add checks for package version (jsc#PED-11808)
+- Dev: pre-migration: add service status checks (jsc#PED-11808)
+- Dev: pre-migration: add checks for used corosync features (jsc#PED-11808)
+- Dev: migration: run checks on remote nodes (jsc#PED-8252)
+- Dev: pre-migration: preserve only checks for SLES 16 (jsc#PED-8252)
+- Dev: ui_cluster: add 'crm cluster health sles [--fix]' (jsc#PED-8252)
+- Dev: ui_configure: Add ':' suffix to order kind completer
+- Dev: ui_cluster: Refactor the `do_restart` function
+- Dev: ui_cluster: Skip stopping cluster if dlm_controld is running in maintenance mode
+- Dev: ui_configure: Show the changes with diff like format
+- Dev: cibconfig: Use VerifyResult to define the return value of sanity check related functions
+- Fix: ra: Prevent to add unknown operation (bsc#1236442)
+- Dev: Refactored node reachability handling in multiple modules
+- Dev: command: Sort the completion results for non-interactive mode
+- Dev: bash_completion.sh: Add nosort option to disable sorting
+- Dev: main: Ignore crm flag option to get completion
+- Dev: ui_cluster: Return False when run `crm cluster stop` raise NoSSHError
+- Fix: ui_cluster: Return when cluster service on all nodes are already startd (bsc#1241358)
+- Dev: ra: Refactor the code about how to show parameters
+- Dev: ra: Show parameters more clear
+- Dev: Remove codes that include rhcs term
+- Dev: Drop node type normal
+- Update crmsh/idmgmt.py
+- Dev: doc: Update the default value of <heartbeat_dir> in the documentation
+- Dev: ui_resource: Refactor do_trace function
+- Dev: cibverify: Print output of crm_verify directly
+- Fix: idmgmt: Replace hashtag('#') with point('.') in id (bsc#1239782)
+- Dev: ui_configure: Enable -F option for 'configure upgrade'
+- Dev: doc: Mention that 'configure upgrade' supports -F option
+- Dev: ssh_key: more robust error handling in KeyFileManager (bsc#1239084)
+- Dev: doc: Update the doc of 'configure upgrade' command
+- Dev: ui_configure: Improve 'configure upgrade' command
+- Dev: utils: Add parentheses to if else statements
+- Dev: cluster_fs: Use 'dlm-controld-ra' as the default dlm ra name
+- Dev: Add error log when cluster services fail to start
+- Fix: Add 'packaging' dependency to crmsh for version comparison (bsc#1237568)
+- Dev: doc: Improve documentation for `configure schema` command
+- Dev: ui_configure: Get schema statically when cluster is not running
+- Dev: schema: Make sure schema changed after setting new schema by `configure schema`
+- Dev: Add cancel option when confirming to commit for the pending changes
+- Dev: Refactor: Introduce custom sort order enable/disable functions
+- Dev: ui_configure: Add completer for 'configure schema' command
+- Revert "Fix: ui_context: Don't complete for unknown argument"
+- Dev: bootstrap: Check if core packages like corosync/pacemaker are installed
+- Fix: report: Check if mounted.ocfs2 command exists before using it (bsc#1236220)
+- Fix: report: Check corosync.service status before querying quorum status (bsc#1235930)
+- Dev: bootstrap: Option -N should require option -y
+- Fix: bootstrap: Improve sync_files_to_disk function (bsc#1219537)
+- Dev: ui_configure: Print all properties if no property is specified
+- Dev: help: Support '--help' option for cluster properties (jsc#PED-11710)
+- Dev: ui_ra: Give warning when running `crm ra info` with deprecated options
+- Dev: doc: Update 'cluster' option for `crm ra info` command
+- Dev: ra: Show related info when "advanced", "generated" and "deprecated" detected in metadata
+- Dev: ra: Parsing select values in cluster option metadata
+- Dev: ra: Get cluster option metadata from crm_attribute command (jsc#PED-11710)
+- Fix: bootstrap: Local joining node should be included when merging known_hosts (bsc#1229419)
+- Dev: report: Support crm report to collect GFS2 information
+- Dev: bootstrap: add gfs2 stage functionality (Technical Preview) (jsc#PED-11809)
+- Dev: Rename ocfs2.py as cluster_fs.py
+- Dev: doc: Add examples for the 'failcount' command
+- Dev: ui_resource: Refine 'do_failcount' function
+- Dev: report: Handle collect files with the same name
+- Dev: report: Add ~/.config/crm/crm.conf to the list of collected files
+- Fix: report: Fix a regression for irregular file collection
+- Fix: ui_context: Don't complete for unknown argument
+- Fix: ui_context: Don't complete for unknown command
+
 * Fri Nov 15 2024 Xin Liang <XLiang@suse.com>
 - Release 4.6.1
 - Dev: bootstrap: more robust implementation for ssh_merge (bsc#1230530)
