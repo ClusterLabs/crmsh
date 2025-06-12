@@ -11,7 +11,7 @@ import pwd
 import datetime
 import subprocess
 from subprocess import TimeoutExpired
-from typing import List
+from typing import List, Optional
 
 import crmsh.user_of_host
 from crmsh import log, sh, corosync
@@ -24,11 +24,11 @@ from crmsh.service_manager import ServiceManager
 logger = log.setup_report_logger(__name__)
 
 
-def get_corosync_log() -> str:
+def get_corosync_log() -> Optional[str]:
     """
     Get the path of the corosync log file
     """
-    corosync_log = ""
+    corosync_log = None
     corosync_conf_path = corosync.conf()
     if os.path.exists(corosync_conf_path):
         corosync_log = corosync.get_value("logging.logfile")
@@ -37,7 +37,7 @@ def get_corosync_log() -> str:
     return corosync_log
 
 
-def get_pcmk_log() -> str:
+def get_pcmk_log() -> Optional[str]:
     """
     Get the path of the pacemaker log file
     """
@@ -58,7 +58,7 @@ def get_pcmk_log() -> str:
             return log
 
     logger.warning("No valid pacemaker log file found")
-    return ""
+    return None
 
 
 def collect_ha_logs(context: core.Context) -> None:
@@ -66,10 +66,10 @@ def collect_ha_logs(context: core.Context) -> None:
     Collect pacemaker, corosync and extra logs
     """
     log_list = [get_pcmk_log(), get_corosync_log()] + context.extra_log_list
-    log_list = [os.path.expanduser(log) for log in log_list]
+    log_list = [os.path.expanduser(log) for log in log_list if log is not None]
     log_list_marked_same_basename = utils.mark_duplicate_basenames(log_list)
     for log, same_basename in log_list_marked_same_basename:
-        if log and os.path.isfile(log):
+        if os.path.isfile(log):
             utils.dump_logset(context, log, create_dir=same_basename)
 
 
