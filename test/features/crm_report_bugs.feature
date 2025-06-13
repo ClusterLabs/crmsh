@@ -171,3 +171,11 @@ Feature: crm report functional test for verifying bugs
     # found password
     Then    Expected return code is "0"
     When    Run "rm -rf report.tar.bz2 report" on "hanode1"
+
+  @clean
+  Scenario: When no logfile in corosync.conf (bsc#1244515, bsc#1232821)
+    When    Run "sed -i '/logfile:/d' /etc/corosync/corosync.conf" on "hanode1"
+    When    Run "sed -i '/logfile:/d' /etc/corosync/corosync.conf" on "hanode2"
+    When    Try "crm report report" on "hanode1"
+    # Should no exception here
+    Then    Expected "TypeError:" not in stderr
