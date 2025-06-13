@@ -204,7 +204,7 @@ deploy_ha_node() {
 	podman_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
 	podman_exec $node_name "systemctl start sshd.service"
 
-	if [ "$node_name" != "qnetd-node" ];then
+	if [[ "$node_name" != "qnetd-node" && ! "$node_name" =~ ^pcmk-remote-node[0-9]$ ]];then
 	  podman cp $PROJECT_PATH $node_name:/opt/crmsh
 	  info "Building crmsh on \"$node_name\"..."
 	  podman_exec $node_name "$make_cmd" || \
@@ -320,7 +320,7 @@ setup_cluster() {
 
 cleanup_cluster() {
         info "Cleanup ha specific containers..."
-        podman ps --format json | jq -r '.[].Names[]' | grep -E 'hanode.*|qnetd-node' | xargs podman stop
+        podman ps --format json | jq -r '.[].Names[]' | grep -E 'hanode.*|qnetd-node|pcmk-remote-node[0-9]' | xargs podman stop
         info "Cleanup ha specific container networks..."
 	exist_network_array=()
 	for network in ${HA_NETWORK_ARRAY[@]};do
