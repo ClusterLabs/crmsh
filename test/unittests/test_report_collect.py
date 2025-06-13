@@ -13,7 +13,7 @@ class TestCollect(unittest.TestCase):
     def test_get_pcmk_log_no_config(self, mock_isfile, mock_warning):
         mock_isfile.side_effect = [False, False, False]
         res = collect.get_pcmk_log()
-        self.assertEqual(res, "")
+        self.assertIsNone(res)
         mock_isfile.assert_has_calls([
             mock.call(constants.PCMKCONF),
             mock.call("/var/log/pacemaker/pacemaker.log"),
@@ -74,7 +74,7 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
     def test_get_corosync_log_not_exist(self, mock_conf, mock_exists, mock_warning):
         mock_conf.return_value = "/etc/corosync/corosync.conf"
         mock_exists.return_value = False
-        self.assertEqual(collect.get_corosync_log(), "")
+        self.assertIsNone(collect.get_corosync_log())
 
     @mock.patch('crmsh.corosync.get_value')
     @mock.patch('os.path.exists')
