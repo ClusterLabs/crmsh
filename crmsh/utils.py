@@ -2424,6 +2424,8 @@ def node_reachable_check(node, ping_count=1, port=22, timeout=3):
     """
     Check if node is reachable by using ping and socket to ssh port
     """
+    if options.regression_tests:
+        return True
     rc, _, _ = ShellUtils().get_stdout_stderr(f"ping -n -c {ping_count} -W {timeout} {node}")
     if rc == 0:
         return True
