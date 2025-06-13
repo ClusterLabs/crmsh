@@ -1900,7 +1900,12 @@ def setup_passwordless_with_other_nodes(init_node):
         result = ssh_copy_id_no_raise(local_user, remote_privileged_user, node, local_shell)
         if result.returncode != 0:
             utils.fatal("Failed to login to remote host {}@{}".format(remote_user_to_swap, node))
-        _merge_ssh_authorized_keys(cluster_node_list)
+        if utils.this_node() in cluster_node_list:
+            nodes_including_self = cluster_node_list
+        else:
+            nodes_including_self = [utils.this_node()]
+            nodes_including_self.extend(cluster_node_list)
+        _merge_ssh_authorized_keys(shell, user_of_host.UserOfHost.instance(), nodes_including_self)
         if local_user != 'hacluster':
             change_user_shell('hacluster', node)
             swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user, local_shell)
@@ -1910,7 +1915,7 @@ def setup_passwordless_with_other_nodes(init_node):
     user_by_host.save_remote(cluster_node_list)
 
 
-def _merge_ssh_authorized_keys(nodes: typing.Sequence[str]):
+def _merge_ssh_authorized_keys(shell: sh.ClusterShell, user_of_host: user_of_host.UserOfHost, nodes: typing.Sequence[str]):
     keys = set()
     with tempfile.TemporaryDirectory(prefix='crmsh-bootstrap-') as tmpdir:
         # sftp does not accept `~`
@@ -1919,7 +1924,11 @@ def _merge_ssh_authorized_keys(nodes: typing.Sequence[str]):
                 for line in f:
                     if line.startswith('ssh-'):
                         keys.add(line.rstrip())
-    parallax.parallax_run(nodes, _merge_line_into_file('~/.ssh/authorized_keys', keys))
+    script = _merge_line_into_file('~/.ssh/authorized_keys', keys)
+    for node in nodes:
+        rc, error = shell.get_rc_and_error(node, user_of_host.user_of(node), script)
+        if rc != 0:
+            raise ValueError(error)
 
 
 def swap_key_for_hacluster(other_node_list):

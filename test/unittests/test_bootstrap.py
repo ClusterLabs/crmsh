@@ -952,7 +952,7 @@ done
         ])
         mock_host_user_config.return_value.save_local.assert_called_once_with()
         mock_ssh_copy_id.assert_called_once_with('carol', 'foo', 'node2', mock_local_shell.return_value)
-        mock_merge_ssh_authorized_keys.assert_called_once_with(['node1', 'node2'])
+        mock_merge_ssh_authorized_keys.assert_called_once_with(mock_cluster_shell.return_value, mock_user_of_host.instance.return_value, ['node3', 'node1', 'node2'])
         mock_change_user_shell.assert_called_once_with('hacluster', 'node2')
         mock_swap_public_ssh_key.assert_called_once_with('node2', 'hacluster', 'hacluster', 'carol', 'foo', mock_local_shell.return_value)
         mock_swap_key_for_hacluster.assert_called_once_with(['node1', 'node2'])
