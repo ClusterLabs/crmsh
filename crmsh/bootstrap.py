@@ -2784,8 +2784,6 @@ def bootstrap_remove(context):
     else:
         utils.fatal("Specified node {} is not configured in cluster! Unable to remove.".format(cluster_node))
 
-    # In case any crm command can re-generate upgrade_seq again
-    sh.cluster_shell().get_stdout_or_raise_error("rm -rf /var/lib/crmsh", cluster_node)
     bootstrap_finished()
 
 
