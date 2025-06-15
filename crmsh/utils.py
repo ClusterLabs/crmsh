@@ -42,6 +42,7 @@ from . import constants
 from . import options
 from . import term
 from . import log
+from . import xmlutil
 from .prun import prun
 from .sh import ShellUtils
 from .service_manager import ServiceManager
@@ -1722,7 +1723,6 @@ def list_cluster_nodes(no_reg=False) -> list[str]:
     '''
     Returns a list of nodes in the cluster.
     '''
-    from . import xmlutil
     rc, out, err = ShellUtils().get_stdout_stderr(constants.CIB_QUERY, no_reg=no_reg)
     # When cluster service running
     if rc == 0:
@@ -2460,12 +2460,34 @@ def get_quorum_votes_dict(remote=None):
     return dict(re.findall(r"(Expected|Total) votes:\s+(\d+)", out))
 
 
-def check_all_nodes_reachable():
+class DeadNodeError(ValueError):
+    def __init__(self, msg: str, dead_nodes=None):
+        super().__init__(msg)
+        self.dead_nodes = dead_nodes or []
+
+
+def check_all_nodes_reachable(action_to_do: str, peer_node: str = None):
     """
     Check if all cluster nodes are reachable
     """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l")
-    for node in re.findall(r"\d+ (.*) \w+", out):
+    crm_mon_inst = xmlutil.CrmMonXmlParser(peer_node)
+    online_nodes = crm_mon_inst.get_node_list()
+    offline_nodes = crm_mon_inst.get_node_list(online=False)
+    dead_nodes = []
+    for node in offline_nodes:
+        try:
+            node_reachable_check(node)
+        except ValueError:
+            dead_nodes.append(node)
+    if dead_nodes:
+        # dead nodes bring risk to cluster, either bring them online or remove them
+        msg = f"""There are offline nodes also unreachable: {', '.join(dead_nodes)}.
+Please bring them online before {action_to_do}.
+Or use `crm cluster remove <offline_node> --force` to remove the offline node.
+        """
+        raise DeadNodeError(msg, dead_nodes)
+
+    for node in online_nodes:
         node_reachable_check(node)
 
 
