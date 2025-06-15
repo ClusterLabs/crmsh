@@ -1531,19 +1531,53 @@ class CrmMonXmlParser(object):
         xpath = f'//node[@name="{node}" and @online="true"]'
         return bool(self.xml_elem.xpath(xpath))
 
-    def get_node_list(self, online=True, standby=False, exclude_remote=True) -> list[str]:
+    def is_node_remote(self, node):
+        """
+        Check if a node is pacemaker remote node
+        """
+        xpath = f'//node[@name="{node}" and @type="remote"]'
+        return bool(self.xml_elem.xpath(xpath))
+
+    def get_res_id_of_remote_node(self, node):
+        """
+        Get the resource id of a pacemaker remote node
+        For remote node, the resource id is the name attribute
+        For guest node, the resource id is the id_as_resource attribute
+        """
+        xpath = f'//node[@name="{node}" and @type="remote"]'
+        res = self.xml_elem.xpath(xpath)
+        if not res:
+            return None
+        remote_node = res[0]
+        return remote_node.get('id_as_resource') or remote_node.get('name')
+
+    def get_node_list(
+            self,
+            online: bool = None,
+            standby: bool = None,
+            only_member: bool = False,
+            only_remote: bool = False,
+        ) -> list[str]:
         """
         Get a list of nodes based on the given attribute
+        Return all nodes if no attribute is given
         """
         xpath_str = '//nodes/node'
         conditions = []
-        online_value = "true" if online else "false"
-        conditions.append(f'@online="{online_value}"')
-        standby_value = "true" if standby else "false"
-        conditions.append(f'@standby="{standby_value}"')
-        if exclude_remote:
+
+        if online is not None:
+            online_value = "true" if online else "false"
+            conditions.append(f'@online="{online_value}"')
+        if standby is not None:
+            standby_value = "true" if standby else "false"
+            conditions.append(f'@standby="{standby_value}"')
+        if only_member:
             conditions.append('@type="member"')
-        xpath_str += '[' + ' and '.join(conditions) + ']'
+        elif only_remote:
+            conditions.append('@type="remote"')
+
+        if conditions:
+            xpath_str += '[' + ' and '.join(conditions) + ']'
         return [elem.get('name') for elem in self.xml_elem.xpath(xpath_str)]
 
     def is_resource_configured(self, ra_type):
