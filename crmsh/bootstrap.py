@@ -2048,7 +2048,7 @@ def join_cluster(seed_host, remote_user):
     except corosync.IPAlreadyConfiguredError as e:
         logger.warning(e)
     sync_file(corosync.conf())
-    shell.get_stdout_or_raise_error('sudo corosync-cfgtool -R', seed_host)
+    shell.get_stdout_or_raise_error('corosync-cfgtool -R', seed_host)
 
     _context.sbd_manager.join_sbd(remote_user, seed_host)
 
@@ -2060,26 +2060,24 @@ def join_cluster(seed_host, remote_user):
 
     adjust_properties()
 
+    # Ditch no-quorum-policy=ignore
+    no_quorum_policy = utils.get_property("no-quorum-policy")
+    if no_quorum_policy == "ignore":
+        logger.info("Ditching no-quorum-policy=ignore")
+        if not utils.delete_property("no-quorum-policy"):
+            logger.error("Failed to delete no-quorum-policy=ignore")
+
+    corosync.configure_two_node()
+    sync_file(corosync.conf())
+    sync_files_to_disk()
+
     with logger_utils.status_long("Reloading cluster configuration"):
-
-        # Ditch no-quorum-policy=ignore
-        no_quorum_policy = utils.get_property("no-quorum-policy")
-        if no_quorum_policy == "ignore":
-            logger.info("Ditching no-quorum-policy=ignore")
-            if not utils.delete_property("no-quorum-policy"):
-                logger.error("Failed to delete no-quorum-policy=ignore")
-
-        invoke("crm cluster run 'crm corosync reload'")
+        shell.get_stdout_or_raise_error("corosync-cfgtool -R")
 
     if is_qdevice_configured:
         start_qdevice_on_join_node(seed_host)
     else:
         ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).disable_service("corosync-qdevice.service")
-
-    if not is_qdevice_configured:
-        corosync.configure_two_node()
-    sync_file(corosync.conf())
-    sync_files_to_disk()
 
 
 def adjust_priority_in_rsc_defaults(is_2node_wo_qdevice):
@@ -2197,8 +2195,7 @@ def remove_node_from_cluster(node):
     sync_file(CSYNC2_CFG)
     sync_file(corosync.conf())
 
-    # Trigger corosync config reload to ensure expected_votes is propagated
-    invoke("corosync-cfgtool -R")
+    sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
 
     FirewallManager(peer=node).remove_service()
 
@@ -2454,7 +2451,7 @@ def remove_qdevice() -> None:
         corosync.configure_two_node(removing=True)
         sync_file(corosync.conf())
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
-        invoke("crm cluster run 'crm corosync reload'")
+        sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
     elif qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART:
         restart_cluster()
     else:
