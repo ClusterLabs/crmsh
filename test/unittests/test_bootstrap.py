@@ -1337,6 +1337,7 @@ done
         mock_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Removing QDevice service and configuration from cluster: Are you sure?")
 
+    @mock.patch('crmsh.sh.cluster_shell')
     @mock.patch('crmsh.bootstrap.adjust_properties')
     @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.configure_two_node')
@@ -1352,10 +1353,12 @@ done
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_remove_qdevice_reload(self, mock_qdevice_configured, mock_confirm, mock_reachable, mock_evaluate,
             mock_status, mock_invoke, mock_status_long, mock_remove_config, mock_remove_db,
-            mock_remove_files, mock_config_two_node, mock_sync, mock_adjust_priority):
+            mock_remove_files, mock_config_two_node, mock_sync, mock_adjust_priority, mock_cluster_shell):
         mock_qdevice_configured.return_value = True
         mock_confirm.return_value = True
         mock_evaluate.return_value = qdevice.QdevicePolicy.QDEVICE_RELOAD
+        mock_cluster_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
 
         bootstrap.remove_qdevice()
 
@@ -1370,11 +1373,11 @@ done
         mock_invoke.assert_has_calls([
             mock.call("crm cluster run 'systemctl disable corosync-qdevice'"),
             mock.call("crm cluster run 'systemctl stop corosync-qdevice'"),
-            mock.call("crm cluster run 'crm corosync reload'")
             ] )
         mock_status_long.assert_called_once_with("Removing QDevice configuration from cluster")
         mock_remove_config.assert_called_once_with()
         mock_remove_db.assert_called_once_with()
+        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-cfgtool -R")
 
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
     @mock.patch('crmsh.qdevice.QDevice')
@@ -1984,6 +1987,7 @@ class TestValidation(unittest.TestCase):
             ])
         mock_error.assert_called_once_with("Removing the node node1 from {} failed".format(bootstrap.CSYNC2_CFG))
 
+    @mock.patch('crmsh.sh.cluster_shell')
     @mock.patch('crmsh.bootstrap.FirewallManager')
     @mock.patch.object(NodeMgmt, 'call_delnode')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
@@ -2001,7 +2005,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
     def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
             mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_csync2,
-            mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall):
+            mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell):
         mock_get_ip.return_value = "10.10.10.1"
         mock_cal_delnode.return_value = True
         mock_invoke.side_effect = [(True, None, None)]
@@ -2011,6 +2015,8 @@ class TestValidation(unittest.TestCase):
         mock_firewall_inst = mock.Mock()
         mock_firewall.return_value = mock_firewall_inst
         mock_firewall_inst.remove_service = mock.Mock()
+        mock_cluster_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
 
         bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
         bootstrap.remove_node_from_cluster('node1')
@@ -2022,9 +2028,7 @@ class TestValidation(unittest.TestCase):
             ])
         mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
         mock_cal_delnode.assert_called_once_with("node1")
-        mock_invoke.assert_has_calls([
-            mock.call("corosync-cfgtool -R")
-            ])
+        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-cfgtool -R")
         mock_invokerc.assert_called_once_with("sed -i /node1/d {}".format(bootstrap.CSYNC2_CFG))
         mock_error.assert_not_called()
         mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
