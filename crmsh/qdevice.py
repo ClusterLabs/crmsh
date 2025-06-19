@@ -630,7 +630,6 @@ class QDevice(object):
         """
         Adjust SBD_WATCHDOG_TIMEOUT when configuring qdevice and diskless SBD
         """
-        utils.check_all_nodes_reachable()
         self.using_diskless_sbd = SBDUtils.is_using_diskless_sbd()
         # add qdevice after diskless sbd started
         if self.using_diskless_sbd:

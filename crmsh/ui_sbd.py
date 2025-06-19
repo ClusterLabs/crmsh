@@ -516,6 +516,8 @@ class SBD(command.UI):
             if len(args) < 2:
                 raise self.SyntaxError("No device specified")
 
+            utils.check_all_nodes_reachable("configuring SBD device")
+
             logger.info("Configured sbd devices: %s", ';'.join(self.device_list_from_config))
             if len(args) == 2 and ";" in args[1]:
                 device_list_from_args = args[1].split(";")
@@ -549,6 +551,8 @@ class SBD(command.UI):
                 if not self._service_is_active(service):
                     return False
 
+            utils.check_all_nodes_reachable("configuring SBD")
+
             parameter_dict = self._parse_args(args)
             if sbd.SBDUtils.is_using_disk_based_sbd():
                 self._configure_diskbase(parameter_dict)
@@ -571,6 +575,8 @@ class SBD(command.UI):
         self._load_attributes()
         if not self._service_is_active(constants.SBD_SERVICE):
             return False
+
+        utils.check_all_nodes_reachable("purging SBD")
 
         if args and args[0] == "crashdump":
             self._set_crashdump_option(delete=True)
