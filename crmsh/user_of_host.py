@@ -37,7 +37,7 @@ class UserOfHost:
         if cached is None:
             ret = self._get_user_of_host_from_config(host)
             if ret is None:
-                raise UserNotFoundError()
+                raise UserNotFoundError(f"UserNotFoundError: host={host}")
             else:
                 self._user_cache[host] = ret
                 return ret
@@ -65,7 +65,7 @@ class UserOfHost:
                 else:
                     ret = self._guess_user_for_ssh(host)
                     if ret is None:
-                        raise UserNotFoundError from None
+                        raise UserNotFoundError(f'Passwordless ssh to host "{host}" does not work.') from None
                     else:
                         self._user_pair_cache[host] = ret
                         return ret
