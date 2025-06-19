@@ -445,6 +445,19 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
 
+  functional_test_pacemaker_remote:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v4
+    - name: functional test for pacemaker remote
+      run:  |
+        $CONTAINER_SCRIPT `$GET_INDEX_OF pacemaker_remote`
+    - uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
+
   original_regression_test:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
