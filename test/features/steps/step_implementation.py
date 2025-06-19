@@ -256,6 +256,12 @@ def step_impl(context, nodelist):
         assert node in out, "Node {} not found in {}".format(node, out)
 
 
+@then('No remote nodes')
+def step_impl(context):
+    rc, out, _ = run_command(context, 'crm_mon -1|grep RemoteOnline:', exit_on_fail=False)
+    assert rc != 0
+
+
 @then('Node "{node}" is standby')
 def step_impl(context, node):
     assert xmlutil.CrmMonXmlParser().is_node_standby(node) is True
