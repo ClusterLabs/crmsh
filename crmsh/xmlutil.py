@@ -1574,4 +1574,19 @@ class CrmMonXmlParser(object):
         """
         xpath = f'//resource[@resource_agent="{ra_type}"]'
         return [elem.get('id') for elem in self.xml_elem.xpath(xpath)]
+
+    def get_last_fence_event_info(self) -> dict:
+        fence_event_info = {}
+        fence_events = self.xml_elem.xpath(r'//fence_history/fence_event')
+        if not fence_events:
+            return fence_event_info
+        last_event = fence_events[0]
+        fence_event_info = {
+            'origin': last_event.get('origin', ''),
+            'target': last_event.get('target', ''),
+            'action': last_event.get('action', ''),
+            'status': last_event.get('status', ''),
+            'completed': last_event.get('completed', '')
+        }
+        return fence_event_info
 # vim:ts=4:sw=4:et:
