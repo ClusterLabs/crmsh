@@ -246,7 +246,10 @@ create_node() {
 config_cluster() {
 	node_num=$#
 	insert_str=""
-	container_ip_array=(`podman network inspect $HA_NETWORK_ARRAY -f '{{range .Containers}}{{printf "%s " .IPv4Address}}{{end}}'`)
+	for node in $*;do
+		ip=`podman container inspect $node -f "{{.NetworkSettings.Networks.$HA_NETWORK_ARRAY.IPAddress}}"|tr -d "\r"`
+		container_ip_array+=($ip)
+	done
 
 	for i in $(seq $node_num -1 1);do
 		ip=`echo ${container_ip_array[$((i-1))]}|awk -F/ '{print $1}'`
