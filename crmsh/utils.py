@@ -3253,4 +3253,26 @@ class VerifyResult(IntFlag):
 
     def __bool__(self):
         return self in self.SUCCESS | self.WARNING
+
+
+def validate_and_get_reachable_nodes(
+        nodes: typing.List[str] = [],
+        all_nodes: bool = False
+    ) -> typing.List[str]:
+
+    cluster_member_list = list_cluster_nodes() or get_address_list_from_corosync_conf()
+
+    if not cluster_member_list:
+        fatal("Cannot get the member list of the cluster")
+    for node in nodes:
+        if node not in cluster_member_list:
+            fatal(f"Node '{node}' is not a member of the cluster")
+
+    # Return local node if no nodes specified
+    if not nodes and not all_nodes:
+        return [this_node()]
+    # Use all cluster members if no nodes specified and all_nodes is True
+    node_list = nodes or cluster_member_list
+    # Filter out unreachable nodes
+    return get_reachable_node_list(node_list)
 # vim:ts=4:sw=4:et:
