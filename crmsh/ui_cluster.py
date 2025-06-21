@@ -895,13 +895,7 @@ to get the geo cluster configuration.""",
         '''
         Execute the given command on all nodes/specific node(s), report outcome
         '''
-        if nodes:
-            hosts = list(nodes)
-        else:
-            hosts = utils.list_cluster_nodes()
-            if hosts is None:
-                context.fatal_error("failed to get node list from cluster")
-
+        hosts = utils.validate_and_get_reachable_nodes(nodes)
         for host, result in prun.prun({x: cmd for x in hosts}).items():
             if isinstance(result, prun.PRunError):
                 logger.error("[%s]: %s", host, result)
@@ -923,6 +917,7 @@ to get the geo cluster configuration.""",
         Copy file to other cluster nodes.
         If given no nodes as arguments, copy to all other cluster nodes.
         '''
+        nodes = utils.validate_and_get_reachable_nodes(nodes)
         return utils.cluster_copy_file(local_file, nodes)
 
     def do_diff(self, context, filename, *nodes):
