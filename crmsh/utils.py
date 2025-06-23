@@ -2525,7 +2525,7 @@ def get_reachable_node_list(node_list: typing.List[str]) -> typing.List[str]:
     reachable_node_list = []
     for node in node_list:
         try:
-            if node_reachable_check(node):
+            if node == this_node() or node_reachable_check(node):
                 reachable_node_list.append(node)
         except ValueError as e:
             logger.warning(str(e))
@@ -3260,7 +3260,12 @@ def validate_and_get_reachable_nodes(
         all_nodes: bool = False
     ) -> typing.List[str]:
 
-    cluster_member_list = list_cluster_nodes() or get_address_list_from_corosync_conf()
+    no_cib = False
+    cluster_member_list = list_cluster_nodes()
+    if not cluster_member_list:
+        cluster_member_list = get_address_list_from_corosync_conf()
+        if cluster_member_list:
+            no_cib = True
 
     if not cluster_member_list:
         fatal("Cannot get the member list of the cluster")
@@ -3268,11 +3273,26 @@ def validate_and_get_reachable_nodes(
         if node not in cluster_member_list:
             fatal(f"Node '{node}' is not a member of the cluster")
 
+    local_node = this_node()
     # Return local node if no nodes specified
     if not nodes and not all_nodes:
-        return [this_node()]
+        return [local_node]
     # Use all cluster members if no nodes specified and all_nodes is True
     node_list = nodes or cluster_member_list
     # Filter out unreachable nodes
-    return get_reachable_node_list(node_list)
+    node_list = get_reachable_node_list(node_list)
+    if no_cib:
+        return node_list
+
+    shell = sh.cluster_shell()
+    crm_mon_inst = xmlutil.CrmMonXmlParser()
+    for node in node_list[:]:
+        if node == local_node or crm_mon_inst.is_node_online(node):
+            continue
+        out = shell.get_stdout_or_raise_error("crm node show", node)
+        if not re.search(rf"^{local_node}\(\d\): member", out, re.M):
+            logger.error("From the view of node '%s', node '%s' is not a member of the cluster", node, local_node)
+            node_list.remove(node)
+
+    return node_list
 # vim:ts=4:sw=4:et:
