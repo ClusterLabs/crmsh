@@ -839,7 +839,7 @@ to get the geo cluster configuration.""",
             case 'sles16':
                 try:
                     if parsed_args.fix:
-                        migration.migrate()
+                        migration.migrate(['sles16'] + remaining_args)
                     else:
                         return 0 == migration.check(['sles16'] + remaining_args)
                 except migration.MigrationFailure as e:
