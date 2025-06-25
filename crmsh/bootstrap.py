@@ -2199,6 +2199,10 @@ def remove_node_from_cluster(node):
 
     FirewallManager(peer=node).remove_service()
 
+    user_by_host = utils.HostUserConfig()
+    user_by_host.remove(node)
+    user_by_host.save_remote(utils.list_cluster_nodes())
+
 
 def ssh_stage_finished():
     """
