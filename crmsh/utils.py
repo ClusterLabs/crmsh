@@ -3128,6 +3128,10 @@ class HostUserConfig:
     def get(self, host):
         return self._hosts_users[host]
 
+    def remove(self, host):
+        if host in self._hosts_users:
+            del self._hosts_users[host]
+
     def add(self, user, host):
         self._hosts_users[host] = user
 
