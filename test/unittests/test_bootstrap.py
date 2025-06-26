@@ -1987,6 +1987,7 @@ class TestValidation(unittest.TestCase):
             ])
         mock_error.assert_called_once_with("Removing the node node1 from {} failed".format(bootstrap.CSYNC2_CFG))
 
+    @mock.patch('crmsh.utils.HostUserConfig')
     @mock.patch('crmsh.sh.cluster_shell')
     @mock.patch('crmsh.bootstrap.FirewallManager')
     @mock.patch.object(NodeMgmt, 'call_delnode')
@@ -2005,7 +2006,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
     def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
             mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_csync2,
-            mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell):
+            mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell, mock_host_user_config):
         mock_get_ip.return_value = "10.10.10.1"
         mock_cal_delnode.return_value = True
         mock_invoke.side_effect = [(True, None, None)]
