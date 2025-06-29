@@ -232,7 +232,7 @@ deploy_ha_node() {
 	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
-	docker run --restart always $docker_options $DOCKER_IMAGE &> /dev/null
+	docker run --restart no $docker_options $DOCKER_IMAGE &> /dev/null
 	for network in ${HA_NETWORK_ARRAY[@]};do
 		docker network connect $network $node_name
 	done
