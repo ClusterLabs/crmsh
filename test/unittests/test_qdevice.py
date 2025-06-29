@@ -842,15 +842,13 @@ Membership information
     @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     @mock.patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    def test_adjust_sbd_watchdog_timeout_with_qdevice(self, mock_check_reachable, mock_using_diskless_sbd, mock_get_sbd_value, mock_update_config, mock_get_timeout, mock_set_property):
+    def test_adjust_sbd_watchdog_timeout_with_qdevice(self, mock_using_diskless_sbd, mock_get_sbd_value, mock_update_config, mock_get_timeout, mock_set_property):
         mock_using_diskless_sbd.return_value = True
         mock_get_sbd_value.return_value = ""
         mock_get_timeout.return_value = 100
 
         self.qdevice_with_stage_cluster_name.adjust_sbd_watchdog_timeout_with_qdevice()
 
-        mock_check_reachable.assert_called_once_with()
         mock_using_diskless_sbd.assert_called_once_with()
         mock_get_sbd_value.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
         mock_update_config.assert_called_once_with({"SBD_WATCHDOG_TIMEOUT": str(sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)})

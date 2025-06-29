@@ -181,7 +181,7 @@ class TestContext(unittest.TestCase):
         ctx.cluster_is_running = True
         with self.assertRaises(ValueError):
             ctx._validate_sbd_option()
-        mock_check_all.assert_called_once_with()
+        mock_check_all.assert_called_once_with("setup SBD")
         mock_installed.assert_has_calls([
             mock.call("sbd", "node1"),
             mock.call("sbd", "node2")
@@ -1147,6 +1147,7 @@ done
         mock_status.assert_not_called()
         mock_disable.assert_called_once_with("corosync-qdevice.service")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
     @mock.patch('crmsh.utils.HostUserConfig')
     @mock.patch('crmsh.user_of_host.UserOfHost.instance')
@@ -1163,6 +1164,7 @@ done
             mock_qdevice_configured, mock_confirm, mock_list_nodes, mock_user_of_host,
             mock_host_user_config_class,
             mock_select_user_pair_for_ssh,
+            mock_check_all_nodes
     ):
         mock_list_nodes.return_value = []
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob")
@@ -1186,7 +1188,9 @@ done
         mock_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Qdevice is already configured - overwrite?")
         self.qdevice_with_ip.start_qdevice_service.assert_called_once_with()
+        mock_check_all_nodes.assert_called_once_with("setup Qdevice")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
     @mock.patch('crmsh.utils.HostUserConfig')
     @mock.patch('crmsh.user_of_host.UserOfHost.instance')
@@ -1201,7 +1205,7 @@ done
     @mock.patch('logging.Logger.info')
     def test_init_qdevice(self, mock_info, mock_local_shell, mock_ssh, mock_configure_ssh_key, mock_qdevice_configured,
                           mock_this_node, mock_list_nodes, mock_adjust_priority, mock_adjust_fence_delay,
-                          mock_user_of_host, mock_host_user_config_class, mock_select_user_pair_for_ssh):
+                          mock_user_of_host, mock_host_user_config_class, mock_select_user_pair_for_ssh, mock_check_all_nodes):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob")
         mock_this_node.return_value = "192.0.2.100"
         mock_list_nodes.return_value = []
@@ -1230,7 +1234,9 @@ done
         self.qdevice_with_ip.set_cluster_name.assert_called_once_with()
         self.qdevice_with_ip.valid_qnetd.assert_called_once_with()
         self.qdevice_with_ip.config_and_start_qdevice.assert_called_once_with()
+        mock_check_all_nodes.assert_called_once_with("setup Qdevice")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.HostUserConfig')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_available')
@@ -1241,6 +1247,7 @@ done
             mock_info, mock_list_nodes, mock_available,
             mock_host_user_config_class,
             mock_fatal,
+            mock_check_all_nodes
     ):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
         mock_list_nodes.return_value = ["node1"]
@@ -1255,6 +1262,7 @@ done
         mock_fatal.assert_called_once_with("corosync-qdevice.service is not available on node1")
         mock_available.assert_called_once_with("corosync-qdevice.service", "node1")
         mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
+        mock_check_all_nodes.assert_called_once_with("setup Qdevice")
 
     @mock.patch('crmsh.bootstrap.prompt_for_string')
     def test_configure_qdevice_interactive_return(self, mock_prompt):
@@ -1364,7 +1372,7 @@ done
 
         mock_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Removing QDevice service and configuration from cluster: Are you sure?")
-        mock_reachable.assert_called_once_with()
+        mock_reachable.assert_called_once_with("removing QDevice from the cluster")
         mock_evaluate.assert_called_once_with(qdevice.QDEVICE_REMOVE)
         mock_status.assert_has_calls([
             mock.call("Disable corosync-qdevice.service"),
@@ -1699,6 +1707,7 @@ class TestValidation(unittest.TestCase):
         mock_prompt.assert_called_once_with("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.remove_qdevice')
@@ -1707,7 +1716,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.init')
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove_no_confirm(self, mock_context, mock_init, mock_active,
-            mock_error, mock_qdevice, mock_hostname, mock_confirm):
+            mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_check_all_nodes):
         mock_context_inst = mock.Mock(cluster_node="node1", force=False, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
@@ -1725,7 +1734,9 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_not_called()
         mock_hostname.assert_called_once_with('node1')
         mock_confirm.assert_called_once_with('Removing node "node1" from the cluster: Are you sure?')
+        mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
@@ -1735,7 +1746,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.init')
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove_self_need_force(self, mock_context, mock_init, mock_active,
-            mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node):
+                                              mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_check_all_nodes):
         mock_context_inst = mock.Mock(cluster_node="node1", force=False, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
@@ -1758,6 +1769,7 @@ class TestValidation(unittest.TestCase):
         mock_this_node.assert_called_once_with()
         mock_error.assert_called_once_with("Removing self requires --force")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap.bootstrap_finished')
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.remove_self')
@@ -1770,7 +1782,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.init')
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove_self(self, mock_context, mock_init, mock_active,
-                                   mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_self, mock_run, mock_finished):
+                                   mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_self, mock_run, mock_finished, mock_check_all_nodes):
         mock_context_inst = mock.Mock(cluster_node="node1", force=True, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
@@ -1791,7 +1803,9 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_not_called()
         mock_self.assert_called_once_with(True)
         mock_run.assert_called_once_with('rm -rf /var/lib/crmsh', 'node1')
+        mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.xmlutil.listnodes')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
@@ -1802,7 +1816,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.init')
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove_not_in_cluster(self, mock_context, mock_init, mock_active,
-            mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_list):
+            mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_list, mock_check_all_nodes):
         mock_context_inst = mock.Mock(cluster_node="node2", force=True, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
@@ -1824,7 +1838,9 @@ class TestValidation(unittest.TestCase):
         mock_confirm.assert_not_called()
         mock_this_node.assert_called_once_with()
         mock_error.assert_called_once_with("Specified node node2 is not configured in cluster! Unable to remove.")
+        mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.utils.fetch_cluster_node_list_from_node')
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
@@ -1839,7 +1855,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node,
-            mock_list, mock_remove, mock_fetch, mock_run):
+            mock_list, mock_remove, mock_fetch, mock_run, mock_check_all_nodes):
         mock_context_inst = mock.Mock(cluster_node="node2", qdevice_rm_flag=None, force=True)
         mock_context.return_value = mock_context_inst
         mock_active.side_effect = [True, False, True]
@@ -1862,6 +1878,7 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_not_called()
         mock_remove.assert_called_once_with('node2')
         mock_run.assert_called_once_with('rm -rf /var/lib/crmsh', 'node2')
+        mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.sh.ClusterShell.get_rc_stdout_stderr_without_input')

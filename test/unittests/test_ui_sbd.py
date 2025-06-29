@@ -535,9 +535,10 @@ class TestSBD(unittest.TestCase):
         mock_logger_error.assert_called_once_with('%s', "No device specified")
         mock_logger_info.assert_called_once_with("Usage: crm sbd device <add|remove> <device>...")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
-    def test_do_device_add(self, mock_is_using_disk_based_sbd, mock_logger_info):
+    def test_do_device_add(self, mock_is_using_disk_based_sbd, mock_logger_info, mock_check_all_nodes_reachable):
         mock_is_using_disk_based_sbd.return_value = True
         self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=True)
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
@@ -546,10 +547,12 @@ class TestSBD(unittest.TestCase):
         self.assertTrue(res)
         self.sbd_instance_diskbased._device_add.assert_called_once_with(["/dev/sda2", "/dev/sda3"])
         mock_logger_info.assert_called_once_with("Configured sbd devices: %s", "/dev/sda1")
+        mock_check_all_nodes_reachable.assert_called_once_with("configuring SBD device")
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
-    def test_do_device_remove(self, mock_is_using_disk_based_sbd, mock_logger_info):
+    def test_do_device_remove(self, mock_is_using_disk_based_sbd, mock_logger_info, mock_check_all_nodes_reachable):
         mock_is_using_disk_based_sbd.return_value = True
         self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=True)
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
@@ -558,6 +561,7 @@ class TestSBD(unittest.TestCase):
         self.assertTrue(res)
         self.sbd_instance_diskbased._device_remove.assert_called_once_with(["/dev/sda1"])
         mock_logger_info.assert_called_once_with("Configured sbd devices: %s", "/dev/sda1")
+        mock_check_all_nodes_reachable.assert_called_once_with("configuring SBD device")
 
     @mock.patch('crmsh.sbd.purge_sbd_from_cluster')
     def test_do_purge_no_service(self, mock_purge_sbd_from_cluster):
@@ -567,8 +571,9 @@ class TestSBD(unittest.TestCase):
         self.assertFalse(res)
         mock_purge_sbd_from_cluster.assert_not_called()
 
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.sbd.purge_sbd_from_cluster')
-    def test_do_purge(self, mock_purge_sbd_from_cluster):
+    def test_do_purge(self, mock_purge_sbd_from_cluster, mock_check_all_nodes_reachable):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         res = self.sbd_instance_diskbased.do_purge(mock.Mock())
@@ -577,6 +582,7 @@ class TestSBD(unittest.TestCase):
         self.sbd_instance_diskbased._load_attributes.assert_called_once()
         self.sbd_instance_diskbased._service_is_active.assert_called_once_with(constants.SBD_SERVICE)
         mock_purge_sbd_from_cluster.assert_called_once_with()
+        mock_check_all_nodes_reachable.assert_called_once_with("purging SBD")
 
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_print_sbd_agent_status(self, mock_CrmMonXmlParser):
