@@ -431,6 +431,20 @@ def pe_to_dot(pe_file: str) -> None:
         logger.warning("pe_to_dot: %s -> %s failed", pe_file, dotf)
 
 
+def add_the_last_pe_file(file_list: List[str]) -> List[str]:
+    for f in file_list[:]:
+        if f.endswith(".last"):
+            num_str = crmutils.read_from_file(f).strip()
+            if num_str and num_str.isdigit() and int(num_str) >= 1:
+                dirname = os.path.dirname(f)
+                basename = f"{os.path.basename(f)[:-5]}-{int(num_str)-1}.bz2"
+                prev_pe_file = os.path.join(dirname, basename)
+                if prev_pe_file not in file_list and os.path.exists(prev_pe_file):
+                    logger.debug2(f"Adding previous PE file: {prev_pe_file}")
+                    file_list.append(prev_pe_file)
+    return file_list
+
+
 def collect_pe_inputs(context: core.Context) -> None:
     """
     Collects PE files in the specified directory and generates DOT files if needed
@@ -438,6 +452,7 @@ def collect_pe_inputs(context: core.Context) -> None:
     logger.debug2(f"Looking for PE files in {context.pe_dir}")
 
     _list = utils.find_files_in_timespan(context, [context.pe_dir])
+    _list = add_the_last_pe_file(_list)
     pe_file_list = [f for f in _list if not f.endswith(".last")]
     if pe_file_list:
         pe_flist_dir = os.path.join(context.work_dir, os.path.basename(context.pe_dir))
