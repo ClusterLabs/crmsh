@@ -749,12 +749,13 @@ def create_configuration(clustername="hacluster",
     utils.str2file(_COROSYNC_CONF_TEMPLATE % config_common, conf())
 
 
-def get_corosync_value(key):
+def get_corosync_value(key, cmapctl_prefix="runtime.config"):
     """
     Get corosync configuration value from corosync-cmapctl or corosync.conf
     """
     try:
-        out = sh.cluster_shell().get_stdout_or_raise_error("corosync-cmapctl {}".format(key))
+        cmapctl_prefix = f"{cmapctl_prefix.strip('.')}." if cmapctl_prefix else ""
+        out = sh.cluster_shell().get_stdout_or_raise_error(f"corosync-cmapctl {cmapctl_prefix}{key}")
         res = re.search(r'{}\s+.*=\s+(.*)'.format(key), out)
         return res.group(1) if res else None
     except ValueError:
