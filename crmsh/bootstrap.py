@@ -2059,10 +2059,13 @@ def setup_passwordless_with_other_nodes(init_node, remote_user):
     # Swap ssh public key between join node and other cluster nodes
     if not _context.use_ssh_agent:
         for node in (node for node in cluster_nodes_list if node != out):
-            remote_user_to_swap = utils.user_of(node)
-            remote_privileged_user = remote_user_to_swap
+            try:
+                remote_privileged_user = utils.user_of(node)
+            except UserNotFoundError:
+                remote_privileged_user = local_user
             utils.ssh_copy_id(local_user, remote_privileged_user, node)
-            swap_public_ssh_key(node, local_user, remote_user_to_swap, local_user, remote_privileged_user)
+            user_by_host.add(remote_privileged_user, node)
+            swap_public_ssh_key(node, local_user, remote_privileged_user, local_user, remote_privileged_user)
             if local_user != 'hacluster':
                 change_user_shell('hacluster', node)
                 swap_public_ssh_key(node, 'hacluster', 'hacluster', local_user, remote_privileged_user, add=True)
