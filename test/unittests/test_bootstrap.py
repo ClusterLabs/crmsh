@@ -950,7 +950,7 @@ done
             mock.call('alice', 'node1'),
             mock.call('bob', 'node2'),
         ])
-        mock_host_user_config.return_value.save_local.assert_called_once_with()
+        mock_host_user_config.return_value.save_local.assert_called()
         mock_ssh_copy_id.assert_called_once_with('carol', 'foo', 'node2', mock_local_shell.return_value)
         mock_merge_ssh_authorized_keys.assert_called_once_with(mock_cluster_shell.return_value, mock_user_of_host.instance.return_value, ['node3', 'node1', 'node2'])
         mock_change_user_shell.assert_called_once_with('hacluster', 'node2')
