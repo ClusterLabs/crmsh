@@ -2005,10 +2005,11 @@ def join_cluster(seed_host, remote_user):
 
     shell = sh.cluster_shell()
 
-    if is_qdevice_configured and not _context.use_ssh_agent:
-        # trigger init_qnetd_remote on init node
-        cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
-        shell.get_stdout_or_raise_error(cmd, seed_host)
+    if is_qdevice_configured:
+        if not _context.use_ssh_agent or not _keys_from_ssh_agent():
+            # trigger init_qnetd_remote on init node
+            cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
+            shell.get_stdout_or_raise_error(cmd, seed_host)
 
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
