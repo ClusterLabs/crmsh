@@ -287,3 +287,17 @@ Feature: Regression test for bootstrap bugs
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     And     Run "crm configure show" on "hanode1"
     Then    Expected "no-quorum-policy=ignore" not in stdout
+
+  @clean
+  Scenario: Join when `core.hosts` is not available from the seed node (bsc#1245343)
+    Given   Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    And     Run "crm cluster join -c hanode1 -y" on "hanode2"
+    And     Run "rm -r /root/.config/crm" on "hanode1,hanode2"
+    And     Run "crm cluster join -c hanode1 -y" on "hanode3"
+    Then    Cluster service is "started" on "hanode3"
+    When    Run "crm cluster stop --all" on "hanode3"
+    Then    Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    And     Cluster service is "stopped" on "hanode3"

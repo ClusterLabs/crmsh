@@ -1896,16 +1896,22 @@ def setup_passwordless_with_other_nodes(init_node):
     init_node_hostname = out
     # Swap ssh public key between join node and other cluster nodes
     for node in (node for node in cluster_node_list if node != init_node_hostname):
-        remote_user_to_swap = utils.user_of(node)
-        remote_privileged_user = remote_user_to_swap
+        try:
+            remote_privileged_user = utils.user_of(node)
+        except UserNotFoundError:
+            remote_privileged_user = local_user
         result = ssh_copy_id_no_raise(local_user, remote_privileged_user, node, local_shell)
         if result.returncode != 0:
-            utils.fatal("Failed to login to remote host {}@{}".format(remote_user_to_swap, node))
+            utils.fatal("Failed to login to remote host {}@{}".format(remote_privileged_user, node))
+        else:
+            user_by_host.add(remote_privileged_user, node)
+            user_by_host.save_local()
         if utils.this_node() in cluster_node_list:
             nodes_including_self = cluster_node_list
         else:
             nodes_including_self = [utils.this_node()]
             nodes_including_self.extend(cluster_node_list)
+        # FIXME: 2 layers of loop is unnecessary?
         _merge_ssh_authorized_keys(shell, user_of_host.UserOfHost.instance(), nodes_including_self)
         if local_user != 'hacluster':
             change_user_shell('hacluster', node)
