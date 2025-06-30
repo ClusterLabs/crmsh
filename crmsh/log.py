@@ -353,8 +353,9 @@ class LoggerUtils(object):
         """
         while True:
             ans = self.wait_input("{} (y/n)? ".format(msg.strip("? ")))
-            if ans:
-                return ans.lower() == "y"
+            if not ans or ans.lower() not in ('y', 'n'):
+                continue
+            return ans.lower() == 'y'
 
     def syntax_err(self, s, token='', context='', msg=''):
         err = "syntax"
