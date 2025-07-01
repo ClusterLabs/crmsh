@@ -266,7 +266,7 @@ def test_get_corosync_value_raise(mock_run, mock_get_value):
     mock_run.side_effect = ValueError
     mock_get_value.return_value = None
     assert corosync.get_corosync_value("xxx") is None
-    mock_run.assert_called_once_with("corosync-cmapctl xxx")
+    mock_run.assert_called_once_with("corosync-cmapctl runtime.config.xxx")
     mock_get_value.assert_called_once_with("xxx")
 
 
@@ -274,7 +274,7 @@ def test_get_corosync_value_raise(mock_run, mock_get_value):
 def test_get_corosync_value(mock_run):
     mock_run.return_value = "totem.token = 10000"
     assert corosync.get_corosync_value("totem.token") == "10000"
-    mock_run.assert_called_once_with("corosync-cmapctl totem.token")
+    mock_run.assert_called_once_with("corosync-cmapctl runtime.config.totem.token")
 
 
 class TestCorosyncParser(unittest.TestCase):
