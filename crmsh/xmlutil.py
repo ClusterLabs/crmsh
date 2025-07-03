@@ -359,18 +359,6 @@ def mk_rsc_type(n):
     return ''.join((s1, s2, ra_type))
 
 
-def listnodes(include_remote_nodes=True):
-    cib = cibdump2elem()
-    if cib is None:
-        return []
-    local_nodes = cib.xpath('/cib/configuration/nodes/node/@uname')
-    if include_remote_nodes:
-        remote_nodes = cib.xpath('/cib/status/node_state[@remote_node="true"]/@uname')
-    else:
-        remote_nodes = []
-    return list(set([n for n in local_nodes + remote_nodes if n]))
-
-
 def is_our_node(s):
     '''
     Check if s is in a list of our nodes (ignore case).
@@ -378,7 +366,7 @@ def is_our_node(s):
 
     Includes remote nodes as well
     '''
-    for n in listnodes():
+    for n in CrmMonXmlParser.get_node_list():
         if n.lower() == s.lower():
             return True
     return False
@@ -1531,20 +1519,37 @@ class CrmMonXmlParser(object):
         xpath = f'//node[@name="{node}" and @online="true"]'
         return bool(self.xml_elem.xpath(xpath))
 
-    def get_node_list(self, online=True, standby=False, exclude_remote=True) -> list[str]:
+    @classmethod
+    def get_node_list(
+            cls,
+            online: bool = None,
+            standby: bool = None,
+            only_member: bool = False,
+            only_remote: bool = False,
+            peer: str = None
+        ) -> list[str]:
         """
         Get a list of nodes based on the given attribute
+        Return all nodes if no attributes are given
         """
+        instance = cls(peer)
         xpath_str = '//nodes/node'
         conditions = []
-        online_value = "true" if online else "false"
-        conditions.append(f'@online="{online_value}"')
-        standby_value = "true" if standby else "false"
-        conditions.append(f'@standby="{standby_value}"')
-        if exclude_remote:
+
+        if online is not None:
+            online_value = 'true' if online else 'false'
+            conditions.append(f'@online="{online_value}"')
+        if standby is not None:
+            standby_value = 'true' if standby else 'false'
+            conditions.append(f'@standby="{standby_value}"')
+        if only_member:
             conditions.append('@type="member"')
-        xpath_str += '[' + ' and '.join(conditions) + ']'
-        return [elem.get('name') for elem in self.xml_elem.xpath(xpath_str)]
+        elif only_remote:
+            conditions.append('@type="remote"')
+
+        if conditions:
+            xpath_str += '[' + ' and '.join(conditions) + ']'
+        return [elem.get('name') for elem in instance.xml_elem.xpath(xpath_str)]
 
     def is_resource_configured(self, ra_type):
         """
