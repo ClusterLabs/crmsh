@@ -69,9 +69,9 @@ def primitives(args):
     return [x.get("id") for x in nodes if xmlutil.is_primitive(x)]
 
 
-nodes = call(xmlutil.listnodes)
-online_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(standby=x), False)
-standby_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(standby=x), True)
+nodes = call(xmlutil.CrmMonXmlParser.get_node_list)
+online_nodes = call(lambda x: xmlutil.CrmMonXmlParser.get_node_list(standby=x), False)
+standby_nodes = call(lambda x: xmlutil.CrmMonXmlParser.get_node_list(standby=x), True)
 
 shadows = call(xmlutil.listshadows)
 
