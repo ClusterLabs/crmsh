@@ -156,9 +156,12 @@ class CheckResultInteractiveHandler(CheckResultHandler):
         return ret
 
 
-def migrate():
+def migrate(args: typing.Sequence[str]):
+    parser = argparse.ArgumentParser(args[0])
+    parser.add_argument('--local', action='store_true')
+    parsed_args = parser.parse_args(args[1:])
     try:
-        match _check_impl(local=False, json='', summary=False):
+        match _check_impl(local=parsed_args.local, json='', summary=False):
             case CheckReturnCode.ALREADY_MIGRATED:
                 logger.info("This cluster works on SLES 16. No migration is needed.")
                 return 0
@@ -167,7 +170,7 @@ def migrate():
                 return 0
             case CheckReturnCode.PASS_NEED_AUTO_FIX:
                 logger.info('Starting migration...')
-                migrate_corosync_conf()
+                migrate_corosync_conf(local=parsed_args.local)
                 logger.info('Finished migration.')
                 return 0
             case _:
@@ -372,7 +375,7 @@ def _check_unsupported_corosync_transport(handler: CheckResultHandler, dom):
     )
 
 
-def migrate_corosync_conf():
+def migrate_corosync_conf(local: bool):
     conf_path = corosync.conf()
     with open(conf_path, 'r', encoding='utf-8') as f:
         config = corosync_config_format.DomParser(f).dom()
@@ -387,16 +390,17 @@ def migrate_corosync_conf():
         'Finish migrating corosync configuration. The original configuration is renamed to %s.bak',
         os.path.basename(conf_path),
     )
-    for host, result in prun.pcopy_to_remote(
-            conf_path,
-            utils.list_cluster_nodes_except_me(), conf_path,
-            atomic_write=True,
-    ).items():
-        match result:
-            case None:
-                pass
-            case prun.PRunError() as e:
-                logger.error("Failed to copy crmsh.conf to host %s: %s", host, e)
+    if not local:
+        for host, result in prun.pcopy_to_remote(
+                conf_path,
+                utils.list_cluster_nodes_except_me(), conf_path,
+                atomic_write=True,
+        ).items():
+            match result:
+                case None:
+                    pass
+                case prun.PRunError() as e:
+                    logger.error("Failed to copy crmsh.conf to host %s: %s", host, e)
 
 
 def migrate_corosync_conf_impl(config):
