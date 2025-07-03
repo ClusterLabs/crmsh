@@ -75,6 +75,8 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    Directory "/var/lib/pacemaker/cib/" is empty on "hanode2"
     Then    Directory "/var/lib/pacemaker/pengine/" is empty on "hanode2"
     Then    Directory "/var/lib/corosync/" is empty on "hanode2"
+    When    Try "crm cluster run "crm cluster stop" hanode1" on "hanode2"
+    Then    Expected "Cannot get the member list of the cluster" in stderr
 
   Scenario: Remove peer node when cluster is not running
     Then    File "/etc/corosync/authkey" exists on "hanode2"

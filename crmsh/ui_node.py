@@ -243,18 +243,7 @@ keep the node in standby after reboot. The life time defaults to
     if options.all and args:
         context.fatal_error("Should either use --all or specific node(s)")
 
-    # return local node
-    if (not options.all and not args) or (len(args) == 1 and args[0] == utils.this_node()):
-        return [utils.this_node()]
-    member_list = utils.list_cluster_nodes() or utils.get_address_list_from_corosync_conf()
-    if not member_list:
-        context.fatal_error("Cannot get the node list from cluster")
-    for node in args:
-        if node not in member_list:
-            context.fatal_error(f"Node '{node}' is not a member of the cluster")
-
-    node_list = member_list if options.all else args
-    return utils.get_reachable_node_list(node_list)
+    return utils.validate_and_get_reachable_nodes(args, options.all)
 
 
 class NodeMgmt(command.UI):
