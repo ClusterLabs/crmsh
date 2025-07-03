@@ -2223,6 +2223,8 @@ def valid_nodeid(nodeid):
 
 
 def get_nodeid_from_name(name):
+    if xmlutil.CrmMonXmlParser().is_node_remote(name):
+        return name
     rc, out = ShellUtils().get_stdout('crm_node -l')
     if rc != 0:
         return None
@@ -2789,8 +2791,7 @@ def is_standby(node):
     """
     Check if the node is already standby
     """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1")
-    return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
+    return node in xmlutil.CrmMonXmlParser.get_node_list(standby=True)
 
 
 def get_dlm_option_dict(peer=None):
@@ -3258,7 +3259,8 @@ class VerifyResult(IntFlag):
 
 def validate_and_get_reachable_nodes(
         nodes: typing.List[str] = [],
-        all_nodes: bool = False
+        all_nodes: bool = False,
+        include_remote: bool = False
     ) -> typing.List[str]:
 
     no_cib = False
@@ -3270,6 +3272,8 @@ def validate_and_get_reachable_nodes(
 
     if not cluster_member_list:
         fatal("Cannot get the member list of the cluster")
+    if include_remote:
+        cluster_member_list.extend(xmlutil.CrmMonXmlParser.get_node_list(only_remote=True))
     for node in nodes:
         if node not in cluster_member_list:
             fatal(f"Node '{node}' is not a member of the cluster")

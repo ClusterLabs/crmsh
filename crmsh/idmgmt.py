@@ -109,10 +109,13 @@ def check_xml(node):
     return ok
 
 
-def store_xml(node):
+def store_xml(node, thin=True):
     if not check_xml(node):
         return False
-    xmlutil.xmltraverse_thin(node, _store_node)
+    if thin:
+        xmlutil.xmltraverse_thin(node, _store_node)
+    else:
+        xmlutil.xmltraverse(node, _store_node)
     return True
 
 
