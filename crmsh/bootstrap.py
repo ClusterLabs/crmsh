@@ -2175,6 +2175,14 @@ def rm_configuration_files(remote=None):
         shell.get_stdout_or_raise_error(cmd, remote)
 
 
+def remove_pacemaker_remote_node_from_cluster(node):
+    logger.info("Removing pacemaker remote node '%s' from cluster", node)
+    shell = sh.cluster_shell()
+    remote_node_res_id = xmlutil.CrmMonXmlParser().get_res_id_of_remote_node(node)
+    shell.get_stdout_or_raise_error(f"crm resource stop {remote_node_res_id}")
+    shell.get_stdout_or_raise_error(f"crm configure delete {remote_node_res_id}")
+
+
 def remove_node_from_cluster(node, dead_node=False):
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
@@ -2516,6 +2524,11 @@ def bootstrap_remove(context):
 
     remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
 
+    if xmlutil.CrmMonXmlParser().is_node_remote(cluster_node):
+        remove_pacemaker_remote_node_from_cluster(cluster_node)
+        bootstrap_finished()
+        return
+
     try:
         utils.check_all_nodes_reachable("removing a node from the cluster")
     except utils.DeadNodeError as e:
@@ -2528,25 +2541,20 @@ def bootstrap_remove(context):
 
     if service_manager.service_is_active("pacemaker.service", cluster_node):
         cluster_node = get_node_canonical_hostname(cluster_node)
-    else:
-        configured_nodes = utils.list_cluster_nodes()
-        if cluster_node not in configured_nodes:
-            utils.fatal(f"Node {cluster_node} is not configured in cluster! (valid nodes: {', '.join(configured_nodes)})")
 
     if not force_flag and not confirm("Removing node \"{}\" from the cluster: Are you sure?".format(cluster_node)):
         return
 
+    configured_nodes = xmlutil.CrmMonXmlParser().get_node_list()
     if cluster_node == utils.this_node():
         if not force_flag:
             utils.fatal("Removing self requires --force")
         remove_self(force_flag)
-    elif cluster_node in xmlutil.listnodes():
+    elif cluster_node in configured_nodes:
         remove_node_from_cluster(cluster_node)
     else:
-        utils.fatal("Specified node {} is not configured in cluster! Unable to remove.".format(cluster_node))
+        utils.fatal(f"Node {cluster_node} is not configured in cluster! (valid nodes: {', '.join(configured_nodes)})")
 
-    # In case any crm command can re-generate upgrade_seq again
-    sh.cluster_shell().get_stdout_or_raise_error("rm -rf /var/lib/crmsh", cluster_node)
     bootstrap_finished()
 
 
