@@ -1519,6 +1519,13 @@ class CrmMonXmlParser(object):
         xpath = f'//node[@name="{node}" and @online="true"]'
         return bool(self.xml_elem.xpath(xpath))
 
+    def is_node_remote(self, node):
+        """
+        Check if a node is remote
+        """
+        xpath = f'//node[@name="{node}" and @type="remote"]'
+        return bool(self.xml_elem.xpath(xpath))
+
     @classmethod
     def get_node_list(
             cls,
