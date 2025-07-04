@@ -1519,6 +1519,20 @@ class CrmMonXmlParser(object):
         xpath = f'//node[@name="{node}" and @online="true"]'
         return bool(self.xml_elem.xpath(xpath))
 
+    def is_node_standby(self, node):
+        """
+        Check if a node is in standby mode
+        """
+        xpath = f'//node[@name="{node}" and @standby="true"]'
+        return bool(self.xml_elem.xpath(xpath))
+
+    def is_node_maintenance(self, node):
+        """
+        Check if a node is in maintenance mode
+        """
+        xpath = f'//node[@name="{node}" and @maintenance="true"]'
+        return bool(self.xml_elem.xpath(xpath))
+
     def is_node_remote(self, node):
         """
         Check if a node is remote
@@ -1531,6 +1545,7 @@ class CrmMonXmlParser(object):
             cls,
             online: bool = None,
             standby: bool = None,
+            maintenance: bool = None,
             only_member: bool = False,
             only_remote: bool = False,
             peer: str = None
@@ -1541,14 +1556,16 @@ class CrmMonXmlParser(object):
         """
         instance = cls(peer)
         xpath_str = '//nodes/node'
-        conditions = []
+        filters = {
+            "online": online,
+            "standby": standby,
+            "maintenance": maintenance
+        }
+        conditions = [
+            f'@{key}="{str(value).lower()}"'
+            for key, value in filters.items() if value is not None
+        ]
 
-        if online is not None:
-            online_value = 'true' if online else 'false'
-            conditions.append(f'@online="{online_value}"')
-        if standby is not None:
-            standby_value = 'true' if standby else 'false'
-            conditions.append(f'@standby="{standby_value}"')
         if only_member:
             conditions.append('@type="member"')
         elif only_remote:
