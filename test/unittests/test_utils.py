@@ -1502,3 +1502,73 @@ def test_verify_result():
     rc = rc1 | rc2 | rc3
     assert bool(rc) is False
     assert utils.VerifyResult.NON_FATAL_ERROR in rc
+
+
+@mock.patch('crmsh.utils.fatal')
+@mock.patch('crmsh.utils.get_address_list_from_corosync_conf')
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_validate_and_get_reachable_nodes_cannot_get_member(mock_list_nodes, mock_get_address, mock_fatal):
+    mock_list_nodes.return_value = None
+    mock_get_address.return_value = None
+    mock_fatal.side_effect = ValueError
+    with pytest.raises(ValueError):
+        utils.validate_and_get_reachable_nodes([])
+    mock_fatal.assert_called_once_with("Cannot get the member list of the cluster")
+    mock_get_address.assert_called_once_with()
+
+
+@mock.patch('crmsh.utils.fatal')
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_validate_and_get_reachable_nodes_not_a_member(mock_list_nodes, mock_fatal):
+    mock_list_nodes.return_value = ["node1", "node2"]
+    mock_fatal.side_effect = ValueError
+    with pytest.raises(ValueError):
+        utils.validate_and_get_reachable_nodes(["node3"])
+    mock_fatal.assert_called_once_with("Node 'node3' is not a member of the cluster")
+
+
+@mock.patch('crmsh.utils.this_node')
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_validate_and_get_reachable_nodes_return_local(mock_list_nodes, mock_this_node):
+    mock_list_nodes.return_value = ["node1", "node2"]
+    mock_this_node.return_value = "node1"
+    res = utils.validate_and_get_reachable_nodes()
+    assert res == ["node1"]
+
+
+@mock.patch('crmsh.utils.get_reachable_node_list')
+@mock.patch('crmsh.utils.this_node')
+@mock.patch('crmsh.utils.get_address_list_from_corosync_conf')
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_validate_and_get_reachable_nodes_no_cib(mock_list_nodes, mock_get_address, mock_this_node, mock_get_reachable):
+    mock_list_nodes.return_value = None
+    mock_get_address.return_value = ["node1", "node2"]
+    mock_get_reachable.return_value = ["node1"]
+    mock_this_node.return_value = "node1"
+    res = utils.validate_and_get_reachable_nodes(all_nodes=True)
+    assert res == ["node1"]
+
+
+@mock.patch('logging.Logger.error')
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+@mock.patch('crmsh.sh.cluster_shell')
+@mock.patch('crmsh.utils.get_reachable_node_list')
+@mock.patch('crmsh.utils.this_node')
+@mock.patch('crmsh.utils.list_cluster_nodes')
+def test_validate_and_get_reachable_nodes(mock_list_nodes, mock_this_node, mock_get_reachable, mock_shell, mock_xml, mock_error):
+    mock_list_nodes.return_value = ["node1", "node2"]
+    mock_get_reachable.return_value = ["node1", "node2"]
+    mock_this_node.return_value = "node2"
+    mock_shell_inst = mock.Mock()
+    mock_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_stdout_or_raise_error.return_value = """
+node1(1): member
+    """
+    mock_xml_inst = mock.Mock()
+    mock_xml.return_value = mock_xml_inst
+    mock_xml_inst.is_node_online.return_value = False
+
+    res = utils.validate_and_get_reachable_nodes(all_nodes=True)
+    assert res == ["node2"]
+
+    mock_error.assert_called_once_with("From the view of node '%s', node '%s' is not a member of the cluster", 'node1', 'node2')
