@@ -2787,13 +2787,6 @@ def fatal(error_msg):
     raise ValueError(error_msg)
 
 
-def is_standby(node):
-    """
-    Check if the node is already standby
-    """
-    return node in xmlutil.CrmMonXmlParser.get_node_list(standby=True)
-
-
 def get_dlm_option_dict(peer=None):
     """
     Get dlm config option dictionary
