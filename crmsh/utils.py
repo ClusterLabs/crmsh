@@ -2134,6 +2134,8 @@ def valid_nodeid(nodeid):
 
 
 def get_nodeid_from_name(name):
+    if xmlutil.CrmMonXmlParser().is_node_remote(name):
+        return name
     rc, out = ShellUtils().get_stdout('crm_node -l')
     if rc != 0:
         return None
@@ -2470,9 +2472,8 @@ def check_all_nodes_reachable(action_to_do: str, peer_node: str = None):
     """
     Check if all cluster nodes are reachable
     """
-    crm_mon_inst = xmlutil.CrmMonXmlParser(peer_node)
-    online_nodes = crm_mon_inst.get_node_list()
-    offline_nodes = crm_mon_inst.get_node_list(online=False)
+    online_nodes = xmlutil.CrmMonXmlParser.get_node_list(online=True, only_member=True, peer=peer_node)
+    offline_nodes = xmlutil.CrmMonXmlParser.get_node_list(online=False, peer=peer_node)
     dead_nodes = []
     for node in offline_nodes:
         try:
@@ -2697,14 +2698,6 @@ def fatal(error_msg):
     handled by Context.run in ui_context.py
     """
     raise ValueError(error_msg)
-
-
-def is_standby(node):
-    """
-    Check if the node is already standby
-    """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1")
-    return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
 
 
 def get_dlm_option_dict(peer=None):
@@ -3250,7 +3243,8 @@ class VerifyResult(IntFlag):
 
 def validate_and_get_reachable_nodes(
         nodes: typing.List[str] = [],
-        all_nodes: bool = False
+        all_nodes: bool = False,
+        include_remote: bool = False
     ) -> typing.List[str]:
 
     no_cib = False
@@ -3262,6 +3256,8 @@ def validate_and_get_reachable_nodes(
 
     if not cluster_member_list:
         fatal("Cannot get the member list of the cluster")
+    if include_remote:
+        cluster_member_list.extend(xmlutil.CrmMonXmlParser.get_node_list(only_remote=True))
     for node in nodes:
         if node not in cluster_member_list:
             fatal(f"Node '{node}' is not a member of the cluster")
