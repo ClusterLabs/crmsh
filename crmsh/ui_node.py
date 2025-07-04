@@ -80,8 +80,16 @@ def update_xml_node(cluster_node_name, attr, value):
 
     node_obj = cib_factory.find_node(cluster_node_name)
     if node_obj is None:
-        logger.error("CIB is not valid!")
-        return False
+        if xmlutil.CrmMonXmlParser().is_node_remote(cluster_node_name):
+            xml_item = etree.Element("node", id=cluster_node_name, uname=cluster_node_name, type="remote")
+            cib_factory.create_from_node(xml_item)
+            node_obj = cib_factory.find_node(cluster_node_name)
+            if node_obj is None:
+                logger.error("Failed to create remote node '%s'", cluster_node_name)
+                return False
+        else:
+            logger.error("Node '%s' not found in CIB", cluster_node_name)
+            return False
 
     logger.debug("update_xml_node: %s", node_obj.obj_id)
 
