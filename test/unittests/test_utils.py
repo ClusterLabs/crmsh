@@ -1000,16 +1000,6 @@ def test_detect_virt(mock_run):
     mock_run.assert_called_once_with("systemd-detect-virt")
 
 
-@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-def test_is_standby(mock_run):
-    mock_run.return_value = """
-Node List:
-* Node 15sp2-1: standby
-    """
-    assert utils.is_standby("15sp2-1") is True
-    mock_run.assert_called_once_with("crm_mon -1")
-
-
 @mock.patch('crmsh.sh.cluster_shell')
 def test_get_dlm_option_dict(mock_run):
     mock_run_inst = mock.Mock()
