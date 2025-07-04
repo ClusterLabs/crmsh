@@ -1,3 +1,4 @@
+from lxml import etree
 import unittest
 
 try:
@@ -7,21 +8,12 @@ except ImportError:
 
 from crmsh import xmlutil, constants
 
-
-class TestCrmMonXmlParser(unittest.TestCase):
-    """
-    Unitary tests for crmsh.xmlutil.CrmMonXmlParser
-    """
-    @mock.patch('crmsh.sh.cluster_shell')
-    def setUp(self, mock_cluster_shell):
-        """
-        Test setUp.
-        """
-        data = '''
+FAKE_XML = '''
 <data>
   <nodes>
     <node name="tbw-1" id="1084783148" online="true" standby="true" standby_onfail="false" maintenance="false" pending="false" unclean="false" shutdown="false" expected_up="true" is_dc="true" resources_running="3" type="member"/>
     <node name="tbw-2" id="1084783312" online="false" standby="false" standby_onfail="false" maintenance="false" pending="false" unclean="false" shutdown="false" expected_up="true" is_dc="false" resources_running="2" type="member"/>
+    <node name="tbw-3" id="alp-2" online="true" standby="false" standby_onfail="false" maintenance="true" pending="false" unclean="false" health="green" shutdown="false" expected_up="false" is_dc="false" resources_running="0" type="remote"/>
   </nodes>
   <resources>
     <resource id="ocfs2-dlm" resource_agent="ocf:pacemaker:controld" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1">
@@ -32,17 +24,48 @@ class TestCrmMonXmlParser(unittest.TestCase):
     </resource>
   </resources>
 </data>
-        '''
-        mock_cluster_shell().get_rc_stdout_stderr_without_input.return_value = (0, data, '')
+'''
+
+def fake_text2elem(xml_string):
+    return etree.fromstring(xml_string)
+
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser._load')
+def test_get_node_list(mock_load):
+    mock_load.return_value = fake_text2elem(FAKE_XML)
+    node_list = xmlutil.CrmMonXmlParser.get_node_list()
+    assert node_list == ['tbw-1', 'tbw-2', 'tbw-3']
+    node_list = xmlutil.CrmMonXmlParser.get_node_list(online=True)
+    assert node_list == ['tbw-1', 'tbw-3']
+    node_list = xmlutil.CrmMonXmlParser.get_node_list(maintenance=True)
+    assert node_list == ['tbw-3']
+    node_list = xmlutil.CrmMonXmlParser.get_node_list(node_type="remote")
+    assert node_list == ['tbw-3']
+    node_list = xmlutil.CrmMonXmlParser.get_node_list(node_type="member")
+    assert node_list == ['tbw-1', 'tbw-2']
+
+class TestCrmMonXmlParser(unittest.TestCase):
+    """
+    Unitary tests for crmsh.xmlutil.CrmMonXmlParser
+    """
+    @mock.patch('crmsh.sh.cluster_shell')
+    def setUp(self, mock_cluster_shell):
+        """
+        Test setUp.
+        """
+        mock_cluster_shell().get_rc_stdout_stderr_without_input.return_value = (0, FAKE_XML, '')
         self.parser_inst = xmlutil.CrmMonXmlParser()
 
     def test_is_node_online(self):
         assert self.parser_inst.is_node_online("tbw-1") is True
         assert self.parser_inst.is_node_online("tbw-2") is False
 
-    def test_get_node_list(self):
-        assert self.parser_inst.get_node_list(standby=True) == ['tbw-1']
-        assert self.parser_inst.get_node_list(online=False) == ['tbw-2']
+    def test_is_node_maintenance(self):
+        assert self.parser_inst.is_node_maintenance("tbw-1") is False
+        assert self.parser_inst.is_node_maintenance("tbw-3") is True
+
+    def test_is_node_remote(self):
+        assert self.parser_inst.is_node_remote("tbw-1") is False
+        assert self.parser_inst.is_node_remote("tbw-3") is True
 
     def test_is_resource_configured(self):
         assert self.parser_inst.is_resource_configured("test") is False
