@@ -80,8 +80,17 @@ def update_xml_node(cluster_node_name, attr, value):
 
     node_obj = cib_factory.find_node(cluster_node_name)
     if node_obj is None:
-        logger.error("CIB is not valid!")
-        return False
+        # Append node section for remote node
+        if xmlutil.CrmMonXmlParser().is_node_remote(cluster_node_name):
+            xml_item = etree.Element("node", id=cluster_node_name, uname=cluster_node_name, type="remote")
+            cib_factory.create_from_node(xml_item)
+            node_obj = cib_factory.find_node(cluster_node_name)
+            if node_obj is None:
+                logger.error("Failed to create remote node '%s'", cluster_node_name)
+                return False
+        else:
+            logger.error("Node '%s' not found in CIB", cluster_node_name)
+            return False
 
     logger.debug("update_xml_node: %s", node_obj.obj_id)
 
@@ -378,6 +387,7 @@ class NodeMgmt(command.UI):
         create_remote_node = False
         for node in node_list:
             if node not in uname_list_in_xml:
+                # Append node section for remote node
                 if crm_mon_parser_inst.is_node_remote(node) and lifetime_opt == "forever":
                     xml_item = etree.Element("node", id=node, uname=node, type="remote")
                     cib.find("configuration/nodes").append(xml_item)
@@ -386,6 +396,7 @@ class NodeMgmt(command.UI):
                     logger.error("Node '%s' not found in CIB", node)
                     return False
         if create_remote_node:
+            # Store exsisting objects' id to avoid duplicate id generation
             idmgmt.store_xml(cib, False)
             xml_item_list = cib.xpath(xml_path)
 
