@@ -3251,7 +3251,7 @@ class VerifyResult(IntFlag):
 
 
 def validate_and_get_reachable_nodes(
-        nodes: typing.List[str] = [],
+        nodes_from_args: typing.List[str] = [],
         all_nodes: bool = False,
         include_remote: bool = False
     ) -> typing.List[str]:
@@ -3265,32 +3265,36 @@ def validate_and_get_reachable_nodes(
 
     if not cluster_member_list:
         fatal("Cannot get the member list of the cluster")
+    pcmk_remote_list = []
     if include_remote:
-        cluster_member_list.extend(xmlutil.CrmMonXmlParser.get_node_list(only_remote=True))
-    for node in nodes:
-        if node not in cluster_member_list:
+        pcmk_remote_list = xmlutil.CrmMonXmlParser.get_node_list(online=True, only_remote=True)
+    for node in nodes_from_args:
+        if node not in cluster_member_list and node not in pcmk_remote_list:
             fatal(f"Node '{node}' is not a member of the cluster")
 
     local_node = this_node()
     # Return local node if no nodes specified
-    if not nodes and not all_nodes:
+    if not nodes_from_args and not all_nodes:
         return [local_node]
-    # Use all cluster members if no nodes specified and all_nodes is True
-    node_list = nodes or cluster_member_list
+
+    # Use all nodes if no nodes specified and all_nodes is True
+    node_list = nodes_from_args or cluster_member_list + pcmk_remote_list
+    member_list = [node for node in node_list if node not in pcmk_remote_list]
+    remote_list = [node for node in node_list if node in pcmk_remote_list]
     # Filter out unreachable nodes
-    node_list = get_reachable_node_list(node_list)
+    member_list = get_reachable_node_list(member_list)
     if no_cib:
-        return node_list
+        return member_list
 
     shell = sh.cluster_shell()
     crm_mon_inst = xmlutil.CrmMonXmlParser()
-    for node in node_list[:]:
+    for node in member_list[:]:
         if node == local_node or crm_mon_inst.is_node_online(node):
             continue
         out = shell.get_stdout_or_raise_error("crm node show", node)
         if not re.search(rf"^{local_node}\(\d\): member", out, re.M):
             logger.error("From the view of node '%s', node '%s' is not a member of the cluster", node, local_node)
-            node_list.remove(node)
+            member_list.remove(node)
 
-    return node_list
+    return member_list + remote_list
 # vim:ts=4:sw=4:et:
