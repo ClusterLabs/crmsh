@@ -60,11 +60,7 @@ def get_cluster_nodes(cib: lxml.etree.Element) -> list[ClusterNode]:
         node_id = element.get('id')
         uname = element.get('uname')
         if element.get('type') == 'remote':
-            xpath = "//primitive[@provider='pacemaker' and @type='remote']/instance_attributes/nvpair[@name='server' and @value='{}']".format(
-                uname if uname is not None else node_id
-            )
-            if cib.xpath(xpath):
-                continue
+            continue
         assert node_id
         assert uname
         result.append(ClusterNode(int(node_id), uname))
