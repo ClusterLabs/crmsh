@@ -1010,20 +1010,16 @@ Usage 2: Topic-Specified Health Check
 Verifies the health of a specified topic.
 
 ...............
-health hawk2|sles16 [--fix]
+health hawk2|sles16 [--local] [--fix]
 ...............
 
 * `hawk2`: check or fix key-based ssh authentication for user hacluster, which
-is needed by hawk2.
+  is needed by hawk2.
+    ** `--fix`: attempts to automatically resolve any detected issues, eg.
+       hacluster passwordless
 * `sles16`: check whether the cluster is good to migrate to SLES 16.
-
-The optional `--fix` argument attempts to automatically resolve any detected
-issues.
-
-.Note on sles16
-****************************
-`--fix` is only available after the OS is migrated to SLES 16.
-****************************
+    ** `--local`: run checks in local mode
+    ** `--fix`: attempts to automatically resolve any detected issues.
 
 [[cmdhelp.cluster.init,Initializes a new HA cluster,From Code]]
 ==== `init`
