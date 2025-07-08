@@ -135,24 +135,21 @@ class TestSBDTimeout(unittest.TestCase):
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
     @mock.patch('crmsh.utils.detect_virt')
     @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_delay_start_expected')
-    @mock.patch('crmsh.utils.get_pcmk_delay_max')
     @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_msgwait')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
     @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
-    def test_load_configurations(self, mock_2node, mock_get_sbd_dev, mock_get_msgwait, mock_pcmk_delay, mock_delay_expected, mock_detect, mock_get_sbd_value, mock_debug):
+    def test_load_configurations(self, mock_2node, mock_get_sbd_dev, mock_get_msgwait, mock_delay_expected, mock_detect, mock_get_sbd_value, mock_debug):
         mock_2node.return_value = True
         mock_debug.return_value = False
         mock_get_sbd_value.return_value = "no"
         mock_get_sbd_dev.return_value = ["/dev/sda1"]
         mock_get_msgwait.return_value = 30
-        mock_pcmk_delay.return_value = 30
 
         self.sbd_timeout_inst._load_configurations()
 
         mock_2node.assert_called_once_with()
         mock_get_sbd_dev.assert_called_once_with()
         mock_get_msgwait.assert_called_once_with("/dev/sda1")
-        mock_pcmk_delay.assert_called_once_with(True)
 
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
@@ -181,11 +178,10 @@ class TestSBDTimeout(unittest.TestCase):
     @mock.patch('logging.Logger.debug')
     def test_get_stonith_timeout_expected(self, mock_debug, mock_general):
         self.sbd_timeout_inst.disk_based = True
-        self.sbd_timeout_inst.pcmk_delay_max = 30
         self.sbd_timeout_inst.msgwait = 30
         mock_general.return_value = 11
         res = self.sbd_timeout_inst.get_stonith_timeout_expected()
-        assert res == 83
+        assert res == 71
 
     @mock.patch('crmsh.corosync.token_and_consensus_timeout')
     @mock.patch('logging.Logger.debug')
@@ -201,10 +197,9 @@ class TestSBDTimeout(unittest.TestCase):
     def test_get_sbd_delay_start_expected(self, mock_corosync):
         mock_corosync.return_value = 30
         self.sbd_timeout_inst.disk_based = True
-        self.sbd_timeout_inst.pcmk_delay_max = 30
         self.sbd_timeout_inst.msgwait = 30
         res = self.sbd_timeout_inst.get_sbd_delay_start_expected()
-        assert res == 90
+        assert res == 60
 
     @mock.patch('crmsh.corosync.token_and_consensus_timeout')
     def test_get_sbd_delay_start_expected_diskless(self, mock_corosync):
