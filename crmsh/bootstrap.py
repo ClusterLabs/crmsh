@@ -2400,7 +2400,6 @@ def bootstrap_join(context):
             _context.initialize_user()
 
         remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
-        utils.node_reachable_check(cluster_node)
         join_ssh(cluster_node, remote_user)
         remote_user = utils.user_of(cluster_node)
 
