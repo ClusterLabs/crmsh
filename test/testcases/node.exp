@@ -1,7 +1,7 @@
 .TRY node show
-node1: member
+node1: member(offline)
 .TRY node show node1
-node1: member
+node1: member(offline)
 .SETENV showobj=node1
 .TRY configure primitive p5 Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
