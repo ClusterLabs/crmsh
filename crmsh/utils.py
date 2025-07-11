@@ -1639,10 +1639,6 @@ def is_min_pcmk_ver(min_ver, cib_f=None):
     return is_larger_than_min_version(constants.pcmk_version, min_ver)
 
 
-def is_larger_than_pcmk_118(cib_f=None):
-    return is_min_pcmk_ver("1.1.8", cib_f=cib_f)
-
-
 # quote function from python module shlex.py in python 3.3
 
 _find_unsafe = re.compile(r'[^\w@%+=:,./-]').search

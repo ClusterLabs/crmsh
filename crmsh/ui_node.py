@@ -257,19 +257,7 @@ class NodeMgmt(command.UI):
     node_delete = """cibadmin -D -o nodes -X '<node uname="%s"/>'"""
     node_delete_status = """cibadmin -D -o status -X '<node_state uname="%s"/>'"""
     node_cleanup_resources = "crm_resource --cleanup --node '%s'"
-    node_clear_state = _oneline("""cibadmin %s
-      -o status --xml-text
-      '<node_state id="%s"
-                   uname="%s"
-                   ha="active"
-                   in_ccm="false"
-                   crmd="offline"
-                   join="member"
-                   expected="down"
-                   crm-debug-origin="manual_clear"
-                   shutdown="0"
-       />'""")
-    node_clear_state_118 = "stonith_admin --confirm %s"
+    node_clear_state = "stonith_admin --confirm %s"
     crm_node = "crm_node"
     node_fence = "crm_attribute -t status -N '%s' -n terminate -v true"
     dc = "crmadmin -D"
@@ -489,24 +477,21 @@ class NodeMgmt(command.UI):
         if not config.core.force and \
                 not utils.ask("Do you really want to drop state for node %s?" % node):
             return False
-        if utils.is_larger_than_pcmk_118():
-            cib_elem = xmlutil.cibdump2elem()
-            if cib_elem is None:
-                return False
-            crmd = cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node)
-            if not crmd:
-                logger.error("Node '%s' not found in CIB", node)
-                return False
-            if crmd == ["online"] or (crmd[0].isdigit() and int(crmd[0]) != 0):
-                return utils.ext_cmd(self.node_cleanup_resources % node) == 0
-            in_ccm = cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node)
-            if in_ccm == ["true"] or (in_ccm[0].isdigit() and int(in_ccm[0]) != 0):
-                logger.warning("Node is offline according to Pacemaker, but online according to corosync. First shut down node '%s'", node)
-                return False
-            return utils.ext_cmd(self.node_clear_state_118 % node) == 0
-        else:
-            return utils.ext_cmd(self.node_clear_state % ("-M -c", node, node)) == 0 and \
-                utils.ext_cmd(self.node_clear_state % ("-R", node, node)) == 0
+
+        cib_elem = xmlutil.cibdump2elem()
+        if cib_elem is None:
+            return False
+        crmd = cib_elem.xpath("//node_state[@uname=\"%s\"]/@crmd" % node)
+        if not crmd:
+            logger.error("Node '%s' not found in CIB", node)
+            return False
+        if crmd == ["online"] or (crmd[0].isdigit() and int(crmd[0]) != 0):
+            return utils.ext_cmd(self.node_cleanup_resources % node) == 0
+        in_ccm = cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node)
+        if in_ccm == ["true"] or (in_ccm[0].isdigit() and int(in_ccm[0]) != 0):
+            logger.warning("Node is offline according to Pacemaker, but online according to corosync. First shut down node '%s'", node)
+            return False
+        return utils.ext_cmd(self.node_clear_state % node) == 0
 
     @classmethod
     def call_delnode(cls, node):
