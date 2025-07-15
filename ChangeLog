@@ -1,3 +1,36 @@
+* Tue Jul 15 2025 Xin Liang <XLiang@suse.com>
+- Release 5.0.0 rc2
+- Dev: migration: allow to run migration locally (jsc#PED-8252)
+- Dev: Remove unused code
+- Dev: utils: Validate if local node is a cluster member on peer node's view
+- Dev: ui_cluster: Enhance membership validation for `cluster run` command
+- Dev: corosync: Get value from runtime.config prefix and update default token value
+- Fix: bootstrap: should fallback to default user when `core.hosts` is not availabe from the seed node (bsc#1245343)
+- Fix: bootstrap: Refine qnetd passwordless configuration logic (bsc#1245387)
+- Fix: log: Improve function confirm's logic (bsc#1245386)
+- Dev: bootstrap: Remove dead node from the cluster
+- Dev: Prevent actions when offline nodes are unreachable
+- Dev: xmlutil: Address circular import issue
+- Dev: bootstrap: Remove user@host item from /root/.config/crm/crm.conf when removing node
+- Dev: run-functional-tests: Fetch container's IP address correctly
+- Dev: provide a friendly message when passwordless ssh does not work (bsc#1244525)
+- Fix: bootstrap: Reload corosync after sync corosync.conf (bsc#1244437)
+- Fix: bootstrap: setup_passwordless_with_other_nodes does not update the authorized_keys on localhost (bsc#1244314)
+- Dev: cibconfig: Prevent adding Pacemaker remote resources to groups, orders, or colocations
+- Fix: report.collect: Detect log existence before using it (bsc#1244515)
+- Dev: bootstrap: Improve node removal handling and messaging
+- Dev: ui_corosync: Write changes made by `corosync.set` to temporary file first
+- Dev: bootstrap: Improve configuration for admin IP
+- Dev: bootstrap: do not hide ssh-copy-id outputs in debug mode
+- Fix: bootstrap: add sleeps to avoid triggering sshd PerSourcePenalties (bsc#1243141)
+- Fix: crash_test: Correctly retrieve fence event information (bsc#1243786)
+- Dev: doc: Update help text for `corosync set` command
+- Dev: corosync_config_format: Skip comment key
+- ui_corosync: Add push reminder after called `corosync set`
+- Dev: ui_corosync: Call `corosync -t` to do verification
+- Dev: migration: use atomic write to modify corosync.conf on remote nodes (jsc#PED-8252)
+- Dev: Dockerfile: Install pacemaker-remote package
+
 * Wed May 21 2025 Xin Liang <XLiang@suse.com>
 - Release 5.0.0 rc1
 - Dev: Drop scripts and templates which include unsupported RAs (jsc#PED-8924) (#1800)
