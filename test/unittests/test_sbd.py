@@ -213,14 +213,18 @@ class TestSBDTimeout(unittest.TestCase):
         self.assertEqual(result, 5)
 
     @patch('crmsh.sbd.ServiceManager')
-    def test_get_stonith_watchdog_timeout_default(self, mock_ServiceManager):
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    def test_get_stonith_watchdog_timeout_default(self, mock_get_sbd_watchdog_timeout, mock_ServiceManager):
+        mock_get_sbd_watchdog_timeout.return_value = 1
         mock_ServiceManager.return_value.service_is_active = MagicMock(return_value=False)
         result = sbd.SBDTimeout.get_stonith_watchdog_timeout()
-        self.assertEqual(result, sbd.SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT)
+        self.assertEqual(result, 2)
 
     @patch('crmsh.utils.get_property')
     @patch('crmsh.sbd.ServiceManager')
-    def test_get_stonith_watchdog_timeout(self, mock_ServiceManager, mock_get_property):
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    def test_get_stonith_watchdog_timeout(self, mock_get_sbd_watchdog_timeout, mock_ServiceManager, mock_get_property):
+        mock_get_sbd_watchdog_timeout.return_value = 1
         mock_ServiceManager.return_value.service_is_active = MagicMock(return_value=True)
         mock_get_property.return_value = "5"
         result = sbd.SBDTimeout.get_stonith_watchdog_timeout()
@@ -730,11 +734,13 @@ class TestSBDManager(unittest.TestCase):
 
     @patch('crmsh.utils.set_property')
     @patch('crmsh.sbd.ServiceManager')
-    def test_configure_sbd_diskless(self, mock_ServiceManager, mock_set_property):
+    @patch('crmsh.sbd.SBDTimeout.get_stonith_watchdog_timeout')
+    def test_configure_sbd_diskless(self, mock_get_stonith_watchdog_timeout, mock_ServiceManager, mock_set_property):
+        mock_get_stonith_watchdog_timeout.return_value = 2
         sbdmanager_instance = SBDManager(diskless_sbd=True)
         sbdmanager_instance.configure_sbd()
         mock_set_property.assert_has_calls([
-            call("stonith-watchdog-timeout", sbd.SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT),
+            call("stonith-watchdog-timeout", 2),
             call("stonith-enabled", "true")
         ])
 
