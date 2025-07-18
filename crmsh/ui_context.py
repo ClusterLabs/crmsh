@@ -89,7 +89,7 @@ class Context(object):
                     entry = self.current_level()
                     if 'requires' in dir(entry) and not entry.requires():
                         self.fatal_error("Missing requirements")
-                utils.check_user_access(self.current_level().name)
+                    utils.check_user_access(self.current_level().name)
                 rv = self.execute_command() is not False
         except (ValueError, IOError) as e:
             logger.error("%s: %s", self.get_qualified_name(), e, exc_info=e)
