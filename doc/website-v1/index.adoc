@@ -18,6 +18,7 @@ package management, and history exploration tools giving you a complete
 insight into the state of your cluster.
 
 * https://github.com/ClusterLabs/crmsh/[Source Code]
+* link:man-5.0/[Reference Manual (v5.0)]
 * link:man-4.6/[Reference Manual (v4.6)]
 * link:man-4.3/[Reference Manual (v4.3.1)]
 * link:man-3/[Reference Manual (v3.0.0)]
