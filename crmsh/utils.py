@@ -2130,6 +2130,8 @@ def valid_nodeid(nodeid):
 
 
 def get_nodeid_from_name(name):
+    if xmlutil.CrmMonXmlParser().is_node_remote(name):
+        return name
     rc, out = ShellUtils().get_stdout('crm_node -l')
     if rc != 0:
         return None
@@ -2466,9 +2468,8 @@ def check_all_nodes_reachable(action_to_do: str, peer_node: str = None):
     """
     Check if all cluster nodes are reachable
     """
-    crm_mon_inst = xmlutil.CrmMonXmlParser(peer_node)
-    online_nodes = crm_mon_inst.get_node_list()
-    offline_nodes = crm_mon_inst.get_node_list(online=False)
+    online_nodes = xmlutil.CrmMonXmlParser.get_node_list(online=True, only_member=True, peer=peer_node)
+    offline_nodes = xmlutil.CrmMonXmlParser.get_node_list(online=False, peer=peer_node)
     dead_nodes = []
     for node in offline_nodes:
         try:
@@ -2693,14 +2694,6 @@ def fatal(error_msg):
     handled by Context.run in ui_context.py
     """
     raise ValueError(error_msg)
-
-
-def is_standby(node):
-    """
-    Check if the node is already standby
-    """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1")
-    return re.search(r'Node\s+{}:\s+standby'.format(node), out) is not None
 
 
 def get_dlm_option_dict(peer=None):
@@ -3245,8 +3238,9 @@ class VerifyResult(IntFlag):
 
 
 def validate_and_get_reachable_nodes(
-        nodes: typing.List[str] = [],
-        all_nodes: bool = False
+        nodes_from_args: typing.List[str] = [],
+        all_nodes: bool = False,
+        include_remote: bool = False
     ) -> typing.List[str]:
 
     no_cib = False
@@ -3258,30 +3252,36 @@ def validate_and_get_reachable_nodes(
 
     if not cluster_member_list:
         fatal("Cannot get the member list of the cluster")
-    for node in nodes:
-        if node not in cluster_member_list:
+    pcmk_remote_list = []
+    if include_remote:
+        pcmk_remote_list = xmlutil.CrmMonXmlParser.get_node_list(online=True, only_remote=True)
+    for node in nodes_from_args:
+        if node not in cluster_member_list and node not in pcmk_remote_list:
             fatal(f"Node '{node}' is not a member of the cluster")
 
     local_node = this_node()
     # Return local node if no nodes specified
-    if not nodes and not all_nodes:
+    if not nodes_from_args and not all_nodes:
         return [local_node]
-    # Use all cluster members if no nodes specified and all_nodes is True
-    node_list = nodes or cluster_member_list
+
+    # Use all nodes if no nodes specified and all_nodes is True
+    node_list = nodes_from_args or cluster_member_list + pcmk_remote_list
+    member_list = [node for node in node_list if node not in pcmk_remote_list]
+    remote_list = [node for node in node_list if node in pcmk_remote_list]
     # Filter out unreachable nodes
-    node_list = get_reachable_node_list(node_list)
+    member_list = get_reachable_node_list(member_list)
     if no_cib:
-        return node_list
+        return member_list
 
     shell = sh.cluster_shell()
     crm_mon_inst = xmlutil.CrmMonXmlParser()
-    for node in node_list[:]:
+    for node in member_list[:]:
         if node == local_node or crm_mon_inst.is_node_online(node):
             continue
         out = shell.get_stdout_or_raise_error("crm node show", node)
         if not re.search(rf"^{local_node}\(\d\): member", out, re.M):
             logger.error("From the view of node '%s', node '%s' is not a member of the cluster", node, local_node)
-            node_list.remove(node)
+            member_list.remove(node)
 
-    return node_list
+    return member_list + remote_list
 # vim:ts=4:sw=4:et:
