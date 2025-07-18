@@ -10,6 +10,7 @@ that will hopefully make using the shell as easy as possible.
 == Manual ==
 
 * link:/man[Manual (Development)]
+* link:/man-5.0[Manual (v5.0.x)]
 * link:/man-4.6[Manual (v4.6.x)]
 * link:/man-4.3[Manual (v4.3.x)]
 * link:/man-3[Manual (v3.x)]

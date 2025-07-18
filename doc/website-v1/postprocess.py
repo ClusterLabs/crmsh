@@ -23,7 +23,7 @@ def read_toc_data(infile, debug):
             line = line[2:-3]  # strip [[ and ]]\n
             info, short_help = line.split(',', 1)
             short_help = short_help.strip()
-            info_split = info.split('_')
+            info_split = info.split('.')
             if info_split[0] == 'topics':
                 if len(info_split) == 2:
                     topics_data.append((1, short_help, info))
