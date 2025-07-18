@@ -182,7 +182,6 @@ class SBDTimeout(object):
     '''
     Consolidate sbd related timeout methods and constants
     '''
-    STONITH_WATCHDOG_TIMEOUT_DEFAULT = -1
     SBD_WATCHDOG_TIMEOUT_DEFAULT = 5
     SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
@@ -197,7 +196,7 @@ class SBDTimeout(object):
         self.sbd_msgwait = None
         self.stonith_timeout = None
         self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT
-        self.stonith_watchdog_timeout = self.STONITH_WATCHDOG_TIMEOUT_DEFAULT
+        self.stonith_watchdog_timeout = None
         self.two_node_without_qdevice = False
 
     def initialize_timeout(self):
@@ -288,11 +287,12 @@ class SBDTimeout(object):
     def get_stonith_watchdog_timeout():
         '''
         For non-bootstrap case, get stonith-watchdog-timeout value from cluster property
+        The default value is 2 * SBD_WATCHDOG_TIMEOUT
         '''
-        default = SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT
+        default = 2 * SBDTimeout.get_sbd_watchdog_timeout()
         if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
             return default
-        value = utils.get_property("stonith-watchdog-timeout")
+        value = utils.get_property("stonith-watchdog-timeout", get_default=False)
         return int(value.strip('s')) if value else default
 
     def _load_configurations(self):
@@ -568,7 +568,7 @@ class SBDManager:
         Configure fence_sbd resource and related properties
         '''
         if self.diskless_sbd:
-            swt_value = self.timeout_dict.get("stonith-watchdog", SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT)
+            swt_value = self.timeout_dict.get("stonith-watchdog", SBDTimeout.get_stonith_watchdog_timeout())
             utils.set_property("stonith-watchdog-timeout", swt_value)
         else:
             if utils.get_property("stonith-watchdog-timeout", get_default=False):

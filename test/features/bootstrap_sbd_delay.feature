@@ -232,7 +232,7 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_DELAY_START" value is "81"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "35"
     And     Cluster property "stonith-timeout" is "95"
-    And     Cluster property "stonith-watchdog-timeout" is "-1"
+    And     Cluster property "stonith-watchdog-timeout" is "70"
 
   @clean
   Scenario: Add and remove qdevice from cluster with sbd running
