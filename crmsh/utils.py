@@ -3318,13 +3318,15 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
     return 0
 
 
-def get_property(name, property_type="crm_config", peer=None):
+def get_property(name, property_type="crm_config", peer=None, get_default=True):
     """
     Get cluster properties
 
     "property_type" can be crm_config|rsc_defaults|op_defaults
+    "get_default" is used to get the default value from cluster metadata,
+    when it is False, the property value will be got from cib
     """
-    if property_type == "crm_config":
+    if property_type == "crm_config" and get_default:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
     else:
