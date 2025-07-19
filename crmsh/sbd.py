@@ -18,7 +18,6 @@ class SBDTimeout(object):
     """
     Consolidate sbd related timeout methods and constants
     """
-    STONITH_WATCHDOG_TIMEOUT_DEFAULT = -1
     SBD_WATCHDOG_TIMEOUT_DEFAULT = 5
     SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
@@ -32,7 +31,7 @@ class SBDTimeout(object):
         self.sbd_msgwait = None
         self.stonith_timeout = None
         self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT
-        self.stonith_watchdog_timeout = self.STONITH_WATCHDOG_TIMEOUT_DEFAULT
+        self.stonith_watchdog_timeout = None
         self.sbd_delay_start = None
         self.removing = removing
         self.two_node_without_qdevice = False
@@ -106,10 +105,10 @@ class SBDTimeout(object):
         """
         For non-bootstrap case, get stonith-watchdog-timeout value from cluster property
         """
-        default = SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT
+        default = 2 * SBDTimeout.get_sbd_watchdog_timeout()
         if not utils.service_is_active("pacemaker.service"):
             return default
-        value = utils.get_property("stonith-watchdog-timeout")
+        value = utils.get_property("stonith-watchdog-timeout", get_default=False)
         return int(value.strip('s')) if value else default
 
     def _load_configurations(self):
@@ -455,7 +454,7 @@ class SBDManager(object):
         else:
             logger.warning("To start sbd.service, need to restart cluster service manually on each node")
             if self.diskless_sbd:
-                cmd = self.DISKLESS_CRM_CMD.format(self.timeout_inst.stonith_watchdog_timeout, SBDTimeout.get_stonith_timeout())
+                cmd = self.DISKLESS_CRM_CMD.format(SBDTimeout.get_stonith_watchdog_timeout(), SBDTimeout.get_stonith_timeout())
                 logger.warning("Then run \"{}\" on any node".format(cmd))
             else:
                 self.configure_sbd_resource_and_properties()
@@ -523,7 +522,7 @@ class SBDManager(object):
             utils.set_property(stonith_enabled="true")
         # disk-less sbd
         else:
-            cmd = self.DISKLESS_CRM_CMD.format(self.timeout_inst.stonith_watchdog_timeout, constants.STONITH_TIMEOUT_DEFAULT)
+            cmd = self.DISKLESS_CRM_CMD.format(SBDTimeout.get_stonith_watchdog_timeout(), constants.STONITH_TIMEOUT_DEFAULT)
             utils.get_stdout_or_raise_error(cmd)
 
         # in sbd stage
