@@ -108,15 +108,19 @@ class TestSBDTimeout(unittest.TestCase):
         mock_get.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
 
     @mock.patch('crmsh.utils.service_is_active')
-    def test_get_stonith_watchdog_timeout_return(self, mock_active):
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    def test_get_stonith_watchdog_timeout_return(self, mock_get_sbd_watchdog_timeout, mock_active):
+        mock_get_sbd_watchdog_timeout.return_value = 10
         mock_active.return_value = False
         res = sbd.SBDTimeout.get_stonith_watchdog_timeout()
-        assert res == sbd.SBDTimeout.STONITH_WATCHDOG_TIMEOUT_DEFAULT
+        assert res == 20
         mock_active.assert_called_once_with("pacemaker.service")
 
     @mock.patch('crmsh.utils.get_property')
     @mock.patch('crmsh.utils.service_is_active')
-    def test_get_stonith_watchdog_timeout(self, mock_active, mock_get_property):
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    def test_get_stonith_watchdog_timeout(self, mock_get_sbd_watchdog_timeout, mock_active, mock_get_property):
+        mock_get_sbd_watchdog_timeout.return_value = 10
         mock_active.return_value = True
         mock_get_property.return_value = "60s"
         res = sbd.SBDTimeout.get_stonith_watchdog_timeout()
@@ -618,16 +622,18 @@ class TestSBDManager(unittest.TestCase):
         mock_config_sbd_ra.assert_called_once_with()
 
     @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_timeout')
+    @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_watchdog_timeout')
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_any_resource_running')
-    def test_restart_cluster_on_needed_diskless(self, mock_ra_running, mock_warn, mock_get_timeout):
+    def test_restart_cluster_on_needed_diskless(self, mock_ra_running, mock_warn, mock_get_stonith_watchdog_timeout, mock_get_timeout):
         mock_ra_running.return_value = True
         mock_get_timeout.return_value = 60
+        mock_get_stonith_watchdog_timeout.return_value = 2
         self.sbd_inst_diskless.timeout_inst = mock.Mock(stonith_watchdog_timeout=-1)
         self.sbd_inst_diskless._restart_cluster_and_configure_sbd_ra()
         mock_warn.assert_has_calls([
             mock.call("To start sbd.service, need to restart cluster service manually on each node"),
-            mock.call("Then run \"crm configure property stonith-enabled=true stonith-watchdog-timeout=-1 stonith-timeout=60\" on any node")
+            mock.call("Then run \"crm configure property stonith-enabled=true stonith-watchdog-timeout=2 stonith-timeout=60\" on any node")
             ])
 
     @mock.patch('crmsh.sbd.SBDManager.configure_sbd_resource_and_properties')
