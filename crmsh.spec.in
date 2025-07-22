@@ -156,9 +156,6 @@ find . -type f -exec sed -i \
     {} \;
 sed -i -e '1{\@^#!%{_bindir}/python3@d}' crmsh/report/core.py
 
-# this is wrong FIXME
-sed -i -e '/data_files/d' setup.py
-
 %build
 ./autogen.sh
 
