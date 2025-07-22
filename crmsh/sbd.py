@@ -128,6 +128,7 @@ class SBDTimeout(object):
         if dev_list:  # disk-based
             self.disk_based = True
             self.msgwait = SBDTimeout.get_sbd_msgwait(dev_list[0])
+            self.pcmk_delay_max = utils.get_pcmk_delay_max(self.two_node_without_qdevice)
         else:  # disk-less
             self.disk_based = False
             self.sbd_watchdog_timeout = SBDTimeout.get_sbd_watchdog_timeout()
@@ -165,12 +166,12 @@ class SBDTimeout(object):
         """
         Get the value for SBD_DELAY_START, formulas are:
 
-        SBD_DELAY_START = (token + consensus + msgwait)  # for disk-based sbd
+        SBD_DELAY_START = (token + consensus + pcmk_delay_max + msgwait)  # for disk-based sbd
         SBD_DELAY_START = (token + consensus + 2*SBD_WATCHDOG_TIMEOUT) # for disk-less sbd
         """
         token_and_consensus_timeout = corosync.token_and_consensus_timeout()
         if self.disk_based:
-            value = token_and_consensus_timeout + self.msgwait
+            value = token_and_consensus_timeout + self.pcmk_delay_max + self.msgwait
         else:
             value = token_and_consensus_timeout + 2*self.sbd_watchdog_timeout
         return value
