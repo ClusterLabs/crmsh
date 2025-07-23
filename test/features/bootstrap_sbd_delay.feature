@@ -29,8 +29,8 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
-    # SBD_DELAY_START >= (token + consensus + msgwait)  # for disk-based sbd
-    And     SBD option "SBD_DELAY_START" value is "41"
+    # SBD_DELAY_START >= (token + consensus + pcmk_delay_max + msgwait)  # for disk-based sbd
+    And     SBD option "SBD_DELAY_START" value is "71"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     # value_from_sbd >= 1.2 * msgwait  # for disk-based sbd
@@ -43,9 +43,9 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     And     Service "sbd" is "started" on "hanode3"
-    # SBD_DELAY_START >= (token + consensus + msgwait)  # for disk-based sbd
+    # SBD_DELAY_START >= (token + consensus + pcmk_delay_max + msgwait)  # for disk-based sbd
     # runtime value is "41", we keep the larger one here
-    And     SBD option "SBD_DELAY_START" value is "41"
+    And     SBD option "SBD_DELAY_START" value is "71"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     # value_from_sbd >= 1.2 * msgwait  # for disk-based sbd
@@ -57,7 +57,7 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster remove hanode3 -y" on "hanode1"
     Then    Cluster service is "stopped" on "hanode3"
     And     Service "sbd" is "stopped" on "hanode3"
-    And     SBD option "SBD_DELAY_START" value is "41"
+    And     SBD option "SBD_DELAY_START" value is "71"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     And     Cluster property "stonith-timeout" is "71"
@@ -125,8 +125,8 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
-    # SBD_DELAY_START >= (token + consensus + msgwait)  # for disk-based sbd
-    And     SBD option "SBD_DELAY_START" value is "131"
+    # SBD_DELAY_START >= (token + consensus + pcmk_delay_max + msgwait)  # for disk-based sbd
+    And     SBD option "SBD_DELAY_START" value is "161"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
     # stonith-timeout >= 1.2 * msgwait  # for disk-based sbd
@@ -136,31 +136,31 @@ Feature: configure sbd delay start correctly
     # since SBD_DELAY_START value(161s) > default systemd startup value(1min 30s)
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
     # 1.2*SBD_DELAY_START
-    And     Run "grep 'TimeoutSec=157' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
+    And     Run "grep 'TimeoutSec=193' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
 
     Given   Has disk "/dev/sda1" on "hanode3"
     Given   Cluster service is "stopped" on "hanode3"
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     And     Service "sbd" is "started" on "hanode3"
-    And     SBD option "SBD_DELAY_START" value is "131"
+    And     SBD option "SBD_DELAY_START" value is "161"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
     And     Cluster property "stonith-timeout" is "155"
     And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
-    And     Run "grep 'TimeoutSec=157' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
+    And     Run "grep 'TimeoutSec=193' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
 
     When    Run "crm cluster remove hanode3 -y" on "hanode1"
     Then    Cluster service is "stopped" on "hanode3"
     And     Service "sbd" is "stopped" on "hanode3"
-    And     SBD option "SBD_DELAY_START" value is "131"
+    And     SBD option "SBD_DELAY_START" value is "161"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
     And     Cluster property "stonith-timeout" is "155"
     And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
-    And     Run "grep 'TimeoutSec=157' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
+    And     Run "grep 'TimeoutSec=193' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
     When    Run "sed -i 's/watchdog_timeout: 60/watchdog_timeout: 15/g' /etc/crm/profiles.yml" on "hanode1"
 
   @clean
@@ -181,7 +181,7 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     Then    Service "sbd" is "started" on "hanode2"
-    And     SBD option "SBD_DELAY_START" value is "41"
+    And     SBD option "SBD_DELAY_START" value is "71"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     And     Cluster property "stonith-timeout" is "71"

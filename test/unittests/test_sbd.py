@@ -337,9 +337,10 @@ class TestSBDTimeout(unittest.TestCase):
     def test_get_sbd_delay_start_expected_diskbased(self, mock_token_and_consensus_timeout):
         inst = sbd.SBDTimeout()
         inst.disk_based = True
+        inst.pcmk_delay_max = 10
         inst.msgwait = 5
         mock_token_and_consensus_timeout.return_value = 10
-        self.assertEqual(inst.get_sbd_delay_start_expected(), 15)
+        self.assertEqual(inst.get_sbd_delay_start_expected(), 25)
 
     @patch('crmsh.corosync.token_and_consensus_timeout')
     def test_get_sbd_delay_start_expected_diskless(self, mock_token_and_consensus_timeout):
