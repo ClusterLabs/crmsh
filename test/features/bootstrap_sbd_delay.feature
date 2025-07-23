@@ -16,7 +16,7 @@ Feature: configure sbd delay start correctly
     And     Service "sbd" is "started" on "hanode1"
     And     Resource "stonith-sbd" type "external/sbd" is "Started"
     And     SBD option "SBD_DELAY_START" value is "no"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     # calculated and set by sbd RA
     And     Cluster property "stonith-timeout" is "43"
@@ -29,7 +29,7 @@ Feature: configure sbd delay start correctly
     And     Service "sbd" is "started" on "hanode2"
     # SBD_DELAY_START >= (token + consensus + msgwait)  # for disk-based sbd
     And     SBD option "SBD_DELAY_START" value is "41"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     # value_from_sbd >= 1.2 * msgwait  # for disk-based sbd
     # stonith_timeout >= max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + token + consensus
@@ -44,7 +44,7 @@ Feature: configure sbd delay start correctly
     # SBD_DELAY_START >= (token + consensus + msgwait)  # for disk-based sbd
     # runtime value is "41", we keep the larger one here
     And     SBD option "SBD_DELAY_START" value is "41"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     # value_from_sbd >= 1.2 * msgwait  # for disk-based sbd
     # stonith_timeout >= max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + token + consensus
@@ -56,7 +56,7 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "stopped" on "hanode3"
     And     Service "sbd" is "stopped" on "hanode3"
     And     SBD option "SBD_DELAY_START" value is "41"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     And     Cluster property "stonith-timeout" is "71"
     And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
@@ -110,7 +110,7 @@ Feature: configure sbd delay start correctly
     And     Service "sbd" is "started" on "hanode1"
     And     Resource "stonith-sbd" type "external/sbd" is "Started"
     And     SBD option "SBD_DELAY_START" value is "no"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "60"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
     # calculated and set by sbd RA
     And     Cluster property "stonith-timeout" is "172"
@@ -123,11 +123,11 @@ Feature: configure sbd delay start correctly
     And     Service "sbd" is "started" on "hanode2"
     # SBD_DELAY_START >= (token + consensus + msgwait)  # for disk-based sbd
     And     SBD option "SBD_DELAY_START" value is "131"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "60"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
     # stonith-timeout >= 1.2 * msgwait  # for disk-based sbd
     # stonith_timeout >= max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + token + consensus
-    And     Cluster property "stonith-timeout" is "155"
+    And     Cluster property "stonith-timeout" is "172"
     And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
     # since SBD_DELAY_START value(161s) > default systemd startup value(1min 30s)
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
@@ -140,9 +140,9 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "started" on "hanode3"
     And     Service "sbd" is "started" on "hanode3"
     And     SBD option "SBD_DELAY_START" value is "131"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "60"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
-    And     Cluster property "stonith-timeout" is "155"
+    And     Cluster property "stonith-timeout" is "172"
     And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
     And     Run "grep 'TimeoutSec=157' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
@@ -151,9 +151,9 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "stopped" on "hanode3"
     And     Service "sbd" is "stopped" on "hanode3"
     And     SBD option "SBD_DELAY_START" value is "131"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "60"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
-    And     Cluster property "stonith-timeout" is "155"
+    And     Cluster property "stonith-timeout" is "172"
     And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
     And     Run "grep 'TimeoutSec=157' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
@@ -178,7 +178,7 @@ Feature: configure sbd delay start correctly
     Then    Service "sbd" is "started" on "hanode1"
     Then    Service "sbd" is "started" on "hanode2"
     And     SBD option "SBD_DELAY_START" value is "41"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     And     Cluster property "stonith-timeout" is "71"
     And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
@@ -203,7 +203,7 @@ Feature: configure sbd delay start correctly
     And     Service "sbd" is "started" on "hanode2"
 
     And     SBD option "SBD_DELAY_START" value is "41"
-    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     And     Cluster property "stonith-timeout" is "71"
     And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
