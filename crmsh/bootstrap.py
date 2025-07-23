@@ -1609,9 +1609,16 @@ def _setup_passwordless_ssh_for_qnetd(cluster_node_list: typing.List[str]):
         if node == utils.this_node():
             continue
         local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(node)
-        remote_key_content = ssh_key.fetch_public_key_content_list(node, remote_user)[0]
-        in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
-        ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
+        try:
+            remote_key_content = ssh_key.fetch_public_key_content_list(node, remote_user)[0]
+            in_memory_key = ssh_key.InMemoryPublicKey(remote_key_content)
+            ssh_key.AuthorizedKeyManager(cluster_shell).add(qnetd_addr, qnetd_user, in_memory_key)
+        except ssh_key.Error:
+            # crmsh#1850: if ssh-agent was used, there will not be a key pair on the node.
+            logger.debug(
+                "Skip adding the ssh key of %s:%s to authorized_keys of the qnetd node: keypair does not exist",
+                remote_user, node,
+            )
 
     user_by_host = utils.HostUserConfig()
     user_by_host.add(local_user, utils.this_node())
