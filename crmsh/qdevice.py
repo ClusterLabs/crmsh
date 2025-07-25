@@ -588,7 +588,7 @@ class QDevice(object):
             corosync.configure_two_node(qdevice_adding=True)
             bootstrap.sync_file(corosync.conf())
             if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
-                utils.cluster_run_cmd("crm corosync reload")
+                sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
 
     def config_qnetd_port(self):
         """

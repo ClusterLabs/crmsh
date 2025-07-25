@@ -958,12 +958,14 @@ Membership information
         mock_parser_inst.remove.assert_called_once_with("quorum.device")
         mock_parser_inst.save.assert_called_once()
 
-    @mock.patch('crmsh.utils.cluster_run_cmd')
+    @mock.patch('crmsh.sh.cluster_shell')
     @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.configure_two_node')
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     @mock.patch('crmsh.qdevice.QDevice.write_qdevice_config')
-    def test_config_qdevice(self, mock_write_config, mock_status_long, mock_config_two_node, mock_sync_file, mock_run_cmd):
+    def test_config_qdevice(self, mock_write_config, mock_status_long, mock_config_two_node, mock_sync_file, mock_cluster_shell):
+        mock_cluster_shell_instance = mock.Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_instance
         mock_status_long.return_value.__enter__ = mock.Mock()
         mock_status_long.return_value.__exit__ = mock.Mock()
         self.qdevice_with_ip.qdevice_reload_policy = qdevice.QdevicePolicy.QDEVICE_RELOAD
@@ -971,4 +973,4 @@ Membership information
         self.qdevice_with_ip.config_qdevice()
         mock_status_long.assert_called_once_with("Update configuration")
         mock_config_two_node.assert_called_once_with(qdevice_adding=True)
-        mock_run_cmd.assert_called_once_with("crm corosync reload")
+        mock_cluster_shell_instance.get_stdout_or_raise_error.assert_called_once_with("corosync-cfgtool -R")
