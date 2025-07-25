@@ -28,7 +28,11 @@ def test_package_is_installed_local(mock_run):
 
 @mock.patch('re.search')
 @mock.patch('crmsh.sh.ShellUtils.get_stdout')
-def test_get_nodeid_from_name_run_None1(mock_get_stdout, mock_re_search):
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+def test_get_nodeid_from_name_run_None1(mock_parser, mock_get_stdout, mock_re_search):
+    mock_parser_inst = mock.Mock()
+    mock_parser.return_value = mock_parser_inst
+    mock_parser_inst.is_node_remote.return_value = False
     mock_get_stdout.return_value = (1, None)
     mock_re_search_inst = mock.Mock()
     mock_re_search.return_value = mock_re_search_inst
@@ -40,7 +44,11 @@ def test_get_nodeid_from_name_run_None1(mock_get_stdout, mock_re_search):
 
 @mock.patch('re.search')
 @mock.patch('crmsh.sh.ShellUtils.get_stdout')
-def test_get_nodeid_from_name_run_None2(mock_get_stdout, mock_re_search):
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+def test_get_nodeid_from_name_run_None2(mock_parser, mock_get_stdout, mock_re_search):
+    mock_parser_inst = mock.Mock()
+    mock_parser.return_value = mock_parser_inst
+    mock_parser_inst.is_node_remote.return_value = False
     mock_get_stdout.return_value = (0, "172167901 node1 member\n172168231 node2 member")
     mock_re_search.return_value = None
     res = utils.get_nodeid_from_name("node111")
@@ -51,7 +59,11 @@ def test_get_nodeid_from_name_run_None2(mock_get_stdout, mock_re_search):
 
 @mock.patch('re.search')
 @mock.patch('crmsh.sh.ShellUtils.get_stdout')
-def test_get_nodeid_from_name(mock_get_stdout, mock_re_search):
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+def test_get_nodeid_from_name(mock_parser, mock_get_stdout, mock_re_search):
+    mock_parser_inst = mock.Mock()
+    mock_parser.return_value = mock_parser_inst
+    mock_parser_inst.is_node_remote.return_value = False
     mock_get_stdout.return_value = (0, "172167901 node1 member\n172168231 node2 member")
     mock_re_search_inst = mock.Mock()
     mock_re_search.return_value = mock_re_search_inst
@@ -971,11 +983,9 @@ def test_is_block_device(mock_stat, mock_isblk):
 
 
 @mock.patch('crmsh.utils.node_reachable_check')
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser.get_node_list')
 def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
-    mock_xml_inst = mock.Mock()
-    mock_xml.return_value = mock_xml_inst
-    mock_xml_inst.get_node_list.side_effect = [["node1"], ["node2"]]
+    mock_xml.side_effect = [["node1"], ["node2"]]
     mock_reachable.side_effect = ValueError
 
     with pytest.raises(utils.DeadNodeError) as err:
@@ -984,11 +994,9 @@ def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
 
 
 @mock.patch('crmsh.utils.node_reachable_check')
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser.get_node_list')
 def test_check_all_nodes_reachable(mock_xml, mock_reachable):
-    mock_xml_inst = mock.Mock()
-    mock_xml.return_value = mock_xml_inst
-    mock_xml_inst.get_node_list.side_effect = [["node1"], []]
+    mock_xml.side_effect = [["node1"], []]
     utils.check_all_nodes_reachable("testing")
     mock_reachable.assert_called_once_with("node1")
 
@@ -998,16 +1006,6 @@ def test_detect_virt(mock_run):
     mock_run.return_value = (0, None, None)
     assert utils.detect_virt() is True
     mock_run.assert_called_once_with("systemd-detect-virt")
-
-
-@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-def test_is_standby(mock_run):
-    mock_run.return_value = """
-Node List:
-* Node 15sp2-1: standby
-    """
-    assert utils.is_standby("15sp2-1") is True
-    mock_run.assert_called_once_with("crm_mon -1")
 
 
 @mock.patch('crmsh.sh.cluster_shell')
