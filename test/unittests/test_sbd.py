@@ -409,11 +409,15 @@ class TestSBDManager(unittest.TestCase):
         mock_CrmMonXmlParser.assert_not_called()
 
     @patch('logging.Logger.warning')
+    @patch('crmsh.utils.is_dlm_running')
     @patch('crmsh.xmlutil.CrmMonXmlParser')
     @patch('crmsh.sbd.ServiceManager')
-    def test_restart_cluster_if_possible_manually(self, mock_ServiceManager, mock_CrmMonXmlParser, mock_logger_warning):
+    def test_restart_cluster_if_possible_manually(
+            self, mock_ServiceManager, mock_CrmMonXmlParser, mock_is_dlm_running, mock_logger_warning,
+    ):
         mock_ServiceManager.return_value.service_is_active.return_value = True
         mock_CrmMonXmlParser.return_value.is_any_resource_running.return_value = True
+        mock_is_dlm_running.return_value = False
         SBDManager.restart_cluster_if_possible()
         mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
         mock_logger_warning.assert_has_calls([
@@ -421,6 +425,20 @@ class TestSBDManager(unittest.TestCase):
             call("Or, run with `crm -F` or `--force` option, the `sbd` subcommand will leverage maintenance mode for any changes that require restarting sbd.service"),
             call("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
         ])
+
+    @patch('logging.Logger.warning')
+    @patch('crmsh.utils.is_dlm_running')
+    @patch('crmsh.xmlutil.CrmMonXmlParser')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_restart_cluster_if_possible_dlm_running(
+            self, mock_ServiceManager, mock_CrmMonXmlParser, mock_is_dlm_running, mock_logger_warning,
+    ):
+        mock_ServiceManager.return_value.service_is_active.return_value = True
+        mock_CrmMonXmlParser.return_value.is_any_resource_running.return_value = True
+        mock_is_dlm_running.return_value = True
+        SBDManager.restart_cluster_if_possible(with_maintenance_mode=True)
+        mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
+        mock_logger_warning.assert_called_once_with("Resource is running, need to restart cluster service manually on each node")
 
     @patch('crmsh.bootstrap.restart_cluster')
     @patch('logging.Logger.warning')
