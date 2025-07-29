@@ -293,6 +293,74 @@ INFO: test-2 shadow CIB created
 crm(test-2)configure# commit
 ...............
 
+[[topics_TimeoutFormulas,Timeout formulas]]
+=== Timeout formulas
+
+If you use `crm cluster init` command to set up a cluster, especially
+with SBD as the STONITH device, crmsh configures several fencing related
+settings based on the calculations with a set of formulas.
+
+.SBD related timeouts
+`watchdog` timeout: Default value is 15s. This value is from the definition
+    in +/etc/crm/profiles.xml+, can be a different value with a different profile.
+
+`msgwait` timeout:
+...............
+    msgwait = 2 * watchdog
+...............
+`SBD_WATCHDOG_TIMEOUT`:
+...............
+    # For diskless SBD
+    SBD_WATCHDOG_TIMEOUT = Default value is 15s. This value is from the definition
+    in +/etc/crm/profiles.xml+, can be a different value with a different profile.
+
+    # When adding diskless SBD and QDevice together from crm cluster init
+    if SBD_WATCHDOG_TIMEOUT < 35s:
+	SBD_WATCHDOG_TIMEOUT = 35s
+
+    # When adding diskless SBD in a cluster with QDevice already
+    if SBD_WATCHDOG_TIMEOUT < qdevice_sync_timeout:
+	SBD_WATCHDOG_TIMEOUT = qdevice_sync_timeout + 5s
+
+    # When adding QDevice in a cluster with diskless SBD already
+    if SBD_WATCHDOG_TIMEOUT < 35s:
+	SBD_WATCHDOG_TIMEOUT = 35s
+...............
+`SBD_DELAY_START`:
+...............
+    # For disk-based SBD
+    SBD_DELAY_START =  pcmk_delay_max + msgwait + corosync.token + corosync.consensus
+
+    # For diskless SBD
+    SBD_DELAY_START = 2 * SBD_WATCHDOG_TIMEOUT + corosync.token + corosync.consensus
+...............
+`TimeoutSec` of sbd.service systemd unit:
+...............
+    default_value = 1min30s
+    if SBD_DELAY_START > default_value:
+	TimeoutSec = 1.2 * SBD_DELAY_START
+    else:
+	TimeoutSec = default_value
+...............
+.Pacemaker related timeouts
+`stonith-watchdog-timeout`: (for diskless SBD)
+...............
+    stonith-watchdog-timeout = 2 * SBD_WATCHDOG_TIMEOUT
+...............
+`stonith-timeout`:
+...............
+    # For disk-based SBD
+    value_from_sbd = 1.2 * msgwait
+    stonith-timeout = max(value_from_sbd, 60s) + corosync.token + corosync.consensus
+
+    # For diskless SBD
+    value_from_sbd = 1.2 * max(stonith-watchdog-timeout, 2*SBD_WATCHDOG_TIMEOUT)
+    stonith-timeout = max(value_from_sbd, 60s) + corosync.token + corosync.consensus
+
+    # For general scenarios
+    stonith-timeout = 60s + corosync.token + corosync.consensus
+...............
+
 [[topics_Features_Checks,Configuration semantic checks]]
 === Configuration semantic checks
 
