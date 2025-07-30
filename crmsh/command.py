@@ -231,8 +231,10 @@ def _cd_completer(args, context):
 
 
 def _help_completer(args, context):
-    'TODO: make better completion'
-    return help_module.list_help_topics() + context.current_level().get_completions()
+    current_level_completions = context.current_level().get_completions()
+    if context.current_level().name == 'root':
+        return help_module.list_help_topics() + current_level_completions
+    return current_level_completions
 
 
 class UI(object):
