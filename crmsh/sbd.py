@@ -557,12 +557,17 @@ class SBDManager:
     def restart_cluster_if_possible(with_maintenance_mode=False):
         if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
             return
-        if xmlutil.CrmMonXmlParser().is_any_resource_running() and not with_maintenance_mode:
+        if not xmlutil.CrmMonXmlParser().is_any_resource_running():
+            bootstrap.restart_cluster()
+        elif with_maintenance_mode:
+            if not utils.is_dlm_running():
+                bootstrap.restart_cluster()
+            else:
+                logger.warning("Resource is running, need to restart cluster service manually on each node")
+        else:
             logger.warning("Resource is running, need to restart cluster service manually on each node")
             logger.warning("Or, run with `crm -F` or `--force` option, the `sbd` subcommand will leverage maintenance mode for any changes that require restarting sbd.service")
             logger.warning("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
-        else:
-            bootstrap.restart_cluster()
 
     def configure_sbd(self):
         '''
