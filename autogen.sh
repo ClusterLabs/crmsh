@@ -80,42 +80,20 @@ do
   fi
 done
 
-for command in automake14 automake-1.4 automake15 automake-1.5 automake17 automake-1.7 automake19 automake-1.9 automake-1.11 automake
-do
-  if
-      testProgram $command
-  then
-    : OK $pkg is installed
-    automake=$command
-    aclocal=`echo  "$automake" | sed -e 's/automake/aclocal/'`
-  fi
-done
-
 if [ -z $autoconf ]; then
     echo You must have autoconf installed to compile the crmsh package.
     echo Download the appropriate package for your system,
     echo or get the source tarball at: $gnu/autoconf/
     exit 1
-
-elif [ -z $automake ]; then
-    echo You must have automake installed to compile the crmsh package.
-    echo Download the appropriate package for your system,
-    echo or get the source tarball at: $gnu/automake/
-    exit 1
-
 fi
 
 # Create local copies so that the incremental updates will work.
-rm -f ./autoconf ./automake ./autoheader
+rm -f ./autoconf ./autoheader
 ln -s `which $autoconf` ./autoconf
-ln -s `which $automake` ./automake
 ln -s `which $autoheader` ./autoheader
 
 printf "$autoconf:\t"
 $autoconf --version | head -n 1
-
-printf "$automake:\t"
-$automake --version | head -n 1
 
 arch=`uname -s`
 # Disable the errors on FreeBSD until a fix can be found.
@@ -133,9 +111,6 @@ fi
 
 echo $aclocal $ACLOCAL_FLAGS
 $aclocal $ACLOCAL_FLAGS
-
-echo $automake --add-missing --include-deps --copy
-$automake --add-missing --include-deps --copy
 
 echo $autoconf
 $autoconf
