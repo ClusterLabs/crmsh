@@ -408,6 +408,14 @@ class SBDTimeout(object):
         '''
         utils.set_property("stonith-timeout", self.get_stonith_timeout_expected(), conditional=True)
 
+    def adjust_stonith_watchdog_timeout(self):
+        '''
+        Adjust stonith-watchdog-timeout property
+        '''
+        if self.disk_based:
+            return
+        utils.set_property("stonith-watchdog-timeout", self.stonith_watchdog_timeout, conditional=True)
+
     def adjust_sbd_delay_start(self):
         '''
         Adjust SBD_DELAY_START in /etc/sysconfig/sbd
@@ -430,6 +438,7 @@ class SBDTimeout(object):
         cls_inst._load_configurations()
         cls_inst.adjust_sbd_delay_start()
         cls_inst.adjust_stonith_timeout()
+        cls_inst.adjust_stonith_watchdog_timeout()
         cls_inst.adjust_systemd_start_timeout()
 
 
