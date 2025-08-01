@@ -1518,7 +1518,7 @@ done
         bootstrap.adjust_properties()
         mock_is_active.assert_called_once_with("pacemaker.service")
         mock_adj_pcmk.assert_called_once_with(True)
-        mock_adj_stonith.assert_called_once_with()
+        mock_adj_stonith.assert_called_once_with(with_sbd=False)
         mock_adj_priority.assert_called_once_with(True)
         mock_adj_fence.assert_called_once_with(True)
 
