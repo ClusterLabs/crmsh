@@ -265,15 +265,18 @@ class TestSBDTimeout(unittest.TestCase):
         mock_get_systemd_timeout_start_in_sec.assert_called_once_with("1min 30s")
 
     @patch('crmsh.sbd.SBDTimeout.adjust_systemd_start_timeout')
+    @patch('crmsh.sbd.SBDTimeout.adjust_stonith_watchdog_timeout')
     @patch('crmsh.sbd.SBDTimeout.adjust_stonith_timeout')
     @patch('crmsh.sbd.SBDTimeout.adjust_sbd_delay_start')
     @patch('crmsh.sbd.SBDTimeout._load_configurations')
-    def test_adjust_sbd_timeout_related_cluster_configuration(self, mock_load_configurations, mock_adjust_sbd_delay_start, mock_adjust_stonith_timeout, mock_adjust_systemd_start_timeout):
+    def test_adjust_sbd_timeout_related_cluster_configuration(self, mock_load_configurations, mock_adjust_sbd_delay_start, mock_adjust_stonith_timeout,
+                                                              mock_adjust_stonith_watchdog_timeout, mock_adjust_systemd_start_timeout):
         sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
         mock_load_configurations.assert_called_once()
         mock_adjust_sbd_delay_start.assert_called_once()
         mock_adjust_stonith_timeout.assert_called_once()
         mock_adjust_systemd_start_timeout.assert_called_once()
+        mock_adjust_stonith_watchdog_timeout.assert_called_once()
 
     @patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     def test_adjust_sbd_delay_start_return(self, mock_update_sbd_configuration):
