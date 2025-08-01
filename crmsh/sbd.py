@@ -286,14 +286,21 @@ class SBDTimeout(object):
     @staticmethod
     def get_stonith_watchdog_timeout():
         '''
-        For non-bootstrap case, get stonith-watchdog-timeout value from cluster property
-        The default value is 2 * SBD_WATCHDOG_TIMEOUT
+        Returns the value of the stonith-watchdog-timeout cluster property.
+
+        If the Pacemaker service is inactive, returns the default value (2 * SBD_WATCHDOG_TIMEOUT).
+        If the property is set and its value is equal to or greater than the default, returns the property value.
+        Otherwise, returns the default value.
         '''
         default = 2 * SBDTimeout.get_sbd_watchdog_timeout()
         if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
             return default
         value = utils.get_property("stonith-watchdog-timeout", get_default=False)
-        return int(value.strip('s')) if value else default
+        if value:
+            property_value = int(value.strip('s'))
+            if property_value >= default:
+                return property_value
+        return default
 
     def _load_configurations(self):
         '''
@@ -401,6 +408,14 @@ class SBDTimeout(object):
         '''
         utils.set_property("stonith-timeout", self.get_stonith_timeout_expected(), conditional=True)
 
+    def adjust_stonith_watchdog_timeout(self):
+        '''
+        Adjust stonith-watchdog-timeout property
+        '''
+        if self.disk_based:
+            return
+        utils.set_property("stonith-watchdog-timeout", self.stonith_watchdog_timeout, conditional=True)
+
     def adjust_sbd_delay_start(self):
         '''
         Adjust SBD_DELAY_START in /etc/sysconfig/sbd
@@ -423,6 +438,7 @@ class SBDTimeout(object):
         cls_inst._load_configurations()
         cls_inst.adjust_sbd_delay_start()
         cls_inst.adjust_stonith_timeout()
+        cls_inst.adjust_stonith_watchdog_timeout()
         cls_inst.adjust_systemd_start_timeout()
 
 
