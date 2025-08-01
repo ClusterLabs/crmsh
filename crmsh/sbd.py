@@ -286,14 +286,21 @@ class SBDTimeout(object):
     @staticmethod
     def get_stonith_watchdog_timeout():
         '''
-        For non-bootstrap case, get stonith-watchdog-timeout value from cluster property
-        The default value is 2 * SBD_WATCHDOG_TIMEOUT
+        Returns the value of the stonith-watchdog-timeout cluster property.
+
+        If the Pacemaker service is inactive, returns the default value (2 * SBD_WATCHDOG_TIMEOUT).
+        If the property is set and its value is equal to or greater than the default, returns the property value.
+        Otherwise, returns the default value.
         '''
         default = 2 * SBDTimeout.get_sbd_watchdog_timeout()
         if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
             return default
         value = utils.get_property("stonith-watchdog-timeout", get_default=False)
-        return int(value.strip('s')) if value else default
+        if value:
+            property_value = int(value.strip('s'))
+            if property_value >= default:
+                return property_value
+        return default
 
     def _load_configurations(self):
         '''
