@@ -710,9 +710,9 @@ class SBDManager:
             SBDManager.enable_sbd_service()
 
             if self.cluster_is_running:
-                SBDManager.restart_cluster_if_possible(with_maintenance_mode=enabled)
                 self.configure_sbd()
                 bootstrap.adjust_properties()
+                SBDManager.restart_cluster_if_possible(with_maintenance_mode=enabled)
 
     def join_sbd(self, remote_user, peer_host):
         '''
