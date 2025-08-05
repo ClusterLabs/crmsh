@@ -48,8 +48,8 @@ class TestCrmMonXmlParser(unittest.TestCase):
         assert self.parser_inst.is_resource_configured("test") is False
         assert self.parser_inst.is_resource_configured("ocf:heartbeat:Filesystem") is True
 
-    def test_is_any_resource_running(self):
-        assert self.parser_inst.is_any_resource_running() is True
+    def test_is_non_stonith_resource_running(self):
+        assert self.parser_inst.is_non_stonith_resource_running() is True
 
     def test_is_resource_started(self):
         assert self.parser_inst.is_resource_started("test") is False

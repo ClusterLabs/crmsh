@@ -416,7 +416,7 @@ class TestSBDManager(unittest.TestCase):
             self, mock_ServiceManager, mock_CrmMonXmlParser, mock_is_dlm_running, mock_logger_warning,
     ):
         mock_ServiceManager.return_value.service_is_active.return_value = True
-        mock_CrmMonXmlParser.return_value.is_any_resource_running.return_value = True
+        mock_CrmMonXmlParser.return_value.is_non_stonith_resource_running.return_value = True
         mock_is_dlm_running.return_value = False
         SBDManager.restart_cluster_if_possible()
         mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
@@ -434,7 +434,7 @@ class TestSBDManager(unittest.TestCase):
             self, mock_ServiceManager, mock_CrmMonXmlParser, mock_is_dlm_running, mock_logger_warning,
     ):
         mock_ServiceManager.return_value.service_is_active.return_value = True
-        mock_CrmMonXmlParser.return_value.is_any_resource_running.return_value = True
+        mock_CrmMonXmlParser.return_value.is_non_stonith_resource_running.return_value = True
         mock_is_dlm_running.return_value = True
         SBDManager.restart_cluster_if_possible(with_maintenance_mode=True)
         mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
@@ -446,7 +446,7 @@ class TestSBDManager(unittest.TestCase):
     @patch('crmsh.sbd.ServiceManager')
     def test_restart_cluster_if_possible(self, mock_ServiceManager, mock_CrmMonXmlParser, mock_logger_warning, mock_restart_cluster):
         mock_ServiceManager.return_value.service_is_active.return_value = True
-        mock_CrmMonXmlParser.return_value.is_any_resource_running.return_value = False
+        mock_CrmMonXmlParser.return_value.is_non_stonith_resource_running.return_value = False
         SBDManager.restart_cluster_if_possible()
         mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
         mock_restart_cluster.assert_called_once()
