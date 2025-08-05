@@ -1582,12 +1582,15 @@ class CrmMonXmlParser(object):
         xpath = f'//resource[@resource_agent="{ra_type}"]'
         return bool(self.xml_elem.xpath(xpath))
 
-    def is_any_resource_running(self):
+    def is_non_stonith_resource_running(self) -> bool:
         """
-        Check if any RA is running
+        Check if any non-stonith resource is running
         """
-        xpath = '//resource[@active="true"]'
-        return bool(self.xml_elem.xpath(xpath))
+        for elem in self.xml_elem.xpath('//resource[@active="true"]'):
+            ra_type = elem.get('resource_agent', '')
+            if not ra_type.startswith('stonith'):
+                return True
+        return False
 
     def is_resource_started(self, ra):
         """

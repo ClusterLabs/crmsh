@@ -652,7 +652,7 @@ Finally run `crm cluster init qdevice` on any node in the cluster to re-deploy t
         if not cib_factory.commit():
             context.fatal_error("Change property cluster-name failed!")
 
-        if xmlutil.CrmMonXmlParser().is_any_resource_running():
+        if xmlutil.CrmMonXmlParser().is_non_stonith_resource_running():
             context.info("To apply the change, restart the cluster service at convenient time")
         else:
             bootstrap.restart_cluster()
