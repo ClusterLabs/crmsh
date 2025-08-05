@@ -557,7 +557,7 @@ class SBDManager:
     def restart_cluster_if_possible(with_maintenance_mode=False):
         if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
             return
-        if not xmlutil.CrmMonXmlParser().is_any_resource_running():
+        if not xmlutil.CrmMonXmlParser().is_non_stonith_resource_running():
             bootstrap.restart_cluster()
         elif with_maintenance_mode:
             if not utils.is_dlm_running():

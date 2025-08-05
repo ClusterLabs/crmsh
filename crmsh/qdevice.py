@@ -52,13 +52,13 @@ def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False, is_stage=False):
     elif mode == QDEVICE_ADD and not is_stage:
         # Add qdevice from init process, safe to restart
         return QdevicePolicy.QDEVICE_RESTART
-    elif xmlutil.CrmMonXmlParser().is_any_resource_running():
-        # will lose quorum, and with RA running
+    elif xmlutil.CrmMonXmlParser().is_non_stonith_resource_running():
+        # will lose quorum, with non-stonith resource running
         # no reload, no restart cluster service
         # just leave a warning
         return QdevicePolicy.QDEVICE_RESTART_LATER
     else:
-        # will lose quorum, without RA running
+        # will lose quorum, without resource running or just stonith resource running
         # safe to restart cluster service
         return QdevicePolicy.QDEVICE_RESTART
 
