@@ -619,7 +619,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_restart_cluster_on_needed_no_ra_running(self, mock_parser, mock_status, mock_cluster_run, mock_wait, mock_config_sbd_ra):
-        mock_parser().is_any_resource_running.return_value = False
+        mock_parser().is_non_stonith_resource_running.return_value = False
         self.sbd_inst._restart_cluster_and_configure_sbd_ra()
         mock_status.assert_called_once_with("Restarting cluster service")
         mock_cluster_run.assert_called_once_with("crm cluster restart")
@@ -631,7 +631,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_restart_cluster_on_needed_diskless(self, mock_parser, mock_warn, mock_get_stonith_watchdog_timeout, mock_get_timeout):
-        mock_parser().is_any_resource_running.return_value = True
+        mock_parser().is_non_stonith_resource_running.return_value = True
         mock_get_timeout.return_value = 60
         self.sbd_inst_diskless.timeout_inst = mock.Mock(stonith_watchdog_timeout=-1)
         mock_get_stonith_watchdog_timeout.return_value = 2
@@ -645,7 +645,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_restart_cluster_on_needed(self, mock_parser, mock_warn, mock_config_sbd_ra):
-        mock_parser().is_any_resource_running.return_value = True
+        mock_parser().is_non_stonith_resource_running.return_value = True
         self.sbd_inst._restart_cluster_and_configure_sbd_ra()
         mock_warn.assert_has_calls([
             mock.call("To start sbd.service, need to restart cluster service manually on each node"),
