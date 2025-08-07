@@ -22,5 +22,4 @@ setup(name='crmsh',
       packages=['crmsh', 'crmsh.crash_test', 'crmsh.report', 'crmsh.prun'],
       install_requires=['lxml', 'PyYAML', 'python-dateutil', 'packaging'],
       scripts=['bin/crm'],
-      data_files=[('/usr/share/crmsh', ['doc/crm.8.adoc'])],
       include_package_data=True)

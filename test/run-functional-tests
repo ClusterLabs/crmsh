@@ -1,5 +1,5 @@
 #!/bin/bash
-CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/nyang23/haleap:master"}
+CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/nyang23/haleap:asciidoc"}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
 COROSYNC_CONF="/etc/corosync/corosync.conf"
@@ -190,7 +190,7 @@ deploy_ha_node() {
         else
             podman_security=""
         fi
-	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && make install-crmconfDATA prefix= && cp /usr/bin/crm /usr/sbin"
+	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
 	podman run --rm -d $podman_options $podman_capabilties $podman_security $CONTAINER_IMAGE
