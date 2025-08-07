@@ -4,6 +4,7 @@ confdir ?= /etc
 localstatedir ?= /var
 tmpfilesdir ?= /lib/tmpfiles.d
 mandir ?= /$(datadir)/man
+fwdefdir ?= /usr/lib/firewalld/services
 
 PYTHON ?= python3
 
