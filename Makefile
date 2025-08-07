@@ -5,15 +5,17 @@ localstatedir ?= /var
 tmpfilesdir ?= /lib/tmpfiles.d
 mandir ?= /$(datadir)/man
 
+PYTHON ?= python3
+
 .PHONY: all install uninstall
 
-all: non-python
+all: non-python python
 
-install: install-non-python
+install: install-non-python install-python
 
-uninstall: uninstall-non-python
+uninstall: uninstall-non-python uninstall-python
 
-.PHONY: non-python manpages html-docs install-non-python uninstall-non-python
+.PHONY: non-python manpages html-docs python
 
 non-python: manpages html-docs
 
@@ -27,9 +29,12 @@ html-docs: doc/crm.8.html doc/crmsh_crm_report.8.html doc/profiles.html
 %.html: %.adoc
 	asciidoc --unsafe --backend=xhtml11 $<
 
-.PHONY: install-non-python uninstall-non-python
+python:
+	$(PYTHON) -m pip wheel .
 
-install-non-python:
+.PHONY: install-non-python uninstall-non-python install-python uninstall-python
+
+install-non-python: non-python
 	# additional directories
 	install -d -m0770 $(DESTDIR)$(localstatedir)/cache/crm
 	install -d -m0770 $(DESTDIR)$(localstatedir)/log/crmsh
@@ -52,6 +57,9 @@ install-non-python:
 		install -Dm0644 high-availability.xml $(DESTDIR)$(fwdefdir)/high-availability.xml; \
 	fi
 
+install-python: python
+	$(PYTHON) -m pip install --break-system-packages --prefix /usr crmsh-*.whl
+
 uninstall-non-python:
 	$(RM) -r $(DESTDIR)$(confdir)/crm
 	$(RM) -r $(DESTDIR)$(localstatedir)/cache/crm
@@ -60,3 +68,6 @@ uninstall-non-python:
 	$(RM) -r $(DESTDIR)$(datadir)/bash-completion/completions/crm
 	$(RM) $(DESTDIR)$(fwdefdir)/high-availability.xml
 	$(RM) $(DESTDIR)$(tmpfilesdir)/crmsh.conf
+
+uninstall-non-python:
+	$(PYTHON) -m pip uninstall crmsh
