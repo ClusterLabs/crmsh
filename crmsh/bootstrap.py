@@ -2828,11 +2828,11 @@ def adjust_pcmk_delay_max(is_2node_wo_qdevice):
             logger.info("Delete parameter 'pcmk_delay_max' for resource '{}'".format(res))
 
 
-def adjust_stonith_timeout():
+def adjust_stonith_timeout(with_sbd: bool = False):
     """
     Adjust stonith-timeout for sbd and other scenarios
     """
-    if ServiceManager().service_is_active(constants.SBD_SERVICE):
+    if ServiceManager().service_is_active(constants.SBD_SERVICE) or with_sbd:
         SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
     else:
         value = get_stonith_timeout_generally_expected()
@@ -2840,7 +2840,7 @@ def adjust_stonith_timeout():
             utils.set_property("stonith-timeout", value, conditional=True)
 
 
-def adjust_properties():
+def adjust_properties(with_sbd: bool = False):
     """
     Adjust properties for the cluster:
     - pcmk_delay_max
@@ -2858,7 +2858,7 @@ def adjust_properties():
         return
     is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
     adjust_pcmk_delay_max(is_2node_wo_qdevice)
-    adjust_stonith_timeout()
+    adjust_stonith_timeout(with_sbd=with_sbd)
     adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
 
