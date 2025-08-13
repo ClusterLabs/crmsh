@@ -402,8 +402,10 @@ class LoggerUtils(object):
         To wait and mark something finished, start with BEGIN msg, end of END msg
         """
         self.logger.info("BEGIN %s", msg)
+        pb = ProgressBar()
         try:
-            yield ProgressBar()
+            yield pb
+            pb._end()
         except Exception:
             self.logger.error("FAIL %s", msg)
             raise
@@ -514,6 +516,24 @@ class ProgressBar:
         line = '\r{}{}'.format('.' * self._i, ' ' * (width - self._i))
         sys.stdout.write(line)
         sys.stdout.flush()
+
+    def _end(self):
+        try:
+            width, _ = os.get_terminal_size()
+        except OSError:
+            # not a terminal
+            return
+        if self._i == 0:
+            pass
+        elif self._i < width:
+            line = '\r{}\n'.format('.' * self._i)
+            sys.stdout.write(line)
+        else:
+            # the terminal is resized and narrower than the progress bar printed before
+            # just write an LF in this case
+            sys.stdout.write('\n')
+        sys.stdout.flush()
+
 
 
 def setup_logging(only_help=False):
