@@ -129,6 +129,21 @@ Feature: crmsh bootstrap sbd management
     And     Resource "stonith-sbd" type "fence_sbd" is "Started"
 
   @clean
+  Scenario: Configure diskless sbd on running cluster via stage
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    When    Run "crm cluster init sbd -S -y" on "hanode1"
+    Then    Expected "Diskless SBD requires cluster with three or more nodes." in stderr
+    Then    Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith:fence_sbd" not configured
+
+  @clean
   Scenario: Configure sbd on running cluster via stage with ra running(bsc#1181906)
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
