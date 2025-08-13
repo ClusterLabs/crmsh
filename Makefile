@@ -10,9 +10,9 @@ PYTHON ?= python3
 
 .PHONY: all install uninstall
 
-all: non-python python
+all: non-python
 
-install: install-non-python install-python
+install: install-non-python
 
 uninstall: uninstall-non-python uninstall-python
 
