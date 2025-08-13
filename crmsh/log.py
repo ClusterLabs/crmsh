@@ -402,12 +402,17 @@ class LoggerUtils(object):
         To wait and mark something finished, start with BEGIN msg, end of END msg
         """
         self.logger.info("BEGIN %s", msg)
+        pb = ProgressBar()
         try:
-            yield ProgressBar()
+            yield pb
         except Exception:
+            if pb.has_printed:
+                sys.stdout.write('\n')
             self.logger.error("FAIL %s", msg)
             raise
         else:
+            if pb.has_printed:
+                sys.stdout.write('\n')
             self.logger.info("END %s", msg)
 
     def wait_input(self, prompt_string, default=""):
@@ -503,6 +508,7 @@ class LoggerUtils(object):
 class ProgressBar:
     def __init__(self):
         self._i = 0
+        self.has_printed = False
 
     def progress(self):
         try:
@@ -514,6 +520,7 @@ class ProgressBar:
         line = '\r{}{}'.format('.' * self._i, ' ' * (width - self._i))
         sys.stdout.write(line)
         sys.stdout.flush()
+        self.has_printed = True
 
 
 def setup_logging(only_help=False):
