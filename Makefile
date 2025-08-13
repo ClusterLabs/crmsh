@@ -70,5 +70,5 @@ uninstall-non-python:
 	$(RM) $(DESTDIR)$(fwdefdir)/high-availability.xml
 	$(RM) $(DESTDIR)$(tmpfilesdir)/crmsh.conf
 
-uninstall-non-python:
+uninstall-python:
 	$(PYTHON) -m pip uninstall crmsh
