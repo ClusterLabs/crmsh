@@ -3244,25 +3244,28 @@ def validate_and_get_reachable_nodes(
         cluster_member_list = get_address_list_from_corosync_conf()
         if cluster_member_list:
             no_cib = True
-
     if not cluster_member_list:
         fatal("Cannot get the member list of the cluster")
+
     pcmk_remote_list = []
     if include_remote:
         pcmk_remote_list = xmlutil.CrmMonXmlParser.get_node_list(online=True, node_type="remote")
-    for node in nodes_from_args:
-        if node not in cluster_member_list and node not in pcmk_remote_list:
-            fatal(f"Node '{node}' is not a member of the cluster")
 
     local_node = this_node()
-    # Return local node if no nodes specified
-    if not nodes_from_args and not all_nodes:
+
+    member_list = []
+    remote_list = []
+    if nodes_from_args:
+        member_list = [node for node in nodes_from_args if node in cluster_member_list]
+        remote_list = [node for node in nodes_from_args if node in pcmk_remote_list]
+        invalid_nodes = set(nodes_from_args) - set(member_list) - set(remote_list)
+        if invalid_nodes:
+            fatal(f"Node \"{', '.join(invalid_nodes)}\" is not in the cluster")
+    elif all_nodes:
+        member_list, remote_list = cluster_member_list, pcmk_remote_list
+    else:
         return [local_node]
 
-    # Use all nodes if no nodes specified and all_nodes is True
-    node_list = nodes_from_args or cluster_member_list + pcmk_remote_list
-    member_list = [node for node in node_list if node not in pcmk_remote_list]
-    remote_list = [node for node in node_list if node in pcmk_remote_list]
     # Filter out unreachable nodes
     member_list = get_reachable_node_list(member_list)
     if no_cib:
