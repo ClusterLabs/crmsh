@@ -1,3 +1,21 @@
+* Thu Aug 14 2025 Xin Liang <XLiang@suse.com>
+- Release 5.0.0
+- Fix: log: missing LF after a progress bar (#1886)
+- Dev: sbd: Use SBDUtils.get_sbd_device_from_config for reliable diskless SBD detection
+- Dev: sbd: Add with_sbd parameter for the case when sbd is not active
+- Dev: sbd: Restart cluster after configured sbd and adjusted properties
+- Fix: sbd: Ensure stonith-watchdog-timeout is >= 2 * SBD_WATCHDOG_TIMEOUT (bsc#1247415)
+- Dev: xmlutil: Add is_non_stonith_resource_running() and use for cluster restart checks
+- Fix: doc: Add TimeoutFormulas help topic (bsc#1242981)
+- Dev: command: Show help topic completion only at root level
+- Fix: sbd: should show warning instead of error when unable to restart the cluster automatically after changing configs (bsc#1246956)
+- Dev: qdevice: Reload corosync configuration on one node
+- Fix: bootstrap: continue qnetd setup when ssh keypair is not found for some cluster nodes (#1850)
+- Dev: sbd: Add pcmk_delay_max back to calculate SBD_DELAY_START
+- Dev: doc: release crmsh-5.0 document
+- Fix: ui_context: should not require root privilege when using subcommand 'help'
+- Fix: sbd: Avoid negative value for the property 'stonith-watchdog-timeout' (bsc#1246622)
+
 * Tue Jul 15 2025 Xin Liang <XLiang@suse.com>
 - Release 5.0.0 rc2
 - Dev: migration: allow to run migration locally (jsc#PED-8252)
