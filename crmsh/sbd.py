@@ -577,15 +577,15 @@ class SBDManager:
         '''
         Configure fence_sbd resource and related properties
         '''
-        if self.diskless_sbd:
-            swt_value = self.timeout_dict.get("stonith-watchdog", SBDTimeout.get_stonith_watchdog_timeout_expected())
-            utils.set_property("stonith-watchdog-timeout", swt_value)
-        else:
+        if SBDUtils.get_sbd_device_from_config():
             if utils.get_property("stonith-watchdog-timeout", get_default=False):
                 utils.delete_property("stonith-watchdog-timeout")
             if not xmlutil.CrmMonXmlParser().is_resource_configured(self.SBD_RA):
                 cmd = f"crm configure primitive {self.SBD_RA_ID} {self.SBD_RA}"
                 sh.cluster_shell().get_stdout_or_raise_error(cmd)
+        else:
+            swt_value = self.timeout_dict.get("stonith-watchdog", SBDTimeout.get_stonith_watchdog_timeout_expected())
+            utils.set_property("stonith-watchdog-timeout", swt_value)
         utils.set_property("stonith-enabled", "true")
 
     def _warn_diskless_sbd(self, peer=None):
