@@ -2468,7 +2468,7 @@ def check_all_nodes_reachable(action_to_do: str, peer_node: str = None):
     """
     Check if all cluster nodes are reachable
     """
-    online_nodes = xmlutil.CrmMonXmlParser.get_node_list(online=True, only_member=True, peer=peer_node)
+    online_nodes = xmlutil.CrmMonXmlParser.get_node_list(online=True, node_type="member", peer=peer_node)
     offline_nodes = xmlutil.CrmMonXmlParser.get_node_list(online=False, peer=peer_node)
     dead_nodes = []
     for node in offline_nodes:
@@ -3263,7 +3263,7 @@ def validate_and_get_reachable_nodes(
         fatal("Cannot get the member list of the cluster")
     pcmk_remote_list = []
     if include_remote:
-        pcmk_remote_list = xmlutil.CrmMonXmlParser.get_node_list(online=True, only_remote=True)
+        pcmk_remote_list = xmlutil.CrmMonXmlParser.get_node_list(online=True, node_type="remote")
     for node in nodes_from_args:
         if node not in cluster_member_list and node not in pcmk_remote_list:
             fatal(f"Node '{node}' is not a member of the cluster")
