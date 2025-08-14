@@ -5,6 +5,7 @@
 import os
 import subprocess
 import typing
+from typing import Optional
 
 from lxml import etree, doctestcompare
 import copy
@@ -1548,12 +1549,11 @@ class CrmMonXmlParser(object):
     @classmethod
     def get_node_list(
             cls,
-            online: bool = None,
-            standby: bool = None,
-            maintenance: bool = None,
-            only_member: bool = False,
-            only_remote: bool = False,
-            peer: str = None
+            online: Optional[bool] = None,
+            standby: Optional[bool] = None,
+            maintenance: Optional[bool] = None,
+            node_type: Optional[str] = None,
+            peer: Optional[str] = None
         ) -> typing.List[str]:
         """
         Get a list of nodes based on the given attribute
@@ -1571,10 +1571,8 @@ class CrmMonXmlParser(object):
             for key, value in filters.items() if value is not None
         ]
 
-        if only_member:
-            conditions.append('@type="member"')
-        elif only_remote:
-            conditions.append('@type="remote"')
+        if node_type:
+            conditions.append(f'@type="{node_type}"')
 
         if conditions:
             xpath_str += '[' + ' and '.join(conditions) + ']'
