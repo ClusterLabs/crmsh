@@ -44,7 +44,7 @@ def test_evaluate_qdevice_quorum_effect_reload(mock_get_dict, mock_quorate):
 def test_evaluate_qdevice_quorum_effect_later(mock_get_dict, mock_quorate, mock_parser):
     mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
     mock_quorate.return_value = False
-    mock_parser().is_any_resource_running.return_value = True
+    mock_parser().is_non_stonith_resource_running.return_value = True
     res = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
     assert res == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER
     mock_get_dict.assert_called_once_with()
@@ -57,7 +57,7 @@ def test_evaluate_qdevice_quorum_effect_later(mock_get_dict, mock_quorate, mock_
 def test_evaluate_qdevice_quorum_effect(mock_get_dict, mock_quorate, mock_parser):
     mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
     mock_quorate.return_value = False
-    mock_parser().is_any_resource_running.return_value = False
+    mock_parser().is_non_stonith_resource_running.return_value = False
     res = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
     assert res == qdevice.QdevicePolicy.QDEVICE_RESTART
     mock_get_dict.assert_called_once_with()
