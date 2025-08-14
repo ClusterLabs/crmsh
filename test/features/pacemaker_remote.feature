@@ -29,3 +29,9 @@ Feature: Test deployment of pacemaker remote
     Then    Expected "Cannot put remote resource 'remote-node1' in order constraint" in stderr
     When    Try "crm configure colocation c1 inf: d remote-node1"
     Then    Expected "Cannot put remote resource 'remote-node1' in colocation constraint" in stderr
+
+  Scenario: Remove pacemaker remove node
+    When    Run "crm cluster remove remote-node1" on "hanode1"
+    Then    Remote online nodes are "remote-node2"
+    When    Run "crm cluster remove remote-node2" on "hanode1"
+    Then    No remote nodes
