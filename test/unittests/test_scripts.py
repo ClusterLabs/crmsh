@@ -11,6 +11,7 @@ from lxml import etree
 from crmsh import scripts
 from crmsh import ra
 from crmsh import utils
+from unittest import mock
 
 scripts._script_dirs = lambda: [path.join(path.dirname(__file__), 'scripts')]
 
@@ -830,7 +831,8 @@ class UnitTestPrinter:
         for name in ('print_header', 'debug', 'error', 'start', 'flush', 'print_command', 'finish'):
             add_capture(name)
 
-def test_inline_script():
+@mock.patch('crmsh.utils.node_reachable_check')
+def test_inline_script(mock_check):
     """
     Test inline script feature for call actions
     """
