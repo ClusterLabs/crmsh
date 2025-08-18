@@ -367,7 +367,7 @@ def is_our_node(s):
 
     Includes remote nodes as well
     '''
-    for n in CrmMonXmlParser.get_node_list():
+    for n in CrmMonXmlParser().get_node_list():
         if n.lower() == s.lower():
             return True
     return False
@@ -1511,7 +1511,7 @@ class CrmMonXmlParser(object):
         Load xml output of crm_mon
         """
         _, output, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.peer, constants.CRM_MON_XML_OUTPUT)
-        return text2elem(output)
+        return text2elem(output) if output else None
 
     def is_node_online(self, node):
         """
@@ -1541,20 +1541,17 @@ class CrmMonXmlParser(object):
         xpath = f'//node[@name="{node}" and @type="remote"]'
         return bool(self.xml_elem.xpath(xpath))
 
-    @classmethod
     def get_node_list(
-            cls,
+            self,
             online: Optional[bool] = None,
             standby: Optional[bool] = None,
             maintenance: Optional[bool] = None,
-            node_type: Optional[str] = None,
-            peer: Optional[str] = None
+            node_type: Optional[str] = None
         ) -> list[str]:
         """
         Get a list of nodes based on the given attribute
         Return all nodes if no attributes are given
         """
-        instance = cls(peer)
         xpath_str = '//nodes/node'
         filters = {
             "online": online,
@@ -1571,7 +1568,7 @@ class CrmMonXmlParser(object):
 
         if conditions:
             xpath_str += '[' + ' and '.join(conditions) + ']'
-        return [elem.get('name') for elem in instance.xml_elem.xpath(xpath_str)]
+        return [elem.get('name') for elem in self.xml_elem.xpath(xpath_str)]
 
     def is_resource_configured(self, ra_type):
         """
