@@ -1651,7 +1651,6 @@ class TestValidation(unittest.TestCase):
 
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap.bootstrap_finished')
-    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.remove_self')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
@@ -1662,7 +1661,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.init')
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove_self(self, mock_context, mock_init, mock_active,
-                                   mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_self, mock_run, mock_finished, mock_check_reachable):
+                                   mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_self, mock_finished, mock_check_reachable):
         mock_context_inst = mock.Mock(cluster_node="node1", force=True, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
@@ -1682,7 +1681,6 @@ class TestValidation(unittest.TestCase):
         mock_this_node.assert_called_once_with()
         mock_error.assert_not_called()
         mock_self.assert_called_once_with(True)
-        mock_run.assert_called_once_with('rm -rf /var/lib/crmsh', 'node1')
 
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.xmlutil.listnodes')
@@ -1719,7 +1717,6 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_called_once_with("Specified node node2 is not configured in cluster! Unable to remove.")
 
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.utils.fetch_cluster_node_list_from_node')
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
     @mock.patch('crmsh.xmlutil.listnodes')
@@ -1733,7 +1730,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node,
-                              mock_list, mock_remove, mock_fetch, mock_run, mock_check_reachable):
+                              mock_list, mock_remove, mock_fetch, mock_check_reachable):
         mock_context_inst = mock.Mock(cluster_node="node2", qdevice_rm_flag=None, force=True)
         mock_context.return_value = mock_context_inst
         mock_active.side_effect = [True, False, True]
@@ -1755,7 +1752,6 @@ class TestValidation(unittest.TestCase):
         mock_confirm.assert_not_called()
         mock_error.assert_not_called()
         mock_remove.assert_called_once_with('node2')
-        mock_run.assert_called_once_with('rm -rf /var/lib/crmsh', 'node2')
         mock_check_reachable.assert_called_once_with("removing a node from the cluster")
 
     @mock.patch('crmsh.utils.fatal')
