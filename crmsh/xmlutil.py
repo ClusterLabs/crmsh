@@ -1541,6 +1541,19 @@ class CrmMonXmlParser(object):
         xpath = f'//node[@name="{node}" and @type="remote"]'
         return bool(self.xml_elem.xpath(xpath))
 
+    def get_res_id_of_remote_node(self, node):
+        """
+        Get the resource id of a pacemaker remote node
+        For remote node, the resource id is the name attribute
+        For guest node, the resource id is the id_as_resource attribute
+        """
+        xpath = f'//node[@name="{node}" and @type="remote"]'
+        res = self.xml_elem.xpath(xpath)
+        if not res:
+            return None
+        remote_node = res[0]
+        return remote_node.get('id_as_resource') or remote_node.get('name')
+
     def get_node_list(
             self,
             online: Optional[bool] = None,
