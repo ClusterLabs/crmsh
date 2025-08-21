@@ -2779,7 +2779,7 @@ def bootstrap_remove(context):
         if not force_flag:
             utils.fatal("Removing self requires --force")
         remove_self(force_flag)
-    elif cluster_node in xmlutil.listnodes():
+    elif cluster_node in utils.list_cluster_nodes():
         remove_node_from_cluster(cluster_node)
     else:
         utils.fatal("Specified node {} is not configured in cluster! Unable to remove.".format(cluster_node))
@@ -2790,7 +2790,7 @@ def bootstrap_remove(context):
 def remove_self(force_flag=False):
     me = utils.this_node()
     yes_to_all = _context.yes_to_all
-    nodes = xmlutil.listnodes(include_remote_nodes=False)
+    nodes = utils.list_cluster_nodes()
     othernode = next((x for x in nodes if x != me), None)
     if othernode is not None:
         logger.info("Removing node %s from cluster on %s", me, othernode)

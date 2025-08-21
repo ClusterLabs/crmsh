@@ -16,16 +16,26 @@ Feature: Test deployment of pacemaker remote
     And     Run "scp -rp /etc/pacemaker pcmk-remote-node2:/etc" on "hanode1"
     And     Run "systemctl start pacemaker_remote" on "pcmk-remote-node1"
     And     Run "systemctl start pacemaker_remote" on "pcmk-remote-node2"
-    And     Run "crm configure primitive remote-node1 ocf:pacemaker:remote params server=pcmk-remote-node1 reconnect_interval=10m op monitor interval=30s" on "hanode1"
-    And     Run "crm configure primitive remote-node2 ocf:pacemaker:remote params server=pcmk-remote-node2 reconnect_interval=10m op monitor interval=30s" on "hanode1"
+    And     Run "crm configure primitive pcmk-remote-node1 ocf:pacemaker:remote params server=pcmk-remote-node1 reconnect_interval=10m op monitor interval=30s" on "hanode1"
+    And     Run "crm configure primitive pcmk-remote-node2 ocf:pacemaker:remote params server=pcmk-remote-node2 reconnect_interval=10m op monitor interval=30s" on "hanode1"
     And     Wait "5" seconds
-    Then    Remote online nodes are "remote-node1 remote-node2"
+    Then    Remote online nodes are "pcmk-remote-node1 pcmk-remote-node2"
+
+  Scenario: Test standby/online/maintenance/ready remote node
+    When    Run "crm node standby pcmk-remote-node1" on "hanode1"
+    Then    Node "pcmk-remote-node1" is standby
+    When    Run "crm node online pcmk-remote-node1" on "hanode1"
+    Then    Node "pcmk-remote-node1" is online
+    When    Run "crm node maintenance pcmk-remote-node1" on "hanode1"
+    Then    Node "pcmk-remote-node1" is maintenance
+    When    Run "crm node ready pcmk-remote-node1" on "hanode1"
+    Then    Node "pcmk-remote-node1" is ready
 
   Scenario: Prevent adding remote RA to group, order and colocation
     When    Run "crm configure primitive d Dummy" on "hanode1"
-    When    Try "crm configure group g d remote-node1"
-    Then    Expected "Cannot put remote resource 'remote-node1' in a group" in stderr
-    When    Try "crm configure order o1 d remote-node1"
-    Then    Expected "Cannot put remote resource 'remote-node1' in order constraint" in stderr
-    When    Try "crm configure colocation c1 inf: d remote-node1"
-    Then    Expected "Cannot put remote resource 'remote-node1' in colocation constraint" in stderr
+    When    Try "crm configure group g d pcmk-remote-node1"
+    Then    Expected "Cannot put remote resource 'pcmk-remote-node1' in a group" in stderr
+    When    Try "crm configure order o1 d pcmk-remote-node1"
+    Then    Expected "Cannot put remote resource 'pcmk-remote-node1' in order constraint" in stderr
+    When    Try "crm configure colocation c1 inf: d pcmk-remote-node1"
+    Then    Expected "Cannot put remote resource 'pcmk-remote-node1' in colocation constraint" in stderr

@@ -5,6 +5,7 @@
 import os
 import subprocess
 import typing
+from typing import Optional
 
 from lxml import etree, doctestcompare
 import copy
@@ -359,18 +360,6 @@ def mk_rsc_type(n):
     return ''.join((s1, s2, ra_type))
 
 
-def listnodes(include_remote_nodes=True):
-    cib = cibdump2elem()
-    if cib is None:
-        return []
-    local_nodes = cib.xpath('/cib/configuration/nodes/node/@uname')
-    if include_remote_nodes:
-        remote_nodes = cib.xpath('/cib/status/node_state[@remote_node="true"]/@uname')
-    else:
-        remote_nodes = []
-    return list(set([n for n in local_nodes + remote_nodes if n]))
-
-
 def is_our_node(s):
     '''
     Check if s is in a list of our nodes (ignore case).
@@ -378,7 +367,7 @@ def is_our_node(s):
 
     Includes remote nodes as well
     '''
-    for n in listnodes():
+    for n in CrmMonXmlParser().get_node_list():
         if n.lower() == s.lower():
             return True
     return False
@@ -1527,7 +1516,7 @@ class CrmMonXmlParser(object):
         Load xml output of crm_mon
         """
         _, output, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.peer, constants.CRM_MON_XML_OUTPUT)
-        return text2elem(output)
+        return text2elem(output) if output else None
 
     def is_node_online(self, node):
         """
@@ -1536,19 +1525,54 @@ class CrmMonXmlParser(object):
         xpath = f'//node[@name="{node}" and @online="true"]'
         return bool(self.xml_elem.xpath(xpath))
 
-    def get_node_list(self, online=True, standby=False, exclude_remote=True) -> typing.List[str]:
+    def is_node_standby(self, node):
+        """
+        Check if a node is in standby mode
+        """
+        xpath = f'//node[@name="{node}" and @standby="true"]'
+        return bool(self.xml_elem.xpath(xpath))
+
+    def is_node_maintenance(self, node):
+        """
+        Check if a node is in maintenance mode
+        """
+        xpath = f'//node[@name="{node}" and @maintenance="true"]'
+        return bool(self.xml_elem.xpath(xpath))
+
+    def is_node_remote(self, node):
+        """
+        Check if a node is remote
+        """
+        xpath = f'//node[@name="{node}" and @type="remote"]'
+        return bool(self.xml_elem.xpath(xpath))
+
+    def get_node_list(
+            self,
+            online: Optional[bool] = None,
+            standby: Optional[bool] = None,
+            maintenance: Optional[bool] = None,
+            node_type: Optional[str] = None,
+        ) -> typing.List[str]:
         """
         Get a list of nodes based on the given attribute
+        Return all nodes if no attributes are given
         """
         xpath_str = '//nodes/node'
-        conditions = []
-        online_value = "true" if online else "false"
-        conditions.append(f'@online="{online_value}"')
-        standby_value = "true" if standby else "false"
-        conditions.append(f'@standby="{standby_value}"')
-        if exclude_remote:
-            conditions.append('@type="member"')
-        xpath_str += '[' + ' and '.join(conditions) + ']'
+        filters = {
+            "online": online,
+            "standby": standby,
+            "maintenance": maintenance
+        }
+        conditions = [
+            f'@{key}="{str(value).lower()}"'
+            for key, value in filters.items() if value is not None
+        ]
+
+        if node_type:
+            conditions.append(f'@type="{node_type}"')
+
+        if conditions:
+            xpath_str += '[' + ' and '.join(conditions) + ']'
         return [elem.get('name') for elem in self.xml_elem.xpath(xpath_str)]
 
     def is_resource_configured(self, ra_type):
