@@ -150,6 +150,9 @@ class Parser:
             elif token.tpe == 'text':
                 buf.write(' ')
                 buf.write(token.text[token.indent:])
+            elif token.tpe == 'option':
+                buf.write(' ')
+                buf.write(token.text.lstrip())
             else:
                 self.assert_token_tpe('emptyline', token)
                 tokens.rollback()
