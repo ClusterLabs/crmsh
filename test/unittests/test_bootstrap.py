@@ -1804,7 +1804,7 @@ class TestValidation(unittest.TestCase):
         mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
@@ -1814,13 +1814,15 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.init')
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove_not_in_cluster(self, mock_context, mock_init, mock_active,
-            mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_list, mock_check_all_nodes):
+            mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_crm_mon_parser, mock_check_all_nodes):
         mock_context_inst = mock.Mock(cluster_node="node2", force=True, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
         mock_hostname.return_value = "node2"
         mock_this_node.return_value = "node1"
-        mock_list.return_value = ["node1", "node3"]
+        mock_crm_mon_parser_inst = mock.Mock()
+        mock_crm_mon_parser.return_value = mock_crm_mon_parser_inst
+        mock_crm_mon_parser_inst.get_node_list.return_value = ["node1", "node3"]
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
@@ -1835,13 +1837,13 @@ class TestValidation(unittest.TestCase):
         mock_hostname.assert_called_once_with('node2')
         mock_confirm.assert_not_called()
         mock_this_node.assert_called_once_with()
-        mock_error.assert_called_once_with("Specified node node2 is not configured in cluster! Unable to remove.")
+        mock_error.assert_called_once_with("Node node2 is not configured in cluster! (valid nodes: node1, node3)")
         mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.utils.fetch_cluster_node_list_from_node')
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
-    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
@@ -1852,13 +1854,15 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node,
-            mock_list, mock_remove, mock_fetch, mock_check_all_nodes):
+            mock_crm_mon_parser, mock_remove, mock_fetch, mock_check_all_nodes):
         mock_context_inst = mock.Mock(cluster_node="node2", qdevice_rm_flag=None, force=True)
         mock_context.return_value = mock_context_inst
         mock_active.side_effect = [True, False, True]
         mock_hostname.return_value = "node2"
         mock_this_node.return_value = "node1"
-        mock_list.return_value = ["node1", "node2"]
+        mock_crm_mon_parser_inst = mock.Mock()
+        mock_crm_mon_parser.return_value = mock_crm_mon_parser_inst
+        mock_crm_mon_parser_inst.get_node_list.return_value = ["node1", "node2"]
         mock_fetch.return_value = ["node1", "node2"]
 
         bootstrap.bootstrap_remove(mock_context_inst)
@@ -1956,7 +1960,11 @@ class TestValidation(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
-    def test_remove_node_from_cluster_rm_node_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error, mock_rm_conf_files, mock_call_delnode):
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_remove_node_from_cluster_rm_node_failed(self, mock_crm_mon_parser, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error, mock_rm_conf_files, mock_call_delnode):
+        mock_crm_mon_parser_inst = mock.Mock()
+        mock_crm_mon_parser.return_value = mock_crm_mon_parser_inst
+        mock_crm_mon_parser_inst.is_node_remote.return_value = False
         mock_get_ip.return_value = '192.0.2.100'
         mock_call_delnode.return_value = False
         mock_error.side_effect = SystemExit
@@ -1980,7 +1988,11 @@ class TestValidation(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
-    def test_remove_node_from_cluster_rm_csync_failed(self, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_invokerc, mock_error, mock_rm_conf_files, mock_call_delnode):
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_remove_node_from_cluster_rm_csync_failed(self, mock_crm_mon_parser, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_invokerc, mock_error, mock_rm_conf_files, mock_call_delnode):
+        mock_crm_mon_parser_inst = mock.Mock()
+        mock_crm_mon_parser.return_value = mock_crm_mon_parser_inst
+        mock_crm_mon_parser_inst.is_node_remote.return_value = False
         mock_get_ip.return_value = '192.0.2.100'
         mock_call_delnode.return_value = True
         mock_invokerc.return_value = False
@@ -2017,9 +2029,13 @@ class TestValidation(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
     @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
-    def test_remove_node_from_cluster_hostname(self, mock_get_ip, mock_stop, mock_status,
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_remove_node_from_cluster_hostname(self, mock_crm_mon_parser, mock_get_ip, mock_stop, mock_status,
             mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del, mock_csync2,
             mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell, mock_host_user_config):
+        mock_crm_mon_parser_inst = mock.Mock()
+        mock_crm_mon_parser.return_value = mock_crm_mon_parser_inst
+        mock_crm_mon_parser_inst.is_node_remote.return_value = False
         mock_get_ip.return_value = "10.10.10.1"
         mock_cal_delnode.return_value = True
         mock_invoke.side_effect = [(True, None, None)]
