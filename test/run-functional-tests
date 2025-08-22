@@ -144,7 +144,7 @@ END
 podman_exec() {
 	name=$1
 	cmd=$2
-	podman exec -t $name /bin/sh -c "$cmd"
+	podman exec -it $name /bin/sh -c "$cmd"
 }
 
 set_sshd_config_like_in_azure() {
