@@ -16,13 +16,16 @@ install: install-non-python
 
 uninstall: uninstall-non-python uninstall-python
 
-.PHONY: non-python manpages html-docs python
+.PHONY: non-python manpages html-docs doc-subdir python
 
 non-python: manpages html-docs
 
-manpages: doc/crm.8 doc/crmsh_crm_report.8
+manpages: doc/crmsh_crm_report.8 doc-subdir
 
-html-docs: doc/crm.8.html doc/crmsh_crm_report.8.html doc/profiles.html
+html-docs: doc/crmsh_crm_report.8.html doc/profiles.html
+
+doc-subdir:
+	PATH=$(PATH):$(PWD)/bin PYTHONPATH=$(PWD) CRM_HELP_FILE=$(PWD)/doc/crm.8.adoc $(MAKE) -C doc all
 
 %.8: %.8.adoc
 	a2x -f manpage $<
@@ -44,7 +47,8 @@ install-non-python: non-python
 	install -Dm0644 -t $(DESTDIR)$(confdir)/crm etc/{crm.conf,profiles.yml}
 	install -m0644 crmsh.tmpfiles.d.conf $(DESTDIR)$(tmpfilesdir)/crmsh.conf
 	# install manpages
-	install -Dpm0644 -t $(DESTDIR)$(mandir)/man8 doc/*.8
+	install -Dpm0644 -t $(DESTDIR)$(mandir)/man8 doc/generated-sources/crm.8
+	install -Dpm0644 -t $(DESTDIR)$(mandir)/man8 doc/crmsh_crm_report.8
 	install -Dpm0644 -t $(DESTDIR)$(datadir)/crmsh/ doc/crm.8.adoc
 	# install data
 	for d in $$(cat data-manifest); do \
