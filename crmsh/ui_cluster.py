@@ -2,10 +2,15 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+import os
 import sys
 import re
 import argparse
 import typing
+import tempfile
+import tarfile
+import subprocess
+import glob
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
@@ -799,7 +804,7 @@ to get the geo cluster configuration.""",
         Extensive health check.
         '''
         if not args:
-            return self._do_health_legacy(context, *args)
+            return Cluster._do_health_legacy()
         parser = argparse.ArgumentParser('health')
         parser.add_argument('component', choices=['hawk2', 'sles16'])
         parser.add_argument('-f', '--fix', action='store_true')
@@ -849,12 +854,31 @@ to get the geo cluster configuration.""",
                 logger.error('Unknown component: %s', parsed_args.component)
                 return False
 
-    def _do_health_legacy(self, context, *args):
-        params = self._args_implicit(context, args, 'nodes')
-        script = scripts.load_script('health')
-        if script is None:
-            raise ValueError("health script failed to load")
-        return scripts.run(script, script_args(params), script_printer())
+    @staticmethod
+    def _do_health_legacy():
+        with tempfile.TemporaryDirectory(prefix='crm_cluster_health_') as tempdir:
+            report_path = os.path.join(tempdir, 'report')
+            logger.info("Collecting health report in %s", report_path)
+            result = subprocess.run(['crm', 'report', report_path])
+            if result.returncode != 0:
+                logger.error("Failed to collect health report")
+                return False
+
+            tar_candidates = glob.glob(report_path + '.tar.*')
+            if not tar_candidates:
+                logger.error("No report archive found")
+                return False
+            logger.info("Dumping analysis from the report:")
+            try:
+                with tarfile.open(tar_candidates[0], 'r:*') as tar:
+                    analysis_member = tar.getmember("report/analysis.txt")
+                    with tar.extractfile(analysis_member) as analysis_file:
+                        for line in analysis_file:
+                            print(line.decode('utf-8'), end='')
+            except (tarfile.TarError, FileNotFoundError, KeyError) as e:
+                logger.error("Failed to extract analysis from the report: %s", e, exc_info=True)
+                return False
+        return True
 
     def do_status(self, context):
         '''
