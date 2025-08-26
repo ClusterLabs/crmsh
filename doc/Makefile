@@ -1,6 +1,8 @@
+export PATH := $(PATH):$(shell pwd)/toolchain/bin
+
 .PHONY: all clean subdirs website website-clean
 
-all: crm.8.html generated-sources/crm.8.aio.adoc
+all: crm.8
 
 generated-sources:
 	mkdir -p $@
@@ -21,7 +23,10 @@ generated-sources/profiles.adoc: profiles.adoc generated-sources
 	cp $< $@
 
 crm.8.html: generated-sources/crm.8.aio.adoc
-	asciidoctor $<
+	asciidoc $<
+
+crm.8: generated-sources/crm.8.aio.adoc
+	a2x -f manpage $<
 
 website: generated-sources/crm.8.adoc
 	$(MAKE) -C website-v1 all
@@ -30,4 +35,4 @@ website-clean:
 	$(MAKE) -C website-v1 clean
 
 clean:	website-clean
-	$(RM) -r generated-sources crm.8.html
+	$(RM) -r generated-sources crm.8.html crm.8

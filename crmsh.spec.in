@@ -64,6 +64,7 @@ BuildRequires:  python3-lxml
 BuildRequires:  python3-setuptools
 BuildRequires:  python3-pip
 BuildRequires:  python3-wheel
+BuildRequires:  python3-PyYAML
 
 %if 0%{?suse_version}
 # only require csync2 on SUSE since bootstrap
@@ -80,11 +81,13 @@ Requires:       python3-curses
 Requires:       python3-python-dateutil
 BuildRequires:  fdupes
 BuildRequires:  python3-curses
+BuildRequires:  python3-python-dateutil
 %else
 Requires:       python3-dateutil
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
+BuildRequires:  python3-dateutil
 %endif
 
 # Required for core functionality
