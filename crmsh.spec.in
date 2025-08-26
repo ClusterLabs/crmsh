@@ -156,9 +156,6 @@ find . -type f -exec sed -i \
     {} \;
 sed -i -e '1{\@^#!%{_bindir}/python3@d}' crmsh/report/core.py
 
-# this is wrong FIXME
-sed -i -e '/data_files/d' setup.py
-
 %build
 ./autogen.sh
 
@@ -175,14 +172,7 @@ sed -i -e '/data_files/d' setup.py
 %pyproject_wheel
 %endif
 
-# Generate manpages
-for manpg in doc/crm{,sh_crm_report}.8.adoc ; do
-    a2x -f manpage $manpg
-done
-
-for docad in doc/crm{,sh_crm_report}.8.adoc ; do
-    asciidoc --unsafe --backend=xhtml11 $docad
-done
+make all
 
 %if %{with regression_tests}
 tox
@@ -193,47 +183,18 @@ fi
 %endif
 
 %install
-# make DESTDIR=%%{buildroot} docdir=%%{crmsh_docdir} install
 %if 0%{?suse_version}
 %python3_pyproject_install
 %else
 %pyproject_install
 %endif
 
-# additional directories
-install -d -m0770 %{buildroot}%{_localstatedir}/cache/crm
-install -d -m0770 %{buildroot}%{_localstatedir}/log/crmsh
-install -d -m0755 %{buildroot}%{_tmpfilesdir}
-
-# install configuration
-install -Dm0644 -t %{buildroot}%{_sysconfdir}/crm etc/{crm.conf,profiles.yml}
-install -m0644 %{SOURCE1} %{buildroot}%{_tmpfilesdir}/%{name}.conf
-
-# install manpages
-install -Dpm0644 -t %{buildroot}%{_mandir}/man8 doc/*.8
-install -Dpm0644 -t %{buildroot}%{_datadir}/crmsh/ doc/crm.8.adoc
-
-# install data
-for d in $(cat data-manifest); do
-	if [ -x $d ] ; then mode="0755" ; else mode="0644" ; fi
-	install -D -m $mode $d %{buildroot}%{_datadir}/crmsh/$d
-done
-mv %{buildroot}%{_datadir}/crmsh/test{,s}
-install -p test/testcases/xmlonly.sh \
-	%{buildroot}%{_datadir}/crmsh/tests/testcases/configbasic-xml.filter
-
-install -Dm0644 contrib/bash_completion.sh \
-	%{buildroot}%{_datadir}/bash-completion/completions/crm
+make DESTDIR=%{buildroot} tmpfilesdir=%{_tmpfilesdir} fwdefdir=%{_fwdefdir} install
 
 if [ -f %{buildroot}%{_bindir}/crm ]; then
-	install -Dm0755 %{buildroot}%{_bindir}/crm %{buildroot}%{_sbindir}/crm
-	rm %{buildroot}%{_bindir}/crm
+	install -d %{buildroot}%{_sbindir}/
+	mv %{buildroot}%{_bindir}/crm %{buildroot}%{_sbindir}/crm
 fi
-
-%if %{use_firewalld}
-install -Dm0644 high-availability.xml \
-	%{buildroot}%{_fwdefdir}/high-availability.xml
-%endif
 
 %if 0%{?suse_version}
 %fdupes %{buildroot}

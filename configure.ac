@@ -30,16 +30,8 @@ AC_ARG_WITH(daemon-user,
     [ CRM_DAEMON_USER="$withval" ],
     [ CRM_DAEMON_USER="hacluster" ])
 
-AM_INIT_AUTOMAKE([no-define foreign])
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE_NAME")
 AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION")
-
-dnl automake >= 1.11 offers --enable-silent-rules for suppressing the output from
-dnl normal compilation.  When a failure occurs, it will then display the full 
-dnl command line
-dnl Wrap in m4_ifdef to avoid breaking on older platforms
-m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES])
 
 AC_SUBST(OCF_ROOT_DIR)
 AC_SUBST(CRM_DAEMON_USER)
@@ -48,13 +40,9 @@ CRM_CACHE_DIR=${localstatedir}/cache/crm
 AC_DEFINE_UNQUOTED(CRM_CACHE_DIR,"$CRM_CACHE_DIR", Where crm shell keeps the cache)
 AC_SUBST(CRM_CACHE_DIR)
 
-AM_PATH_PYTHON([3])
 AC_PATH_PROGS(ASCIIDOC, asciidoc)
 
-AM_CONDITIONAL(BUILD_ASCIIDOC, test x"${ASCIIDOC}" != x"")
-
-AC_CONFIG_FILES(Makefile \
-etc/crm.conf             \
+AC_CONFIG_FILES(etc/crm.conf             \
 version                  \
 crmsh.spec               \
 )
