@@ -279,7 +279,7 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
 
         collect.collect_sys_info(mock_ctx_inst)
 
-        mock_package.assert_called_once_with(constants.PACKAGES)
+        mock_package.assert_called_once_with(' '.join(constants.PACKAGE_LIST))
         mock_str2file.assert_called_once_with('##### System info #####\nPlatform: Linux\nKernel release: 4.5\nArchitecture: x86_64\nDistribution: suse\n\n##### Installed cluster related packages #####\nversion_data\n\n\n##### Verification output of packages #####\nverify_data\n', '/opt/work/sysinfo.txt')
         mock_debug.assert_called_once_with(f"Dump packages and platform info into {constants.SYSINFO_F}")
 
