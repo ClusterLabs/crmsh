@@ -509,7 +509,7 @@ def collect_sys_info(context: core.Context) -> None:
     """
     Collect the versions of cluster-related packages and platform information
     """
-    pkg_inst = utils.Package(constants.PACKAGES)
+    pkg_inst = utils.Package(' '.join(constants.PACKAGE_LIST))
     version_info = pkg_inst.version()
     packages_info = "##### Installed cluster related packages #####\n"
     packages_info += version_info + '\n\n'
