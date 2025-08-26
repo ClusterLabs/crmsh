@@ -25,7 +25,7 @@ manpages: doc/crmsh_crm_report.8 doc-subdir
 html-docs: doc/crmsh_crm_report.8.html doc/profiles.html
 
 doc-subdir:
-	PATH=$(PATH):$(PWD)/bin PYTHONPATH=$(PWD) CRM_HELP_FILE=$(PWD)/doc/crm.8.adoc $(MAKE) -C doc all
+	PATH=$(PATH):$(CURDIR)/bin PYTHONPATH=$(CURDIR) CRM_HELP_FILE=$(CURDIR)/doc/crm.8.adoc $(MAKE) -C doc all
 
 %.8: %.8.adoc
 	a2x -f manpage $<

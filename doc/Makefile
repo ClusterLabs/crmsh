@@ -1,4 +1,4 @@
-export PATH := $(PATH):$(shell pwd)/toolchain/bin
+export PATH := $(PATH):$(CURDIR)/toolchain/bin
 
 .PHONY: all clean subdirs website website-clean
 
