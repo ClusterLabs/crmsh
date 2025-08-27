@@ -72,6 +72,8 @@ uninstall-non-python:
 	$(RM) -r $(DESTDIR)$(localstatedir)/log/crm
 	$(RM) -r $(DESTDIR)$(datadir)/crmsh
 	$(RM) -r $(DESTDIR)$(datadir)/bash-completion/completions/crm
+	$(RM) $(DESTDIR)$(mandir)/man8/crm.8
+	$(RM) $(DESTDIR)$(mandir)/man8/crmsh_crm_report.8
 	$(RM) $(DESTDIR)$(fwdefdir)/high-availability.xml
 	$(RM) $(DESTDIR)$(tmpfilesdir)/crmsh.conf
 
