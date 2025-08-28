@@ -228,11 +228,14 @@ class Context(object):
         if self.stage == "sbd":
             if self.cluster_is_running:
                 utils.check_all_nodes_reachable("setup SBD")
-                for node in utils.list_cluster_nodes():
-                    if not utils.package_is_installed("sbd", node):
-                        utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
-            elif not utils.package_is_installed("sbd"):
-                utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
+                node_list = utils.list_cluster_nodes()
+            else:
+                node_list = [utils.this_node()]
+            for node in node_list:
+                if not utils.package_is_installed("sbd", node):
+                    utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
+                if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd", node):
+                    utils.fatal(SBDManager.FENCE_SBD_NOT_INSTALLED_MSG + f" on {node}")
 
             if not with_sbd_option and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
