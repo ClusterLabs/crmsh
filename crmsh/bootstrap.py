@@ -2381,10 +2381,28 @@ def rm_configuration_files(remote=None):
         shell.get_stdout_or_raise_error(cmd, remote)
 
 
+def remove_pacemaker_remote_node_from_cluster(node):
+    logger.info("Removing pacemaker remote node %s from cluster", node)
+    shell = sh.cluster_shell()
+    remote_node_res_id = xmlutil.CrmMonXmlParser().get_res_id_of_remote_node(node)
+    if not remote_node_res_id:
+        logger.error("Cannot find the resource ID of the pacemaker remote node %s", node)
+        return
+    shell.get_stdout_or_raise_error(f"crm resource stop {remote_node_res_id}")
+    shell.get_stdout_or_raise_error(f"crm configure delete {remote_node_res_id}")
+    logger.info("Removing node %s from CIB", node)
+    if not NodeMgmt.call_delnode(node):
+        utils.fatal("Failed to remove {}.".format(node))
+
+
 def remove_node_from_cluster(node, dead_node=False):
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
     """
+    if xmlutil.CrmMonXmlParser().is_node_remote(node):
+        remove_pacemaker_remote_node_from_cluster(node)
+        return
+
     node_ip = get_cluster_node_ip(node)
     if not dead_node:
         stop_services(SERVICES_STOP_LIST, remote_addr=node)
@@ -2767,10 +2785,6 @@ def bootstrap_remove(context):
 
     if service_manager.service_is_active("pacemaker.service", cluster_node):
         cluster_node = get_node_canonical_hostname(cluster_node)
-    else:
-        configured_nodes = utils.list_cluster_nodes()
-        if cluster_node not in configured_nodes:
-            utils.fatal(f"Node {cluster_node} is not configured in cluster! (valid nodes: {', '.join(configured_nodes)})")
 
     if not force_flag and not confirm("Removing node \"{}\" from the cluster: Are you sure?".format(cluster_node)):
         return
@@ -2779,10 +2793,12 @@ def bootstrap_remove(context):
         if not force_flag:
             utils.fatal("Removing self requires --force")
         remove_self(force_flag)
-    elif cluster_node in utils.list_cluster_nodes():
-        remove_node_from_cluster(cluster_node)
     else:
-        utils.fatal("Specified node {} is not configured in cluster! Unable to remove.".format(cluster_node))
+        configured_nodes = xmlutil.CrmMonXmlParser().get_node_list()
+        if cluster_node in configured_nodes:
+            remove_node_from_cluster(cluster_node)
+        else:
+            utils.fatal(f"Node {cluster_node} is not configured in cluster! (valid nodes: {', '.join(configured_nodes)})")
 
     bootstrap_finished()
 
