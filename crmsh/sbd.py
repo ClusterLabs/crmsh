@@ -449,7 +449,7 @@ class SBDManager:
     DISKLESS_SBD_MIN_EXPECTED_VOTE = 3
     DISKLESS_SBD_WARNING = "Diskless SBD requires cluster with three or more nodes. If you want to use diskless SBD for 2-node cluster, should be combined with QDevice."
     SBD_NOT_INSTALLED_MSG = "Package sbd is not installed"
-    FENCE_SBD_NOT_EXISTED_MSG = "fence_sbd command does not exist."
+    FENCE_SBD_NOT_INSTALLED_MSG = "Package fence-agents-sbd is not installed"
     SBD_RA = "stonith:fence_sbd"
     SBD_RA_ID = "stonith-sbd"
     SBD_DEVICE_MAX = 3
@@ -535,9 +535,6 @@ class SBDManager:
             logger.info("Configuring disk-based SBD")
         else:
             return
-
-        if not shutil.which("fence_sbd"):
-            utils.fatal(self.FENCE_SBD_NOT_EXISTED_MSG)
 
         opt_str = SBDManager.convert_timeout_dict_to_opt_str(self.timeout_dict)
         shell = sh.cluster_shell()
