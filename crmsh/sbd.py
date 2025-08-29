@@ -658,9 +658,14 @@ class SBDManager:
         configured_devices = SBDUtils.get_sbd_device_from_config()
         # return empty list if already configured and user doesn't want to overwrite
         if configured_devices and not self._wants_to_overwrite(configured_devices):
-            return []
+            return_devices = []
+        else:
+            return_devices = self._prompt_for_sbd_device()
 
-        return self._prompt_for_sbd_device()
+        if not self.diskless_sbd and not utils.package_is_installed("fence-agents-sbd"):
+            utils.fatal(self.FENCE_SBD_NOT_INSTALLED_MSG)
+
+        return return_devices
 
     def get_sbd_device_from_bootstrap(self):
         '''
