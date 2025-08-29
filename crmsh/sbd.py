@@ -456,7 +456,7 @@ class SBDManager(object):
         """
         Try to configure sbd resource, restart cluster on needed
         """
-        if not xmlutil.CrmMonXmlParser().is_any_resource_running():
+        if not xmlutil.CrmMonXmlParser().is_non_stonith_resource_running():
             bootstrap.restart_cluster()
             self.configure_sbd_resource_and_properties()
         else:
