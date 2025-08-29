@@ -345,7 +345,6 @@ option.""", usage="init [options] [STAGE]", epilog="""
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
     firewalld   Add high-availability service to firewalld
-    csync2      Configure csync2
     corosync    Configure corosync
     sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
@@ -353,6 +352,7 @@ Stage can be one of:
     gfs2        Configure GFS2 (requires -g <dev>) NOTE: this is a Technical Preview
     admin       Create administration virtual IP (optional)
     qdevice     Configure qdevice and qnetd
+    csync2      Configure csync2
 
 Note:
   - If stage is not specified, the script will run through each stage
@@ -422,8 +422,6 @@ Examples:
                             help="Enable SBD even if no SBD device is configured (diskless mode)")
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
                             help="Use the given watchdog device or driver name")
-        parser.add_argument("-x", "--skip-csync2-sync", dest="skip_csync2", action="store_true",
-                            help="Skip csync2 initialization (an experimental option)")
         parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
                             help="Try to use an existing key from ssh-agent (default)")
 
@@ -511,9 +509,7 @@ to the -c option.""",usage="join [options] [STAGE]", epilog="""
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
     firewalld   Add high-availability service to firewalld
-    csync2      Configure csync2 (requires -c <host>)
-    ssh_merge   Merge root's SSH known_hosts across all nodes (csync2 must
-                already be configured).
+    ssh_merge   Merge root's SSH known_hosts across all nodes
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.
