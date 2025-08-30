@@ -749,6 +749,8 @@ class SBDManager:
 
         dev_list = SBDUtils.get_sbd_device_from_config()
         if dev_list:
+            if not utils.package_is_installed("fence-agents-sbd"):
+                utils.fatal(self.FENCE_SBD_NOT_INSTALLED_MSG)
             SBDUtils.verify_sbd_device(dev_list, [peer_host])
         else:
             self._warn_diskless_sbd(peer_host)
