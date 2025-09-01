@@ -664,13 +664,15 @@ class TestSBDManager(unittest.TestCase):
         mock_exists.assert_called_once_with(sbd.SBDManager.SYSCONFIG_SBD)
         mock_ServiceManager.return_value.disable_service.assert_called_once_with(constants.SBD_SERVICE)
 
+    @patch('crmsh.utils.package_is_installed')
     @patch('logging.Logger.info')
     @patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
     @patch('crmsh.watchdog.Watchdog')
     @patch('os.path.exists')
     @patch('crmsh.sbd.ServiceManager')
-    def test_join_sbd_diskbased(self, mock_ServiceManager, mock_exists, mock_Watchdog, mock_get_sbd_device_from_config, mock_verify_sbd_device, mock_logger_info):
+    def test_join_sbd_diskbased(self, mock_ServiceManager, mock_exists, mock_Watchdog, mock_get_sbd_device_from_config, mock_verify_sbd_device, mock_logger_info, mock_package_is_installed):
+        mock_package_is_installed.side_effect = [True, True]
         mock_exists.return_value = True
         mock_ServiceManager.return_value.service_is_enabled.return_value = True
         mock_Watchdog.return_value.join_watchdog = Mock()
@@ -681,13 +683,15 @@ class TestSBDManager(unittest.TestCase):
 
         mock_logger_info.assert_called_once_with("Got SBD configuration")
 
+    @patch('crmsh.utils.package_is_installed')
     @patch('logging.Logger.info')
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
     @patch('crmsh.watchdog.Watchdog')
     @patch('os.path.exists')
     @patch('crmsh.sbd.ServiceManager')
-    def test_join_sbd_diskless(self, mock_ServiceManager, mock_exists, mock_Watchdog, mock_get_sbd_device_from_config, mock_logger_info):
+    def test_join_sbd_diskless(self, mock_ServiceManager, mock_exists, mock_Watchdog, mock_get_sbd_device_from_config, mock_logger_info, mock_package_is_installed):
         mock_exists.return_value = True
+        mock_package_is_installed.return_value = True
         mock_ServiceManager.return_value.service_is_enabled.return_value = True
         mock_Watchdog.return_value.join_watchdog = Mock()
         mock_get_sbd_device_from_config.return_value = []

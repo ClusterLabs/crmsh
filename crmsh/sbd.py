@@ -658,9 +658,14 @@ class SBDManager:
         configured_devices = SBDUtils.get_sbd_device_from_config()
         # return empty list if already configured and user doesn't want to overwrite
         if configured_devices and not self._wants_to_overwrite(configured_devices):
-            return []
+            return_devices = []
+        else:
+            return_devices = self._prompt_for_sbd_device()
 
-        return self._prompt_for_sbd_device()
+        if not self.diskless_sbd and not utils.package_is_installed("fence-agents-sbd"):
+            utils.fatal(self.FENCE_SBD_NOT_INSTALLED_MSG)
+
+        return return_devices
 
     def get_sbd_device_from_bootstrap(self):
         '''
@@ -738,11 +743,16 @@ class SBDManager:
             service_manager.disable_service(constants.SBD_SERVICE)
             return
 
+        if not utils.package_is_installed("sbd"):
+            utils.fatal(self.SBD_NOT_INSTALLED_MSG)
+        dev_list = SBDUtils.get_sbd_device_from_config()
+        if dev_list and not utils.package_is_installed("fence-agents-sbd"):
+            utils.fatal(self.FENCE_SBD_NOT_INSTALLED_MSG)
+
         from .watchdog import Watchdog
         self._watchdog_inst = Watchdog(remote_user=remote_user, peer_host=peer_host)
         self._watchdog_inst.join_watchdog()
 
-        dev_list = SBDUtils.get_sbd_device_from_config()
         if dev_list:
             SBDUtils.verify_sbd_device(dev_list, [peer_host])
         else:

@@ -242,8 +242,11 @@ class Context(object):
             if ServiceManager().service_is_active(constants.SBD_SERVICE) and not config.core.force:
                 utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
 
-        elif with_sbd_option and not utils.package_is_installed("sbd"):
-            utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
+        elif with_sbd_option:
+            if not utils.package_is_installed("sbd"):
+                utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
+            if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd"):
+                utils.fatal(SBDManager.FENCE_SBD_NOT_INSTALLED_MSG)
 
     def _validate_nodes_option(self):
         """
