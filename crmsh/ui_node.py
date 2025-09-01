@@ -319,7 +319,6 @@ class NodeMgmt(command.UI):
             return False
 
         cfg_nodes = cib.xpath('/cib/configuration/nodes/node')
-        node_states = cib.xpath('/cib/status/node_state')
 
         def find(it, lst):
             for n in lst:
@@ -329,18 +328,14 @@ class NodeMgmt(command.UI):
 
         def do_print(uname):
             xml = find(uname, cfg_nodes)
-            state = find(uname, node_states)
-            if xml is not None or state is not None:
-                is_offline = state is not None and \
-                    (state.get("crmd") == "offline" or \
-                        (state.get("crmd").isdigit() and int(state.get("crmd")) == 0))
-                print_node(*unpack_node_xmldata(xml if xml is not None else state, is_offline))
+            if xml is not None:
+                is_offline = not xmlutil.CrmMonXmlParser().is_node_online(uname)
+                print_node(*unpack_node_xmldata(xml, is_offline))
 
         if node is not None:
             do_print(node)
         else:
-            all_nodes = set([n.get("uname") for n in cfg_nodes + node_states])
-            for uname in sorted(all_nodes):
+            for uname in [n.get("uname") for n in cfg_nodes]:
                 do_print(uname)
         return True
 
