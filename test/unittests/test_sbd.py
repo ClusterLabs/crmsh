@@ -393,9 +393,11 @@ class TestSBDManager(unittest.TestCase):
     @patch('crmsh.sbd.ServiceManager')
     @patch('crmsh.utils.list_cluster_nodes')
     def test_enable_sbd_service(self, mock_list_cluster_nodes, mock_ServiceManager, mock_logger_info):
+        mock_bootstrap_ctx = Mock(cluster_is_running=True)
+        sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
         mock_list_cluster_nodes.return_value = ['node1', 'node2']
         mock_ServiceManager.return_value.service_is_enabled.side_effect = [False, False]
-        SBDManager.enable_sbd_service()
+        sbdmanager_instance.enable_sbd_service()
         mock_logger_info.assert_has_calls([
             call("Enable %s on node %s", constants.SBD_SERVICE, 'node1'),
             call("Enable %s on node %s", constants.SBD_SERVICE, 'node2')
@@ -679,6 +681,7 @@ class TestSBDManager(unittest.TestCase):
         mock_get_sbd_device_from_config.return_value = ['/dev/sbd_device']
 
         sbdmanager_instance = SBDManager()
+        sbdmanager_instance.enable_sbd_service = Mock()
         sbdmanager_instance.join_sbd("remote_user", "peer_host")
 
         mock_logger_info.assert_called_once_with("Got SBD configuration")
@@ -698,6 +701,7 @@ class TestSBDManager(unittest.TestCase):
 
         sbdmanager_instance = SBDManager()
         sbdmanager_instance._warn_diskless_sbd = Mock()
+        sbdmanager_instance.enable_sbd_service = Mock()
         sbdmanager_instance.join_sbd("remote_user", "peer_host")
 
         mock_logger_info.assert_called_once_with("Got diskless SBD configuration")
