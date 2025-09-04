@@ -544,9 +544,11 @@ class SBDManager:
             logger.debug("Running command: %s", cmd)
             shell.get_stdout_or_raise_error(cmd)
 
-    @staticmethod
-    def enable_sbd_service():
-        cluster_nodes = utils.list_cluster_nodes() or [utils.this_node()]
+    def enable_sbd_service(self):
+        if self.cluster_is_running:
+            cluster_nodes = utils.list_cluster_nodes()
+        else:
+            cluster_nodes = [utils.this_node()]
         service_manager = ServiceManager()
 
         for node in cluster_nodes:
@@ -709,7 +711,7 @@ class SBDManager:
         with utils.leverage_maintenance_mode() as enabled:
             self.initialize_sbd()
             self.update_configuration()
-            SBDManager.enable_sbd_service()
+            self.enable_sbd_service()
 
             if self.cluster_is_running:
 
@@ -759,7 +761,7 @@ class SBDManager:
             self._warn_diskless_sbd(peer_host)
 
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
-        service_manager.enable_service(constants.SBD_SERVICE)
+        self.enable_sbd_service()
 
 
 def cleanup_existing_sbd_resource():
