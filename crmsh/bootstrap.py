@@ -64,7 +64,7 @@ SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_NFS = "/etc/sysconfig/nfs"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 COROSYNC_CONF_ORIG = tmpfiles.create()[1]
-SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service", CSYNC2_SERVICE]
+SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service"]
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
 BOOTH_AUTH = "/etc/booth/authkey"
@@ -138,10 +138,8 @@ class Context(object):
         self.profiles_dict = {}
         self.default_nic = None
         self.default_ip_list = []
-        self.rm_list = [SBDManager.SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
-                COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
-                "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
-                "/var/lib/csync2/*", "~/.config/crm/*"]
+        self.rm_list = [SBDManager.SYSCONFIG_SBD, corosync.conf(), COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
+                "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH, "~/.config/crm/*"]
         self.use_ssh_agent = None
 
     @classmethod
@@ -2213,9 +2211,6 @@ def remove_node_from_cluster(node, dead_node=False):
     if not NodeMgmt.call_delnode(node):
         utils.fatal("Failed to remove {}.".format(node))
 
-    if not invokerc("sed -i /{}/d {}".format(node, CSYNC2_CFG)):
-        utils.fatal("Removing the node {} from {} failed".format(node, CSYNC2_CFG))
-
     # Remove node from nodelist
     if corosync.get_values("nodelist.node.ring0_addr"):
         corosync.del_node(node_ip if node_ip is not None else node)
@@ -2224,7 +2219,6 @@ def remove_node_from_cluster(node, dead_node=False):
     adjust_properties()
 
     logger.info("Propagating configuration changes across the remaining nodes")
-    sync_file(CSYNC2_CFG)
     sync_file(corosync.conf())
 
     sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
