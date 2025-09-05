@@ -135,7 +135,6 @@ class Context(object):
         self.cloud_type = None
         self.is_s390 = False
         self.profiles_data = None
-        self.skip_csync2 = None
         self.profiles_dict = {}
         self.default_nic = None
         self.default_ip_list = []
@@ -314,10 +313,6 @@ class Context(object):
             self.qdevice_inst.valid_qdevice_options()
         if self.ocfs2_devices or self.gfs2_devices or self.stage in ("ocfs2", "gfs2"):
             cluster_fs.ClusterFSManager.pre_verify(self)
-        if not self.skip_csync2 and self.type == "init":
-            self.skip_csync2 = utils.get_boolean(os.getenv("SKIP_CSYNC2_SYNC"))
-        if self.skip_csync2 and self.stage:
-            utils.fatal("-x option or SKIP_CSYNC2_SYNC can't be used with any stage")
         self._validate_stage()
         self._validate_network_options()
         self._validate_cluster_node()
@@ -1107,21 +1102,16 @@ key /etc/csync2/key_hagroup;
 }}
     """.format(host_str, csync2_file_list), CSYNC2_CFG)
 
-    if _context.skip_csync2:
-        for f in [CSYNC2_CFG, CSYNC2_KEY]:
-            sync_file(f)
+    for f in [CSYNC2_CFG, CSYNC2_KEY]:
+        sync_file(f)
 
     service_manager = ServiceManager()
     for host in host_list:
         logger.info("Starting {} service on {}".format(CSYNC2_SERVICE, host))
         service_manager.start_service(CSYNC2_SERVICE, enable=True, remote_addr=host)
 
-    _msg = "syncing" if _context.skip_csync2 else "checking"
-    with logger_utils.status_long("csync2 {} files".format(_msg)):
-        if _context.skip_csync2:
-            csync2_update("/")
-        else:
-            invoke("csync2", "-cr", "/")
+    with logger_utils.status_long("csync2 syncing files"):
+        csync2_update("/")
 
 
 def csync2_update(path):
@@ -2018,6 +2008,8 @@ def join_cluster(seed_host, remote_user):
     """
     Cluster configuration for joining node.
     """
+    retrieve_all_config_files(seed_host)
+
     is_qdevice_configured = corosync.is_qdevice_configured()
     if is_qdevice_configured and not ServiceManager().service_is_available("corosync-qdevice.service"):
         utils.fatal("corosync-qdevice.service is not available")
@@ -2323,7 +2315,6 @@ def bootstrap_init(context):
 
     if stage and _context.cluster_is_running and \
             not ServiceManager(shell=sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active(CSYNC2_SERVICE):
-        _context.skip_csync2 = True
         _context.node_list_in_cluster = utils.list_cluster_nodes()
     elif not _context.cluster_is_running:
         _context.node_list_in_cluster = [utils.this_node()]
@@ -2334,10 +2325,6 @@ def bootstrap_init(context):
     else:
         init_ssh()
         init_firewalld()
-        if _context.skip_csync2:
-            ServiceManager().stop_service(CSYNC2_SERVICE, disable=True)
-        else:
-            init_csync2()
         init_corosync()
         init_sbd()
 
@@ -2442,14 +2429,7 @@ def bootstrap_join(context):
                 utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node)
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node)
-                _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
                 join_firewalld()
-                if _context.skip_csync2:
-                    service_manager.stop_service(CSYNC2_SERVICE, disable=True)
-                    retrieve_all_config_files(cluster_node)
-                    logger.warning("csync2 is not initiated yet. Before using csync2 for the first time, please run \"crm cluster init csync2 -y\" on any one node. Note, this may take a while.")
-                else:
-                    join_csync2(cluster_node, remote_user)
                 join_ssh_merge(cluster_node, remote_user)
                 probe_partitions()
                 join_cluster_fs(cluster_node, remote_user)
@@ -2525,9 +2505,7 @@ def bootstrap_remove(context):
     if not service_manager.service_is_active("corosync.service"):
         utils.fatal("Cluster is not active - can't execute removing action")
 
-    _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE)
-    if _context.skip_csync2:
-        _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(utils.this_node())
+    _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(utils.this_node())
 
     if _context.qdevice_rm_flag:
         remove_qdevice()
@@ -2915,15 +2893,7 @@ def sync_file(path):
     """
     Sync files between cluster nodes
     """
-    if _context:
-        skip_csync2 = _context.skip_csync2
-    else:
-        skip_csync2 = not ServiceManager().service_is_active(CSYNC2_SERVICE)
-
-    if skip_csync2:
-        utils.cluster_copy_file(path, nodes=_context.node_list_in_cluster, output=False)
-    else:
-        csync2_update(path)
+    utils.cluster_copy_file(path, nodes=_context.node_list_in_cluster, output=False)
 
 
 def restart_cluster():
