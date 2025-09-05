@@ -102,7 +102,6 @@ class Context(object):
         self.transport = None
         self.nic_list = []
         self.user_at_node_list = []
-        self.node_list_in_cluster = []
         self.current_user = None
         self.admin_ip = None
         self.ipv6 = None
@@ -534,7 +533,7 @@ def is_online():
     cluster_node = get_node_canonical_hostname(cluster_node)
     if not xmlutil.CrmMonXmlParser().is_node_online(cluster_node):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
-        sync_file(corosync.conf())
+        sync_file(corosync.conf(), cluster_node)
         sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R", cluster_node)
         ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).stop_service("corosync")
         print()
@@ -1072,7 +1071,9 @@ EOF
 
 
 def init_csync2():
-    host_list = _context.node_list_in_cluster
+    host_list = utils.list_cluster_nodes()
+    if not host_list:
+        utils.fatal("Failed to get node list from cluster")
 
     logger.info("Configuring csync2")
     if os.path.exists(CSYNC2_KEY):
@@ -1843,7 +1844,7 @@ def join_ssh_merge(cluster_node, remote_user):
     """
     logger.info("Merging known_hosts")
 
-    hosts = _context.node_list_in_cluster + [utils.this_node()]
+    hosts = utils.fetch_cluster_node_list_from_node(cluster_node) + [utils.this_node()]
 
     shell = sh.cluster_shell()
     # create local entry in known_hosts
@@ -2058,7 +2059,7 @@ def join_cluster(seed_host, remote_user):
         corosync.add_node_config(ringXaddr_res)
     except corosync.IPAlreadyConfiguredError as e:
         logger.warning(e)
-    sync_file(corosync.conf())
+    sync_file(corosync.conf(), seed_host)
     shell.get_stdout_or_raise_error('corosync-cfgtool -R', seed_host)
 
     _context.sbd_manager.join_sbd(remote_user, seed_host)
@@ -2079,7 +2080,7 @@ def join_cluster(seed_host, remote_user):
             logger.error("Failed to delete no-quorum-policy=ignore")
 
     corosync.configure_two_node()
-    sync_file(corosync.conf())
+    sync_file(corosync.conf(), seed_host)
     sync_files_to_disk()
 
     with logger_utils.status_long("Reloading cluster configuration"):
@@ -2298,12 +2299,6 @@ def bootstrap_init(context):
         if not check_prereqs():
             return
 
-    if stage and _context.cluster_is_running and \
-            not ServiceManager(shell=sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active(CSYNC2_SERVICE):
-        _context.node_list_in_cluster = utils.list_cluster_nodes()
-    elif not _context.cluster_is_running:
-        _context.node_list_in_cluster = [utils.this_node()]
-
     if stage != "":
         check_stage_dependency(stage)
         globals()["init_" + stage]()
@@ -2412,7 +2407,6 @@ def bootstrap_join(context):
             with lock_inst.lock():
                 service_manager = ServiceManager()
                 utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node)
-                _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node)
                 join_firewalld()
                 join_ssh_merge(cluster_node, remote_user)
@@ -2489,8 +2483,6 @@ def bootstrap_remove(context):
     service_manager = ServiceManager()
     if not service_manager.service_is_active("corosync.service"):
         utils.fatal("Cluster is not active - can't execute removing action")
-
-    _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(utils.this_node())
 
     if _context.qdevice_rm_flag:
         remove_qdevice()
@@ -2874,11 +2866,14 @@ def retrieve_all_config_files(cluster_node):
             utils.fatal("Failed to retrieve config files from {}".format(cluster_node))
 
 
-def sync_file(path):
+def sync_file(path, peer_node=None):
     """
     Sync files between cluster nodes
     """
-    utils.cluster_copy_file(path, nodes=_context.node_list_in_cluster, output=False)
+    node_list = []
+    if peer_node:
+        node_list = utils.fetch_cluster_node_list_from_node(peer_node)
+    utils.cluster_copy_file(path, nodes=node_list, output=False)
 
 
 def restart_cluster():
