@@ -2245,13 +2245,6 @@ def ssh_stage_finished():
     return feature_check.check_quick() and feature_check.check_local([utils.this_node()])
 
 
-def csync2_stage_finished():
-    """
-    Dectect if the csync2 stage is finished
-    """
-    return ServiceManager().service_is_active(CSYNC2_SERVICE)
-
-
 def corosync_stage_finished():
     """
     Dectect if the corosync stage is finished
@@ -2262,7 +2255,6 @@ def corosync_stage_finished():
 INIT_STAGE_CHECKER = {
         "ssh": ssh_stage_finished,
         "firewalld": FirewallManager.firewalld_stage_finished,
-        "csync2": csync2_stage_finished,
         "corosync": corosync_stage_finished,
         "sbd": lambda: True,
         "cluster": is_online
@@ -2272,7 +2264,6 @@ INIT_STAGE_CHECKER = {
 JOIN_STAGE_CHECKER = {
         "ssh": ssh_stage_finished,
         "firewalld": FirewallManager.firewalld_stage_finished,
-        "csync2": csync2_stage_finished,
         "ssh_merge": lambda: True,
         "cluster": is_online
 }
