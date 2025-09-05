@@ -509,9 +509,7 @@ to the -c option.""",usage="join [options] [STAGE]", epilog="""
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
     firewalld   Add high-availability service to firewalld
-    csync2      Configure csync2 (requires -c <host>)
-    ssh_merge   Merge root's SSH known_hosts across all nodes (csync2 must
-                already be configured).
+    ssh_merge   Merge root's SSH known_hosts across all nodes
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.

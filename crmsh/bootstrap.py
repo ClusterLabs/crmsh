@@ -74,9 +74,9 @@ FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_K
         PROFILES_FILE, CRM_CFG, SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
 
 INIT_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "corosync", "sbd", "cluster", "ocfs2", "gfs2", "admin", "qdevice")
-INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote")
+INIT_STAGES_INTERNAL = ("qnetd_remote", )
 INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
-JOIN_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "ssh_merge", "cluster")
+JOIN_STAGES_EXTERNAL = ("ssh", "firewalld", "ssh_merge", "cluster")
 
 
 class Context(object):
@@ -1127,37 +1127,6 @@ def csync2_update(path):
         logger.warning("{} was not synced".format(path))
 
 
-def init_csync2_remote():
-    """
-    It would be nice if we could just have csync2.cfg include a directory,
-    which in turn included one file per node which would be referenced via
-    something like "group ha_group { ... config: /etc/csync2/hosts/*; }"
-    That way, adding a new node would just mean adding a single new file
-    to that directory.  Unfortunately, the 'config' statement only allows
-    inclusion of specific individual files, not multiple files via wildcard.
-    So we have this function which is called by ha-cluster-join to add the new
-    remote node to csync2 config on some existing node.  It is intentionally
-    not documented in ha-cluster-init's user-visible usage information.
-    """
-    if not _context.cluster_node:
-        utils.fatal("Hostname not specified")
-    user, newhost = _parse_user_at_host(_context.cluster_node, _context.current_user)
-
-    curr_cfg = open(CSYNC2_CFG).read()
-
-    was_quiet = _context.quiet
-    try:
-        _context.quiet = True
-        # if host doesn't already exist in csync2 config, add it
-        if not re.search(r"^\s*host.*\s+%s\s*;" % (newhost), curr_cfg, flags=re.M):
-            curr_cfg = re.sub(r"\bhost.*\s+\S+\s*;", r"\g<0>\n\thost %s;" % (utils.doublequote(newhost)), curr_cfg, count=1)
-            utils.str2file(curr_cfg, CSYNC2_CFG)
-        else:
-            logger_utils.log_only_to_file(": Not updating %s - remote host %s already exists" % (CSYNC2_CFG, newhost))
-    finally:
-        _context.quiet = was_quiet
-
-
 def init_qnetd_remote():
     """
     Triggered by join_cluster, this function adds the joining node's key to the qnetd's authorized_keys
@@ -1787,57 +1756,6 @@ def swap_public_ssh_key(
     return public_key
 
 
-def join_csync2(seed_host, remote_user):
-    """
-    Csync2 configuration for joining node.
-    """
-    if not seed_host:
-        utils.fatal("No existing IP/hostname specified (use -c option)")
-
-    logger.info("Configuring csync2")
-    # Necessary if re-running join on a node that's been configured before.
-    utils.rmfile("/var/lib/csync2/{}.db3".format(utils.this_node()), ignore_errors=True)
-
-    # Not automatically updating /etc/hosts - risky in the general case.
-    # etc_hosts_add_me
-    # local hosts_line=$(etc_hosts_get_me)
-    # [ -n "$hosts_line" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
-
-    # If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
-    # the last arg (but this requires re-enabling this functionality in ha-cluster-init)
-    shell = sh.cluster_shell()
-    cmd = "crm cluster init csync2_remote {}".format(utils.this_node())
-    shell.get_stdout_or_raise_error(cmd, seed_host)
-
-    # This is necessary if syncing /etc/hosts (to ensure everyone's got the
-    # same list of hosts)
-    # local tmp_conf=/etc/hosts.$$
-    # invoke scp root@seed_host:/etc/hosts $tmp_conf \
-    #   || error "Can't retrieve /etc/hosts from seed_host"
-    # install_tmp $tmp_conf /etc/hosts
-    utils.copy_remote_textfile(remote_user, seed_host, "/etc/csync2/csync2.cfg", "/etc/csync2")
-    utils.copy_remote_textfile(remote_user, seed_host, "/etc/csync2/key_hagroup", "/etc/csync2")
-
-    logger.info("Starting {} service".format(CSYNC2_SERVICE))
-    ServiceManager(shell).start_service(CSYNC2_SERVICE, enable=True)
-
-    # Sync new config out.  This goes to all hosts; csync2.cfg definitely
-    # needs to go to all hosts (else hosts other than the seed and the
-    # joining host won't have the joining host in their config yet).
-    # Strictly, the rest of the files need only go to the new host which
-    # could theoretically be effected using `csync2 -xv -P $(hostname)`,
-    # but this still leaves all the other files in dirty state (becuase
-    # they haven't gone to all nodes in the cluster, which means a
-    # subseqent join of another node can fail its sync of corosync.conf
-    # when it updates expected_votes.  Grrr...
-    with logger_utils.status_long("csync2 syncing files in cluster"):
-        cmd = "sudo csync2 -rm /;sudo csync2 -rxv || sudo csync2 -rf / && sudo csync2 -rxv"
-        rc, _, stderr = shell.get_rc_stdout_stderr_without_input(seed_host, cmd)
-        if rc != 0:
-            print("")
-            logger.warning("csync2 run failed - some files may not be sync'd: %s", stderr)
-
-
 def join_ssh_merge(cluster_node, remote_user):
     """
     Ensure known_hosts is the same in all nodes
@@ -2288,7 +2206,7 @@ def bootstrap_init(context):
     _context.load_profiles()
     _context.init_sbd_manager()
 
-    if stage in ('csync2_remote', 'qnetd_remote'):
+    if stage in ('qnetd_remote', ):
         args = _context.args
         logger_utils.log_only_to_file(f"args: {args}")
         if len(args) != 2:
