@@ -518,8 +518,9 @@ class SBDManager:
         for key, value in self.update_dict.items():
             logger.info("Update %s in %s: %s", key, self.SYSCONFIG_SBD, value)
         utils.sysconfig_set(self.SYSCONFIG_SBD, **self.update_dict)
-        bootstrap.sync_file(self.SYSCONFIG_SBD)
-        logger.info("Already synced %s to all nodes", self.SYSCONFIG_SBD)
+        if self.cluster_is_running:
+            bootstrap.sync_file(self.SYSCONFIG_SBD)
+            logger.info("Already synced %s to all nodes", self.SYSCONFIG_SBD)
 
     @classmethod
     def update_sbd_configuration(cls, update_dict: typing.Dict[str, str]) -> None:
