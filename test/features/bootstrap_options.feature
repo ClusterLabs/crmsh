@@ -32,8 +32,6 @@ Feature: crmsh bootstrap process - options
       usage: init [options] [STAGE]
       crm: error: Duplicated input for '-i/--interface' option
       """
-    When    Try "crm cluster init sbd -x -y" on "hanode1"
-    Then    Expected "-x option or SKIP_CSYNC2_SYNC can't be used with any stage" in stderr
     When    Try "crm cluster init -N hanode2" on "hanode1"
     Then    Expected "Can't use -N/--nodes option without -y/--yes option" in stderr
     When    Try "crm cluster init sbd -N hanode1 -N hanode2 -y" on "hanode1"
@@ -46,7 +44,7 @@ Feature: crmsh bootstrap process - options
     When    Try "crm cluster init fdsf -y" on "hanode1"
     Then    Expected "Invalid stage: fdsf(available stages: ssh, firewalld, csync2, corosync, sbd, cluster, ocfs2, gfs2, admin, qdevice)" in stderr
     When    Try "crm cluster join fdsf -y" on "hanode1"
-    Then    Expected "Invalid stage: fdsf(available stages: ssh, firewalld, csync2, ssh_merge, cluster)" in stderr
+    Then    Expected "Invalid stage: fdsf(available stages: ssh, firewalld, ssh_merge, cluster)" in stderr
     When    Try "crm cluster join ssh -y" on "hanode1"
     Then    Expected "Can't use stage(ssh) without specifying cluster node" in stderr
 
@@ -168,20 +166,6 @@ Feature: crmsh bootstrap process - options
     When    Run "crm cluster init -N hanode1 -N hanode2 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
-
-  @clean
-  Scenario: Skip using csync2 by -x option
-    Given   Cluster service is "stopped" on "hanode1"
-    Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y -x" on "hanode1"
-    Then    Cluster service is "started" on "hanode1"
-    And     Service "csync2.socket" is "stopped" on "hanode1"
-    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
-    Then    Cluster service is "started" on "hanode2"
-    And     Service "csync2.socket" is "stopped" on "hanode2"
-    When    Run "crm cluster init csync2 -y" on "hanode1"
-    Then    Service "csync2.socket" is "started" on "hanode1"
-    And     Service "csync2.socket" is "started" on "hanode2"
 
   @clean
   Scenario: Setup cluster with udpu transport

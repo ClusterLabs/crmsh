@@ -1920,8 +1920,7 @@ def cluster_copy_file(local_path, nodes=None, output=True):
             logger.error("Failed to copy %s to %s@%s: %s", local_path, exc.user, host, exc)
             rc = False
         else:
-            logger.info("%s", host)
-            logger.debug("Sync file %s to %s", local_path, host)
+            logger.info("Sync file %s to %s", local_path, host)
     return rc
 
 
