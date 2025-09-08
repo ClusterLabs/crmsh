@@ -2766,7 +2766,7 @@ def retrieve_all_config_files(cluster_node):
         )
         pipe_outlet, pipe_inlet = os.pipe()
         try:
-            child = subprocess.Popen(['cpio', '-iu'], stdin=pipe_outlet, stderr=subprocess.DEVNULL)
+            child = subprocess.Popen(['cpio', '-iud'], stdin=pipe_outlet, stderr=subprocess.DEVNULL)
         except Exception:
             os.close(pipe_inlet)
             raise
