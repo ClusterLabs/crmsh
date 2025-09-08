@@ -1911,16 +1911,40 @@ def cluster_copy_file(local_path, nodes=None, output=True):
     """
     if not nodes:
         nodes = list_cluster_nodes_except_me()
-    rc = True
     if not nodes:
-        return rc
-    results = prun.pcopy_to_remote(local_path, nodes, local_path)
+        return True
+
+    p = Path(local_path)
+    if not p.exists():
+        logger.error("%s does not exist", local_path)
+        return False
+
+    if p.is_absolute():
+        source_path = local_path
+        parent_path = p.parent
+    else:
+        absolute_path = p.resolve()
+        source_path = str(absolute_path)
+        parent_path = absolute_path.parent
+    mkdir_cmd = f"test -d {parent_path} || mkdir -p {parent_path}"
+    crmsh.parallax.parallax_call(nodes, mkdir_cmd)
+
+    recursive = False
+    sync_type = "file"
+    target_path = source_path
+    if p.is_dir():
+        recursive = True
+        sync_type = "directory"
+        target_path = parent_path
+
+    rc = True
+    results = prun.pcopy_to_remote(source_path, nodes, target_path, recursive=recursive)
     for host, exc in results.items():
         if exc is not None:
-            logger.error("Failed to copy %s to %s@%s: %s", local_path, exc.user, host, exc)
+            logger.error("Failed to copy %s to %s@%s: %s", source_path, exc.user, host, exc)
             rc = False
         else:
-            logger.info("Sync file %s to %s", local_path, host)
+            logger.info("Sync %s %s to %s", sync_type, source_path, host)
     return rc
 
 

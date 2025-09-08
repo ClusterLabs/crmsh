@@ -2549,7 +2549,7 @@ def bootstrap_init_geo(context):
     create_booth_authkey()
     create_booth_config(_context.arbitrator, _context.clusters, _context.tickets)
     logger.info("Sync booth configuration across cluster")
-    csync2_update(BOOTH_DIR)
+    sync_file(BOOTH_DIR)
     init_csync2_geo()
     geo_cib_config(_context.clusters)
 
@@ -2648,7 +2648,7 @@ def bootstrap_join_geo(context):
         user_by_host.save_local()
     geo_fetch_config(node)
     logger.info("Sync booth configuration across cluster")
-    csync2_update(BOOTH_DIR)
+    sync_file(BOOTH_DIR)
     geo_cib_config(_context.clusters)
 
 
