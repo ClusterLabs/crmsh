@@ -396,7 +396,7 @@ class SBDTimeout(object):
         utils.mkdirp(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
         sbd_delay_start_file = "{}/sbd_delay_start.conf".format(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
         utils.str2file("[Service]\nTimeoutSec={}".format(int(1.2*int(sbd_delay_start_value))), sbd_delay_start_file)
-        bootstrap.sync_file(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
+        bootstrap.sync_path(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
         utils.cluster_run_cmd("systemctl daemon-reload")
 
     def adjust_stonith_timeout(self):
@@ -519,7 +519,7 @@ class SBDManager:
             logger.info("Update %s in %s: %s", key, self.SYSCONFIG_SBD, value)
         utils.sysconfig_set(self.SYSCONFIG_SBD, **self.update_dict)
         if self.cluster_is_running:
-            bootstrap.sync_file(self.SYSCONFIG_SBD)
+            bootstrap.sync_path(self.SYSCONFIG_SBD)
             logger.info("Already synced %s to all nodes", self.SYSCONFIG_SBD)
 
     @classmethod

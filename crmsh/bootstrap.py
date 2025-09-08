@@ -533,7 +533,7 @@ def is_online():
     cluster_node = get_node_canonical_hostname(cluster_node)
     if not xmlutil.CrmMonXmlParser().is_node_online(cluster_node):
         shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
-        sync_file(corosync.conf(), cluster_node)
+        sync_path(corosync.conf(), cluster_node)
         sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R", cluster_node)
         ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).stop_service("corosync")
         print()
@@ -1102,7 +1102,7 @@ key /etc/csync2/key_hagroup;
     """.format(host_str, csync2_file_list), CSYNC2_CFG)
 
     for f in [CSYNC2_CFG, CSYNC2_KEY]:
-        sync_file(f)
+        sync_path(f)
 
     service_manager = ServiceManager()
     for host in host_list:
@@ -1977,7 +1977,7 @@ def join_cluster(seed_host, remote_user):
         corosync.add_node_config(ringXaddr_res)
     except corosync.IPAlreadyConfiguredError as e:
         logger.warning(e)
-    sync_file(corosync.conf(), seed_host)
+    sync_path(corosync.conf(), seed_host)
     shell.get_stdout_or_raise_error('corosync-cfgtool -R', seed_host)
 
     _context.sbd_manager.join_sbd(remote_user, seed_host)
@@ -1998,7 +1998,7 @@ def join_cluster(seed_host, remote_user):
             logger.error("Failed to delete no-quorum-policy=ignore")
 
     corosync.configure_two_node()
-    sync_file(corosync.conf(), seed_host)
+    sync_path(corosync.conf(), seed_host)
     sync_files_to_disk()
 
     with logger_utils.status_long("Reloading cluster configuration"):
@@ -2138,7 +2138,7 @@ def remove_node_from_cluster(node, dead_node=False):
     adjust_properties()
 
     logger.info("Propagating configuration changes across the remaining nodes")
-    sync_file(corosync.conf())
+    sync_path(corosync.conf())
 
     sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
 
@@ -2372,7 +2372,7 @@ def remove_qdevice() -> None:
         qdevice.QDevice.remove_qdevice_config()
         qdevice.QDevice.remove_qdevice_db()
         corosync.configure_two_node(removing=True)
-        sync_file(corosync.conf())
+        sync_path(corosync.conf())
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
         sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
     elif qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART:
@@ -2549,7 +2549,7 @@ def bootstrap_init_geo(context):
     create_booth_authkey()
     create_booth_config(_context.arbitrator, _context.clusters, _context.tickets)
     logger.info("Sync booth configuration across cluster")
-    sync_file(BOOTH_DIR)
+    sync_path(BOOTH_DIR)
     init_csync2_geo()
     geo_cib_config(_context.clusters)
 
@@ -2648,7 +2648,7 @@ def bootstrap_join_geo(context):
         user_by_host.save_local()
     geo_fetch_config(node)
     logger.info("Sync booth configuration across cluster")
-    sync_file(BOOTH_DIR)
+    sync_path(BOOTH_DIR)
     geo_cib_config(_context.clusters)
 
 
@@ -2784,7 +2784,7 @@ def retrieve_all_config_files(cluster_node):
             utils.fatal("Failed to retrieve config files from {}".format(cluster_node))
 
 
-def sync_file(path, peer_node=None):
+def sync_path(path, peer_node=None):
     """
     Sync files between cluster nodes
     """
