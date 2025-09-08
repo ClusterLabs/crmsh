@@ -2791,7 +2791,7 @@ def sync_path(path, peer_node=None):
     node_list = []
     if peer_node:
         node_list = utils.fetch_cluster_node_list_from_node(peer_node)
-    utils.cluster_copy_file(path, nodes=node_list, output=False)
+    utils.cluster_copy_path(path, nodes=node_list)
 
 
 def restart_cluster():

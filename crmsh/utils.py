@@ -1905,9 +1905,9 @@ def remote_checksum(local_path, nodes, this_node):
             print("%-16s: %s" % (host, hashlib.sha1(f.read()).hexdigest()))
 
 
-def cluster_copy_file(local_path, nodes=None, output=True):
+def cluster_copy_path(local_path, nodes=None):
     """
-    Copies given file to all other cluster nodes.
+    Copies given file/directory to all other cluster nodes.
     """
     if not nodes:
         nodes = list_cluster_nodes_except_me()
