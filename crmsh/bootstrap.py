@@ -140,6 +140,7 @@ class Context(object):
         self.rm_list = [SBDManager.SYSCONFIG_SBD, corosync.conf(), COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH, "~/.config/crm/*"]
         self.use_ssh_agent = None
+        self.skip_csync2 = None
 
     @classmethod
     def set_context(cls, options):
@@ -310,6 +311,8 @@ class Context(object):
             self.qdevice_inst.valid_qdevice_options()
         if self.ocfs2_devices or self.gfs2_devices or self.stage in ("ocfs2", "gfs2"):
             cluster_fs.ClusterFSManager.pre_verify(self)
+        if self.skip_csync2:
+            logger.warning("-x option is deprecated and will be removed in future releases")
         self._validate_stage()
         self._validate_network_options()
         self._validate_cluster_node()

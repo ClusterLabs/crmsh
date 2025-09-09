@@ -422,6 +422,8 @@ Examples:
                             help="Enable SBD even if no SBD device is configured (diskless mode)")
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
                             help="Use the given watchdog device or driver name")
+        parser.add_argument("-x", "--skip-csync2-sync", dest="skip_csync2", action="store_true",
+                            help="Skip csync2 initialization (default, deprecated)")
         parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
                             help="Try to use an existing key from ssh-agent (default)")
 
