@@ -69,7 +69,7 @@ BuildRequires:  python3-PyYAML
 %if 0%{?suse_version}
 # only require csync2 on SUSE since bootstrap
 # only works for SUSE at the moment anyway
-Requires:       csync2
+Recommends:     csync2
 %if %{use_firewalld}
 BuildRequires:  firewall-macros
 %endif
