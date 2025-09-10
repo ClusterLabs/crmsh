@@ -1,5 +1,6 @@
 #!/bin/bash
 CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/nyang23/haleap:master"}
+PYPI_MIRROR=${PYPI_MIRROR:-""}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
 COROSYNC_CONF="/etc/corosync/corosync.conf"
@@ -207,6 +208,7 @@ deploy_ha_node() {
 	if [[ "$node_name" != "qnetd-node" && ! "$node_name" =~ ^pcmk-remote-node[0-9]$ ]];then
 	  podman cp $PROJECT_PATH $node_name:/opt/crmsh
 	  info "Building crmsh on \"$node_name\"..."
+	  [ -n "${PYPI_MIRROR}" ] && podman_exec $node_name "pip config set global.index-url ${PYPI_MIRROR}"
 	  podman_exec $node_name "$make_cmd" || \
 		fatal "Building failed on $node_name!"
 	  podman_exec $node_name "chown hacluster:haclient -R /var/log/crmsh"
