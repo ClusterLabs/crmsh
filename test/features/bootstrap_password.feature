@@ -3,7 +3,7 @@ Feature: crmsh bootstrap process - with password authentication
 
   Need nodes: hanode1 hanode2 hanode3
 
-  Background: Disable key-based authentication
+  Scenario: Disable key-based authentication
     Given Permit root ssh login with password on "hanode1"
     Given Permit root ssh login with password on "hanode2"
     Given Permit root ssh login with password on "hanode3"
@@ -32,3 +32,43 @@ Feature: crmsh bootstrap process - with password authentication
     Then Cluster is using "knet" transport mode
     Then Run "corosync-cmapctl|grep "votequorum.two_node .* = 1"" OK on "hanode1"
     Then Run "corosync-cmapctl|grep "votequorum.two_node .* = 1"" OK on "hanode2"
+
+  Scenario: Join on a 3rd node "hanode3"
+    Then This expect program exits with 0 on "hanode3"
+      """
+      set timeout 120
+      spawn crm cluster join -c hanode1 -y
+      for {set i 0} {$i < 2} {incr i} {
+        expect "Password: " {
+          send "root123\n"
+        }
+      }
+      expect eof
+      """
+    Then Cluster service is "started" on "hanode3"
+    Then Online nodes are "hanode1 hanode2 hanode3"
+    Then two_node in corosync.conf is "0"
+    Then Cluster is using "knet" transport mode
+    Then Run "corosync-cmapctl|grep "votequorum.two_node .* = 0"" OK on "hanode1"
+    Then Run "corosync-cmapctl|grep "votequorum.two_node .* = 0"" OK on "hanode2"
+    Then Run "corosync-cmapctl|grep "votequorum.two_node .* = 0"" OK on "hanode3"
+
+  @clean
+  Scenario: Bootstrap using `init -N`
+    Given Directory ~root/.ssh is empty on "hanode1"
+    Given Directory ~root/.ssh is empty on "hanode2"
+    Given Directory ~root/.ssh is empty on "hanode3"
+    Then This expect program exits with 0 on "hanode1"
+      """
+      set timeout 120
+      spawn crm cluster init -N hanode2 -N hanode3 -y
+      for {set i 0} {$i < 2} {incr i} {
+        expect "Password: " {
+          send "root123\n"
+        }
+      }
+      expect eof
+      """
+    Then Online nodes are "hanode1 hanode2 hanode3"
+    Then two_node in corosync.conf is "0"
+    Then Cluster is using "knet" transport mode
