@@ -3155,7 +3155,7 @@ def sync_file(path):
     Sync files between cluster nodes
     """
     if _context.skip_csync2:
-        utils.cluster_copy_file(path, nodes=_context.node_list_in_cluster, output=False)
+        utils.cluster_copy_path(path, nodes=_context.node_list_in_cluster)
     else:
         csync2_update(path)
 
