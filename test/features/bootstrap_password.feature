@@ -1,24 +1,29 @@
 # vim: sw=2 sts=2
 Feature: crmsh bootstrap process - with password authentication
 
-  Need nodes: hanode1 hanode2 hanode3
+  Need nodes: hanode1 hanode2 hanode3 qnetd-node
 
   Scenario: Disable key-based authentication
     Given Permit root ssh login with password on "hanode1"
     Given Permit root ssh login with password on "hanode2"
     Given Permit root ssh login with password on "hanode3"
+    Given Permit root ssh login with password on "qnetd-node"
     Given The password of user "root" set to "root123" on "hanode1"
     Given The password of user "root" set to "root123" on "hanode2"
     Given The password of user "root" set to "root123" on "hanode3"
+    Given The password of user "root" set to "root123" on "qnetd-node"
     Given The password of user "alice" set to "alice123" on "hanode1"
     Given The password of user "alice" set to "alice123" on "hanode2"
     Given The password of user "alice" set to "alice123" on "hanode3"
+    Given The password of user "alice" set to "alice123" on "qnetd-node"
     Given Directory ~root/.ssh is empty on "hanode1"
     Given Directory ~root/.ssh is empty on "hanode2"
     Given Directory ~root/.ssh is empty on "hanode3"
+    Given Directory ~root/.ssh is empty on "qnetd-node"
     Given Directory ~alice/.ssh is empty on "hanode1"
     Given Directory ~alice/.ssh is empty on "hanode2"
     Given Directory ~alice/.ssh is empty on "hanode3"
+    Given Directory ~alice/.ssh is empty on "qnetd-node"
 
   Scenario: Init cluster service on node "hanode1", and join on node "hanode2"
     When Run "crm cluster init -y" on "hanode1"
@@ -144,3 +149,68 @@ Feature: crmsh bootstrap process - with password authentication
     Then Online nodes are "hanode1 hanode2 hanode3"
     Then two_node in corosync.conf is "0"
     Then Cluster is using "knet" transport mode
+
+  @clean
+  Scenario: Setup qdevice/qnetd during init/join process
+    Given Directory ~root/.ssh is empty on "hanode1"
+    Given Directory ~root/.ssh is empty on "hanode2"
+    Given Directory ~root/.ssh is empty on "qnetd-node"
+    Given Directory ~alice/.ssh is empty on "hanode1"
+    Given Directory ~alice/.ssh is empty on "hanode2"
+    Given Directory ~alice/.ssh is empty on "qnetd-node"
+    Then This expect program exits with 0 on "root"@"hanode1"
+      """
+      set timeout 120
+      spawn crm cluster init --qnetd-hostname=qnetd-node -y
+      expect "Password: " {
+        send "root123\n"
+      }
+      expect eof
+      """
+    Then    Cluster service is "started" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    Then    Service "corosync-qnetd" is "started" on "qnetd-node"
+    Then This expect program exits with 0 on "root"@"hanode2"
+      """
+      set timeout 120
+      spawn crm cluster join -c hanode1 -y
+      expect "Password: " {
+        send "root123\n"
+      }
+      expect eof
+      """
+    Then    Cluster service is "started" on "hanode2"
+    Then    Online nodes are "hanode1 hanode2"
+    Then    Service "corosync-qdevice" is "started" on "hanode2"
+    Then    Service "corosync-qnetd" is "started" on "qnetd-node"
+
+  @clean
+  Scenario: Setup qdevice/qnetd on running cluster
+    Given Directory ~root/.ssh is empty on "hanode1"
+    Given Directory ~root/.ssh is empty on "hanode2"
+    Given Directory ~root/.ssh is empty on "qnetd-node"
+    Given Directory ~alice/.ssh is empty on "hanode1"
+    Given Directory ~alice/.ssh is empty on "hanode2"
+    Given Directory ~alice/.ssh is empty on "qnetd-node"
+    Then This expect program exits with 0 on "root"@"hanode1"
+      """
+      set timeout 120
+      spawn crm cluster init -N hanode1 -N hanode2 -y
+      expect "Password: " {
+        send "root123\n"
+      }
+      expect eof
+      """
+    Then    Online nodes are "hanode1 hanode2"
+    Then This expect program exits with 0 on "root"@"hanode1"
+      """
+      set timeout 120
+      spawn crm cluster init qdevice --qnetd-hostname=qnetd-node -y
+      expect "Password: " {
+        send "root123\n"
+      }
+      expect eof
+      """
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode2"
+    Then    Service "corosync-qnetd" is "started" on "qnetd-node"
