@@ -51,16 +51,15 @@ def step_impl(context, user, node):
         assert 0 == rc
 
 
-@then('This expect program exits with 0 on "{node}"')
-def step_impl(context, node):
+@then('This expect program exits with 0 on "{user}"@"{node}"')
+def step_impl(context, user, node):
     eof = _gen_random_string()
     script = f'''expect <(cat << '{eof}'
 {context.text}
 {eof}
 )
 '''
-    # FIXME: sudoer
-    rc, stdout, stderr = behave_agent.call(node, 1122, script)
+    rc, stdout, stderr = behave_agent.call(node, 1122, script, user)
     if 0 == rc:
         print(stdout.decode('utf-8', errors='backslashreplace'))
         return
