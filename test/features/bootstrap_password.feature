@@ -214,3 +214,68 @@ Feature: crmsh bootstrap process - with password authentication
     Then    Service "corosync-qdevice" is "started" on "hanode1"
     Then    Service "corosync-qdevice" is "started" on "hanode2"
     Then    Service "corosync-qnetd" is "started" on "qnetd-node"
+
+  @clean
+  Scenario: Setup qdevice/qnetd during init/join process (non-root)
+    Given Directory ~root/.ssh is empty on "hanode1"
+    Given Directory ~root/.ssh is empty on "hanode2"
+    Given Directory ~root/.ssh is empty on "qnetd-node"
+    Given Directory ~alice/.ssh is empty on "hanode1"
+    Given Directory ~alice/.ssh is empty on "hanode2"
+    Given Directory ~alice/.ssh is empty on "qnetd-node"
+    Then This expect program exits with 0 on "alice"@"hanode1"
+      """
+      set timeout 120
+      spawn sudo crm cluster init --qnetd-hostname=alice@qnetd-node -y
+      expect "Password: " {
+        send "alice123\n"
+      }
+      expect eof
+      """
+    Then    Cluster service is "started" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    Then    Service "corosync-qnetd" is "started" on "qnetd-node"
+    Then This expect program exits with 0 on "alice"@"hanode2"
+      """
+      set timeout 120
+      spawn sudo crm cluster join -c alice@hanode1 -y
+      expect "Password: " {
+        send "alice123\n"
+      }
+      expect eof
+      """
+    Then    Cluster service is "started" on "hanode2"
+    Then    Online nodes are "hanode1 hanode2"
+    Then    Service "corosync-qdevice" is "started" on "hanode2"
+    Then    Service "corosync-qnetd" is "started" on "qnetd-node"
+
+  @clean
+  Scenario: Setup qdevice/qnetd on running cluster
+    Given Directory ~root/.ssh is empty on "hanode1"
+    Given Directory ~root/.ssh is empty on "hanode2"
+    Given Directory ~root/.ssh is empty on "qnetd-node"
+    Given Directory ~alice/.ssh is empty on "hanode1"
+    Given Directory ~alice/.ssh is empty on "hanode2"
+    Given Directory ~alice/.ssh is empty on "qnetd-node"
+    Then This expect program exits with 0 on "alice"@"hanode1"
+      """
+      set timeout 120
+      spawn sudo crm cluster init -N alice@hanode2 -y
+      expect "Password: " {
+        send "alice123\n"
+      }
+      expect eof
+      """
+    Then    Online nodes are "hanode1 hanode2"
+    Then This expect program exits with 0 on "alice"@"hanode1"
+      """
+      set timeout 120
+      spawn sudo crm cluster init qdevice --qnetd-hostname=alice@qnetd-node -y
+      expect "Password: " {
+        send "alice123\n"
+      }
+      expect eof
+      """
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode2"
+    Then    Service "corosync-qnetd" is "started" on "qnetd-node"
