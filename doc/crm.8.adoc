@@ -1004,17 +1004,17 @@ These commands enable easy installation and maintenance of a HA
 cluster, by providing support for package installation, configuration
 of the cluster messaging layer, file system setup and more.
 
-[[cmdhelp.cluster.copy,Copy file to other cluster nodes]]
+[[cmdhelp.cluster.copy,Copy file or directory to other cluster nodes]]
 ==== `copy`
 
-Copy file to other cluster nodes.
+Copy file or directory to other cluster nodes.
 
-Copies the given file to all other nodes unless given a
+Copies the given file or directory to all other nodes unless given a
 list of nodes to copy to as argument.
 
 Usage:
 ...............
-copy <filename> [nodes ...]
+copy <path> [nodes ...]
 ...............
 
 Example:

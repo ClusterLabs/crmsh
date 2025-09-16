@@ -423,7 +423,7 @@ Examples:
         parser.add_argument("-w", "--watchdog", dest="watchdog", metavar="WATCHDOG",
                             help="Use the given watchdog device or driver name")
         parser.add_argument("-x", "--skip-csync2-sync", dest="skip_csync2", action="store_true",
-                            help="Skip csync2 initialization (an experimental option)")
+                            help="Skip csync2 initialization (default, deprecated)")
         parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
                             help="Try to use an existing key from ssh-agent (default)")
 
@@ -511,9 +511,7 @@ to the -c option.""",usage="join [options] [STAGE]", epilog="""
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
     firewalld   Add high-availability service to firewalld
-    csync2      Configure csync2 (requires -c <host>)
-    ssh_merge   Merge root's SSH known_hosts across all nodes (csync2 must
-                already be configured).
+    ssh_merge   Merge root's SSH known_hosts across all nodes
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.
@@ -935,13 +933,13 @@ to get the geo cluster configuration.""",
                     else:
                         logger.info("[%s]\n%s", host, utils.to_ascii(result.stdout))
 
-    def do_copy(self, context, local_file, *nodes):
+    def do_copy(self, context, local_path, *nodes):
         '''
-        usage: copy <filename> [nodes ...]
-        Copy file to other cluster nodes.
+        usage: copy <path> [nodes ...]
+        Copy file/directory to other cluster nodes.
         If given no nodes as arguments, copy to all other cluster nodes.
         '''
-        return utils.cluster_copy_file(local_file, nodes)
+        return utils.cluster_copy_path(local_path, nodes)
 
     def do_diff(self, context, filename, *nodes):
         "usage: diff <filename> [--checksum] [nodes...]. Diff file across cluster."

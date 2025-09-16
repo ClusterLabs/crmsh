@@ -959,7 +959,7 @@ Membership information
         mock_parser_inst.save.assert_called_once()
 
     @mock.patch('crmsh.sh.cluster_shell')
-    @mock.patch('crmsh.bootstrap.sync_file')
+    @mock.patch('crmsh.bootstrap.sync_path')
     @mock.patch('crmsh.corosync.configure_two_node')
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     @mock.patch('crmsh.qdevice.QDevice.write_qdevice_config')

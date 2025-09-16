@@ -78,7 +78,7 @@ options:
   -w, --watchdog WATCHDOG
                         Use the given watchdog device or driver name
   -x, --skip-csync2-sync
-                        Skip csync2 initialization (an experimental option)
+                        Skip csync2 initialization (default, deprecated)
   --use-ssh-agent, --no-use-ssh-agent
                         Try to use an existing key from ssh-agent (default)
 
@@ -251,9 +251,7 @@ Network configuration:
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
     firewalld   Add high-availability service to firewalld
-    csync2      Configure csync2 (requires -c <host>)
-    ssh_merge   Merge root's SSH known_hosts across all nodes (csync2 must
-                already be configured).
+    ssh_merge   Merge root's SSH known_hosts across all nodes
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.

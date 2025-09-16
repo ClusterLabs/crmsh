@@ -586,7 +586,7 @@ class QDevice(object):
         self.write_qdevice_config()
         with logger_utils.status_long("Update configuration"):
             corosync.configure_two_node(qdevice_adding=True)
-            bootstrap.sync_file(corosync.conf())
+            bootstrap.sync_path(corosync.conf())
             if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
                 sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
 

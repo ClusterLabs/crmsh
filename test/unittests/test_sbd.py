@@ -319,7 +319,7 @@ class TestSBDTimeout(unittest.TestCase):
         mock_get_sbd_systemd_start_timeout.assert_called_once()
 
     @patch('crmsh.utils.cluster_run_cmd')
-    @patch('crmsh.bootstrap.sync_file')
+    @patch('crmsh.bootstrap.sync_path')
     @patch('crmsh.utils.str2file')
     @patch('crmsh.utils.mkdirp')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout')
@@ -718,7 +718,7 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance.update_configuration()
         mock_sysconfig_set.assert_not_called()
 
-    @patch('crmsh.bootstrap.sync_file')
+    @patch('crmsh.bootstrap.sync_path')
     @patch('crmsh.utils.sysconfig_set')
     @patch('logging.Logger.info')
     @patch('crmsh.utils.copy_local_file')
