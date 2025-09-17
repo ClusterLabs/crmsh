@@ -710,9 +710,25 @@ class SBDManager:
             SBDManager.enable_sbd_service()
 
             if self.cluster_is_running:
+
+                # If diskless SBD is being added and sbd.service is not running, like running:
+                #     crm cluster init sbd -S -y
+                # the cluster must be restarted first to activate sbd.service on all nodes.
+                # Only then should additional properties be configured,
+                # because the stonith-watchdog-timeout property requires sbd.service to be active.
+                restart_cluster_first = self.diskless_sbd and not ServiceManager().service_is_active(constants.SBD_SERVICE)
+                if restart_cluster_first:
+                    SBDManager.restart_cluster_if_possible(with_maintenance_mode=enabled)
+
                 self.configure_sbd()
                 bootstrap.adjust_properties(with_sbd=True)
-                SBDManager.restart_cluster_if_possible(with_maintenance_mode=enabled)
+
+                # In other cases, it is better to restart the cluster
+                # after modifying SBD-related configurations.
+                # This helps prevent unexpected issues, such as nodes being fenced
+                # due to large SBD_WATCHDOG_TIMEOUT values combined with smaller timeouts.
+                if not restart_cluster_first:
+                    SBDManager.restart_cluster_if_possible(with_maintenance_mode=enabled)
 
     def join_sbd(self, remote_user, peer_host):
         '''
