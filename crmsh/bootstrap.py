@@ -1681,36 +1681,50 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("sshd.service", enable=True)
     if ssh_public_keys:
         local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK')})
+        ssh_shell = sh.SSHShell(local_shell, local_user)
+        authorized_key_manager = ssh_key.AuthorizedKeyManager(ssh_shell)
+        authorized_key_manager.add(seed_host, seed_user, ssh_public_keys[0])
+        logger.info(
+            'A public key is added to authorized_keys for user %s@%s: %s',
+            local_user, seed_host, ssh_public_keys[0].fingerprint(),
+        )
+        authorized_key_manager.add(None, seed_user, ssh_public_keys[0])
+        logger.info(
+            'A public key is added to authorized_keys for user %s: %s',
+            local_user, ssh_public_keys[0].fingerprint(),
+        )
+        # From here, login to remote_node is passwordless
+        ssh_shell = sh.SSHShell(local_shell, local_user)
     else:
         local_shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': ''})
-    result = ssh_copy_id_no_raise(local_user, seed_user, seed_host, local_shell)
-    if 0 != result.returncode:
-        msg = f"Failed to login to {seed_user}@{seed_host}. Please check the credentials."
-        sudoer = userdir.get_sudoer()
-        if sudoer and seed_user != sudoer:
-            args = ['sudo crm']
-            args += [x for x in sys.argv[1:]]
-            for i, arg in enumerate(args):
-                if arg == '-c' or arg == '--cluster-node' and i + 1 < len(args):
-                    if '@' not in args[i+1]:
-                        args[i + 1] = f'{sudoer}@{seed_host}'
-                        msg += '\nOr, run "{}".'.format(' '.join(args))
-        raise ValueError(msg)
-    # From here, login to remote_node is passwordless
-    ssh_shell = sh.SSHShell(local_shell, local_user)
-    authorized_key_manager = ssh_key.AuthorizedKeyManager(ssh_shell)
-    if not result.public_keys:
-        pass
-    elif isinstance(result.public_keys[0], ssh_key.KeyFile):
-        public_key = ssh_key.InMemoryPublicKey(
-            generate_ssh_key_pair_on_remote(local_shell, local_user, seed_host, seed_user, seed_user),
-        )
-        authorized_key_manager.add( None, local_user, public_key)
-        logger.info('A public key is added to authorized_keys for user %s: %s', local_user, public_key.fingerprint())
-    elif isinstance(result.public_keys[0], ssh_key.InMemoryPublicKey):
-        authorized_key_manager.add(None, local_user, result.public_keys[0])
-        logger.info('A public key is added to authorized_keys for user %s: %s', local_user, result.public_keys[0].fingerprint())
-    # else is not None do nothing
+        result = ssh_copy_id_no_raise(local_user, seed_user, seed_host, local_shell)
+        if 0 != result.returncode:
+            msg = f"Failed to login to {seed_user}@{seed_host}. Please check the credentials."
+            sudoer = userdir.get_sudoer()
+            if sudoer and seed_user != sudoer:
+                args = ['sudo crm']
+                args += [x for x in sys.argv[1:]]
+                for i, arg in enumerate(args):
+                    if arg == '-c' or arg == '--cluster-node' and i + 1 < len(args):
+                        if '@' not in args[i+1]:
+                            args[i + 1] = f'{sudoer}@{seed_host}'
+                            msg += '\nOr, run "{}".'.format(' '.join(args))
+            raise ValueError(msg)
+        # From here, login to remote_node is passwordless
+        ssh_shell = sh.SSHShell(local_shell, local_user)
+        authorized_key_manager = ssh_key.AuthorizedKeyManager(ssh_shell)
+        if not result.public_keys:
+            pass
+        elif isinstance(result.public_keys[0], ssh_key.KeyFile):
+            public_key = ssh_key.InMemoryPublicKey(
+                generate_ssh_key_pair_on_remote(local_shell, local_user, seed_host, seed_user, seed_user),
+            )
+            authorized_key_manager.add( None, local_user, public_key)
+            logger.info('A public key is added to authorized_keys for user %s: %s', local_user, public_key.fingerprint())
+        elif isinstance(result.public_keys[0], ssh_key.InMemoryPublicKey):
+            authorized_key_manager.add(None, local_user, result.public_keys[0])
+            logger.info('A public key is added to authorized_keys for user %s: %s', local_user, result.public_keys[0].fingerprint())
+        # else is not None do nothing
     if seed_user != 'root' and 0 != ssh_shell.subprocess_run_without_input(
             seed_host, seed_user, 'sudo true',
             stdout=subprocess.DEVNULL,
