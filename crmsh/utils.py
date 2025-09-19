@@ -3301,4 +3301,20 @@ def validate_and_get_reachable_nodes(
             member_list.remove(node)
 
     return member_list + remote_list
+
+
+def handle_deprecated_ms_command(cli_str: str) -> str:
+    if not re.search(r'^ms\s+', cli_str) or not is_ocf_1_1_cib_schema_detected():
+        return cli_str
+
+    meta_str = " " if "meta" in cli_str else " meta "
+    clone_str = re.sub(r'^ms\s+', 'clone ', cli_str)
+    new_cli_str = f"{clone_str}{meta_str}promotable=true"
+
+    if config.core.OCF_1_1_SUPPORT:
+        logger.info("Convert deprecated \"ms\" command to promotable clone: %s", new_cli_str)
+        return new_cli_str
+    else:
+        logger.warning("The \"ms\" command is deprecated, please use: %s", new_cli_str)
+        return cli_str
 # vim:ts=4:sw=4:et:
