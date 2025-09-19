@@ -512,6 +512,8 @@ class ProgressBar:
         except OSError:
             # not a terminal
             return
+        if width == 0:
+            return
         self._i = (self._i + 1) % width
         line = '\r{}{}'.format('.' * self._i, ' ' * (width - self._i))
         sys.stdout.write(line)
@@ -522,6 +524,8 @@ class ProgressBar:
             width, _ = os.get_terminal_size()
         except OSError:
             # not a terminal
+            return
+        if width == 0:
             return
         if self._i == 0:
             pass
