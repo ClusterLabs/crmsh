@@ -575,6 +575,7 @@ class CibObjectSetCli(CibObjectSet):
         diff = CibDiff(self)
         rc = True
         comments = []
+        utils.auto_convert_role = True
         with logger_utils.line_number():
             for cli_text in lines2cli(s):
                 logger_utils.incr_lineno()
