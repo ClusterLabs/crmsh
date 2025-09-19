@@ -1147,7 +1147,7 @@ INFO: Stop tracing p0 for operation stop
 WARNING: This command 'rm' is deprecated, please use 'delete'
 INFO: "rm" is accepted as "delete"
 .TRY configure ms msg g
-WARNING: "ms" is deprecated. Please use "clone msg g meta promotable=true"
+WARNING: The "ms" command is deprecated, please use: clone msg g meta promotable=true
 .TRY resource scores
 .EXT crm_simulate -sUL
 2 of 6 resource instances DISABLED and 0 BLOCKED from further action due to failure
