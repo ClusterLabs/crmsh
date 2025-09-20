@@ -22,19 +22,19 @@
 .INP: clone c d3 	meta clone-max=1
 .INP: primitive d4 ocf:pacemaker:Dummy
 .INP: ms m d4
-WARNING: 19: "ms" is deprecated. Please use "clone m d4 meta promotable=true"
+WARNING: 19: The "ms" command is deprecated, please use: clone m d4 meta promotable=true
 .INP: delete m
 .INP: master m d4
 WARNING: 21: This command 'master' is deprecated, please use 'ms'
 INFO: 21: "master" is accepted as "ms"
-WARNING: 21: "ms" is deprecated. Please use "clone m d4 meta promotable=true"
+WARNING: 21: The "ms" command is deprecated, please use: clone m d4 meta promotable=true
 .INP: primitive s5 ocf:pacemaker:Stateful 	operations $id-ref=d1-ops
 .EXT crm_resource --show-metadata ocf:pacemaker:Stateful
 .INP: primitive s6 ocf:pacemaker:Stateful 	operations $id-ref=d1
 .INP: ms m5 s5
-WARNING: 24: "ms" is deprecated. Please use "clone m5 s5 meta promotable=true"
+WARNING: 24: The "ms" command is deprecated, please use: clone m5 s5 meta promotable=true
 .INP: ms m6 s6
-WARNING: 25: "ms" is deprecated. Please use "clone m6 s6 meta promotable=true"
+WARNING: 25: The "ms" command is deprecated, please use: clone m6 s6 meta promotable=true
 .INP: primitive d7 Dummy 	params rule inf: #uname eq node1 fake=1 	params rule inf: #uname eq node2 fake=2         op start interval=0 timeout=60s         op_params 2: rule #uname eq node1 op_param=dummy         op_params 1: op_param=smart         op_meta 2: rule #ra-version version:gt 1.0 start-delay=120m         op_meta 1: start-delay=60m
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: primitive d8 ocf:pacemaker:Dummy

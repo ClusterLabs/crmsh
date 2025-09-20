@@ -576,8 +576,10 @@ class CibObjectSetCli(CibObjectSet):
         diff = CibDiff(self)
         rc = True
         comments = []
+        utils.auto_convert_role = True
         with logger_utils.line_number():
             for cli_text in lines2cli(s):
+                cli_text = utils.handle_deprecated_ms_command(cli_text)
                 logger_utils.incr_lineno()
                 node = parse.parse(cli_text, comments=comments)
                 if node not in (False, None):
