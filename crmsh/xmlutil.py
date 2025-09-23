@@ -2,6 +2,8 @@
 # Copyright (C) 2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 
+# import annotations to avoid circular import issues when using type hints
+from __future__ import annotations
 import os
 import subprocess
 import typing
@@ -20,6 +22,7 @@ from . import constants
 from . import userdir
 from .sh import ShellUtils
 from . import utils
+from . import sbd
 from . import log
 
 
@@ -155,13 +158,28 @@ def read_cib(fun, params=None):
     return cib_elem
 
 
-def sanity_check_nvpairs(ident, node, attr_list):
+def sanity_check_nvpairs(ident, node, attr_list) -> utils.VerifyResult:
     rc = utils.VerifyResult.SUCCESS
     for nvpair in node.iterchildren("nvpair"):
+        rc |= check_stonith_watchdog_timeout(nvpair)
         n = nvpair.get("name")
         if n and n not in attr_list:
             logger.warning("%s: unknown attribute '%s'", ident, n)
             rc |= utils.VerifyResult.WARNING
+    return rc
+
+
+def check_stonith_watchdog_timeout(nvpair) -> utils.VerifyResult:
+    rc = utils.VerifyResult.SUCCESS
+    name, value = nvpair.get("name"), nvpair.get("value")
+    if name and name == "stonith-watchdog-timeout" and value:
+        try:
+            intval = int(value)
+            if not sbd.SBDTimeout.able_to_set_stonith_watchdog_timeout(intval):
+                rc = utils.VerifyResult.FATAL_ERROR
+        except ValueError:
+            logger.error("stonith-watchdog-timeout must be an integer")
+            rc = utils.VerifyResult.FATAL_ERROR
     return rc
 
 
