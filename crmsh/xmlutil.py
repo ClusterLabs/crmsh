@@ -158,10 +158,26 @@ def read_cib(fun, params=None):
 def sanity_check_nvpairs(ident, node, attr_list):
     rc = utils.VerifyResult.SUCCESS
     for nvpair in node.iterchildren("nvpair"):
+        rc |= check_stonith_watchdog_timeout(nvpair)
         n = nvpair.get("name")
         if n and n not in attr_list:
             logger.warning("%s: unknown attribute '%s'", ident, n)
             rc |= utils.VerifyResult.WARNING
+    return rc
+
+
+def check_stonith_watchdog_timeout(nvpair):
+    rc = utils.VerifyResult.SUCCESS
+    name, value = nvpair.get("name"), nvpair.get("value")
+    if name and name == "stonith-watchdog-timeout" and value:
+        try:
+            from . import sbd
+            intval = int(value)
+            if not sbd.SBDTimeout.able_to_set_stonith_watchdog_timeout(intval):
+                rc = utils.VerifyResult.FATAL_ERROR
+        except ValueError:
+            logger.error("stonith-watchdog-timeout must be an integer")
+            rc = utils.VerifyResult.FATAL_ERROR
     return rc
 
 
