@@ -187,6 +187,8 @@ deploy_ha_node() {
             else
                 podman_security="--security-opt=apparmor=unconfined"
             fi
+        elif [ -f /sys/fs/selinux/enforce ] && [ x"1" == x"$(cat /sys/fs/selinux/enforce)" ]; then
+            podman_security="--security-opt=label=user:unconfined_u --security-opt=label=role:unconfined_r --security-opt=label=type:unconfined_t"
         else
             podman_security=""
         fi
