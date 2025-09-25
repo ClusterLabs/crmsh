@@ -683,21 +683,25 @@ done
             mock_swap_public_ssh_key_for_secondary_user,
             mock_setup_passwordless_with_other_nodes,
     ):
+        bootstrap._context = mock.Mock(stage=None)
         ssh_key = mock.Mock(crmsh.ssh_key.InMemoryPublicKey)
         ssh_key.fingerprint.return_value = 'foo'
         mock_environ.get.return_value = '/nonexist'
-        mock_ssh_copy_id_no_raise.return_value = crmsh.bootstrap.SshCopyIdResult(
-            0, [ssh_key],
-        )
         mock_ssh_shell.return_value.subprocess_run_without_input.return_value = mock.Mock(returncode=0)
         mock_get_node_canonical_hostname.return_value = 'host1'
         crmsh.bootstrap.join_ssh_impl('alice', 'node1', 'bob', [ssh_key])
         mock_environ.get.assert_called_with('SSH_AUTH_SOCK')
         mock_local_shell.assert_called_with(additional_environ={'SSH_AUTH_SOCK': '/nonexist'})
-        mock_ssh_copy_id_no_raise.assert_called_once_with('alice', 'bob', 'node1', mock_local_shell.return_value)
-        mock_ssh_shell.assert_called_once_with(mock_local_shell.return_value, 'alice')
+        mock_ssh_copy_id_no_raise.assert_not_called()
+        mock_ssh_shell.assert_has_calls([
+            mock.call(mock_local_shell.return_value, 'alice'),
+            mock.call(mock_local_shell.return_value, 'alice'),
+        ])
         mock_authorized_key_manager.assert_called_once_with(mock_ssh_shell.return_value)
-        mock_authorized_key_manager.return_value.add.assert_called_once_with(None, 'alice', ssh_key)
+        mock_authorized_key_manager.return_value.add.assert_has_calls([
+            mock.call('node1', 'bob', ssh_key),
+            mock.call(None, 'bob', ssh_key),
+        ])
         mock_ssh_shell.return_value.subprocess_run_without_input.assert_called_once_with(
             'node1', 'bob', 'sudo true',
             stdout=subprocess.DEVNULL,
@@ -710,7 +714,27 @@ done
             mock_cluster_shell_fn.return_value, 'node1', 'hacluster',
         )
 
+    @mock.patch('crmsh.bootstrap.ssh_copy_id_no_raise')
+    @mock.patch('crmsh.sh.LocalShell')
+    @mock.patch('crmsh.service_manager.ServiceManager')
+    @mock.patch('crmsh.userdir.get_sudoer', return_value=None)
+    def test_join_ssh_impl_no_key_fails(
+            self,
+            mock_get_sudoer,
+            mock_service_manager,
+            mock_local_shell,
+            mock_ssh_copy_id_no_raise,
+    ):
+        bootstrap._context = mock.Mock(stage=None)
+        mock_ssh_copy_id_no_raise.return_value = mock.Mock(returncode=1)
 
+        with self.assertRaisesRegex(ValueError, "Failed to login to bob@node1"):
+            crmsh.bootstrap.join_ssh_impl('alice', 'node1', 'bob', [])
+
+        mock_local_shell.assert_called_with(additional_environ={'SSH_AUTH_SOCK': ''})
+        mock_ssh_copy_id_no_raise.assert_called_once_with('alice', 'bob', 'node1', mock_local_shell.return_value)
+
+    @mock.patch('crmsh.bootstrap.generate_ssh_key_pair_on_remote')
     @mock.patch('crmsh.bootstrap.setup_passwordless_with_other_nodes')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key_for_secondary_user')
     @mock.patch('crmsh.sh.cluster_shell')
@@ -723,12 +747,10 @@ done
     @mock.patch('crmsh.sh.SSHShell')
     @mock.patch('crmsh.bootstrap.ssh_copy_id_no_raise')
     @mock.patch('crmsh.sh.LocalShell')
-    @mock.patch('os.environ')
     @mock.patch('crmsh.service_manager.ServiceManager')
-    def test_join_ssh_bad_credential(
+    def test_join_ssh_impl_no_key(
             self,
             mock_service_manager,
-            mock_environ,
             mock_local_shell,
             mock_ssh_copy_id_no_raise,
             mock_ssh_shell,
@@ -741,25 +763,17 @@ done
             mock_cluster_shell_fn,
             mock_swap_public_ssh_key_for_secondary_user,
             mock_setup_passwordless_with_other_nodes,
+            mock_generate_ssh_key_pair_on_remote,
     ):
-        ssh_key = mock.Mock(crmsh.ssh_key.InMemoryPublicKey)
-        ssh_key.fingerprint.return_value = 'foo'
-        mock_environ.get.side_effect = ['/nonexist', 'alice']
-        mock_ssh_copy_id_no_raise.return_value = crmsh.bootstrap.SshCopyIdResult(
-            255, list(),
-        )
-        with self.assertRaises(ValueError):
-            crmsh.bootstrap.join_ssh_impl('alice', 'node1', 'bob', [ssh_key])
-        mock_environ.get.assert_called_with('SUDO_USER')
-        mock_local_shell.assert_called_with(additional_environ={'SSH_AUTH_SOCK': '/nonexist'})
-        mock_ssh_copy_id_no_raise.assert_called_once_with('alice', 'bob', 'node1', mock_local_shell.return_value)
-        mock_ssh_shell.assert_not_called()
-        mock_authorized_key_manager.assert_not_called()
-        mock_host_user_config.return_value.add.assert_not_called()
-        mock_configure_ssh_key.assert_not_called()
-        mock_change_user_shell.assert_not_called()
-        mock_swap_public_ssh_key_for_secondary_user.assert_not_called()
-
+        bootstrap._context = mock.Mock(stage=None)
+        in_memory_key = mock.Mock(spec=crmsh.ssh_key.InMemoryPublicKey)
+        mock_ssh_copy_id_no_raise.return_value = mock.Mock(returncode=0, public_keys=[in_memory_key])
+        mock_ssh_shell.return_value.subprocess_run_without_input.return_value = mock.Mock(returncode=0)
+        mock_get_node_canonical_hostname.return_value = 'host1'
+        crmsh.bootstrap.join_ssh_impl('alice', 'node1', 'bob', [])
+        mock_ssh_copy_id_no_raise.assert_called_once()
+        mock_generate_ssh_key_pair_on_remote.assert_not_called()
+        mock_authorized_key_manager.return_value.add.assert_called_once_with(None, 'alice', in_memory_key)
 
     @mock.patch('crmsh.ssh_key.AuthorizedKeyManager.add')
     @mock.patch('crmsh.ssh_key.KeyFile.public_key')

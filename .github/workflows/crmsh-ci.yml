@@ -168,6 +168,21 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
 
+  functional_test_bootstrap_password:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+    - uses: actions/checkout@v4
+    - name: functional test for bootstrap using password
+      run:  |
+        index=`$GET_INDEX_OF bootstrap_password`
+        $CONTAINER_SCRIPT $index
+    - uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration
+
+
   functional_test_corosync_ui:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
