@@ -76,7 +76,4 @@ alert notify_9 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
 .INP: _test
 .INP: verify
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
 .INP: commit

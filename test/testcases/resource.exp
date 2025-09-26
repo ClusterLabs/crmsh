@@ -1148,48 +1148,62 @@ WARNING: This command 'rm' is deprecated, please use 'delete'
 INFO: "rm" is accepted as "delete"
 .TRY configure ms msg g
 WARNING: The "ms" command is deprecated, please use: clone msg g meta promotable=true
+warning: Support for <master> (such as in msg) is deprecated and will be removed in a future release. Use <clone> with a promotable meta-attribute instead.
+Warnings found during check: config not valid
 .TRY resource scores
 .EXT crm_simulate -sUL
 2 of 6 resource instances DISABLED and 0 BLOCKED from further action due to failure
 
-Node node1: UNCLEAN (offline)
+Current cluster status:
+  * Node List:
+    * Node node1: UNCLEAN (offline)
 
- st	(stonith:null):	Stopped 
-     Stopped: [ node1 ]
-     Stopped: [ node1 ]
- p3	(ocf::heartbeat:Dummy):	Stopped ( disabled ) 
-     Stopped: [ node1 ]
+  * Full List of Resources:
+    * st	(stonith:null):	 Stopped
+    * Clone Set: c1 [p1] (unmanaged):
+      * Stopped: [ node1 ]
+    * Clone Set: m1 [p2] (promotable):
+      * Stopped: [ node1 ]
+    * p3	(ocf::heartbeat:Dummy):	 Stopped (disabled)
+    * Clone Set: msg [g] (promotable):
+      * Stopped: [ node1 ]
 
-Original: node1 capacity:
-pcmk__primitive_assign: st allocation score on node1: 0
-pcmk__clone_assign: c1 allocation score on node1: 0
-pcmk__clone_assign: p1:0 allocation score on node1: 0
-pcmk__primitive_assign: p1:0 allocation score on node1: -INFINITY
-pcmk__clone_assign: m1 allocation score on node1: 0
-pcmk__clone_assign: p2:0 allocation score on node1: 0
-pcmk__primitive_assign: p2:0 allocation score on node1: -INFINITY
-p2:0 promotion score on none: 0
-pcmk__primitive_assign: p3 allocation score on node1: -INFINITY
-pcmk__clone_assign: msg allocation score on node1: 0
-pcmk__clone_assign: g:0 allocation score on node1: 0
-pcmk__clone_assign: p0:0 allocation score on node1: 0
-pcmk__clone_assign: p4:0 allocation score on node1: 0
-pcmk__group_assign: g:0 allocation score on node1: -INFINITY
-pcmk__group_assign: p0:0 allocation score on node1: -INFINITY
-pcmk__group_assign: p4:0 allocation score on node1: -INFINITY
-pcmk__primitive_assign: p0:0 allocation score on node1: -INFINITY
-pcmk__primitive_assign: p4:0 allocation score on node1: -INFINITY
-g:0 promotion score on none: 0
-Remaining: node1 capacity:
+Assignment Scores and Utilization Information:
+  * Original: node1 capacity:
+  * pcmk__primitive_assign: st allocation score on node1: 0
+  * pcmk__clone_assign: c1 allocation score on node1: 0
+  * pcmk__clone_assign: p1:0 allocation score on node1: 0
+  * pcmk__primitive_assign: p1:0 allocation score on node1: -INFINITY
+  * pcmk__clone_assign: m1 allocation score on node1: 0
+  * pcmk__clone_assign: p2:0 allocation score on node1: 0
+  * pcmk__primitive_assign: p2:0 allocation score on node1: -INFINITY
+  * p2:0 promotion score (inactive): -INFINITY
+  * pcmk__primitive_assign: p3 allocation score on node1: -INFINITY
+  * pcmk__clone_assign: msg allocation score on node1: 0
+  * pcmk__clone_assign: g:0 allocation score on node1: 0
+  * pcmk__clone_assign: p0:0 allocation score on node1: 0
+  * pcmk__clone_assign: p4:0 allocation score on node1: 0
+  * pcmk__group_assign: g:0 allocation score on node1: -INFINITY
+  * pcmk__group_assign: p0:0 allocation score on node1: -INFINITY
+  * pcmk__group_assign: p4:0 allocation score on node1: -INFINITY
+  * pcmk__primitive_assign: p0:0 allocation score on node1: -INFINITY
+  * pcmk__primitive_assign: p4:0 allocation score on node1: -INFINITY
+  * g:0 promotion score (inactive): -INFINITY
+  * Remaining: node1 capacity:
 
+Transition Summary:
 .SETENV showobj=
 .TRY configure primitive p5 Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
+warning: Support for <master> (such as in msg) is deprecated and will be removed in a future release. Use <clone> with a promotable meta-attribute instead.
+Warnings found during check: config not valid
 .EXT crm_resource --show-metadata stonith:null
 .EXT stonithd metadata
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .TRY configure group g1 p5
+warning: Support for <master> (such as in msg) is deprecated and will be removed in a future release. Use <clone> with a promotable meta-attribute instead.
+Warnings found during check: config not valid
 .TRY resource manage p5
 .SETENV showobj=p5
 .TRY -F resource maintenance p5 on
