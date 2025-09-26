@@ -196,12 +196,13 @@ rsc_defaults rsc_options: \
 op_defaults op-options: \
 	timeout=60s
 .INP: commit
+warning: Support for multiple rule elements in a location constraint is deprecated and will be removed in a future release (use a single new rule combining the previous rules with boolean-op set to 'or' instead)
+Warnings found during check: config not valid
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
 .INP: _test
 .INP: verify
+warning: Support for multiple rule elements in a location constraint is deprecated and will be removed in a future release (use a single new rule combining the previous rules with boolean-op set to 'or' instead)
+Warnings found during check: config not valid
 .INP: primitive a0 ocf:heartbeat:Dummy
 .INP: primitive a1 ocf:heartbeat:Dummy
 .INP: primitive a2 ocf:heartbeat:Dummy
@@ -215,11 +216,15 @@ op_defaults op-options: \
 .INP: primitive aErr ocf:heartbeat:Dummy
 .INP: group as a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aErr
 .INP: commit
+warning: Support for multiple rule elements in a location constraint is deprecated and will be removed in a future release (use a single new rule combining the previous rules with boolean-op set to 'or' instead)
+Warnings found during check: config not valid
 .INP: cd ..
 .INP: cd configure
 .INP: filter "sed '/as/s/a9//'"
 .INP: filter "sed '/as/s/a1/a1 a9/'"
 .INP: commit
+warning: Support for multiple rule elements in a location constraint is deprecated and will be removed in a future release (use a single new rule combining the previous rules with boolean-op set to 'or' instead)
+Warnings found during check: config not valid
 .INP: cd ..
 .INP: cd configure
 .INP: filter "sed '/abs/s/a9//'"
@@ -331,6 +336,8 @@ INFO: 89: apparently there is nothing to commit
 INFO: 89: try changing something first
 .INP: _test
 .INP: verify
+warning: Support for multiple rule elements in a location constraint is deprecated and will be removed in a future release (use a single new rule combining the previous rules with boolean-op set to 'or' instead)
+Warnings found during check: config not valid
 .INP: show
 node node1 \
 	attributes mem=16G
