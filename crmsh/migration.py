@@ -341,6 +341,7 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
             ('* ' + ':'.join(x for x in resource_agent if x is not None) for resource_agent in class_unsupported_resource_agents)
         )
     _check_ocfs2(handler, cib)
+    _check_obseleted_sap_ascs_ers_mount(handler, cib)
 
 
 def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: typing.Iterable[cibquery.ResourceAgent]):
@@ -430,3 +431,55 @@ def _check_ocfs2(handler: CheckResultHandler, cib: lxml.etree.Element):
     if cibquery.has_primitive_filesystem_with_fstype(cib, 'ocfs2'):
        handler.handle_problem(False, 'OCFS2 is not supported in SLES 16. Please use GFS2.', [
        ])
+
+
+def _check_obseleted_sap_ascs_ers_mount(handler: CheckResultHandler, cib: lxml.etree.Element):
+    """
+    Checks for Filesystem resources that are part of a resource group with an
+    SAPInstance resource where IS_ERS=true, and the Filesystem resource starts
+    before the SAPInstance resource. This setup is not supported for ENSA2.
+    """
+    # 1. Find all SAPInstance primitives with IS_ERS=true
+    ers_primitives = cib.xpath(
+        '/cib/configuration/resources//primitive[@class="ocf" and @provider="heartbeat" and @type="SAPInstance"]'
+        '[instance_attributes/nvpair[@name="IS_ERS" and translate(@value, "TRUE", "true")="true"]]'
+    )
+    if not ers_primitives:
+        return
+
+    # 2. Find all Filesystem primitive IDs
+    fs_ids = {
+        p.get('id') for p in cib.xpath('/cib/configuration/resources//primitive[@class="ocf" and @provider="heartbeat" and @type="Filesystem"]')
+    }
+    if not fs_ids:
+        return
+
+    # 3. Find all groups in the CIB
+    groups = cib.xpath('/cib/configuration/resources//group')
+    for group in groups:
+        group_id = group.get('id')
+        # Primitives returned by xpath are in document order
+        group_primitives_ids = [p.get('id') for p in group.xpath('.//primitive')]
+        group_primitive_id_set = set(group_primitives_ids)
+
+        # Check if the group contains both an ERS instance and a Filesystem resource
+        ers_in_group = [p for p in ers_primitives if p.get('id') in group_primitive_id_set]
+        if not ers_in_group:
+            continue
+        fs_in_group = [fs_id for fs_id in fs_ids if fs_id in group_primitive_id_set]
+        if not ers_in_group or not fs_in_group:
+            continue
+
+        # 4. Check ordering constraints for each pair
+        for ers_primitive in ers_in_group:
+            ers_id = ers_primitive.get('id')
+            for fs_id in fs_in_group:
+                ers_index = group_primitives_ids.index(ers_id)
+                fs_index = group_primitives_ids.index(fs_id)
+                if fs_index < ers_index:
+                    # Implicit order is fs -> ers
+                    handler.handle_problem(
+                        False,
+                        "Cluster-controlled filesystem setup for SAP ENSA2 is not supported in SLES 16. Please migrate to simple-mount setup.",
+                        [f'* Filesystem resource "{fs_id}" is ordered to start before SAPInstance ERS resource "{ers_id}" in group "{group_id}".']
+                    )
