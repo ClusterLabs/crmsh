@@ -212,24 +212,6 @@ class TestSBDTimeout(unittest.TestCase):
         result = sbd.SBDTimeout.get_sbd_watchdog_timeout()
         self.assertEqual(result, 5)
 
-    @patch('crmsh.sbd.ServiceManager')
-    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
-    def test_get_stonith_watchdog_timeout_expected_default(self, mock_get_sbd_watchdog_timeout, mock_ServiceManager):
-        mock_get_sbd_watchdog_timeout.return_value = 1
-        mock_ServiceManager.return_value.service_is_active = MagicMock(return_value=False)
-        result = sbd.SBDTimeout.get_stonith_watchdog_timeout_expected()
-        self.assertEqual(result, 2)
-
-    @patch('crmsh.utils.get_property')
-    @patch('crmsh.sbd.ServiceManager')
-    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
-    def test_get_stonith_watchdog_timeout_expected(self, mock_get_sbd_watchdog_timeout, mock_ServiceManager, mock_get_property):
-        mock_get_sbd_watchdog_timeout.return_value = 1
-        mock_ServiceManager.return_value.service_is_active = MagicMock(return_value=True)
-        mock_get_property.return_value = "5"
-        result = sbd.SBDTimeout.get_stonith_watchdog_timeout_expected()
-        self.assertEqual(result, 5)
-
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
     @patch('crmsh.utils.is_boolean_true')
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
@@ -297,20 +279,22 @@ class TestSBDTimeout(unittest.TestCase):
         inst = sbd.SBDTimeout()
         inst.get_stonith_timeout_expected = MagicMock(return_value=10)
         inst.adjust_stonith_timeout()
-        mock_set_property.assert_called_once_with("stonith-timeout", 10, conditional=True)
+        mock_set_property.assert_called_once_with("stonith-timeout", 10)
 
+    @patch('crmsh.sbd.SBDTimeout.restore_systemd_start_timeout')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout')
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
-    def test_adjust_systemd_start_timeout_no_delay_start(self, mock_get_sbd_value_from_config, mock_get_sbd_systemd_start_timeout):
+    def test_adjust_systemd_start_timeout_no_delay_start(self, mock_get_sbd_value_from_config, mock_get_sbd_systemd_start_timeout, mock_restore_systemd_start_timeout):
         mock_get_sbd_value_from_config.return_value = "no"
         inst = sbd.SBDTimeout()
         inst.adjust_systemd_start_timeout()
         mock_get_sbd_value_from_config.assert_called_once_with("SBD_DELAY_START")
         mock_get_sbd_systemd_start_timeout.assert_not_called()
 
+    @patch('crmsh.sbd.SBDTimeout.restore_systemd_start_timeout')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout')
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
-    def test_adjust_systemd_start_timeout_return(self, mock_get_sbd_value_from_config, mock_get_sbd_systemd_start_timeout):
+    def test_adjust_systemd_start_timeout_return(self, mock_get_sbd_value_from_config, mock_get_sbd_systemd_start_timeout, mock_restore_systemd_start_timeout):
         mock_get_sbd_value_from_config.return_value = "10"
         mock_get_sbd_systemd_start_timeout.return_value = 90
         inst = sbd.SBDTimeout()
@@ -762,10 +746,10 @@ class TestSBDManager(unittest.TestCase):
 
     @patch('crmsh.utils.set_property')
     @patch('crmsh.sbd.ServiceManager')
-    @patch('crmsh.sbd.SBDTimeout.get_stonith_watchdog_timeout_expected')
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
-    def test_configure_sbd_diskless(self, mock_get_sbd_device, mock_get_stonith_watchdog_timeout, mock_ServiceManager, mock_set_property):
-        mock_get_stonith_watchdog_timeout.return_value = 2
+    def test_configure_sbd_diskless(self, mock_get_sbd_device, mock_get_sbd_watchdog_timeout, mock_ServiceManager, mock_set_property):
+        mock_get_sbd_watchdog_timeout.return_value = 1
         mock_get_sbd_device.return_value = False
         sbdmanager_instance = SBDManager()
         sbdmanager_instance.configure_sbd()
