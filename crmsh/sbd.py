@@ -708,7 +708,7 @@ class SBDManager:
             self.timeout_dict = SBDUtils.get_sbd_device_metadata(no_overwrite_list[0], timeout_only=True)
         self.update_dict["SBD_DEVICE"] = ';'.join(device_list)
 
-    def init_and_deploy_sbd(self):
+    def init_and_deploy_sbd(self, restart_first=False):
         '''
         The process of deploying sbd includes:
         1. Initialize sbd device
@@ -737,7 +737,8 @@ class SBDManager:
                 # the cluster must be restarted first to activate sbd.service on all nodes.
                 # Only then should additional properties be configured,
                 # because the stonith-watchdog-timeout property requires sbd.service to be active.
-                restart_cluster_first = self.diskless_sbd and not ServiceManager().service_is_active(constants.SBD_SERVICE)
+                restart_cluster_first = restart_first or \
+                        (self.diskless_sbd and not ServiceManager().service_is_active(constants.SBD_SERVICE))
                 if restart_cluster_first:
                     SBDManager.restart_cluster_if_possible(with_maintenance_mode=enabled)
 
