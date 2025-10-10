@@ -630,6 +630,57 @@ class TestLinkManagerRemoveLink(unittest.TestCase):
             self.lm.remove_link(2)
 
 
+@mock.patch('crmsh.cibquery.get_node_name_by_id')
+@mock.patch('crmsh.xmlutil.text2elem')
+@mock.patch('crmsh.sh.LocalShell')
+class TestLinkManagerGetNodeNames(unittest.TestCase):
+    def test_get_name_from_nodelist(self, mock_shell, mock_text2elem, mock_get_node_name):
+        nodelist = [
+            {'name': 'node1', 'nodeid': '1'},
+            {'name': 'node2', 'nodeid': '2'},
+        ]
+        names = corosync.LinkManager._get_node_names(nodelist)
+        self.assertEqual(['node1', 'node2'], names)
+        mock_shell.assert_not_called()
+        mock_text2elem.assert_not_called()
+        mock_get_node_name.assert_not_called()
+
+    def test_get_name_from_cib(self, mock_shell, mock_text2elem, mock_get_node_name):
+        mock_shell_inst = mock.Mock()
+        mock_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_stdout_or_raise_error.return_value = '<cib/>'
+        mock_text2elem.return_value = 'cib_element'
+        mock_get_node_name.side_effect = ['node1', 'node2']
+        nodelist = [
+            {'nodeid': '1'},
+            {'nodeid': '2'},
+        ]
+        names = corosync.LinkManager._get_node_names(nodelist)
+        self.assertEqual(['node1', 'node2'], names)
+        mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with(None, 'crm configure show xml')
+        mock_text2elem.assert_called_once_with('<cib/>')
+        mock_get_node_name.assert_has_calls([
+            mock.call('cib_element', '1'),
+            mock.call('cib_element', '2'),
+        ])
+
+    def test_get_name_mixed(self, mock_shell, mock_text2elem, mock_get_node_name):
+        mock_shell_inst = mock.Mock()
+        mock_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_stdout_or_raise_error.return_value = '<cib/>'
+        mock_text2elem.return_value = 'cib_element'
+        mock_get_node_name.return_value = 'node2'
+        nodelist = [
+            {'name': 'node1', 'nodeid': '1'},
+            {'nodeid': '2'},
+        ]
+        names = corosync.LinkManager._get_node_names(nodelist)
+        self.assertEqual(['node1', 'node2'], names)
+        mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with(None, 'crm configure show xml')
+        mock_text2elem.assert_called_once_with('<cib/>')
+        mock_get_node_name.assert_called_once_with('cib_element', '2')
+
+
 @mock.patch('crmsh.corosync.LinkManager.update_link')
 @mock.patch('crmsh.corosync.LinkManager._LinkManager__upsert_node_addr_impl')
 @mock.patch('crmsh.corosync.LinkManager.links')

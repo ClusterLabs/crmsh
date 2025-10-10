@@ -65,3 +65,10 @@ def get_cluster_nodes(cib: lxml.etree.Element) -> list[ClusterNode]:
         assert uname
         result.append(ClusterNode(int(node_id), uname))
     return result
+
+
+def get_node_name_by_id(cib: lxml.etree.Element, node_id: int) -> typing.Optional[str]:
+    """Return the node name for a given node ID"""
+    xpath = f"/cib/configuration/nodes/node[@id='{node_id}']/@uname"
+    result = cib.xpath(xpath)
+    return result[0] if result else None

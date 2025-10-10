@@ -409,7 +409,7 @@ def migrate_corosync_conf_impl(config):
     migrate_transport(config)
     migrate_crypto(config)
     migrate_rrp(config)
-    # TODO: other migrations
+    populate_node_name(config)
 
 
 def migrate_transport(dom):
@@ -534,16 +534,20 @@ def migrate_rrp(dom):
     except KeyError:
         pass
     assert all('nodeid' in node for node in nodes)
-    if any('name' not in node for node in nodes):
-        populate_node_name(nodes)
 
 
-def populate_node_name(nodelist):
+def populate_node_name(dom):
+    try:
+        nodes = dom['nodelist']['node']
+    except KeyError:
+        return
+    if all('name' in node for node in nodes):
+        return
     # cannot use utils.list_cluster_nodes, as pacemaker is not running
     with open(constants.CIB_RAW_FILE, 'rb') as f:
         cib = lxml.etree.parse(f)
     cib_nodes = {node.node_id: node for node in cibquery.get_cluster_nodes(cib)}
-    for node in nodelist:
+    for node in nodes:
         node_id = int(node['nodeid'])
         node['name'] = cib_nodes[node_id].uname
 
