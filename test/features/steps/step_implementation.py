@@ -482,6 +482,10 @@ def step_impl(context, key, dev, value):
     res = sbd.SBDTimeout.get_sbd_msgwait(dev)
     assert_eq(int(value), res)
 
+@then('Start timeout for sbd.service is "{value}" seconds')
+def step_impl(context, value):
+    systemd_start_timeout = sbd.SBDTimeout.get_sbd_systemd_start_timeout()
+    assert_eq(int(value), systemd_start_timeout)
 
 @then('Cluster property "{key}" is "{value}"')
 def step_impl(context, key, value):
