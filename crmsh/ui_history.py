@@ -7,6 +7,7 @@ import sys
 import time
 import re
 import bz2
+from functools import cache
 from . import config
 from . import command
 from . import completers as compl
@@ -28,7 +29,7 @@ logger_utils = log.LoggerUtils(logger)
 ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
 
 
-@utils.memoize
+@cache
 def crm_report():
     return history.Report()
 
