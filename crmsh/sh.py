@@ -26,9 +26,9 @@ import socket
 import subprocess
 import typing
 from io import StringIO
+from functools import cache
 
 from . import constants
-from .pyshim import cache
 from . import user_of_host
 from .user_of_host import UserOfHost
 
