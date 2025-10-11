@@ -1,7 +1,6 @@
 import subprocess
 import typing
 
-import crmsh.pyshim
 import crmsh.sh
 import crmsh.userdir
 

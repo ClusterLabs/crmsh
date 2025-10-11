@@ -20,7 +20,6 @@ import random
 import string
 import pwd
 import grp
-import functools
 import gzip
 import bz2
 import lzma
@@ -33,6 +32,7 @@ from stat import S_ISBLK
 from lxml import etree
 from packaging import version
 from enum import IntFlag, auto
+from functools import cache
 
 import crmsh.parallax
 import crmsh.user_of_host
@@ -97,20 +97,6 @@ def raise_exception(e):
     raise e
 
 
-def memoize(function):
-    "Decorator to invoke a function once only for any argument"
-    memoized = {}
-
-    @functools.wraps(function)
-    def inner(*args):
-        if args in memoized:
-            return memoized[args]
-        r = function(*args)
-        memoized[args] = r
-        return r
-    return inner
-
-
 @contextmanager
 def nogc():
     gc.disable()
@@ -135,7 +121,7 @@ def user_pair_for_ssh(host):
         raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
 
 
-@memoize
+@cache
 def this_node():
     'returns name of this node (hostname)'
     return os.uname()[1]
@@ -202,37 +188,37 @@ def pacemaker_20_daemon(new, old):
     return old
 
 
-@memoize
+@cache
 def pacemaker_attrd():
     return pacemaker_20_daemon("pacemaker-attrd", "attrd")
 
 
-@memoize
+@cache
 def pacemaker_based():
     return pacemaker_20_daemon("pacemaker-based", "cib")
 
 
-@memoize
+@cache
 def pacemaker_controld():
     return pacemaker_20_daemon("pacemaker-controld", "crmd")
 
 
-@memoize
+@cache
 def pacemaker_execd():
     return pacemaker_20_daemon("pacemaker-execd", "lrmd")
 
 
-@memoize
+@cache
 def pacemaker_fenced():
     return pacemaker_20_daemon("pacemaker-fenced", "stonithd")
 
 
-@memoize
+@cache
 def pacemaker_remoted():
     return pacemaker_20_daemon("pacemaker-remoted", "pacemaker_remoted")
 
 
-@memoize
+@cache
 def pacemaker_schedulerd():
     return pacemaker_20_daemon("pacemaker-schedulerd", "pengine")
 
@@ -2019,7 +2005,7 @@ def detect_gcp():
     return False
 
 
-@memoize
+@cache
 def detect_cloud():
     """
     Tries to determine which (if any) cloud environment
