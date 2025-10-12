@@ -47,12 +47,11 @@ def nvpair_format(n, v):
 def cli_nvpair(nvp):
     'Converts an nvpair tag or a (name, value) pair to CLI syntax'
     from .cibconfig import cib_factory
-    from .utils import obscured
     nodeid = nvp.get('id')
     idref = nvp.get('id-ref')
     name = nvp.get('name')
     value = nvp.get('value')
-    value = obscured(name, value)
+    value = utils.obscured(name, value)
     if idref is not None:
         if name is not None:
             return '@%s:%s' % (idref, name)
