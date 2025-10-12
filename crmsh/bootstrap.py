@@ -46,7 +46,7 @@ from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import NodeMgmt
 from .user_of_host import UserOfHost, UserNotFoundError
-from .sbd import SBDUtils, SBDManager, SBDTimeout
+from . import sbd
 from . import watchdog
 import crmsh.healthcheck
 
@@ -70,8 +70,8 @@ BOOTH_CFG = "/etc/booth/booth.conf"
 BOOTH_AUTH = "/etc/booth/authkey"
 FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
-        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SBDManager.SYSCONFIG_SBD, PCMK_REMOTE_AUTH, watchdog.Watchdog.WATCHDOG_CFG,
-        PROFILES_FILE, CRM_CFG, SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
+        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, sbd.SBDManager.SYSCONFIG_SBD, PCMK_REMOTE_AUTH, watchdog.Watchdog.WATCHDOG_CFG,
+        PROFILES_FILE, CRM_CFG, sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
 
 INIT_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "corosync", "sbd", "cluster", "ocfs2", "gfs2", "admin", "qdevice")
 INIT_STAGES_INTERNAL = ("qnetd_remote", )
@@ -137,7 +137,7 @@ class Context(object):
         self.profiles_dict = {}
         self.default_nic = None
         self.default_ip_list = []
-        self.rm_list = [SBDManager.SYSCONFIG_SBD, corosync.conf(), COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
+        self.rm_list = [sbd.SBDManager.SYSCONFIG_SBD, corosync.conf(), COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH, "~/.config/crm/*"]
         self.use_ssh_agent = None
         self.skip_csync2 = None
@@ -218,7 +218,7 @@ class Context(object):
         if self.sbd_devices and self.diskless_sbd:
             utils.fatal("Can't use -s and -S options together")
         if self.sbd_devices:
-            SBDUtils.verify_sbd_device(self.sbd_devices)
+            sbd.SBDUtils.verify_sbd_device(self.sbd_devices)
 
         with_sbd_option = self.sbd_devices or self.diskless_sbd
 
@@ -230,9 +230,9 @@ class Context(object):
                 node_list = [utils.this_node()]
             for node in node_list:
                 if not utils.package_is_installed("sbd", node):
-                    utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
+                    utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
                 if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd", node):
-                    utils.fatal(SBDManager.FENCE_SBD_NOT_INSTALLED_MSG + f" on {node}")
+                    utils.fatal(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG + f" on {node}")
 
             if not with_sbd_option and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
@@ -241,9 +241,9 @@ class Context(object):
 
         elif with_sbd_option:
             if not utils.package_is_installed("sbd"):
-                utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
+                utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG)
             if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd"):
-                utils.fatal(SBDManager.FENCE_SBD_NOT_INSTALLED_MSG)
+                utils.fatal(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG)
 
     def _validate_nodes_option(self):
         """
@@ -320,7 +320,7 @@ class Context(object):
         self._validate_sbd_option()
 
     def init_sbd_manager(self):
-        self.sbd_manager = SBDManager(bootstrap_context=self)
+        self.sbd_manager = sbd.SBDManager(bootstrap_context=self)
 
     def detect_platform(self):
         """
@@ -713,9 +713,9 @@ def start_pacemaker(node_list=[], enable_flag=False):
     if not _context and \
             utils.package_is_installed("sbd") and \
             ServiceManager().service_is_enabled(constants.SBD_SERVICE) and \
-            SBDTimeout.is_sbd_delay_start():
-        cmd1 = f"mkdir -p {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}"
-        cmd2 = f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"
+            sbd.SBDTimeout.is_sbd_delay_start():
+        cmd1 = f"mkdir -p {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}"
+        cmd2 = f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"
         cmd3 = "systemctl daemon-reload"
         for cmd in [cmd1, cmd2, cmd3]:
             parallax.parallax_call(node_list, cmd)
@@ -2110,7 +2110,7 @@ def rm_configuration_files(remote=None):
     shell.get_stdout_or_raise_error("rm -f {}".format(' '.join(_context.rm_list)), remote)
     # restore original sbd configuration file from /usr/share/fillup-templates/sysconfig.sbd
     if utils.package_is_installed("sbd", remote_addr=remote):
-        cmd = "cp {} {}".format(SBDManager.SYSCONFIG_SBD_TEMPLATE, SBDManager.SYSCONFIG_SBD)
+        cmd = "cp {} {}".format(sbd.SBDManager.SYSCONFIG_SBD_TEMPLATE, sbd.SBDManager.SYSCONFIG_SBD)
         shell.get_stdout_or_raise_error(cmd, remote)
 
 
@@ -2743,7 +2743,7 @@ def adjust_stonith_timeout(with_sbd: bool = False):
     Adjust stonith-timeout for sbd and other scenarios
     """
     if ServiceManager().service_is_active(constants.SBD_SERVICE) or with_sbd:
-        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+        sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
     else:
         value = get_stonith_timeout_generally_expected()
         if value:

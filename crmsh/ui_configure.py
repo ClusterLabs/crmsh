@@ -601,7 +601,6 @@ class CibConfig(command.UI):
     @command.completers_repeating(_id_show_list)
     def do_show(self, context, *args):
         "usage: show [xml] [<id>...]"
-        from .utils import obscure
         utils.load_cib_file_env()
         osargs = [arg[8:] for arg in args if arg.startswith('obscure:')]
         if not osargs and config.core.obscure_pattern:
@@ -612,7 +611,7 @@ class CibConfig(command.UI):
             osargs = re.split(r'\s*\|\s*|\s+', config.core.obscure_pattern.strip('|'))
         args = [arg for arg in args if not arg.startswith('obscure:')]
         cib_factory.ensure_cib_updated()
-        with obscure(osargs):
+        with utils.obscure(osargs):
             if args and args[0] == "changed":
                 self._show_diff()
                 return True
