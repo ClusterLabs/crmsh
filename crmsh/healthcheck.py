@@ -10,6 +10,7 @@ import crmsh.constants
 import crmsh.parallax
 import crmsh.user_of_host
 import crmsh.utils
+import crmsh.bootstrap
 
 
 logger = logging.getLogger(__name__)
@@ -143,7 +144,6 @@ class PasswordlessHaclusterAuthenticationFeature(Feature):
             return False
 
     def fix_cluster(self, nodes: typing.Iterable[str], ask: typing.Callable[[str], None]) -> None:
-        import crmsh.bootstrap  # import bootstrap lazily here to avoid circular dependency
         logger.debug("setup passwordless ssh authentication for user hacluster")
         local_node = crmsh.utils.this_node()
         remote_nodes = set(nodes)

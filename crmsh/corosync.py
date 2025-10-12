@@ -157,7 +157,6 @@ def query_qnetd_status():
     """
     Query qnetd status
     """
-    import crmsh.bootstrap  # workaround for circular dependencies
     if not is_qdevice_configured():
         raise ValueError("QDevice/QNetd not configured!")
     cluster_name = get_value('totem.cluster_name')

@@ -1695,7 +1695,6 @@ def get_address_list_from_corosync_conf():
     """
     Return a list of addresses configured in corosync.conf
     """
-    from . import corosync
     if not os.path.exists(corosync.conf()):
         return []
     return corosync.get_values("nodelist.node.ring0_addr")
