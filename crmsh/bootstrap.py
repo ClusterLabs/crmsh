@@ -63,7 +63,6 @@ PROFILES_FILE = "/etc/crm/profiles.yml"
 SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_NFS = "/etc/sysconfig/nfs"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
-COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service", CSYNC2_SERVICE]
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
@@ -139,6 +138,7 @@ class Context(object):
         self.profiles_dict = {}
         self.default_nic = None
         self.default_ip_list = []
+        self.corosync_conf_orig = None
         self.rm_list = [sbd.SBDManager.SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
                 COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
@@ -398,6 +398,11 @@ class Context(object):
         # merge two dictionaries
         self.profiles_dict = {**default_profile_dict, **specific_profile_dict}
 
+    def get_corosync_conf_orig(self):
+        if self.corosync_conf_orig is None:
+            self.corosync_conf_orig = tmpfiles.create()[1]
+        return self.corosync_conf_orig
+
 
 _context: typing.Optional[Context] = None
 
@@ -554,7 +559,7 @@ def is_online():
     user, cluster_node = _parse_user_at_host(_context.cluster_node, None)
     cluster_node = get_node_canonical_hostname(cluster_node)
     if not xmlutil.CrmMonXmlParser().is_node_online(cluster_node):
-        shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
+        shutil.copy(_context.get_corosync_conf_orig(), corosync.conf())
         sync_file(corosync.conf())
         sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R", cluster_node)
         ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).stop_service("corosync")
@@ -2058,7 +2063,7 @@ def join_cluster(seed_host, remote_user):
             cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
             shell.get_stdout_or_raise_error(cmd, seed_host)
 
-    shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
+    shutil.copy(corosync.conf(), _context.get_corosync_conf_orig())
 
     # check if use IPv6
     _context.ipv6 = corosync.is_using_ipv6()
