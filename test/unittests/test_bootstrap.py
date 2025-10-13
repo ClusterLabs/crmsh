@@ -1092,10 +1092,10 @@ done
     def test_is_online_peer_offline(self, mock_parser, mock_get_hostname, mock_this_node,
             mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error, mock_cluster_shell):
         bootstrap._context = mock.Mock(cluster_node='node1')
+        bootstrap._context.get_corosync_conf_orig.return_value = "/tmp/crmsh_tempfile"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
         mock_parser_inst.is_node_online.side_effect = [True, False]
-        bootstrap.COROSYNC_CONF_ORIG = "/tmp/crmsh_tmpfile"
         mock_this_node.return_value = "node2"
         mock_get_hostname.return_value = "node1"
         mock_corosync_conf.side_effect = [ "/etc/corosync/corosync.conf",
@@ -1109,7 +1109,7 @@ done
             mock.call(),
             mock.call()
             ])
-        mock_copy.assert_called_once_with(bootstrap.COROSYNC_CONF_ORIG, "/etc/corosync/corosync.conf")
+        mock_copy.assert_called_once_with(bootstrap._context.get_corosync_conf_orig.return_value, "/etc/corosync/corosync.conf")
         mock_csync2.assert_called_once_with("/etc/corosync/corosync.conf")
         mock_stop_service.assert_called_once_with("corosync")
         mock_error.assert_called_once_with("Cannot see peer node \"node1\", please check the communication IP")
@@ -1503,8 +1503,9 @@ done
 
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('os.path.isfile')
-    def test_sync_files_to_disk(self, mock_isfile, mock_cluster_cmd):
-        bootstrap.FILES_TO_SYNC = ("file1", "file2")
+    @mock.patch('crmsh.bootstrap.get_files_to_sync')
+    def test_sync_files_to_disk(self, mock_get_files, mock_isfile, mock_cluster_cmd):
+        mock_get_files.return_value = ["file1", "file2"]
         mock_isfile.side_effect = [True, True]
         bootstrap.sync_files_to_disk()
         mock_isfile.assert_has_calls([mock.call("file1"), mock.call("file2")])
@@ -1516,21 +1517,25 @@ done
 
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-    @mock.patch('crmsh.bootstrap.cib_factory')
-    def test_adjust_pcmk_delay_2node(self, mock_cib_factory, mock_run, mock_debug):
-        mock_cib_factory.refresh = mock.Mock()
-        mock_cib_factory.fence_id_list_without_pcmk_delay = mock.Mock()
-        mock_cib_factory.fence_id_list_without_pcmk_delay.return_value = ["res_1"]
+    @mock.patch('crmsh.cibconfig.cib_factory_instance')
+    def test_adjust_pcmk_delay_2node(self, mock_cib_inst, mock_run, mock_debug):
+        inst = mock.Mock()
+        mock_cib_inst.return_value = inst
+        inst.refresh = mock.Mock()
+        inst.fence_id_list_without_pcmk_delay = mock.Mock()
+        inst.fence_id_list_without_pcmk_delay.return_value = ["res_1"]
         bootstrap.adjust_pcmk_delay_max(True)
         mock_run.assert_called_once_with("crm resource param res_1 set pcmk_delay_max {}s".format(constants.PCMK_DELAY_MAX))
 
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-    @mock.patch('crmsh.bootstrap.cib_factory')
-    def test_adjust_pcmk_delay(self, mock_cib_factory, mock_run, mock_debug):
-        mock_cib_factory.refresh = mock.Mock()
-        mock_cib_factory.fence_id_list_with_pcmk_delay = mock.Mock()
-        mock_cib_factory.fence_id_list_with_pcmk_delay.return_value = ["res_1"]
+    @mock.patch('crmsh.cibconfig.cib_factory_instance')
+    def test_adjust_pcmk_delay(self, mock_cib_inst, mock_run, mock_debug):
+        inst = mock.Mock()
+        mock_cib_inst.return_value = inst
+        inst.refresh = mock.Mock()
+        inst.fence_id_list_with_pcmk_delay = mock.Mock()
+        inst.fence_id_list_with_pcmk_delay.return_value = ["res_1"]
         bootstrap.adjust_pcmk_delay_max(False)
         mock_run.assert_called_once_with("crm resource param res_1 delete pcmk_delay_max")
 
