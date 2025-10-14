@@ -4,7 +4,7 @@
 from . import command
 from . import completers as compl
 from . import config
-from .cibconfig import cib_factory
+from . import cibconfig
 from . import utils
 from . import xmlutil
 
@@ -24,20 +24,21 @@ class Maintenance(command.UI):
 
     def __init__(self):
         command.UI.__init__(self)
+        self.cib_factory = cibconfig.cib_factory_instance()
 
     def requires(self):
-        cib_factory.initialize(no_side_effects=True)
+        self.cib_factory.initialize(no_side_effects=True)
         return True
 
     def _onoff(self, resource, onoff):
         if resource is not None:
             return utils.ext_cmd(self.rsc_maintenance % (resource, onoff)) == 0
         else:
-            cib_factory.create_object('property', 'maintenance-mode=%s' % (onoff))
-            return cib_factory.commit()
+            self.cib_factory.create_object('property', 'maintenance-mode=%s' % (onoff))
+            return self.cib_factory.commit()
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(cib_factory.rsc_id_list))
+    @command.completers_repeating(compl.call(cibconfig.cib_factory_instance().rsc_id_list))
     def do_on(self, context, resource=None):
         '''
         Enable maintenance mode (for the optional resource or for everything)
@@ -45,7 +46,7 @@ class Maintenance(command.UI):
         return self._onoff(resource, 'true')
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(cib_factory.rsc_id_list))
+    @command.completers_repeating(compl.call(cibconfig.cib_factory_instance().rsc_id_list))
     def do_off(self, context, resource=None):
         '''
         Disable maintenance mode (for the optional resource or for everything)
@@ -53,7 +54,7 @@ class Maintenance(command.UI):
         return self._onoff(resource, 'false')
 
     def _in_maintenance_mode(self, obj):
-        if cib_factory.get_property("maintenance-mode") == "true":
+        if self.cib_factory.get_property("maintenance-mode") == "true":
             return True
         v = obj.meta_attributes("maintenance")
         return v and all(x == 'true' for x in v)
@@ -63,13 +64,13 @@ class Maintenance(command.UI):
         return set(nodes) == set([utils.this_node()])
 
     @command.skill_level('administrator')
-    @command.completers(compl.call(cib_factory.rsc_id_list), _compl_actions, compl.choice(["ssh"]))
+    @command.completers(compl.call(cibconfig.cib_factory_instance().rsc_id_list), _compl_actions, compl.choice(["ssh"]))
     def do_action(self, context, resource, action, ssh=None):
         '''
         Issue action out-of-band to the given resource, making
         sure that the resource is in maintenance mode first
         '''
-        obj = cib_factory.find_object(resource)
+        obj = self.cib_factory.find_object(resource)
         if not obj:
             context.fatal_error("Resource not found: %s" % (resource))
         if not xmlutil.is_resource(obj.node):
@@ -91,7 +92,7 @@ class Maintenance(command.UI):
                 return rsctest.call_resource(obj.node, action,
                                              [utils.this_node()], local_only=True)
             else:
-                all_nodes = cib_factory.node_id_list()
+                all_nodes = self.cib_factory.node_id_list()
                 return rsctest.call_resource(obj.node, action, all_nodes, local_only=False)
         else:
             context.fatal_error("Unknown argument: %s" % (ssh))

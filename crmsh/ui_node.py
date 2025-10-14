@@ -18,7 +18,7 @@ from . import xmlutil
 from . import idmgmt
 from .cliformat import cli_nvpairs, nvpairs2list
 from . import term
-from .cibconfig import cib_factory
+from . import cibconfig
 from .sh import ShellUtils
 from . import log
 
@@ -61,6 +61,7 @@ def remove_redundant_attrs(objs, attributes_tag, attr, conflicting_attr = None):
 
 def get_resources_on_nodes(nodes, resources_tags):
     prefix = "cli-prefer-"
+    cib_factory = cibconfig.cib_factory_instance()
     exclude = [str(x.node.get("id")).replace(prefix,"") for x in cib_factory.cib_objects
         if x.obj_type  == "location" and x.node.get("node") not in nodes]
 
@@ -78,6 +79,7 @@ def update_xml_node(cluster_node_name, attr, value):
     2) remove the conflicting attribute in the node itself
     '''
 
+    cib_factory = cibconfig.cib_factory_instance()
     node_obj = cib_factory.find_node(cluster_node_name)
     if node_obj is None:
         # Append node section for remote node
@@ -139,7 +141,7 @@ def set_node_attr(cluster_node_name, attr_name, value, commit=True):
     if not commit:
         return True
 
-    if not cib_factory.commit():
+    if not cibconfig.cib_factory_instance().commit():
         logger.error("Failed to commit updates to %s", cluster_node_name)
         return False
     return True
@@ -601,7 +603,7 @@ class NodeMgmt(command.UI):
         """
         if not utils.is_name_sane(node_name):
             return False
-        commit = not cib_factory.has_cib_changed()
+        commit = not cibconfig.cib_factory_instance().has_cib_changed()
         if not commit:
             context.info("Currently editing the CIB, changes will not be committed")
         return set_node_attr(node_name, attr_name, value, commit=commit)

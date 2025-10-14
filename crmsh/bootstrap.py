@@ -31,7 +31,7 @@ from lxml import etree
 from . import config, constants, ssh_key, sh, cibquery, user_of_host
 from . import utils
 from . import xmlutil
-from .cibconfig import cib_factory
+from . import cibconfig
 from . import corosync
 from . import tmpfiles
 from . import lock
@@ -2728,6 +2728,7 @@ def adjust_pcmk_delay_max(is_2node_wo_qdevice):
     add parameter pcmk_delay_max when cluster is two-node cluster without qdevice
     else remove pcmk_delay_max
     """
+    cib_factory = cibconfig.cib_factory_instance()
     cib_factory.refresh()
 
     shell = sh.cluster_shell()

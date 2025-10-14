@@ -4073,4 +4073,7 @@ class CibFactory(object):
 
 cib_factory = CibFactory()
 
+
+def cib_factory_instance():
+    return cib_factory
 # vim:ts=4:sw=4:et:
