@@ -43,6 +43,8 @@ from . import options
 from . import term
 from . import log
 from . import xmlutil
+from . import cibconfig
+from . import sbd
 from .prun import prun
 from .sh import ShellUtils
 from .service_manager import ServiceManager
@@ -2507,7 +2509,6 @@ def has_stonith_running():
     """
     Check if any stonith device registered
     """
-    from . import sbd
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
     has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
     using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
@@ -2534,7 +2535,7 @@ def all_exist_id():
     """
     Get current exist id list
     """
-    from .cibconfig import cib_factory
+    cib_factory = cibconfig.cib_factory_instance()
     cib_factory.refresh()
     return cib_factory.id_list()
 
@@ -2880,7 +2881,7 @@ def is_ocf_1_1_cib_schema_detected():
     """
     Only turn on ocf_1_1 feature the cib schema version is pacemaker-3.7 or above
     """
-    from .cibconfig import cib_factory
+    cib_factory = cibconfig.cib_factory_instance()
     cib_factory.get_cib()
     return is_larger_than_min_version(cib_factory.get_schema(), constants.SCHEMA_MIN_VER_SUPPORT_OCF_1_1)
 
