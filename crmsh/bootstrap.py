@@ -46,7 +46,7 @@ from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import NodeMgmt
 from .user_of_host import UserOfHost, UserNotFoundError
-from .sbd import SBDUtils, SBDManager, SBDTimeout
+from .sbd import SBDUtils, SBDManager, SBDTimeout, SBDTimeoutChecker
 from . import watchdog
 import crmsh.healthcheck
 
@@ -2743,7 +2743,7 @@ def adjust_stonith_timeout(with_sbd: bool = False):
     Adjust stonith-timeout for sbd and other scenarios
     """
     if ServiceManager().service_is_active(constants.SBD_SERVICE) or with_sbd:
-        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+        SBDTimeoutChecker(fix=True, warn=False).check_and_fix()
     else:
         value = get_stonith_timeout_generally_expected()
         if value:

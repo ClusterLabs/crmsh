@@ -253,6 +253,9 @@ class SBD(command.UI):
             print()
             self._show_property()
 
+        print()
+        sbd.SBDTimeoutChecker().check_and_fix()
+
     def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str]:
         '''
         Parse arguments and verify them

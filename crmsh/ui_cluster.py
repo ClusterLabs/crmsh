@@ -28,7 +28,7 @@ from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import parse_option_for_nodes
 from . import constants
-
+from . import sbd
 
 from . import log
 from .utils import TerminateSubCommand
@@ -793,10 +793,9 @@ to get the geo cluster configuration.""",
         bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
-    @command.completers(compl.choice([
-        'hawk2',
-        'sles16',
-    ]))
+    HEALTH_COMPONENTS = ['hawk2', 'sles16', 'sbd']
+
+    @command.completers(compl.choice(HEALTH_COMPONENTS))
     def do_health(self, context, *args):
         '''
         Extensive health check.
@@ -804,7 +803,7 @@ to get the geo cluster configuration.""",
         if not args:
             return Cluster._do_health_legacy()
         parser = argparse.ArgumentParser('health')
-        parser.add_argument('component', choices=['hawk2', 'sles16'])
+        parser.add_argument('component', choices=Cluster.HEALTH_COMPONENTS)
         parser.add_argument('-f', '--fix', action='store_true')
         parsed_args, remaining_args = parser.parse_known_args(args)
         match parsed_args.component:
@@ -837,8 +836,23 @@ to get the geo cluster configuration.""",
                         return True
                     else:
                         logger.error("hawk2: passwordless ssh authentication: FAIL.")
-                        logger.warning('Please run "crm cluster health hawk2 --fix"')
+                        logger.warning('Please run "crm cluster health hawk2 --fix".')
                         return False
+            case 'sbd':
+                fix = parsed_args.fix
+                try:
+                    result = sbd.SBDTimeoutChecker(fix=fix).check_and_fix()
+                except healthcheck.FixFailure as e:
+                    logger.error('%s', e)
+                    return False
+                if result:
+                    logger.info("SBD: Check sbd timeout settings: OK.")
+                    return True
+                else:
+                    logger.error("SBD: Check sbd timeout settings: FAIL.")
+                    if not fix:
+                        logger.warning('Please run "crm cluster health sbd --fix".')
+                    return False
             case 'sles16':
                 try:
                     if parsed_args.fix:
