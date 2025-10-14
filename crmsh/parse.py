@@ -12,6 +12,7 @@ from .ra import disambiguate_ra_type, ra_type_validate
 from . import schema
 from . import utils
 from . import xmlutil
+from . import cibconfig
 from . import log
 
 
@@ -414,13 +415,11 @@ class BaseParser(object):
         if matchname is False, matches:
         <n>=<v> <n>=<v> ...
         """
-        from .cibconfig import cib_factory
-
         xmlid = None
         if self.try_match_idspec():
             if self.matched(1) == '$id-ref':
                 r = xmlutil.new(tag)
-                ref = cib_factory.resolve_id_ref(name, self.matched(2))
+                ref = cibconfig.cib_factory_instance().resolve_id_ref(name, self.matched(2))
                 r.set('id-ref', ref)
                 return r
             else:
@@ -456,9 +455,8 @@ class BaseParser(object):
 
     def match_rules(self):
         '''parse rule definitions'''
-        from .cibconfig import cib_factory
-
         rules = []
+        cib_factory = cibconfig.cib_factory_instance()
         while self.try_match('rule'):
             rule = xmlutil.new('rule')
             rules.append(rule)
@@ -812,8 +810,6 @@ class BaseParser(object):
         out.append(node)
 
     def match_operations(self, out, match_id):
-        from .cibconfig import cib_factory
-
         def is_op():
             return self.has_tokens() and self.current_token().lower() == 'op'
         if match_id:
@@ -824,7 +820,7 @@ class BaseParser(object):
             match_id = self.matched(1)[1:].lower()
             idval = self.matched(2)
             if match_id == 'id-ref':
-                idval = cib_factory.resolve_id_ref('operations', idval)
+                idval = cibconfig.cib_factory_instance().resolve_id_ref('operations', idval)
 
             node.set(match_id, idval)
 
@@ -1180,8 +1176,6 @@ def property_parser(self, cmd):
     rsc_defaults = <rsc_defaults><meta_attributes>...</></>
     op_defaults = <op_defaults><meta_attributes>...</></>
     """
-    from .cibconfig import cib_factory
-
     setmap = {'property': 'cluster_property_set',
               'rsc_defaults': 'meta_attributes',
               'op_defaults': 'meta_attributes'}
@@ -1199,7 +1193,7 @@ def property_parser(self, cmd):
         idkey = self.matched(1)[1:]
         idval = self.matched(2)
         if idkey == 'id-ref':
-            idval = cib_factory.resolve_id_ref(attrs.tag, idval)
+            idval = cibconfig.cib_factory_instance().resolve_id_ref(attrs.tag, idval)
         attrs.set(idkey, idval)
     for rule in self.match_rules():
         attrs.append(rule)
@@ -1265,7 +1259,6 @@ class FencingOrderParser(BaseParser):
     def _postprocess_levels(self, raw_levels):
         from collections import defaultdict
         from itertools import repeat
-        from .cibconfig import cib_factory
         if len(raw_levels) == 0:
             def no_levels():
                 return []
@@ -1281,6 +1274,7 @@ class FencingOrderParser(BaseParser):
                 return raw_levels
             lvl_generator = wrap_levels
 
+        cib_factory = cibconfig.cib_factory_instance()
         out = xmlutil.new('fencing-topology')
         targets = defaultdict(repeat(1).__next__)
         for target, devices in lvl_generator():

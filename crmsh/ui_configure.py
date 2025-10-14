@@ -15,8 +15,9 @@ from . import constants
 from . import userdir
 from . import xmlutil
 from . import ra
-from .cibconfig import mkset_obj, cib_factory
+from . import cibconfig
 from . import clidisplay
+from . import cliformat
 from . import term
 from . import options
 from . import rsctest
@@ -35,6 +36,9 @@ from .ui_node import get_resources_on_nodes, remove_redundant_attrs
 from . import log
 logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
+
+
+cib_factory = cibconfig.cib_factory_instance()
 
 
 def _type_completions():
@@ -584,9 +588,9 @@ class CibConfig(command.UI):
         pass
 
     def _show_diff(self):
-        obj_orig = mkset_obj("orig")
+        obj_orig = cibconfig.mkset_obj("orig")
         obj_orig_str = obj_orig.repr()
-        obj_changed = mkset_obj()
+        obj_changed = cibconfig.mkset_obj()
         obj_changed_str = obj_changed.repr()
 
         diff = difflib.unified_diff(obj_orig_str.splitlines(), obj_changed_str.splitlines())
@@ -615,7 +619,7 @@ class CibConfig(command.UI):
             if args and args[0] == "changed":
                 self._show_diff()
                 return True
-            set_obj = mkset_obj(*args)
+            set_obj = cibconfig.mkset_obj(*args)
             return set_obj.show()
 
     @command.name("get_property")
@@ -652,7 +656,7 @@ class CibConfig(command.UI):
     def do_filter(self, context, filterprog, *args):
         "usage: filter <prog> [xml] [<id>...]"
         cib_factory.ensure_cib_updated()
-        set_obj = mkset_obj(*args)
+        set_obj = cibconfig.mkset_obj(*args)
         return set_obj.filter(filterprog)
 
     @command.skill_level('administrator')
@@ -760,7 +764,7 @@ class CibConfig(command.UI):
         else:
             sed_s = r's/ %s( |$)/ /' % prim_id
         l = (group_id,)
-        set_obj = mkset_obj(*l)
+        set_obj = cibconfig.mkset_obj(*l)
         return set_obj.filter("sed -r '%s'" % sed_s)
 
     @command.skill_level('administrator')
@@ -769,7 +773,7 @@ class CibConfig(command.UI):
         "usage: edit [xml] [<id>...]"
         cib_factory.ensure_cib_updated()
         with logger_utils.buffer():  # keep error messages
-            set_obj = mkset_obj(*args)
+            set_obj = cibconfig.mkset_obj(*args)
         return set_obj.edit()
 
     def _verify(self, set_obj_semantic, set_obj_all) -> utils.VerifyResult:
@@ -784,7 +788,7 @@ class CibConfig(command.UI):
         "usage: verify"
         utils.load_cib_file_env()
         cib_factory.ensure_cib_updated()
-        set_obj_all = mkset_obj("xml")
+        set_obj_all = cibconfig.mkset_obj("xml")
         verify_result = self._verify(set_obj_all, set_obj_all)
         return bool(verify_result)
 
@@ -795,9 +799,6 @@ class CibConfig(command.UI):
     def do_validate_all(self, context, rsc):
         "usage: validate-all <rsc>"
         cib_factory.ensure_cib_updated()
-        from . import ra
-        from . import cibconfig
-        from . import cliformat
         obj = cib_factory.find_object(rsc)
         if not obj:
             context.error("Not found: %s" % (rsc))
@@ -827,7 +828,7 @@ class CibConfig(command.UI):
         cib_factory.ensure_cib_updated()
         filename = args[-1]
         setargs = args[:-1]
-        set_obj = mkset_obj(*setargs)
+        set_obj = cibconfig.mkset_obj(*setargs)
         return set_obj.save_to_file(filename)
 
     @command.skill_level('administrator')
@@ -857,9 +858,9 @@ class CibConfig(command.UI):
                     return False
             cib_factory.erase()
         if xml:
-            set_obj = mkset_obj("xml")
+            set_obj = cibconfig.mkset_obj("xml")
         else:
-            set_obj = mkset_obj()
+            set_obj = cibconfig.mkset_obj()
         return set_obj.import_file(method, url)
 
     @command.skill_level('administrator')
@@ -869,7 +870,7 @@ class CibConfig(command.UI):
         if args and args[0] == "exportsettings":
             return utils.save_graphviz_file(userdir.GRAPHVIZ_USER_FILE, constants.graph)
         cib_factory.ensure_cib_updated()
-        set_obj = mkset_obj()
+        set_obj = cibconfig.mkset_obj()
         rc = set_obj.query_graph(*args)
         if rc is None:
             context.fatal_error("Failed to create graph")
@@ -944,7 +945,7 @@ class CibConfig(command.UI):
         config.core.ptest = constants.simulate_programs[context.get_command_name()]
         if not config.core.ptest:
             return False
-        set_obj = mkset_obj("xml")
+        set_obj = cibconfig.mkset_obj("xml")
         return ui_utils.ptestlike(set_obj.ptest, 'vv', context.get_command_name(), args)
 
     def _commit(self, force=False, replace=False):
@@ -956,7 +957,7 @@ class CibConfig(command.UI):
         if replace and not force:
             rc1 = cib_factory.is_current_cib_equal()
 
-        verify_result = self._verify(mkset_obj("xml", "changed"), mkset_obj("xml"))
+        verify_result = self._verify(cibconfig.mkset_obj("xml", "changed"), cibconfig.mkset_obj("xml"))
         if utils.VerifyResult.FATAL_ERROR in verify_result:
             return False
 
