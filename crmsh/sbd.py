@@ -187,7 +187,7 @@ class SBDTimeout(object):
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
     QDEVICE_SYNC_TIMEOUT_MARGIN = 5
     SHOW_SBD_START_TIMEOUT_CMD = "systemctl show -p TimeoutStartUSec sbd.service --value"
-    SBD_START_TIMEOUT_DEFAULT = 90
+    SHOW_DEFAULT_START_TIMEOUT_CMD = "systemctl show -p DefaultTimeoutStartUSec --value"
 
     def __init__(self, context=None):
         '''
@@ -378,6 +378,11 @@ class SBDTimeout(object):
         out = sh.cluster_shell().get_stdout_or_raise_error(SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD)
         return utils.get_systemd_timeout_start_in_sec(out)
 
+    @staticmethod
+    def get_default_systemd_start_timeout() -> int:
+        out = sh.cluster_shell().get_stdout_or_raise_error(SBDTimeout.SHOW_DEFAULT_START_TIMEOUT_CMD)
+        return utils.get_systemd_timeout_start_in_sec(out)
+
     def adjust_systemd_start_timeout(self):
         '''
         Adjust start timeout for sbd when set SBD_DELAY_START
@@ -388,16 +393,17 @@ class SBDTimeout(object):
             return
         expected_start_timeout = int(1.2*int(sbd_delay_start_value))
         actual_start_timeout = SBDTimeout.get_sbd_systemd_start_timeout()
+        default_start_timeout = SBDTimeout.get_default_systemd_start_timeout()
         if expected_start_timeout == actual_start_timeout:
             return
-        elif expected_start_timeout > self.SBD_START_TIMEOUT_DEFAULT:
+        elif expected_start_timeout > default_start_timeout:
             logger.info("Adjust systemd start timeout for sbd.service to %ds, it was %ds",
                         expected_start_timeout, actual_start_timeout)
             SBDTimeout.set_systemd_start_timeout(expected_start_timeout)
         else:
             if os.path.isdir(SBDManager.SBD_SYSTEMD_DELAY_START_DIR):
                 logger.info("Restore systemd start timeout for sbd.service to default %ds, it was %ds",
-                            self.SBD_START_TIMEOUT_DEFAULT, actual_start_timeout)
+                            default_start_timeout, actual_start_timeout)
             SBDTimeout.restore_systemd_start_timeout()
 
     @staticmethod
