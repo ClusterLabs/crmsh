@@ -5,18 +5,17 @@ Functions that abstract creating and editing the corosync.conf
 configuration file, and also the corosync-* utilities.
 '''
 import dataclasses
-import ipaddress
-import itertools
 import os
 import re
 import typing
 from io import StringIO
 
-from . import utils, sh
+from . import utils, sh, cibquery
 from . import tmpfiles
 from . import parallax
 from . import log
 from . import corosync_config_format
+from . import xmlutil
 from .sh import ShellUtils
 
 
@@ -647,9 +646,8 @@ class LinkManager:
         assert isinstance(nodelist, list)
         assert nodelist
         assert all('nodeid' in node for node in nodelist)
-        assert all('name' in node for node in nodelist)
         ids = [int(node['nodeid']) for node in nodelist]
-        names = [node['name'] for node in nodelist]
+        names = self._get_node_names(nodelist)
         links: list[typing.Optional[Link]] = [None] * KNET_LINK_NUM_LIMIT
         for i in range(KNET_LINK_NUM_LIMIT):
             # enumerate ringX_addr for X = 0, 1, ...
@@ -824,3 +822,20 @@ class LinkManager:
         interfaces = [interface for interface in interfaces if int(interface['linknumber']) != linknumber]
         self._config['totem']['interface'] = interfaces
         return self._config
+
+    @staticmethod
+    def _get_node_names(nodelist: list) -> list[str]:
+        ret = list()
+        cib = None
+        for node in nodelist:
+            name = node.get('name')
+            if name is not None:
+                ret.append(name)
+                continue
+            # bsc#1250585: missing "name" in clusters migrated from 15
+            if cib is None:
+                cib = xmlutil.text2elem(sh.LocalShell().get_stdout_or_raise_error(None, 'crm configure show xml'))
+            uname = cibquery.get_node_name_by_id(cib, node['nodeid'])
+            assert uname is not None
+            ret.append(uname)
+        return ret

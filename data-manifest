@@ -64,6 +64,7 @@ test/features/bootstrap_bugs.feature
 test/features/bootstrap_firewalld.feature
 test/features/bootstrap_init_join_remove.feature
 test/features/bootstrap_options.feature
+test/features/bootstrap_password.feature
 test/features/bootstrap_sbd_delay.feature
 test/features/bootstrap_sbd_normal.feature
 test/features/cluster_api.feature
@@ -91,6 +92,7 @@ test/features/resource_set.feature
 test/features/sbd_ui.feature
 test/features/ssh_agent.feature
 test/features/steps/behave_agent.py
+test/features/steps/bootstrap_steps.py
 test/features/steps/const.py
 test/features/steps/__init__.py
 test/features/steps/step_implementation.py
