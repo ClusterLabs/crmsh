@@ -339,17 +339,16 @@ class ClusterShell:
             if user is None:
                 user = 'root'
             local_user, remote_user = self.user_of_host.user_pair_for_ssh(host)
+            ssh_agent_options = '-A' if self.forward_ssh_agent else ''
+            if user == remote_user:
+                shell = f'ssh {ssh_agent_options} {constants.SSH_OPTION} -o BatchMode=yes {remote_user}@{host} /bin/bash'
+            else:
+                preserve_env_options = '--preserve-env=SSH_AUTH_SOCK' if self.forward_ssh_agent else ''
+                shell = f'ssh {ssh_agent_options} {constants.SSH_OPTION} -o BatchMode=yes {remote_user}@{host}' \
+                        f' sudo -H -u {user} {preserve_env_options} /bin/bash'
             result = self.local_shell.su_subprocess_run(
                 local_user,
-                'ssh {} {} -o BatchMode=yes {}@{} sudo -H -u {} {} /bin/sh'.format(
-                    '-A' if self.forward_ssh_agent else '',
-                    constants.SSH_OPTION,
-                    remote_user,
-                    host,
-                    user,
-                    '--preserve-env=SSH_AUTH_SOCK' if self.forward_ssh_agent else '',
-                    constants.SSH_OPTION,
-                ),
+                shell,
                 input=cmd.encode('utf-8'),
                 start_new_session=True,
                 **kwargs,
