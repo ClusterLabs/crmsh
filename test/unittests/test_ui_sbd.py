@@ -153,7 +153,7 @@ class TestSBD(unittest.TestCase):
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
     def test_configure_usage_disk_diskbased(self, mock_is_using_disk_based_sbd, mock_is_using_diskless_sbd):
         mock_is_using_disk_based_sbd.return_value = True
-        timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.TIMEOUT_TYPES])
+        timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.TIMEOUT_TYPE_MINIMUMS])
         show_usage = f"crm sbd configure show [{'|'.join(ui_sbd.SBD.SHOW_TYPES)}]"
         expected = f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device>]\n"
         self.assertEqual(self.sbd_instance_diskbased.configure_usage, expected)
@@ -165,7 +165,7 @@ class TestSBD(unittest.TestCase):
     def test_configure_usage_disk_diskless(self, mock_is_using_disk_based_sbd, mock_is_using_diskless_sbd):
         mock_is_using_disk_based_sbd.return_value = False
         mock_is_using_diskless_sbd.return_value = True
-        timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.DISKLESS_TIMEOUT_TYPES])
+        timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.DISKLESS_TIMEOUT_TYPE_MINIMUMS])
         show_usage = f"crm sbd configure show [{'|'.join(ui_sbd.SBD.DISKLESS_SHOW_TYPES)}]"
         expected = f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device>]\n"
         self.assertEqual(self.sbd_instance_diskless.configure_usage, expected)
