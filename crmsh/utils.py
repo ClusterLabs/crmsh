@@ -2449,6 +2449,12 @@ class DeadNodeError(ValueError):
         self.dead_nodes = dead_nodes or []
 
 
+class UnreachableNodeError(ValueError):
+    def __init__(self, msg: str, unreachable_nodes=None):
+        super().__init__(msg)
+        self.unreachable_nodes = unreachable_nodes or []
+
+
 def check_all_nodes_reachable(action_to_do: str, peer_node: str = None):
     """
     Check if all cluster nodes are reachable
@@ -2470,8 +2476,17 @@ Or use `crm cluster remove <offline_node> --force` to remove the offline node.
         """
         raise DeadNodeError(msg, dead_nodes)
 
+    unreachable_nodes = []
     for node in online_nodes:
-        node_reachable_check(node)
+        try:
+            node_reachable_check(node)
+        except ValueError:
+            unreachable_nodes.append(node)
+    if unreachable_nodes:
+        msg = f"""There are unreachable nodes: {', '.join(unreachable_nodes)}.
+Please check the network connectivity before {action_to_do}.
+        """
+        raise UnreachableNodeError(msg, unreachable_nodes)
 
 
 def re_split_string(reg, string):
