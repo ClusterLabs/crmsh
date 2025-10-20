@@ -213,9 +213,6 @@ class QDevice(object):
         if utils.InterfacesInfo.ip_in_local(qnetd_ip):
             raise ValueError("host for qnetd must be a remote one")
 
-        if not utils.check_port_open(qnetd_ip, 22):
-            raise ValueError("ssh service on \"{}\" not available".format(qnetd_addr))
-
     @staticmethod
     def check_qdevice_port(qdevice_port):
         if not utils.valid_port(qdevice_port):
