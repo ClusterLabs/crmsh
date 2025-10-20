@@ -23,7 +23,7 @@ Feature: corosync qdevice/qnetd options validate
   Scenario: Service ssh on qnetd node not available
     When    Run "systemctl stop sshd.service" on "node-without-ssh"
     When    Try "crm cluster init --qnetd-hostname=node-without-ssh"
-    Then    Except "ERROR: cluster.init: ssh service on "node-without-ssh" not available"
+    Then    Except "ERROR: cluster.init: host "node-without-ssh" is unreachable via SSH"
 
   @clean
   Scenario: Option "--qdevice-port" set wrong port

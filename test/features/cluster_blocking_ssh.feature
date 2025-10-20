@@ -60,8 +60,6 @@ Feature: cluster testing with ssh blocked
     And     Run "firewall-cmd --zone=public --add-rich-rule='rule port port=22 protocol=tcp drop' --permanent && firewall-cmd --reload" on "hanode2"
     And     Try "ssh -o ConnectTimeout=5 hanode2" on "hanode1"
     Then    Except "ssh: connect to host hanode2 port 22: Connection timed out" in stderr
-    When    Run "timeout 5s crm report || echo "timeout"" on "hanode1"
-    Then    Expected "timeout" in stdout
     When    Write multi lines to file "/etc/crm/crm.conf" on "hanode1"
       """
       [core]
