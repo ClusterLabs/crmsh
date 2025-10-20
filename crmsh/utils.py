@@ -2428,25 +2428,23 @@ def package_is_installed(pkg, remote_addr=None):
     return rc == 0
 
 
-def node_reachable_check(node, ping_count=1, port=22, timeout=3):
+def node_reachable_check(node):
     """
-    Check if node is reachable by using ping and socket to ssh port
+    Check if node is reachable by checking SSH port is open
     """
-    rc, _, _ = ShellUtils().get_stdout_stderr(f"ping -n -c {ping_count} -W {timeout} {node}")
-    if rc == 0:
+    if node == this_node() or check_port_open(node, 22):
         return True
-    # ping failed, try to connect to ssh port by socket
-    if check_port_open(node, port, timeout):
-        return True
-    # both ping and socket failed
-    raise ValueError(f"host \"{node}\" is unreachable")
+    if config.core.no_ssh:
+        raise NoSSHError(constants.NO_SSH_ERROR_MSG)
+    else:
+        raise ValueError(f"host \"{node}\" is unreachable via SSH")
 
 
 def get_reachable_node_list(node_list:list[str]) -> list[str]:
     reachable_node_list = []
     for node in node_list:
         try:
-            if node == this_node() or node_reachable_check(node):
+            if node_reachable_check(node):
                 reachable_node_list.append(node)
         except ValueError as e:
             logger.warning(str(e))
