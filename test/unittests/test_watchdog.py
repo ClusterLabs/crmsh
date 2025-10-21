@@ -287,7 +287,7 @@ Driver: iTCO_wdt
 
         mock_valid.assert_called_once_with("test")
         mock_run.assert_called_once_with("modinfo test")
-        mock_error.assert_called_once_with("Should provide valid watchdog device or driver name by -w option")
+        mock_error.assert_called_once_with("Should provide valid watchdog device or driver name")
 
     @mock.patch('crmsh.watchdog.Watchdog._get_device_through_driver')
     @mock.patch('crmsh.watchdog.Watchdog._load_watchdog_driver')
