@@ -215,6 +215,9 @@ class Context(object):
         """
         Validate sbd options
         """
+        no_sbd_option = not self.sbd_devices and not self.diskless_sbd
+        if self.watchdog and no_sbd_option:
+            utils.fatal("-w option should be used with -s or -S option")
         if self.sbd_devices and self.diskless_sbd:
             utils.fatal("Can't use -s and -S options together")
         if self.sbd_devices:
