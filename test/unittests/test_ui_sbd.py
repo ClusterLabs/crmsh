@@ -155,7 +155,7 @@ class TestSBD(unittest.TestCase):
         mock_is_using_disk_based_sbd.return_value = True
         timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.TIMEOUT_TYPES])
         show_usage = f"crm sbd configure show [{'|'.join(ui_sbd.SBD.SHOW_TYPES)}]"
-        expected = f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device>]\n"
+        expected = f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device|driver>]\n"
         self.assertEqual(self.sbd_instance_diskbased.configure_usage, expected)
         mock_is_using_disk_based_sbd.assert_called_once()
         mock_is_using_diskless_sbd.assert_not_called()
@@ -167,7 +167,7 @@ class TestSBD(unittest.TestCase):
         mock_is_using_diskless_sbd.return_value = True
         timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.DISKLESS_TIMEOUT_TYPES])
         show_usage = f"crm sbd configure show [{'|'.join(ui_sbd.SBD.DISKLESS_SHOW_TYPES)}]"
-        expected = f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device>]\n"
+        expected = f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device|driver>]\n"
         self.assertEqual(self.sbd_instance_diskless.configure_usage, expected)
         mock_is_using_disk_based_sbd.assert_called_once()
         mock_is_using_diskless_sbd.assert_called_once()
