@@ -1614,6 +1614,13 @@ class CrmMonXmlParser(object):
         xpath = f'//resource[(@id="{ra}" or @resource_agent="{ra}") and @active="true" and @role="Started"]'
         return bool(self.xml_elem.xpath(xpath))
 
+    def get_resource_top_parent_id_set_via_type(self, ra_type):
+        """
+        Given configured ra type, get the topmost parent ra id set
+        """
+        xpath = f'//resource[@resource_agent="{ra_type}"]'
+        return set([get_topmost_rsc(elem).get('id') for elem in self.xml_elem.xpath(xpath)])
+
     def get_resource_id_list_via_type(self, ra_type):
         """
         Given configured ra type, get the ra id list

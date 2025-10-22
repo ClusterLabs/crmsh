@@ -568,22 +568,6 @@ class SBDManager:
                 logger.info("Enable %s on node %s", constants.SBD_SERVICE, node)
                 service_manager.enable_service(constants.SBD_SERVICE, node)
 
-    @staticmethod
-    def restart_cluster_if_possible(with_maintenance_mode=False):
-        if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
-            return
-        if not xmlutil.CrmMonXmlParser().is_non_stonith_resource_running():
-            bootstrap.restart_cluster()
-        elif with_maintenance_mode:
-            if not utils.is_dlm_running():
-                bootstrap.restart_cluster()
-            else:
-                logger.warning("Resource is running, need to restart cluster service manually on each node")
-        else:
-            logger.warning("Resource is running, need to restart cluster service manually on each node")
-            logger.warning("Or, run with `crm -F` or `--force` option, the `sbd` subcommand will leverage maintenance mode for any changes that require restarting sbd.service")
-            logger.warning("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
-
     def configure_sbd(self):
         '''
         Configure fence_sbd resource and related properties
@@ -721,6 +705,9 @@ class SBDManager:
             self._load_attributes_from_bootstrap()
 
         with utils.leverage_maintenance_mode() as enabled:
+            if not utils.able_to_restart_cluster(enabled):
+                return
+
             self.initialize_sbd()
             self.update_configuration()
             SBDManager.enable_sbd_service()
@@ -734,7 +721,7 @@ class SBDManager:
                 # because the stonith-watchdog-timeout property requires sbd.service to be active.
                 restart_cluster_first = self.diskless_sbd and not ServiceManager().service_is_active(constants.SBD_SERVICE)
                 if restart_cluster_first:
-                    SBDManager.restart_cluster_if_possible(with_maintenance_mode=enabled)
+                    bootstrap.restart_cluster()
 
                 self.configure_sbd()
                 bootstrap.adjust_properties(with_sbd=True)
@@ -744,7 +731,7 @@ class SBDManager:
                 # This helps prevent unexpected issues, such as nodes being fenced
                 # due to large SBD_WATCHDOG_TIMEOUT values combined with smaller timeouts.
                 if not restart_cluster_first:
-                    SBDManager.restart_cluster_if_possible(with_maintenance_mode=enabled)
+                    bootstrap.restart_cluster()
 
     def join_sbd(self, remote_user, peer_host):
         '''
