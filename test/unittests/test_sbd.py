@@ -729,7 +729,6 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance.update_configuration()
         mock_logger_info.assert_has_calls([
             call("Update %s in %s: %s", 'key', sbd.SBDManager.SYSCONFIG_SBD, 'value'),
-            call('Already synced %s to all nodes', sbd.SBDManager.SYSCONFIG_SBD)
         ])
 
     @patch('logging.Logger.info')
@@ -808,6 +807,7 @@ class TestOutterFunctions(unittest.TestCase):
             call("Remove sbd resource '%s'", 'sbd_resource')
         ])
 
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.parallax.parallax_call')
     @patch('crmsh.utils.cleanup_stonith_related_properties')
     @patch('crmsh.sbd.sh.cluster_shell')
@@ -816,8 +816,9 @@ class TestOutterFunctions(unittest.TestCase):
     @patch('crmsh.sbd.ServiceManager')
     @patch('crmsh.utils.list_cluster_nodes')
     @patch('crmsh.sbd.cleanup_existing_sbd_resource')
-    def test_purge_sbd_from_cluster(self, mock_cleanup_existing_sbd_resource, mock_list_cluster_nodes, mock_ServiceManager, mock_logger_info, mock_cluster_run_cmd, mock_cluster_shell, mock_cleanup_stonith_related_properties, mock_parallax_call):
+    def test_purge_sbd_from_cluster(self, mock_cleanup_existing_sbd_resource, mock_list_cluster_nodes, mock_ServiceManager, mock_logger_info, mock_cluster_run_cmd, mock_cluster_shell, mock_cleanup_stonith_related_properties, mock_parallax_call, mock_list_cluster_nodes_except_me):
         mock_list_cluster_nodes.return_value = ['node1', 'node2']
+        mock_list_cluster_nodes_except_me.return_value = ['node2']
         mock_ServiceManager.return_value.service_is_enabled.side_effect = [True, True]
         stonith_data = """stonith-sbd
 1 fence device found
@@ -827,6 +828,6 @@ class TestOutterFunctions(unittest.TestCase):
         mock_logger_info.assert_has_calls([
             call("Disable %s on node %s", constants.SBD_SERVICE, 'node1'),
             call("Disable %s on node %s", constants.SBD_SERVICE, 'node2'),
-            call("Move %s to %s on all nodes", sbd.SBDManager.SYSCONFIG_SBD, sbd.SBDManager.SYSCONFIG_SBD+'.bak')
+            call("Move %s to %s%s", sbd.SBDManager.SYSCONFIG_SBD, sbd.SBDManager.SYSCONFIG_SBD+'.bak', ' on all nodes')
         ])
         mock_cleanup_stonith_related_properties.assert_called_once()
