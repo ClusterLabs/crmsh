@@ -517,8 +517,11 @@ class SBD(command.UI):
 
         logger.info("Remove devices: %s", ';'.join(devices_to_remove))
         update_dict = {"SBD_DEVICE": ";".join(left_device_list)}
-        sbd.SBDManager.update_sbd_configuration(update_dict)
-        sbd.SBDManager.restart_cluster_if_possible()
+        with utils.leverage_maintenance_mode() as enabled:
+            if not utils.able_to_restart_cluster(enabled):
+                return
+            sbd.SBDManager.update_sbd_configuration(update_dict)
+            bootstrap.restart_cluster()
 
     @command.completers_repeating(sbd_device_completer)
     def do_device(self, context, *args) -> bool:
@@ -603,20 +606,23 @@ class SBD(command.UI):
 
         utils.check_all_nodes_reachable("purging SBD")
 
-        if args and args[0] == "crashdump":
-            if not self._is_crashdump_configured():
-                logger.error("SBD crashdump is not configured")
+        with utils.leverage_maintenance_mode() as enabled:
+            if not utils.able_to_restart_cluster(enabled):
                 return False
-            self._set_crashdump_option(delete=True)
-            update_dict = self._set_crashdump_in_sysconfig(restore=True)
-            if update_dict:
-                sbd.SBDManager.update_sbd_configuration(update_dict)
-                sbd.SBDManager.restart_cluster_if_possible()
-            return True
 
-        sbd.purge_sbd_from_cluster()
-        sbd.SBDManager.restart_cluster_if_possible()
-        return True
+            if args and args[0] == "crashdump":
+                if not self._is_crashdump_configured():
+                    logger.error("SBD crashdump is not configured")
+                    return False
+                self._set_crashdump_option(delete=True)
+                update_dict = self._set_crashdump_in_sysconfig(restore=True)
+                if update_dict:
+                    sbd.SBDManager.update_sbd_configuration(update_dict)
+            else:
+                sbd.purge_sbd_from_cluster()
+
+            bootstrap.restart_cluster()
+            return True
 
     def _print_sbd_type(self):
         if not self.service_manager.service_is_active(constants.SBD_SERVICE):
