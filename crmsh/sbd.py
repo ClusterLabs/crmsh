@@ -520,7 +520,6 @@ class SBDManager:
         utils.sysconfig_set(self.SYSCONFIG_SBD, **self.update_dict)
         if self.cluster_is_running:
             bootstrap.sync_path(self.SYSCONFIG_SBD)
-            logger.info("Already synced %s to all nodes", self.SYSCONFIG_SBD)
 
     @classmethod
     def update_sbd_configuration(cls, update_dict: typing.Dict[str, str]) -> None:
@@ -795,7 +794,8 @@ def purge_sbd_from_cluster():
             service_manager.disable_service(constants.SBD_SERVICE, node)
 
     config_bak = f"{SBDManager.SYSCONFIG_SBD}.bak"
-    logger.info("Move %s to %s on all nodes", SBDManager.SYSCONFIG_SBD, config_bak)
+    all_nodes_msg = " on all nodes" if utils.list_cluster_nodes_except_me() else ""
+    logger.info("Move %s to %s%s", SBDManager.SYSCONFIG_SBD, config_bak, all_nodes_msg)
     utils.cluster_run_cmd(f"mv {SBDManager.SYSCONFIG_SBD} {config_bak}")
 
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
