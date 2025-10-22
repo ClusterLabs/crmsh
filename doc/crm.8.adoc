@@ -2218,11 +2218,11 @@ Usage:
 ...............
 # For disk-based SBD
 crm sbd configure show [disk_metadata|sysconfig|property]
-crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device>]
+crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device|driver>]
 
 # For disk-less SBD
 crm sbd configure show [sysconfig|property]
-crm sbd configure [watchdog-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device>]
+crm sbd configure [watchdog-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device|driver>]
 ...............
 
 example:

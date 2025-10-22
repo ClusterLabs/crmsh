@@ -175,7 +175,7 @@ class SBD(command.UI):
 
         timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in timeout_types])
         show_usage = f"crm sbd configure show [{'|'.join(show_types)}]"
-        return f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device>]\n"
+        return f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device|driver>]\n"
 
     def _show_sysconfig(self) -> None:
         '''
