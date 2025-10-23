@@ -2762,31 +2762,14 @@ def is_dlm_running(peer=None):
     """
     Check if dlm ra controld is running
     """
-    return is_resource_running(constants.DLM_CONTROLD_RA, peer=peer)
-
-
-def has_resource_configured(ra_type, peer=None):
-    """
-    Check if the RA configured
-    """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1rR", peer)
-    return re.search(ra_type, out) is not None
-
-
-def is_resource_running(ra_type, peer=None):
-    """
-    Check if the RA running
-    """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1rR", peer)
-    patt = f"\\({ra_type}\\):\\s*Started"
-    return re.search(patt, out) is not None
+    return xmlutil.CrmMonXmlParser(peer).is_resource_started(constants.DLM_CONTROLD_RA)
 
 
 def is_dlm_configured(peer=None):
     """
     Check if dlm configured
     """
-    return has_resource_configured(constants.DLM_CONTROLD_RA, peer=peer)
+    return xmlutil.CrmMonXmlParser(peer).is_resource_configured(constants.DLM_CONTROLD_RA)
 
 
 def is_quorate(peer=None):
