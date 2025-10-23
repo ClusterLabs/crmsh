@@ -406,57 +406,6 @@ class TestSBDManager(unittest.TestCase):
             call("Enable %s on node %s", constants.SBD_SERVICE, 'node2')
         ])
 
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    @patch('crmsh.sbd.ServiceManager')
-    def test_restart_cluster_if_possible_return(self, mock_ServiceManager, mock_CrmMonXmlParser):
-        mock_ServiceManager.return_value.service_is_active.return_value = False
-        SBDManager.restart_cluster_if_possible()
-        mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
-        mock_CrmMonXmlParser.assert_not_called()
-
-    @patch('logging.Logger.warning')
-    @patch('crmsh.utils.is_dlm_running')
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    @patch('crmsh.sbd.ServiceManager')
-    def test_restart_cluster_if_possible_manually(
-            self, mock_ServiceManager, mock_CrmMonXmlParser, mock_is_dlm_running, mock_logger_warning,
-    ):
-        mock_ServiceManager.return_value.service_is_active.return_value = True
-        mock_CrmMonXmlParser.return_value.is_non_stonith_resource_running.return_value = True
-        mock_is_dlm_running.return_value = False
-        SBDManager.restart_cluster_if_possible()
-        mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
-        mock_logger_warning.assert_has_calls([
-            call("Resource is running, need to restart cluster service manually on each node"),
-            call("Or, run with `crm -F` or `--force` option, the `sbd` subcommand will leverage maintenance mode for any changes that require restarting sbd.service"),
-            call("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
-        ])
-
-    @patch('logging.Logger.warning')
-    @patch('crmsh.utils.is_dlm_running')
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    @patch('crmsh.sbd.ServiceManager')
-    def test_restart_cluster_if_possible_dlm_running(
-            self, mock_ServiceManager, mock_CrmMonXmlParser, mock_is_dlm_running, mock_logger_warning,
-    ):
-        mock_ServiceManager.return_value.service_is_active.return_value = True
-        mock_CrmMonXmlParser.return_value.is_non_stonith_resource_running.return_value = True
-        mock_is_dlm_running.return_value = True
-        SBDManager.restart_cluster_if_possible(with_maintenance_mode=True)
-        mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
-        mock_logger_warning.assert_called_once_with("Resource is running, need to restart cluster service manually on each node")
-
-    @patch('crmsh.bootstrap.restart_cluster')
-    @patch('logging.Logger.warning')
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    @patch('crmsh.sbd.ServiceManager')
-    def test_restart_cluster_if_possible(self, mock_ServiceManager, mock_CrmMonXmlParser, mock_logger_warning, mock_restart_cluster):
-        mock_ServiceManager.return_value.service_is_active.return_value = True
-        mock_CrmMonXmlParser.return_value.is_non_stonith_resource_running.return_value = False
-        SBDManager.restart_cluster_if_possible()
-        mock_ServiceManager.return_value.service_is_active.assert_called_once_with(constants.PCMK_SERVICE)
-        mock_restart_cluster.assert_called_once()
-
     @patch('crmsh.bootstrap.prompt_for_string')
     def test_prompt_for_sbd_device_diskless(self, mock_prompt_for_string):
         mock_prompt_for_string.return_value = "none"
@@ -644,10 +593,10 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance._load_attributes_from_bootstrap.assert_not_called()
 
     @patch('crmsh.bootstrap.adjust_properties')
-    @patch('crmsh.sbd.SBDManager.restart_cluster_if_possible')
+    @patch('crmsh.bootstrap.restart_cluster')
     @patch('crmsh.sbd.SBDManager.enable_sbd_service')
     @patch('crmsh.sbd.ServiceManager')
-    def test_init_and_deploy_sbd(self, mock_ServiceManager, mock_enable_sbd_service, mock_restart_cluster_if_possible, mock_adjust_properties):
+    def test_init_and_deploy_sbd(self, mock_ServiceManager, mock_enable_sbd_service, mock_restart_cluster, mock_adjust_properties):
         mock_bootstrap_ctx = Mock(cluster_is_running=True)
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
         sbdmanager_instance.get_sbd_device_from_bootstrap = Mock()
