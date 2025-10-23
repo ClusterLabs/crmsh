@@ -469,14 +469,14 @@ class TestSBD(unittest.TestCase):
             self.sbd_instance_diskbased._device_remove(["/dev/sda1"])
         self.assertEqual(str(e.exception), "Not allowed to remove all devices")
 
-    @mock.patch('crmsh.sbd.SBDManager.restart_cluster_if_possible')
+    @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     @mock.patch('logging.Logger.info')
-    def test_device_remove(self, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster_if_possible):
+    def test_device_remove(self, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster):
         self.sbd_instance_diskbased.device_list_from_config = ["/dev/sda1", "/dev/sda2"]
         self.sbd_instance_diskbased._device_remove(["/dev/sda1"])
         mock_update_sbd_configuration.assert_called_once_with({"SBD_DEVICE": "/dev/sda2"})
-        mock_restart_cluster_if_possible.assert_called_once()
+        mock_restart_cluster.assert_called_once()
         mock_logger_info.assert_called_once_with("Remove devices: %s", "/dev/sda1")
 
     def test_do_device_no_service(self):
@@ -571,9 +571,10 @@ class TestSBD(unittest.TestCase):
         self.assertFalse(res)
         mock_purge_sbd_from_cluster.assert_not_called()
 
+    @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.sbd.purge_sbd_from_cluster')
-    def test_do_purge(self, mock_purge_sbd_from_cluster, mock_check_all_nodes_reachable):
+    def test_do_purge(self, mock_purge_sbd_from_cluster, mock_check_all_nodes_reachable, mock_restart_cluster):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         res = self.sbd_instance_diskbased.do_purge(mock.Mock())
