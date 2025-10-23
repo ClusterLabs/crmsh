@@ -367,23 +367,14 @@ totem.interface.1.ttl (u8) = 1
             ])
         mock_error.assert_not_called()
 
-    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-    def test_online_nodes_empty(self, mock_run):
-        mock_run.return_value = (0, "data", None)
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_online_nodes(self, mock_crmmon_parser):
+        mock_inst = mock.Mock()
+        mock_crmmon_parser.return_value = mock_inst
+        mock_inst.get_node_list.return_value = ["node1", "node2"]
         res = utils.online_nodes()
-        self.assertEqual(res, [])
-        mock_run.assert_called_once_with("crm_mon -1")
-
-    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-    def test_online_nodes(self, mock_run):
-        output = """
-Node List:
-  * Online: [ 15sp2-1 15sp2-2 ]
-        """
-        mock_run.return_value = (0, output, None)
-        res = utils.online_nodes()
-        self.assertEqual(res, ["15sp2-1", "15sp2-2"])
-        mock_run.assert_called_once_with("crm_mon -1")
+        self.assertEqual(res, ["node1", "node2"])
+        mock_inst.get_node_list.assert_called_once_with(online=True, node_type='member')
 
     @mock.patch('crmsh.crash_test.utils.online_nodes')
     def test_peer_node_list_empty(self, mock_online):

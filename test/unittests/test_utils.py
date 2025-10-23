@@ -1058,34 +1058,22 @@ def test_set_dlm_option(mock_get_dict, mock_run):
     mock_run_inst.get_stdout_or_raise_error.assert_called_once_with('dlm_tool set_config "key2=test"', None)
 
 
-@mock.patch('crmsh.utils.has_resource_configured')
-def test_is_dlm_configured(mock_configured):
-    mock_configured.return_value = True
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+def test_is_dlm_configured(mock_crmmon):
+    mock_crmmon_inst = mock.Mock()
+    mock_crmmon.return_value = mock_crmmon_inst
+    mock_crmmon_inst.is_resource_configured.return_value = True
     assert utils.is_dlm_configured() is True
-    mock_configured.assert_called_once_with(constants.DLM_CONTROLD_RA, peer=None)
+    mock_crmmon_inst.is_resource_configured.assert_called_once_with(constants.DLM_CONTROLD_RA)
 
 
-@mock.patch('crmsh.sh.cluster_shell')
-def test_is_quorate_exception(mock_run):
-    mock_run_inst = mock.Mock()
-    mock_run.return_value = mock_run_inst
-    mock_run_inst.get_stdout_or_raise_error.return_value = "data"
-    with pytest.raises(ValueError) as err:
-        utils.is_quorate()
-    assert str(err.value) == "Failed to get quorate status from corosync-quorumtool"
-    mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-quorumtool -s", None, success_exit_status={0, 2})
-
-
-@mock.patch('crmsh.sh.cluster_shell')
-def test_is_quorate(mock_run):
-    mock_run_inst = mock.Mock()
-    mock_run.return_value = mock_run_inst
-    mock_run_inst.get_stdout_or_raise_error.return_value = """
-Ring ID:          1084783297/440
-Quorate:          Yes
-    """
-    assert utils.is_quorate() is True
-    mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-quorumtool -s", None, success_exit_status={0, 2})
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+def test_cluster_with_quorum(mock_crmmon):
+    mock_crmmon_inst = mock.Mock()
+    mock_crmmon.return_value = mock_crmmon_inst
+    mock_crmmon_inst.with_quorum.return_value = True
+    assert utils.cluster_with_quorum() is True
+    mock_crmmon_inst.with_quorum.assert_called_once_with()
 
 
 @mock.patch('crmsh.cibquery.get_cluster_nodes')
