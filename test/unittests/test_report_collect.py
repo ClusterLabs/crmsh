@@ -491,6 +491,7 @@ id            0x19041a12
                 "crm_mon_data_n1",
                 "crm_mon_data_rf1",
                 "crm_mon_data_rnt1",
+                "crm_mon_data_xml",
                 "cib_data",
                 "crm_node_data"
                 ]

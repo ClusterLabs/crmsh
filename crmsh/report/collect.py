@@ -359,9 +359,10 @@ def dump_runtime_state(workdir: str) -> None:
         ("-n1", "resources grouped by node"),
         ("-rf1", "resource fail counts"),
         ("-rnt1", "resource operation history with timing details"),
+        ("--output-as=xml", "XML format")
     ]:
         cmd = f"crm_mon {option}"
-        out += f"\n#### Display cluster state and {desc}: {cmd} ####\n"
+        out += f"\n#### Display cluster state with {desc}: {cmd} ####\n"
         out += cluster_shell_inst.get_stdout_or_raise_error(cmd)
         out += "\n\n"
 
