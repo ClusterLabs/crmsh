@@ -11,6 +11,7 @@ from crmsh import ra
 from crmsh import log
 from crmsh.sh import ShellUtils
 from crmsh import constants
+from crmsh import xmlutil
 
 
 logger = log.setup_logger(__name__)
@@ -151,12 +152,7 @@ def online_nodes():
     """
     Get online node list
     """
-    rc, stdout, stderr = ShellUtils().get_stdout_stderr('crm_mon -1')
-    if rc == 0 and stdout:
-        res = re.search(r'Online:\s+\[\s(.*)\s\]', stdout)
-        if res:
-            return res.group(1).split()
-    return []
+    return xmlutil.CrmMonXmlParser().get_node_list(online=True, node_type='member')
 
 
 def peer_node_list():
