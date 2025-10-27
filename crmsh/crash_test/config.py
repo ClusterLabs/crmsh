@@ -5,4 +5,3 @@ BLOCK_IP = '''iptables -{action} INPUT -s {peer_ip} -j DROP;
 REMOVE_PORT = "firewall-cmd --zone=public --remove-port={port}/udp"
 ADD_PORT = "firewall-cmd --zone=public --add-port={port}/udp"
 SBD_CONF = "/etc/sysconfig/sbd"
-SBD_CHECK_CMD = "sbd -d {dev} dump"
