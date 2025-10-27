@@ -182,17 +182,6 @@ def str_to_datetime(str_time, fmt):
     return datetime.strptime(str_time, fmt)
 
 
-def corosync_port_list():
-    """
-    Get corosync ports using corosync-cmapctl
-    """
-    ports = []
-    rc, out, _ = ShellUtils().get_stdout_stderr("corosync-cmapctl totem.interface")
-    if rc == 0 and out:
-        ports = re.findall(r'(?:mcastport.*) ([0-9]+)', out)
-    return ports
-
-
 def get_handler(logger, _type):
     """
     Get logger specific handler
@@ -227,72 +216,6 @@ def get_process_status(s):
             # a process may have died since we got the list of pids
             pass
     return False, -1
-
-
-def _find_match_count(str1, str2):
-    """
-    Find the max match number of s1 and s2
-    """
-    leng = min(len(str1), len(str2))
-    num = 0
-
-    for i in range(leng):
-        if str1[i] == str2[i]:
-            num += 1
-        else:
-            break
-
-    return num
-
-
-def is_valid_sbd(dev):
-    """
-    Check whether the device is a initialized SBD device
-
-    dev: dev path
-    return 'True' if 'dev' is a initialized SBD device
-    """
-    if not os.path.exists(dev):
-        return False
-
-    rc, out, err = ShellUtils().get_stdout_stderr(config.SBD_CHECK_CMD.format(dev=dev))
-    if rc != 0 and err:
-        msg_error(err)
-        return False
-
-    return True
-
-
-def find_candidate_sbd(dev):
-    """
-    Find the devices that already have SBD header
-
-    return the path of candidate SBD device
-    """
-    ddir = os.path.dirname(dev)
-    dname = os.path.basename(dev)
-
-    dev_list = glob.glob(ddir + "/*")
-    if len(dev_list) == 0:
-        return ""
-
-    can_filter = filter(is_valid_sbd, dev_list)
-    candidates = list(can_filter)
-
-    if len(candidates) == 0:
-        return ""
-
-    index = 0
-    i = 0
-    max_match = -1
-    num_list = map(_find_match_count, [dev] * len(candidates), candidates)
-    for num in num_list:
-        if num > max_match:
-            max_match = num
-            index = i
-        i += 1
-
-    return candidates[index]
 
 
 def warning_ask(warn_string):
