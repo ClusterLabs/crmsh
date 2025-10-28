@@ -64,6 +64,7 @@ SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_NFS = "/etc/sysconfig/nfs"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
 SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service"]
+SERVICES_DISABLE_LIST = ["pacemaker.service", "sbd.service"]
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
 BOOTH_AUTH = "/etc/booth/authkey"
@@ -734,7 +735,7 @@ def start_pacemaker(node_list=[], enable_flag=False):
             except ValueError as err:
                 node_list.remove(node)
                 logger.error(err)
-    logger.info("Starting %s on %s", constants.PCMK_SERVICE, ', '.join(node_list) or utils.this_node())
+    logger.info("Starting and enable %s on %s", constants.PCMK_SERVICE, ', '.join(node_list) or utils.this_node())
     return service_manager.start_service("pacemaker.service", enable=enable_flag, node_list=node_list)
 
 
@@ -2095,15 +2096,19 @@ def get_cluster_node_ip(node: str) -> str:
             return ip
 
 
-def stop_services(stop_list, remote_addr=None):
+def stop_and_disable_services(remote_addr=None):
     """
-    Stop cluster related service
+    Stop and disable cluster related service
     """
     service_manager = ServiceManager()
-    for service in stop_list:
+    for service in SERVICES_STOP_LIST:
         if service_manager.service_is_active(service, remote_addr=remote_addr):
-            logger.info("Stopping the %s on %s", service, remote_addr if remote_addr else utils.this_node())
+            logger.info("Stopping and disable %s on node %s", service, remote_addr or utils.this_node())
             service_manager.stop_service(service, disable=True, remote_addr=remote_addr)
+    for service in SERVICES_DISABLE_LIST:
+        if service_manager.service_is_enabled(service, remote_addr=remote_addr):
+            logger.info("Disable %s on node %s", service, remote_addr or utils.this_node())
+            service_manager.disable_service(service, remote_addr=remote_addr)
 
 
 def rm_configuration_files(remote=None):
@@ -2142,7 +2147,7 @@ def remove_node_from_cluster(node, dead_node=False):
 
     node_ip = get_cluster_node_ip(node)
     if not dead_node:
-        stop_services(SERVICES_STOP_LIST, remote_addr=node)
+        stop_and_disable_services(remote_addr=node)
         qdevice.QDevice.remove_qdevice_db([node])
         rm_configuration_files(node)
 
@@ -2486,7 +2491,7 @@ def remove_self(force_flag=False):
             print(stdout)
     else:
         # disable and stop cluster
-        stop_services(SERVICES_STOP_LIST)
+        stop_and_disable_services()
         qdevice.QDevice.remove_certification_files_on_qnetd()
         qdevice.QDevice.remove_qdevice_db([utils.this_node()])
         rm_configuration_files()
