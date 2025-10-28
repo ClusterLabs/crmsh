@@ -97,6 +97,9 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     Cluster property "stonith-timeout" is "71"
 
+    When    Try "crm configure property stonith-watchdog-timeout=1" on "hanode1"
+    Then    Except "Can't set stonith-watchdog-timeout to 1 because it is less than SBD_WATCHDOG_TIMEOUT(now: 15)" in stderr
+
   @clean
   Scenario: disk-based SBD with big sbd_watchdog_timeout
     When    Run "sed -i 's/watchdog_timeout: 15/watchdog_timeout: 60/' /etc/crm/profiles.yml" on "hanode1"
