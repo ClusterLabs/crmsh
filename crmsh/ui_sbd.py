@@ -290,12 +290,12 @@ class SBD(command.UI):
             return timeout_dict
         if watchdog_timeout and not msgwait_timeout:
             timeout_dict["msgwait"] = 2*watchdog_timeout
-            logger.info("No 'msgwait-timeout=' specified in the command, use 2*watchdog timeout: %s", 2*watchdog_timeout)
+            logger.info("No 'msgwait-timeout' specified in the command, use 2*watchdog timeout: %s", 2*watchdog_timeout)
             return timeout_dict
         if msgwait_timeout and not watchdog_timeout:
             watchdog_timeout = msgwait_timeout//2
             timeout_dict["watchdog"] = watchdog_timeout
-            logger.info("No 'watchdog-timeout=' specified in the command, use msgwait timeout/2: %s", watchdog_timeout)
+            logger.info("No 'watchdog-timeout' specified in the command, use msgwait timeout/2: %s", watchdog_timeout)
             return timeout_dict
         return timeout_dict
 
@@ -450,12 +450,19 @@ class SBD(command.UI):
             logger.info("No change in SBD configuration")
             return
 
+        restart_first = False
+        if watchdog_timeout:
+            expected_stonith_watchdog_timeout = timeout_dict.get("stonith-watchdog", 2*watchdog_timeout)
+            # If the expected stonith-watchdog-timeout is smaller than runtime SBD_WATCHDOG_TIMEOUT, restart cluster first
+            if expected_stonith_watchdog_timeout < self.watchdog_timeout_from_config:
+                restart_first = True
+
         sbd_manager = sbd.SBDManager(
             timeout_dict=timeout_dict,
             update_dict=update_dict,
             diskless_sbd=True
         )
-        sbd_manager.init_and_deploy_sbd()
+        sbd_manager.init_and_deploy_sbd(restart_first)
 
     def _device_add(self, devices_to_add: typing.List[str]):
         '''

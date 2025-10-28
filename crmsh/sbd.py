@@ -187,6 +187,7 @@ class SBDTimeout(object):
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
     QDEVICE_SYNC_TIMEOUT_MARGIN = 5
     SHOW_SBD_START_TIMEOUT_CMD = "systemctl show -p TimeoutStartUSec sbd.service --value"
+    SHOW_DEFAULT_START_TIMEOUT_CMD = "systemctl show -p DefaultTimeoutStartUSec --value"
 
     def __init__(self, context=None):
         '''
@@ -287,17 +288,13 @@ class SBDTimeout(object):
     def get_stonith_watchdog_timeout_expected():
         '''
         Returns the value of the stonith-watchdog-timeout cluster property.
-
-        If the Pacemaker service is inactive, returns the default value (2 * SBD_WATCHDOG_TIMEOUT).
-        If the property is set and its value is equal to or greater than the default, returns the property value.
-        Otherwise, returns the default value.
+        Default is 2 * SBD_WATCHDOG_TIMEOUT.
         '''
         default = 2 * SBDTimeout.get_sbd_watchdog_timeout()
         if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
             return default
         value = utils.get_property("stonith-watchdog-timeout", get_default=False)
-        return_value = value if utils.crm_msec(value) >= utils.crm_msec(default) else default
-        return int(utils.crm_msec(return_value)/1000)  # convert msec to sec
+        return int(value) if value else default
 
     def _load_configurations(self):
         '''
@@ -381,29 +378,54 @@ class SBDTimeout(object):
         out = sh.cluster_shell().get_stdout_or_raise_error(SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD)
         return utils.get_systemd_timeout_start_in_sec(out)
 
+    @staticmethod
+    def get_default_systemd_start_timeout() -> int:
+        out = sh.cluster_shell().get_stdout_or_raise_error(SBDTimeout.SHOW_DEFAULT_START_TIMEOUT_CMD)
+        return utils.get_systemd_timeout_start_in_sec(out)
+
     def adjust_systemd_start_timeout(self):
         '''
         Adjust start timeout for sbd when set SBD_DELAY_START
         '''
         sbd_delay_start_value = SBDUtils.get_sbd_value_from_config("SBD_DELAY_START")
         if sbd_delay_start_value == "no":
+            SBDTimeout.restore_systemd_start_timeout()
             return
-
-        start_timeout = SBDTimeout.get_sbd_systemd_start_timeout()
-        if start_timeout > int(sbd_delay_start_value):
+        expected_start_timeout = int(1.2*int(sbd_delay_start_value))
+        actual_start_timeout = SBDTimeout.get_sbd_systemd_start_timeout()
+        default_start_timeout = SBDTimeout.get_default_systemd_start_timeout()
+        if expected_start_timeout == actual_start_timeout:
             return
+        elif expected_start_timeout > default_start_timeout:
+            logger.info("Adjust systemd start timeout for sbd.service to %ds, it was %ds",
+                        expected_start_timeout, actual_start_timeout)
+            SBDTimeout.set_systemd_start_timeout(expected_start_timeout)
+        else:
+            if os.path.isdir(SBDManager.SBD_SYSTEMD_DELAY_START_DIR):
+                logger.info("Restore systemd start timeout for sbd.service to default %ds, it was %ds",
+                            default_start_timeout, actual_start_timeout)
+            SBDTimeout.restore_systemd_start_timeout()
 
+    @staticmethod
+    def set_systemd_start_timeout(value):
         utils.mkdirp(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
-        sbd_delay_start_file = "{}/sbd_delay_start.conf".format(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
-        utils.str2file("[Service]\nTimeoutSec={}".format(int(1.2*int(sbd_delay_start_value))), sbd_delay_start_file)
+        sbd_delay_start_file = os.path.join(SBDManager.SBD_SYSTEMD_DELAY_START_DIR, "sbd_delay_start.conf")
+        utils.str2file(f"[Service]\nTimeoutStartSec={value}", sbd_delay_start_file)
         bootstrap.sync_path(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
         utils.cluster_run_cmd("systemctl daemon-reload")
+
+    @staticmethod
+    def restore_systemd_start_timeout():
+        test_dir_cmd = f"test -d {SBDManager.SBD_SYSTEMD_DELAY_START_DIR}"
+        rm_dir_cmd = f"rm -rf {SBDManager.SBD_SYSTEMD_DELAY_START_DIR}"
+        reload_cmd = "systemctl daemon-reload"
+        utils.cluster_run_cmd(f"{test_dir_cmd} && {rm_dir_cmd} && {reload_cmd} || exit 0")
 
     def adjust_stonith_timeout(self):
         '''
         Adjust stonith-timeout property
         '''
-        utils.set_property("stonith-timeout", self.get_stonith_timeout_expected(), conditional=True)
+        utils.set_property("stonith-timeout", self.get_stonith_timeout_expected())
 
     def adjust_sbd_delay_start(self):
         '''
@@ -415,7 +437,7 @@ class SBDTimeout(object):
             return
         if expected_value == "no" \
                 or (not re.search(r'\d+', config_value)) \
-                or (int(expected_value) > int(config_value)):
+                or (int(expected_value) != int(config_value)):
             SBDManager.update_sbd_configuration({"SBD_DELAY_START": expected_value})
 
     @classmethod
@@ -584,7 +606,7 @@ class SBDManager:
                 cmd = f"crm configure primitive {self.SBD_RA_ID} {self.SBD_RA}"
                 sh.cluster_shell().get_stdout_or_raise_error(cmd)
         else:
-            swt_value = self.timeout_dict.get("stonith-watchdog", SBDTimeout.get_stonith_watchdog_timeout_expected())
+            swt_value = self.timeout_dict.get("stonith-watchdog", 2*SBDTimeout.get_sbd_watchdog_timeout())
             utils.set_property("stonith-watchdog-timeout", swt_value)
         utils.set_property("stonith-enabled", "true")
 
@@ -692,7 +714,7 @@ class SBDManager:
             self.timeout_dict = SBDUtils.get_sbd_device_metadata(no_overwrite_list[0], timeout_only=True)
         self.update_dict["SBD_DEVICE"] = ';'.join(device_list)
 
-    def init_and_deploy_sbd(self):
+    def init_and_deploy_sbd(self, restart_first=False):
         '''
         The process of deploying sbd includes:
         1. Initialize sbd device
@@ -721,7 +743,8 @@ class SBDManager:
                 # the cluster must be restarted first to activate sbd.service on all nodes.
                 # Only then should additional properties be configured,
                 # because the stonith-watchdog-timeout property requires sbd.service to be active.
-                restart_cluster_first = self.diskless_sbd and not ServiceManager().service_is_active(constants.SBD_SERVICE)
+                restart_cluster_first = restart_first or \
+                        (self.diskless_sbd and not ServiceManager().service_is_active(constants.SBD_SERVICE))
                 if restart_cluster_first:
                     SBDManager.restart_cluster_if_possible(with_maintenance_mode=enabled)
 
