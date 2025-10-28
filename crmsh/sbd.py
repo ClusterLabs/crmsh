@@ -752,8 +752,7 @@ class SBDManager:
         if dev_list and not utils.package_is_installed("fence-agents-sbd"):
             utils.fatal(self.FENCE_SBD_NOT_INSTALLED_MSG)
 
-        from .watchdog import Watchdog
-        self._watchdog_inst = Watchdog(remote_user=remote_user, peer_host=peer_host)
+        self._watchdog_inst = watchdog.Watchdog(remote_user=remote_user, peer_host=peer_host)
         self._watchdog_inst.join_watchdog()
 
         if dev_list:

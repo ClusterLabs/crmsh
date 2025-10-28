@@ -73,4 +73,4 @@ nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(standby=x), None)
 online_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(standby=x), False)
 standby_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(standby=x), True)
 
-shadows = call(xmlutil.listshadows)
+shadows = call(lambda: xmlutil.listshadows())

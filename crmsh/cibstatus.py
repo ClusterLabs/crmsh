@@ -8,7 +8,6 @@ from . import tmpfiles
 from . import xmlutil
 from . import utils
 from . import config
-from .utils import ext_cmd, show_dot_graph, page_string
 from . import log
 
 
@@ -239,9 +238,9 @@ class CibStatus(object):
             cmd = "%s -D %s" % (cmd, dotfile)
         else:
             dotfile = None
-        rc = ext_cmd(cmd % self.source_file())
+        rc = utils.ext_cmd(cmd % self.source_file())
         if dotfile:
-            show_dot_graph(dotfile)
+            utils.show_dot_graph(dotfile)
         return rc == 0
 
     # actions is ignored
@@ -286,11 +285,11 @@ class CibStatus(object):
         '''
         if self.get_status() is None:
             return False
-        page_string(xmlutil.xml_tostring(self.status_node, pretty_print=True))
+        utils.page_string(xmlutil.xml_tostring(self.status_node, pretty_print=True))
         return True
 
     def inject(self, opts):
-        return ext_cmd("%s %s" %
+        return utils.ext_cmd("%s %s" %
                        (self.cmd_inject % (self.source_file(), self.source_file()), opts))
 
     def set_quorum(self, v):
