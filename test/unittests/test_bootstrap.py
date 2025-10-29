@@ -1972,23 +1972,28 @@ class TestValidation(unittest.TestCase):
         mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
         mock_get_iplist.assert_called_once_with('node1')
 
+    @mock.patch('crmsh.service_manager.ServiceManager.disable_service')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.service_manager.ServiceManager.stop_service')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_stop_services(self, mock_active, mock_status, mock_stop, mock_this_node):
+    def test_stop_and_disable_services(self, mock_active, mock_status, mock_stop, mock_this_node, mock_enabled, mock_disable):
         mock_active.side_effect = [True, True, True, True]
-        mock_this_node.side_effect = ['node1', 'node1', 'node1', 'node1']
-        bootstrap.stop_services(bootstrap.SERVICES_STOP_LIST)
+        mock_enabled.side_effect = [True, True]
+        mock_this_node.side_effect = ['node1', 'node1', 'node1', 'node1', 'node1', 'node1']
+        bootstrap.stop_and_disable_services()
         mock_active.assert_has_calls([
             mock.call("corosync-qdevice.service", remote_addr=None),
             mock.call("corosync.service", remote_addr=None),
             mock.call("hawk.service", remote_addr=None),
             ])
         mock_status.assert_has_calls([
-            mock.call('Stopping the %s on %s', 'corosync-qdevice.service', 'node1'),
-            mock.call('Stopping the %s on %s', 'corosync.service', 'node1'),
-            mock.call('Stopping the %s on %s', 'hawk.service', 'node1'),
+            mock.call('Stopping and disable %s on node %s', 'corosync-qdevice.service', 'node1'),
+            mock.call('Stopping and disable %s on node %s', 'corosync.service', 'node1'),
+            mock.call('Stopping and disable %s on node %s', 'hawk.service', 'node1'),
+            mock.call('Disable %s on node %s', 'pacemaker.service', 'node1'),
+            mock.call('Disable %s on node %s', 'sbd.service', 'node1'),
             ])
         mock_stop.assert_has_calls([
             mock.call("corosync-qdevice.service", disable=True, remote_addr=None),
@@ -2001,7 +2006,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.bootstrap.stop_services')
+    @mock.patch('crmsh.bootstrap.stop_and_disable_services')
     @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_remove_node_from_cluster_rm_node_failed(self, mock_crm_mon_parser, mock_get_ip, mock_stop, mock_status, mock_invoke, mock_error, mock_rm_conf_files, mock_call_delnode):
@@ -2018,7 +2023,7 @@ class TestValidation(unittest.TestCase):
 
         mock_get_ip.assert_called_once_with('node1')
         mock_status.assert_called_once_with("Removing node %s from CIB", "node1")
-        mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
+        mock_stop.assert_called_once_with(remote_addr="node1")
         mock_invoke.assert_not_called()
         mock_call_delnode.assert_called_once_with("node1")
         mock_error.assert_called_once_with("Failed to remove node1.")
@@ -2037,7 +2042,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.bootstrap.stop_services')
+    @mock.patch('crmsh.bootstrap.stop_and_disable_services')
     @mock.patch('crmsh.bootstrap.get_cluster_node_ip')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_remove_node_from_cluster_hostname(self, mock_crm_mon_parser, mock_get_ip, mock_stop, mock_status,
@@ -2065,7 +2070,7 @@ class TestValidation(unittest.TestCase):
             mock.call("Removing node %s from CIB", "node1"),
             mock.call("Propagating configuration changes across the remaining nodes")
             ])
-        mock_stop.assert_called_once_with(bootstrap.SERVICES_STOP_LIST, remote_addr="node1")
+        mock_stop.assert_called_once_with(remote_addr="node1")
         mock_cal_delnode.assert_called_once_with("node1")
         mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-cfgtool -R")
         mock_error.assert_not_called()
