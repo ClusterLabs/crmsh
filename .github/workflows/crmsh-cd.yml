@@ -16,11 +16,12 @@ env:
 
 jobs:
   integration:
-    if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'master'
+    if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'crmsh-5.0'
     uses: ./.github/workflows/crmsh-ci.yml
     secrets: inherit
 
   delivery:
+    if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'master'
     needs: integration
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -38,6 +39,7 @@ jobs:
           /bin/bash -c "cp -r /package ~/package && cd ~/package && /scripts/upload.sh"
 
   submit:
+    if: github.repository == 'ClusterLabs/crmsh' && github.ref_name == 'master'
     needs: delivery
     runs-on: ubuntu-24.04
     timeout-minutes: 10
