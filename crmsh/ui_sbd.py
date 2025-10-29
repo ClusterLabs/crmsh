@@ -54,10 +54,10 @@ def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str
     show_types, timeout_types = (), ()
     if is_diskbased:
         show_types = SBD.SHOW_TYPES
-        timeout_types = SBD.TIMEOUT_TYPES
+        timeout_types = tuple(SBD.TIMEOUT_TYPE_MINIMUMS.keys())
     elif is_diskless:
         show_types = SBD.DISKLESS_SHOW_TYPES
-        timeout_types = SBD.DISKLESS_TIMEOUT_TYPES
+        timeout_types = tuple(SBD.DISKLESS_TIMEOUT_TYPE_MINIMUMS.keys())
 
     if completed_list[1] == "show":
         if len(completed_list) == 3:
@@ -89,8 +89,19 @@ class SBD(command.UI):
     - sbd purge
     '''
     name = "sbd"
-    TIMEOUT_TYPES = ("watchdog", "allocate", "loop", "msgwait", "crashdump-watchdog")
-    DISKLESS_TIMEOUT_TYPES = ("watchdog", "crashdump-watchdog")
+    TIMEOUT_TYPE_MINIMUMS = {
+        # Type: Minimum value
+        "watchdog": 5,
+        "allocate": 2,
+        "loop": 1,
+        "msgwait": 10,
+        "crashdump-watchdog": 1
+    }
+    DISKLESS_TIMEOUT_TYPE_MINIMUMS = {
+        # Type: Minimum value
+        "watchdog": 5,
+        "crashdump-watchdog": 1
+    }
     SHOW_TYPES = ("disk_metadata", "sysconfig", "property")
     DISKLESS_SHOW_TYPES = ("sysconfig", "property")
     PCMK_ATTRS = (
@@ -167,9 +178,9 @@ class SBD(command.UI):
         '''
         timeout_types, show_types = (), ()
         if sbd.SBDUtils.is_using_disk_based_sbd():
-            timeout_types, show_types = self.TIMEOUT_TYPES, self.SHOW_TYPES
+            timeout_types, show_types = tuple(self.TIMEOUT_TYPE_MINIMUMS.keys()), self.SHOW_TYPES
         elif sbd.SBDUtils.is_using_diskless_sbd():
-            timeout_types, show_types = self.DISKLESS_TIMEOUT_TYPES, self.DISKLESS_SHOW_TYPES
+            timeout_types, show_types = tuple(self.DISKLESS_TIMEOUT_TYPE_MINIMUMS.keys()), self.DISKLESS_SHOW_TYPES
         else:
             return ""
 
@@ -265,9 +276,12 @@ class SBD(command.UI):
                 raise self.SyntaxError(f"Invalid argument: {arg}")
             key, suffix, value = match.groups()
             # timeout related parameters
-            if key in self.TIMEOUT_TYPES and suffix and suffix == "timeout":
+            if key in self.TIMEOUT_TYPE_MINIMUMS and suffix and suffix == "timeout":
                 if not value.isdigit():
                     raise self.SyntaxError(f"Invalid timeout value: {value}")
+                min_value = self.TIMEOUT_TYPE_MINIMUMS[key]
+                if int(value) < min_value:
+                    raise ValueError(f"The minimum value for {key}-timeout is {min_value}")
                 parameter_dict[key] = int(value)
             # watchdog device parameter
             elif key == "watchdog" and suffix == "device":
@@ -397,7 +411,7 @@ class SBD(command.UI):
 
         timeout_dict = {
             k: v for k, v in parameter_dict.items()
-            if k in self.TIMEOUT_TYPES and k != "crashdump-watchdog"
+            if k in self.TIMEOUT_TYPE_MINIMUMS and k != "crashdump-watchdog"
         }
         timeout_dict = self._adjust_timeout_dict(timeout_dict)
         # merge runtime timeout dict into parameter timeout dict without overwriting
