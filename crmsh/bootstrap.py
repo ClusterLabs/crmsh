@@ -182,29 +182,45 @@ class Context(object):
         """
         users_of_specified_hosts: 'not_specified', 'specified', 'no_hosts'
         """
-        if self.cluster_node is None and self.user_at_node_list is None:
-            users_of_specified_hosts = 'no_hosts'
-        elif self.cluster_node is not None and '@' in self.cluster_node:
-            users_of_specified_hosts = 'specified'
-        elif self.user_at_node_list is not None and any('@' in x for x in self.user_at_node_list):
-            users_of_specified_hosts = 'specified'
-        else:
-            users_of_specified_hosts = 'not_specified'
         sudoer = userdir.get_sudoer()
-        has_sudoer = sudoer is not None
-        if users_of_specified_hosts == 'specified':
-            if has_sudoer:
-                self.current_user = sudoer
+        if self.cluster_node is not None:
+            parts = self.cluster_node.split('@', 1)
+            if len(parts) == 2:
+                user, host = parts
+                cluster_node_user = user
             else:
+                cluster_node_user = 'root'
+            if cluster_node_user == 'root':
+                assert userdir.getuser() == 'root'
+                self.current_user = 'root'
+            elif sudoer is None:
                 utils.fatal("Unsupported config: local node is using root and remote nodes is using non-root users.")
-        elif users_of_specified_hosts == 'not_specified':
-            assert userdir.getuser() == 'root'
-            self.current_user = 'root'
-        elif users_of_specified_hosts == 'no_hosts':
-            assert userdir.getuser() == 'root'
-            self.current_user = 'root'
+            else:
+                self.current_user = sudoer
+        elif self.user_at_node_list:
+            has_root = False
+            has_non_root = False
+            for item in self.user_at_node_list:
+                parts = item.split('@', 1)
+                if len(parts) == 2:
+                    user, host = parts
+                    has_root = has_root or user == 'root'
+                    has_non_root = has_non_root or user != 'root'
+                else:
+                    has_root = True
+            if has_root and has_non_root:
+                utils.fatal("Unsupported config: mixing root and non-root users in a cluster.")
+            elif has_root:
+                assert userdir.getuser() == 'root'
+                self.current_user = 'root'
+            else:
+                if sudoer is None:
+                    utils.fatal("Unsupported config: local node is using root and remote nodes is using non-root users.")
+                else:
+                    self.current_user = sudoer
         else:
-            raise AssertionError('Bad parameter user_of_specified_hosts: {}'.format(users_of_specified_hosts))
+            assert userdir.getuser() == 'root'
+            self.current_user = 'root'
 
     def _validate_sbd_option(self):
         """

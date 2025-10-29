@@ -324,6 +324,10 @@ class TestContext(unittest.TestCase):
         context.user_at_node_list = None
         with self.assertRaises(ValueError):
             context.initialize_user()
+        context.cluster_node = 'root@node1'
+        context.user_at_node_list = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
@@ -346,6 +350,10 @@ class TestContext(unittest.TestCase):
         context.user_at_node_list = None
         context.initialize_user()
         self.assertEqual('bob', context.current_user)
+        context.cluster_node = 'root@node1'
+        context.user_at_node_list = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
@@ -368,6 +376,10 @@ class TestContext(unittest.TestCase):
         context.cluster_node = None
         with self.assertRaises(ValueError):
             context.initialize_user()
+        context.user_at_node_list = ['root@node1', 'root@node2']
+        context.cluster_node = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
@@ -386,10 +398,18 @@ class TestContext(unittest.TestCase):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'bob'
         context = bootstrap.Context()
+        context.user_at_node_list = ['alice@node1', 'root@node2']
+        context.cluster_node = None
+        with self.assertRaises(ValueError):
+            context.initialize_user()
         context.user_at_node_list = ['alice@node1', 'alice@node2']
         context.cluster_node = None
         context.initialize_user()
         self.assertEqual('bob', context.current_user)
+        context.user_at_node_list = ['root@node1', 'root@node2']
+        context.cluster_node = None
+        context.initialize_user()
+        self.assertEqual('root', context.current_user)
 
 
 class TestBootstrap(unittest.TestCase):
