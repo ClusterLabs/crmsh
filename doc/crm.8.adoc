@@ -307,9 +307,12 @@ settings based on the calculations with a set of formulas.
 `watchdog` timeout: Default value is 15s. This value is from the definition
     in +/etc/crm/profiles.xml+, can be a different value with a different profile.
 
-`msgwait` timeout:
+`msgwait` timeout: (only for disk-based SBD)
 ...............
     msgwait = 2 * watchdog
+
+    # When setting crashdump watchdog timeout
+    msgwait = 2 * watchdog + crashdump_watchdog_timeout
 ...............
 `SBD_WATCHDOG_TIMEOUT`:
 ...............
@@ -346,9 +349,12 @@ settings based on the calculations with a set of formulas.
 	TimeoutSec = default_value
 ...............
 .Pacemaker related timeouts
-`stonith-watchdog-timeout`: (for diskless SBD)
+`stonith-watchdog-timeout`: (only for diskless SBD)
 ...............
     stonith-watchdog-timeout = 2 * SBD_WATCHDOG_TIMEOUT
+
+    # When setting crashdump watchdog timeout
+    stonith-watchdog-timeout = SBD_WATCHDOG_TIMEOUT + crashdump_watchdog_timeout
 ...............
 `stonith-timeout`:
 ...............
