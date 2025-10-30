@@ -811,15 +811,27 @@ class TestOutterFunctions(unittest.TestCase):
             call("Remove sbd resource '%s'", 'sbd_resource')
         ])
 
-    @patch('crmsh.parallax.parallax_call')
+    @patch('logging.Logger.info')
+    @patch('crmsh.sh.cluster_shell')
+    def test_cleanup_sbd_configurations(self, mock_cluster_shell, mock_logger_info):
+        mock_cluster_shell_inst = Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.get_stdout_or_raise_error = Mock()
+        sbd.cleanup_sbd_configurations()
+        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_has_calls([
+            call(f"test -f {sbd.SBDManager.SYSCONFIG_SBD} && mv {sbd.SBDManager.SYSCONFIG_SBD} {sbd.SBDManager.SYSCONFIG_SBD}.bak || exit 0", host=None),
+            call(f"test -d {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DIR} && rm -rf {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DIR} && systemctl daemon-reload || exit 0", host=None),
+            call(f"test -d {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR} && rm -rf {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR} && systemctl daemon-reload || exit 0", host=None),
+        ])
+
+    @patch('crmsh.sbd.cleanup_sbd_configurations')
     @patch('crmsh.utils.cleanup_stonith_related_properties')
     @patch('crmsh.sbd.sh.cluster_shell')
-    @patch('crmsh.utils.cluster_run_cmd')
     @patch('logging.Logger.info')
     @patch('crmsh.sbd.ServiceManager')
     @patch('crmsh.utils.list_cluster_nodes')
     @patch('crmsh.sbd.cleanup_existing_sbd_resource')
-    def test_purge_sbd_from_cluster(self, mock_cleanup_existing_sbd_resource, mock_list_cluster_nodes, mock_ServiceManager, mock_logger_info, mock_cluster_run_cmd, mock_cluster_shell, mock_cleanup_stonith_related_properties, mock_parallax_call):
+    def test_purge_sbd_from_cluster(self, mock_cleanup_existing_sbd_resource, mock_list_cluster_nodes, mock_ServiceManager, mock_logger_info, mock_cluster_shell, mock_cleanup_stonith_related_properties, mock_rm_sbd_configuration_files):
         mock_list_cluster_nodes.return_value = ['node1', 'node2']
         mock_ServiceManager.return_value.service_is_enabled.side_effect = [True, True]
         stonith_data = """stonith-sbd
@@ -830,6 +842,6 @@ class TestOutterFunctions(unittest.TestCase):
         mock_logger_info.assert_has_calls([
             call("Disable %s on node %s", constants.SBD_SERVICE, 'node1'),
             call("Disable %s on node %s", constants.SBD_SERVICE, 'node2'),
-            call("Move %s to %s on all nodes", sbd.SBDManager.SYSCONFIG_SBD, sbd.SBDManager.SYSCONFIG_SBD+'.bak')
         ])
         mock_cleanup_stonith_related_properties.assert_called_once()
+        mock_rm_sbd_configuration_files.assert_has_calls([call("node1"), call("node2")])

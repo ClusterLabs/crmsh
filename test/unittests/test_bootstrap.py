@@ -1964,16 +1964,17 @@ class TestValidation(unittest.TestCase):
         mock_run.assert_called_once_with("node2", "crm cluster remove -y -c node1")
         mock_error.assert_called_once_with("Failed to remove this node from node2: err")
 
-    @mock.patch('crmsh.utils.package_is_installed')
+    @mock.patch('crmsh.sbd.cleanup_sbd_configurations')
+    @mock.patch('os.path.exists')
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-    def test_rm_configuration_files(self, mock_run, mock_installed):
+    def test_rm_configuration_files(self, mock_run, mock_exists, mock_rm_sbd):
         bootstrap._context = mock.Mock(rm_list=["file1", "file2"])
-        mock_installed.return_value = True
+        mock_exists.return_value = True
         bootstrap.rm_configuration_files()
         mock_run.assert_has_calls([
             mock.call('rm -f file1 file2', None),
-            mock.call('cp /usr/share/fillup-templates/sysconfig.sbd /etc/sysconfig/sbd', None)
             ])
+        mock_rm_sbd.assert_called_once_with(None)
 
     @mock.patch('crmsh.utils.get_iplist_from_name')
     @mock.patch('crmsh.corosync.get_values')
