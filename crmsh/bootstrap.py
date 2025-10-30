@@ -137,7 +137,7 @@ class Context(object):
         self.default_nic = None
         self.default_ip_list = []
         self.corosync_conf_orig = None
-        self.rm_list = [sbd.SBDManager.SYSCONFIG_SBD, corosync.conf(), COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
+        self.rm_list = [corosync.conf(), COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH, "~/.config/crm/*"]
         self.use_ssh_agent = None
         self.skip_csync2 = None
@@ -2137,10 +2137,8 @@ def rm_configuration_files(remote=None):
     """
     shell = sh.cluster_shell()
     shell.get_stdout_or_raise_error("rm -f {}".format(' '.join(_context.rm_list)), remote)
-    # restore original sbd configuration file from /usr/share/fillup-templates/sysconfig.sbd
-    if utils.package_is_installed("sbd", remote_addr=remote):
-        cmd = "cp {} {}".format(sbd.SBDManager.SYSCONFIG_SBD_TEMPLATE, sbd.SBDManager.SYSCONFIG_SBD)
-        shell.get_stdout_or_raise_error(cmd, remote)
+    if os.path.exists(sbd.SBDManager.SYSCONFIG_SBD):
+        sbd.cleanup_sbd_configurations(remote)
 
 
 def remove_pacemaker_remote_node_from_cluster(node):
