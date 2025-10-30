@@ -3,7 +3,6 @@ import sys
 import argparse
 from argparse import RawDescriptionHelpFormatter
 
-from . import check
 from . import utils
 from . import task
 from crmsh import utils as crmshutils
@@ -30,8 +29,6 @@ class Context(object):
         self.current_case = None
 
         # set by argparse(functions)
-        self.check_conf = None
-        self.cluster_check = None
         self.sbd = None
         self.corosync = None
         self.pacemakerd = None
@@ -142,9 +139,6 @@ For each --kill-* testcase, report directory: {}'''.format(context.logfile,
                                                            context.jsonfile,
                                                            context.report_path))
 
-    #parser.add_argument('-c', '--check-conf', dest='check_conf', action='store_true',
-    #                    help='Validate the configurations')
-
     group_mutual = parser.add_mutually_exclusive_group()
     group_mutual.add_argument('--kill-sbd', dest='sbd', action='store_true',
                               help='Kill sbd daemon')
@@ -198,8 +192,6 @@ def run(context):
         os.makedirs(context.var_dir, exist_ok=True)
 
     try:
-        check.fix(context)
-        check.check(context)
         kill_process(context)
         fence_node(context)
         split_brain(context)
