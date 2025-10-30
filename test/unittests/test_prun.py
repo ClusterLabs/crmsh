@@ -40,14 +40,14 @@ class TestPrun(unittest.TestCase):
         ])
         mock_runner_add_task.assert_has_calls([
             mock.call(TaskArgumentsEq(
-                ['su', 'alice', '--login', '-c', 'ssh -A {} bob@host1 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION), '-w', 'SSH_AUTH_SOCK'],
+                ['su', 'alice', '--login', '-c', 'ssh -A {} bob@host1 sudo -H /bin/bash'.format(crmsh.constants.SSH_OPTION), '-w', 'SSH_AUTH_SOCK'],
                 b'foo',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,
                 context={"host": 'host1', "ssh_user": 'bob'},
             )),
             mock.call(TaskArgumentsEq(
-                ['su', 'alice', '--login', '-c', 'ssh -A {} bob@host2 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION), '-w', 'SSH_AUTH_SOCK'],
+                ['su', 'alice', '--login', '-c', 'ssh -A {} bob@host2 sudo -H /bin/bash'.format(crmsh.constants.SSH_OPTION), '-w', 'SSH_AUTH_SOCK'],
                 b'bar',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,
@@ -90,14 +90,14 @@ class TestPrun(unittest.TestCase):
         ])
         mock_runner_add_task.assert_has_calls([
             mock.call(TaskArgumentsEq(
-                ['/bin/sh', '-c', 'ssh -A {} root@host1 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION)],
+                ['/bin/sh', '-c', 'ssh -A {} root@host1 /bin/bash'.format(crmsh.constants.SSH_OPTION)],
                 b'foo',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,
                 context={"host": 'host1', "ssh_user": 'root'},
             )),
             mock.call(TaskArgumentsEq(
-                ['/bin/sh', '-c', 'ssh -A {} root@host2 sudo -H /bin/sh'.format(crmsh.constants.SSH_OPTION)],
+                ['/bin/sh', '-c', 'ssh -A {} root@host2 /bin/bash'.format(crmsh.constants.SSH_OPTION)],
                 b'bar',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,
