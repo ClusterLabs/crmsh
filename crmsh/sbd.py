@@ -451,6 +451,21 @@ class SBDTimeout(object):
         cls_inst.adjust_stonith_timeout()
         cls_inst.adjust_systemd_start_timeout()
 
+    @staticmethod
+    def able_to_set_stonith_watchdog_timeout(value: int) -> bool:
+        '''
+        Check if able to set stonith-watchdog-timeout property
+        '''
+        if not ServiceManager().service_is_active(constants.SBD_SERVICE):
+            logger.error("Can't set stonith-watchdog-timeout because sbd.service is not active")
+            return False
+        sbd_watchdog_timeout = SBDTimeout.get_sbd_watchdog_timeout()
+        if value < sbd_watchdog_timeout:
+            logger.error("Can't set stonith-watchdog-timeout to %d because it is less than SBD_WATCHDOG_TIMEOUT(now: %d)",
+                         value, sbd_watchdog_timeout)
+            return False
+        return True
+
 
 class SBDManager:
     SYSCONFIG_SBD = "/etc/sysconfig/sbd"
