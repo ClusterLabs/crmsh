@@ -9,7 +9,6 @@ from . import constants
 from . import corosync
 from . import xmlutil
 from . import watchdog
-from . import parallax
 from .service_manager import ServiceManager
 from .sh import ShellUtils
 
@@ -787,6 +786,19 @@ def cleanup_existing_sbd_resource():
         utils.ext_cmd("crm configure delete {}".format(' '.join(sbd_id_list)))
 
 
+def cleanup_sbd_configurations(remote=None):
+    shell = sh.cluster_shell()
+    sysconfig_sbd_bak = f"{SBDManager.SYSCONFIG_SBD}.bak"
+    logger.info("Rename %s to %s on node %s",
+                SBDManager.SYSCONFIG_SBD, sysconfig_sbd_bak, remote or utils.this_node())
+    cmd = f"test -f {SBDManager.SYSCONFIG_SBD} && mv {SBDManager.SYSCONFIG_SBD} {sysconfig_sbd_bak} || exit 0"
+    shell.get_stdout_or_raise_error(cmd, host=remote)
+
+    for _dir in [SBDManager.SBD_SYSTEMD_DELAY_START_DIR, SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR]:
+        cmd = f"test -d {_dir} && rm -rf {_dir} && systemctl daemon-reload || exit 0"
+        shell.get_stdout_or_raise_error(cmd, host=remote)
+
+
 def purge_sbd_from_cluster():
     '''
     Purge SBD from cluster, the process includes:
@@ -804,17 +816,10 @@ def purge_sbd_from_cluster():
         if service_manager.service_is_enabled(constants.SBD_SERVICE, node):
             logger.info("Disable %s on node %s", constants.SBD_SERVICE, node)
             service_manager.disable_service(constants.SBD_SERVICE, node)
-
-    config_bak = f"{SBDManager.SYSCONFIG_SBD}.bak"
-    logger.info("Move %s to %s on all nodes", SBDManager.SYSCONFIG_SBD, config_bak)
-    utils.cluster_run_cmd(f"mv {SBDManager.SYSCONFIG_SBD} {config_bak}")
+        cleanup_sbd_configurations(node)
 
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
     res = re.search("([0-9]+) fence device[s]* found", out)
     # after disable sbd.service, check if sbd is the last stonith device
     if res and int(res.group(1)) <= 1:
         utils.cleanup_stonith_related_properties()
-
-    for _dir in [SBDManager.SBD_SYSTEMD_DELAY_START_DIR, SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR]:
-        cmd = f"test -d {_dir} && rm -rf {_dir} || exit 0"
-        parallax.parallax_call(cluster_nodes, cmd)
