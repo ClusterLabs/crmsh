@@ -20,7 +20,6 @@ import random
 import string
 import pwd
 import grp
-import functools
 import gzip
 import bz2
 import lzma
@@ -33,6 +32,7 @@ from stat import S_ISBLK
 from lxml import etree
 from packaging import version
 from enum import IntFlag, auto
+from functools import cache
 
 import crmsh.parallax
 import crmsh.user_of_host
@@ -43,6 +43,8 @@ from . import options
 from . import term
 from . import log
 from . import xmlutil
+from . import cibconfig
+from . import sbd
 from .prun import prun
 from .sh import ShellUtils
 from .service_manager import ServiceManager
@@ -97,20 +99,6 @@ def raise_exception(e):
     raise e
 
 
-def memoize(function):
-    "Decorator to invoke a function once only for any argument"
-    memoized = {}
-
-    @functools.wraps(function)
-    def inner(*args):
-        if args in memoized:
-            return memoized[args]
-        r = function(*args)
-        memoized[args] = r
-        return r
-    return inner
-
-
 @contextmanager
 def nogc():
     gc.disable()
@@ -135,7 +123,7 @@ def user_pair_for_ssh(host):
         raise ValueError('Can not create ssh session from {} to {}.'.format(this_node(), host))
 
 
-@memoize
+@cache
 def this_node():
     'returns name of this node (hostname)'
     return os.uname()[1]
@@ -202,37 +190,37 @@ def pacemaker_20_daemon(new, old):
     return old
 
 
-@memoize
+@cache
 def pacemaker_attrd():
     return pacemaker_20_daemon("pacemaker-attrd", "attrd")
 
 
-@memoize
+@cache
 def pacemaker_based():
     return pacemaker_20_daemon("pacemaker-based", "cib")
 
 
-@memoize
+@cache
 def pacemaker_controld():
     return pacemaker_20_daemon("pacemaker-controld", "crmd")
 
 
-@memoize
+@cache
 def pacemaker_execd():
     return pacemaker_20_daemon("pacemaker-execd", "lrmd")
 
 
-@memoize
+@cache
 def pacemaker_fenced():
     return pacemaker_20_daemon("pacemaker-fenced", "stonithd")
 
 
-@memoize
+@cache
 def pacemaker_remoted():
     return pacemaker_20_daemon("pacemaker-remoted", "pacemaker_remoted")
 
 
-@memoize
+@cache
 def pacemaker_schedulerd():
     return pacemaker_20_daemon("pacemaker-schedulerd", "pengine")
 
@@ -1709,7 +1697,6 @@ def get_address_list_from_corosync_conf():
     """
     Return a list of addresses configured in corosync.conf
     """
-    from . import corosync
     if not os.path.exists(corosync.conf()):
         return []
     return corosync.get_values("nodelist.node.ring0_addr")
@@ -2019,7 +2006,7 @@ def detect_gcp():
     return False
 
 
-@memoize
+@cache
 def detect_cloud():
     """
     Tries to determine which (if any) cloud environment
@@ -2522,7 +2509,6 @@ def has_stonith_running():
     """
     Check if any stonith device registered
     """
-    from . import sbd
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
     has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
     using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
@@ -2549,7 +2535,7 @@ def all_exist_id():
     """
     Get current exist id list
     """
-    from .cibconfig import cib_factory
+    cib_factory = cibconfig.cib_factory_instance()
     cib_factory.refresh()
     return cib_factory.id_list()
 
@@ -2895,7 +2881,7 @@ def is_ocf_1_1_cib_schema_detected():
     """
     Only turn on ocf_1_1 feature the cib schema version is pacemaker-3.7 or above
     """
-    from .cibconfig import cib_factory
+    cib_factory = cibconfig.cib_factory_instance()
     cib_factory.get_cib()
     return is_larger_than_min_version(cib_factory.get_schema(), constants.SCHEMA_MIN_VER_SUPPORT_OCF_1_1)
 

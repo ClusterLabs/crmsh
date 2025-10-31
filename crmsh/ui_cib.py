@@ -12,7 +12,7 @@ from . import constants
 from . import config
 from . import options
 from .cibstatus import cib_status
-from .cibconfig import cib_factory
+from . import cibconfig
 from .sh import ShellUtils
 from . import tmpfiles
 from . import completers as compl
@@ -201,6 +201,7 @@ class CibShadow(command.UI):
         # take special precautions
         if not context.previous_level_is("cibconfig"):
             return self._use(name, withstatus)
+        cib_factory = cibconfig.cib_factory_instance()
         if not cib_factory.has_cib_changed():
             ret = self._use(name, withstatus)
             # new CIB: refresh the CIB factory

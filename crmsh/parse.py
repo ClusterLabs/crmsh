@@ -10,10 +10,9 @@ from . import ra
 from . import constants
 from .ra import disambiguate_ra_type, ra_type_validate
 from . import schema
-from .utils import keyword_cmp, verify_boolean, lines2cli
-from .utils import get_boolean, olist, canonical_boolean
-from .utils import handle_role_for_ocf_1_1, compatible_role, add_time_unit_if_needed
+from . import utils
 from . import xmlutil
+from . import cibconfig
 from . import log
 
 
@@ -101,7 +100,7 @@ class Validation(object):
     def classify_role(self, role):
         if not role:
             return role, None
-        elif role in olist(self.resource_roles()):
+        elif role in utils.olist(self.resource_roles()):
             return self.canonize(role, self.resource_roles()), 'role'
         elif role.isdigit():
             return role, 'instance'
@@ -110,14 +109,14 @@ class Validation(object):
     def classify_action(self, action):
         if not action:
             return action, None
-        elif action in olist(self.resource_actions()):
+        elif action in utils.olist(self.resource_actions()):
             return self.canonize(action, self.resource_actions()), 'action'
         elif action.isdigit():
             return action, 'instance'
         return action, None
 
     def op_attributes(self):
-        return olist(schema.get('attr', 'op', 'a'))
+        return utils.olist(schema.get('attr', 'op', 'a'))
 
     def acl_2_0(self):
         vname = schema.validate_name()
@@ -416,13 +415,11 @@ class BaseParser(object):
         if matchname is False, matches:
         <n>=<v> <n>=<v> ...
         """
-        from .cibconfig import cib_factory
-
         xmlid = None
         if self.try_match_idspec():
             if self.matched(1) == '$id-ref':
                 r = xmlutil.new(tag)
-                ref = cib_factory.resolve_id_ref(name, self.matched(2))
+                ref = cibconfig.cib_factory_instance().resolve_id_ref(name, self.matched(2))
                 r.set('id-ref', ref)
                 return r
             else:
@@ -458,9 +455,8 @@ class BaseParser(object):
 
     def match_rules(self):
         '''parse rule definitions'''
-        from .cibconfig import cib_factory
-
         rules = []
+        cib_factory = cibconfig.cib_factory_instance()
         while self.try_match('rule'):
             rule = xmlutil.new('rule')
             rules.append(rule)
@@ -472,7 +468,7 @@ class BaseParser(object):
                     idref = True
                 rule.set(idtyp, idval)
             if self.try_match(_ROLE_RE):
-                rule.set('role', handle_role_for_ocf_1_1(self.matched(1)))
+                rule.set('role', utils.handle_role_for_ocf_1_1(self.matched(1)))
             if idref:
                 continue
             if self.try_match(_SCORE_RE):
@@ -480,7 +476,7 @@ class BaseParser(object):
             else:
                 rule.set('score', 'INFINITY')
             boolop, exprs = self.match_rule_expression()
-            if boolop and not keyword_cmp(boolop, 'and'):
+            if boolop and not utils.keyword_cmp(boolop, 'and'):
                 rule.set('boolean-op', boolop)
             for expr in exprs:
                 rule.append(expr)
@@ -571,10 +567,10 @@ class BaseParser(object):
         op = self.matched(1)
         opmap = {'in': 'in_range', 'spec': 'date_spec'}
         node.set('operation', opmap.get(op, op))
-        if op in olist(constants.simple_date_ops):
+        if op in utils.olist(constants.simple_date_ops):
             # lt|gt <value>
             val = self.match_any()
-            if keyword_cmp(op, 'lt'):
+            if utils.keyword_cmp(op, 'lt'):
                 node.set('end', val)
             else:
                 node.set('start', val)
@@ -593,7 +589,7 @@ class BaseParser(object):
             self.err("Unknown date operation '%s', please upgrade crmsh" % (op))
 
     def validate_score(self, score, noattr=False, to_kind=False):
-        if not noattr and score in olist(constants.score_types):
+        if not noattr and score in utils.olist(constants.score_types):
             return ["score", constants.score_types[score.lower()]]
         elif re.match("^[+-]?(inf(inity)?|INF(INITY)?|[0-9]+)$", score):
             score = re.sub("inf(inity)?|INF(INITY)?", "INFINITY", score)
@@ -625,11 +621,11 @@ class BaseParser(object):
         This is so for example: primitive foo Dummy state=1 is accepted when
         params is the implicit initial.
         """
-        names = olist(list(name_map.keys()))
-        oplist = olist([op for op in name_map if op.lower() in ('operations', 'op')])
+        names = utils.olist(list(name_map.keys()))
+        oplist = utils.olist([op for op in name_map if op.lower() in ('operations', 'op')])
         for op in oplist:
             del name_map[op]
-        bundle_list = olist([op for op in name_map if op.lower()
+        bundle_list = utils.olist([op for op in name_map if op.lower()
                             in ('docker', 'podman', 'network', 'port-mapping', 'storage', 'primitive')])
         for bl in bundle_list:
             del name_map[bl]
@@ -678,7 +674,7 @@ class BaseParser(object):
                 if action == "monitor":
                     if role:
                         for monitor_item in advised_dict[action]:
-                            if compatible_role(role, monitor_item['role']):
+                            if utils.compatible_role(role, monitor_item['role']):
                                 adv_attr_value = monitor_item[attr]
                     else:
                         adv_attr_value = advised_dict[action][0][attr]
@@ -704,9 +700,9 @@ class BaseParser(object):
                         constants.DEFAULT_INTERVAL_IN_ACTION
                 adv_timeout = extract_advised_value(action_advised_attr_dict, action, 'timeout', op_node.get('role'))
                 if op_node.get('interval') is None:
-                    op_node.set('interval', add_time_unit_if_needed(adv_interval))
+                    op_node.set('interval', utils.add_time_unit_if_needed(adv_interval))
                 if op_node.get('timeout') is None and adv_timeout:
-                    op_node.set('timeout', add_time_unit_if_needed(adv_timeout))
+                    op_node.set('timeout', utils.add_time_unit_if_needed(adv_timeout))
                 configured_action_list.append(action)
 
         for action in action_advised_attr_dict:
@@ -722,13 +718,13 @@ class BaseParser(object):
                         # set normal attributes
                         if k in constants.ADVISED_KEY_LIST:
                             if k in ('interval', 'timeout'):
-                                v = add_time_unit_if_needed(v)
-                            op_node.set(k, handle_role_for_ocf_1_1(v))
+                                v = utils.add_time_unit_if_needed(v)
+                            op_node.set(k, utils.handle_role_for_ocf_1_1(v))
                     operations_node.append(op_node)
             else:
                 for k, v in value.items():
                     if k in ('interval', 'timeout'):
-                        v = add_time_unit_if_needed(v)
+                        v = utils.add_time_unit_if_needed(v)
                         value.update({k: v})
                 op_node = xmlutil.new('op', name=action, **value)
                 operations_node.append(op_node)
@@ -799,7 +795,7 @@ class BaseParser(object):
                     self.err(f"Attribute order error: {name} must appear before any instance attribute")
                 value = nvp.get('value')
                 if name in ('interval', 'timeout') and self.auto_add_time_unit:
-                    value = add_time_unit_if_needed(value)
+                    value = utils.add_time_unit_if_needed(value)
                 node.set(name, value)
             else:
                 if inst_attrs is None:
@@ -814,8 +810,6 @@ class BaseParser(object):
         out.append(node)
 
     def match_operations(self, out, match_id):
-        from .cibconfig import cib_factory
-
         def is_op():
             return self.has_tokens() and self.current_token().lower() == 'op'
         if match_id:
@@ -826,7 +820,7 @@ class BaseParser(object):
             match_id = self.matched(1)[1:].lower()
             idval = self.matched(2)
             if match_id == 'id-ref':
-                idval = cib_factory.resolve_id_ref('operations', idval)
+                idval = cibconfig.cib_factory_instance().resolve_id_ref('operations', idval)
 
             node.set(match_id, idval)
 
@@ -1021,12 +1015,12 @@ class ConstraintParser(BaseParser):
 
         while self.try_match(_ATTR_RE):
             name = self.matched(1)
-            value = handle_role_for_ocf_1_1(self.matched(2), name=name)
+            value = utils.handle_role_for_ocf_1_1(self.matched(2), name=name)
             out.set(name, value)
 
         # not sure this is necessary after parse _ATTR_RE in a while loop
         if self.try_match(_ROLE_RE) or self.try_match(_ROLE2_RE):
-            out.set('role', handle_role_for_ocf_1_1(self.matched(1)))
+            out.set('role', utils.handle_role_for_ocf_1_1(self.matched(1)))
 
         score = False
         if self.try_match(_SCORE_RE):
@@ -1036,7 +1030,7 @@ class ConstraintParser(BaseParser):
             # backwards compatibility: role used to be read here
             if 'role' not in out:
                 if self.try_match(_ROLE_RE) or self.try_match(_ROLE2_RE):
-                    out.set('role', handle_role_for_ocf_1_1(self.matched(1)))
+                    out.set('role', utils.handle_role_for_ocf_1_1(self.matched(1)))
         if not score:
             rules = self.match_rules()
             out.extend(rules)
@@ -1073,7 +1067,7 @@ class ConstraintParser(BaseParser):
         elif self.try_match(_SCORE_RE):
             out.set(*self.validate_score(self.matched(1), noattr=True, to_kind=True))
         if self.try_match_tail('symmetrical=(true|false|yes|no|on|off)$'):
-            out.set('symmetrical', canonical_boolean(self.matched(1)))
+            out.set('symmetrical', utils.canonical_boolean(self.matched(1)))
         self.try_match_rscset(out, 'action')
         return out
 
@@ -1139,7 +1133,7 @@ class ConstraintParser(BaseParser):
 
     def _split_setref(self, typename, classifier):
         rsc, typ = self.match_split()
-        typ, t = classifier(handle_role_for_ocf_1_1(typ, name=typename))
+        typ, t = classifier(utils.handle_role_for_ocf_1_1(typ, name=typename))
         if typ and not t:
             self.err("Invalid %s '%s' for '%s'" % (typename, typ, rsc))
         return rsc, typ, t
@@ -1182,8 +1176,6 @@ def property_parser(self, cmd):
     rsc_defaults = <rsc_defaults><meta_attributes>...</></>
     op_defaults = <op_defaults><meta_attributes>...</></>
     """
-    from .cibconfig import cib_factory
-
     setmap = {'property': 'cluster_property_set',
               'rsc_defaults': 'meta_attributes',
               'op_defaults': 'meta_attributes'}
@@ -1201,7 +1193,7 @@ def property_parser(self, cmd):
         idkey = self.matched(1)[1:]
         idval = self.matched(2)
         if idkey == 'id-ref':
-            idval = cib_factory.resolve_id_ref(attrs.tag, idval)
+            idval = cibconfig.cib_factory_instance().resolve_id_ref(attrs.tag, idval)
         attrs.set(idkey, idval)
     for rule in self.match_rules():
         attrs.append(rule)
@@ -1267,7 +1259,6 @@ class FencingOrderParser(BaseParser):
     def _postprocess_levels(self, raw_levels):
         from collections import defaultdict
         from itertools import repeat
-        from .cibconfig import cib_factory
         if len(raw_levels) == 0:
             def no_levels():
                 return []
@@ -1283,6 +1274,7 @@ class FencingOrderParser(BaseParser):
                 return raw_levels
             lvl_generator = wrap_levels
 
+        cib_factory = cibconfig.cib_factory_instance()
         out = xmlutil.new('fencing-topology')
         targets = defaultdict(repeat(1).__next__)
         for target, devices in lvl_generator():
@@ -1711,10 +1703,10 @@ class ResourceSet(object):
             self.err('Unknown attribute',
                      token=self.tokens[tokpos])
         k, v = l
-        if not verify_boolean(v):
+        if not utils.verify_boolean(v):
             self.err('Not a boolean: %s' % (v),
                      token=self.tokens[tokpos])
-        setattr(self, attrs[k], get_boolean(v))
+        setattr(self, attrs[k], utils.get_boolean(v))
         return True
 
     def splitrsc(self, p):
@@ -1726,7 +1718,7 @@ class ResourceSet(object):
                     validator.resource_actions())
             else:
                 l[1] = validator.canonize(
-                    handle_role_for_ocf_1_1(l[1]),
+                    utils.handle_role_for_ocf_1_1(l[1]),
                     validator.resource_roles())
             if not l[1]:
                 self.err('Invalid %s for %s' % (self.q_attr, p))
@@ -1829,7 +1821,7 @@ def parse(s,
             return None
         if s.startswith('xml'):
             try:
-                s = [x for p in lines2cli(s) for x in p.split()]
+                s = [x for p in utils.lines2cli(s) for x in p.split()]
             except ValueError as e:
                 logger.error(e)
                 return False

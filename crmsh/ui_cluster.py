@@ -22,7 +22,7 @@ from . import bootstrap
 from . import corosync
 from . import qdevice
 from . import xmlutil
-from .cibconfig import cib_factory
+from . import cibconfig
 from .prun import prun
 from .service_manager import ServiceManager
 from .sh import ShellUtils
@@ -65,7 +65,7 @@ def get_cluster_name():
         if name:
             cluster_name = name[0]
     else:
-        cluster_name = cib_factory.get_property('cluster-name')
+        cluster_name = cibconfig.cib_factory_instance().get_property('cluster-name')
     return cluster_name
 
 
@@ -612,6 +612,7 @@ Finally run `crm cluster init qdevice` on any node in the cluster to re-deploy t
             logger.info(suggestion)
             return
 
+        cib_factory = cibconfig.cib_factory_instance()
         old_name = cib_factory.get_property('cluster-name')
         if old_name and new_name == old_name:
             context.fatal_error("Expected a different name")

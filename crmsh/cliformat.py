@@ -5,6 +5,7 @@ from . import constants
 from . import clidisplay
 from . import utils
 from . import xmlutil
+from . import cibconfig
 
 
 #
@@ -46,18 +47,16 @@ def nvpair_format(n, v):
 
 def cli_nvpair(nvp):
     'Converts an nvpair tag or a (name, value) pair to CLI syntax'
-    from .cibconfig import cib_factory
-    from .utils import obscured
     nodeid = nvp.get('id')
     idref = nvp.get('id-ref')
     name = nvp.get('name')
     value = nvp.get('value')
-    value = obscured(name, value)
+    value = utils.obscured(name, value)
     if idref is not None:
         if name is not None:
             return '@%s:%s' % (idref, name)
         return '@%s' % (idref)
-    elif nodeid is not None and cib_factory.is_id_refd(nvp.tag, nodeid):
+    elif nodeid is not None and cibconfig.cib_factory_instance().is_id_refd(nvp.tag, nodeid):
         return '$%s:%s' % (nodeid, nvpair_format(name, value))
     return nvpair_format(name, value)
 
@@ -175,10 +174,9 @@ def cli_exprs(node):
 
 
 def cli_rule(node):
-    from .cibconfig import cib_factory
     s = []
     node_id = node.get("id")
-    if node_id and cib_factory.is_id_refd(node.tag, node_id):
+    if node_id and cibconfig.cib_factory_instance().is_id_refd(node.tag, node_id):
         s.append(nvpair_format('$id', node_id))
     else:
         idref = node.get("id-ref")

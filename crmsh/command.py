@@ -13,7 +13,7 @@ from . import help as help_module
 from . import ui_utils
 from . import log
 from . import constants
-from .utils import fuzzy_get
+from . import utils
 
 
 logger = log.setup_logger(__name__)
@@ -412,7 +412,7 @@ Examples:
         if options.shell_completion:
             return self._children.get(child)
         else:
-            return fuzzy_get(self._children, child)
+            return utils.fuzzy_get(self._children, child)
 
     def is_sublevel(self, child):
         '''

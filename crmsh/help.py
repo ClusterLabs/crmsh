@@ -32,8 +32,7 @@ import re
 import typing
 
 from .sh import ShellUtils
-from .utils import fuzzy_get
-from .utils import page_string
+from . import utils
 from . import config
 from . import clidisplay
 from . import log
@@ -115,7 +114,7 @@ class HelpEntry(object):
         if self.is_alias():
             prefix = helpfilter("(Redirected from `%s` to `%s`)\n" % self.alias_for)
 
-        page_string(short_help + '\n' + prefix + long_help)
+        utils.page_string(short_help + '\n' + prefix + long_help)
 
     def __str__(self):
         if self.long_help:
@@ -146,7 +145,7 @@ class LazyHelpEntryFromCli(HelpEntry):
         return stdout
 
     def paginate(self):
-        page_string('{}\n\n{}'.format(self.short, self.long_help))
+        utils.page_string('{}\n\n{}'.format(self.short, self.long_help))
 
 
 @dataclasses.dataclass
@@ -264,7 +263,7 @@ def _get_level_help(root: SubcommandTreeNode, levels: typing.Sequence[str]):
     node = root
     for level in levels:
         if node is not None:
-            node = fuzzy_get(node.children, level)
+            node = utils.fuzzy_get(node.children, level)
         else:
             return None
     return node.help
@@ -302,7 +301,7 @@ def _is_command(levels: typing.Sequence[str]):
     node = _COMMAND_TREE
     for level in levels:
         if node is not None:
-            node = fuzzy_get(node.children, level)
+            node = utils.fuzzy_get(node.children, level)
     return node is not None and not node.children
 
 
@@ -310,7 +309,7 @@ def _is_level(levels: typing.Sequence[str]):
     node = _COMMAND_TREE
     for level in levels:
         if node is not None:
-            node = fuzzy_get(node.children, level)
+            node = utils.fuzzy_get(node.children, level)
     return node is not None and node.children
 
 
@@ -341,7 +340,7 @@ def help_contextual(levels: typing.Sequence[str]):
         return None
     else:
         topic = levels[0].lower()
-        t = fuzzy_get(_TOPICS, topic)
+        t = utils.fuzzy_get(_TOPICS, topic)
         if t:
             return t
     raise ValueError('No help found for "crm {}". Run "crm help overview" to list all help entries.'.format(
