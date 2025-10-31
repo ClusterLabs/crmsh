@@ -76,7 +76,8 @@ optional arguments:
   -S, --enable-sbd      Enable SBD even if no SBD device is configured
                         (diskless mode)
   -w WATCHDOG, --watchdog WATCHDOG
-                        Use the given watchdog device or driver name
+                        Use the given watchdog device or driver name (only
+                        valid together with -s or -S option)
   -x, --skip-csync2-sync
                         Skip csync2 initialization (an experimental option)
   --no-overwrite-sshkey
