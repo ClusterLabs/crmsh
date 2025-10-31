@@ -36,6 +36,8 @@ class Task:
         # Caller can pass arbitrary data to context, it is kept untouched.
         self.context = context
 
+    def __repr__(self):
+        return f"TaskArgumentsEq({self.args}, {self.input}, {self.stdout_config}, {self.stderr_config}, {self.context}"
 
 class Runner:
     def __init__(self, concurrency):

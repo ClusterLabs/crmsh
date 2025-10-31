@@ -150,6 +150,15 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @skip_non_root
   @clean
+  Scenario: Initialize qnetd without "sudo" installed (bsc#1229416)
+    When    Run "mv /usr/bin/sudo /usr/bin/sudo.bak" on "qnetd-node"
+    When    Run "crm cluster init -y --qnetd-hostname root@qnetd-node" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    Then    Service "corosync-qnetd" is "started" on "qnetd-node"
+    When    Run "mv /usr/bin/sudo.bak /usr/bin/sudo" on "qnetd-node"
+
+  @skip_non_root
+  @clean
   Scenario: Missing crm/crm.conf (bsc#1209193)
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
