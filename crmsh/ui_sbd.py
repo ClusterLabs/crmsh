@@ -376,6 +376,10 @@ class SBD(command.UI):
 
         return update_dict
 
+    def _is_crashdump_configured(self) -> bool:
+        sbd_timeout_action_configured = sbd.SBDUtils.get_sbd_value_from_config("SBD_TIMEOUT_ACTION")
+        return sbd_timeout_action_configured and "crashdump" in sbd_timeout_action_configured
+
     def _check_kdump_service(self):
         no_kdump = False
         for node in self.cluster_nodes:
@@ -600,6 +604,9 @@ class SBD(command.UI):
         utils.check_all_nodes_reachable("purging SBD")
 
         if args and args[0] == "crashdump":
+            if not self._is_crashdump_configured():
+                logger.error("SBD crashdump is not configured")
+                return False
             self._set_crashdump_option(delete=True)
             update_dict = self._set_crashdump_in_sysconfig(restore=True)
             if update_dict:
