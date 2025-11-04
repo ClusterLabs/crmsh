@@ -449,7 +449,7 @@ class SBDManager:
     DISKLESS_SBD_MIN_EXPECTED_VOTE = 3
     DISKLESS_SBD_WARNING = "Diskless SBD requires cluster with three or more nodes. If you want to use diskless SBD for 2-node cluster, should be combined with QDevice."
     SBD_NOT_INSTALLED_MSG = "Package sbd is not installed"
-    FENCE_SBD_NOT_EXISTED_MSG = "fence_sbd command does not exist."
+    FENCE_SBD_NOT_INSTALLED_MSG = "Package fence-agents-sbd is not installed"
     SBD_RA = "stonith:fence_sbd"
     SBD_RA_ID = "stonith-sbd"
     SBD_DEVICE_MAX = 3
@@ -535,9 +535,6 @@ class SBDManager:
             logger.info("Configuring disk-based SBD")
         else:
             return
-
-        if not shutil.which("fence_sbd"):
-            utils.fatal(self.FENCE_SBD_NOT_EXISTED_MSG)
 
         opt_str = SBDManager.convert_timeout_dict_to_opt_str(self.timeout_dict)
         shell = sh.cluster_shell()
@@ -661,9 +658,14 @@ class SBDManager:
         configured_devices = SBDUtils.get_sbd_device_from_config()
         # return empty list if already configured and user doesn't want to overwrite
         if configured_devices and not self._wants_to_overwrite(configured_devices):
-            return []
+            return_devices = []
+        else:
+            return_devices = self._prompt_for_sbd_device()
 
-        return self._prompt_for_sbd_device()
+        if not self.diskless_sbd and not utils.package_is_installed("fence-agents-sbd"):
+            utils.fatal(self.FENCE_SBD_NOT_INSTALLED_MSG)
+
+        return return_devices
 
     def get_sbd_device_from_bootstrap(self):
         '''
@@ -741,11 +743,16 @@ class SBDManager:
             service_manager.disable_service(constants.SBD_SERVICE)
             return
 
+        if not utils.package_is_installed("sbd"):
+            utils.fatal(self.SBD_NOT_INSTALLED_MSG)
+        dev_list = SBDUtils.get_sbd_device_from_config()
+        if dev_list and not utils.package_is_installed("fence-agents-sbd"):
+            utils.fatal(self.FENCE_SBD_NOT_INSTALLED_MSG)
+
         from .watchdog import Watchdog
         self._watchdog_inst = Watchdog(remote_user=remote_user, peer_host=peer_host)
         self._watchdog_inst.join_watchdog()
 
-        dev_list = SBDUtils.get_sbd_device_from_config()
         if dev_list:
             SBDUtils.verify_sbd_device(dev_list, [peer_host])
         else:
