@@ -11,7 +11,7 @@ from . import utils
 from . import xmlutil
 from . import ui_utils
 from . import options
-from .cibconfig import cib_factory
+from . import cibconfig
 from .sh import ShellUtils
 from . import log
 
@@ -147,6 +147,7 @@ def set_deep_meta_attr(rsc, attr, value, commit=True):
     def is_resource(obj):
         return xmlutil.is_resource(obj.node)
 
+    cib_factory = cibconfig.cib_factory_instance()
     objs = cib_factory.find_objects(rsc)
     if objs is None:
         logger.error("CIB is not valid!")
@@ -278,7 +279,7 @@ class RscMgmt(command.UI):
         """
         if not utils.is_name_sane(rsc):
             return False
-        commit = not cib_factory.has_cib_changed()
+        commit = not cibconfig.cib_factory_instance().has_cib_changed()
         if not commit:
             context.info("Currently editing the CIB, changes will not be committed")
         return set_deep_meta_attr(rsc, name, value, commit=commit)
@@ -290,6 +291,7 @@ class RscMgmt(command.UI):
         for rsc in resources:
             if not utils.is_name_sane(rsc):
                 return False
+        cib_factory = cibconfig.cib_factory_instance()
         commit = not cib_factory.has_cib_changed()
         if not commit:
             context.info("Currently editing the CIB, changes will not be committed")
@@ -634,6 +636,7 @@ class RscMgmt(command.UI):
         return self._commit_meta_attr(context, resource, "maintenance", on_off)
 
     def _get_trace_rsc(self, rsc_id):
+        cib_factory = cibconfig.cib_factory_instance()
         if not cib_factory.refresh():
             return None
         rsc = cib_factory.find_object(rsc_id)
@@ -737,7 +740,7 @@ class RscMgmt(command.UI):
         else:
             self._trace_op_interval(context, rsc_id, rsc, op, interval, trace_dir)
 
-        if not cib_factory.commit():
+        if not cibconfig.cib_factory_instance().commit():
             return False
 
         rsc_type = rsc.node.get("type")
@@ -796,7 +799,7 @@ class RscMgmt(command.UI):
             self._untrace_op(context, rsc_id, rsc, op)
         else:
             self._untrace_op_interval(context, rsc_id, rsc, op, interval)
-        if not cib_factory.commit():
+        if not cibconfig.cib_factory_instance().commit():
             return False
         logger.info("Stop tracing %s%s", rsc_id, " for operation "+op if op else "")
         return True

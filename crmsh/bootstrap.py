@@ -31,7 +31,7 @@ from lxml import etree
 from . import config, constants, ssh_key, sh, cibquery, user_of_host
 from . import utils
 from . import xmlutil
-from .cibconfig import cib_factory
+from . import cibconfig
 from . import corosync
 from . import tmpfiles
 from . import lock
@@ -46,7 +46,7 @@ from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import NodeMgmt
 from .user_of_host import UserOfHost, UserNotFoundError
-from .sbd import SBDUtils, SBDManager, SBDTimeout
+from . import sbd
 from . import watchdog
 import crmsh.healthcheck
 
@@ -63,15 +63,13 @@ PROFILES_FILE = "/etc/crm/profiles.yml"
 SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_NFS = "/etc/sysconfig/nfs"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
-COROSYNC_CONF_ORIG = tmpfiles.create()[1]
 SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service", CSYNC2_SERVICE]
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
 BOOTH_AUTH = "/etc/booth/authkey"
-FILES_TO_SYNC = (BOOTH_DIR, corosync.conf(), COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
+STATIC_FILES_TO_SYNC = (BOOTH_DIR, COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
-        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, SBDManager.SYSCONFIG_SBD, PCMK_REMOTE_AUTH, watchdog.Watchdog.WATCHDOG_CFG,
-        PROFILES_FILE, CRM_CFG, SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
+        "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, PCMK_REMOTE_AUTH, PROFILES_FILE, CRM_CFG)
 
 INIT_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "corosync", "sbd", "cluster", "ocfs2", "gfs2", "admin", "qdevice")
 INIT_STAGES_INTERNAL = ("csync2_remote", "qnetd_remote")
@@ -139,7 +137,8 @@ class Context(object):
         self.profiles_dict = {}
         self.default_nic = None
         self.default_ip_list = []
-        self.rm_list = [SBDManager.SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
+        self.corosync_conf_orig = None
+        self.rm_list = [sbd.SBDManager.SYSCONFIG_SBD, CSYNC2_CFG, corosync.conf(), CSYNC2_KEY,
                 COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH,
                 "/var/lib/csync2/*", "~/.config/crm/*"]
@@ -235,7 +234,7 @@ class Context(object):
         if self.sbd_devices and self.diskless_sbd:
             utils.fatal("Can't use -s and -S options together")
         if self.sbd_devices:
-            SBDUtils.verify_sbd_device(self.sbd_devices)
+            sbd.SBDUtils.verify_sbd_device(self.sbd_devices)
 
         with_sbd_option = self.sbd_devices or self.diskless_sbd
 
@@ -247,9 +246,9 @@ class Context(object):
                 node_list = [utils.this_node()]
             for node in node_list:
                 if not utils.package_is_installed("sbd", node):
-                    utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
+                    utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
                 if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd", node):
-                    utils.fatal(SBDManager.FENCE_SBD_NOT_INSTALLED_MSG + f" on {node}")
+                    utils.fatal(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG + f" on {node}")
 
             if not with_sbd_option and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
@@ -258,9 +257,9 @@ class Context(object):
 
         elif with_sbd_option:
             if not utils.package_is_installed("sbd"):
-                utils.fatal(SBDManager.SBD_NOT_INSTALLED_MSG)
+                utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG)
             if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd"):
-                utils.fatal(SBDManager.FENCE_SBD_NOT_INSTALLED_MSG)
+                utils.fatal(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG)
 
     def _validate_nodes_option(self):
         """
@@ -339,7 +338,7 @@ class Context(object):
         self._validate_sbd_option()
 
     def init_sbd_manager(self):
-        self.sbd_manager = SBDManager(bootstrap_context=self)
+        self.sbd_manager = sbd.SBDManager(bootstrap_context=self)
 
     def detect_platform(self):
         """
@@ -397,6 +396,11 @@ class Context(object):
         specific_profile_dict = self.load_specific_profile(profile_type)
         # merge two dictionaries
         self.profiles_dict = {**default_profile_dict, **specific_profile_dict}
+
+    def get_corosync_conf_orig(self):
+        if self.corosync_conf_orig is None:
+            self.corosync_conf_orig = tmpfiles.create()[1]
+        return self.corosync_conf_orig
 
 
 _context: typing.Optional[Context] = None
@@ -554,7 +558,7 @@ def is_online():
     user, cluster_node = _parse_user_at_host(_context.cluster_node, None)
     cluster_node = get_node_canonical_hostname(cluster_node)
     if not xmlutil.CrmMonXmlParser().is_node_online(cluster_node):
-        shutil.copy(COROSYNC_CONF_ORIG, corosync.conf())
+        shutil.copy(_context.get_corosync_conf_orig(), corosync.conf())
         sync_file(corosync.conf())
         sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R", cluster_node)
         ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).stop_service("corosync")
@@ -732,9 +736,9 @@ def start_pacemaker(node_list=[], enable_flag=False):
     if not _context and \
             utils.package_is_installed("sbd") and \
             ServiceManager().service_is_enabled(constants.SBD_SERVICE) and \
-            SBDTimeout.is_sbd_delay_start():
-        cmd1 = f"mkdir -p {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}"
-        cmd2 = f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"
+            sbd.SBDTimeout.is_sbd_delay_start():
+        cmd1 = f"mkdir -p {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}"
+        cmd2 = f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"
         cmd3 = "systemctl daemon-reload"
         for cmd in [cmd1, cmd2, cmd3]:
             parallax.parallax_call(node_list, cmd)
@@ -1106,7 +1110,7 @@ def init_csync2():
         utils.fatal("Can't create csync2 key {}".format(CSYNC2_KEY))
 
     csync2_file_list = ""
-    for f in FILES_TO_SYNC:
+    for f in get_files_to_sync():
         csync2_file_list += "include {};\n".format(f)
 
     host_str = ""
@@ -2005,7 +2009,7 @@ def sync_files_to_disk():
     """
     target_files_str = ""
 
-    for f in FILES_TO_SYNC:
+    for f in get_files_to_sync():
         # check if the file exists on the local node
         if not os.path.isfile(f):
             continue
@@ -2058,7 +2062,7 @@ def join_cluster(seed_host, remote_user):
             cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
             shell.get_stdout_or_raise_error(cmd, seed_host)
 
-    shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
+    shutil.copy(corosync.conf(), _context.get_corosync_conf_orig())
 
     # check if use IPv6
     _context.ipv6 = corosync.is_using_ipv6()
@@ -2212,7 +2216,7 @@ def rm_configuration_files(remote=None):
     shell.get_stdout_or_raise_error("rm -f {}".format(' '.join(_context.rm_list)), remote)
     # restore original sbd configuration file from /usr/share/fillup-templates/sysconfig.sbd
     if utils.package_is_installed("sbd", remote_addr=remote):
-        cmd = "cp {} {}".format(SBDManager.SYSCONFIG_SBD_TEMPLATE, SBDManager.SYSCONFIG_SBD)
+        cmd = "cp {} {}".format(sbd.SBDManager.SYSCONFIG_SBD_TEMPLATE, sbd.SBDManager.SYSCONFIG_SBD)
         shell.get_stdout_or_raise_error(cmd, remote)
 
 
@@ -2847,6 +2851,7 @@ def adjust_pcmk_delay_max(is_2node_wo_qdevice):
     add parameter pcmk_delay_max when cluster is two-node cluster without qdevice
     else remove pcmk_delay_max
     """
+    cib_factory = cibconfig.cib_factory_instance()
     cib_factory.refresh()
 
     shell = sh.cluster_shell()
@@ -2867,7 +2872,7 @@ def adjust_stonith_timeout(with_sbd: bool = False):
     Adjust stonith-timeout for sbd and other scenarios
     """
     if ServiceManager().service_is_active(constants.SBD_SERVICE) or with_sbd:
-        SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+        sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
     else:
         value = get_stonith_timeout_generally_expected()
         if value:
@@ -2903,7 +2908,7 @@ def retrieve_all_config_files(cluster_node):
     """
     with logger_utils.status_long("Retrieve all config files"):
         cmd = 'cpio -o << EOF\n{}\nEOF\n'.format(
-            '\n'.join((f for f in FILES_TO_SYNC if f != CSYNC2_KEY and f != CSYNC2_CFG))
+            '\n'.join((f for f in get_files_to_sync() if f != CSYNC2_KEY and f != CSYNC2_CFG))
         )
         pipe_outlet, pipe_inlet = os.pipe()
         try:
@@ -2918,7 +2923,7 @@ def retrieve_all_config_files(cluster_node):
         finally:
             os.close(pipe_inlet)
         rc = child.wait()
-        # Some errors may happen here, since all files in FILES_TO_SYNC may not exist.
+        # Some errors may happen here, since all files in get_files_to_sync() may not exist.
         if result is None or result.returncode == 255:
             utils.fatal("Failed to create ssh connect to {}".format(cluster_node))
         if rc != 0:
@@ -2944,4 +2949,11 @@ def restart_cluster():
     logger.info("Restarting cluster service")
     utils.cluster_run_cmd("crm cluster restart")
     wait_for_cluster()
+
+
+def get_files_to_sync():
+    return (
+        (corosync.conf(), sbd.SBDManager.SYSCONFIG_SBD, watchdog.Watchdog.WATCHDOG_CFG,
+         sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR) + STATIC_FILES_TO_SYNC
+    )
 # EOF

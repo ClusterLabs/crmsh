@@ -6,6 +6,7 @@ import subprocess
 import copy
 import re
 import glob
+import functools
 from lxml import etree
 from . import cache
 from . import constants
@@ -14,8 +15,6 @@ from . import options
 from . import userdir
 from . import utils
 from .sh import ShellUtils
-from .utils import stdout2list, is_program, to_ascii
-from .utils import crm_msec, crm_time_cmp, VerifyResult
 from . import log
 
 
@@ -31,7 +30,7 @@ def crm_resource(opts):
     '''
     Get information from crm_resource.
     '''
-    _rc, l = stdout2list("crm_resource %s" % opts, stderr_on=False)
+    _rc, l = utils.stdout2list("crm_resource %s" % opts, stderr_on=False)
     return l
 
 
@@ -102,7 +101,7 @@ def ra_types(ra_class="ocf", ra_provider=""):
     return cache.store(ident, sorted(list(set(ra for ra in find_types() if include(ra)))))
 
 
-@utils.memoize
+@functools.cache
 def ra_meta(ra_class, ra_type, ra_provider):
     """
     Return metadata for the given class/type/provider
@@ -112,12 +111,12 @@ def ra_meta(ra_class, ra_type, ra_provider):
     return crm_resource("--show-metadata %s:%s" % (ra_class, ra_type))
 
 
-@utils.memoize
+@functools.cache
 def get_stonithd_meta():
     return RAInfo(utils.pacemaker_fenced(), "metadata")
 
 
-@utils.memoize
+@functools.cache
 def get_properties_meta():
     cluster_option_meta = utils.get_cluster_option_metadata()
     if cluster_option_meta:
@@ -128,12 +127,12 @@ def get_properties_meta():
         raise ValueError("No cluster option metadata found")
 
 
-@utils.memoize
+@functools.cache
 def get_property_options(property_name):
     return get_properties_meta().param_options(property_name)
 
 
-@utils.memoize
+@functools.cache
 def get_properties_list():
     try:
         return list(get_properties_meta().params().keys())
@@ -141,7 +140,7 @@ def get_properties_list():
         return []
 
 
-@utils.memoize
+@functools.cache
 def get_resource_meta():
     resource_meta = utils.get_resource_metadata()
     if resource_meta:
@@ -149,7 +148,7 @@ def get_resource_meta():
     return None
 
 
-@utils.memoize
+@functools.cache
 def get_resource_meta_list():
     try:
         return list(get_resource_meta().params().keys())
@@ -164,7 +163,7 @@ def prog_meta(prog):
     '''
     prog = utils.pacemaker_daemon(prog)
     if prog:
-        rc, l = stdout2list("%s metadata" % prog)
+        rc, l = utils.stdout2list("%s metadata" % prog)
         if rc == 0:
             return l
         logger.debug("%s metadata exited with code %d", prog, rc)
@@ -416,7 +415,7 @@ class RAInfo(object):
                     return True
             return False
 
-        rc = VerifyResult.SUCCESS
+        rc = utils.VerifyResult.SUCCESS
         d = {}
         for nvp in nvpairs:
             if 'name' in nvp.attrib:
@@ -480,24 +479,24 @@ class RAInfo(object):
             """
             Helper method used by sanity_check_op_timeout, to check operation's timeout
             """
-            rc = VerifyResult.SUCCESS
+            rc = utils.VerifyResult.SUCCESS
             if "timeout" in item_dict:
                 actual_timeout = item_dict["timeout"]
                 timeout_string = "specified timeout"
             else:
                 actual_timeout = default_timeout
                 timeout_string = "default timeout"
-            if actual_timeout and crm_time_cmp(adv_timeout, actual_timeout) > 0:
+            if actual_timeout and utils.crm_time_cmp(adv_timeout, actual_timeout) > 0:
                 logger.warning("%s: %s %s for %s is smaller than the advised %s",
                         ident, timeout_string, actual_timeout, op, adv_timeout)
-                rc |= VerifyResult.WARNING
+                rc |= utils.VerifyResult.WARNING
             return rc
 
         def sanity_check_op_timeout(op, op_dict):
             """
             Helper method used by sanity_check_op, to check operation's timeout
             """
-            rc = VerifyResult.SUCCESS
+            rc = utils.VerifyResult.SUCCESS
             role = None
             depth = None
             if op == "monitor":
@@ -515,7 +514,7 @@ class RAInfo(object):
             """
             Helper method used by sanity_check_op, to check operation's interval
             """
-            rc = VerifyResult.SUCCESS
+            rc = utils.VerifyResult.SUCCESS
             prev_intervals = []
             if op == "monitor":
                 for monitor_item in op_dict[op]:
@@ -523,40 +522,40 @@ class RAInfo(object):
                     depth = monitor_item['depth'] if 'depth' in monitor_item else None
                     # make sure interval in multi monitor operations is unique and non-zero
                     adv_interval = self.get_op_attr_value(op, "interval", role=role, depth=depth)
-                    actual_interval_msec = crm_msec(monitor_item["interval"])
+                    actual_interval_msec = utils.crm_msec(monitor_item["interval"])
                     if actual_interval_msec == 0:
                         logger.warning("%s: interval in monitor should be larger than 0, advised is %s", ident, adv_interval)
-                        rc |= VerifyResult.WARNING
+                        rc |= utils.VerifyResult.WARNING
                     elif actual_interval_msec in prev_intervals:
                         logger.warning("%s: interval in monitor must be unique, advised is %s", ident, adv_interval)
-                        rc |= VerifyResult.WARNING
+                        rc |= utils.VerifyResult.WARNING
                     else:
                         prev_intervals.append(actual_interval_msec)
             elif "interval" in op_dict[op]:
                 value = op_dict[op]["interval"]
-                value_msec = crm_msec(value)
+                value_msec = utils.crm_msec(value)
                 if op in self.no_interval_ops and value_msec != 0:
                     logger.warning("%s: Specified interval for %s is %s, it must be 0", ident, op, value)
-                    rc |= VerifyResult.WARNING
+                    rc |= utils.VerifyResult.WARNING
             return rc
 
         def sanity_check_op(op, op_dict):
             """
             Helper method used by sanity_check_ops.
             """
-            rc = VerifyResult.SUCCESS
+            rc = utils.VerifyResult.SUCCESS
             if self.ra_class == "stonith" and op in ("start", "stop"):
                 return rc
             if op not in self.actions():
                 logger.error("Action '%s' not found in Resource Agent meta-data", op)
-                rc |= VerifyResult.FATAL_ERROR
+                rc |= utils.VerifyResult.FATAL_ERROR
                 return rc
             rc |= sanity_check_op_interval(op, op_dict)
             rc |= sanity_check_op_timeout(op, op_dict)
             return rc
 
 
-        rc = VerifyResult.SUCCESS
+        rc = utils.VerifyResult.SUCCESS
         op_dict = {}
         op_dict["monitor"] = []
         # ops example:
@@ -876,7 +875,7 @@ def validate_agent(agentname, params, log=False):
         print(".EXT", " ".join(cmd))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=my_env)
     _out, _ = p.communicate()
-    out = to_ascii(_out)
+    out = utils.to_ascii(_out)
     p.wait()
 
     if log is True:

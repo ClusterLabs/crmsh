@@ -5,7 +5,7 @@ from . import utils
 from . import command
 from . import completers as compl
 from . import xmlutil
-from .cibconfig import cib_factory
+from . import cibconfig
 
 
 def rmattrs(e, *attrs):
@@ -27,20 +27,21 @@ class Assist(command.UI):
 
     def __init__(self):
         command.UI.__init__(self)
+        self.cib_factory = cibconfig.cib_factory_instance()
 
     def requires(self):
-        cib_factory.initialize(no_side_effects=True)
+        self.cib_factory.initialize(no_side_effects=True)
         return True
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(cib_factory.prim_id_list))
+    @command.completers_repeating(compl.call(cibconfig.cib_factory_instance().prim_id_list))
     def do_template(self, context, *primitives):
         '''
         Create a shared template for the given primitives
         '''
         if len(primitives) < 1:
             context.fatal_error("Expected at least one primitive argument")
-        objs = [cib_factory.find_resource(p) for p in primitives]
+        objs = [self.cib_factory.find_resource(p) for p in primitives]
         for prim, obj in zip(primitives, objs):
             if obj is None:
                 context.fatal_error("Primitive %s not found" % (prim))
@@ -63,7 +64,7 @@ class Assist(command.UI):
 
         node = primitives[0].node
         template_name = self.make_unique_name('template-%s-' % (node.get('type').lower()))
-        shared_template = cib_factory.create_object('rsc_template', template_name,
+        shared_template = self.cib_factory.create_object('rsc_template', template_name,
                                                     xmlutil.mk_rsc_type(node))
         if not shared_template:
             context.fatal_error("Error creating template")
@@ -86,7 +87,7 @@ class Assist(command.UI):
         return True
 
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(cib_factory.prim_id_list))
+    @command.completers_repeating(compl.call(cibconfig.cib_factory_instance().prim_id_list))
     @command.name('weak-bond')
     @command.alias('weak_bond')
     def do_weak_bond(self, context, *nodes):
@@ -101,7 +102,7 @@ class Assist(command.UI):
             context.fatal_error("Need at least two arguments")
 
         for node in nodes:
-            obj = cib_factory.find_resource(node)
+            obj = self.cib_factory.find_resource(node)
             if not obj:
                 context.fatal_error("Object not found: %s" % (node))
             if not xmlutil.is_primitive(obj.node):
@@ -114,19 +115,19 @@ class Assist(command.UI):
         print("   * Colocation constraint, ID: %s" % (constraint_name))
         print("   * Dummy resource, ID: %s" % (dummy_name))
         if not utils.can_ask() or utils.ask("Create resources?"):
-            cib_factory.create_object('primitive', dummy_name, 'ocf:heartbeat:Dummy')
+            self.cib_factory.create_object('primitive', dummy_name, 'ocf:heartbeat:Dummy')
             colo = ['colocation', constraint_name, 'inf:', '(']
             colo.extend(nodes)
             colo.append(')')
             colo.append(dummy_name)
-            cib_factory.create_object(*colo)
+            self.cib_factory.create_object(*colo)
 
     def make_unique_name(self, prefix):
         n = 0
         while n < 1000:
             n += 1
             name = "%s%s" % (prefix, n)
-            for _id in cib_factory.id_list():
+            for _id in self.cib_factory.id_list():
                 if name == _id.lower():
                     continue
             return name

@@ -4,11 +4,11 @@ import socket
 import subprocess
 import time
 import typing
+from functools import cache
 
 from . import config
 from . import constants
 from . import userdir
-from .pyshim import cache
 
 
 logger = logging.getLogger(__name__)
