@@ -177,13 +177,13 @@ PCMK_logfile=/var/log/pacemaker/pacemaker.log
         mock_which.assert_called_once_with("sbd")
         mock_open_file.assert_called_once_with(f"{mock_ctx_inst.work_dir}/{constants.SBD_F}", "w")
         file_handle.write.assert_has_calls([
-            mock.call("\n\n#=====[ Command ] ==========================#\n"),
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
             mock.call("# . /etc/sysconfig/sbd;export SBD_DEVICE;sbd dump;sbd list\n"),
             mock.call("data"),
-            mock.call("\n\n#=====[ Command ] ==========================#\n"),
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
             mock.call("# crm sbd configure show\n"),
             mock.call("data"),
-            mock.call("\n\n#=====[ Command ] ==========================#\n"),
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
             mock.call("# crm sbd status\n"),
             mock.call("data")
             ])
@@ -542,6 +542,51 @@ id            0x19041a12
         collect.collect_qdevice_info(mock_ctx_inst)
         mock_debug.assert_called_once_with('Dump quorum/qdevice/qnetd information into /opt/workdir/qdevice.txt')
 
+    @mock.patch('crmsh.report.collect.ServiceManager')
+    def test_collect_corosync_status_return(self, mock_service):
+        mock_service_inst = mock.Mock()
+        mock_service.return_value = mock_service_inst
+        mock_service_inst.service_is_active.return_value = False
+        collect.collect_corosync_status(mock.Mock())
+        mock_service_inst.service_is_active.assert_called_once_with("corosync.service")
+
+    @mock.patch('crmsh.report.utils.real_path')
+    @mock.patch('logging.Logger.debug')
+    @mock.patch('crmsh.report.utils.get_cmd_output')
+    @mock.patch('builtins.open', create=True)
+    @mock.patch('os.path.join')
+    @mock.patch('crmsh.report.collect.ServiceManager')
+    def test_collect_corosync_status(self, mock_service, mock_join, mock_open_file, mock_get_cmd_output, mock_debug, mock_real_path):
+        mock_ctx_inst = mock.Mock(work_dir="/opt/workdir")
+        mock_service_inst = mock.Mock()
+        mock_service.return_value = mock_service_inst
+        mock_service_inst.service_is_active.return_value = True
+        mock_join.return_value = f"/opt/workdir/{constants.COROSYNC_STATUS_F}"
+        mock_real_path.return_value = f"/opt/workdir/{constants.COROSYNC_STATUS_F}"
+        mock_open_write = mock.mock_open()
+        file_handle = mock_open_write.return_value.__enter__.return_value
+        mock_open_file.return_value = mock_open_write.return_value
+        mock_get_cmd_output.side_effect = ["data1", "data2", "data3", "data4"]
+
+        collect.collect_corosync_status(mock_ctx_inst)
+
+        mock_open_file.assert_called_once_with(f"{mock_join.return_value}", "w")
+        file_handle.write.assert_has_calls([
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
+            mock.call("# crm corosync status\n"),
+            mock.call("data1"),
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
+            mock.call("# crm corosync link show\n"),
+            mock.call("data2"),
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
+            mock.call("# crm corosync status cpg\n"),
+            mock.call("data3"),
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
+            mock.call("# corosync-cmapctl\n"),
+            mock.call("data4")
+        ])
+        mock_debug.assert_called_once_with(f"Dump corosync status info into {mock_real_path.return_value}")
+
     @mock.patch("logging.Logger.error")
     @mock.patch('crmsh.utils.str2file')
     @mock.patch("crmsh.report.utils.real_path")
@@ -612,7 +657,7 @@ tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=169544k,nr_inodes
         """
         mock_run_inst.get_stdout_stderr.side_effect = [(0, mount_data, None), (0, "data", None)]
         res = collect.lsof_cluster_fs_device("OCFS2")
-        self.assertEqual(res, "\n\n#=====[ Command ] ==========================#\n# lsof /dev/sda7\ndata")
+        self.assertEqual(res, f"\n\n{collect.DIVIDER}\n# lsof /dev/sda7\ndata")
         mock_run_inst.get_stdout_stderr.assert_has_calls([
             mock.call("mount"),
             mock.call("lsof /dev/sda7")
@@ -626,4 +671,4 @@ tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=169544k,nr_inodes
         mock_exists.return_value = False
         mock_run.return_value = "data"
         res = collect.cluster_fs_commands_output("OCFS2")
-        self.assertEqual(res, "\n\n#===== [ Command ] ==========================#\n# mounted.ocfs2 -f\ndata")
+        self.assertEqual(res, f"\n\n{collect.DIVIDER}\n# mounted.ocfs2 -f\ndata")
