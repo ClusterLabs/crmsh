@@ -21,6 +21,7 @@ from crmsh.service_manager import ServiceManager
 
 
 logger = log.setup_report_logger(__name__)
+DIVIDER = "=" * 50
 
 
 def get_corosync_log() -> Optional[str]:
@@ -129,7 +130,7 @@ def lsof_cluster_fs_device(fs_type: str) -> str:
     dev_list = re.findall(f"^(.*) on .* type {fs_type.lower()} ", out, re.M)
     for dev in dev_list:
         cmd = f"lsof {dev}"
-        out_string += "\n\n#=====[ Command ] ==========================#\n"
+        out_string += f"\n\n{DIVIDER}\n"
         out_string += f"# {cmd}\n"
         _, cmd_out, _ = sh_utils_inst.get_stdout_stderr(cmd)
         if cmd_out:
@@ -164,7 +165,7 @@ def cluster_fs_commands_output(fs_type: str) -> str:
             continue
         if cmd_name == "cat" and not os.path.exists(cmd.split()[1]):
             continue
-        out_string += "\n\n#===== [ Command ] ==========================#\n"
+        out_string += f"\n\n{DIVIDER}\n"
         out_string += f"# {cmd}\n"
         out_string += utils.get_cmd_output(cmd)
 
@@ -475,7 +476,7 @@ def collect_sbd_info(context: core.Context) -> None:
     ]
     with open(sbd_f, "w") as f:
         for cmd in cmd_list:
-            f.write("\n\n#=====[ Command ] ==========================#\n")
+            f.write(f"\n\n{DIVIDER}\n")
             f.write(f"# {cmd}\n")
             f.write(utils.get_cmd_output(cmd))
 
@@ -552,3 +553,22 @@ def collect_qdevice_info(context: core.Context) -> None:
     _file = os.path.join(context.work_dir, constants.QDEVICE_F)
     crmutils.str2file(out_string, _file)
     logger.debug(f"Dump quorum/qdevice/qnetd information into {utils.real_path(_file)}")
+
+
+def collect_corosync_status(context: core.Context) -> None:
+    if not ServiceManager().service_is_active("corosync.service"):
+        return
+
+    corosync_f = os.path.join(context.work_dir, constants.COROSYNC_STATUS_F)
+    cmd_list = [
+        "crm corosync status",
+        "crm corosync link show",
+        "crm corosync status cpg",
+        "corosync-cmapctl"
+    ]
+    with open(corosync_f, "w") as f:
+        for cmd in cmd_list:
+            f.write(f"\n\n{DIVIDER}\n")
+            f.write(f"# {cmd}\n")
+            f.write(utils.get_cmd_output(cmd))
+    logger.debug(f"Dump corosync status info into {utils.real_path(corosync_f)}")

@@ -41,6 +41,7 @@ CONFIGURATIONS = [
 ]
 COROSYNC_RECORDER_F = "fdata.txt"
 COROSYNC_F = "corosync.conf"
+COROSYNC_STATUS_F = "corosync_status.txt"
 CRM_MON_F = "crm_mon.txt"
 CRM_VERIFY_F = "crm_verify.txt"
 DESCRIPTION_F = "description.txt"
