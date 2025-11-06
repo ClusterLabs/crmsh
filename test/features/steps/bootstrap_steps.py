@@ -64,5 +64,6 @@ def step_impl(context, user, node):
         print(stdout.decode('utf-8', errors='backslashreplace'))
         return
     else:
+        print(stdout.decode('utf-8', errors='backslashreplace'))
         print(stderr.decode('utf-8', errors='backslashreplace'))
         assert 0 == rc
