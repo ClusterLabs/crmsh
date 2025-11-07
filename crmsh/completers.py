@@ -69,7 +69,7 @@ def primitives(args):
     return [x.get("id") for x in nodes if xmlutil.is_primitive(x)]
 
 
-nodes = call(xmlutil.listnodes)
+nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(standby=x), None)
 online_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(standby=x), False)
 standby_nodes = call(lambda x: xmlutil.CrmMonXmlParser().get_node_list(standby=x), True)
 

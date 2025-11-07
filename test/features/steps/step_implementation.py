@@ -10,6 +10,7 @@ from behave import given, when, then
 import behave_agent
 from crmsh import corosync, userdir, bootstrap
 from crmsh import utils as crmutils
+from crmsh import xmlutil
 from crmsh import sbd
 from crmsh import ui_configure
 from crmsh.sh import ShellUtils
@@ -257,12 +258,22 @@ def step_impl(context, nodelist):
 
 @then('Node "{node}" is standby')
 def step_impl(context, node):
-    assert crmutils.is_standby(node) is True
+    assert xmlutil.CrmMonXmlParser().is_node_standby(node) is True
 
 
 @then('Node "{node}" is online')
 def step_impl(context, node):
-    assert crmutils.is_standby(node) is False
+    assert xmlutil.CrmMonXmlParser().is_node_standby(node) is False
+
+
+@then('Node "{node}" is maintenance')
+def step_impl(context, node):
+    assert xmlutil.CrmMonXmlParser().is_node_maintenance(node) is True
+
+
+@then('Node "{node}" is ready')
+def step_impl(context, node):
+    assert xmlutil.CrmMonXmlParser().is_node_maintenance(node) is False
 
 
 @then('IP "{addr}" is used by corosync on "{node}"')

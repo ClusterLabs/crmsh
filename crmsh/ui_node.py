@@ -5,6 +5,7 @@ import os
 import re
 import copy
 import subprocess
+from lxml import etree
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from . import config
@@ -14,6 +15,7 @@ from . import constants
 from . import ui_utils
 from . import utils
 from . import xmlutil
+from . import idmgmt
 from .cliformat import cli_nvpairs, nvpairs2list
 from . import term
 from . import cibconfig
@@ -80,8 +82,17 @@ def update_xml_node(cluster_node_name, attr, value):
     cib_factory = cibconfig.cib_factory_instance()
     node_obj = cib_factory.find_node(cluster_node_name)
     if node_obj is None:
-        logger.error("CIB is not valid!")
-        return False
+        # Append node section for remote node
+        if xmlutil.CrmMonXmlParser().is_node_remote(cluster_node_name):
+            xml_item = etree.Element("node", id=cluster_node_name, uname=cluster_node_name, type="remote")
+            cib_factory.create_from_node(xml_item)
+            node_obj = cib_factory.find_node(cluster_node_name)
+            if node_obj is None:
+                logger.error("Failed to create remote node '%s'", cluster_node_name)
+                return False
+        else:
+            logger.error("Node '%s' not found in CIB", cluster_node_name)
+            return False
 
     logger.debug("update_xml_node: %s", node_obj.obj_id)
 
@@ -245,7 +256,8 @@ keep the node in standby after reboot. The life time defaults to
     if options.all and args:
         context.fatal_error("Should either use --all or specific node(s)")
 
-    return utils.validate_and_get_reachable_nodes(args, options.all)
+    include_remote = action_type in ["standby", "online"]
+    return utils.validate_and_get_reachable_nodes(args, options.all, include_remote)
 
 
 class NodeMgmt(command.UI):
@@ -372,6 +384,24 @@ class NodeMgmt(command.UI):
         orig_cib = copy.deepcopy(cib)
 
         xml_item_list = cib.xpath(xml_path)
+        uname_list_in_xml = [xml_item.get("uname") for xml_item in xml_item_list]
+        crm_mon_parser_inst = xmlutil.CrmMonXmlParser()
+        create_remote_node = False
+        for node in node_list:
+            if node not in uname_list_in_xml:
+                # Append node section for remote node
+                if crm_mon_parser_inst.is_node_remote(node) and lifetime_opt == "forever":
+                    xml_item = etree.Element("node", id=node, uname=node, type="remote")
+                    cib.find("configuration/nodes").append(xml_item)
+                    create_remote_node = True
+                else:
+                    logger.error("Node '%s' not found in CIB", node)
+                    return False
+        if create_remote_node:
+            # Store exsisting objects' id to avoid duplicate id generation
+            idmgmt.store_xml(cib, False)
+            xml_item_list = cib.xpath(xml_path)
+
         for xml_item in xml_item_list:
             if xml_item.get("uname") in node_list:
                 node_id = xml_item.get('id')
