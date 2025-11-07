@@ -379,3 +379,41 @@ Feature: crmsh bootstrap process - with password authentication
     Then Service "corosync-qdevice" is "started" on "hanode1"
     Then Service "corosync-qdevice" is "started" on "hanode2"
     Then Service "corosync-qnetd" is "started" on "qnetd-node"
+    When Run "crm cluster stop" on "hanode1,hanode2,hanode3"
+
+  @clean
+  Scenario: Bootsrap with pre-configured key-based authentication (crmsh#1931)
+    Given Directory ~root/.ssh is empty on "hanode1"
+    Given Directory ~root/.ssh is empty on "hanode2"
+    Given Directory ~alice/.ssh is empty on "hanode1"
+    Given Directory ~alice/.ssh is empty on "hanode2"
+    Given Directory ~hacluster/.ssh is empty on "hanode1"
+    Given Directory ~hacluster/.ssh is empty on "hanode2"
+    Given crm.conf poisoned on nodes ["hanode1", "hanode2"]
+    Given Run "ssh-keygen -q -N '' -t ed25519 -f /root/.ssh/id_ed25519" OK on "hanode1"
+    Given Run "ssh-keygen -q -N '' -t ed25519 -f /root/.ssh/id_ed25519" OK on "hanode2"
+    Then This expect program exits with 0 on "root"@"hanode1"
+      """
+      set timeout 20
+      spawn ssh-copy-id -i /root/.ssh/id_ed25519 hanode2
+      expect "Password: " {
+        send "root123\n"
+      }
+      expect eof
+      """
+    Then This expect program exits with 0 on "root"@"hanode2"
+      """
+      set timeout 20
+      spawn ssh-copy-id -i /root/.ssh/id_ed25519 hanode1
+      expect "Password: " {
+        send "root123\n"
+      }
+      expect eof
+      """
+    When Run "crm cluster init -y" on "hanode1"
+    Then Cluster service is "started" on "hanode1"
+    When Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then Cluster service is "started" on "hanode2"
+    Then Online nodes are "hanode1 hanode2"
+    Then two_node in corosync.conf is "1"
+    Then Cluster is using "knet" transport mode

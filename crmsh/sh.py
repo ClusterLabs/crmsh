@@ -405,29 +405,6 @@ class ClusterShell:
         else:
             raise CommandFailure(cmd, host, None, Utils.decode_str(stderr).strip())
 
-    def ssh_to_localhost(self, user: typing.Optional[str], cmd: str, **kwargs):
-        if user is None:
-            user = 'root'
-        host = self.local_shell.hostname()
-        local_user, remote_user = self.user_of_host.user_pair_for_ssh(host)
-        result = self.local_shell.su_subprocess_run(
-            local_user,
-            'ssh {} {} {}@{} sudo -H -u {} {} /bin/sh'.format(
-                '-A' if self.forward_ssh_agent else '',
-                constants.SSH_OPTION,
-                remote_user,
-                host,
-                user,
-                '--preserve-env=SSH_AUTH_SOCK' if self.forward_ssh_agent else '',
-            ),
-            input=cmd.encode('utf-8'),
-            **kwargs,
-        )
-        if self.raise_ssh_error and result.returncode == 255:
-            raise AuthorizationError(cmd, host, remote_user, Utils.decode_str(result.stderr).strip())
-        else:
-            return result
-
 
 class ShellUtils:
     CONTROL_CHARACTER_PATTER = re.compile('[\u0000-\u001F]')

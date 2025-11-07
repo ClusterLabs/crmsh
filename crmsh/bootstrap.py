@@ -1798,14 +1798,20 @@ def join_ssh_merge(cluster_node, remote_user):
     """
     logger.info("Merging known_hosts")
 
-    hosts = utils.fetch_cluster_node_list_from_node(cluster_node) + [utils.this_node()]
-
-    shell = sh.cluster_shell()
     # create local entry in known_hosts
-    shell.ssh_to_localhost(None, 'true')
+    shell = sh.cluster_shell()
+    hostname = shell.local_shell.hostname()
+    local_user, remote_user = shell.user_of_host.user_pair_for_ssh(hostname)
+    shell.local_shell.su_subprocess_run(
+        local_user,
+        f'ssh -o BatchMode=yes {constants.SSH_OPTION} {hostname}',
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
+    hosts = utils.fetch_cluster_node_list_from_node(cluster_node) + [utils.this_node()]
     known_hosts_new: set[str] = set()
-
     cat_cmd = "[ -e ~/.ssh/known_hosts ] && cat ~/.ssh/known_hosts || true"
     for host in hosts:
         known_hosts_content = shell.get_stdout_or_raise_error(cat_cmd, host)
