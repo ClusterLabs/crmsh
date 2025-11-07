@@ -1539,12 +1539,15 @@ done
         bootstrap.adjust_pcmk_delay_max(False)
         mock_run.assert_called_once_with("crm resource param res_1 delete pcmk_delay_max")
 
-    @mock.patch('crmsh.sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration')
+    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_adjust_stonith_timeout_sbd(self, mock_is_active, mock_sbd_adjust_timeout):
+    def test_adjust_stonith_timeout_sbd(self, mock_is_active, mock_sbd_checker):
+        mock_sbd_checker_inst = mock.Mock()
+        mock_sbd_checker.return_value = mock_sbd_checker_inst
+        mock_sbd_checker_inst.check_and_fix = mock.Mock()
         mock_is_active.return_value = True
         bootstrap.adjust_stonith_timeout()
-        mock_sbd_adjust_timeout.assert_called_once_with()
+        mock_sbd_checker.assert_called_once_with(fix=True, warn=False, from_bootstrap=True)
 
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.bootstrap.get_stonith_timeout_generally_expected')
