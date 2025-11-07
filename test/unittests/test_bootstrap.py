@@ -275,19 +275,19 @@ class TestContext(unittest.TestCase):
         assert res == {}
         mock_status.assert_not_called()
 
-    @mock.patch('logging.Logger.info')
+    @mock.patch('logging.Logger.warning')
     def test_load_specific_profile_not_exist(self, mock_status):
         self.ctx_inst.profiles_data = {"name": "test"}
         res = self.ctx_inst.load_specific_profile("newname")
         assert res == {}
-        mock_status.assert_called_once_with("\"newname\" profile does not exist in {}".format(bootstrap.PROFILES_FILE))
+        mock_status.assert_called_once_with("\"%s\" profile does not exist in %s", "newname", bootstrap.PROFILES_FILE)
 
     @mock.patch('logging.Logger.info')
     def test_load_specific_profile(self, mock_status):
         self.ctx_inst.profiles_data = {"name": "test"}
         res = self.ctx_inst.load_specific_profile("name")
         assert res == "test"
-        mock_status.assert_called_once_with("Loading \"name\" profile from {}".format(bootstrap.PROFILES_FILE))
+        mock_status.assert_called_once_with("Loading \"%s\" profile from %s", "name", bootstrap.PROFILES_FILE)
 
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.detect_cloud')
@@ -1539,12 +1539,15 @@ done
         bootstrap.adjust_pcmk_delay_max(False)
         mock_run.assert_called_once_with("crm resource param res_1 delete pcmk_delay_max")
 
-    @mock.patch('crmsh.sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration')
+    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_adjust_stonith_timeout_sbd(self, mock_is_active, mock_sbd_adjust_timeout):
+    def test_adjust_stonith_timeout_sbd(self, mock_is_active, mock_sbd_checker):
+        mock_sbd_checker_inst = mock.Mock()
+        mock_sbd_checker.return_value = mock_sbd_checker_inst
+        mock_sbd_checker_inst.check_and_fix = mock.Mock()
         mock_is_active.return_value = True
         bootstrap.adjust_stonith_timeout()
-        mock_sbd_adjust_timeout.assert_called_once_with()
+        mock_sbd_checker.assert_called_once_with(quiet=True, fix=True, from_bootstrap=True)
 
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.bootstrap.get_stonith_timeout_generally_expected')
