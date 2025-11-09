@@ -266,10 +266,10 @@ class TestUtils(unittest.TestCase):
     def test_get_cmd_output(self, mock_run):
         mock_run_inst = mock.Mock()
         mock_run.return_value = mock_run_inst
-        mock_run_inst.get_stdout_stderr.return_value = (0, "stdout_data", "stderr_data")
+        mock_run_inst.get_stdout_stderr.return_value = (0, "line 1\nerror: foo\nline 2", None)
         res = utils.get_cmd_output("cmd")
-        self.assertEqual(res, "stdout_data\nstderr_data\n")
-        mock_run_inst.get_stdout_stderr.assert_called_once_with("cmd", timeout=None)
+        self.assertEqual(res, "line 1\nerror: foo\nline 2\n")
+        mock_run_inst.get_stdout_stderr.assert_called_once_with("cmd", timeout=None, mix_stderr=True)
 
     @mock.patch('crmsh.utils.read_from_file')
     def test_is_our_log_empty(self, mock_read):
