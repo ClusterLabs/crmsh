@@ -107,9 +107,9 @@ class SBD(command.UI):
     PCMK_ATTRS = (
         "have-watchdog",
         "stonith-timeout",
-        "stonith-enabled"
+        "stonith-enabled",
+        "stonith-watchdog-timeout"
     )
-    PCMK_ATTRS_DISKLESS = ('stonith-watchdog-timeout',)
     PARSE_RE = re.compile(
         # To extract key, suffix and value from these possible arguments:
         # watchdog-timeout=30
@@ -222,11 +222,7 @@ class SBD(command.UI):
         out = self.cluster_shell.get_stdout_or_raise_error("crm configure show")
 
         logger.info("crm sbd configure show property")
-        if self.device_list_from_config:
-            attrs = self.PCMK_ATTRS
-        else:
-            attrs = self.PCMK_ATTRS + self.PCMK_ATTRS_DISKLESS
-        regex = f"({'|'.join(attrs)})=(\\S+)"
+        regex = f"({'|'.join(self.PCMK_ATTRS)})=(\\S+)"
         matches = re.findall(regex, out)
         for match in matches:
             print(f"{match[0]}={match[1]}")
@@ -244,6 +240,7 @@ class SBD(command.UI):
         print(f"TimeoutStartUSec={systemd_start_timeout}")
 
     def _configure_show(self, args) -> None:
+        check_rc = True
         if len(args) > 2:
             raise self.SyntaxError("Invalid argument")
         elif len(args) == 2:
@@ -256,6 +253,7 @@ class SBD(command.UI):
                     self._show_property()
                 case _:
                     raise self.SyntaxError(f"Unknown argument: {args[1]}")
+            check_rc = sbd.SBDTimeoutChecker(check_category=args[1]).check_and_fix()
         else:
             self._show_disk_metadata()
             if self.device_list_from_config:
@@ -263,6 +261,10 @@ class SBD(command.UI):
             self._show_sysconfig()
             print()
             self._show_property()
+            check_rc = sbd.SBDTimeoutChecker().check_and_fix()
+
+        if not check_rc:
+            logger.info('Please run "crm cluster health sbd --fix" to fix the above warning')
 
     def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str]:
         '''
