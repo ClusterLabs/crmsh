@@ -764,13 +764,11 @@ def get_cmd_output(cmd: str, timeout: int = None) -> str:
     """
     Get the output of a command, include stdout and stderr
     """
-    out_str = ""
-    _, out, err = ShellUtils().get_stdout_stderr(cmd, timeout=timeout)
+    _, out, _ = ShellUtils().get_stdout_stderr(cmd, timeout=timeout, mix_stderr=True)
     if out:
-        out_str += f"{out}\n"
-    if err:
-        out_str += f"{err}\n"
-    return crmutils.strip_ansi_escape_sequences(out_str)
+        return crmutils.strip_ansi_escape_sequences(out) + '\n'
+    else:
+        return ''
 
 
 def get_timespan_str(context: core.Context) -> str:
