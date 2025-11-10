@@ -292,11 +292,19 @@ class TestSBDTimeout(unittest.TestCase):
         mock_get_sbd_systemd_start_timeout.assert_not_called()
 
     @patch('crmsh.sbd.SBDTimeout.restore_systemd_start_timeout')
+    @patch('crmsh.sbd.SBDTimeout.get_default_systemd_start_timeout')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout')
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
-    def test_adjust_systemd_start_timeout_return(self, mock_get_sbd_value_from_config, mock_get_sbd_systemd_start_timeout, mock_restore_systemd_start_timeout):
+    def test_adjust_systemd_start_timeout_return(
+            self,
+            mock_get_sbd_value_from_config,
+            mock_get_sbd_systemd_start_timeout,
+            mock_get_default_systemd_start_timeout,
+            mock_restore_systemd_start_timeout,
+    ):
         mock_get_sbd_value_from_config.return_value = "10"
         mock_get_sbd_systemd_start_timeout.return_value = 90
+        mock_get_default_systemd_start_timeout.return_value = 90
         inst = sbd.SBDTimeout()
         inst.adjust_systemd_start_timeout()
         mock_get_sbd_value_from_config.assert_called_once_with("SBD_DELAY_START")
@@ -306,11 +314,22 @@ class TestSBDTimeout(unittest.TestCase):
     @patch('crmsh.bootstrap.sync_path')
     @patch('crmsh.utils.str2file')
     @patch('crmsh.utils.mkdirp')
+    @patch('crmsh.sbd.SBDTimeout.get_default_systemd_start_timeout')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout')
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
-    def test_adjust_systemd_start_timeout(self, mock_get_sbd_value_from_config, mock_get_sbd_systemd_start_timeout, mock_mkdirp, mock_str2file, mock_sync_file, mock_cluster_run_cmd):
+    def test_adjust_systemd_start_timeout(
+            self,
+            mock_get_sbd_value_from_config,
+            mock_get_sbd_systemd_start_timeout,
+            mock_get_default_systemd_start_timeout,
+            mock_mkdirp,
+            mock_str2file,
+            mock_sync_file,
+            mock_cluster_run_cmd,
+    ):
         mock_get_sbd_value_from_config.return_value = "150"
         mock_get_sbd_systemd_start_timeout.return_value = 90
+        mock_get_default_systemd_start_timeout.return_value = 90
         inst = sbd.SBDTimeout()
         inst.adjust_systemd_start_timeout()
         mock_get_sbd_value_from_config.assert_called_once_with("SBD_DELAY_START")
