@@ -604,16 +604,25 @@ class SBD(command.UI):
         if not self._service_is_active(constants.SBD_SERVICE):
             return False
 
+        purge_crashdump = False
+        if args:
+            if args[0] == "crashdump":
+                if not self._is_crashdump_configured():
+                    logger.error("SBD crashdump is not configured")
+                    return False
+                purge_crashdump = True
+            else:
+                logger.error("Invalid argument: %s", ' '.join(args))
+                logger.info("Usage: crm sbd purge [crashdump]")
+                return False
+
         utils.check_all_nodes_reachable("purging SBD")
 
         with utils.leverage_maintenance_mode() as enabled:
             if not utils.able_to_restart_cluster(enabled):
                 return False
 
-            if args and args[0] == "crashdump":
-                if not self._is_crashdump_configured():
-                    logger.error("SBD crashdump is not configured")
-                    return False
+            if purge_crashdump:
                 self._set_crashdump_option(delete=True)
                 update_dict = self._set_crashdump_in_sysconfig(restore=True)
                 if update_dict:
