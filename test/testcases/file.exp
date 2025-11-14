@@ -46,9 +46,6 @@ op_defaults op-options: \
 .INP: load update sample.txt
 ERROR: 4: syntax: Unknown command near <op> parsing 'op stop timeout=20s interval=0s'
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
-.EXT crmd metadata
-.EXT pengine metadata
-.EXT cib metadata
 .TRY configure show
 node node1
 primitive p0 ocf:pacemaker:Dummy \
