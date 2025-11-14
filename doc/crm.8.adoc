@@ -1084,13 +1084,15 @@ Usage 2: Topic-Specified Health Check
 Verifies the health of a specified topic.
 
 ...............
-health hawk2|sles16 [--local] [--fix]
+health hawk2|sbd|sles16 [--local] [--fix]
 ...............
 
 * `hawk2`: check or fix key-based ssh authentication for user hacluster, which
   is needed by hawk2.
     ** `--fix`: attempts to automatically resolve any detected issues, eg.
        hacluster passwordless
+* `sbd`: check or fix SBD timeout-related configurations.
+    ** `--fix`: attempts to automatically resolve any detected issues.
 * `sles16`: check whether the cluster is good to migrate to SLES 16.
     ** `--local`: run checks in local mode
     ** `--fix`: attempts to automatically resolve any detected issues.
@@ -2216,6 +2218,7 @@ Main functionailities include:
 - Show contents of /etc/sysconfig/sbd
 - Show SBD related cluster properties
 - Update the SBD related configuration parameters
+- Give warnings for timeout-related misconfigurations
 - NOTE: sbd crashdump is used for debugging. Understand the risks and run `crm sbd purge crashdump` afterward
 
 For more details on SBD and related parameters, please see man sbd(8).
