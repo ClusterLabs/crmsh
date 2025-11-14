@@ -197,6 +197,7 @@ class SBDTimeout(object):
         self.stonith_watchdog_timeout = None
         self.two_node_without_qdevice = False
         self.qdevice_sync_timeout = None
+        self.crashdump_watchdog_timeout = None
         if self.context:
             self._initialize_timeout_in_bootstrap()
 
@@ -259,24 +260,18 @@ class SBDTimeout(object):
             raise ValueError("Cannot get the value of SBD_WATCHDOG_TIMEOUT")
         return int(res)
 
-    @staticmethod
-    def get_stonith_watchdog_timeout_expected():
-        '''
-        Returns the value of the stonith-watchdog-timeout cluster property.
-        Default is 2 * SBD_WATCHDOG_TIMEOUT.
-        '''
-        default = 2 * SBDTimeout.get_sbd_watchdog_timeout()
-        if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
-            return default
-        value = utils.get_property("stonith-watchdog-timeout", get_default=False)
-        return int(value) if value else default
+    def get_stonith_watchdog_timeout_expected(self):
+        if self.crashdump_watchdog_timeout:
+            return SBDTimeout.get_sbd_watchdog_timeout() + self.crashdump_watchdog_timeout
+        else:
+            return 2 * SBDTimeout.get_sbd_watchdog_timeout()
 
     def _load_configurations(self):
         '''
         Load necessary configurations for both disk-based/disk-less sbd
         '''
         self.two_node_without_qdevice = utils.is_2node_cluster_without_qdevice()
-
+        self.crashdump_watchdog_timeout = SBDUtils.get_crashdump_watchdog_timeout()
         dev_list = SBDUtils.get_sbd_device_from_config()
         if dev_list:  # disk-based
             self.disk_based = True
@@ -288,7 +283,7 @@ class SBDTimeout(object):
         else:  # disk-less
             self.disk_based = False
             self.sbd_watchdog_timeout = SBDTimeout.get_sbd_watchdog_timeout()
-            self.stonith_watchdog_timeout = SBDTimeout.get_stonith_watchdog_timeout_expected()
+            self.stonith_watchdog_timeout = self.get_stonith_watchdog_timeout_expected()
             if corosync.is_qdevice_configured() and ServiceManager().service_is_active("corosync-qdevice.service"):
                 self.qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
         self.sbd_delay_start_value_expected = self.get_sbd_delay_start_expected() if utils.detect_virt() else "no"
@@ -299,6 +294,12 @@ class SBDTimeout(object):
         self.sbd_systemd_start_timeout_expected = self.get_sbd_systemd_start_timeout_expected()
 
         logger.debug("Inspect SBDTimeout: %s", vars(self))
+
+    def get_sbd_msgwait_expected(self):
+        if self.crashdump_watchdog_timeout:
+            return 2 * self.sbd_watchdog_timeout + self.crashdump_watchdog_timeout
+        else:
+            return 2 * self.sbd_watchdog_timeout
 
     def get_stonith_timeout_expected(self):
         '''
@@ -474,17 +475,18 @@ class SBDTimeoutChecker(SBDTimeout):
         return consistent
 
     def _check_sbd_disk_metadata(self) -> bool:
-        if self.disk_based and self.sbd_msgwait < 2 * self.sbd_watchdog_timeout:
-            if self.warn:
-                logger.warning("It's recommended that msgwait(now %d) >= 2*watchdog timeout(now %d)",
-                               self.sbd_msgwait, self.sbd_watchdog_timeout)
-            return False
+        if self.disk_based:
+            expected_msgwait = self.get_sbd_msgwait_expected()
+            if self.sbd_msgwait < expected_msgwait:
+                if self.warn:
+                    logger.warning("It's recommended that SBD msgwait(now %d) >= %d", self.sbd_msgwait, expected_msgwait)
+                return False
         return True
 
     def _fix_sbd_disk_metadata(self) -> None:
-        advised_msgwait = 2 * self.sbd_watchdog_timeout
-        logger.info("Adjusting sbd msgwait to %d", advised_msgwait)
-        cmd = f"crm sbd configure msgwait-timeout={advised_msgwait} watchdog-timeout={self.sbd_watchdog_timeout}"
+        expected_msgwait = self.get_sbd_msgwait_expected()
+        logger.info("Adjusting sbd msgwait to %d", expected_msgwait)
+        cmd = f"crm sbd configure msgwait-timeout={expected_msgwait} watchdog-timeout={self.sbd_watchdog_timeout}"
         output = sh.cluster_shell().get_stdout_or_raise_error(cmd)
         if output:
             print(output)
