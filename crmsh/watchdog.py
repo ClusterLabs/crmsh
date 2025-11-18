@@ -167,7 +167,7 @@ class Watchdog(object):
         # self._input is invalid, exit
         rc, _, _ = ShellUtils().get_stdout_stderr(f"modinfo {self._input}")
         if rc != 0:
-            utils.fatal("Should provide valid watchdog device or driver name by -w option")
+            utils.fatal("Should provide valid watchdog device or driver name")
 
         # self._input is a driver name, load it if it was unloaded
         if not self._driver_is_loaded(self._input):
