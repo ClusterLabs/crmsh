@@ -1605,13 +1605,16 @@ class CrmMonXmlParser(object):
                 return True
         return False
 
-    def is_resource_started(self, ra):
+    def is_resource_started(self, ra, node=None):
         """
         Check if the RA started(in all clone instances if configured as clone)
 
         @ra could be resource id or resource type
+        @node: optional, specify the node name to check if the resource is started on the node
         """
         xpath = f'//resource[(@id="{ra}" or @resource_agent="{ra}") and @active="true" and @role="Started"]'
+        if node:
+            xpath += f"/node[@name='{node}']"
         return bool(self.xml_elem.xpath(xpath))
 
     def get_resource_id_list_via_type(self, ra_type):

@@ -2704,11 +2704,11 @@ def set_dlm_option(peer=None, **kargs):
             shell.get_stdout_or_raise_error(f'dlm_tool set_config "{option}={value}"', peer)
 
 
-def is_dlm_running(peer=None):
+def is_dlm_running(peer=None, on_node=None):
     """
     Check if dlm ra controld is running
     """
-    return xmlutil.CrmMonXmlParser(peer).is_resource_started(constants.DLM_CONTROLD_RA)
+    return xmlutil.CrmMonXmlParser(peer).is_resource_started(constants.DLM_CONTROLD_RA, node=on_node)
 
 
 def is_dlm_configured(peer=None):
