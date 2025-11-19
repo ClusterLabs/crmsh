@@ -260,10 +260,14 @@ class Cluster(command.UI):
             return
         logger.debug(f"stop node list: {node_list}")
 
-        if utils.is_cluster_in_maintenance_mode() and utils.is_dlm_running():
-            logger.info("The cluster is in maintenance mode")
-            logger.error("Stopping pacemaker/corosync will trigger unexpected node fencing when 'dlm_controld' is running in maintenance mode.")
-            return False
+        cluster_in_maintenance = utils.is_cluster_in_maintenance_mode()
+        for node in node_list[:]:
+            if cluster_in_maintenance and utils.is_dlm_running(on_node=node):
+                logger.info("The cluster is in maintenance mode and dlm is running on %s", node)
+                logger.error("Stopping pacemaker/corosync will trigger unexpected node fencing when 'dlm_controld' is running in maintenance mode.")
+                node_list.remove(node)
+        if not node_list:
+            return
 
         utils.wait_for_dc(node_list[0])
 
