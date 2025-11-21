@@ -246,11 +246,12 @@ def check_local(handler: CheckResultHandler):
 
 def check_remote():
     handler = CheckResultInteractiveHandler()
+    nodes = utils.list_cluster_nodes_except_me()
     class CheckRemoteThread(threading.Thread):
         def run(self):
             self.result = prun.prun({
                 node: 'crm cluster health sles16 --local --json=oneline'
-                for node in utils.list_cluster_nodes_except_me()
+                for node in nodes
             })
     prun_thread = CheckRemoteThread()
     prun_thread.start()
