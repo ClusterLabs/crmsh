@@ -26,7 +26,7 @@ from . import cibconfig
 from .prun import prun
 from .service_manager import ServiceManager
 from .sh import ShellUtils
-from .ui_node import parse_option_for_nodes
+from . import ui_utils
 from . import constants
 
 
@@ -168,7 +168,7 @@ class Cluster(command.UI):
         Starts the cluster stack on all nodes or specific node(s)
         '''
         try:
-            node_list = parse_option_for_nodes(context, *args)
+            node_list = ui_utils.parse_and_validate_node_args("start", *args)
         except utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster start' on each node")
@@ -250,7 +250,7 @@ class Cluster(command.UI):
         Stops the cluster stack on all nodes or specific node(s)
         '''
         try:
-            node_list = parse_option_for_nodes(context, *args)
+            node_list = ui_utils.parse_and_validate_node_args("stop", *args)
         except utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster stop' on each node")
@@ -299,7 +299,7 @@ class Cluster(command.UI):
         '''
         Enable the cluster services on this node
         '''
-        node_list = parse_option_for_nodes(context, *args)
+        node_list = ui_utils.parse_and_validate_node_args("enable", *args)
         service_manager = ServiceManager()
         node_list = service_manager.enable_service("pacemaker.service", node_list=node_list)
         if service_manager.service_is_available("corosync-qdevice.service") and corosync.is_qdevice_configured():
@@ -312,7 +312,7 @@ class Cluster(command.UI):
         '''
         Disable the cluster services on this node
         '''
-        node_list = parse_option_for_nodes(context, *args)
+        node_list = ui_utils.parse_and_validate_node_args("disable", *args)
         service_manager = ServiceManager()
         node_list = service_manager.disable_service("pacemaker.service", node_list=node_list)
         service_manager.disable_service("corosync-qdevice.service", node_list=node_list)

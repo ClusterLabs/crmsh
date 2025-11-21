@@ -6,6 +6,7 @@ import re
 import inspect
 from . import utils
 from . import log
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 
 logger = log.setup_logger(__name__)
@@ -162,3 +163,45 @@ def validate_arguments(f, args, nskip=0):
     if max_args >= 0 and len(args) > max_args:
         raise ValueError("Expected (%s), takes at most %d arguments (%d given)" %
                          (mknamed(), max_args-nskip, len(args)-nskip))
+
+
+def parse_and_validate_node_args(command_name, *args) -> list:
+    '''
+    Parses option for node-related commands
+    Then validates and returns the reachable node list
+    '''
+    action_target = "node" if command_name in ["standby", "online"] else "cluster service"
+    action = f"{command_name} {action_target}"
+    usage_template = """
+Specify node(s) on which to {action}.
+If no nodes are specified, {action} on the local node.
+If --all is specified, {action} on all nodes."""
+    addtion_usage = ""
+    if command_name == "standby":
+        usage_template += """
+\n\nAdditionally, you may specify a lifetime for the standby---if set to
+"reboot", the node will be back online once it reboots. "forever" will
+keep the node in standby after reboot. The life time defaults to
+"forever"."""
+        addtion_usage = " [lifetime]"
+
+    parser = ArgumentParser(
+            description=usage_template.format(action=action),
+            usage=f"{command_name} [--all | <node>... ]{addtion_usage}",
+            add_help=False,
+            formatter_class=RawDescriptionHelpFormatter
+    )
+    parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
+    parser.add_argument("--all", help=f"To {action} on all nodes", action="store_true", dest="all")
+
+    options, args = parser.parse_known_args(args)
+    if options.help:
+        parser.print_help()
+        raise utils.TerminateSubCommand(success=True)
+    if options is None or args is None:
+        raise utils.TerminateSubCommand
+    if options.all and args:
+        raise ValueError("Should either use --all or specific node(s)")
+
+    include_remote = command_name in ["standby", "online"]
+    return utils.validate_and_get_reachable_nodes(args, options.all, include_remote)
