@@ -982,7 +982,7 @@ def test_is_block_device(mock_stat, mock_isblk):
     mock_isblk.assert_called_once_with(12345)
 
 
-@mock.patch('crmsh.utils.node_reachable_check')
+@mock.patch('crmsh.utils.ssh_reachable_check')
 @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
 def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
     mock_xml_inst = mock.Mock()
@@ -995,7 +995,7 @@ def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
     assert err.value.dead_nodes == ["node2"]
 
 
-@mock.patch('crmsh.utils.node_reachable_check')
+@mock.patch('crmsh.utils.ssh_reachable_check')
 @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
 def test_check_all_nodes_reachable(mock_xml, mock_reachable):
     mock_xml_inst = mock.Mock()
@@ -1410,7 +1410,7 @@ def test_is_dc_idle(mock_dc, mock_shell):
 
 
 @mock.patch('logging.Logger.warning')
-@mock.patch('crmsh.utils.node_reachable_check')
+@mock.patch('crmsh.utils.ssh_reachable_check')
 def test_get_reachable_node_list(mock_reachable, mock_warn):
     mock_reachable.side_effect = [False, True, ValueError("error for node3")]
     assert utils.get_reachable_node_list(["node1", "node2", "node3"]) == ["node2"]
