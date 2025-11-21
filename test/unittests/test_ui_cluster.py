@@ -38,7 +38,7 @@ class TestCluster(unittest.TestCase):
 
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
+    @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_do_start_already_started(self, mock_qdevice_configured, mock_parse_nodes, mock_active, mock_info):
         mock_qdevice_configured.return_value = False
@@ -46,7 +46,7 @@ class TestCluster(unittest.TestCase):
         mock_parse_nodes.return_value = ["node1", "node2"]
         mock_active.side_effect = [True, True]
         self.ui_cluster_inst.do_start(context_inst, "node1", "node2")
-        mock_parse_nodes.assert_called_once_with(context_inst, "node1", "node2")
+        mock_parse_nodes.assert_called_once_with("start", "node1", "node2")
         mock_active.assert_has_calls([
             mock.call("pacemaker.service", remote_addr="node1"),
             mock.call("pacemaker.service", remote_addr="node2")
@@ -63,7 +63,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
+    @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
     def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_error, mock_start_pacemaker, mock_check_qdevice):
         context_inst = mock.Mock()
         mock_start_pacemaker.return_value = ["node1"]
@@ -86,7 +86,7 @@ class TestCluster(unittest.TestCase):
 
     @mock.patch('crmsh.utils.wait_for_dc')
     @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
-    @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
+    @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
     def test_do_stop_return(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc):
         mock_parse_nodes.return_value = ["node1", "node2"]
         mock_node_ready_to_stop_cluster_service.side_effect = [False, False]
@@ -94,7 +94,7 @@ class TestCluster(unittest.TestCase):
         context_inst = mock.Mock()
         self.ui_cluster_inst.do_stop(context_inst, "node1", "node2")
 
-        mock_parse_nodes.assert_called_once_with(context_inst, "node1", "node2")
+        mock_parse_nodes.assert_called_once_with("stop", "node1", "node2")
         mock_node_ready_to_stop_cluster_service.assert_has_calls([mock.call("node1"), mock.call("node2")])
         mock_dc.assert_not_called()
 
@@ -104,7 +104,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.ui_cluster.Cluster._set_dlm')
     @mock.patch('crmsh.utils.wait_for_dc')
     @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
-    @mock.patch('crmsh.ui_cluster.parse_option_for_nodes')
+    @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
     def test_do_stop(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc,
                      mock_set_dlm, mock_service_manager, mock_info, mock_debug):
         mock_parse_nodes.return_value = ["node1", "node2"]
@@ -117,7 +117,7 @@ class TestCluster(unittest.TestCase):
         context_inst = mock.Mock()
         self.ui_cluster_inst.do_stop(context_inst, "node1", "node2")
 
-        mock_parse_nodes.assert_called_once_with(context_inst, "node1", "node2")
+        mock_parse_nodes.assert_called_once_with("stop", "node1", "node2")
         mock_node_ready_to_stop_cluster_service.assert_has_calls([mock.call("node1"), mock.call("node2")])
         mock_debug.assert_called_once_with("stop node list: ['node1']")
         mock_dc.assert_called_once_with("node1")
