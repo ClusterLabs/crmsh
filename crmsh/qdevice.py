@@ -208,13 +208,10 @@ class QDevice(object):
         except socket.error:
             raise ValueError("host \"{}\" is unreachable".format(qnetd_addr))
 
-        utils.node_reachable_check(qnetd_addr)
+        utils.ssh_reachable_check(qnetd_addr)
 
         if utils.InterfacesInfo.ip_in_local(qnetd_ip):
             raise ValueError("host for qnetd must be a remote one")
-
-        if not utils.check_port_open(qnetd_ip, 22):
-            raise ValueError("ssh service on \"{}\" not available".format(qnetd_addr))
 
     @staticmethod
     def check_qdevice_port(qdevice_port):
