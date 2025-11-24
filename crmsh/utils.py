@@ -3306,4 +3306,32 @@ def validate_and_get_reachable_nodes(
             member_list.remove(node)
 
     return member_list + remote_list
+
+
+def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
+    """
+    Check whether it is able to restart cluster now
+    1. If pacemaker is not running, return True
+    2. If no non-stonith resource is running, return True
+    3. If in maintenance mode and DLM is not running, return True
+    4. Otherwise, return False with warning messages to guide user
+    """
+    if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
+        return True
+    crm_mon_parser = xmlutil.CrmMonXmlParser()
+    if not crm_mon_parser.is_non_stonith_resource_running():
+        return True
+    elif in_maintenance_mode:
+        if is_dlm_running():
+            dlm_related_ids = crm_mon_parser.get_resource_top_parent_id_set_via_type(constants.DLM_CONTROLD_RA)
+            logger.warning("Please stop DLM related resources (%s) and try again", ', '.join(dlm_related_ids))
+            return False
+        else:
+            return True
+    else:
+        logger.warning("Please stop all running resources and try again")
+        logger.warning("Or use 'crm -F/--force' option to leverage maintenance mode")
+        logger.warning("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
+        logger.info("Aborting the configuration change attempt")
+        return False
 # vim:ts=4:sw=4:et:
