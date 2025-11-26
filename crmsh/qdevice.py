@@ -101,7 +101,6 @@ class QDevice(object):
     """Class to manage qdevice configuration and services
 
     Call `certificate_process_on_init` to generate all of CA, server, and client certs.
-    Call `certificate_process_on_join` to generate a single client cert for the local node.
     """
 
     qnetd_service = "corosync-qnetd.service"
@@ -113,7 +112,7 @@ class QDevice(object):
     qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
 
     def __init__(self, qnetd_addr, port=5403, algo="ffsplit", tie_breaker="lowest",
-            tls="on", ssh_user=None, cluster_node=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
+            tls="on", ssh_user=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
         """
         Init function
         """
@@ -123,7 +122,6 @@ class QDevice(object):
         self.tie_breaker = tie_breaker
         self.tls = tls
         self.ssh_user = ssh_user
-        self.cluster_node = cluster_node
         self.cmds = cmds
         self.mode = mode
         self.cluster_name = cluster_name
@@ -144,13 +142,6 @@ class QDevice(object):
         Return path of qnetd-cacert.crt on local node
         """
         return "{}/{}/{}".format(self.qdevice_path, self.qnetd_addr, self.qnetd_cacert_filename)
-
-    @property
-    def qnetd_cacert_on_cluster(self):
-        """
-        Return path of qnetd-cacert.crt on cluster node
-        """
-        return "{}/{}/{}".format(self.qdevice_path, self.cluster_node, self.qnetd_cacert_filename)
 
     @property
     def qdevice_crq_on_qnetd(self):
@@ -186,13 +177,6 @@ class QDevice(object):
         Return path of qdevice-net-node.p12 on local node
         """
         return "{}/nssdb/{}".format(self.qdevice_path, self.qdevice_p12_filename)
-
-    @property
-    def qdevice_p12_on_cluster(self):
-        """
-        Return path of qdevice-net-node.p12 on cluster node
-        """
-        return "{}/{}/{}".format(self.qdevice_path, self.cluster_node, self.qdevice_p12_filename)
 
     @staticmethod
     def check_qnetd_addr(qnetd_addr):
@@ -451,65 +435,6 @@ class QDevice(object):
             self.import_p12_on_cluster,
         ]):
             step(lambda s, cmd=None: self.log_only_to_file(f'Step {i+1}: {s}', cmd))
-
-    def fetch_qnetd_crt_from_cluster(self):
-        """
-        Certificate process for join
-        Step 1
-        Fetch QNetd CA certificate(qnetd-cacert.crt) from init node
-        """
-        if os.path.exists(self.qnetd_cacert_on_cluster):
-            return
-
-        desc = "Step 1: Fetch {} from {}".format(self.qnetd_cacert_filename, self.cluster_node)
-        QDevice.log_only_to_file(desc)
-        crmsh.parallax.parallax_slurp([self.cluster_node], self.qdevice_path, self.qnetd_cacert_on_local)
-
-    def init_db_on_local(self):
-        """
-        Certificate process for join
-        Step 2
-        Initialize database by running
-        /usr/sbin/corosync-qdevice-net-certutil -i -c qnetd-cacert.crt
-        """
-        if os.path.exists(self.qdevice_db_path):
-            utils.rmdir_r(self.qdevice_db_path)
-
-        cmd = "corosync-qdevice-net-certutil -i -c {}".format(self.qnetd_cacert_on_cluster)
-        QDevice.log_only_to_file("Step 2: Initialize database on local", cmd)
-        sh.cluster_shell().get_stdout_or_raise_error(cmd)
-
-    def fetch_p12_from_cluster(self):
-        """
-        Certificate process for join
-        Step 3
-        Fetch p12 key file from init node
-        """
-        if os.path.exists(self.qdevice_p12_on_cluster):
-            return
-
-        desc = "Step 3: Fetch {} from {}".format(self.qdevice_p12_filename, self.cluster_node)
-        QDevice.log_only_to_file(desc)
-        crmsh.parallax.parallax_slurp([self.cluster_node], self.qdevice_path, self.qdevice_p12_on_local)
-
-    def import_p12_on_local(self):
-        """
-        Certificate process for join
-        Step 4
-        Import cluster certificate and key
-        """
-        cmd = "corosync-qdevice-net-certutil -m -c {}".format(self.qdevice_p12_on_cluster)
-        QDevice.log_only_to_file("Step 4: Import cluster certificate and key", cmd)
-        sh.cluster_shell().get_stdout_or_raise_error(cmd)
-
-    def certificate_process_on_join(self):
-        """
-        The qdevice certificate process on join node
-        """
-        self.fetch_qnetd_crt_from_cluster()
-        self.init_db_on_local()
-        self.fetch_p12_from_cluster()
-        self.import_p12_on_local()
 
     def write_qdevice_config(self) -> None:
         """
