@@ -1976,12 +1976,6 @@ def join_cluster(seed_host, remote_user):
 
     shell = sh.cluster_shell()
 
-    if is_qdevice_configured:
-        if not _context.use_ssh_agent or not _keys_from_ssh_agent():
-            # trigger init_qnetd_remote on init node
-            cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
-            shell.get_stdout_or_raise_error(cmd, seed_host)
-
     shutil.copy(corosync.conf(), _context.get_corosync_conf_orig())
 
     # check if use IPv6
@@ -2047,10 +2041,17 @@ def join_cluster(seed_host, remote_user):
     with logger_utils.status_long("Reloading cluster configuration"):
         shell.get_stdout_or_raise_error("corosync-cfgtool -R")
 
+    service_manager = ServiceManager()
     if is_qdevice_configured:
-        start_qdevice_on_join_node(seed_host)
+        if not _context.use_ssh_agent or not _keys_from_ssh_agent():
+            # trigger init_qnetd_remote on init node
+            cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
+            shell.get_stdout_or_raise_error(cmd, seed_host)
+        retrieve_data(seed_host, [qdevice.QDevice.qdevice_path], "qdevice")
+        logger.info("Starting and enable corosync-qdevice.service")
+        service_manager.start_service("corosync-qdevice.service", enable=True)
     else:
-        ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).disable_service("corosync-qdevice.service")
+        service_manager.disable_service("corosync-qdevice.service")
 
 
 def adjust_priority_in_rsc_defaults(is_2node_wo_qdevice):
@@ -2084,18 +2085,6 @@ def adjust_priority_fencing_delay(is_2node_wo_qdevice):
         utils.set_property("priority-fencing-delay", 2*max_value, conditional=True)
     else:
         utils.set_property("priority-fencing-delay", 0)
-
-
-def start_qdevice_on_join_node(seed_host):
-    """
-    Doing qdevice certificate process and start qdevice service on join node
-    """
-    with logger_utils.status_long("Starting corosync-qdevice.service"):
-        if corosync.is_qdevice_tls_on():
-            qnetd_addr = corosync.get_value("quorum.device.net.host")
-            qdevice_inst = qdevice.QDevice(qnetd_addr, cluster_node=seed_host)
-            qdevice_inst.certificate_process_on_join()
-        ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("corosync-qdevice.service", enable=True)
 
 
 def get_cluster_node_ip(node: str) -> str:
