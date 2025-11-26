@@ -23,6 +23,7 @@ import time
 import readline
 import shutil
 import typing
+import shlex
 
 import yaml
 import socket
@@ -2689,7 +2690,7 @@ def bootstrap_join(context):
                 _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
                 if _context.skip_csync2:
                     service_manager.stop_service(CSYNC2_SERVICE, disable=True)
-                    retrieve_all_config_files(cluster_node)
+                    retrieve_data(cluster_node)
                     logger.warning("csync2 is not initiated yet. Before using csync2 for the first time, please run \"crm cluster init csync2 -y\" on any one node. Note, this may take a while.")
                 else:
                     join_csync2(cluster_node, remote_user)
@@ -3138,14 +3139,18 @@ def adjust_properties():
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
 
 
-def retrieve_all_config_files(cluster_node):
-    """
-    Retrieve config files from cluster_node if exists
-    """
-    with logger_utils.status_long("Retrieve all config files"):
-        cmd = 'cpio -o << EOF\n{}\nEOF\n'.format(
-            '\n'.join((f for f in FILES_TO_SYNC if f != CSYNC2_KEY and f != CSYNC2_CFG))
-        )
+def retrieve_data(from_node, data_list=None, data_type=None):
+    if not data_list:
+        data_list = [f for f in FILES_TO_SYNC if f != CSYNC2_KEY and f != CSYNC2_CFG]
+    find_args = ' '.join(shlex.quote(f) for f in data_list)
+    cmd = f'find {find_args} -print | cpio -o'
+
+    if data_type:
+        msg = f"Retrieving {data_type} configuration files from {from_node}"
+    else:
+        msg = f"Retrieving all configuration files from {from_node}"
+
+    with logger_utils.status_long(msg):
         pipe_outlet, pipe_inlet = os.pipe()
         try:
             child = subprocess.Popen(['cpio', '-iu'], stdin=pipe_outlet, stderr=subprocess.DEVNULL)
@@ -3155,15 +3160,17 @@ def retrieve_all_config_files(cluster_node):
         finally:
             os.close(pipe_outlet)
         try:
-            result = sh.cluster_shell().subprocess_run_without_input(cluster_node, None, cmd, stdout=pipe_inlet, stderr=subprocess.DEVNULL)
+            result = sh.cluster_shell().subprocess_run_without_input(
+                    from_node, None, cmd, stdout=pipe_inlet, stderr=subprocess.DEVNULL
+            )
         finally:
             os.close(pipe_inlet)
         rc = child.wait()
         # Some errors may happen here, since all files in FILES_TO_SYNC may not exist.
         if result is None or result.returncode == 255:
-            utils.fatal("Failed to create ssh connect to {}".format(cluster_node))
+            utils.fatal(f"Failed to create ssh connection to {from_node}")
         if rc != 0:
-            utils.fatal("Failed to retrieve config files from {}".format(cluster_node))
+            utils.fatal(f"Failed to retrieve config files from {from_node}")
 
 
 def sync_file(path):
