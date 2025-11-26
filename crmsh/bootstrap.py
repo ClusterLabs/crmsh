@@ -2159,11 +2159,6 @@ def join_cluster(seed_host, remote_user):
 
     shell = sh.cluster_shell()
 
-    if is_qdevice_configured and not _context.use_ssh_agent:
-        # trigger init_qnetd_remote on init node
-        cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
-        shell.get_stdout_or_raise_error(cmd, seed_host)
-
     shutil.copy(corosync.conf(), COROSYNC_CONF_ORIG)
 
     # check if use IPv6
@@ -2301,6 +2296,10 @@ def join_cluster(seed_host, remote_user):
         sync_files_to_disk()
 
     if is_qdevice_configured:
+        if not _context.use_ssh_agent:
+            # trigger init_qnetd_remote on init node
+            cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
+            shell.get_stdout_or_raise_error(cmd, seed_host)
         start_qdevice_on_join_node(seed_host)
     else:
         ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).disable_service("corosync-qdevice.service")
@@ -2348,10 +2347,7 @@ def start_qdevice_on_join_node(seed_host):
             corosync.add_nodelist_from_cmaptool()
             sync_file(corosync.conf())
             invoke("crm corosync reload")
-        if utils.is_qdevice_tls_on():
-            qnetd_addr = corosync.get_value("quorum.device.net.host")
-            qdevice_inst = qdevice.QDevice(qnetd_addr, cluster_node=seed_host)
-            qdevice_inst.certificate_process_on_join()
+        retrieve_data(seed_host, [qdevice.QDevice.qdevice_path], "qdevice")
         ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("corosync-qdevice.service", enable=True)
 
 
