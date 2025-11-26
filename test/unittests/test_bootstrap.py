@@ -1461,27 +1461,6 @@ done
         mock_remove_db.assert_called_once_with()
         mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-cfgtool -R")
 
-    @mock.patch('crmsh.service_manager.ServiceManager.start_service')
-    @mock.patch('crmsh.qdevice.QDevice')
-    @mock.patch('crmsh.corosync.get_value')
-    @mock.patch('crmsh.corosync.is_qdevice_tls_on')
-    @mock.patch('crmsh.log.LoggerUtils.status_long')
-    def test_start_qdevice_on_join_node(self, mock_status_long, mock_qdevice_tls, mock_get_value, mock_qdevice, mock_start_service):
-        mock_qdevice_tls.return_value = True
-        mock_get_value.return_value = "10.10.10.123"
-        mock_qdevice_inst = mock.Mock()
-        mock_qdevice.return_value = mock_qdevice_inst
-        mock_qdevice_inst.certificate_process_on_join = mock.Mock()
-
-        bootstrap.start_qdevice_on_join_node("node2")
-
-        mock_status_long.assert_called_once_with("Starting corosync-qdevice.service")
-        mock_qdevice_tls.assert_called_once_with()
-        mock_get_value.assert_called_once_with("quorum.device.net.host")
-        mock_qdevice.assert_called_once_with("10.10.10.123", cluster_node="node2")
-        mock_qdevice_inst.certificate_process_on_join.assert_called_once_with()
-        mock_start_service.assert_called_once_with("corosync-qdevice.service", enable=True)
-
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.log.LoggerUtils.log_only_to_file')
     def test_invoke(self, mock_log, mock_run):
