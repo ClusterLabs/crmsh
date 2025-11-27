@@ -2462,7 +2462,7 @@ def bootstrap_join(context):
         try:
             with lock_inst.lock():
                 service_manager = ServiceManager()
-                utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node)
+                utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node, check_passwd=False)
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node)
                 _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
