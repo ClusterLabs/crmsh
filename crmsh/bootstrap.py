@@ -2368,7 +2368,7 @@ def bootstrap_join(context):
         try:
             with lock_inst.lock():
                 service_manager = ServiceManager()
-                utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node)
+                utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node, check_passwd=False)
                 setup_passwordless_with_other_nodes(cluster_node)
                 join_firewalld()
                 join_ssh_merge(cluster_node, remote_user)

@@ -2473,12 +2473,12 @@ class DeadNodeError(ValueError):
 
 
 class UnreachableNodeError(ValueError):
-    def __init__(self, msg: str, unreachable_nodes=None):
+    def __init__(self, msg: str, nodes_unreachable=None):
         super().__init__(msg)
-        self.unreachable_nodes = unreachable_nodes or []
+        self.nodes_unreachable = nodes_unreachable or []
 
 
-def check_all_nodes_reachable(action_to_do: str, peer_node: str = None):
+def check_all_nodes_reachable(action_to_do: str, peer_node: str = None, check_passwd: bool = True):
     """
     Check if all cluster nodes are reachable
     """
@@ -2499,17 +2499,35 @@ Or use `crm cluster remove <offline_node> --force` to remove the offline node.
         """
         raise DeadNodeError(msg, dead_nodes)
 
-    unreachable_nodes = []
+    nodes_unreachable = []
+    nodes_need_password = []
+    me = this_node()
     for node in online_nodes:
+        if node == me:
+            continue
+
         try:
             ssh_reachable_check(node)
         except ValueError:
-            unreachable_nodes.append(node)
-    if unreachable_nodes:
-        msg = f"""There are unreachable nodes: {', '.join(unreachable_nodes)}.
+            nodes_unreachable.append(node)
+            continue
+
+        if check_passwd:
+            local_user, remote_user = crmsh.user_of_host.UserOfHost.instance().user_pair_for_ssh(node)
+            if check_ssh_passwd_need(local_user, remote_user, node):
+                nodes_need_password.append(node)
+
+    if nodes_unreachable:
+        msg = f"""There are nodes whose SSH ports are unreachable: {', '.join(nodes_unreachable)}.
 Please check the network connectivity before {action_to_do}.
         """
-        raise UnreachableNodeError(msg, unreachable_nodes)
+        raise UnreachableNodeError(msg, nodes_unreachable)
+
+    if nodes_need_password:
+        msg = f"""There are nodes which requires a password for SSH access: {', '.join(nodes_need_password)}.
+Please setup passwordless SSH access before {action_to_do}.
+        """
+        raise UnreachableNodeError(msg, nodes_need_password)
 
 
 def re_split_string(reg, string):
