@@ -2428,7 +2428,7 @@ def package_is_installed(pkg, remote_addr=None):
     return rc == 0
 
 
-def ssh_reachable_check(node):
+def ssh_port_reachable_check(node):
     """
     Check if node is reachable by checking SSH port is open
     """
@@ -2444,7 +2444,7 @@ def get_reachable_node_list(node_list:list[str]) -> list[str]:
     reachable_node_list = []
     for node in node_list:
         try:
-            if ssh_reachable_check(node):
+            if ssh_port_reachable_check(node):
                 reachable_node_list.append(node)
         except ValueError as e:
             logger.warning(str(e))
@@ -2488,7 +2488,7 @@ def check_all_nodes_reachable(action_to_do: str, peer_node: str = None, check_pa
     dead_nodes = []
     for node in offline_nodes:
         try:
-            ssh_reachable_check(node)
+            ssh_port_reachable_check(node)
         except ValueError:
             dead_nodes.append(node)
     if dead_nodes:
@@ -2507,7 +2507,7 @@ Or use `crm cluster remove <offline_node> --force` to remove the offline node.
             continue
 
         try:
-            ssh_reachable_check(node)
+            ssh_port_reachable_check(node)
         except ValueError:
             nodes_unreachable.append(node)
             continue
