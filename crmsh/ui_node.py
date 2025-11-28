@@ -6,7 +6,6 @@ import re
 import copy
 import subprocess
 from lxml import etree
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from . import config
 from . import command
@@ -219,47 +218,6 @@ def print_node(uname, ident, node_type, other, inst_attr, offline):
         print(term.render("\t%s" % (s)))
 
 
-def parse_option_for_nodes(context, *args):
-    """
-    Parse option for nodes
-    Return a node list
-    """
-    action_type = context.get_command_name()
-    action_target = "node" if action_type in ["standby", "online"] else "cluster service"
-    action = "{} {}".format(action_type, action_target)
-    usage_template = """
-Specify node(s) on which to {action}.
-If no nodes are specified, {action} on the local node.
-If --all is specified, {action} on all nodes."""
-    addtion_usage = ""
-    if action_type == "standby":
-        usage_template += """
-\n\nAdditionally, you may specify a lifetime for the standby---if set to
-"reboot", the node will be back online once it reboots. "forever" will
-keep the node in standby after reboot. The life time defaults to
-"forever"."""
-        addtion_usage = " [lifetime]"
-
-    parser = ArgumentParser(description=usage_template.format(action=action),
-                       usage="{} [--all | <node>... ]{}".format(action_type, addtion_usage),
-                       add_help=False,
-                       formatter_class=RawDescriptionHelpFormatter)
-    parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
-    parser.add_argument("--all", help="To {} on all nodes".format(action), action="store_true", dest="all")
-
-    options, args = parser.parse_known_args(args)
-    if options.help:
-        parser.print_help()
-        raise utils.TerminateSubCommand(success=True)
-    if options is None or args is None:
-        raise utils.TerminateSubCommand
-    if options.all and args:
-        context.fatal_error("Should either use --all or specific node(s)")
-
-    include_remote = action_type in ["standby", "online"]
-    return utils.validate_and_get_reachable_nodes(args, options.all, include_remote)
-
-
 class NodeMgmt(command.UI):
     '''
     Nodes management class
@@ -343,7 +301,7 @@ class NodeMgmt(command.UI):
             args = args[:-1]
 
         # Parse node option
-        node_list = parse_option_for_nodes(context, *args)
+        node_list = ui_utils.parse_and_validate_node_args("standby", *args)
         if not node_list:
             return
 
@@ -431,7 +389,7 @@ class NodeMgmt(command.UI):
         To avoid race condition for --all option, melt all online values into one cib replace session
         """
         # Parse node option
-        node_list = parse_option_for_nodes(context, *args)
+        node_list = ui_utils.parse_and_validate_node_args("online", *args)
         if not node_list:
             return
 

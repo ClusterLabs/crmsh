@@ -26,7 +26,7 @@ from . import cibconfig
 from .prun import prun
 from .service_manager import ServiceManager
 from .sh import ShellUtils
-from .ui_node import parse_option_for_nodes
+from . import ui_utils
 from . import constants
 
 
@@ -167,7 +167,13 @@ class Cluster(command.UI):
         '''
         Starts the cluster stack on all nodes or specific node(s)
         '''
-        node_list = parse_option_for_nodes(context, *args)
+        try:
+            node_list = ui_utils.parse_and_validate_node_args("start", *args)
+        except utils.NoSSHError as msg:
+            logger.error('%s', msg)
+            logger.info("Please try 'crm cluster start' on each node")
+            return False
+
         service_check_list = ["pacemaker.service"]
         start_qdevice = False
         if corosync.is_qdevice_configured():
@@ -175,15 +181,10 @@ class Cluster(command.UI):
             service_check_list.append("corosync-qdevice.service")
 
         service_manager = ServiceManager()
-        try:
-            for node in node_list[:]:
-                if all([service_manager.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
-                    logger.info("The cluster stack already started on {}".format(node))
-                    node_list.remove(node)
-        except utils.NoSSHError as msg:
-            logger.error('%s', msg)
-            logger.info("Please try 'crm cluster start' on each node")
-            return False
+        for node in node_list[:]:
+            if all([service_manager.service_is_active(srv, remote_addr=node) for srv in service_check_list]):
+                logger.info("The cluster stack already started on {}".format(node))
+                node_list.remove(node)
         if not node_list:
             return
 
@@ -248,13 +249,14 @@ class Cluster(command.UI):
         '''
         Stops the cluster stack on all nodes or specific node(s)
         '''
-        node_list = parse_option_for_nodes(context, *args)
         try:
-            node_list = [n for n in node_list if self._node_ready_to_stop_cluster_service(n)]
+            node_list = ui_utils.parse_and_validate_node_args("stop", *args)
         except utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster stop' on each node")
             return False
+
+        node_list = [n for n in node_list if self._node_ready_to_stop_cluster_service(n)]
         if not node_list:
             return
         logger.debug(f"stop node list: {node_list}")
@@ -297,7 +299,7 @@ class Cluster(command.UI):
         '''
         Enable the cluster services on this node
         '''
-        node_list = parse_option_for_nodes(context, *args)
+        node_list = ui_utils.parse_and_validate_node_args("enable", *args)
         service_manager = ServiceManager()
         node_list = service_manager.enable_service("pacemaker.service", node_list=node_list)
         if service_manager.service_is_available("corosync-qdevice.service") and corosync.is_qdevice_configured():
@@ -310,7 +312,7 @@ class Cluster(command.UI):
         '''
         Disable the cluster services on this node
         '''
-        node_list = parse_option_for_nodes(context, *args)
+        node_list = ui_utils.parse_and_validate_node_args("disable", *args)
         service_manager = ServiceManager()
         node_list = service_manager.disable_service("pacemaker.service", node_list=node_list)
         service_manager.disable_service("corosync-qdevice.service", node_list=node_list)
