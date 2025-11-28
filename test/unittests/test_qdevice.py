@@ -203,7 +203,7 @@ class TestQDevice(unittest.TestCase):
         self.assertEqual(res, "/etc/corosync/qdevice/net/node1.com/qdevice-net-node.p12")
 
     @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
-    @mock.patch('crmsh.utils.ssh_reachable_check')
+    @mock.patch('crmsh.utils.ssh_port_reachable_check')
     @mock.patch('socket.getaddrinfo')
     def test_check_qnetd_addr_local(self, mock_getaddrinfo, mock_reachable, mock_in_local):
         mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]

@@ -982,7 +982,7 @@ def test_is_block_device(mock_stat, mock_isblk):
     mock_isblk.assert_called_once_with(12345)
 
 
-@mock.patch('crmsh.utils.ssh_reachable_check')
+@mock.patch('crmsh.utils.ssh_port_reachable_check')
 @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
 def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
     mock_xml_inst = mock.Mock()
@@ -995,12 +995,18 @@ def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
     assert err.value.dead_nodes == ["node2"]
 
 
-@mock.patch('crmsh.utils.ssh_reachable_check')
+@mock.patch('crmsh.utils.check_ssh_passwd_need')
+@mock.patch('crmsh.user_of_host.UserOfHost.instance')
+@mock.patch('crmsh.utils.ssh_port_reachable_check')
 @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
-def test_check_all_nodes_reachable(mock_xml, mock_reachable):
+def test_check_all_nodes_reachable(mock_xml, mock_reachable, mock_user_of_host, mock_check_passwd):
     mock_xml_inst = mock.Mock()
     mock_xml.return_value = mock_xml_inst
     mock_xml_inst.get_node_list.side_effect = [["node1"], []]
+    mock_user_of_host_inst = mock.Mock()
+    mock_user_of_host.return_value = mock_user_of_host_inst
+    mock_user_of_host_inst.user_pair_for_ssh = mock.Mock(return_value=("root", "root"))
+    mock_check_passwd.return_value = False
     utils.check_all_nodes_reachable("testing")
     mock_reachable.assert_called_once_with("node1")
 
@@ -1410,7 +1416,7 @@ def test_is_dc_idle(mock_dc, mock_shell):
 
 
 @mock.patch('logging.Logger.warning')
-@mock.patch('crmsh.utils.ssh_reachable_check')
+@mock.patch('crmsh.utils.ssh_port_reachable_check')
 def test_get_reachable_node_list(mock_reachable, mock_warn):
     mock_reachable.side_effect = [False, True, ValueError("error for node3")]
     assert utils.get_reachable_node_list(["node1", "node2", "node3"]) == ["node2"]
