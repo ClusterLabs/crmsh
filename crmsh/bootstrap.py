@@ -273,7 +273,7 @@ class Context(object):
             utils.fatal(f"Overriding current user '{self.current_user}' by '{user}'. Ouch, don't do it.")
         self.user_at_node_list = [value for (user, node), value in zip(li, self.user_at_node_list) if node != me]
         for user, node in (utils.parse_user_at_host(x) for x in self.user_at_node_list):
-            utils.ssh_reachable_check(node)
+            utils.ssh_port_reachable_check(node)
 
     def _validate_cluster_node(self):
         """
@@ -2360,7 +2360,7 @@ def bootstrap_join(context):
             _context.initialize_user()
 
         remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
-        utils.ssh_reachable_check(cluster_node)
+        utils.ssh_port_reachable_check(cluster_node)
         join_ssh(cluster_node, remote_user)
         remote_user = utils.user_of(cluster_node)
 
@@ -2368,7 +2368,7 @@ def bootstrap_join(context):
         try:
             with lock_inst.lock():
                 service_manager = ServiceManager()
-                utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node)
+                utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node, check_passwd=False)
                 setup_passwordless_with_other_nodes(cluster_node)
                 join_firewalld()
                 join_ssh_merge(cluster_node, remote_user)
