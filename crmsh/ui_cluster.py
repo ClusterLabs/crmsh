@@ -842,8 +842,7 @@ to get the geo cluster configuration.""",
             case 'sbd':
                 fix = parsed_args.fix
                 try:
-                    warn = not fix
-                    result = sbd.SBDTimeoutChecker(fix=fix, warn=warn).check_and_fix()
+                    result = sbd.check_and_fix(['sbd'] + remaining_args, fix=fix)
                 except sbd.FixFailure as e:
                     logger.error('%s', e)
                     return False
