@@ -510,7 +510,7 @@ class SBDTimeoutChecker(SBDTimeout):
 
     def _fix_sbd_watchdog_timeout(self):
         advised_watchdog_timeout = self.qdevice_sync_timeout + SBDTimeout.QDEVICE_SYNC_TIMEOUT_MARGIN
-        SBDManager.update_sbd_configuration({"SBD_WATCHDOG_TIMEOUT": str(advised_watchdog_timeout)})
+        SBDManager.update_sbd_configuration({"SBD_WATCHDOG_TIMEOUT": str(advised_watchdog_timeout)}, local=self.local)
 
     def _check_sbd_delay_start(self) -> bool:
         expected_value = str(self.sbd_delay_start_value_expected)
@@ -524,7 +524,7 @@ class SBDTimeoutChecker(SBDTimeout):
 
     def _fix_sbd_delay_start(self):
         advised_value = str(self.sbd_delay_start_value_expected)
-        SBDManager.update_sbd_configuration({"SBD_DELAY_START": advised_value})
+        SBDManager.update_sbd_configuration({"SBD_DELAY_START": advised_value}, local=self.local)
 
     def _check_sbd_systemd_start_timeout(self) -> bool:
         actual_start_timeout = SBDTimeout.get_sbd_systemd_start_timeout()
@@ -540,8 +540,9 @@ class SBDTimeoutChecker(SBDTimeout):
         utils.mkdirp(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
         sbd_delay_start_file = os.path.join(SBDManager.SBD_SYSTEMD_DELAY_START_DIR, "sbd_delay_start.conf")
         utils.str2file(f"[Service]\nTimeoutStartSec={self.sbd_systemd_start_timeout_expected}", sbd_delay_start_file)
-        bootstrap.sync_path(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
-        utils.cluster_run_cmd("systemctl daemon-reload")
+        if not self.local:
+            bootstrap.sync_path(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
+            utils.cluster_run_cmd("systemctl daemon-reload")
 
     def _check_stonith_watchdog_timeout(self) -> bool:
         value = utils.get_property("stonith-watchdog-timeout", get_default=False)
@@ -586,6 +587,8 @@ def check_and_fix(args: typing.Sequence[str], fix: bool) -> bool:
     parser = argparse.ArgumentParser(args[0])
     parser.add_argument('--local', action='store_true')
     parsed_args = parser.parse_args(args[1:])
+    if fix and parsed_args.local:
+        logger.warning("Running --fix in local mode, please ensure the configurations are consistent across all cluster nodes")
     return SBDTimeoutChecker(fix=fix, warn=not fix, local=parsed_args.local).check_and_fix()
 
 
@@ -622,7 +625,8 @@ class SBDManager:
         timeout_dict: typing.Dict[str, int] | None = None,
         update_dict: typing.Dict[str, str] | None = None,
         diskless_sbd: bool = False,
-        bootstrap_context: 'bootstrap.Context | None' = None
+        bootstrap_context: 'bootstrap.Context | None' = None,
+        local: bool = False
     ):
         '''
         Init function which can be called from crm sbd subcommand or bootstrap
@@ -634,6 +638,7 @@ class SBDManager:
         self.cluster_is_running = ServiceManager().service_is_active(constants.PCMK_SERVICE)
         self.bootstrap_context = bootstrap_context
         self.overwrite_sysconfig = False
+        self.local = local
 
         # From bootstrap init or join process, override the values
         if self.bootstrap_context:
@@ -676,13 +681,13 @@ class SBDManager:
         for key, value in self.update_dict.items():
             logger.info("Update %s in %s: %s", key, self.SYSCONFIG_SBD, value)
         utils.sysconfig_set(self.SYSCONFIG_SBD, **self.update_dict)
-        if self.cluster_is_running:
+        if self.cluster_is_running and not self.local:
             bootstrap.sync_path(self.SYSCONFIG_SBD)
             logger.info("Already synced %s to all nodes", self.SYSCONFIG_SBD)
 
     @classmethod
-    def update_sbd_configuration(cls, update_dict: typing.Dict[str, str]) -> None:
-        inst = cls(update_dict=update_dict)
+    def update_sbd_configuration(cls, update_dict: dict[str, str], local: bool = False) -> None:
+        inst = cls(update_dict=update_dict, local=local)
         inst.update_configuration()
 
     def initialize_sbd(self):
