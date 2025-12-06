@@ -664,7 +664,6 @@ class SBDManager:
         utils.sysconfig_set(self.SYSCONFIG_SBD, **self.update_dict)
         if self.cluster_is_running:
             bootstrap.sync_path(self.SYSCONFIG_SBD)
-            logger.info("Already synced %s to all nodes", self.SYSCONFIG_SBD)
 
     @classmethod
     def update_sbd_configuration(cls, update_dict: typing.Dict[str, str]) -> None:
