@@ -1728,8 +1728,7 @@ def init_qdevice():
     qdevice_inst.set_cluster_name()
     qdevice_inst.valid_qnetd()
     qdevice_inst.config_and_start_qdevice()
-    if _context.stage == "qdevice":
-        adjust_properties()
+    adjust_properties()
 
 
 def init():
