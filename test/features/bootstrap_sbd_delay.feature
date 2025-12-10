@@ -252,6 +252,18 @@ Feature: configure sbd delay start correctly
     And     Cluster property "stonith-watchdog-timeout" is "70"
 
   @clean
+  Scenario: Add qdevice on a diskless SBD cluster (bsc#1254571)
+    Given   Cluster service is "stopped" on "hanode1"
+    When    Run "crm cluster init -S -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode1"
+    When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "35"
+    And     Cluster property "stonith-timeout" is "95"
+    And     Cluster property "stonith-watchdog-timeout" is "70"
+
+  @clean
   Scenario: Add and remove qdevice from cluster with sbd running
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
