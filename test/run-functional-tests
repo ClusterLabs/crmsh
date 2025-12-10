@@ -1,5 +1,5 @@
 #!/bin/bash
-CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/liangxin1300/haleap:master"}
+CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/nyang23/haleap:master"}
 PYPI_MIRROR=${PYPI_MIRROR:-""}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
