@@ -868,21 +868,19 @@ Membership information
         self.qdevice_with_ip.start_qdevice_service.assert_called_once_with()
 
     @mock.patch('crmsh.utils.set_property')
-    @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_timeout')
     @mock.patch('crmsh.sbd.SBDManager.update_configuration')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
     @mock.patch('crmsh.sbd.SBDManager.is_using_diskless_sbd')
-    def test_adjust_sbd_watchdog_timeout_with_qdevice(self, mock_using_diskless_sbd, mock_get_sbd_value, mock_update_config, mock_get_timeout, mock_set_property):
+    def test_adjust_sbd_watchdog_timeout_with_qdevice(self, mock_using_diskless_sbd, mock_get_sbd_value, mock_update_config, mock_set_property):
         mock_using_diskless_sbd.return_value = True
         mock_get_sbd_value.return_value = ""
-        mock_get_timeout.return_value = 100
 
         self.qdevice_with_stage_cluster_name.adjust_sbd_watchdog_timeout_with_qdevice()
 
         mock_using_diskless_sbd.assert_called_once_with()
         mock_get_sbd_value.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
         mock_update_config.assert_called_once_with({"SBD_WATCHDOG_TIMEOUT": str(sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)})
-        mock_set_property.assert_called_once_with("stonith-timeout", 100)
+        mock_set_property.assert_called_once_with("stonith-watchdog-timeout", 2*sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
 
     @mock.patch('crmsh.qdevice.QDevice.start_qnetd')
     @mock.patch('crmsh.qdevice.QDevice.enable_qnetd')
