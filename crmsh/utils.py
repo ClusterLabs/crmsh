@@ -2772,16 +2772,11 @@ def is_dlm_configured(peer=None):
     return xmlutil.CrmMonXmlParser(peer).is_resource_configured(constants.DLM_CONTROLD_RA)
 
 
-def is_quorate(peer=None):
+def cluster_with_quorum(peer=None):
     """
-    Check if cluster is quorated
+    Check if current cluster has quorum
     """
-    out = sh.cluster_shell().get_stdout_or_raise_error("corosync-quorumtool -s", peer, success_exit_status={0, 2})
-    res = re.search(r'Quorate:\s+(.*)', out)
-    if res:
-        return res.group(1) == "Yes"
-    else:
-        raise ValueError("Failed to get quorate status from corosync-quorumtool")
+    return xmlutil.CrmMonXmlParser(peer).with_quorum()
 
 
 def is_2node_cluster_without_qdevice():
