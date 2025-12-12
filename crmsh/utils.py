@@ -2074,7 +2074,7 @@ def check_ssh_passwd_need(local_user, remote_user, host, shell: sh.LocalShell = 
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
     ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
     if shell is None:
-        shell = sh.LocalShell()
+        shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '')})
     rc, _ = shell.get_rc_and_error(local_user, ssh_cmd)
     return rc != 0
 
