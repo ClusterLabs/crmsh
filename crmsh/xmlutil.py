@@ -1531,6 +1531,13 @@ class CrmMonXmlParser(object):
         _, output, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.peer, constants.CRM_MON_XML_OUTPUT)
         return text2elem(output) if output else None
 
+    def with_quorum(self):
+        """
+        Check if cluster is with quorum
+        """
+        xpath = '//current_dc[@with_quorum="true"]'
+        return bool(self.xml_elem.xpath(xpath))
+
     def is_node_online(self, node):
         """
         Check if a node is online

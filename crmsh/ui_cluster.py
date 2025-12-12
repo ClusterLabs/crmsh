@@ -240,7 +240,7 @@ class Cluster(command.UI):
         When dlm running and quorum is lost, before stop cluster service, should set
         enable_quorum_fencing=0, enable_quorum_lockspace=0 for dlm config option
         """
-        if utils.is_dlm_running(node) and not utils.is_quorate(node):
+        if utils.is_dlm_running(node) and not utils.cluster_with_quorum(node):
             logger.debug("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
             utils.set_dlm_option(peer=node, enable_quorum_fencing=0, enable_quorum_lockspace=0)
 

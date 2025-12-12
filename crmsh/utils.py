@@ -2762,43 +2762,21 @@ def is_dlm_running(peer=None):
     """
     Check if dlm ra controld is running
     """
-    return is_resource_running(constants.DLM_CONTROLD_RA, peer=peer)
-
-
-def has_resource_configured(ra_type, peer=None):
-    """
-    Check if the RA configured
-    """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1rR", peer)
-    return re.search(ra_type, out) is not None
-
-
-def is_resource_running(ra_type, peer=None):
-    """
-    Check if the RA running
-    """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm_mon -1rR", peer)
-    patt = f"\\({ra_type}\\):\\s*Started"
-    return re.search(patt, out) is not None
+    return xmlutil.CrmMonXmlParser(peer).is_resource_started(constants.DLM_CONTROLD_RA)
 
 
 def is_dlm_configured(peer=None):
     """
     Check if dlm configured
     """
-    return has_resource_configured(constants.DLM_CONTROLD_RA, peer=peer)
+    return xmlutil.CrmMonXmlParser(peer).is_resource_configured(constants.DLM_CONTROLD_RA)
 
 
-def is_quorate(peer=None):
+def cluster_with_quorum(peer=None):
     """
-    Check if cluster is quorated
+    Check if current cluster has quorum
     """
-    out = sh.cluster_shell().get_stdout_or_raise_error("corosync-quorumtool -s", peer, success_exit_status={0, 2})
-    res = re.search(r'Quorate:\s+(.*)', out)
-    if res:
-        return res.group(1) == "Yes"
-    else:
-        raise ValueError("Failed to get quorate status from corosync-quorumtool")
+    return xmlutil.CrmMonXmlParser(peer).with_quorum()
 
 
 def is_2node_cluster_without_qdevice():
