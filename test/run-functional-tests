@@ -1,5 +1,5 @@
 #!/bin/bash
-CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/liangxin1300/haleap:master"}
+CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/nyang23/haleap:master"}
 PYPI_MIRROR=${PYPI_MIRROR:-""}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
@@ -204,6 +204,7 @@ deploy_ha_node() {
 	podman_exec $node_name "rm -rf /run/nologin"
 	podman_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
 	podman_exec $node_name "systemctl start sshd.service"
+	podman_exec $node_name "systemctl stop firewalld.service"
 
 	if [[ "$node_name" != "qnetd-node" && ! "$node_name" =~ ^pcmk-remote-node[0-9]$ ]];then
 	  podman cp $PROJECT_PATH $node_name:/opt/crmsh
