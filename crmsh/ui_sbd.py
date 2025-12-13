@@ -269,6 +269,11 @@ class SBD(command.UI):
         Parse arguments and verify them
         '''
         parameter_dict = {}
+        timeout_type_minimums = {}
+        if self.device_list_from_config:
+            timeout_type_minimums = self.TIMEOUT_TYPE_MINIMUMS
+        else:
+            timeout_type_minimums = self.DISKLESS_TIMEOUT_TYPE_MINIMUMS
 
         for arg in args:
             match = self.PARSE_RE.match(arg)
@@ -276,10 +281,10 @@ class SBD(command.UI):
                 raise self.SyntaxError(f"Invalid argument: {arg}")
             key, suffix, value = match.groups()
             # timeout related parameters
-            if key in self.TIMEOUT_TYPE_MINIMUMS and suffix and suffix == "timeout":
+            if key in timeout_type_minimums and suffix and suffix == "timeout":
                 if not value.isdigit():
                     raise self.SyntaxError(f"Invalid timeout value: {value}")
-                min_value = self.TIMEOUT_TYPE_MINIMUMS[key]
+                min_value = timeout_type_minimums[key]
                 if int(value) < min_value:
                     raise ValueError(f"The minimum value for {key}-timeout is {min_value}")
                 parameter_dict[key] = int(value)
