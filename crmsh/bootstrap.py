@@ -364,10 +364,11 @@ class Context(object):
             return profile_dict
 
         if profile_type in self.profiles_data:
-            logger.info("Loading \"{}\" profile from {}".format(profile_type, PROFILES_FILE))
+            if not self.quiet:
+                logger.info("Loading \"%s\" profile from %s", profile_type, PROFILES_FILE)
             profile_dict = self.profiles_data[profile_type]
         else:
-            logger.info("\"{}\" profile does not exist in {}".format(profile_type, PROFILES_FILE))
+            logger.warning("\"%s\" profile does not exist in %s", profile_type, PROFILES_FILE)
         return profile_dict
 
     def load_profiles(self):
