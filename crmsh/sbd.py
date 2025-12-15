@@ -398,9 +398,9 @@ class FixFailure(Exception):
 
 class SBDTimeoutChecker(SBDTimeout):
 
-    def __init__(self, warn=True, fix=False, check_category: str = "", from_bootstrap=False):
+    def __init__(self, quiet=False, fix=False, check_category: str = "", from_bootstrap=False):
         super().__init__()
-        self.warn = warn
+        self.quiet = quiet
         self.fix = fix
         self.check_category = check_category
         self.from_bootstrap = from_bootstrap
@@ -423,7 +423,7 @@ class SBDTimeoutChecker(SBDTimeout):
         ]
 
         if not self.from_bootstrap and not ServiceManager().service_is_active(constants.SBD_SERVICE):
-            if self.warn:
+            if not self.quiet:
                 logger.warning("%s is not active, skip SBD timeout checks", constants.SBD_SERVICE)
             raise utils.TerminateSubCommand
 
@@ -478,7 +478,7 @@ class SBDTimeoutChecker(SBDTimeout):
         if self.disk_based:
             expected_msgwait = self.get_sbd_msgwait_expected()
             if self.sbd_msgwait < expected_msgwait:
-                if self.warn:
+                if not self.quiet:
                     logger.warning("It's recommended that SBD msgwait(now %d) >= %d", self.sbd_msgwait, expected_msgwait)
                 return False
         return True
@@ -495,7 +495,7 @@ class SBDTimeoutChecker(SBDTimeout):
         if self.disk_based or not self.qdevice_sync_timeout:
             return True
         if self.sbd_watchdog_timeout < self.qdevice_sync_timeout:
-            if self.warn:
+            if not self.quiet:
                 logger.warning("It's recommended that SBD_WATCHDOG_TIMEOUT(now %d) >= qdevice sync timeout(now %d)",
                                self.sbd_watchdog_timeout, self.qdevice_sync_timeout)
             return False
@@ -509,7 +509,7 @@ class SBDTimeoutChecker(SBDTimeout):
         expected_value = str(self.sbd_delay_start_value_expected)
         config_value = self.sbd_delay_start_value_from_config
         if expected_value != config_value:
-            if self.warn:
+            if not self.quiet:
                 logger.warning("It's recommended that SBD_DELAY_START is set to %s, now is %s",
                                expected_value, config_value)
             return False
@@ -522,7 +522,7 @@ class SBDTimeoutChecker(SBDTimeout):
     def _check_sbd_systemd_start_timeout(self) -> bool:
         actual_start_timeout = SBDTimeout.get_sbd_systemd_start_timeout()
         if actual_start_timeout != self.sbd_systemd_start_timeout_expected:
-            if self.warn:
+            if not self.quiet:
                 logger.warning("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds",
                                self.sbd_systemd_start_timeout_expected, actual_start_timeout)
             return False
@@ -540,12 +540,12 @@ class SBDTimeoutChecker(SBDTimeout):
         value = utils.get_property("stonith-watchdog-timeout", get_default=False)
         if self.disk_based:
             if value:
-                if self.warn:
+                if not self.quiet:
                     logger.warning("It's recommended that stonith-watchdog-timeout is not set when using disk-based SBD")
                 return False
         else:
             if not value or int(value) < self.stonith_watchdog_timeout:
-                if self.warn:
+                if not self.quiet:
                     logger.warning("It's recommended that stonith-watchdog-timeout is set to %d, now is %s",
                                    self.stonith_watchdog_timeout, value if value else "not set")
                 return False
@@ -564,7 +564,7 @@ class SBDTimeoutChecker(SBDTimeout):
         value = utils.get_property("stonith-timeout", get_default=False)
         if value and int(value) == expected_value:
             return True
-        if self.warn:
+        if not self.quiet:
             logger.warning("It's recommended that stonith-timeout is set to %d, now is %s",
                            expected_value, value if value else "not set")
         return False

@@ -2770,7 +2770,7 @@ def adjust_stonith_timeout(with_sbd: bool = False):
     Adjust stonith-timeout for sbd and other scenarios
     """
     if ServiceManager().service_is_active(constants.SBD_SERVICE) or with_sbd:
-        sbd.SBDTimeoutChecker(fix=True, warn=False, from_bootstrap=True).check_and_fix()
+        sbd.SBDTimeoutChecker(quiet=True, fix=True, from_bootstrap=True).check_and_fix()
     else:
         value = get_stonith_timeout_generally_expected()
         if value:
