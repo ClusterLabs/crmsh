@@ -348,17 +348,6 @@ class SBDTimeout(object):
             return default_value
 
     @staticmethod
-    def get_sbd_delay_start_sec_from_sysconfig():
-        '''
-        Get suitable systemd start timeout for sbd.service
-        '''
-        # TODO 5ms, 5us, 5s, 5m, 5h are also valid for sbd sysconfig
-        value = SBDUtils.get_sbd_value_from_config("SBD_DELAY_START")
-        if utils.is_boolean_true(value):
-            return 2*SBDTimeout.get_sbd_watchdog_timeout()
-        return int(value)
-
-    @staticmethod
     def is_sbd_delay_start():
         '''
         Check if SBD_DELAY_START is not no or not set
