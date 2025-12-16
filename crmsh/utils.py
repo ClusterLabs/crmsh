@@ -2405,25 +2405,23 @@ def package_is_installed(pkg, remote_addr=None):
     return rc == 0
 
 
-def node_reachable_check(node, ping_count=1, port=22, timeout=3):
+def ssh_reachable_check(node):
     """
-    Check if node is reachable by using ping and socket to ssh port
+    Check if node is reachable by checking SSH port is open
     """
-    rc, _, _ = ShellUtils().get_stdout_stderr(f"ping -n -c {ping_count} -W {timeout} {node}")
-    if rc == 0:
+    if node == this_node() or check_port_open(node, 22):
         return True
-    # ping failed, try to connect to ssh port by socket
-    if check_port_open(node, port, timeout):
-        return True
-    # both ping and socket failed
-    raise ValueError(f"host \"{node}\" is unreachable")
+    if config.core.no_ssh:
+        raise NoSSHError(constants.NO_SSH_ERROR_MSG)
+    else:
+        raise ValueError(f"host \"{node}\" is unreachable via SSH")
 
 
 def get_reachable_node_list(node_list:list[str]) -> list[str]:
     reachable_node_list = []
     for node in node_list:
         try:
-            if node == this_node() or node_reachable_check(node):
+            if ssh_reachable_check(node):
                 reachable_node_list.append(node)
         except ValueError as e:
             logger.warning(str(e))
@@ -2451,6 +2449,12 @@ class DeadNodeError(ValueError):
         self.dead_nodes = dead_nodes or []
 
 
+class UnreachableNodeError(ValueError):
+    def __init__(self, msg: str, unreachable_nodes=None):
+        super().__init__(msg)
+        self.unreachable_nodes = unreachable_nodes or []
+
+
 def check_all_nodes_reachable(action_to_do: str, peer_node: str = None):
     """
     Check if all cluster nodes are reachable
@@ -2461,7 +2465,7 @@ def check_all_nodes_reachable(action_to_do: str, peer_node: str = None):
     dead_nodes = []
     for node in offline_nodes:
         try:
-            node_reachable_check(node)
+            ssh_reachable_check(node)
         except ValueError:
             dead_nodes.append(node)
     if dead_nodes:
@@ -2472,8 +2476,17 @@ Or use `crm cluster remove <offline_node> --force` to remove the offline node.
         """
         raise DeadNodeError(msg, dead_nodes)
 
+    unreachable_nodes = []
     for node in online_nodes:
-        node_reachable_check(node)
+        try:
+            ssh_reachable_check(node)
+        except ValueError:
+            unreachable_nodes.append(node)
+    if unreachable_nodes:
+        msg = f"""There are unreachable nodes: {', '.join(unreachable_nodes)}.
+Please check the network connectivity before {action_to_do}.
+        """
+        raise UnreachableNodeError(msg, unreachable_nodes)
 
 
 def re_split_string(reg, string):
