@@ -151,6 +151,17 @@ Feature: corosync qdevice/qnetd setup/remove process
     And     Service "corosync-qdevice" is "started" on "hanode1"
     And     Show status from qnetd
 
+  @clean
+  Scenario: Re-join cluster (bsc#1254243)
+    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    And     Service "corosync-qdevice" is "started" on "hanode2"
+    When    Run "crm cluster remove hanode1 -y" on "hanode2"
+    Then    Service "corosync-qdevice" is "stopped" on "hanode1"
+    When    Run "crm cluster join -c hanode2 -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+
   @skip_non_root
   @clean
   Scenario: Passwordless for root, not for sudoer (bsc#1209193)
