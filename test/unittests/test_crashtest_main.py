@@ -77,15 +77,13 @@ class TestMain(TestCase):
     @mock.patch('crmsh.crash_test.main.split_brain')
     @mock.patch('crmsh.crash_test.main.fence_node')
     @mock.patch('crmsh.crash_test.main.kill_process')
-    @mock.patch('crmsh.crash_test.main.check.check')
-    @mock.patch('crmsh.crash_test.main.check.fix')
     @mock.patch('os.makedirs')
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.crash_test.utils.is_root')
     @mock.patch('crmsh.crash_test.main.parse_argument')
     @mock.patch('crmsh.crash_test.main.setup_basic_context')
     def test_run(self, mock_setup, mock_parse, mock_is_root, mock_exists, mock_mkdir,
-                 mock_fix, mock_check, mock_kill, mock_fence, mock_sb):
+                 mock_kill, mock_fence, mock_sb):
         mock_is_root.return_value = True
         ctx = mock.Mock(var_dir="/var/lib/crash_test")
         mock_exists.return_value = False
@@ -97,36 +95,9 @@ class TestMain(TestCase):
         mock_is_root.assert_called_once_with()
         mock_exists.assert_called_once_with(ctx.var_dir)
         mock_mkdir.assert_called_once_with(ctx.var_dir, exist_ok=True)
-        mock_check.assert_called_once_with(ctx)
-        mock_fix.assert_called_once_with(ctx)
         mock_kill.assert_called_once_with(ctx)
         mock_fence.assert_called_once_with(ctx)
         mock_sb.assert_called_once_with(ctx)
-
-    @mock.patch('crmsh.crash_test.utils.json_dumps')
-    @mock.patch('crmsh.crash_test.main.check.check')
-    @mock.patch('crmsh.crash_test.main.check.fix')
-    @mock.patch('os.path.exists')
-    @mock.patch('crmsh.crash_test.utils.is_root')
-    @mock.patch('crmsh.crash_test.main.parse_argument')
-    @mock.patch('crmsh.crash_test.main.setup_basic_context')
-    def test_run_except(self, mock_setup, mock_parse, mock_is_root, mock_exists,
-            mock_fix, mock_check, mock_dumps):
-        mock_is_root.return_value = True
-        ctx = mock.Mock(var_dir="/var/lib/crash_test")
-        mock_exists.return_value = True
-        mock_check.side_effect = KeyboardInterrupt
-
-        with self.assertRaises(KeyboardInterrupt):
-            main.run(ctx)
-
-        mock_setup.assert_called_once_with(ctx)
-        mock_parse.assert_called_once_with(ctx)
-        mock_is_root.assert_called_once_with()
-        mock_exists.assert_called_once_with(ctx.var_dir)
-        mock_check.assert_called_once_with(ctx)
-        mock_fix.assert_called_once_with(ctx)
-        mock_dumps.assert_called_once_with()
 
     @mock.patch('crmsh.crash_test.task.TaskKill')
     def test_kill_porcess_return_pacemaker_loop(self, mock_task_kill):
