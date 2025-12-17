@@ -215,7 +215,7 @@ LOGGING_CFG = {
             },
         },
         "file": {
-            "format": "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
+            "format": "%(asctime)s.%(msecs)03d {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
             "datefmt": "%b %d %H:%M:%S",
         }
     },
