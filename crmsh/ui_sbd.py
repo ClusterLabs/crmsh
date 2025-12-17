@@ -240,7 +240,7 @@ class SBD(command.UI):
         print(f"TimeoutStartUSec={systemd_start_timeout}")
 
     def _configure_show(self, args) -> None:
-        check_rc = True
+        check_rc = sbd.CheckResult
         if len(args) > 2:
             raise self.SyntaxError("Invalid argument")
         elif len(args) == 2:
@@ -263,8 +263,9 @@ class SBD(command.UI):
             self._show_property()
             check_rc = sbd.SBDTimeoutChecker().check_and_fix()
 
-        if not check_rc:
-            logger.info('Please run "crm cluster health sbd --fix" to fix the above warning')
+        if check_rc != sbd.CheckResult.SUCCESS:
+            issue_type = "error" if check_rc == sbd.CheckResult.ERROR else "warning"
+            logger.info('Please run "crm cluster health sbd --fix" to fix the above %s', issue_type)
 
     def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str]:
         '''
