@@ -38,7 +38,7 @@ logging {
     to_logfile: yes
     logfile: /var/log/cluster/corosync.log
     to_syslog: yes
-    timestamp: on
+    timestamp: hires
 }
 """
 KNET_LINK_NUM_LIMIT = 8
