@@ -417,27 +417,26 @@ class CheckResult(Enum):
 
 class SBDTimeoutChecker(SBDTimeout):
 
-    def __init__(self, quiet=False, fix=False, check_category: str = "", from_bootstrap=False):
+    def __init__(self, quiet=False, fix=False, from_bootstrap=False):
         super().__init__()
         self.quiet = quiet
         self.fix = fix
-        self.check_category = check_category
         self.from_bootstrap = from_bootstrap
 
     def check_and_fix(self) -> CheckResult:
         checks_and_fixes = [
-            # issue name, check category, check method, fix method
-            ("SBD disk metadata", "disk_metadata",
+            # issue name, check method, fix method
+            ("SBD disk metadata",
              self._check_sbd_disk_metadata, self._fix_sbd_disk_metadata),
-            ("SBD_WATCHDOG_TIMEOUT", "sysconfig",
+            ("SBD_WATCHDOG_TIMEOUT",
              self._check_sbd_watchdog_timeout, self._fix_sbd_watchdog_timeout),
-            ("SBD_DELAY_START", "sysconfig",
+            ("SBD_DELAY_START",
              self._check_sbd_delay_start, self._fix_sbd_delay_start),
-            ("systemd start timeout for sbd.service", "property",
+            ("systemd start timeout for sbd.service",
              self._check_sbd_systemd_start_timeout, self._fix_sbd_systemd_start_timeout),
-            ("stonith-watchdog-timeout property", "property",
+            ("stonith-watchdog-timeout property",
              self._check_stonith_watchdog_timeout, self._fix_stonith_watchdog_timeout),
-            ("stonith-timeout property", "property",
+            ("stonith-timeout property",
              self._check_stonith_timeout, self._fix_stonith_timeout)
         ]
 
@@ -452,9 +451,7 @@ class SBDTimeoutChecker(SBDTimeout):
         self._load_configurations_from_runtime()
 
         check_res = CheckResult.SUCCESS
-        for name, category, check_method, fix_method in checks_and_fixes:
-            if (self.check_category and self.check_category != category):
-                continue
+        for name, check_method, fix_method in checks_and_fixes:
             check_res = check_method()
             if check_res == CheckResult.SUCCESS:
                 continue

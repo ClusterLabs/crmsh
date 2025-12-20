@@ -253,7 +253,6 @@ class SBD(command.UI):
                     self._show_property()
                 case _:
                     raise self.SyntaxError(f"Unknown argument: {args[1]}")
-            check_rc = sbd.SBDTimeoutChecker(check_category=args[1]).check_and_fix()
         else:
             self._show_disk_metadata()
             if self.device_list_from_config:
@@ -261,8 +260,8 @@ class SBD(command.UI):
             self._show_sysconfig()
             print()
             self._show_property()
-            check_rc = sbd.SBDTimeoutChecker().check_and_fix()
 
+        check_rc = sbd.SBDTimeoutChecker().check_and_fix()
         if check_rc != sbd.CheckResult.SUCCESS:
             issue_type = "error" if check_rc == sbd.CheckResult.ERROR else "warning"
             logger.info('Please run "crm cluster health sbd --fix" to fix the above %s', issue_type)
