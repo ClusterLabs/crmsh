@@ -1858,9 +1858,10 @@ def remote_diff_this(local_path, nodes, this_node):
         if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
         path = result
-        _, s = ShellUtils().get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
-                          (host, this_node, path, local_path))
-        page_string(s)
+        _, output = ShellUtils().get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
+                                            (host, this_node, path, local_path))
+        page_string(output)
+    return output
 
 
 def remote_diff(local_path, nodes):
@@ -2073,7 +2074,7 @@ def check_ssh_passwd_need(local_user, remote_user, host, shell: sh.LocalShell = 
     ssh_options = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
     ssh_cmd = "ssh {} -T -o Batchmode=yes {}@{} true".format(ssh_options, remote_user, host)
     if shell is None:
-        shell = sh.LocalShell()
+        shell = sh.LocalShell(additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '')})
     rc, _ = shell.get_rc_and_error(local_user, ssh_cmd)
     return rc != 0
 

@@ -297,7 +297,7 @@ crm(test-2)configure# commit
 ...............
 
 [[topics.TimeoutFormulas,Timeout formulas]]
-=== Timeout formulas
+=== TimeoutFormulas
 
 If you use `crm cluster init` command to set up a cluster, especially
 with SBD as the STONITH device, crmsh configures several fencing related
@@ -359,12 +359,12 @@ settings based on the calculations with a set of formulas.
 `stonith-timeout`:
 ...............
     # For disk-based SBD
-    value_from_sbd = 1.2 * msgwait
-    stonith-timeout = max(value_from_sbd, 60s) + corosync.token + corosync.consensus
+    _value_from_sbd = 1.2 * msgwait
+    stonith-timeout = max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
 
     # For diskless SBD
-    value_from_sbd = 1.2 * max(stonith-watchdog-timeout, 2*SBD_WATCHDOG_TIMEOUT)
-    stonith-timeout = max(value_from_sbd, 60s) + corosync.token + corosync.consensus
+    _value_from_sbd = 1.2 * max(stonith-watchdog-timeout, 2*SBD_WATCHDOG_TIMEOUT)
+    stonith-timeout = max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
 
     # For general scenarios
     stonith-timeout = 60s + corosync.token + corosync.consensus
@@ -1084,13 +1084,15 @@ Usage 2: Topic-Specified Health Check
 Verifies the health of a specified topic.
 
 ...............
-health hawk2|sles16 [--local] [--fix]
+health hawk2|sbd|sles16 [--local] [--fix]
 ...............
 
 * `hawk2`: check or fix key-based ssh authentication for user hacluster, which
   is needed by hawk2.
     ** `--fix`: attempts to automatically resolve any detected issues, eg.
        hacluster passwordless
+* `sbd`: check or fix SBD timeout-related configurations.
+    ** `--fix`: attempts to automatically resolve any detected issues.
 * `sles16`: check whether the cluster is good to migrate to SLES 16.
     ** `--local`: run checks in local mode
     ** `--fix`: attempts to automatically resolve any detected issues.
@@ -2216,6 +2218,7 @@ Main functionailities include:
 - Show contents of /etc/sysconfig/sbd
 - Show SBD related cluster properties
 - Update the SBD related configuration parameters
+- Give warnings for timeout-related misconfigurations
 - NOTE: sbd crashdump is used for debugging. Understand the risks and run `crm sbd purge crashdump` afterward
 
 For more details on SBD and related parameters, please see man sbd(8).

@@ -317,3 +317,79 @@ Feature: configure sbd delay start correctly
     And     Property "priority" in "rsc_defaults" is "0"
     And     Cluster property "priority-fencing-delay" is "0"
     And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
+
+  @clean
+  Scenario: Check and fix sbd-related timeout values for disk-based sbd
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    # check /etc/sysconf/sbd consistency
+    When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START="no"/' /etc/sysconfig/sbd" on "hanode2"
+    When    Try "crm sbd configure show"
+    Then    Expected "/etc/sysconfig/sbd is not consistent across cluster nodes" in stderr
+    When    Try "crm cluster health sbd"
+    Then    Expected "/etc/sysconfig/sbd is not consistent across cluster nodes" in stderr
+    When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=71/' /etc/sysconfig/sbd" on "hanode2"
+    When    Run "crm cluster health sbd" on "hanode1"
+    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    # check sbd disk metadata
+    When    Run "sbd -1 15 -4 16 -d /dev/sda1 create" on "hanode1"
+    When    Try "crm sbd configur show disk_metadata" on "hanode1"
+    Then    Expected "It's recommended that msgwait(now 16) >= 2*watchdog timeout(now 15)" in stderr
+    When    Try "crm cluster health sbd" on "hanode1"
+    Then    Expected "It's recommended that msgwait(now 16) >= 2*watchdog timeout(now 15)" in stderr
+    When    Run "crm cluster health sbd --fix" on "hanode1"
+    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    # check SBD_DELAY_START
+    When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=40/' /etc/sysconfig/sbd" on "hanode1"
+    When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=40/' /etc/sysconfig/sbd" on "hanode2"
+    When    Try "crm sbd configure show" on "hanode1"
+    Then    Expected "It's recommended that SBD_DELAY_START is set to 71, now is 40" in stderr
+    When    Try "crm cluster health sbd" on "hanode1"
+    Then    Expected "It's recommended that SBD_DELAY_START is set to 71, now is 40" in stderr
+    When    Run "crm cluster health sbd --fix" on "hanode1"
+    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    # check stonith-timeout
+    When    Run "crm configure property stonith-timeout=50" on "hanode1"
+    When    Try "crm sbd configure show" on "hanode1"
+    Then    Expected "It's recommended that stonith-timeout is set to 71, now is 50" in stderr
+    When    Try "crm cluster health sbd" on "hanode1"
+    Then    Expected "It's recommended that stonith-timeout is set to 71, now is 50" in stderr
+    When    Run "crm cluster health sbd --fix" on "hanode1"
+    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    # Adjust token timeout in corosync.conf
+    When    Run "sed -i 's/token: .*/token: 10000/' /etc/corosync/corosync.conf" on "hanode1"
+    When    Run "sed -i 's/token: .*/token: 10000/' /etc/corosync/corosync.conf" on "hanode2"
+    When    Run "corosync-cfgtool -R" on "hanode1"
+    When    Try "crm sbd configure show" on "hanode1"
+    Then    Expected "It's recommended that SBD_DELAY_START is set to 82, now is 71" in stderr
+    When    Try "crm cluster health sbd" on "hanode1"
+    Then    Expected "It's recommended that SBD_DELAY_START is set to 82, now is 71" in stderr
+    When    Run "crm cluster health sbd --fix" on "hanode1"
+    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+
+  @clean
+  Scenario: Check and fix sbd-related timeout values for diskless sbd
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "crm cluster init sbd -S -y" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    # Delete stonith-watchdog-timeout
+    When    Delete property "stonith-watchdog-timeout" from cluster
+    When    Try "crm sbd configure show" on "hanode1"
+    Then    Expected "It's recommended that stonith-watchdog-timeout is set to 30, now is not set" in stderr
+    When    Try "crm cluster health sbd" on "hanode1"
+    Then    Expected "It's recommended that stonith-watchdog-timeout is set to 30, now is not set" in stderr
+    When    Run "crm cluster health sbd --fix" on "hanode1"
+    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout

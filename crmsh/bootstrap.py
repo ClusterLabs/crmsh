@@ -364,10 +364,11 @@ class Context(object):
             return profile_dict
 
         if profile_type in self.profiles_data:
-            logger.info("Loading \"{}\" profile from {}".format(profile_type, PROFILES_FILE))
+            if not self.quiet:
+                logger.info("Loading \"%s\" profile from %s", profile_type, PROFILES_FILE)
             profile_dict = self.profiles_data[profile_type]
         else:
-            logger.info("\"{}\" profile does not exist in {}".format(profile_type, PROFILES_FILE))
+            logger.warning("\"%s\" profile does not exist in %s", profile_type, PROFILES_FILE)
         return profile_dict
 
     def load_profiles(self):
@@ -2770,7 +2771,7 @@ def adjust_stonith_timeout(with_sbd: bool = False):
     Adjust stonith-timeout for sbd and other scenarios
     """
     if ServiceManager().service_is_active(constants.SBD_SERVICE) or with_sbd:
-        sbd.SBDTimeout.adjust_sbd_timeout_related_cluster_configuration()
+        sbd.SBDTimeoutChecker(quiet=True, fix=True, from_bootstrap=True).check_and_fix()
     else:
         value = get_stonith_timeout_generally_expected()
         if value:

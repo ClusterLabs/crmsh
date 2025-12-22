@@ -479,13 +479,20 @@ def step_impl(context, key, value):
 
 @then('SBD option "{key}" value for "{dev}" is "{value}"')
 def step_impl(context, key, dev, value):
-    res = sbd.SBDTimeout.get_sbd_msgwait(dev)
+    res = sbd.SBDUtils.get_sbd_device_metadata(dev).get(key)
     assert_eq(int(value), res)
+
 
 @then('Start timeout for sbd.service is "{value}" seconds')
 def step_impl(context, value):
     systemd_start_timeout = sbd.SBDTimeout.get_sbd_systemd_start_timeout()
     assert_eq(int(value), systemd_start_timeout)
+
+
+@when('Delete property "{key}" from cluster')
+def step_impl(context, key):
+    crmutils.delete_property(key)
+
 
 @then('Cluster property "{key}" is "{value}"')
 def step_impl(context, key, value):
