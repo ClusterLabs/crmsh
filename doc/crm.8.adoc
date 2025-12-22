@@ -1092,6 +1092,7 @@ health hawk2|sbd|sles16 [--local] [--fix]
     ** `--fix`: attempts to automatically resolve any detected issues, eg.
        hacluster passwordless
 * `sbd`: check or fix SBD timeout-related configurations.
+    ** `--local`: run checks in local mode
     ** `--fix`: attempts to automatically resolve any detected issues.
 * `sles16`: check whether the cluster is good to migrate to SLES 16.
     ** `--local`: run checks in local mode
