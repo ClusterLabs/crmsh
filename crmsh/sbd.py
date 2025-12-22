@@ -2,6 +2,7 @@ import os
 import re
 import typing
 import shutil
+import argparse
 from enum import Enum
 from . import utils, sh
 from . import bootstrap
@@ -417,11 +418,18 @@ class CheckResult(Enum):
 
 class SBDTimeoutChecker(SBDTimeout):
 
-    def __init__(self, quiet=False, fix=False, from_bootstrap=False):
+    def __init__(
+            self,
+            quiet: bool = False,
+            fix: bool = False,
+            from_bootstrap: bool = False,
+            local: bool = False
+    ):
         super().__init__()
         self.quiet = quiet
         self.fix = fix
         self.from_bootstrap = from_bootstrap
+        self.local = local
 
     def check_and_fix(self) -> CheckResult:
         checks_and_fixes = [
@@ -445,7 +453,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 logger.warning("%s is not active, skip SBD timeout checks", constants.SBD_SERVICE)
             raise utils.TerminateSubCommand
 
-        if not self._check_config_consistency():
+        if not self.local and not self._check_config_consistency():
             raise utils.TerminateSubCommand
 
         self._load_configurations_from_runtime()
@@ -626,6 +634,13 @@ class SBDTimeoutChecker(SBDTimeout):
         expected_value = self.get_stonith_timeout_expected()
         logger.info("Adjusting stonith-timeout to %d", expected_value)
         utils.set_property("stonith-timeout", expected_value)
+
+
+def check_and_fix(args: typing.Sequence[str], fix: bool) -> CheckResult:
+    parser = argparse.ArgumentParser(args[0])
+    parser.add_argument('--local', action='store_true')
+    parsed_args = parser.parse_args(args[1:])
+    return SBTDTimeoutChecker(quiet=fix, fix=fix, local=parsed_args.local).check_and_fix()
 
 
 class SBDManager:
