@@ -405,7 +405,11 @@ class SBDTimeout(object):
         return True
 
 
-class FixFailure(Exception):
+class FixFailure(ValueError):
+    pass
+
+
+class FixAbortedDueToUnreachableNode(ValueError):
     pass
 
 
@@ -425,19 +429,19 @@ class SBDTimeoutChecker(SBDTimeout):
 
     def check_and_fix(self) -> CheckResult:
         checks_and_fixes = [
-            # issue name, check method, fix method
+            # issue name, check method, fix method, fix is SSH required
             ("SBD disk metadata",
-             self._check_sbd_disk_metadata, self._fix_sbd_disk_metadata),
+             self._check_sbd_disk_metadata, self._fix_sbd_disk_metadata, True),
             ("SBD_WATCHDOG_TIMEOUT",
-             self._check_sbd_watchdog_timeout, self._fix_sbd_watchdog_timeout),
+             self._check_sbd_watchdog_timeout, self._fix_sbd_watchdog_timeout, True),
             ("SBD_DELAY_START",
-             self._check_sbd_delay_start, self._fix_sbd_delay_start),
+             self._check_sbd_delay_start, self._fix_sbd_delay_start, True),
             ("systemd start timeout for sbd.service",
-             self._check_sbd_systemd_start_timeout, self._fix_sbd_systemd_start_timeout),
+             self._check_sbd_systemd_start_timeout, self._fix_sbd_systemd_start_timeout, True),
             ("stonith-watchdog-timeout property",
-             self._check_stonith_watchdog_timeout, self._fix_stonith_watchdog_timeout),
+             self._check_stonith_watchdog_timeout, self._fix_stonith_watchdog_timeout, False),
             ("stonith-timeout property",
-             self._check_stonith_timeout, self._fix_stonith_timeout)
+             self._check_stonith_timeout, self._fix_stonith_timeout, False)
         ]
 
         if not self.from_bootstrap and not ServiceManager().service_is_active(constants.SBD_SERVICE):
@@ -445,16 +449,28 @@ class SBDTimeoutChecker(SBDTimeout):
                 logger.warning("%s is not active, skip SBD timeout checks", constants.SBD_SERVICE)
             raise utils.TerminateSubCommand
 
-        if not self._check_config_consistency():
-            raise utils.TerminateSubCommand
+        all_nodes_reachable = True
+        try:
+            utils.check_all_nodes_reachable("check and fix SBD timeout configurations")
+        except (utils.DeadNodeError, utils.UnreachableNodeError) as e:
+            all_nodes_reachable = False
+            error_msg = str(e)
+
+        if all_nodes_reachable:
+            if not self._check_config_consistency():
+                raise utils.TerminateSubCommand
+        else:
+            logger.warning("Skip configuration consistency check due to unreachable nodes")
 
         self._load_configurations_from_runtime()
 
         check_res = CheckResult.SUCCESS
-        for name, check_method, fix_method in checks_and_fixes:
+        for name, check_method, fix_method, ssh_required in checks_and_fixes:
             check_res = check_method()
             if check_res == CheckResult.SUCCESS:
                 continue
+            elif ssh_required and not all_nodes_reachable:
+                raise FixAbortedDueToUnreachableNode(f"Cannot fix {name} issue: {error_msg}")
             elif self.fix:
                 fix_method()
                 self._load_configurations_from_runtime()

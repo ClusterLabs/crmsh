@@ -261,7 +261,11 @@ class SBD(command.UI):
             print()
             self._show_property()
 
-        check_rc = sbd.SBDTimeoutChecker().check_and_fix()
+        check_rc = sbd.CheckResult.SUCCESS
+        try:
+            check_rc = sbd.SBDTimeoutChecker().check_and_fix()
+        except sbd.FixAbortedDueToUnreachableNode as e:
+            logger.error('%s', e)
         if check_rc != sbd.CheckResult.SUCCESS:
             issue_type = "error" if check_rc == sbd.CheckResult.ERROR else "warning"
             logger.info('Please run "crm cluster health sbd --fix" to fix the above %s', issue_type)
