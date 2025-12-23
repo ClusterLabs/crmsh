@@ -566,6 +566,11 @@ class SBDTimeoutChecker(SBDTimeout):
                     logger.warning("It's recommended that SBD_DELAY_START is set to %s, now is %s",
                                    expected_value, config_value)
                 return CheckResult.WARNING
+        else:
+            if not self.quiet:
+                logger.error("It's recommended that SBD_DELAY_START is set to %s, now is %s",
+                            expected_value, config_value)
+            return CheckResult.ERROR
 
     def _fix_sbd_delay_start(self):
         advised_value = str(self.sbd_delay_start_value_expected)
