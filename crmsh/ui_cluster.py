@@ -846,6 +846,10 @@ to get the geo cluster configuration.""",
                 except sbd.FixFailure as e:
                     logger.error('%s', e)
                     return False
+                except sbd.FixAbortedDueToUnreachableNode as e:
+                    logger.error('%s', e)
+                    logger.error('SBD: Check sbd timeout configuration: FAIL.')
+                    return False
                 if result == sbd.CheckResult.ERROR:
                     if not fix:
                         logger.info('Please run "crm cluster health sbd --fix" to fix the above error')
