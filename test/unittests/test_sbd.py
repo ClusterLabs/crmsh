@@ -147,13 +147,13 @@ class TestSBDUtils(unittest.TestCase):
         self.assertTrue(result)
 
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata')
-    @patch('logging.Logger.warning')
-    def test_check_devices_metadata_consistent_multiple_devices_inconsistent(self, mock_logger_warning, mock_get_sbd_device_metadata):
+    @patch('logging.Logger.error')
+    def test_check_devices_metadata_consistent_multiple_devices_inconsistent(self, mock_logger_error, mock_get_sbd_device_metadata):
         dev_list = ['/dev/sbd_device1', '/dev/sbd_device2']
         mock_get_sbd_device_metadata.side_effect = ['metadata1', 'metadata2']
         result = SBDUtils.check_devices_metadata_consistent(dev_list)
         self.assertFalse(result)
-        mock_logger_warning.assert_called()
+        mock_logger_error.assert_called_once_with("Device %s doesn't have the same metadata as %s", '/dev/sbd_device2', '/dev/sbd_device1')
 
     @patch('crmsh.sbd.SBDUtils.check_devices_metadata_consistent')
     @patch('crmsh.sbd.SBDUtils.no_overwrite_device_check')
@@ -174,6 +174,16 @@ class TestSBDUtils(unittest.TestCase):
         self.assertEqual(_list2, [])
         mock_no_overwrite_device_check.assert_called_once_with('/dev/sbd1')
         mock_check_devices_metadata_consistent.assert_not_called()
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
+    def test_diskbased_sbd_configured(self, mock_get_sbd_device_from_config):
+        mock_get_sbd_device_from_config.return_value = ['/dev/sbd_device']
+        self.assertTrue(SBDUtils.diskbased_sbd_configured())
+
+    @patch('crmsh.utils.get_property')
+    def test_diskless_sbd_configured(self, mock_get_property):
+        mock_get_property.return_value = 100
+        self.assertTrue(SBDUtils.diskless_sbd_configured())
 
 
 class TestSBDTimeout(unittest.TestCase):
@@ -206,7 +216,7 @@ class TestSBDTimeout(unittest.TestCase):
         mock_get_systemd_timeout_start_in_sec.return_value = 90
         result = sbd.SBDTimeout.get_sbd_systemd_start_timeout()
         self.assertEqual(result, 90)
-        mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with(sbd.SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD)
+        mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with(sbd.SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD, None)
         mock_get_systemd_timeout_start_in_sec.assert_called_once_with("1min 30s")
 
     @patch('crmsh.corosync.token_and_consensus_timeout')
@@ -263,73 +273,121 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check = sbd.SBDTimeoutChecker(fix=False)
         self.instance_fix = sbd.SBDTimeoutChecker(fix=True)
 
-    @patch('logging.Logger.warning')
+    @patch('logging.Logger.info')
+    def test_log_and_return_success(self, mock_logger_info):
+        self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.SUCCESS))
+        mock_logger_info.assert_called_once_with("SBD: Check sbd timeout configuration: OK.")
+
+    @patch('logging.Logger.info')
+    @patch('logging.Logger.error')
+    def test_log_and_return_error(self, mock_logger_error, mock_logger_info):
+        self.assertFalse(self.instance_check.log_and_return(sbd.CheckResult.ERROR))
+        mock_logger_info.assert_called_once_with("Please run \"crm cluster health sbd --fix\" to fix the above error on the running cluster")
+        mock_logger_error.assert_called_once_with("SBD: Check sbd timeout configuration: FAIL.")
+
+    @patch('logging.Logger.info')
+    def test_log_and_return_warning(self, mock_logger_info):
+        self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.WARNING, fix_flag=True))
+        mock_logger_info.assert_called_once_with("SBD: Check sbd timeout configuration: OK.")
+
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_sbd_not_active(self, mock_service_manager, mock_logger_warning):
+    def test_check_and_fix_sbd_not_active(self, mock_service_manager):
+        self.instance_check.fix = True
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=False)
-        with self.assertRaises(utils.TerminateSubCommand):
+        with self.assertRaises(sbd.FixAborted) as context: 
             self.instance_check.check_and_fix()
+        self.assertTrue("sbd.service is not active" in str(context.exception))
         mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
-        mock_logger_warning.assert_called_once_with('%s is not active, skip SBD timeout checks', constants.SBD_SERVICE)
 
+    @patch('crmsh.sbd.SBDUtils.diskless_sbd_configured')
+    @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_sbd_inconsistent(self, mock_service_manager):
+    def test_check_and_fix_sbd_not_configured(self, mock_service_manager, mock_diskbased_sbd_configured, mock_diskless_sbd_configured):
+        self.instance_check.fix = False
+        mock_service_manager_inst = Mock()
+        mock_service_manager.return_value = mock_service_manager_inst
+        mock_service_manager_inst.service_is_active = Mock(return_value=False)
+        mock_diskbased_sbd_configured.return_value = False
+        mock_diskless_sbd_configured.return_value = False
+        with self.assertRaises(sbd.FixAborted) as context:
+            self.instance_check.check_and_fix()
+        self.assertTrue("Neither disk-based nor disk-less SBD is configured" in str(context.exception))
+
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
+    @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_check_and_fix_sbd_inconsistent(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
         self.instance_check._check_config_consistency = Mock(return_value=False)
-        with self.assertRaises(utils.TerminateSubCommand):
+        with self.assertRaises(sbd.FixAborted):
             self.instance_check.check_and_fix()
         mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
         self.instance_check._check_config_consistency.assert_called_once()
 
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
+    @patch('crmsh.utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_not_fix(self, mock_service_manager):
+    def test_check_and_fix_not_fix(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
         self.instance_check._check_config_consistency = Mock(return_value=True)
         self.instance_check._load_configurations_from_runtime = Mock()
-        self.instance_check._check_sbd_disk_metadata = Mock(return_value=False)
-        self.instance_check._check_sbd_watchdog_timeout = Mock(return_value=True)
+        self.instance_check._check_sbd_disk_metadata = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_sbd_device_metadata_consistency = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_sbd_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_sbd_delay_start = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_sbd_systemd_start_timeout = Mock(return_value=sbd.CheckResult.ERROR)
+        self.instance_check._check_stonith_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_stonith_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_sbd_delay_start_unset_dropin = Mock(return_value=sbd.CheckResult.SUCCESS)
 
-        self.assertFalse(self.instance_check.check_and_fix())
+        res = self.instance_check.check_and_fix()
+        self.assertEqual(res, sbd.CheckResult.ERROR)
 
         mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
         self.instance_check._check_config_consistency.assert_called_once()
         self.instance_check._load_configurations_from_runtime.assert_called_once()
         self.instance_check._check_sbd_disk_metadata.assert_called_once()
-        self.instance_check._check_sbd_watchdog_timeout.assert_not_called()
 
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
+    @patch('crmsh.utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_fix_failure(self, mock_service_manager):
+    def test_check_and_fix_fix_failure(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
         self.instance_fix._check_config_consistency = Mock(return_value=True)
         self.instance_fix._load_configurations_from_runtime = Mock()
-        self.instance_fix._check_sbd_disk_metadata = Mock(side_effect=[False, False])
+        self.instance_fix._check_sbd_device_metadata_consistency = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_fix._check_sbd_disk_metadata = Mock(side_effect=[sbd.CheckResult.ERROR, sbd.CheckResult.ERROR])
         self.instance_fix._fix_sbd_disk_metadata = Mock()
 
         with self.assertRaises(sbd.FixFailure) as context:
             self.instance_fix.check_and_fix()
         self.assertTrue("Failed to fix SBD disk metadata" in str(context.exception))
 
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
+    @patch('crmsh.utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_fix_success(self, mock_service_manager):
+    def test_check_and_fix_fix_success(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
         self.instance_fix._check_config_consistency = Mock(return_value=True)
         self.instance_fix._load_configurations_from_runtime = Mock()
+        self.instance_fix._check_sbd_device_metadata_consistency = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_disk_metadata = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_delay_start = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_systemd_start_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_stonith_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_stonith_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_fix._check_sbd_delay_start_unset_dropin = Mock(return_value=sbd.CheckResult.SUCCESS)
 
         res = self.instance_fix.check_and_fix()
         self.assertEqual(res, sbd.CheckResult.SUCCESS)
@@ -343,30 +401,31 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_fix._check_sbd_systemd_start_timeout.assert_called_once()
         self.instance_fix._check_stonith_watchdog_timeout.assert_called_once()
         self.instance_fix._check_stonith_timeout.assert_called_once()
+        self.instance_fix._check_sbd_delay_start_unset_dropin.assert_called_once()
 
-    @patch('crmsh.sbd.SBDUtils.check_devices_metadata_consistent')
-    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
     @patch('logging.Logger.error')
     @patch('logging.Logger.warning')
     @patch('crmsh.utils.remote_diff_this')
     @patch('crmsh.corosync.conf')
-    @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.utils.this_node')
-    def test_check_config_consistency(self, mock_this_node, mock_list_cluster_nodes_except_me, mock_corosync_conf, mock_remote_diff_this, mock_logger_warning, mock_logger_error, mock_get_sbd_device_from_config, mock_check_devices_metadata_consistent):
+    def test_check_config_consistency(self, mock_this_node, mock_corosync_conf, mock_remote_diff_this, mock_logger_warning, mock_logger_error):
         mock_this_node.return_value = 'node1'
-        mock_list_cluster_nodes_except_me.return_value = ['node2', 'node3']
         mock_corosync_conf.return_value = "corosync.conf"
         mock_remote_diff_this.side_effect = ["diff data1", "diff data2"]
-        mock_get_sbd_device_from_config.return_value = ['/dev/sbd_device']
-        mock_check_devices_metadata_consistent.return_value = False
+        self.instance_check.peer_node_list = ["node2", "node3"]
 
         self.assertFalse(self.instance_check._check_config_consistency())
 
         mock_logger_error.assert_has_calls([
-            call('corosync.conf is not consistent across cluster nodes'),
+            call('%s is not consistent across cluster nodes', "corosync.conf"),
             call('%s is not consistent across cluster nodes', sbd.SBDManager.SYSCONFIG_SBD),
-            call('SBD device metadata is not consistent across cluster nodes')
         ])
+
+    @patch('logging.Logger.warning')
+    def test_check_config_consistency_skip(self, mock_logger_warning):
+        self.instance_check.peer_node_list = []
+        self.assertTrue(self.instance_check._check_config_consistency("no peer nodes"))
+        mock_logger_warning.assert_called_once_with("Skipping configuration consistency check: %s", "no peer nodes")
 
     @patch('logging.Logger.error')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
@@ -376,6 +435,16 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check.sbd_watchdog_timeout = 10
         self.assertEqual(self.instance_check._check_sbd_disk_metadata(), sbd.CheckResult.ERROR)
         mock_logger_error.assert_called_once_with("It's recommended that SBD watchdog timeout(now %d) >= %d", 10, 15)
+    
+    @patch('logging.Logger.error')
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
+    def test_check_sbd_disk_metadata_failure_msgwait(self, mock_get_sbd_metadata_expected, mock_logger_error):
+        self.instance_check.disk_based = True
+        mock_get_sbd_metadata_expected.return_value = (10, 25)
+        self.instance_check.sbd_watchdog_timeout = 10
+        self.instance_check.sbd_msgwait = 20
+        self.assertEqual(self.instance_check._check_sbd_disk_metadata(), sbd.CheckResult.ERROR)
+        mock_logger_error.assert_called_once_with("It's recommended that SBD msgwait(now %d) >= %d", 20, 25)
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
     def test_check_sbd_disk_metadata_success(self, mock_get_sbd_metadata_expected):
@@ -430,25 +499,36 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check.sbd_delay_start_value_from_config = "50"
         self.assertTrue(self.instance_check._check_sbd_delay_start())
 
+    @patch('logging.Logger.warning')
+    def test_check_sbd_delay_start_warning(self, mock_logger_warning):
+        self.instance_check.sbd_delay_start_value_expected = "70"
+        self.instance_check.sbd_delay_start_value_from_config = "80"
+        self.assertEqual(self.instance_check._check_sbd_delay_start(), sbd.CheckResult.WARNING)
+        mock_logger_warning.assert_called_once_with("It's recommended that SBD_DELAY_START is set to %s, now is %s", "70", "80")
+
     @patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     def test_fix_sbd_delay_start(self, mock_update_sbd_configuration):
         self.instance_fix.sbd_delay_start_value_expected = "80"
         self.instance_fix._fix_sbd_delay_start()
         mock_update_sbd_configuration.assert_called_once_with({"SBD_DELAY_START": "80"})
 
+    @patch('crmsh.sbd.SBDTimeoutChecker._return_helper')
+    @patch('logging.Logger.warning')
     @patch('logging.Logger.error')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout')
-    def test_check_sbd_systemd_start_timeout_failure(self, mock_get_sbd_systemd_start_timeout, mock_logger_error):
-        mock_get_sbd_systemd_start_timeout.return_value = 30
+    @patch('crmsh.utils.this_node')
+    def test_check_sbd_systemd_start_timeout(self, mock_this_node, mock_get_sbd_systemd_start_timeout, mock_logger_error, mock_logger_warning, mock_return_helper):
+        mock_this_node.return_value = 'node1'
         self.instance_check.sbd_systemd_start_timeout_expected = 60
-        self.assertEqual(self.instance_check._check_sbd_systemd_start_timeout(), sbd.CheckResult.ERROR)
-        mock_logger_error.assert_called_once_with("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds", 60, 30)
+        self.instance_check.peer_node_list = ['node2', 'node3']
+        self.instance_check.quiet = False
+        mock_get_sbd_systemd_start_timeout.side_effect = [60, 50, 70]
+        mock_return_helper.return_value = sbd.CheckResult.ERROR
 
-    @patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout')
-    def test_check_sbd_systemd_start_timeout_success(self, mock_get_sbd_systemd_start_timeout):
-        mock_get_sbd_systemd_start_timeout.return_value = 90
-        self.instance_check.sbd_systemd_start_timeout_expected = 90
-        self.assertTrue(self.instance_check._check_sbd_systemd_start_timeout())
+        self.assertEqual(self.instance_check._check_sbd_systemd_start_timeout(), sbd.CheckResult.ERROR)
+
+        mock_logger_warning.assert_called_once_with("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s", 60, 70, 'node3')
+        mock_logger_error.assert_called_once_with("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s", 60, 50, 'node2')
 
     @patch('crmsh.utils.cluster_run_cmd')
     @patch('crmsh.bootstrap.sync_path')
@@ -477,7 +557,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check.stonith_watchdog_timeout = 15
         mock_get_property.return_value = ""
         self.assertEqual(self.instance_check._check_stonith_watchdog_timeout(), sbd.CheckResult.ERROR)
-        mock_logger_error.assert_called_once_with("It's recommended that stonith-watchdog-timeout is set to %d, now is %s", 15, "not set")
+        mock_logger_error.assert_called_once_with("It's recommended that stonith-watchdog-timeout is set to %d, now is not set", 15)
 
     @patch('crmsh.utils.get_property')
     def test_check_stonith_watchdog_timeout_success(self, mock_get_property):
@@ -509,7 +589,15 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check.get_stonith_timeout_expected = Mock(return_value=60)
         mock_get_property.return_value = 30
         self.assertEqual(self.instance_check._check_stonith_timeout(), sbd.CheckResult.ERROR)
-        mock_logger_error.assert_called_once_with("It's recommended that stonith-timeout is set to %d, now is %s", 60, 30)
+        mock_logger_error.assert_called_once_with("It's recommended that stonith-timeout is set to %d, now is %d", 60, 30)
+
+    @patch('logging.Logger.warning')
+    @patch('crmsh.utils.get_property')
+    def test_check_stonith_timeout_warning(self, mock_get_property, mock_logger_warning):
+        self.instance_check.get_stonith_timeout_expected = Mock(return_value=80)
+        mock_get_property.return_value = 90
+        self.assertEqual(self.instance_check._check_stonith_timeout(), sbd.CheckResult.WARNING)
+        mock_logger_warning.assert_called_once_with("It's recommended that stonith-timeout is set to %d, now is %d", 80, 90)
 
     @patch('crmsh.utils.get_property')
     def test_check_stonith_timeout_success(self, mock_get_property):
@@ -524,6 +612,172 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_fix._fix_stonith_timeout()
         mock_logger_info.assert_called_once_with("Adjusting stonith-timeout to %d", 70)
         mock_set_property.assert_called_once_with('stonith-timeout', 70)
+
+    @patch('crmsh.sbd.SBDTimeout.is_sbd_delay_start')
+    def test_check_sbd_delay_start_unset_dropin_not_set_delay_start(self, mock_is_sbd_delay_start):
+        mock_is_sbd_delay_start.return_value = False
+        self.assertEqual(self.instance_check._check_sbd_delay_start_unset_dropin(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.sbd.SBDTimeoutChecker._return_helper')
+    @patch('logging.Logger.warning')
+    @patch('crmsh.utils.this_node')
+    @patch('crmsh.sh.cluster_shell')
+    @patch('crmsh.sbd.SBDTimeout.is_sbd_delay_start')
+    def test_check_sbd_delay_start_unset_dropin(self, mock_is_sbd_delay_start, mock_cluster_shell, mock_this_node, mock_logger_warning, mock_return_helper):
+        mock_is_sbd_delay_start.return_value = True
+        mock_this_node.return_value = 'node1'
+        mock_cluster_shell_inst = Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        self.instance_check.peer_node_list = ['node2']
+        self.instance_check.quiet = False
+        mock_cluster_shell_inst.get_rc_and_error.side_effect = [(0, None), (1, None)]
+        mock_return_helper.return_value = sbd.CheckResult.WARNING
+
+        self.assertEqual(self.instance_check._check_sbd_delay_start_unset_dropin(), sbd.CheckResult.WARNING)
+
+        mock_logger_warning.assert_called_once_with("Runtime drop-in file %s to unset SBD_DELAY_START is missing on node %s", sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE, 'node2')
+
+    @patch('crmsh.sbd.SBDManager.unset_sbd_delay_start')
+    @patch('logging.Logger.info')
+    def test_fix_sbd_delay_start_unset_dropin(self, mock_logger_info, mock_unset_sbd_delay_start):
+        self.instance_check._fix_sbd_delay_start_unset_dropin()
+        mock_logger_info.assert_called_once_with("Createing runtime drop-in file %s to unset SBD_DELAY_START", sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE)
+
+    def test_check_fence_sbd_diskless(self):
+        self.instance_check.disk_based = False
+        self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.sbd.SBDTimeoutChecker._return_helper')
+    @patch('logging.Logger.error')
+    @patch('crmsh.utils.this_node')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_check_sbd_service_is_enabled(self, mock_ServiceManager, mock_this_node, mock_logger_error, mock_return_helper):
+        mock_this_node.return_value = 'node1'
+        mock_service_manager_inst = Mock()
+        mock_ServiceManager.return_value = mock_service_manager_inst
+        self.instance_check.peer_node_list = ['node2']
+        self.instance_check.quiet = False
+        mock_service_manager_inst.service_is_enabled.side_effect = [True, False]
+        mock_return_helper.return_value = sbd.CheckResult.ERROR
+        self.assertEqual(self.instance_check._check_sbd_service_is_enabled(), sbd.CheckResult.ERROR)
+        mock_logger_error.assert_called_once_with("%s is not enabled on node %s", constants.SBD_SERVICE, 'node2')
+
+    @patch('logging.Logger.info')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_fix_sbd_service_is_enabled(self, mock_ServiceManager, mock_logger_info):
+        mock_service_manager_inst = Mock()
+        mock_ServiceManager.return_value = mock_service_manager_inst
+        self.instance_fix.service_disabled_node_list = ['node2']
+        mock_service_manager_inst.enable_service = Mock()
+        self.instance_fix._fix_sbd_service_is_enabled()
+        mock_logger_info.assert_called_once_with("Enabling %s on node %s", constants.SBD_SERVICE, 'node2')
+
+    @patch('logging.Logger.error')
+    @patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_check_fence_sbd_not_configured(self, mock_CrmMonXmlParser, mock_logger_error):
+        self.instance_check.disk_based = True
+        self.instance_check.quiet = False
+        mock_parser_instance = Mock()
+        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_parser_instance.not_connected.return_value = False
+        mock_parser_instance.is_resource_configured.return_value = False
+        self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.ERROR)
+        mock_logger_error.assert_called_once_with("Fence agent %s is not configured", sbd.SBDManager.SBD_RA)
+
+    @patch('logging.Logger.error')
+    @patch('crmsh.cibquery.get_primitives_with_ra')
+    @patch('crmsh.cibquery.ResourceAgent')
+    @patch('crmsh.xmlutil.text2elem')
+    @patch('crmsh.sh.cluster_shell')
+    @patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_check_fence_sbd_not_configured_cluster_offline(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra, mock_logger_error):
+        self.instance_check.disk_based = True
+        self.instance_check.quiet = False
+        mock_parser_instance = Mock()
+        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_parser_instance.not_connected.return_value = True
+        mock_cluster_shell_inst = Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "<cib></cib>"
+        mock_text2elem.return_value = "cib_elem"
+        mock_resource_agent_instance = Mock()
+        mock_ResourceAgent.return_value = mock_resource_agent_instance
+        mock_get_primitives_with_ra.return_value = []
+        self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.ERROR)
+        mock_logger_error.assert_called_once_with("Fence agent %s is not configured", sbd.SBDManager.SBD_RA)
+
+    @patch('crmsh.cibquery.get_primitives_with_ra')
+    @patch('crmsh.cibquery.ResourceAgent')
+    @patch('crmsh.xmlutil.text2elem')
+    @patch('crmsh.sh.cluster_shell')
+    @patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_check_fence_sbd_success_cluster_offline(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra):
+        self.instance_check.disk_based = True
+        mock_parser_instance = Mock()
+        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_parser_instance.not_connected.return_value = True
+        mock_cluster_shell_inst = Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "<cib></cib>"
+        mock_text2elem.return_value = "cib_elem"
+        mock_resource_agent_instance = Mock()
+        mock_ResourceAgent.return_value = mock_resource_agent_instance
+        mock_get_primitives_with_ra.return_value = ['fence_sbd_0']
+        self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.SUCCESS)
+
+    @patch('logging.Logger.error')
+    @patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_check_fence_sbd_not_started(self, mock_CrmMonXmlParser, mock_logger_error):
+        self.instance_check.disk_based = True
+        self.instance_check.quiet = False
+        mock_parser_instance = Mock()
+        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_parser_instance.not_connected.return_value = False
+        mock_parser_instance.is_resource_configured.return_value = True
+        mock_parser_instance.is_resource_started.return_value = False
+        self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.ERROR)
+        mock_logger_error.assert_called_once_with("Fence agent %s is not started", sbd.SBDManager.SBD_RA)
+
+    @patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_check_fence_sbd_success(self, mock_CrmMonXmlParser):
+        self.instance_check.disk_based = True
+        mock_parser_instance = Mock()
+        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_parser_instance.not_connected.return_value = False
+        mock_parser_instance.is_resource_configured.return_value = True
+        mock_parser_instance.is_resource_started.return_value = True
+        self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.bootstrap.adjust_pcmk_delay_max')
+    @patch('crmsh.utils.is_2node_cluster_without_qdevice')
+    @patch('logging.Logger.info')
+    @patch('crmsh.sh.cluster_shell')
+    @patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_fix_fence_sbd_not_configured(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_logger_info, mock_is_2node_cluster_without_qdevice, mock_adjust_pcmk_delay_max):
+        mock_parser_instance = Mock()
+        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_parser_instance.is_resource_configured.return_value = False
+        mock_cluster_shell_inst = Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.get_stdout_or_raise_error = Mock()
+        mock_is_2node_cluster_without_qdevice.return_value = True
+        self.instance_fix._fix_fence_sbd()
+        mock_logger_info.assert_called_once_with("Configuring fence agent %s", sbd.SBDManager.SBD_RA)
+
+    @patch('logging.Logger.info')
+    @patch('crmsh.sh.cluster_shell')
+    @patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_fix_fence_sbd_not_started(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_logger_info):
+        mock_parser_instance = Mock()
+        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_parser_instance.is_resource_configured.return_value = True
+        mock_parser_instance.is_resource_started.return_value = False
+        mock_parser_instance.get_resource_id_list_via_type.return_value = ['fence_sbd_0']
+        mock_cluster_shell_inst = Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.get_stdout_or_raise_error = Mock()
+        self.instance_fix._fix_fence_sbd()
+        mock_logger_info.assert_called_once_with("Starting fence agent %s", 'fence_sbd_0')
 
 
 class TestSBDManager(unittest.TestCase):
@@ -881,6 +1135,21 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance = SBDManager()
         sbdmanager_instance.configure_sbd()
         mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with("crm configure primitive stonith-sbd stonith:fence_sbd")
+
+    @patch('crmsh.utils.cluster_run_cmd')
+    @patch('crmsh.sbd.SBDTimeout.is_sbd_delay_start')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_unset_sbd_delay_start(self, mock_ServiceManager, mock_is_sbd_delay_start, mock_cluster_run_cmd):
+        mock_is_sbd_delay_start.return_value = True
+        mock_ServiceManager_inst = Mock()
+        mock_ServiceManager.return_value = mock_ServiceManager_inst
+        mock_ServiceManager_inst.service_is_enabled.return_value = True
+        sbdmanager_instance = SBDManager()
+        sbdmanager_instance.unset_sbd_delay_start(['node1', 'node2'])
+        cmd = f"mkdir -p {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR} && " \
+                f"echo -e '[Service]\\nUnsetEnvironment=SBD_DELAY_START' > {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE} && " \
+                "systemctl daemon-reload"
+        mock_cluster_run_cmd.assert_called_once_with(cmd, ['node1', 'node2'])
 
 
 class TestOutterFunctions(unittest.TestCase):
