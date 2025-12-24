@@ -274,8 +274,9 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
         mock_logger_warning.assert_called_once_with('%s is not active, skip SBD timeout checks', constants.SBD_SERVICE)
 
+    @patch('crmsh.utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_sbd_inconsistent(self, mock_service_manager):
+    def test_check_and_fix_sbd_inconsistent(self, mock_service_manager, mock_check_all_nodes_reachable):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
@@ -285,8 +286,9 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
         self.instance_check._check_config_consistency.assert_called_once()
 
+    @patch('crmsh.utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_not_fix(self, mock_service_manager):
+    def test_check_and_fix_not_fix(self, mock_service_manager, mock_check_all_nodes_reachable):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
@@ -303,8 +305,9 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check._check_sbd_disk_metadata.assert_called_once()
         self.instance_check._check_sbd_watchdog_timeout.assert_not_called()
 
+    @patch('crmsh.utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_fix_failure(self, mock_service_manager):
+    def test_check_and_fix_fix_failure(self, mock_service_manager, mock_check_all_nodes_reachable):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
@@ -317,8 +320,9 @@ class TestSBDTimeoutChecker(unittest.TestCase):
             self.instance_fix.check_and_fix()
         self.assertTrue("Failed to fix SBD disk metadata" in str(context.exception))
 
+    @patch('crmsh.utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_fix_success(self, mock_service_manager):
+    def test_check_and_fix_fix_success(self, mock_service_manager, mock_check_all_nodes_reachable):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
@@ -330,6 +334,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_fix._check_sbd_systemd_start_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_stonith_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_stonith_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_fix._check_sbd_delay_start_unset_dropin = Mock(return_value=sbd.CheckResult.SUCCESS)
 
         res = self.instance_fix.check_and_fix()
         self.assertEqual(res, sbd.CheckResult.SUCCESS)
@@ -343,6 +348,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_fix._check_sbd_systemd_start_timeout.assert_called_once()
         self.instance_fix._check_stonith_watchdog_timeout.assert_called_once()
         self.instance_fix._check_stonith_timeout.assert_called_once()
+        self.instance_fix._check_sbd_delay_start_unset_dropin.assert_called_once()
 
     @patch('crmsh.sbd.SBDUtils.check_devices_metadata_consistent')
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')

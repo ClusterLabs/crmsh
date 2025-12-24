@@ -520,16 +520,10 @@ class TestBootstrap(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.parallax.parallax_call')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
-    @mock.patch('crmsh.sbd.SBDTimeout.is_sbd_delay_start')
-    @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
-    @mock.patch('crmsh.utils.package_is_installed')
-    def test_start_pacemaker(self, mock_installed, mock_enabled, mock_delay_start, mock_start, mock_parallax_call):
+    @mock.patch('crmsh.sbd.SBDManager.unset_sbd_delay_start')
+    def test_start_pacemaker(self, mock_unset_delay_start,  mock_start):
         bootstrap._context = None
-        mock_installed.return_value = True
-        mock_enabled.return_value = True
-        mock_delay_start.return_value = True
         node_list = ["node1", "node2", "node3", "node4", "node5", "node6"]
         bootstrap.start_pacemaker(node_list)
         mock_start.assert_has_calls([
@@ -540,11 +534,6 @@ class TestBootstrap(unittest.TestCase):
             mock.call("corosync.service", remote_addr="node5"),
             mock.call("corosync.service", remote_addr="node6"),
             mock.call("pacemaker.service", enable=False, node_list=node_list)
-            ])
-        mock_parallax_call.assert_has_calls([
-            mock.call(node_list, f'mkdir -p {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}'),
-            mock.call(node_list, f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"),
-            mock.call(node_list, "systemctl daemon-reload"),
             ])
 
     @mock.patch('crmsh.bootstrap.change_user_shell')
