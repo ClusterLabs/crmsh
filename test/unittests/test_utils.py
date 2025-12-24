@@ -987,12 +987,13 @@ def test_is_block_device(mock_stat, mock_isblk):
 def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
     mock_xml_inst = mock.Mock()
     mock_xml.return_value = mock_xml_inst
+    mock_xml_inst.not_connected.return_value = False
     mock_xml_inst.get_node_list.side_effect = [["node1"], ["node2"]]
     mock_reachable.side_effect = ValueError
 
     with pytest.raises(utils.DeadNodeError) as err:
         utils.check_all_nodes_reachable("testing")
-    assert err.value.dead_nodes == ["node2"]
+    assert err.value.summary.dead_nodes == ["node2"]
 
 
 @mock.patch('crmsh.utils.check_ssh_passwd_need')
@@ -1002,6 +1003,7 @@ def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
 def test_check_all_nodes_reachable(mock_xml, mock_reachable, mock_user_of_host, mock_check_passwd):
     mock_xml_inst = mock.Mock()
     mock_xml.return_value = mock_xml_inst
+    mock_xml_inst.not_connected.return_value = False
     mock_xml_inst.get_node_list.side_effect = [["node1"], []]
     mock_user_of_host_inst = mock.Mock()
     mock_user_of_host.return_value = mock_user_of_host_inst

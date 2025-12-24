@@ -26,6 +26,11 @@ FAKE_XML = '''
 </data>
 '''
 
+OFFLINE_XML = '''
+<data>
+  <status code="102" message="Not connected to cluster"/>
+</data>
+'''
 
 class TestCrmMonXmlParser(unittest.TestCase):
     """
@@ -38,6 +43,11 @@ class TestCrmMonXmlParser(unittest.TestCase):
         """
         mock_cluster_shell().get_rc_stdout_stderr_without_input.return_value = (0, FAKE_XML, '')
         self.parser_inst = xmlutil.CrmMonXmlParser()
+        mock_cluster_shell().get_rc_stdout_stderr_without_input.return_value = (0, OFFLINE_XML, '')
+        self.offline_parser_inst = xmlutil.CrmMonXmlParser()
+
+    def test_is_cluster_not_connected(self):
+        assert self.offline_parser_inst.not_connected() is True
 
     def test_is_node_online(self):
         assert self.parser_inst.is_node_online("tbw-1") is True
