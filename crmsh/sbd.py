@@ -244,12 +244,18 @@ class SBDTimeout(object):
             qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
             if self.sbd_watchdog_timeout <= qdevice_sync_timeout:
                 watchdog_timeout_with_qdevice = qdevice_sync_timeout + self.QDEVICE_SYNC_TIMEOUT_MARGIN
-                logger.warning("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(watchdog_timeout_with_qdevice, self.sbd_watchdog_timeout))
+                logger.warning(
+                    "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
+                    watchdog_timeout_with_qdevice, self.sbd_watchdog_timeout
+                )
                 self.sbd_watchdog_timeout = watchdog_timeout_with_qdevice
         # add sbd and qdevice together from beginning
         elif self.context.qdevice_inst:
             if self.sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
-                logger.warning("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self.sbd_watchdog_timeout))
+                logger.warning(
+                    "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
+                    self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self.sbd_watchdog_timeout
+                )
                 self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
 
     @staticmethod
@@ -405,6 +411,22 @@ class SBDTimeout(object):
                          value, sbd_watchdog_timeout)
             return False
         return True
+
+    @staticmethod
+    def get_timeout_minimum_value(timeout_type: str, diskless: bool = False) -> int:
+        match timeout_type:
+            case "allocate":
+                return 2
+            case "loop":
+                return 1
+            case "crashdump-watchdog":
+                return 1
+            case "watchdog":
+                return SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=diskless)
+            case "msgwait":
+                return 2 * SBDTimeout.get_sbd_watchdog_timeout_expected()
+            case _:
+                raise ValueError(f"Unknown timeout type: {timeout_type}")
 
 
 class FixFailure(ValueError):
