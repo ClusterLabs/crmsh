@@ -304,9 +304,11 @@ class SBDTimeout(object):
         instance = cls()
         instance._load_configurations_from_runtime()
         expected_watchdog_timeout = max(SBDTimeout.get_sbd_watchdog_timeout_expected(), instance.sbd_watchdog_timeout)
-        expected_msgwait = max(2 * expected_watchdog_timeout, instance.sbd_msgwait)
         if instance.crashdump_watchdog_timeout:
-            expected_msgwait += instance.crashdump_watchdog_timeout
+            msgwait_from_formula = 2 * expected_watchdog_timeout + instance.crashdump_watchdog_timeout
+        else:
+            msgwait_from_formula = 2 * expected_watchdog_timeout
+        expected_msgwait = max(msgwait_from_formula, instance.sbd_msgwait)
 
         return expected_watchdog_timeout, expected_msgwait
 
@@ -515,7 +517,7 @@ class SBDTimeoutChecker(SBDTimeout):
         '''
         For disk-based SBD, check if the sbd msgwait and watchdog timeout are below expected values
         '''
-        if self.disk_based:
+        if self.disk_based and not self.from_bootstrap:
             self.sbd_watchdog_timeout_expected, self.sbd_msgwait_expected = SBDTimeout.get_sbd_metadata_expected()
             if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
                 if not self.quiet:
@@ -538,13 +540,12 @@ class SBDTimeoutChecker(SBDTimeout):
         '''
         For diskless SBD, check if SBD_WATCHDOG_TIMEOUT is below expected value
         '''
-        if self.disk_based:
-            return CheckResult.SUCCESS
-        self.sbd_watchdog_timeout_expected = SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=True)
-        if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
-            if not self.quiet:
-                logger.error("It's recommended that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
-            return CheckResult.ERROR
+        if not self.disk_based and not self.from_bootstrap:
+            self.sbd_watchdog_timeout_expected = SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=True)
+            if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
+                if not self.quiet:
+                    logger.error("It's recommended that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
+                return CheckResult.ERROR
         return CheckResult.SUCCESS
 
     def _fix_sbd_watchdog_timeout(self):
