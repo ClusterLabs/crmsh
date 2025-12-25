@@ -61,6 +61,11 @@ class SocketIO(io.RawIOBase):
 def call(host: str, port: int, cmdline: str, user: typing.Optional[str] = None):
     family, type, proto, _, sockaddr =  socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)[0]
     with socket.socket(family, type, proto) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        if hasattr(socket, "TCP_KEEPIDLE"):
+            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 30)   # start after 30s idle
+            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)  # probe every 10s
+            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)     # 3 probes
         s.connect(sockaddr)
         sout = io.BufferedWriter(SocketIO(s), 4096)
         Message.write(sout, MSG_USER, user.encode('utf-8') if user else _getuser().encode('utf-8'))
