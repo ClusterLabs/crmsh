@@ -2851,7 +2851,12 @@ def restart_cluster():
 
 def get_files_to_sync():
     return (
-        (corosync.conf(), sbd.SBDManager.SYSCONFIG_SBD, watchdog.Watchdog.WATCHDOG_CFG,
-         sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR) + STATIC_FILES_TO_SYNC
+        (
+            corosync.conf(),
+            watchdog.Watchdog.WATCHDOG_CFG,
+            sbd.SBDManager.SYSCONFIG_SBD,
+            sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DIR,
+            sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR
+        ) + STATIC_FILES_TO_SYNC
     )
 # EOF
