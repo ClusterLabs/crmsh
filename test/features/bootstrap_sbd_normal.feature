@@ -150,12 +150,12 @@ Feature: crmsh bootstrap sbd management
     And     Online nodes are "hanode1 hanode2"
     When    Run "crm configure primitive d Dummy op monitor interval=3s" on "hanode1"
     When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
-    Then    Expected "WARNING: Resource is running, need to restart cluster service manually on each node" in stderr
+    Then    Expected "Please stop all running resources and try again" in stderr
     Then    Service "sbd" is "stopped" on "hanode1"
     And     Service "sbd" is "stopped" on "hanode2"
-    When    Run "crm cluster restart" on "hanode1"
+    When    Run "crm resource stop d" on "hanode1"
+    When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
-    When    Run "crm cluster restart" on "hanode2"
     Then    Service "sbd" is "started" on "hanode2"
     When    Run "sleep 20" on "hanode1"
     Then    Resource "stonith-sbd" type "fence_sbd" is "Started"
