@@ -465,7 +465,9 @@ class SBDTimeoutChecker(SBDTimeout):
             ("stonith-watchdog-timeout property",
              self._check_stonith_watchdog_timeout, self._fix_stonith_watchdog_timeout, False),
             ("stonith-timeout property",
-             self._check_stonith_timeout, self._fix_stonith_timeout, False)
+             self._check_stonith_timeout, self._fix_stonith_timeout, False),
+            ("unset SBD_DELAY_START in drop-in file",
+             self._check_sbd_delay_start_unset_dropin, self._fix_sbd_delay_start_unset_dropin, True),
         ]
 
         if not self.from_bootstrap and not ServiceManager().service_is_active(constants.SBD_SERVICE):
@@ -670,6 +672,19 @@ class SBDTimeoutChecker(SBDTimeout):
         expected_value = self.get_stonith_timeout_expected()
         logger.info("Adjusting stonith-timeout to %d", expected_value)
         utils.set_property("stonith-timeout", expected_value)
+
+    def _check_sbd_delay_start_unset_dropin(self) -> CheckResult:
+        if not os.path.exists(SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE):
+            if not self.quiet:
+                logger.warning("Runtime drop-in file %s to unset SBD_DELAY_START is missing",
+                               SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE)
+            return CheckResult.WARNING
+        return CheckResult.SUCCESS
+
+    def _fix_sbd_delay_start_unset_dropin(self):
+        logger.info("Createing runtime drop-in file %s to unset SBD_DELAY_START",
+                    SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE)
+        SBDManager.unset_sbd_delay_start()
 
 
 class SBDManager:
@@ -990,6 +1005,14 @@ class SBDManager:
 
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
         self.enable_sbd_service()
+
+    @staticmethod
+    def unset_sbd_delay_start(node_list: list[str] | None = None):
+        if ServiceManager().service_is_enabled(constants.SBD_SERVICE) and SBDTimeout.is_sbd_delay_start():
+            cmd = f"mkdir -p {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR} && " \
+                  f"echo -e '[Service]\\nUnsetEnvironment=SBD_DELAY_START' > {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE} && " \
+                  "systemctl daemon-reload"
+            utils.cluster_run_cmd(cmd, node_list)
 
 
 def cleanup_existing_sbd_resource():

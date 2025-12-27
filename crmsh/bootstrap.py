@@ -731,15 +731,8 @@ def start_pacemaker(node_list=[], enable_flag=False):
     Return success node list
     """
     # not _context means not in init or join process
-    if not _context and \
-            utils.package_is_installed("sbd") and \
-            ServiceManager().service_is_enabled(constants.SBD_SERVICE) and \
-            sbd.SBDTimeout.is_sbd_delay_start():
-        cmd1 = f"mkdir -p {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}"
-        cmd2 = f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"
-        cmd3 = "systemctl daemon-reload"
-        for cmd in [cmd1, cmd2, cmd3]:
-            parallax.parallax_call(node_list, cmd)
+    if not _context:
+        sbd.SBDManager.unset_sbd_delay_start(node_list)
 
     # To avoid possible JOIN flood in corosync
     service_manager = ServiceManager()
