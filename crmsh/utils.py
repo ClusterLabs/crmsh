@@ -2496,8 +2496,7 @@ def check_all_nodes_reachable(action_to_do: str, peer_node: str = None, check_pa
         # dead nodes bring risk to cluster, either bring them online or remove them
         msg = f"""There are offline nodes also unreachable: {', '.join(dead_nodes)}.
 Please bring them online before {action_to_do}.
-Or use `crm cluster remove <offline_node> --force` to remove the offline node.
-        """
+Or use `crm cluster remove <offline_node> --force` to remove the offline node."""
         raise DeadNodeError(msg, dead_nodes)
 
     nodes_unreachable = []
@@ -2520,14 +2519,12 @@ Or use `crm cluster remove <offline_node> --force` to remove the offline node.
 
     if nodes_unreachable:
         msg = f"""There are nodes whose SSH ports are unreachable: {', '.join(nodes_unreachable)}.
-Please check the network connectivity before {action_to_do}.
-        """
+Please check the network connectivity before {action_to_do}."""
         raise UnreachableNodeError(msg, nodes_unreachable)
 
     if nodes_need_password:
         msg = f"""There are nodes which requires a password for SSH access: {', '.join(nodes_need_password)}.
-Please setup passwordless SSH access before {action_to_do}.
-        """
+Please setup passwordless SSH access before {action_to_do}."""
         raise UnreachableNodeError(msg, nodes_need_password)
 
 
