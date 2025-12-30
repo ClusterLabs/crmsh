@@ -2462,7 +2462,7 @@ def bootstrap_remove(context):
     try:
         utils.check_all_nodes_reachable("removing a node from the cluster")
     except utils.DeadNodeError as e:
-        if force_flag and cluster_node in e.dead_nodes:
+        if force_flag and cluster_node in e.summary.dead_nodes:
             remove_node_from_cluster(cluster_node, dead_node=True)
             bootstrap_finished()
             return
