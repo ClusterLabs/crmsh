@@ -255,11 +255,15 @@ class SBD(command.UI):
         check_rc = sbd.CheckResult.SUCCESS
         try:
             check_rc = sbd.SBDTimeoutChecker().check_and_fix()
-        except sbd.FixAbortedDueToUnreachableNode as e:
-            logger.error('%s', e)
+        except sbd.FixAborted as e:
+            if str(e) != "":
+                logger.error('%s', str(e))
+            return False
         if check_rc != sbd.CheckResult.SUCCESS:
             issue_type = "error" if check_rc == sbd.CheckResult.ERROR else "warning"
             logger.info('Please run "crm cluster health sbd --fix" to fix the above %s', issue_type)
+
+        return check_rc in (sbd.CheckResult.SUCCESS, sbd.CheckResult.WARNING)
 
     def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str]:
         '''
@@ -577,8 +581,7 @@ class SBD(command.UI):
             if not args:
                 raise self.SyntaxError("No argument")
             if args[0] == "show":
-                self._configure_show(args)
-                return True
+                return self._configure_show(args)
             for service in (constants.PCMK_SERVICE, constants.SBD_SERVICE):
                 if not self._service_is_active(service):
                     return False
