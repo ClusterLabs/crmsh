@@ -147,7 +147,7 @@ class SBDUtils:
         for dev in dev_list[1:]:
             this_dev_metadata = SBDUtils.get_sbd_device_metadata(dev, timeout_only=True)
             if this_dev_metadata != first_dev_metadata:
-                logger.warning(f"Device {dev} doesn't have the same metadata as {dev_list[0]}")
+                logger.error("Device %s doesn't have the same metadata as %s", dev, dev_list[0])
                 consistent = False
         return consistent
 
@@ -433,7 +433,7 @@ class FixFailure(ValueError):
     pass
 
 
-class FixAbortedDueToUnreachableNode(ValueError):
+class FixAborted(ValueError):
     pass
 
 
@@ -454,6 +454,8 @@ class SBDTimeoutChecker(SBDTimeout):
     def check_and_fix(self) -> CheckResult:
         checks_and_fixes = [
             # issue name, check method, fix method, fix is SSH required
+            ("SBD devices metadata consistency",
+             self._check_sbd_device_metadata_consistency, None, False),
             ("SBD disk metadata",
              self._check_sbd_disk_metadata, self._fix_sbd_disk_metadata, True),
             ("SBD_WATCHDOG_TIMEOUT",
@@ -471,22 +473,20 @@ class SBDTimeoutChecker(SBDTimeout):
         ]
 
         if not self.from_bootstrap and not ServiceManager().service_is_active(constants.SBD_SERVICE):
-            if not self.quiet:
-                logger.warning("%s is not active, skip SBD timeout checks", constants.SBD_SERVICE)
-            raise utils.TerminateSubCommand
+            raise FixAborted("%s is not active, skip SBD timeout checks" % constants.SBD_SERVICE)
 
         all_nodes_reachable = True
+        peer_node_list = utils.list_cluster_nodes_except_me()
+        error_msg = ""
         try:
             utils.check_all_nodes_reachable("check and fix SBD timeout configurations")
         except (utils.DeadNodeError, utils.UnreachableNodeError) as e:
+            peer_node_list = e.summary.reachable_nodes
             all_nodes_reachable = False
             error_msg = str(e)
 
-        if all_nodes_reachable:
-            if not self._check_config_consistency():
-                raise utils.TerminateSubCommand
-        else:
-            logger.warning("Skip configuration consistency check due to unreachable nodes")
+        if not self._check_config_consistency(peer_node_list, error_msg):
+            raise FixAborted
 
         self._load_configurations_from_runtime()
 
@@ -495,8 +495,10 @@ class SBDTimeoutChecker(SBDTimeout):
             check_res = check_method()
             if check_res == CheckResult.SUCCESS:
                 continue
+            elif not fix_method:
+                raise FixAborted(f"Cannot fix {name} issue")
             elif ssh_required and not all_nodes_reachable:
-                raise FixAbortedDueToUnreachableNode(f"Cannot fix {name} issue: {error_msg}")
+                raise FixAborted(f"Cannot fix {name} issue: {error_msg}")
             elif self.fix:
                 fix_method()
                 self._load_configurations_from_runtime()
@@ -507,35 +509,35 @@ class SBDTimeoutChecker(SBDTimeout):
                 return check_res
         return check_res
 
-    def _check_config_consistency(self) -> bool:
+    def _check_config_consistency(self, peer_node_list: list, error_msg: str = "") -> bool:
         consistent = True
         # Don't check consistency during bootstrap process
         if self.from_bootstrap:
             return consistent
 
-        this_node = utils.this_node()
-        other_nodes = utils.list_cluster_nodes_except_me()
-        if not other_nodes:
+        if not peer_node_list:
+            if error_msg:
+                logger.warning("Skipping configuration consistency check: %s", error_msg)
             return consistent
 
-        diff_output = utils.remote_diff_this(corosync.conf(), other_nodes, this_node)
+        me = utils.this_node()
+        diff_output = utils.remote_diff_this(corosync.conf(), peer_node_list, me)
         if diff_output:
             logger.error("corosync.conf is not consistent across cluster nodes")
             consistent = False
 
-        diff_output = utils.remote_diff_this(SBDManager.SYSCONFIG_SBD, other_nodes, this_node)
+        diff_output = utils.remote_diff_this(SBDManager.SYSCONFIG_SBD, peer_node_list, me)
         if diff_output:
             logger.error("%s is not consistent across cluster nodes", SBDManager.SYSCONFIG_SBD)
             consistent = False
 
+        return consistent
+
+    def _check_sbd_device_metadata_consistency(self) -> CheckResult:
         configured_devices = SBDUtils.get_sbd_device_from_config()
         if not SBDUtils.check_devices_metadata_consistent(configured_devices):
-            logger.error("SBD device metadata is not consistent across cluster nodes")
-            consistent = False
-
-        if not consistent:
-            logger.info("Please ensure the configurations are consistent across all cluster nodes")
-        return consistent
+            return CheckResult.ERROR
+        return CheckResult.SUCCESS
 
     def _check_sbd_disk_metadata(self) -> CheckResult:
         '''
