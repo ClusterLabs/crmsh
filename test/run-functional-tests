@@ -55,6 +55,11 @@ logging {
 EOM
 
 
+log_date() {
+	date +"%Y-%m-%d %H:%M:%S"
+}
+
+
 fatal() {
 	error $*
 	exit 1
@@ -62,17 +67,17 @@ fatal() {
 
 
 error() {
-	echo "ERROR: $*"
+	echo "$(log_date) ERROR: $*"
 }
 
 
 warning() {
-	echo "WARNING: $*"
+	echo "$(log_date) WARNING: $*"
 }
 
 
 info() {
-	echo "INFO: $*"
+	echo "$(log_date) INFO: $*"
 }
 
 
