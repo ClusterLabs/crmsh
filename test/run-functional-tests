@@ -253,7 +253,7 @@ create_node() {
 
 	for node in $*;do
 		deploy_ha_node $node
-		sleep 20
+		sleep 5
 	done
 
 	for node in $*;do
