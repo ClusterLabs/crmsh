@@ -59,7 +59,8 @@ class SocketIO(io.RawIOBase):
 
 
 def call(host: str, port: int, cmdline: str, user: typing.Optional[str] = None):
-    family, type, proto, _, sockaddr =  socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)[0]
+    host = f"{host}-agent"
+    family, type, proto, _, sockaddr =  socket.getaddrinfo(host, port, family=socket.AF_INET, type=socket.SOCK_STREAM)[0]
     with socket.socket(family, type, proto) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         if hasattr(socket, "TCP_KEEPIDLE"):

@@ -7,6 +7,7 @@ COROSYNC_CONF="/etc/corosync/corosync.conf"
 COROSYNC_AUTH="/etc/corosync/authkey"
 HA_NETWORK_FIRST="ha_network_first"
 HA_NETWORK_SECOND="ha_network_second"
+BEHAVE_NETWORK="behave_mgmt_network"
 declare -a HA_NETWORK_ARRAY
 declare -a HA_NETWORK_V6_ARRAY
 HA_NETWORK_ARRAY[0]=$HA_NETWORK_FIRST
@@ -55,6 +56,11 @@ logging {
 EOM
 
 
+log_date() {
+	date +"%Y-%m-%d %H:%M:%S"
+}
+
+
 fatal() {
 	error $*
 	exit 1
@@ -62,17 +68,17 @@ fatal() {
 
 
 error() {
-	echo "ERROR: $*"
+	echo "$(log_date) ERROR: $*"
 }
 
 
 warning() {
-	echo "WARNING: $*"
+	echo "$(log_date) WARNING: $*"
 }
 
 
 info() {
-	echo "INFO: $*"
+	echo "$(log_date) INFO: $*"
 }
 
 
@@ -235,16 +241,38 @@ deploy_ha_node() {
 create_node() {
         echo 16777216 > /proc/sys/net/core/rmem_max
         echo 16777216 > /proc/sys/net/core/wmem_max
+
         info "Create ha specific container networks..."
 	for index in ${!HA_NETWORK_ARRAY[@]};do
 		network=${HA_NETWORK_ARRAY[$index]}
 		podman network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network
 	done
 
+	info "Create behave management network..."
+	podman network create $BEHAVE_NETWORK
+
 	for node in $*;do
-		deploy_ha_node $node &
+		deploy_ha_node $node
+		sleep 5
 	done
-	wait
+
+	for node in $*;do
+		info "Attach $node to behave management network $BEHAVE_NETWORK"
+		podman network connect $BEHAVE_NETWORK $node
+	done
+
+        # Now that behave network IPs exist, populate /etc/hosts for agent
+        for node in "$@"; do
+                for target in "$@"; do
+                        ip_behave=$(podman inspect -f '{{ (index .NetworkSettings.Networks "'"${BEHAVE_NETWORK}"'").IPAddress }}' "$target")
+                        if [ -n "$ip_behave" ]; then
+                                info "Add $ip_behave ${target}-agent to /etc/hosts of $node"
+                                podman exec "$node" sh -c "echo '$ip_behave ${target}-agent' >> /etc/hosts"
+                        else
+                                warning "No behave IPv4 address found for $target on ${BEHAVE_NETWORK}"
+                        fi
+                done
+        done
 }
 
 
@@ -337,6 +365,8 @@ cleanup_cluster() {
 	for network in ${exist_network_array[@]};do
 		podman network rm $network
 	done
+	info "Cleanup behave management network..."
+	podman network rm $BEHAVE_NETWORK
 }
 
 
