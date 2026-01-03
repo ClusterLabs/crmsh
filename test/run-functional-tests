@@ -252,9 +252,9 @@ create_node() {
 	podman network create $BEHAVE_NETWORK
 
 	for node in $*;do
-		deploy_ha_node $node &
+		deploy_ha_node $node
+		sleep 20
 	done
-	wait
 
 	for node in $*;do
 		info "Attach $node to behave management network $BEHAVE_NETWORK"
