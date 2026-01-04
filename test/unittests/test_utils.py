@@ -992,7 +992,7 @@ def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
 
     with pytest.raises(utils.DeadNodeError) as err:
         utils.check_all_nodes_reachable("testing")
-    assert err.value.dead_nodes == ["node2"]
+    assert err.value.summary.dead_nodes == ["node2"]
 
 
 @mock.patch('crmsh.utils.check_ssh_passwd_need')
