@@ -1853,16 +1853,20 @@ def remote_diff_slurp(nodes, filename):
     return crmsh.parallax.parallax_slurp(nodes, tmpdir, filename)
 
 
-def remote_diff_this(local_path, nodes, this_node):
+def remote_diff_this(local_path, nodes, this_node, quiet=False):
     by_host = remote_diff_slurp(nodes, local_path)
+    return_output = ""
     for host, result in by_host:
         if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
         path = result
         _, output = ShellUtils().get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
                                             (host, this_node, path, local_path))
-        page_string(output)
-    return output
+        if output:
+            if not quiet:
+                page_string(output)
+            return_output += f"{output}\n"
+    return return_output
 
 
 def remote_diff(local_path, nodes):

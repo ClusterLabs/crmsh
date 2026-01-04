@@ -521,15 +521,20 @@ class SBDTimeoutChecker(SBDTimeout):
             return consistent
 
         me = utils.this_node()
-        diff_output = utils.remote_diff_this(corosync.conf(), peer_node_list, me)
+        diff_output = utils.remote_diff_this(corosync.conf(), peer_node_list, me, quiet=True)
         if diff_output:
             logger.error("corosync.conf is not consistent across cluster nodes")
+            print(diff_output)
             consistent = False
 
-        diff_output = utils.remote_diff_this(SBDManager.SYSCONFIG_SBD, peer_node_list, me)
+        diff_output = utils.remote_diff_this(SBDManager.SYSCONFIG_SBD, peer_node_list, me, quiet=True)
         if diff_output:
             logger.error("%s is not consistent across cluster nodes", SBDManager.SYSCONFIG_SBD)
+            print(diff_output)
             consistent = False
+
+        if not consistent and error_msg:
+            logger.warning(error_msg)
 
         return consistent
 
