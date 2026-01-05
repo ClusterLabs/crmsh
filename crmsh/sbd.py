@@ -454,23 +454,70 @@ class SBDTimeoutChecker(SBDTimeout):
 
     def check_and_fix(self) -> CheckResult:
         checks_and_fixes = [
-            # issue name, check method, fix method, fix is SSH required
-            ("SBD disk metadata",
-             self._check_sbd_disk_metadata, self._fix_sbd_disk_metadata, True),
-            ("SBD devices metadata consistency",
-             self._check_sbd_device_metadata_consistency, self._fix_sbd_device_metadata_consistency, True),
-            ("SBD_WATCHDOG_TIMEOUT",
-             self._check_sbd_watchdog_timeout, self._fix_sbd_watchdog_timeout, True),
-            ("SBD_DELAY_START",
-             self._check_sbd_delay_start, self._fix_sbd_delay_start, True),
-            ("systemd start timeout for sbd.service",
-             self._check_sbd_systemd_start_timeout, self._fix_sbd_systemd_start_timeout, True),
-            ("stonith-watchdog-timeout property",
-             self._check_stonith_watchdog_timeout, self._fix_stonith_watchdog_timeout, False),
-            ("stonith-timeout property",
-             self._check_stonith_timeout, self._fix_stonith_timeout, False),
-            ("unset SBD_DELAY_START in drop-in file",
-             self._check_sbd_delay_start_unset_dropin, self._fix_sbd_delay_start_unset_dropin, True),
+            # issue name, check method, fix method, SSH required, prerequisites checks
+            (
+                "SBD disk metadata",
+                self._check_sbd_disk_metadata,
+                self._fix_sbd_disk_metadata,
+                True,
+                []
+            ),
+
+            (
+                "SBD devices metadata consistency",
+                self._check_sbd_device_metadata_consistency,
+                self._fix_sbd_device_metadata_consistency,
+                True,
+                [0]
+            ),
+
+            (
+                "SBD_WATCHDOG_TIMEOUT",
+                self._check_sbd_watchdog_timeout,
+                self._fix_sbd_watchdog_timeout,
+                True,
+                []
+            ),
+
+            (
+                "SBD_DELAY_START",
+                self._check_sbd_delay_start,
+                self._fix_sbd_delay_start,
+                True,
+                [0, 2]
+            ),
+
+            (
+                "systemd start timeout for sbd.service",
+                self._check_sbd_systemd_start_timeout,
+                self._fix_sbd_systemd_start_timeout,
+                True,
+                [3]
+            ),
+
+            (
+                "stonith-watchdog-timeout property",
+                self._check_stonith_watchdog_timeout,
+                self._fix_stonith_watchdog_timeout,
+                False,
+                [2]
+            ),
+
+            (
+                "stonith-timeout property",
+                self._check_stonith_timeout,
+                self._fix_stonith_timeout,
+                False,
+                [0, 2]
+            ),
+
+            (
+                "unset SBD_DELAY_START in drop-in file",
+                self._check_sbd_delay_start_unset_dropin,
+                self._fix_sbd_delay_start_unset_dropin,
+                True,
+                []
+            )
         ]
 
         if not self.from_bootstrap and not ServiceManager().service_is_active(constants.SBD_SERVICE):
@@ -487,13 +534,16 @@ class SBDTimeoutChecker(SBDTimeout):
             error_msg = str(e)
 
         if not self._check_config_consistency(peer_node_list, error_msg):
-            raise FixAborted
+            raise FixAborted("All other checks aborted due to inconsistent configurations")
 
         self._load_configurations_from_runtime()
 
-        check_res = CheckResult.SUCCESS
-        for name, check_method, fix_method, ssh_required in checks_and_fixes:
+        check_res_list = [CheckResult.SUCCESS for _ in range(len(checks_and_fixes))]
+        for index, (name, check_method, fix_method, ssh_required, prereq_checks) in enumerate(checks_and_fixes):
+            if prereq_checks and any(check_res_list[i] != CheckResult.SUCCESS for i in prereq_checks):
+                continue
             check_res = check_method()
+            check_res_list[index] = check_res
             if check_res == CheckResult.SUCCESS:
                 continue
             elif ssh_required and not all_nodes_reachable:
@@ -502,11 +552,17 @@ class SBDTimeoutChecker(SBDTimeout):
                 fix_method()
                 self._load_configurations_from_runtime()
                 check_res = check_method()
-                if check_res != CheckResult.SUCCESS:
+                if check_res == CheckResult.SUCCESS:
+                    check_res_list[index] = check_res
+                else:
                     raise FixFailure(f"Failed to fix {name} issue")
-            else:
-                return check_res
-        return check_res
+
+        if all(res == CheckResult.SUCCESS for res in check_res_list):
+            return CheckResult.SUCCESS
+        elif any(res == CheckResult.ERROR for res in check_res_list):
+            return CheckResult.ERROR
+        else:
+            return CheckResult.WARNING
 
     def _check_config_consistency(self, peer_node_list: list, error_msg: str = "") -> bool:
         consistent = True
