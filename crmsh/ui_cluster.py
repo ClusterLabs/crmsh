@@ -847,8 +847,7 @@ to get the geo cluster configuration.""",
                     logger.error('%s', e)
                     return False
                 except sbd.FixAborted as e:
-                    if str(e) != '':
-                        logger.error('%s', e)
+                    logger.error('%s', e)
                     logger.error('SBD: Check sbd timeout configuration: FAIL.')
                     return False
                 if result == sbd.CheckResult.ERROR:

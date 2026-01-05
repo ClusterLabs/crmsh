@@ -136,7 +136,7 @@ class SBDUtils:
                 not bootstrap.confirm(f"{dev} has already been initialized by SBD - overwrite?")
 
     @staticmethod
-    def check_devices_metadata_consistent(dev_list) -> bool:
+    def check_devices_metadata_consistent(dev_list, quiet=False) -> bool:
         '''
         Check if all devices have the same metadata
         '''
@@ -147,7 +147,8 @@ class SBDUtils:
         for dev in dev_list[1:]:
             this_dev_metadata = SBDUtils.get_sbd_device_metadata(dev, timeout_only=True)
             if this_dev_metadata != first_dev_metadata:
-                logger.error("Device %s doesn't have the same metadata as %s", dev, dev_list[0])
+                if not quiet:
+                    logger.error("Device %s doesn't have the same metadata as %s", dev, dev_list[0])
                 consistent = False
         return consistent
 
@@ -454,10 +455,10 @@ class SBDTimeoutChecker(SBDTimeout):
     def check_and_fix(self) -> CheckResult:
         checks_and_fixes = [
             # issue name, check method, fix method, fix is SSH required
-            ("SBD devices metadata consistency",
-             self._check_sbd_device_metadata_consistency, None, False),
             ("SBD disk metadata",
              self._check_sbd_disk_metadata, self._fix_sbd_disk_metadata, True),
+            ("SBD devices metadata consistency",
+             self._check_sbd_device_metadata_consistency, self._fix_sbd_device_metadata_consistency, True),
             ("SBD_WATCHDOG_TIMEOUT",
              self._check_sbd_watchdog_timeout, self._fix_sbd_watchdog_timeout, True),
             ("SBD_DELAY_START",
@@ -495,8 +496,6 @@ class SBDTimeoutChecker(SBDTimeout):
             check_res = check_method()
             if check_res == CheckResult.SUCCESS:
                 continue
-            elif not fix_method:
-                raise FixAborted(f"Cannot fix {name} issue")
             elif ssh_required and not all_nodes_reachable:
                 raise FixAborted(f"Cannot fix {name} issue: {error_msg}")
             elif self.fix:
@@ -540,9 +539,14 @@ class SBDTimeoutChecker(SBDTimeout):
 
     def _check_sbd_device_metadata_consistency(self) -> CheckResult:
         configured_devices = SBDUtils.get_sbd_device_from_config()
-        if not SBDUtils.check_devices_metadata_consistent(configured_devices):
+        if not SBDUtils.check_devices_metadata_consistent(configured_devices, self.quiet):
             return CheckResult.ERROR
         return CheckResult.SUCCESS
+
+    def _fix_sbd_device_metadata_consistency(self) -> None:
+        first_dev = SBDUtils.get_sbd_device_from_config()[0]
+        logger.info("Syncing sbd metadata from %s to other devices", first_dev)
+        self._fix_sbd_disk_metadata()
 
     def _check_sbd_disk_metadata(self) -> CheckResult:
         '''
@@ -561,6 +565,8 @@ class SBDTimeoutChecker(SBDTimeout):
         return CheckResult.SUCCESS
 
     def _fix_sbd_disk_metadata(self) -> None:
+        if self.sbd_msgwait_expected is None or self.sbd_watchdog_timeout_expected is None:
+            self.sbd_watchdog_timeout_expected, self.sbd_msgwait_expected = SBDTimeout.get_sbd_metadata_expected()
         logger.info("Adjusting sbd msgwait to %d, watchdog timeout to %d", self.sbd_msgwait_expected, self.sbd_watchdog_timeout_expected)
         cmd = f"crm sbd configure msgwait-timeout={self.sbd_msgwait_expected} watchdog-timeout={self.sbd_watchdog_timeout_expected}"
         output = sh.cluster_shell().get_stdout_or_raise_error(cmd)

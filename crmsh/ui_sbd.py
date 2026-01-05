@@ -256,8 +256,7 @@ class SBD(command.UI):
         try:
             check_rc = sbd.SBDTimeoutChecker().check_and_fix()
         except sbd.FixAborted as e:
-            if str(e) != "":
-                logger.error('%s', str(e))
+            logger.error('%s', e)
             return False
         if check_rc != sbd.CheckResult.SUCCESS:
             issue_type = "error" if check_rc == sbd.CheckResult.ERROR else "warning"
@@ -438,7 +437,9 @@ class SBD(command.UI):
             result_dict = self._set_crashdump_in_sysconfig(crashdump_watchdog_timeout)
             update_dict = {**update_dict, **result_dict}
 
-        if timeout_dict == self.device_meta_dict_runtime and not update_dict:
+        device_list = sbd.SBDUtils.get_sbd_device_from_config()
+        devices_consistent = sbd.SBDUtils.check_devices_metadata_consistent(device_list, quiet=True)
+        if timeout_dict == self.device_meta_dict_runtime and not update_dict and devices_consistent:
             logger.info("No change in SBD configuration")
             return
 
