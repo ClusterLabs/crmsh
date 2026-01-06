@@ -580,22 +580,24 @@ class SBDTimeoutChecker(SBDTimeout):
                 logger.warning("Skipping configuration consistency check: %s", error_msg)
             return consistent
 
+        # ignore comments and blank lines
+        ignore_pattern = "^#\\|^[[:space:]]*$"
         me = utils.this_node()
-        diff_output = utils.remote_diff_this(corosync.conf(), self.peer_node_list, me, quiet=True)
-        if diff_output:
-            logger.error("corosync.conf is not consistent across cluster nodes")
-            print(diff_output)
-            consistent = False
-
-        diff_output = utils.remote_diff_this(SBDManager.SYSCONFIG_SBD, self.peer_node_list, me, quiet=True)
-        if diff_output:
-            logger.error("%s is not consistent across cluster nodes", SBDManager.SYSCONFIG_SBD)
-            print(diff_output)
-            consistent = False
+        for target_file in (corosync.conf(), SBDManager.SYSCONFIG_SBD):
+            diff_output = utils.remote_diff_this(
+                target_file,
+                self.peer_node_list,
+                me,
+                ignore_pattern=ignore_pattern,
+                quiet=True
+            )
+            if diff_output:
+                logger.error("%s is not consistent across cluster nodes", target_file)
+                print(diff_output)
+                consistent = False
 
         if not consistent and error_msg:
             logger.warning(error_msg)
-
         return consistent
 
     def _check_sbd_device_metadata_consistency(self) -> CheckResult:
