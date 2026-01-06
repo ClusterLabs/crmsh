@@ -451,6 +451,7 @@ class SBDTimeoutChecker(SBDTimeout):
         self.quiet = quiet
         self.fix = fix
         self.from_bootstrap = from_bootstrap
+        self.peer_node_list = []
 
     def check_and_fix(self) -> CheckResult:
         checks_and_fixes = [
@@ -524,16 +525,16 @@ class SBDTimeoutChecker(SBDTimeout):
             raise FixAborted("%s is not active, skip SBD timeout checks" % constants.SBD_SERVICE)
 
         all_nodes_reachable = True
-        peer_node_list = utils.list_cluster_nodes_except_me()
+        self.peer_node_list = utils.list_cluster_nodes_except_me()
         error_msg = ""
         try:
             utils.check_all_nodes_reachable("check and fix SBD timeout configurations")
         except (utils.DeadNodeError, utils.UnreachableNodeError) as e:
-            peer_node_list = e.summary.reachable_nodes
+            self.peer_node_list = e.summary.reachable_nodes
             all_nodes_reachable = False
             error_msg = str(e)
 
-        if not self._check_config_consistency(peer_node_list, error_msg):
+        if not self._check_config_consistency(error_msg):
             raise FixAborted("All other checks aborted due to inconsistent configurations")
 
         self._load_configurations_from_runtime()
@@ -564,25 +565,25 @@ class SBDTimeoutChecker(SBDTimeout):
         else:
             return CheckResult.WARNING
 
-    def _check_config_consistency(self, peer_node_list: list, error_msg: str = "") -> bool:
+    def _check_config_consistency(self, error_msg: str = "") -> bool:
         consistent = True
         # Don't check consistency during bootstrap process
         if self.from_bootstrap:
             return consistent
 
-        if not peer_node_list:
+        if not self.peer_node_list:
             if error_msg:
                 logger.warning("Skipping configuration consistency check: %s", error_msg)
             return consistent
 
         me = utils.this_node()
-        diff_output = utils.remote_diff_this(corosync.conf(), peer_node_list, me, quiet=True)
+        diff_output = utils.remote_diff_this(corosync.conf(), self.peer_node_list, me, quiet=True)
         if diff_output:
             logger.error("corosync.conf is not consistent across cluster nodes")
             print(diff_output)
             consistent = False
 
-        diff_output = utils.remote_diff_this(SBDManager.SYSCONFIG_SBD, peer_node_list, me, quiet=True)
+        diff_output = utils.remote_diff_this(SBDManager.SYSCONFIG_SBD, self.peer_node_list, me, quiet=True)
         if diff_output:
             logger.error("%s is not consistent across cluster nodes", SBDManager.SYSCONFIG_SBD)
             print(diff_output)
@@ -743,12 +744,23 @@ class SBDTimeoutChecker(SBDTimeout):
         utils.set_property("stonith-timeout", expected_value)
 
     def _check_sbd_delay_start_unset_dropin(self) -> CheckResult:
-        if not os.path.exists(SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE):
-            if not self.quiet:
-                logger.warning("Runtime drop-in file %s to unset SBD_DELAY_START is missing",
-                               SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE)
-            return CheckResult.WARNING
-        return CheckResult.SUCCESS
+        if not SBDTimeout.is_sbd_delay_start():
+            return CheckResult.SUCCESS
+
+        shell = sh.cluster_shell()
+        check_res_list = []
+        for node in [utils.this_node()] + self.peer_node_list:
+            cmd = f"test -f {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"
+            rc, _ = shell.get_rc_and_error(node, None, cmd)
+            if rc == 0:
+                check_res_list.append(CheckResult.SUCCESS)
+            else:
+                if not self.quiet:
+                    logger.warning("Runtime drop-in file %s to unset SBD_DELAY_START is missing on node %s",
+                                   SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE, node)
+                check_res_list.append(CheckResult.WARNING)
+
+        return SBDTimeoutChecker._return_helper(check_res_list)
 
     def _fix_sbd_delay_start_unset_dropin(self):
         logger.info("Createing runtime drop-in file %s to unset SBD_DELAY_START",
