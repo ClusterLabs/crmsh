@@ -389,8 +389,8 @@ class SBDTimeout(object):
         return res and res != "no"
 
     @staticmethod
-    def get_sbd_systemd_start_timeout() -> int:
-        out = sh.cluster_shell().get_stdout_or_raise_error(SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD)
+    def get_sbd_systemd_start_timeout(host=None) -> int:
+        out = sh.cluster_shell().get_stdout_or_raise_error(SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD, host)
         return utils.get_systemd_timeout_start_in_sec(out)
 
     @staticmethod
@@ -452,6 +452,15 @@ class SBDTimeoutChecker(SBDTimeout):
         self.fix = fix
         self.from_bootstrap = from_bootstrap
         self.peer_node_list = []
+
+    @staticmethod
+    def _return_helper(check_res_list: list[CheckResult]) -> CheckResult:
+        if all(res == CheckResult.SUCCESS for res in check_res_list):
+            return CheckResult.SUCCESS
+        elif any(res == CheckResult.ERROR for res in check_res_list):
+            return CheckResult.ERROR
+        else:
+            return CheckResult.WARNING
 
     def check_and_fix(self) -> CheckResult:
         checks_and_fixes = [
@@ -558,12 +567,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 else:
                     raise FixFailure(f"Failed to fix {name} issue")
 
-        if all(res == CheckResult.SUCCESS for res in check_res_list):
-            return CheckResult.SUCCESS
-        elif any(res == CheckResult.ERROR for res in check_res_list):
-            return CheckResult.ERROR
-        else:
-            return CheckResult.WARNING
+        return SBDTimeoutChecker._return_helper(check_res_list)
 
     def _check_config_consistency(self, error_msg: str = "") -> bool:
         consistent = True
@@ -672,20 +676,28 @@ class SBDTimeoutChecker(SBDTimeout):
         SBDManager.update_sbd_configuration({"SBD_DELAY_START": advised_value})
 
     def _check_sbd_systemd_start_timeout(self) -> CheckResult:
-        actual_start_timeout = SBDTimeout.get_sbd_systemd_start_timeout()
         expected_start_timeout = self.sbd_systemd_start_timeout_expected
-        if actual_start_timeout == expected_start_timeout:
-            return CheckResult.SUCCESS
-        elif actual_start_timeout < expected_start_timeout:
-            if not self.quiet:
-                logger.error("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds",
-                             expected_start_timeout, actual_start_timeout)
-            return CheckResult.ERROR
-        else:
-            if not self.quiet:
-                logger.warning("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds",
-                               expected_start_timeout, actual_start_timeout)
-            return CheckResult.WARNING
+        check_res_list = []
+        for node in [utils.this_node()] + self.peer_node_list:
+            actual_start_timeout = SBDTimeout.get_sbd_systemd_start_timeout(node)
+            if actual_start_timeout == expected_start_timeout:
+                check_res_list.append(CheckResult.SUCCESS)
+            elif actual_start_timeout < expected_start_timeout:
+                if not self.quiet:
+                    logger.error(
+                        "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
+                        expected_start_timeout, actual_start_timeout, node
+                    )
+                check_res_list.append(CheckResult.ERROR)
+            else:
+                if not self.quiet:
+                    logger.warning(
+                        "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
+                        expected_start_timeout, actual_start_timeout, node
+                    )
+                check_res_list.append(CheckResult.WARNING)
+
+        return SBDTimeoutChecker._return_helper(check_res_list)
 
     def _fix_sbd_systemd_start_timeout(self):
         logger.info("Adjusting systemd start timeout for sbd.service to %ds", self.sbd_systemd_start_timeout_expected)
