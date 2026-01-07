@@ -182,15 +182,10 @@ deploy_ha_node() {
         # CAP_AUDIT_CONTROL for sshd
         # CAP_NET_ADMIN for firewall and virtual ip
         podman_capabilties="--cap-add CAP_SYS_ADMIN --cap-add CAP_SYS_NICE --cap-add CAP_AUDIT_CONTROL --cap-add CAP_NET_ADMIN"
-        if [ -f /sys/fs/selinux/enforce ] && [ x"1" == x"$(cat /sys/fs/selinux/enforce)" ]; then
-            podman_security="--security-opt=label=user:unconfined_u --security-opt=label=role:unconfined_r --security-opt=label=type:unconfined_t"
-        else
-            podman_security=""
-        fi
 	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install install-python && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
-	podman run --rm -d $podman_options $podman_capabilties $podman_security $CONTAINER_IMAGE
+	podman run --rm -d $podman_options $podman_capabilties $CONTAINER_IMAGE
         podman network connect ha_network_second $node_name
 
 	if [ "$node_name" != "qnetd-node" ];then
