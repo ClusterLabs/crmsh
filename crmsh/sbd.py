@@ -2,6 +2,7 @@ import os
 import re
 import typing
 import shutil
+import time
 from enum import Enum
 from . import utils, sh
 from . import bootstrap
@@ -536,6 +537,14 @@ class SBDTimeoutChecker(SBDTimeout):
                 self._fix_sbd_service_is_enabled,
                 True,
                 []
+            ),
+
+            (
+                "fence_sbd agent",
+                self._check_fence_sbd,
+                self._fix_fence_sbd,
+                False,
+                []
             )
         ]
 
@@ -808,6 +817,37 @@ class SBDTimeoutChecker(SBDTimeout):
         for node in self.service_disabled_node_list:
             logger.info("Enabling %s on node %s", constants.SBD_SERVICE, node)
             service_manager.enable_service(constants.SBD_SERVICE, node)
+
+    def _check_fence_sbd(self) -> CheckResult:
+        if not self.disk_based or self.from_bootstrap:
+            return CheckResult.SUCCESS
+        xml_inst = xmlutil.CrmMonXmlParser()
+        if not xml_inst.is_resource_configured(SBDManager.SBD_RA):
+            if not self.quiet:
+                logger.error("Fence agent %s is not configured", SBDManager.SBD_RA)
+            return CheckResult.ERROR
+        elif not xml_inst.is_resource_started(SBDManager.SBD_RA):
+            if not self.quiet:
+                logger.error("Fence agent %s is not started", SBDManager.SBD_RA)
+            return CheckResult.ERROR
+        return CheckResult.SUCCESS
+
+    def _fix_fence_sbd(self):
+        xml_inst = xmlutil.CrmMonXmlParser()
+        shell = sh.cluster_shell()
+        if not xml_inst.is_resource_configured(SBDManager.SBD_RA):
+            logger.info("Configuring fence agent %s", SBDManager.SBD_RA)
+            cmd = f"crm configure primitive {SBDManager.SBD_RA_ID} {SBDManager.SBD_RA}"
+            shell.get_stdout_or_raise_error(cmd)
+            is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
+            bootstrap.adjust_pcmk_delay_max(is_2node_wo_qdevice)
+        elif not xml_inst.is_resource_started(SBDManager.SBD_RA):
+            res_id_list = xml_inst.get_resource_id_list_via_type(SBDManager.SBD_RA)
+            for res_id in res_id_list:
+                logger.info("Starting fence agent %s", res_id)
+                cmd = f"crm resource start {res_id}"
+                shell.get_stdout_or_raise_error(cmd)
+        time.sleep(2)
 
 
 class SBDManager:
