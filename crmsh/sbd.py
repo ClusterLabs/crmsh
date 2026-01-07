@@ -452,6 +452,7 @@ class SBDTimeoutChecker(SBDTimeout):
         self.fix = fix
         self.from_bootstrap = from_bootstrap
         self.peer_node_list = []
+        self.service_disabled_node_list = []
 
     @staticmethod
     def _return_helper(check_res_list: list[CheckResult]) -> CheckResult:
@@ -525,6 +526,14 @@ class SBDTimeoutChecker(SBDTimeout):
                 "unset SBD_DELAY_START in drop-in file",
                 self._check_sbd_delay_start_unset_dropin,
                 self._fix_sbd_delay_start_unset_dropin,
+                True,
+                []
+            ),
+
+            (
+                "sbd.service should be enabled",
+                self._check_sbd_service_is_enabled,
+                self._fix_sbd_service_is_enabled,
                 True,
                 []
             )
@@ -780,6 +789,25 @@ class SBDTimeoutChecker(SBDTimeout):
         logger.info("Createing runtime drop-in file %s to unset SBD_DELAY_START",
                     SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE)
         SBDManager.unset_sbd_delay_start()
+
+    def _check_sbd_service_is_enabled(self) -> CheckResult:
+        service_manager = ServiceManager()
+        check_res_list = []
+        for node in [utils.this_node()] + self.peer_node_list:
+            if service_manager.service_is_enabled(constants.SBD_SERVICE, node):
+                check_res_list.append(CheckResult.SUCCESS)
+            else:
+                if not self.quiet:
+                    logger.error("%s is not enabled on node %s", constants.SBD_SERVICE, node)
+                self.service_disabled_node_list.append(node)
+                check_res_list.append(CheckResult.ERROR)
+        return SBDTimeoutChecker._return_helper(check_res_list)
+
+    def _fix_sbd_service_is_enabled(self):
+        service_manager = ServiceManager()
+        for node in self.service_disabled_node_list:
+            logger.info("Enabling %s on node %s", constants.SBD_SERVICE, node)
+            service_manager.enable_service(constants.SBD_SERVICE, node)
 
 
 class SBDManager:
