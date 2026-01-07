@@ -182,13 +182,7 @@ deploy_ha_node() {
         # CAP_AUDIT_CONTROL for sshd
         # CAP_NET_ADMIN for firewall and virtual ip
         podman_capabilties="--cap-add CAP_SYS_ADMIN --cap-add CAP_SYS_NICE --cap-add CAP_AUDIT_CONTROL --cap-add CAP_NET_ADMIN"
-        if [ -d /sys/kernel/security/apparmor ]; then
-            if [ -f /etc/apparmor.d/podman ]; then
-                podman_security="--security-opt=apparmor=podman"
-            else
-                podman_security="--security-opt=apparmor=unconfined"
-            fi
-        elif [ -f /sys/fs/selinux/enforce ] && [ x"1" == x"$(cat /sys/fs/selinux/enforce)" ]; then
+        if [ -f /sys/fs/selinux/enforce ] && [ x"1" == x"$(cat /sys/fs/selinux/enforce)" ]; then
             podman_security="--security-opt=label=user:unconfined_u --security-opt=label=role:unconfined_r --security-opt=label=type:unconfined_t"
         else
             podman_security=""
