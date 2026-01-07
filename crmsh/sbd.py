@@ -10,6 +10,7 @@ from . import constants
 from . import corosync
 from . import xmlutil
 from . import watchdog
+from . import cibquery
 from .service_manager import ServiceManager
 from .sh import ShellUtils
 
@@ -651,6 +652,7 @@ class SBDManager:
     SBD_RA = "stonith:fence_sbd"
     SBD_RA_ID = "stonith-sbd"
     SBD_DEVICE_MAX = 3
+    SBD_CRASHDUMP_ACTION = "flush,crashdump"
 
     class NotConfigSBD(Exception):
         pass
@@ -661,7 +663,8 @@ class SBDManager:
         timeout_dict: typing.Dict[str, int] | None = None,
         update_dict: typing.Dict[str, str] | None = None,
         diskless_sbd: bool = False,
-        bootstrap_context: 'bootstrap.Context | None' = None
+        bootstrap_context: 'bootstrap.Context | None' = None,
+        crashdump: str | None = None
     ):
         '''
         Init function which can be called from crm sbd subcommand or bootstrap
@@ -673,6 +676,7 @@ class SBDManager:
         self.cluster_is_running = ServiceManager().service_is_active(constants.PCMK_SERVICE)
         self.bootstrap_context = bootstrap_context
         self.overwrite_sysconfig = False
+        self.crashdump = crashdump
 
         # From bootstrap init or join process, override the values
         if self.bootstrap_context:
@@ -763,6 +767,7 @@ class SBDManager:
             if not xmlutil.CrmMonXmlParser().is_resource_configured(self.SBD_RA):
                 cmd = f"crm configure primitive {self.SBD_RA_ID} {self.SBD_RA}"
                 sh.cluster_shell().get_stdout_or_raise_error(cmd)
+            self.set_crashdump_option_in_fence_sbd()
         else:
             swt_value = self.timeout_dict.get("stonith-watchdog", 2*SBDTimeout.get_sbd_watchdog_timeout())
             utils.set_property("stonith-watchdog-timeout", swt_value)
@@ -894,6 +899,7 @@ class SBDManager:
                 return
 
             self.initialize_sbd()
+            self.set_crashdump_action()
             self.update_configuration()
             self.enable_sbd_service()
 
@@ -946,6 +952,59 @@ class SBDManager:
 
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
         self.enable_sbd_service()
+
+    def set_crashdump_action(self):
+        '''
+        Set crashdump timeout action in /etc/sysconfig/sbd
+        '''
+        if not self.crashdump or self.crashdump not in ("set", "restore"):
+            return
+
+        comment_action_line = f"sed -i '/^SBD_TIMEOUT_ACTION/s/^/#__sbd_crashdump_backup__ /' {self.SYSCONFIG_SBD}"
+        add_action_line = f"sed -i '/^#__sbd_crashdump_backup__/a SBD_TIMEOUT_ACTION={self.SBD_CRASHDUMP_ACTION}' {self.SYSCONFIG_SBD}"
+        comment_out_action_line = f"sed -i 's/^#__sbd_crashdump_backup__ SBD_TIMEOUT_ACTION/SBD_TIMEOUT_ACTION/' {self.SYSCONFIG_SBD}"
+        delete_action_line = f"sed -i '/^SBD_TIMEOUT_ACTION/d' {self.SYSCONFIG_SBD}"
+        sbd_timeout_action_configured = SBDUtils.get_sbd_value_from_config("SBD_TIMEOUT_ACTION")
+        shell = sh.cluster_shell()
+
+        if self.crashdump == "set":
+            if not sbd_timeout_action_configured:
+                logger.info("Set SBD_TIMEOUT_ACTION in %s: %s", self.SYSCONFIG_SBD, self.SBD_CRASHDUMP_ACTION)
+                self.update_dict["SBD_TIMEOUT_ACTION"] = self.SBD_CRASHDUMP_ACTION
+            elif sbd_timeout_action_configured != self.SBD_CRASHDUMP_ACTION:
+                logger.info("Update SBD_TIMEOUT_ACTION in %s: %s", self.SYSCONFIG_SBD, self.SBD_CRASHDUMP_ACTION)
+                shell.get_stdout_or_raise_error(f"{comment_action_line} && {add_action_line}")
+        elif self.crashdump == "restore":
+            if sbd_timeout_action_configured and sbd_timeout_action_configured == self.SBD_CRASHDUMP_ACTION:
+                logger.info("Restore SBD_TIMEOUT_ACTION in %s", self.SYSCONFIG_SBD)
+                shell.get_stdout_or_raise_error(f"{delete_action_line} && {comment_out_action_line}")
+
+    def set_crashdump_option_in_fence_sbd(self):
+        '''
+        Set crashdump option in fence_sbd resource
+        '''
+        if not self.crashdump or self.crashdump not in ("set", "restore"):
+            return
+
+        shell = sh.cluster_shell()
+        configure_show_in_xml = xmlutil.text2elem(shell.get_stdout_or_raise_error('crm configure show xml'))
+        ra = cibquery.ResourceAgent("stonith", "", "fence_sbd")
+        res_id_list = cibquery.get_primitives_with_ra(configure_show_in_xml, ra)
+        if not res_id_list:
+            return
+
+        for res in res_id_list:
+            crashdump_value = cibquery.get_parameter_value(configure_show_in_xml, res, "crashdump")
+            cmd = ""
+            if utils.is_boolean_false(crashdump_value):
+                if self.crashdump == "set":
+                    logger.info("Set crashdump option for fence_sbd resource '%s'", res)
+                    cmd = f"crm resource param {res} set crashdump 1"
+            elif self.crashdump == "restore":
+                logger.info("Delete crashdump option for fence_sbd resource '%s'", res)
+                cmd = f"crm resource param {res} delete crashdump"
+            if cmd:
+                shell.get_stdout_or_raise_error(cmd)
 
 
 def cleanup_existing_sbd_resource():
