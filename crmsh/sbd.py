@@ -443,6 +443,7 @@ class CheckResult(Enum):
     SUCCESS = 0
     WARNING = 1
     ERROR = 2
+    __str__ = lambda self: self.name
 
 
 class SBDTimeoutChecker(SBDTimeout):
@@ -571,6 +572,7 @@ class SBDTimeoutChecker(SBDTimeout):
             if prereq_checks and any(check_res_list[i] != CheckResult.SUCCESS for i in prereq_checks):
                 continue
             check_res = check_method()
+            logger.debug("SBD Checking: %s, result: %s", name, check_res)
             check_res_list[index] = check_res
             if check_res == CheckResult.SUCCESS:
                 continue
@@ -580,6 +582,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 fix_method()
                 self._load_configurations_from_runtime()
                 check_res = check_method()
+                logger.debug("SBD Re-Checking after fixing: %s, result: %s", name, check_res)
                 if check_res == CheckResult.SUCCESS:
                     check_res_list[index] = check_res
                 else:
