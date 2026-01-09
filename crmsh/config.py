@@ -248,7 +248,6 @@ DEFAULTS = {
         'wait': opt_boolean('no'),
         'add_quotes': opt_boolean('yes'),
         'manage_children': opt_choice('ask', ('ask', 'never', 'always')),
-        'force': opt_boolean('no'),
         'debug': opt_boolean('no'),
         'ptest': opt_program('', ('ptest', 'crm_simulate')),
         'dotty': opt_program('', ('dotty',)),

@@ -28,6 +28,8 @@ import socket
 from string import Template
 from lxml import etree
 
+import crmsh.options
+
 from . import config, constants, ssh_key, sh, cibquery, user_of_host
 from . import utils
 from . import xmlutil
@@ -252,7 +254,7 @@ class Context(object):
 
             if not with_sbd_option and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
-            if ServiceManager().service_is_active(constants.SBD_SERVICE) and not config.core.force:
+            if ServiceManager().service_is_active(constants.SBD_SERVICE) and not crmsh.options.force:
                 utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
 
         elif with_sbd_option:
@@ -445,7 +447,7 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[
 
 
 def confirm(msg):
-    if config.core.force or (_context and _context.yes_to_all):
+    if crmsh.options.force or (_context and _context.yes_to_all):
         return True
     disable_completion()
     rc = logger_utils.confirm(msg)
@@ -2529,7 +2531,7 @@ def bootstrap_remove(context):
     """
     global _context
     _context = context
-    force_flag = config.core.force or _context.force
+    force_flag = crmsh.options.force or _context.force
 
     init()
 

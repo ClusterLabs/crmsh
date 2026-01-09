@@ -3108,7 +3108,7 @@ in that container, then the container is deleted as well. Any
 related constraints are removed as well.
 
 If the object is a started resource, it will not be deleted unless the
-+--force+ flag is passed to the command, or the +force+ option is set.
++--force+ flag is passed to the command.
 
 Usage:
 ...............

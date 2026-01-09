@@ -16,3 +16,4 @@ shadow = ""
 scriptdir = ""
 # set to true when completing non-interactively
 shell_completion = False
+force = False
