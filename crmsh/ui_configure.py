@@ -892,7 +892,7 @@ class CibConfig(command.UI):
         argl = list(args)
         arg_force = any((x in ('-f', '--force')) for x in argl)
         argl = [x for x in argl if x not in ('-f', '--force')]
-        if arg_force or config.core.force:
+        if arg_force or options.force:
             if self._stop_if_running(argl) > 0:
                 utils.wait4dc(what="Stopping %s" % (", ".join(argl)))
         cib_factory.ensure_cib_updated()
@@ -959,7 +959,7 @@ class CibConfig(command.UI):
 
         if rc1 and bool(verify_result):
             return cib_factory.commit(replace=replace)
-        if force or config.core.force:
+        if force or options.force:
             logger.info("commit forced")
             return cib_factory.commit(force=True, replace=replace)
         if utils.ask("Do you still want to commit?"):
@@ -985,10 +985,10 @@ class CibConfig(command.UI):
     @command.completers(compl.choice(['force']))
     def do_upgrade(self, context, force=None):
         "usage: upgrade <force>"
-        if (not force or force != "force") and not config.core.force:
+        if (not force or force != "force") and not options.force:
             context.fatal_error("'force' option is required")
         cib_factory.ensure_cib_updated()
-        if cib_factory.upgrade_validate_with(force or config.core.force):
+        if cib_factory.upgrade_validate_with(force or options.force):
             logger.info("Current schema version is %s", cib_factory.get_schema(refresh=True))
             return True
         return False

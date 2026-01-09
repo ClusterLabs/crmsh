@@ -281,10 +281,10 @@ def ask(msg, background_wait=True, cancel_option=False):
     block until the process is brought to foreground.
 
     Global Options:
-    * core.force: always return true without asking
+    * options.force: always return true without asking
     * options.ask_no: do not ask and return false
     """
-    if config.core.force:
+    if options.force:
         logger.info("%s [YES]", msg)
         return True
     if not can_ask(background_wait):

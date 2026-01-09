@@ -300,7 +300,7 @@ class CibObjectSet(object):
                 s = open(tmp).read()
                 if hash(s) != filehash:
                     ok = self.save(self._post_edit(s))
-                    if not ok and config.core.force:
+                    if not ok and options.force:
                         logger.error("Save failed and --force is set, aborting edit to avoid infinite loop")
                     elif not ok and ask("Edit or discard changes (yes to edit, no to discard)?"):
                         continue
@@ -4014,7 +4014,7 @@ class CibFactory(object):
                 # to remove doesn't exist. This should help scripted
                 # workflows without compromising an interactive
                 # use.
-                if not config.core.force:
+                if not options.force:
                     logger_utils.no_object_err(obj_id)
                     rc = False
                 continue

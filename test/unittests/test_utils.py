@@ -16,7 +16,7 @@ from unittest import mock
 from itertools import chain
 
 import crmsh.utils
-from crmsh import utils, config, tmpfiles, constants, parallax
+from crmsh import utils, config, tmpfiles, constants, options
 
 logging.basicConfig(level=logging.DEBUG)
 

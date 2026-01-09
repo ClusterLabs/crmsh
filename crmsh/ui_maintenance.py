@@ -3,10 +3,10 @@
 
 from . import command
 from . import completers as compl
-from . import config
 from .cibconfig import cib_factory
 from . import utils
 from . import xmlutil
+from . import options
 
 _compl_actions = compl.choice(['start', 'stop', 'monitor', 'meta-data', 'validate-all',
                                'promote', 'demote', 'notify', 'reload', 'migrate_from',
@@ -74,7 +74,7 @@ class Maintenance(command.UI):
             context.fatal_error("Resource not found: %s" % (resource))
         if not xmlutil.is_resource(obj.node):
             context.fatal_error("Not a resource: %s" % (resource))
-        if not config.core.force and not self._in_maintenance_mode(obj):
+        if not options.force and not self._in_maintenance_mode(obj):
             context.fatal_error("Not in maintenance mode.")
 
         if ssh is None:

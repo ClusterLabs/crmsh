@@ -29,10 +29,12 @@ import socket
 from string import Template
 from lxml import etree
 
-from . import config, constants, ssh_key, sh
+import crmsh.options
+
+from . import constants, ssh_key, sh
 from . import utils
 from . import xmlutil
-from .cibconfig import mkset_obj, cib_factory
+from .cibconfig import cib_factory
 from . import corosync
 from . import tmpfiles
 from . import lock
@@ -231,7 +233,7 @@ class Context(object):
         if self.stage == "sbd":
             if not self.sbd_devices and not self.diskless_sbd and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
-            if ServiceManager().service_is_active("sbd.service") and not config.core.force:
+            if ServiceManager().service_is_active("sbd.service") and not crmsh.options.force:
                 utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
             if self.cluster_is_running:
                 utils.check_all_nodes_reachable("setup SBD")
@@ -2753,7 +2755,7 @@ def bootstrap_remove(context):
     """
     global _context
     _context = context
-    force_flag = config.core.force or _context.force
+    force_flag = crmsh.options.force or _context.force
 
     init()
 

@@ -313,7 +313,7 @@ def parse_options():
     options.profile = opts.profile or options.profile
     options.regression_tests = opts.regression_tests or options.regression_tests
     config.color.style = opts.display or config.color.style
-    config.core.force = opts.force or config.core.force
+    options.force = opts.force
     if opts.filename:
         logger_utils.reset_lineno()
         options.input_file, options.batch, options.interactive = opts.filename, True, False
