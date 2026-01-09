@@ -567,8 +567,8 @@ Remove one or more nodes from the cluster.
 
 This command can remove the last node in the cluster,
 thus effectively removing the whole cluster. To remove
-the last node, pass --force argument to crm or set
-the config.core.force option.""",
+the last node, pass --force argument to crm.
+""",
                 usage="remove [options] [<node> ...]", add_help=False, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
         parser.add_argument("-q", "--quiet", help="Be quiet (don't describe what's happening, just do it)", action="store_true", dest="quiet")

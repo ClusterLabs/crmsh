@@ -5,9 +5,9 @@
 import time
 from . import command
 from . import completers as compl
-from . import config
 from . import utils
 from . import log
+from . import options
 
 
 logger = log.setup_logger(__name__)
@@ -60,7 +60,7 @@ class Site(command.UI):
         "usage: ticket {grant|revoke|standby|activate|show|time|delete} <ticket>"
 
         base_cmd = "crm_ticket"
-        if config.core.force:
+        if options.force:
             base_cmd += " --force"
 
         attr_cmd = _ticket_commands.get(subcmd)

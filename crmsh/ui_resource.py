@@ -401,7 +401,7 @@ class RscMgmt(command.UI):
         lifetime = None
 
         argl = list(args)
-        force = "force" in utils.fetch_opts(argl, ["force"]) or config.core.force
+        force = "force" in utils.fetch_opts(argl, ["force"]) or options.force
         if len(argl) >= 3:
             context.fatal_error(usage)
         if len(argl) == 2:  # must be <node> <lifetime>
@@ -423,7 +423,7 @@ class RscMgmt(command.UI):
             opts = "--node '%s'" % node
         if lifetime:
             opts = "%s --lifetime '%s'" % (opts, lifetime)
-        if force or config.core.force:
+        if force or options.force:
             opts = "%s --force" % opts
         rc = utils.ext_cmd(action_cmd % (rsc, opts))
         if rc == 0:

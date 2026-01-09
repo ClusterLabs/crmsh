@@ -12,7 +12,6 @@
 ; wait = no
 ; add_quotes = yes
 ; manage_children = ask
-; force = no
 ; debug = no
 ; ptest = ptest, crm_simulate
 ; dotty = dotty
