@@ -252,6 +252,7 @@ class SBD(command.UI):
             print()
             self._show_property()
 
+        print()
         return SBD.check_timeout_configurations()
 
     @staticmethod
@@ -262,11 +263,7 @@ class SBD(command.UI):
         except sbd.FixAborted as e:
             logger.error('%s', e)
             return False
-        if check_rc != sbd.CheckResult.SUCCESS:
-            issue_type = "error" if check_rc == sbd.CheckResult.ERROR else "warning"
-            logger.info('Please run "crm cluster health sbd --fix" to fix the above %s', issue_type)
-
-        return check_rc in (sbd.CheckResult.SUCCESS, sbd.CheckResult.WARNING)
+        return sbd.SBDTimeoutChecker.log_and_return(check_rc)
 
     def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str]:
         '''

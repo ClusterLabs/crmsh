@@ -2501,8 +2501,12 @@ def check_all_nodes_reachable(
 ) -> ReachabilitySummary:
 
     crm_mon_inst = xmlutil.CrmMonXmlParser(peer_node)
-    online_nodes = crm_mon_inst.get_node_list(online=True, node_type="member")
-    offline_nodes = crm_mon_inst.get_node_list(online=False)
+    if crm_mon_inst.not_connected():
+        nodes_to_check = list_cluster_nodes_except_me()
+        offline_nodes = list_cluster_nodes_except_me()
+    else:
+        nodes_to_check = crm_mon_inst.get_node_list(online=True, node_type="member")
+        offline_nodes = crm_mon_inst.get_node_list(online=False)
 
     dead_nodes = []
     for node in offline_nodes:
@@ -2516,7 +2520,7 @@ def check_all_nodes_reachable(
     reachable_nodes = []
     me = this_node()
 
-    for node in online_nodes:
+    for node in nodes_to_check:
         if node == me:
             continue
 
@@ -2822,13 +2826,28 @@ def is_2node_cluster_without_qdevice():
     return (current_num + qdevice_num) == 2
 
 
+def get_pcmk_delay_max_configured_value() -> int:
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm configure show related:stonith")
+    if not out:
+        return 0
+    pcmk_delay_max_v_list = re.findall(r"pcmk_delay_max=(\w+)", out)
+    if pcmk_delay_max_v_list:
+        return max([int(crm_msec(v)/1000) for v in pcmk_delay_max_v_list])
+    else:
+        return 0
+
+
 def get_pcmk_delay_max(two_node_without_qdevice=False):
     """
     Get value of pcmk_delay_max
     """
+    configured_value = get_pcmk_delay_max_configured_value()
+    if configured_value > 0:
+        return configured_value
     if ServiceManager().service_is_active("pacemaker.service") and two_node_without_qdevice:
         return constants.PCMK_DELAY_MAX
-    return 0
+    else:
+        return 0
 
 
 def get_property(name, property_type="crm_config", peer=None, get_default=True):
