@@ -102,9 +102,8 @@ class Template(command.UI):
         if not self.config_exists(name):
             return False
         if name == self.curr_conf:
-            if not force and not config.core.force and \
-                    not utils.ask("Do you really want to remove config %s which is in use?" %
-                                  self.curr_conf):
+            if not force and not options.force and \
+                not utils.ask("Config %s is currently in use. Do you really want to delete it?" % name):
                 return False
             else:
                 self.curr_conf = ''
