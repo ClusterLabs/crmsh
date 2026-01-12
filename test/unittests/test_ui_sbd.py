@@ -153,7 +153,7 @@ class TestSBD(unittest.TestCase):
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
     def test_configure_usage_disk_diskbased(self, mock_is_using_disk_based_sbd, mock_is_using_diskless_sbd):
         mock_is_using_disk_based_sbd.return_value = True
-        timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.TIMEOUT_TYPE_MINIMUMS])
+        timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.DISKBASED_TIMEOUT_TYPES])
         show_usage = f"crm sbd configure show [{'|'.join(ui_sbd.SBD.SHOW_TYPES)}]"
         expected = f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device>]\n"
         self.assertEqual(self.sbd_instance_diskbased.configure_usage, expected)
@@ -165,7 +165,7 @@ class TestSBD(unittest.TestCase):
     def test_configure_usage_disk_diskless(self, mock_is_using_disk_based_sbd, mock_is_using_diskless_sbd):
         mock_is_using_disk_based_sbd.return_value = False
         mock_is_using_diskless_sbd.return_value = True
-        timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.DISKLESS_TIMEOUT_TYPE_MINIMUMS])
+        timeout_usage_str = " ".join([f"[{t}-timeout=<integer>]" for t in ui_sbd.SBD.DISKLESS_TIMEOUT_TYPES])
         show_usage = f"crm sbd configure show [{'|'.join(ui_sbd.SBD.DISKLESS_SHOW_TYPES)}]"
         expected = f"Usage:\n{show_usage}\ncrm sbd configure {timeout_usage_str} [watchdog-device=<device>]\n"
         self.assertEqual(self.sbd_instance_diskless.configure_usage, expected)
@@ -308,9 +308,11 @@ class TestSBD(unittest.TestCase):
             self.sbd_instance_diskbased._parse_args(["watchdog-timeout=xxx"])
         self.assertEqual(str(e.exception), "Invalid timeout value: xxx")
 
+    @mock.patch('crmsh.sbd.SBDTimeout.get_timeout_minimum_value')
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.watchdog.Watchdog.get_watchdog_device')
-    def test_parse_args(self, mock_get_watchdog_device, mock_logger_debug):
+    def test_parse_args(self, mock_get_watchdog_device, mock_logger_debug, mock_get_timeout_minimum_value):
+        mock_get_timeout_minimum_value.return_value = 5
         mock_get_watchdog_device.return_value = "/dev/watchdog0"
         args = self.sbd_instance_diskbased._parse_args(["watchdog-timeout=10", "watchdog-device=/dev/watchdog0"])
         self.assertEqual(args, {"watchdog": 10, "watchdog-device": "/dev/watchdog0"})

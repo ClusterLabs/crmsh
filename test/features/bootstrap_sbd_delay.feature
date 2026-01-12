@@ -341,9 +341,9 @@ Feature: configure sbd delay start correctly
     # check sbd disk metadata
     When    Run "sbd -1 15 -4 16 -d /dev/sda1 create" on "hanode1"
     When    Try "crm sbd configur show disk_metadata" on "hanode1"
-    Then    Expected "It's recommended that msgwait(now 16) >= 2*watchdog timeout(now 15)" in stderr
+    Then    Expected "ERROR: It's recommended that SBD msgwait(now 16) >= 30" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's recommended that msgwait(now 16) >= 2*watchdog timeout(now 15)" in stderr
+    Then    Expected "ERROR: It's recommended that SBD msgwait(now 16) >= 30" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
     # check SBD_DELAY_START

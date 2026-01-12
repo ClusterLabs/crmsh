@@ -731,15 +731,8 @@ def start_pacemaker(node_list=[], enable_flag=False):
     Return success node list
     """
     # not _context means not in init or join process
-    if not _context and \
-            utils.package_is_installed("sbd") and \
-            ServiceManager().service_is_enabled(constants.SBD_SERVICE) and \
-            sbd.SBDTimeout.is_sbd_delay_start():
-        cmd1 = f"mkdir -p {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}"
-        cmd2 = f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"
-        cmd3 = "systemctl daemon-reload"
-        for cmd in [cmd1, cmd2, cmd3]:
-            parallax.parallax_call(node_list, cmd)
+    if not _context:
+        sbd.SBDManager.unset_sbd_delay_start(node_list)
 
     # To avoid possible JOIN flood in corosync
     service_manager = ServiceManager()
@@ -2075,14 +2068,9 @@ def adjust_priority_fencing_delay(is_2node_wo_qdevice):
     and the current cluster is 2 nodes without qdevice,
     set priority-fencing-delay=2*pcmk_delay_max
     """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm configure show related:stonith")
-    if not out:
-        return
-    pcmk_delay_max_v_list = re.findall(r"pcmk_delay_max=(\w+)", out)
-    if pcmk_delay_max_v_list:
-        max_value = max([int(utils.crm_msec(v)/1000) for v in pcmk_delay_max_v_list])
-    if pcmk_delay_max_v_list and is_2node_wo_qdevice:
-        utils.set_property("priority-fencing-delay", 2*max_value, conditional=True)
+    pcmk_delay_max_value = utils.get_pcmk_delay_max_configured_value()
+    if pcmk_delay_max_value > 0 and is_2node_wo_qdevice:
+        utils.set_property("priority-fencing-delay", 2*pcmk_delay_max_value, conditional=True)
     else:
         utils.set_property("priority-fencing-delay", 0)
 
@@ -2181,10 +2169,9 @@ def remove_node_from_cluster(node, dead_node=False):
         corosync.del_node(node_ip if node_ip is not None else node)
 
     corosync.configure_two_node(removing=True)
-    adjust_properties()
-
     logger.info("Propagating configuration changes across the remaining nodes")
     sync_path(corosync.conf())
+    adjust_properties()
 
     sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
 
@@ -2469,7 +2456,7 @@ def bootstrap_remove(context):
     try:
         utils.check_all_nodes_reachable("removing a node from the cluster")
     except utils.DeadNodeError as e:
-        if force_flag and cluster_node in e.dead_nodes:
+        if force_flag and cluster_node in e.summary.dead_nodes:
             remove_node_from_cluster(cluster_node, dead_node=True)
             bootstrap_finished()
             return
@@ -2768,19 +2755,19 @@ def adjust_pcmk_delay_max(is_2node_wo_qdevice):
             logger.info("Delete parameter 'pcmk_delay_max' for resource '{}'".format(res))
 
 
-def adjust_stonith_timeout(with_sbd: bool = False):
+def adjust_stonith_timeout():
     """
     Adjust stonith-timeout for sbd and other scenarios
     """
-    if ServiceManager().service_is_active(constants.SBD_SERVICE) or with_sbd:
-        sbd.SBDTimeoutChecker(quiet=True, fix=True, from_bootstrap=True).check_and_fix()
+    if ServiceManager().service_is_active(constants.SBD_SERVICE):
+        sbd.SBDTimeoutChecker(quiet=True, fix=True).check_and_fix()
     else:
         value = get_stonith_timeout_generally_expected()
         if value:
             utils.set_property("stonith-timeout", value, conditional=True)
 
 
-def adjust_properties(with_sbd: bool = False):
+def adjust_properties():
     """
     Adjust properties for the cluster:
     - pcmk_delay_max
@@ -2798,7 +2785,7 @@ def adjust_properties(with_sbd: bool = False):
         return
     is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
     adjust_pcmk_delay_max(is_2node_wo_qdevice)
-    adjust_stonith_timeout(with_sbd=with_sbd)
+    adjust_stonith_timeout()
     adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
 

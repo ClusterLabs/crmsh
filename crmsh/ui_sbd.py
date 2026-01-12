@@ -54,10 +54,10 @@ def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str
     show_types, timeout_types = (), ()
     if is_diskbased:
         show_types = SBD.SHOW_TYPES
-        timeout_types = tuple(SBD.TIMEOUT_TYPE_MINIMUMS.keys())
+        timeout_types = SBD.DISKBASED_TIMEOUT_TYPES
     elif is_diskless:
         show_types = SBD.DISKLESS_SHOW_TYPES
-        timeout_types = tuple(SBD.DISKLESS_TIMEOUT_TYPE_MINIMUMS.keys())
+        timeout_types = SBD.DISKLESS_TIMEOUT_TYPES
 
     if completed_list[1] == "show":
         if len(completed_list) == 3:
@@ -89,19 +89,10 @@ class SBD(command.UI):
     - sbd purge
     '''
     name = "sbd"
-    TIMEOUT_TYPE_MINIMUMS = {
-        # Type: Minimum value
-        "watchdog": 5,
-        "allocate": 2,
-        "loop": 1,
-        "msgwait": 10,
-        "crashdump-watchdog": 1
-    }
-    DISKLESS_TIMEOUT_TYPE_MINIMUMS = {
-        # Type: Minimum value
-        "watchdog": 5,
-        "crashdump-watchdog": 1
-    }
+    DISKBASED_TIMEOUT_TYPES = (
+        "watchdog", "allocate", "loop", "msgwait", "crashdump-watchdog"
+    )
+    DISKLESS_TIMEOUT_TYPES = ("watchdog", "crashdump-watchdog")
     SHOW_TYPES = ("disk_metadata", "sysconfig", "property")
     DISKLESS_SHOW_TYPES = ("sysconfig", "property")
     PCMK_ATTRS = (
@@ -178,9 +169,9 @@ class SBD(command.UI):
         '''
         timeout_types, show_types = (), ()
         if sbd.SBDUtils.is_using_disk_based_sbd():
-            timeout_types, show_types = tuple(self.TIMEOUT_TYPE_MINIMUMS.keys()), self.SHOW_TYPES
+            timeout_types, show_types = SBD.DISKBASED_TIMEOUT_TYPES, self.SHOW_TYPES
         elif sbd.SBDUtils.is_using_diskless_sbd():
-            timeout_types, show_types = tuple(self.DISKLESS_TIMEOUT_TYPE_MINIMUMS.keys()), self.DISKLESS_SHOW_TYPES
+            timeout_types, show_types = SBD.DISKLESS_TIMEOUT_TYPES, self.DISKLESS_SHOW_TYPES
         else:
             return ""
 
@@ -261,16 +252,28 @@ class SBD(command.UI):
             print()
             self._show_property()
 
-        check_rc = sbd.SBDTimeoutChecker().check_and_fix()
-        if check_rc != sbd.CheckResult.SUCCESS:
-            issue_type = "error" if check_rc == sbd.CheckResult.ERROR else "warning"
-            logger.info('Please run "crm cluster health sbd --fix" to fix the above %s', issue_type)
+        print()
+        return SBD.check_timeout_configurations()
+
+    @staticmethod
+    def check_timeout_configurations() -> bool:
+        check_rc = sbd.CheckResult.SUCCESS
+        try:
+            check_rc = sbd.SBDTimeoutChecker().check_and_fix()
+        except sbd.FixAborted as e:
+            logger.error('%s', e)
+            return False
+        return sbd.SBDTimeoutChecker.log_and_return(check_rc)
 
     def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str]:
         '''
         Parse arguments and verify them
         '''
         parameter_dict = {}
+        if self.device_list_from_config:
+            timeout_types = self.DISKBASED_TIMEOUT_TYPES
+        else:
+            timeout_types = self.DISKLESS_TIMEOUT_TYPES
 
         for arg in args:
             match = self.PARSE_RE.match(arg)
@@ -278,10 +281,13 @@ class SBD(command.UI):
                 raise self.SyntaxError(f"Invalid argument: {arg}")
             key, suffix, value = match.groups()
             # timeout related parameters
-            if key in self.TIMEOUT_TYPE_MINIMUMS and suffix and suffix == "timeout":
+            if key in timeout_types and suffix and suffix == "timeout":
                 if not value.isdigit():
                     raise self.SyntaxError(f"Invalid timeout value: {value}")
-                min_value = self.TIMEOUT_TYPE_MINIMUMS[key]
+                min_value = sbd.SBDTimeout.get_timeout_minimum_value(
+                    key,
+                    diskless=not bool(self.device_list_from_config)
+                )
                 if int(value) < min_value:
                     raise ValueError(f"The minimum value for {key}-timeout is {min_value}")
                 parameter_dict[key] = int(value)
@@ -417,7 +423,7 @@ class SBD(command.UI):
 
         timeout_dict = {
             k: v for k, v in parameter_dict.items()
-            if k in self.TIMEOUT_TYPE_MINIMUMS and k != "crashdump-watchdog"
+            if k in self.DISKBASED_TIMEOUT_TYPES and k != "crashdump-watchdog"
         }
         timeout_dict = self._adjust_timeout_dict(timeout_dict)
         # merge runtime timeout dict into parameter timeout dict without overwriting
@@ -432,7 +438,9 @@ class SBD(command.UI):
             result_dict = self._set_crashdump_in_sysconfig(crashdump_watchdog_timeout)
             update_dict = {**update_dict, **result_dict}
 
-        if timeout_dict == self.device_meta_dict_runtime and not update_dict:
+        device_list = sbd.SBDUtils.get_sbd_device_from_config()
+        devices_consistent = sbd.SBDUtils.check_devices_metadata_consistent(device_list, quiet=True)
+        if timeout_dict == self.device_meta_dict_runtime and not update_dict and devices_consistent:
             logger.info("No change in SBD configuration")
             return
 
@@ -575,8 +583,7 @@ class SBD(command.UI):
             if not args:
                 raise self.SyntaxError("No argument")
             if args[0] == "show":
-                self._configure_show(args)
-                return True
+                return self._configure_show(args)
             for service in (constants.PCMK_SERVICE, constants.SBD_SERVICE):
                 if not self._service_is_active(service):
                     return False
@@ -735,4 +742,4 @@ done
         self._print_sbd_cgroup_status()
         self._print_watchdog_info()
         self._print_sbd_agent_status()
-        return True
+        return SBD.check_timeout_configurations()

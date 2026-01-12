@@ -839,6 +839,7 @@ to get the geo cluster configuration.""",
                         logger.error("hawk2: passwordless ssh authentication: FAIL.")
                         logger.warning('Please run "crm cluster health hawk2 --fix"')
                         return False
+
             case 'sbd':
                 fix = parsed_args.fix
                 try:
@@ -846,16 +847,12 @@ to get the geo cluster configuration.""",
                 except sbd.FixFailure as e:
                     logger.error('%s', e)
                     return False
-                if result == sbd.CheckResult.ERROR:
-                    if not fix:
-                        logger.info('Please run "crm cluster health sbd --fix" to fix the above error')
+                except sbd.FixAborted as e:
+                    logger.error('%s', e)
                     logger.error('SBD: Check sbd timeout configuration: FAIL.')
                     return False
-                else:
-                    if result == sbd.CheckResult.WARNING and not fix:
-                        logger.info('Please run "crm cluster health sbd --fix" to fix the above warning')
-                    logger.info('SBD: Check sbd timeout configuration: OK.')
-                    return True
+                return sbd.SBDTimeoutChecker.log_and_return(result, fix)
+
             case 'sles16':
                 try:
                     if parsed_args.fix:
