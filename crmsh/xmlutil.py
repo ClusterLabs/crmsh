@@ -1516,6 +1516,8 @@ class CrmMonXmlParser(object):
     """
     Class to parse xml output of crm_mon
     """
+    NOT_CONNECTED_CODE = 102
+
     def __init__(self, peer=None):
         """
         Init function
@@ -1530,6 +1532,10 @@ class CrmMonXmlParser(object):
         """
         _, output, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(self.peer, constants.CRM_MON_XML_OUTPUT)
         return text2elem(output) if output else None
+
+    def not_connected(self):
+        xpath = f"//status[@code='{self.NOT_CONNECTED_CODE}']"
+        return bool(self.xml_elem.xpath(xpath))
 
     def with_quorum(self):
         """

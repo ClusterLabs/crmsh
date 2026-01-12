@@ -33,6 +33,7 @@ from lxml import etree
 from packaging import version
 from enum import IntFlag, auto
 from functools import cache
+from dataclasses import dataclass
 
 import crmsh.parallax
 import crmsh.user_of_host
@@ -1852,16 +1853,22 @@ def remote_diff_slurp(nodes, filename):
     return crmsh.parallax.parallax_slurp(nodes, tmpdir, filename)
 
 
-def remote_diff_this(local_path, nodes, this_node):
+def remote_diff_this(local_path, nodes, this_node, ignore_pattern="", quiet=False):
     by_host = remote_diff_slurp(nodes, local_path)
+    return_output = ""
+    ignore_arg = f" -I '{ignore_pattern}'" if ignore_pattern else ""
+    shell = sh.ShellUtils()
     for host, result in by_host:
         if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
         path = result
-        _, output = ShellUtils().get_stdout("diff -U 0 -d -b --label %s --label %s %s %s" %
-                                            (host, this_node, path, local_path))
-        page_string(output)
-    return output
+        cmd = f"diff{ignore_arg} -U 0 -d -b --label {host} --label {this_node} {path} {local_path}"
+        _, output = shell.get_stdout(cmd)
+        if output:
+            if not quiet:
+                page_string(output)
+            return_output += f"{output}\n"
+    return return_output
 
 
 def remote_diff(local_path, nodes):
@@ -2467,43 +2474,53 @@ def get_quorum_votes_dict(remote=None):
     return dict(re.findall(r"(Expected|Total) votes:\s+(\d+)", out))
 
 
+@dataclass
+class ReachabilitySummary:
+    dead_nodes: list[str] # offline and unreachable nodes
+    nodes_unreachable: list[str]
+    nodes_need_password: list[str]
+    reachable_nodes: list[str]
+
+
 class DeadNodeError(ValueError):
-    def __init__(self, msg: str, dead_nodes=None):
+    def __init__(self, msg: str, summary: ReachabilitySummary = None):
         super().__init__(msg)
-        self.dead_nodes = dead_nodes or []
+        self.summary = summary
 
 
 class UnreachableNodeError(ValueError):
-    def __init__(self, msg: str, nodes_unreachable=None):
+    def __init__(self, msg: str, summary: ReachabilitySummary = None):
         super().__init__(msg)
-        self.nodes_unreachable = nodes_unreachable or []
+        self.summary = summary
 
 
-def check_all_nodes_reachable(action_to_do: str, peer_node: str = None, check_passwd: bool = True):
-    """
-    Check if all cluster nodes are reachable
-    """
+def check_all_nodes_reachable(
+    action_to_do: str,
+    peer_node: str = None,
+    check_passwd: bool = True
+) -> ReachabilitySummary:
+
     crm_mon_inst = xmlutil.CrmMonXmlParser(peer_node)
-    online_nodes = crm_mon_inst.get_node_list(online=True, node_type="member")
-    offline_nodes = crm_mon_inst.get_node_list(online=False)
+    if crm_mon_inst.not_connected():
+        nodes_to_check = list_cluster_nodes_except_me()
+        offline_nodes = list_cluster_nodes_except_me()
+    else:
+        nodes_to_check = crm_mon_inst.get_node_list(online=True, node_type="member")
+        offline_nodes = crm_mon_inst.get_node_list(online=False)
+
     dead_nodes = []
     for node in offline_nodes:
         try:
             ssh_port_reachable_check(node)
         except ValueError:
             dead_nodes.append(node)
-    if dead_nodes:
-        # dead nodes bring risk to cluster, either bring them online or remove them
-        msg = f"""There are offline nodes also unreachable: {', '.join(dead_nodes)}.
-Please bring them online before {action_to_do}.
-Or use `crm cluster remove <offline_node> --force` to remove the offline node.
-        """
-        raise DeadNodeError(msg, dead_nodes)
 
     nodes_unreachable = []
     nodes_need_password = []
+    reachable_nodes = []
     me = this_node()
-    for node in online_nodes:
+
+    for node in nodes_to_check:
         if node == me:
             continue
 
@@ -2517,18 +2534,38 @@ Or use `crm cluster remove <offline_node> --force` to remove the offline node.
             local_user, remote_user = crmsh.user_of_host.UserOfHost.instance().user_pair_for_ssh(node)
             if check_ssh_passwd_need(local_user, remote_user, node):
                 nodes_need_password.append(node)
+                continue
 
+        reachable_nodes.append(node)
+
+    summary = ReachabilitySummary(
+        dead_nodes=dead_nodes,
+        nodes_unreachable=nodes_unreachable,
+        nodes_need_password=nodes_need_password,
+        reachable_nodes=reachable_nodes
+    )
+
+    if dead_nodes:
+        msg = (
+            f"There are offline nodes also unreachable: {', '.join(dead_nodes)}.\n"
+            f"Please bring them online before {action_to_do}.\n"
+            f"Or use `crm cluster remove <offline_node> --force` to remove the offline node."
+        )
+        raise DeadNodeError(msg, summary)
     if nodes_unreachable:
-        msg = f"""There are nodes whose SSH ports are unreachable: {', '.join(nodes_unreachable)}.
-Please check the network connectivity before {action_to_do}.
-        """
-        raise UnreachableNodeError(msg, nodes_unreachable)
-
+        msg = (
+            f"There are nodes whose SSH ports are unreachable: {', '.join(nodes_unreachable)}.\n"
+            f"Please check the network connectivity before {action_to_do}."
+        )
+        raise UnreachableNodeError(msg, summary)
     if nodes_need_password:
-        msg = f"""There are nodes which requires a password for SSH access: {', '.join(nodes_need_password)}.
-Please setup passwordless SSH access before {action_to_do}.
-        """
-        raise UnreachableNodeError(msg, nodes_need_password)
+        msg = (
+            f"There are nodes which requires a password for SSH access: {', '.join(nodes_need_password)}.\n"
+            f"Please setup passwordless SSH access before {action_to_do}."
+        )
+        raise UnreachableNodeError(msg, summary)
+
+    return summary
 
 
 def re_split_string(reg, string):
@@ -2789,13 +2826,28 @@ def is_2node_cluster_without_qdevice():
     return (current_num + qdevice_num) == 2
 
 
+def get_pcmk_delay_max_configured_value() -> int:
+    out = sh.cluster_shell().get_stdout_or_raise_error("crm configure show related:stonith")
+    if not out:
+        return 0
+    pcmk_delay_max_v_list = re.findall(r"pcmk_delay_max=(\w+)", out)
+    if pcmk_delay_max_v_list:
+        return max([int(crm_msec(v)/1000) for v in pcmk_delay_max_v_list])
+    else:
+        return 0
+
+
 def get_pcmk_delay_max(two_node_without_qdevice=False):
     """
     Get value of pcmk_delay_max
     """
+    configured_value = get_pcmk_delay_max_configured_value()
+    if configured_value > 0:
+        return configured_value
     if ServiceManager().service_is_active("pacemaker.service") and two_node_without_qdevice:
         return constants.PCMK_DELAY_MAX
-    return 0
+    else:
+        return 0
 
 
 def get_property(name, property_type="crm_config", peer=None, get_default=True):

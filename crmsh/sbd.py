@@ -2,6 +2,7 @@ import os
 import re
 import typing
 import shutil
+import time
 from enum import Enum
 from . import utils, sh
 from . import bootstrap
@@ -10,6 +11,7 @@ from . import constants
 from . import corosync
 from . import xmlutil
 from . import watchdog
+from . import cibquery
 from .service_manager import ServiceManager
 from .sh import ShellUtils
 
@@ -136,7 +138,7 @@ class SBDUtils:
                 not bootstrap.confirm(f"{dev} has already been initialized by SBD - overwrite?")
 
     @staticmethod
-    def check_devices_metadata_consistent(dev_list) -> bool:
+    def check_devices_metadata_consistent(dev_list, quiet=False) -> bool:
         '''
         Check if all devices have the same metadata
         '''
@@ -147,7 +149,8 @@ class SBDUtils:
         for dev in dev_list[1:]:
             this_dev_metadata = SBDUtils.get_sbd_device_metadata(dev, timeout_only=True)
             if this_dev_metadata != first_dev_metadata:
-                logger.warning(f"Device {dev} doesn't have the same metadata as {dev_list[0]}")
+                if not quiet:
+                    logger.error("Device %s doesn't have the same metadata as %s", dev, dev_list[0])
                 consistent = False
         return consistent
 
@@ -173,6 +176,15 @@ class SBDUtils:
             raise utils.TerminateSubCommand
 
         return overwrite_list, no_overwrite_list
+
+    @staticmethod
+    def diskbased_sbd_configured() -> bool:
+        return bool(SBDUtils.get_sbd_device_from_config())
+
+    @staticmethod
+    def diskless_sbd_configured() -> bool:
+        value = utils.get_property("stonith-watchdog-timeout")
+        return value and utils.crm_msec(value) > 0
 
 
 class SBDTimeout(object):
@@ -244,12 +256,18 @@ class SBDTimeout(object):
             qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
             if self.sbd_watchdog_timeout <= qdevice_sync_timeout:
                 watchdog_timeout_with_qdevice = qdevice_sync_timeout + self.QDEVICE_SYNC_TIMEOUT_MARGIN
-                logger.warning("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(watchdog_timeout_with_qdevice, self.sbd_watchdog_timeout))
+                logger.warning(
+                    "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
+                    watchdog_timeout_with_qdevice, self.sbd_watchdog_timeout
+                )
                 self.sbd_watchdog_timeout = watchdog_timeout_with_qdevice
         # add sbd and qdevice together from beginning
         elif self.context.qdevice_inst:
             if self.sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
-                logger.warning("sbd_watchdog_timeout is set to {} for qdevice, it was {}".format(self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self.sbd_watchdog_timeout))
+                logger.warning(
+                    "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
+                    self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self.sbd_watchdog_timeout
+                )
                 self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
 
     @staticmethod
@@ -304,9 +322,11 @@ class SBDTimeout(object):
         instance = cls()
         instance._load_configurations_from_runtime()
         expected_watchdog_timeout = max(SBDTimeout.get_sbd_watchdog_timeout_expected(), instance.sbd_watchdog_timeout)
-        expected_msgwait = max(2 * expected_watchdog_timeout, instance.sbd_msgwait)
         if instance.crashdump_watchdog_timeout:
-            expected_msgwait += instance.crashdump_watchdog_timeout
+            msgwait_from_formula = 2 * expected_watchdog_timeout + instance.crashdump_watchdog_timeout
+        else:
+            msgwait_from_formula = 2 * expected_watchdog_timeout
+        expected_msgwait = max(msgwait_from_formula, instance.sbd_msgwait)
 
         return expected_watchdog_timeout, expected_msgwait
 
@@ -380,8 +400,8 @@ class SBDTimeout(object):
         return res and res != "no"
 
     @staticmethod
-    def get_sbd_systemd_start_timeout() -> int:
-        out = sh.cluster_shell().get_stdout_or_raise_error(SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD)
+    def get_sbd_systemd_start_timeout(host=None) -> int:
+        out = sh.cluster_shell().get_stdout_or_raise_error(SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD, host)
         return utils.get_systemd_timeout_start_in_sec(out)
 
     @staticmethod
@@ -404,8 +424,28 @@ class SBDTimeout(object):
             return False
         return True
 
+    @staticmethod
+    def get_timeout_minimum_value(timeout_type: str, diskless: bool = False) -> int:
+        match timeout_type:
+            case "allocate":
+                return 2
+            case "loop":
+                return 1
+            case "crashdump-watchdog":
+                return 1
+            case "watchdog":
+                return SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=diskless)
+            case "msgwait":
+                return 2 * SBDTimeout.get_sbd_watchdog_timeout_expected()
+            case _:
+                raise ValueError(f"Unknown timeout type: {timeout_type}")
 
-class FixFailure(Exception):
+
+class FixFailure(ValueError):
+    pass
+
+
+class FixAborted(ValueError):
     pass
 
 
@@ -413,87 +453,209 @@ class CheckResult(Enum):
     SUCCESS = 0
     WARNING = 1
     ERROR = 2
+    __str__ = lambda self: self.name
 
 
 class SBDTimeoutChecker(SBDTimeout):
 
-    def __init__(self, quiet=False, fix=False, from_bootstrap=False):
+    def __init__(self, quiet=False, fix=False):
         super().__init__()
         self.quiet = quiet
         self.fix = fix
-        self.from_bootstrap = from_bootstrap
+        self.peer_node_list = []
+        self.service_disabled_node_list = []
+
+    @staticmethod
+    def _return_helper(check_res_list: list[CheckResult]) -> CheckResult:
+        if all(res == CheckResult.SUCCESS for res in check_res_list):
+            return CheckResult.SUCCESS
+        elif any(res == CheckResult.ERROR for res in check_res_list):
+            return CheckResult.ERROR
+        else:
+            return CheckResult.WARNING
+
+    @staticmethod
+    def log_and_return(check_res: CheckResult, fix_flag: bool = False) -> bool:
+        if check_res == CheckResult.SUCCESS:
+            logger.info('SBD: Check sbd timeout configuration: OK.')
+            return True
+        cmd = "crm cluster health sbd --fix"
+        issue_type = "error" if check_res == CheckResult.ERROR else "warning"
+        if not fix_flag:
+            logger.info(f'Please run "{cmd}" to fix the above {issue_type} on the running cluster')
+        if check_res == CheckResult.ERROR:
+            logger.error("SBD: Check sbd timeout configuration: FAIL.")
+            return False
+        elif check_res == CheckResult.WARNING:
+            logger.info('SBD: Check sbd timeout configuration: OK.')
+            return True
 
     def check_and_fix(self) -> CheckResult:
         checks_and_fixes = [
-            # issue name, check method, fix method
-            ("SBD disk metadata",
-             self._check_sbd_disk_metadata, self._fix_sbd_disk_metadata),
-            ("SBD_WATCHDOG_TIMEOUT",
-             self._check_sbd_watchdog_timeout, self._fix_sbd_watchdog_timeout),
-            ("SBD_DELAY_START",
-             self._check_sbd_delay_start, self._fix_sbd_delay_start),
-            ("systemd start timeout for sbd.service",
-             self._check_sbd_systemd_start_timeout, self._fix_sbd_systemd_start_timeout),
-            ("stonith-watchdog-timeout property",
-             self._check_stonith_watchdog_timeout, self._fix_stonith_watchdog_timeout),
-            ("stonith-timeout property",
-             self._check_stonith_timeout, self._fix_stonith_timeout)
+            # issue name, check method, fix method, SSH required, prerequisites checks
+            (
+                "SBD disk metadata",
+                self._check_sbd_disk_metadata,
+                self._fix_sbd_disk_metadata,
+                True,
+                []
+            ),
+
+            (
+                "SBD devices metadata consistency",
+                self._check_sbd_device_metadata_consistency,
+                self._fix_sbd_device_metadata_consistency,
+                True,
+                [0]
+            ),
+
+            (
+                "SBD_WATCHDOG_TIMEOUT",
+                self._check_sbd_watchdog_timeout,
+                self._fix_sbd_watchdog_timeout,
+                True,
+                []
+            ),
+
+            (
+                "fence_sbd agent",
+                self._check_fence_sbd,
+                self._fix_fence_sbd,
+                False,
+                []
+            ),
+
+            (
+                "SBD_DELAY_START",
+                self._check_sbd_delay_start,
+                self._fix_sbd_delay_start,
+                True,
+                [0, 2, 3]
+            ),
+
+            (
+                "systemd start timeout for sbd.service",
+                self._check_sbd_systemd_start_timeout,
+                self._fix_sbd_systemd_start_timeout,
+                True,
+                [4]
+            ),
+
+            (
+                "stonith-watchdog-timeout property",
+                self._check_stonith_watchdog_timeout,
+                self._fix_stonith_watchdog_timeout,
+                False,
+                [2]
+            ),
+
+            (
+                "stonith-timeout property",
+                self._check_stonith_timeout,
+                self._fix_stonith_timeout,
+                False,
+                [0, 2]
+            ),
+
+            (
+                "unset SBD_DELAY_START in drop-in file",
+                self._check_sbd_delay_start_unset_dropin,
+                self._fix_sbd_delay_start_unset_dropin,
+                True,
+                []
+            ),
+
+            (
+                "sbd.service should be enabled",
+                self._check_sbd_service_is_enabled,
+                self._fix_sbd_service_is_enabled,
+                True,
+                []
+            ),
         ]
 
-        if not self.from_bootstrap and not ServiceManager().service_is_active(constants.SBD_SERVICE):
-            if not self.quiet:
-                logger.warning("%s is not active, skip SBD timeout checks", constants.SBD_SERVICE)
-            raise utils.TerminateSubCommand
+        if not ServiceManager().service_is_active(constants.SBD_SERVICE):
+            if self.fix:
+                raise FixAborted("%s is not active, skip fixing SBD timeout issues" % constants.SBD_SERVICE)
+            elif not SBDUtils.diskbased_sbd_configured() and not SBDUtils.diskless_sbd_configured():
+                raise FixAborted("Neither disk-based nor disk-less SBD is configured, skip checking SBD timeout issues")
 
-        if not self._check_config_consistency():
-            raise utils.TerminateSubCommand
+        all_nodes_reachable = True
+        self.peer_node_list = utils.list_cluster_nodes_except_me()
+        error_msg = ""
+        try:
+            utils.check_all_nodes_reachable("check and fix SBD timeout configurations")
+        except (utils.DeadNodeError, utils.UnreachableNodeError) as e:
+            self.peer_node_list = e.summary.reachable_nodes
+            all_nodes_reachable = False
+            error_msg = str(e)
+
+        if not self._check_config_consistency(error_msg):
+            raise FixAborted("All other checks aborted due to inconsistent configurations")
 
         self._load_configurations_from_runtime()
 
-        check_res = CheckResult.SUCCESS
-        for name, check_method, fix_method in checks_and_fixes:
+        check_res_list = [CheckResult.SUCCESS for _ in range(len(checks_and_fixes))]
+        for index, (name, check_method, fix_method, ssh_required, prereq_checks) in enumerate(checks_and_fixes):
+            if prereq_checks and any(check_res_list[i] != CheckResult.SUCCESS for i in prereq_checks):
+                continue
             check_res = check_method()
+            logger.debug("SBD Checking: %s, result: %s", name, check_res)
+            check_res_list[index] = check_res
             if check_res == CheckResult.SUCCESS:
                 continue
+            elif ssh_required and not all_nodes_reachable:
+                raise FixAborted(f"Cannot fix {name} issue: {error_msg}")
             elif self.fix:
                 fix_method()
                 self._load_configurations_from_runtime()
                 check_res = check_method()
-                if check_res != CheckResult.SUCCESS:
+                logger.debug("SBD Re-Checking after fixing: %s, result: %s", name, check_res)
+                if check_res == CheckResult.SUCCESS:
+                    check_res_list[index] = check_res
+                else:
                     raise FixFailure(f"Failed to fix {name} issue")
-            else:
-                return check_res
-        return check_res
 
-    def _check_config_consistency(self) -> bool:
+        return SBDTimeoutChecker._return_helper(check_res_list)
+
+    def _check_config_consistency(self, error_msg: str = "") -> bool:
         consistent = True
-        # Don't check consistency during bootstrap process
-        if self.from_bootstrap:
+
+        if not self.peer_node_list:
+            if error_msg:
+                logger.warning("Skipping configuration consistency check: %s", error_msg)
             return consistent
 
-        this_node = utils.this_node()
-        other_nodes = utils.list_cluster_nodes_except_me()
-        if not other_nodes:
-            return consistent
+        # ignore comments and blank lines
+        ignore_pattern = "^#\\|^[[:space:]]*$"
+        me = utils.this_node()
+        for target_file in (corosync.conf(), SBDManager.SYSCONFIG_SBD):
+            diff_output = utils.remote_diff_this(
+                target_file,
+                self.peer_node_list,
+                me,
+                ignore_pattern=ignore_pattern,
+                quiet=True
+            )
+            if diff_output:
+                logger.error("%s is not consistent across cluster nodes", target_file)
+                print(diff_output)
+                consistent = False
 
-        diff_output = utils.remote_diff_this(corosync.conf(), other_nodes, this_node)
-        if diff_output:
-            logger.error("corosync.conf is not consistent across cluster nodes")
-            consistent = False
-
-        diff_output = utils.remote_diff_this(SBDManager.SYSCONFIG_SBD, other_nodes, this_node)
-        if diff_output:
-            logger.error("%s is not consistent across cluster nodes", SBDManager.SYSCONFIG_SBD)
-            consistent = False
-
-        configured_devices = SBDUtils.get_sbd_device_from_config()
-        if not SBDUtils.check_devices_metadata_consistent(configured_devices):
-            logger.error("SBD device metadata is not consistent across cluster nodes")
-            consistent = False
-
-        if not consistent:
-            logger.info("Please ensure the configurations are consistent across all cluster nodes")
+        if not consistent and error_msg:
+            logger.warning(error_msg)
         return consistent
+
+    def _check_sbd_device_metadata_consistency(self) -> CheckResult:
+        configured_devices = SBDUtils.get_sbd_device_from_config()
+        if not SBDUtils.check_devices_metadata_consistent(configured_devices, self.quiet):
+            return CheckResult.ERROR
+        return CheckResult.SUCCESS
+
+    def _fix_sbd_device_metadata_consistency(self) -> None:
+        first_dev = SBDUtils.get_sbd_device_from_config()[0]
+        logger.info("Syncing sbd metadata from %s to other devices", first_dev)
+        self._fix_sbd_disk_metadata()
 
     def _check_sbd_disk_metadata(self) -> CheckResult:
         '''
@@ -512,6 +674,8 @@ class SBDTimeoutChecker(SBDTimeout):
         return CheckResult.SUCCESS
 
     def _fix_sbd_disk_metadata(self) -> None:
+        if self.sbd_msgwait_expected is None or self.sbd_watchdog_timeout_expected is None:
+            self.sbd_watchdog_timeout_expected, self.sbd_msgwait_expected = SBDTimeout.get_sbd_metadata_expected()
         logger.info("Adjusting sbd msgwait to %d, watchdog timeout to %d", self.sbd_msgwait_expected, self.sbd_watchdog_timeout_expected)
         cmd = f"crm sbd configure msgwait-timeout={self.sbd_msgwait_expected} watchdog-timeout={self.sbd_watchdog_timeout_expected}"
         output = sh.cluster_shell().get_stdout_or_raise_error(cmd)
@@ -522,13 +686,12 @@ class SBDTimeoutChecker(SBDTimeout):
         '''
         For diskless SBD, check if SBD_WATCHDOG_TIMEOUT is below expected value
         '''
-        if self.disk_based:
-            return CheckResult.SUCCESS
-        self.sbd_watchdog_timeout_expected = SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=True)
-        if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
-            if not self.quiet:
-                logger.error("It's recommended that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
-            return CheckResult.ERROR
+        if not self.disk_based:
+            self.sbd_watchdog_timeout_expected = SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=True)
+            if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
+                if not self.quiet:
+                    logger.error("It's recommended that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
+                return CheckResult.ERROR
         return CheckResult.SUCCESS
 
     def _fix_sbd_watchdog_timeout(self):
@@ -550,26 +713,39 @@ class SBDTimeoutChecker(SBDTimeout):
                     logger.warning("It's recommended that SBD_DELAY_START is set to %s, now is %s",
                                    expected_value, config_value)
                 return CheckResult.WARNING
+        else:
+            if not self.quiet:
+                logger.error("It's recommended that SBD_DELAY_START is set to %s, now is %s",
+                            expected_value, config_value)
+            return CheckResult.ERROR
 
     def _fix_sbd_delay_start(self):
         advised_value = str(self.sbd_delay_start_value_expected)
         SBDManager.update_sbd_configuration({"SBD_DELAY_START": advised_value})
 
     def _check_sbd_systemd_start_timeout(self) -> CheckResult:
-        actual_start_timeout = SBDTimeout.get_sbd_systemd_start_timeout()
         expected_start_timeout = self.sbd_systemd_start_timeout_expected
-        if actual_start_timeout == expected_start_timeout:
-            return CheckResult.SUCCESS
-        elif actual_start_timeout < expected_start_timeout:
-            if not self.quiet:
-                logger.error("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds",
-                             expected_start_timeout, actual_start_timeout)
-            return CheckResult.ERROR
-        else:
-            if not self.quiet:
-                logger.warning("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds",
-                               expected_start_timeout, actual_start_timeout)
-            return CheckResult.WARNING
+        check_res_list = []
+        for node in [utils.this_node()] + self.peer_node_list:
+            actual_start_timeout = SBDTimeout.get_sbd_systemd_start_timeout(node)
+            if actual_start_timeout == expected_start_timeout:
+                check_res_list.append(CheckResult.SUCCESS)
+            elif actual_start_timeout < expected_start_timeout:
+                if not self.quiet:
+                    logger.error(
+                        "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
+                        expected_start_timeout, actual_start_timeout, node
+                    )
+                check_res_list.append(CheckResult.ERROR)
+            else:
+                if not self.quiet:
+                    logger.warning(
+                        "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
+                        expected_start_timeout, actual_start_timeout, node
+                    )
+                check_res_list.append(CheckResult.WARNING)
+
+        return SBDTimeoutChecker._return_helper(check_res_list)
 
     def _fix_sbd_systemd_start_timeout(self):
         logger.info("Adjusting systemd start timeout for sbd.service to %ds", self.sbd_systemd_start_timeout_expected)
@@ -580,22 +756,28 @@ class SBDTimeoutChecker(SBDTimeout):
         utils.cluster_run_cmd("systemctl daemon-reload")
 
     def _check_stonith_watchdog_timeout(self) -> CheckResult:
-        value = utils.get_property("stonith-watchdog-timeout", get_default=False)
+        value = utils.get_property("stonith-watchdog-timeout")
+        value = int(utils.crm_msec(value)/1000)
         if self.disk_based:
-            if value:
+            if value > 0:
                 if not self.quiet:
                     logger.warning("It's recommended that stonith-watchdog-timeout is not set when using disk-based SBD")
                 return CheckResult.WARNING
         else:
-            if not value or int(value) < self.stonith_watchdog_timeout:
+            if value == 0:
                 if not self.quiet:
-                    logger.error("It's recommended that stonith-watchdog-timeout is set to %d, now is %s",
-                                self.stonith_watchdog_timeout, value if value else "not set")
+                    logger.error("It's recommended that stonith-watchdog-timeout is set to %d, now is not set",
+                                self.stonith_watchdog_timeout)
                 return CheckResult.ERROR
-            elif int(value) > self.stonith_watchdog_timeout:
+            if value < self.stonith_watchdog_timeout:
+                if not self.quiet:
+                    logger.error("It's recommended that stonith-watchdog-timeout is set to %d, now is %d",
+                                 self.stonith_watchdog_timeout, value)
+                return CheckResult.ERROR
+            elif value > self.stonith_watchdog_timeout:
                 if not self.quiet:
                     logger.warning("It's recommended that stonith-watchdog-timeout is set to %d, now is %d",
-                                   self.stonith_watchdog_timeout, int(value))
+                                   self.stonith_watchdog_timeout, value)
                 return CheckResult.WARNING
         return CheckResult.SUCCESS
 
@@ -609,16 +791,18 @@ class SBDTimeoutChecker(SBDTimeout):
 
     def _check_stonith_timeout(self) -> CheckResult:
         expected_value = self.get_stonith_timeout_expected()
-        value = utils.get_property("stonith-timeout", get_default=False)
-        if not value or int(value) < expected_value:
+        value = utils.get_property("stonith-timeout")
+        # will get default value from pacemaker metadata if not set
+        value = int(utils.crm_msec(value)/1000)
+        if value < expected_value:
             if not self.quiet:
-                logger.error("It's recommended that stonith-timeout is set to %d, now is %s",
-                             expected_value, value if value else "not set")
+                logger.error("It's recommended that stonith-timeout is set to %d, now is %d",
+                             expected_value, value)
             return CheckResult.ERROR
-        elif int(value) > expected_value:
+        elif value > expected_value:
             if not self.quiet:
                 logger.warning("It's recommended that stonith-timeout is set to %d, now is %d",
-                               expected_value, int(value))
+                               expected_value, value)
             return CheckResult.WARNING
         return CheckResult.SUCCESS
 
@@ -626,6 +810,90 @@ class SBDTimeoutChecker(SBDTimeout):
         expected_value = self.get_stonith_timeout_expected()
         logger.info("Adjusting stonith-timeout to %d", expected_value)
         utils.set_property("stonith-timeout", expected_value)
+
+    def _check_sbd_delay_start_unset_dropin(self) -> CheckResult:
+        if not SBDTimeout.is_sbd_delay_start():
+            return CheckResult.SUCCESS
+
+        shell = sh.cluster_shell()
+        check_res_list = []
+        for node in [utils.this_node()] + self.peer_node_list:
+            cmd = f"test -f {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"
+            rc, _ = shell.get_rc_and_error(node, None, cmd)
+            if rc == 0:
+                check_res_list.append(CheckResult.SUCCESS)
+            else:
+                if not self.quiet:
+                    logger.warning("Runtime drop-in file %s to unset SBD_DELAY_START is missing on node %s",
+                                   SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE, node)
+                check_res_list.append(CheckResult.WARNING)
+
+        return SBDTimeoutChecker._return_helper(check_res_list)
+
+    def _fix_sbd_delay_start_unset_dropin(self):
+        logger.info("Createing runtime drop-in file %s to unset SBD_DELAY_START",
+                    SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE)
+        SBDManager.unset_sbd_delay_start()
+
+    def _check_sbd_service_is_enabled(self) -> CheckResult:
+        service_manager = ServiceManager()
+        check_res_list = []
+        for node in [utils.this_node()] + self.peer_node_list:
+            if service_manager.service_is_enabled(constants.SBD_SERVICE, node):
+                check_res_list.append(CheckResult.SUCCESS)
+            else:
+                if not self.quiet:
+                    logger.error("%s is not enabled on node %s", constants.SBD_SERVICE, node)
+                self.service_disabled_node_list.append(node)
+                check_res_list.append(CheckResult.ERROR)
+        return SBDTimeoutChecker._return_helper(check_res_list)
+
+    def _fix_sbd_service_is_enabled(self):
+        service_manager = ServiceManager()
+        for node in self.service_disabled_node_list:
+            logger.info("Enabling %s on node %s", constants.SBD_SERVICE, node)
+            service_manager.enable_service(constants.SBD_SERVICE, node)
+
+    def _check_fence_sbd(self) -> CheckResult:
+        if not self.disk_based:
+            return CheckResult.SUCCESS
+        xml_inst = xmlutil.CrmMonXmlParser()
+        if xml_inst.not_connected():
+            cib = xmlutil.text2elem(sh.cluster_shell().get_stdout_or_raise_error("crm configure show xml"))
+            ra = cibquery.ResourceAgent("stonith", "", "fence_sbd")
+            configured = cibquery.get_primitives_with_ra(cib, ra)
+            if configured:
+                return CheckResult.SUCCESS
+            else:
+                if not self.quiet:
+                    logger.error("Fence agent %s is not configured", SBDManager.SBD_RA)
+                return CheckResult.ERROR
+        if not xml_inst.is_resource_configured(SBDManager.SBD_RA):
+            if not self.quiet:
+                logger.error("Fence agent %s is not configured", SBDManager.SBD_RA)
+            return CheckResult.ERROR
+        elif not xml_inst.is_resource_started(SBDManager.SBD_RA) and not utils.is_cluster_in_maintenance_mode():
+            if not self.quiet:
+                logger.error("Fence agent %s is not started", SBDManager.SBD_RA)
+            return CheckResult.ERROR
+        return CheckResult.SUCCESS
+
+    def _fix_fence_sbd(self):
+        xml_inst = xmlutil.CrmMonXmlParser()
+        shell = sh.cluster_shell()
+        if not xml_inst.is_resource_configured(SBDManager.SBD_RA):
+            logger.info("Configuring fence agent %s", SBDManager.SBD_RA)
+            cmd = f"crm configure primitive {SBDManager.SBD_RA_ID} {SBDManager.SBD_RA}"
+            shell.get_stdout_or_raise_error(cmd)
+            is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
+            bootstrap.adjust_pcmk_delay_max(is_2node_wo_qdevice)
+        elif not xml_inst.is_resource_started(SBDManager.SBD_RA):
+            res_id_list = xml_inst.get_resource_id_list_via_type(SBDManager.SBD_RA)
+            for res_id in res_id_list:
+                logger.info("Starting fence agent %s", res_id)
+                cmd = f"crm resource start {res_id}"
+                shell.get_stdout_or_raise_error(cmd)
+        time.sleep(2)
 
 
 class SBDManager:
@@ -905,12 +1173,12 @@ class SBDManager:
                 # Only then should additional properties be configured,
                 # because the stonith-watchdog-timeout property requires sbd.service to be active.
                 restart_cluster_first = restart_first or \
-                        (self.diskless_sbd and not ServiceManager().service_is_active(constants.SBD_SERVICE))
+                        not self.diskless_sbd or \
+                        not ServiceManager().service_is_active(constants.SBD_SERVICE)
                 if restart_cluster_first:
                     bootstrap.restart_cluster()
 
-                self.configure_sbd()
-                bootstrap.adjust_properties(with_sbd=True)
+                bootstrap.adjust_properties()
 
                 # In other cases, it is better to restart the cluster
                 # after modifying SBD-related configurations.
@@ -946,6 +1214,14 @@ class SBDManager:
 
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
         self.enable_sbd_service()
+
+    @staticmethod
+    def unset_sbd_delay_start(node_list: list[str] | None = None):
+        if ServiceManager().service_is_enabled(constants.SBD_SERVICE) and SBDTimeout.is_sbd_delay_start():
+            cmd = f"mkdir -p {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR} && " \
+                  f"echo -e '[Service]\\nUnsetEnvironment=SBD_DELAY_START' > {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE} && " \
+                  "systemctl daemon-reload"
+            utils.cluster_run_cmd(cmd, node_list)
 
 
 def cleanup_existing_sbd_resource():

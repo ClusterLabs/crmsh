@@ -520,16 +520,10 @@ class TestBootstrap(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.parallax.parallax_call')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
-    @mock.patch('crmsh.sbd.SBDTimeout.is_sbd_delay_start')
-    @mock.patch('crmsh.service_manager.ServiceManager.service_is_enabled')
-    @mock.patch('crmsh.utils.package_is_installed')
-    def test_start_pacemaker(self, mock_installed, mock_enabled, mock_delay_start, mock_start, mock_parallax_call):
+    @mock.patch('crmsh.sbd.SBDManager.unset_sbd_delay_start')
+    def test_start_pacemaker(self, mock_unset_delay_start,  mock_start):
         bootstrap._context = None
-        mock_installed.return_value = True
-        mock_enabled.return_value = True
-        mock_delay_start.return_value = True
         node_list = ["node1", "node2", "node3", "node4", "node5", "node6"]
         bootstrap.start_pacemaker(node_list)
         mock_start.assert_has_calls([
@@ -540,11 +534,6 @@ class TestBootstrap(unittest.TestCase):
             mock.call("corosync.service", remote_addr="node5"),
             mock.call("corosync.service", remote_addr="node6"),
             mock.call("pacemaker.service", enable=False, node_list=node_list)
-            ])
-        mock_parallax_call.assert_has_calls([
-            mock.call(node_list, f'mkdir -p {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR}'),
-            mock.call(node_list, f"echo -e '[Service]\nUnsetEnvironment=SBD_DELAY_START' > {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE}"),
-            mock.call(node_list, "systemctl daemon-reload"),
             ])
 
     @mock.patch('crmsh.bootstrap.change_user_shell')
@@ -1547,7 +1536,7 @@ done
         mock_sbd_checker_inst.check_and_fix = mock.Mock()
         mock_is_active.return_value = True
         bootstrap.adjust_stonith_timeout()
-        mock_sbd_checker.assert_called_once_with(quiet=True, fix=True, from_bootstrap=True)
+        mock_sbd_checker.assert_called_once_with(quiet=True, fix=True)
 
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.bootstrap.get_stonith_timeout_generally_expected')
@@ -1568,18 +1557,18 @@ done
         bootstrap.adjust_priority_in_rsc_defaults(False)
         mock_set.assert_called_once_with('priority', 0, property_type='rsc_defaults')
 
-    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-    def test_adjust_priority_fencing_delay_no_fence_agent(self, mock_run):
-        mock_run.return_value = None
-        bootstrap.adjust_priority_fencing_delay(False)
-        mock_run.assert_called_once_with("crm configure show related:stonith")
+    @mock.patch('crmsh.utils.set_property')
+    @mock.patch('crmsh.utils.get_pcmk_delay_max_configured_value')
+    def test_adjust_priority_fencing_delay(self, mock_get_pcmk_delay, mock_set):
+        mock_get_pcmk_delay.return_value = 30
+        bootstrap.adjust_priority_fencing_delay(True)
+        mock_set.assert_called_once_with("priority-fencing-delay", 60, conditional=True)
 
     @mock.patch('crmsh.utils.set_property')
-    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-    def test_adjust_priority_fencing_delay_no_pcmk_delay(self, mock_run, mock_set):
-        mock_run.return_value = "data"
+    @mock.patch('crmsh.utils.get_pcmk_delay_max_configured_value')
+    def test_adjust_priority_fencing_delay_no_pcmk_delay(self, mock_get_pcmk_delay, mock_set):
+        mock_get_pcmk_delay.return_value = 0
         bootstrap.adjust_priority_fencing_delay(False)
-        mock_run.assert_called_once_with("crm configure show related:stonith")
         mock_set.assert_called_once_with("priority-fencing-delay", 0)
 
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
@@ -1600,7 +1589,7 @@ done
         bootstrap.adjust_properties()
         mock_is_active.assert_called_once_with("pacemaker.service")
         mock_adj_pcmk.assert_called_once_with(True)
-        mock_adj_stonith.assert_called_once_with(with_sbd=False)
+        mock_adj_stonith.assert_called_once_with()
         mock_adj_priority.assert_called_once_with(True)
         mock_adj_fence.assert_called_once_with(True)
 
