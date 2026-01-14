@@ -558,6 +558,14 @@ class SBDTimeoutChecker(SBDTimeout):
             ),
 
             (
+                "stonith-enabled property",
+                self._check_stonith_enabled,
+                self._fix_stonith_enabled,
+                False,
+                []
+            ),
+
+            (
                 "unset SBD_DELAY_START in drop-in file",
                 self._check_sbd_delay_start_unset_dropin,
                 self._fix_sbd_delay_start_unset_dropin,
@@ -810,6 +818,18 @@ class SBDTimeoutChecker(SBDTimeout):
         expected_value = self.get_stonith_timeout_expected()
         logger.info("Adjusting stonith-timeout to %d", expected_value)
         utils.set_property("stonith-timeout", expected_value)
+
+    def _check_stonith_enabled(self) -> CheckResult:
+        value = utils.get_property("stonith-enabled", get_default=False)
+        if utils.is_boolean_false(value):
+            if not self.quiet:
+                logger.error("It's recommended that stonith-enabled is set to true, now is false")
+            return CheckResult.ERROR
+        return CheckResult.SUCCESS
+
+    def _fix_stonith_enabled(self):
+        logger.info("Setting stonith-enabled to true")
+        utils.set_property("stonith-enabled", "true")
 
     def _check_sbd_delay_start_unset_dropin(self) -> CheckResult:
         if not SBDTimeout.is_sbd_delay_start():
