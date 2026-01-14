@@ -20,7 +20,6 @@ _legacy_map = {
     'wait': ('core', 'wait'),
     'add_quotes': ('core', 'add_quotes'),
     'manage_children': ('core', 'manage_children'),
-    'force': ('core', 'force'),
     'debug': ('core', 'debug'),
     'ptest': ('core', 'ptest'),
     'dotty': ('core', 'dotty'),
