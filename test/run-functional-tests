@@ -233,6 +233,7 @@ deploy_ha_node() {
 
 
 create_node() {
+        echo 1 > /proc/sys/net/ipv4/tcp_tw_reuse
         echo 16777216 > /proc/sys/net/core/rmem_max
         echo 16777216 > /proc/sys/net/core/wmem_max
         info "Create ha specific container networks..."
@@ -241,6 +242,7 @@ create_node() {
 		podman network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network
 	done
 
+	podman image pull $CONTAINER_IMAGE
 	for node in $*;do
 		deploy_ha_node $node &
 	done
