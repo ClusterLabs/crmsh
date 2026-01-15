@@ -61,7 +61,7 @@ class SocketIO(io.RawIOBase):
 
 
 def call(host: str, port: int, cmdline: str, user: typing.Optional[str] = None):
-    family, type, proto, _, sockaddr =  socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)[0]
+    family, type, proto, _, sockaddr =  socket.getaddrinfo(host, port, family=socket.AF_INET, type=socket.SOCK_STREAM)[0]
     with _socket_connect(family, type, proto, sockaddr) as s:
         sout = io.BufferedWriter(SocketIO(s), 4096)
         Message.write(sout, MSG_USER, user.encode('utf-8') if user else _getuser().encode('utf-8'))
