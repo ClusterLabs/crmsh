@@ -388,6 +388,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_fix._check_stonith_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_stonith_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_delay_start_unset_dropin = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_fix._check_stonith_enabled = Mock(return_value=sbd.CheckResult.SUCCESS)
 
         res = self.instance_fix.check_and_fix()
         self.assertEqual(res, sbd.CheckResult.SUCCESS)
@@ -434,7 +435,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         mock_get_sbd_metadata_expected.return_value = (15, 30)
         self.instance_check.sbd_watchdog_timeout = 10
         self.assertEqual(self.instance_check._check_sbd_disk_metadata(), sbd.CheckResult.ERROR)
-        mock_logger_error.assert_called_once_with("It's recommended that SBD watchdog timeout(now %d) >= %d", 10, 15)
+        mock_logger_error.assert_called_once_with("It's required that SBD watchdog timeout(now %d) >= %d", 10, 15)
     
     @patch('logging.Logger.error')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
@@ -444,7 +445,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check.sbd_watchdog_timeout = 10
         self.instance_check.sbd_msgwait = 20
         self.assertEqual(self.instance_check._check_sbd_disk_metadata(), sbd.CheckResult.ERROR)
-        mock_logger_error.assert_called_once_with("It's recommended that SBD msgwait(now %d) >= %d", 20, 25)
+        mock_logger_error.assert_called_once_with("It's required that SBD msgwait(now %d) >= %d", 20, 25)
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
     def test_check_sbd_disk_metadata_success(self, mock_get_sbd_metadata_expected):
@@ -472,7 +473,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         mock_get_sbd_watchdog_timeout_expected.return_value = 10
         self.instance_check.sbd_watchdog_timeout = 3
         self.assertEqual(self.instance_check._check_sbd_watchdog_timeout(), sbd.CheckResult.ERROR)
-        mock_logger_error.assert_called_once_with("It's recommended that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", 3, 10)
+        mock_logger_error.assert_called_once_with("It's required that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", 3, 10)
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_expected')
     def test_check_sbd_watchdog_timeout_success(self, mock_get_sbd_watchdog_timeout_expected):
@@ -492,7 +493,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check.sbd_delay_start_value_expected = "100"
         self.instance_check.sbd_delay_start_value_from_config = "30"
         self.assertEqual(self.instance_check._check_sbd_delay_start(), sbd.CheckResult.ERROR)
-        mock_logger_error.assert_called_once_with("It's recommended that SBD_DELAY_START is set to %s, now is %s", "100", "30")
+        mock_logger_error.assert_called_once_with("It's required that SBD_DELAY_START is set to %s, now is %s", "100", "30")
 
     def test_check_sbd_delay_start_success(self):
         self.instance_check.sbd_delay_start_value_expected = "50"
@@ -528,7 +529,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.assertEqual(self.instance_check._check_sbd_systemd_start_timeout(), sbd.CheckResult.ERROR)
 
         mock_logger_warning.assert_called_once_with("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s", 60, 70, 'node3')
-        mock_logger_error.assert_called_once_with("It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s", 60, 50, 'node2')
+        mock_logger_error.assert_called_once_with("It's required that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s", 60, 50, 'node2')
 
     @patch('crmsh.utils.cluster_run_cmd')
     @patch('crmsh.bootstrap.sync_path')
@@ -557,7 +558,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check.stonith_watchdog_timeout = 15
         mock_get_property.return_value = ""
         self.assertEqual(self.instance_check._check_stonith_watchdog_timeout(), sbd.CheckResult.ERROR)
-        mock_logger_error.assert_called_once_with("It's recommended that stonith-watchdog-timeout is set to %d, now is not set", 15)
+        mock_logger_error.assert_called_once_with("It's required that stonith-watchdog-timeout is set to %d, now is not set", 15)
 
     @patch('crmsh.utils.get_property')
     def test_check_stonith_watchdog_timeout_success(self, mock_get_property):
@@ -589,7 +590,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check.get_stonith_timeout_expected = Mock(return_value=60)
         mock_get_property.return_value = 30
         self.assertEqual(self.instance_check._check_stonith_timeout(), sbd.CheckResult.ERROR)
-        mock_logger_error.assert_called_once_with("It's recommended that stonith-timeout is set to %d, now is %d", 60, 30)
+        mock_logger_error.assert_called_once_with("It's required that stonith-timeout is set to %d, now is %d", 60, 30)
 
     @patch('logging.Logger.warning')
     @patch('crmsh.utils.get_property')
@@ -778,6 +779,29 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         mock_cluster_shell_inst.get_stdout_or_raise_error = Mock()
         self.instance_fix._fix_fence_sbd()
         mock_logger_info.assert_called_once_with("Starting fence agent %s", 'fence_sbd_0')
+
+    @patch('crmsh.utils.is_boolean_false')
+    @patch('crmsh.utils.get_property')
+    def test_check_stonith_enabled_success(self, mock_get_property, mock_is_boolean_false):
+        mock_get_property.return_value = "true"
+        mock_is_boolean_false.return_value = False
+        self.assertEqual(self.instance_check._check_stonith_enabled(), sbd.CheckResult.SUCCESS)
+
+    @patch('logging.Logger.error')
+    @patch('crmsh.utils.is_boolean_false')
+    @patch('crmsh.utils.get_property')
+    def test_check_stonith_enabled_failure(self, mock_get_property, mock_is_boolean_false, mock_logger_error):
+        mock_get_property.return_value = "false"
+        mock_is_boolean_false.return_value = True
+        self.assertEqual(self.instance_check._check_stonith_enabled(), sbd.CheckResult.ERROR)
+        mock_logger_error.assert_called_once_with("It's required that stonith-enabled is set to true, now is false")
+
+    @patch('logging.Logger.info')
+    @patch('crmsh.utils.set_property')
+    def test_fix_stonith_enabled(self, mock_set_property, mock_logger_info):
+        self.instance_fix._fix_stonith_enabled()
+        mock_logger_info.assert_called_once_with("Setting stonith-enabled to true")
+        mock_set_property.assert_called_once_with('stonith-enabled', 'true')
 
 
 class TestSBDManager(unittest.TestCase):
