@@ -485,6 +485,8 @@ for case_num in $*;do
 	setup_cluster ${node_arry[@]}
 	adjust_test_case ${node_arry[0]} $case_file_in_container
 	echo
+        bpftrace $(dirname $(realpath $0))/trace_access.bt &
+        BPFTRACE_PID=$!
         prepare_coverage_env "${node_arry[@]}"
 	if [ "$NORMAL_USER_FLAG" -eq 0 ];then
 		info "Running \"$case_file_in_container\" under 'root'..."
@@ -493,6 +495,7 @@ for case_num in $*;do
 		info "Running \"$case_file_in_container\" under normal user 'alice'..."
                 podman_exec ${node_arry[0]} "su - alice -c 'sudo behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
 	fi
+        kill $BPFTRACE_PID
 	fetch_coverage_report "${node_arry[@]}"
 	echo
 done

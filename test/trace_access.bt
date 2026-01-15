@@ -1,0 +1,46 @@
+/* trace_debug.bt */
+
+BEGIN {
+    printf("Tracing... Hit Ctrl+C to stop.\n");
+}
+
+/* 1. Catch the syscall return to verify userspace sees -13 */
+tracepoint:syscalls:sys_exit_connect /args->ret == -13/ {
+    printf("\n[!] SYSCALL: Process '%s' (PID %d) got EACCES (-13)\n", comm, pid);
+}
+
+/* 2. Security Layer: This is the generic hook for ALL socket security checks.
+      If this returns non-zero, it is definitely AppArmor/SELinux/BPF. */
+kretprobe:security_socket_connect {
+    if (retval == -13) {
+        printf("    [!] KERNEL: security_socket_connect FAILED (-13)\n");
+        printf("        Blame: AppArmor, SELinux, or Systemd BPF\n");
+    }
+}
+
+/* 3. Networking Layer: Check if the route lookup itself is prohibited.
+      This happens if you hit a 'blackhole' or 'prohibit' route. */
+kretprobe:ip_route_output_flow {
+    if (retval == -13) {
+        printf("    [!] KERNEL: ip_route_output_flow FAILED (-13)\n");
+        printf("        Blame: Routing Table (ip route) or NetworkManager\n");
+    }
+}
+
+/* 4. Core Connect Logic: If this fails but security/route succeeded,
+      it's usually source port exhaustion or a Netfilter rejection. */
+kretprobe:tcp_v4_connect {
+    if (retval == -13) {
+        printf("    [!] KERNEL: tcp_v4_connect FAILED (-13)\n");
+        /* Check if it was port allocation */
+        printf("        Checking inet_hash_connect...\n");
+    }
+}
+
+/* 5. Source Port Allocation: If this fails with -13, it is the TIME_WAIT race
+      (EACCES is rare here, usually EAGAIN, but good to verify). */
+kretprobe:inet_hash_connect {
+    if (retval == -13) {
+        printf("        [!] KERNEL: inet_hash_connect FAILED (-13) -> Port allocation denied\n");
+    }
+}
