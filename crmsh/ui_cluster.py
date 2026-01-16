@@ -478,8 +478,6 @@ Examples:
             stage = args[0]
 
         if options.qnetd_addr_input:
-            if not ServiceManager().service_is_available("corosync-qdevice.service"):
-                utils.fatal("corosync-qdevice.service is not available")
             if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
                 parser.error("Option --qdevice-heuristics is required if want to configure heuristics mode")
             options.qdevice_heuristics_mode = options.qdevice_heuristics_mode or "sync"

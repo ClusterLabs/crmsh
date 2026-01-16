@@ -1530,11 +1530,10 @@ def configure_qdevice_interactive():
     if not confirm("Do you want to configure QDevice?"):
         return
     while True:
-        try:
-            qdevice.QDevice.check_package_installed("corosync-qdevice")
+        if utils.package_is_installed("corosync-qdevice"):
             break
-        except ValueError as err:
-            logger.error(err)
+        else:
+            logger.error("Package corosync-qdevice is not installed")
             if confirm("Please install the package manually and press 'y' to continue"):
                 continue
             else:
@@ -1625,9 +1624,6 @@ def init_qdevice():
     logger.info("""Configure Qdevice/Qnetd:""")
     utils.check_all_nodes_reachable("setup Qdevice")
     cluster_node_list = utils.list_cluster_nodes()
-    for node in cluster_node_list:
-        if not ServiceManager().service_is_available("corosync-qdevice.service", node):
-            utils.fatal("corosync-qdevice.service is not available on {}".format(node))
 
     _setup_passwordless_ssh_for_qnetd(cluster_node_list)
 

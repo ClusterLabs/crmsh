@@ -250,16 +250,20 @@ class QDevice(object):
             if not os.path.exists(cmd.split()[0]):
                 raise ValueError("command {} not exist".format(cmd.split()[0]))
 
-    @staticmethod
-    def check_package_installed(pkg, remote=None):
-        if not utils.package_is_installed(pkg, remote_addr=remote):
-            raise ValueError("Package \"{}\" not installed on {}".format(pkg, remote if remote else "this node"))
+    def check_corosync_qdevice_available(self):
+        nodes = [utils.this_node()]
+        if self.is_stage:
+            nodes = utils.list_cluster_nodes()
+        service_manager = ServiceManager()
+        for node in nodes:
+            if not service_manager.service_is_available("corosync-qdevice.service", remote_addr=node):
+                raise ValueError(f"corosync-qdevice.service is not available on {node}")
 
     def valid_qdevice_options(self):
         """
         Validate qdevice related options
         """
-        self.check_package_installed("corosync-qdevice")
+        self.check_corosync_qdevice_available()
         self.check_qnetd_addr(self.qnetd_addr)
         self.check_qdevice_port(self.port)
         self.check_qdevice_algo(self.algo)
