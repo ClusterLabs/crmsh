@@ -1905,7 +1905,10 @@ def cluster_copy_path(local_path, nodes=None):
     Copies given file/directory to all other cluster nodes.
     """
     if not nodes:
-        nodes = list_cluster_nodes_except_me()
+        try:
+            nodes = list_cluster_nodes_except_me()
+        except ValueError:
+            nodes = []
     if not nodes:
         return True
 
@@ -2502,8 +2505,12 @@ def check_all_nodes_reachable(
 
     crm_mon_inst = xmlutil.CrmMonXmlParser(peer_node)
     if crm_mon_inst.not_connected():
-        nodes_to_check = list_cluster_nodes_except_me()
-        offline_nodes = list_cluster_nodes_except_me()
+        try:
+            nodes_to_check = list_cluster_nodes_except_me()
+            offline_nodes = list_cluster_nodes_except_me()
+        except ValueError:
+            nodes_to_check = []
+            offline_nodes = []
     else:
         nodes_to_check = crm_mon_inst.get_node_list(online=True, node_type="member")
         offline_nodes = crm_mon_inst.get_node_list(online=False)
