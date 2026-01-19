@@ -673,11 +673,11 @@ class SBDTimeoutChecker(SBDTimeout):
             self.sbd_watchdog_timeout_expected, self.sbd_msgwait_expected = SBDTimeout.get_sbd_metadata_expected()
             if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
                 if not self.quiet:
-                    logger.error("It's recommended that SBD watchdog timeout(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
+                    logger.error("It's required that SBD watchdog timeout(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
                 return CheckResult.ERROR
             if self.sbd_msgwait < self.sbd_msgwait_expected:
                 if not self.quiet:
-                    logger.error("It's recommended that SBD msgwait(now %d) >= %d", self.sbd_msgwait, self.sbd_msgwait_expected)
+                    logger.error("It's required that SBD msgwait(now %d) >= %d", self.sbd_msgwait, self.sbd_msgwait_expected)
                 return CheckResult.ERROR
         return CheckResult.SUCCESS
 
@@ -698,7 +698,7 @@ class SBDTimeoutChecker(SBDTimeout):
             self.sbd_watchdog_timeout_expected = SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=True)
             if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
                 if not self.quiet:
-                    logger.error("It's recommended that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
+                    logger.error("It's required that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
                 return CheckResult.ERROR
         return CheckResult.SUCCESS
 
@@ -713,7 +713,7 @@ class SBDTimeoutChecker(SBDTimeout):
         elif config_value.isdigit() and expected_value.isdigit():
             if int(config_value) < int(expected_value):
                 if not self.quiet:
-                    logger.error("It's recommended that SBD_DELAY_START is set to %s, now is %s",
+                    logger.error("It's required that SBD_DELAY_START is set to %s, now is %s",
                                  expected_value, config_value)
                 return CheckResult.ERROR
             else:
@@ -723,7 +723,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 return CheckResult.WARNING
         else:
             if not self.quiet:
-                logger.error("It's recommended that SBD_DELAY_START is set to %s, now is %s",
+                logger.error("It's required that SBD_DELAY_START is set to %s, now is %s",
                             expected_value, config_value)
             return CheckResult.ERROR
 
@@ -741,7 +741,7 @@ class SBDTimeoutChecker(SBDTimeout):
             elif actual_start_timeout < expected_start_timeout:
                 if not self.quiet:
                     logger.error(
-                        "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
+                        "It's required that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
                         expected_start_timeout, actual_start_timeout, node
                     )
                 check_res_list.append(CheckResult.ERROR)
@@ -774,12 +774,12 @@ class SBDTimeoutChecker(SBDTimeout):
         else:
             if value == 0:
                 if not self.quiet:
-                    logger.error("It's recommended that stonith-watchdog-timeout is set to %d, now is not set",
+                    logger.error("It's required that stonith-watchdog-timeout is set to %d, now is not set",
                                 self.stonith_watchdog_timeout)
                 return CheckResult.ERROR
             if value < self.stonith_watchdog_timeout:
                 if not self.quiet:
-                    logger.error("It's recommended that stonith-watchdog-timeout is set to %d, now is %d",
+                    logger.error("It's required that stonith-watchdog-timeout is set to %d, now is %d",
                                  self.stonith_watchdog_timeout, value)
                 return CheckResult.ERROR
             elif value > self.stonith_watchdog_timeout:
@@ -804,7 +804,7 @@ class SBDTimeoutChecker(SBDTimeout):
         value = int(utils.crm_msec(value)/1000)
         if value < expected_value:
             if not self.quiet:
-                logger.error("It's recommended that stonith-timeout is set to %d, now is %d",
+                logger.error("It's required that stonith-timeout is set to %d, now is %d",
                              expected_value, value)
             return CheckResult.ERROR
         elif value > expected_value:
@@ -823,7 +823,7 @@ class SBDTimeoutChecker(SBDTimeout):
         value = utils.get_property("stonith-enabled", get_default=False)
         if utils.is_boolean_false(value):
             if not self.quiet:
-                logger.error("It's recommended that stonith-enabled is set to true, now is false")
+                logger.error("It's required that stonith-enabled is set to true, now is false")
             return CheckResult.ERROR
         return CheckResult.SUCCESS
 
