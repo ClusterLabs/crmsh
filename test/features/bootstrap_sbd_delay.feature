@@ -341,26 +341,26 @@ Feature: configure sbd delay start correctly
     # check sbd disk metadata
     When    Run "sbd -1 15 -4 16 -d /dev/sda1 create" on "hanode1"
     When    Try "crm sbd configur show disk_metadata" on "hanode1"
-    Then    Expected "ERROR: It's recommended that SBD msgwait(now 16) >= 30" in stderr
+    Then    Expected "ERROR: It's required that SBD msgwait(now 16) >= 30" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "ERROR: It's recommended that SBD msgwait(now 16) >= 30" in stderr
+    Then    Expected "ERROR: It's required that SBD msgwait(now 16) >= 30" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
     # check SBD_DELAY_START
     When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=40/' /etc/sysconfig/sbd" on "hanode1"
     When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=40/' /etc/sysconfig/sbd" on "hanode2"
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's recommended that SBD_DELAY_START is set to 71, now is 40" in stderr
+    Then    Expected "It's required that SBD_DELAY_START is set to 71, now is 40" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's recommended that SBD_DELAY_START is set to 71, now is 40" in stderr
+    Then    Expected "It's required that SBD_DELAY_START is set to 71, now is 40" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
     # check stonith-timeout
     When    Run "crm configure property stonith-timeout=50" on "hanode1"
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's recommended that stonith-timeout is set to 71, now is 50" in stderr
+    Then    Expected "It's required that stonith-timeout is set to 71, now is 50" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's recommended that stonith-timeout is set to 71, now is 50" in stderr
+    Then    Expected "It's required that stonith-timeout is set to 71, now is 50" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
     # Adjust token timeout in corosync.conf
@@ -368,9 +368,9 @@ Feature: configure sbd delay start correctly
     When    Run "sed -i 's/token: .*/token: 10000/' /etc/corosync/corosync.conf" on "hanode2"
     When    Run "corosync-cfgtool -R" on "hanode1"
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's recommended that SBD_DELAY_START is set to 82, now is 71" in stderr
+    Then    Expected "It's required that SBD_DELAY_START is set to 82, now is 71" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's recommended that SBD_DELAY_START is set to 82, now is 71" in stderr
+    Then    Expected "It's required that SBD_DELAY_START is set to 82, now is 71" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
 
@@ -388,8 +388,8 @@ Feature: configure sbd delay start correctly
     # Delete stonith-watchdog-timeout
     When    Delete property "stonith-watchdog-timeout" from cluster
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's recommended that stonith-watchdog-timeout is set to 30, now is not set" in stderr
+    Then    Expected "It's required that stonith-watchdog-timeout is set to 30, now is not set" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's recommended that stonith-watchdog-timeout is set to 30, now is not set" in stderr
+    Then    Expected "It's required that stonith-watchdog-timeout is set to 30, now is not set" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
