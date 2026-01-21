@@ -1053,21 +1053,6 @@ class SBDManager:
                 logger.info("Enable %s on node %s", constants.SBD_SERVICE, node)
                 service_manager.enable_service(constants.SBD_SERVICE, node)
 
-    def configure_sbd(self):
-        '''
-        Configure fence_sbd resource and related properties
-        '''
-        if SBDUtils.get_sbd_device_from_config():
-            if utils.get_property("stonith-watchdog-timeout", get_default=False):
-                utils.delete_property("stonith-watchdog-timeout")
-            if not xmlutil.CrmMonXmlParser().is_resource_configured(self.SBD_RA):
-                cmd = f"crm configure primitive {self.SBD_RA_ID} {self.SBD_RA}"
-                sh.cluster_shell().get_stdout_or_raise_error(cmd)
-        else:
-            swt_value = self.timeout_dict.get("stonith-watchdog", 2*SBDTimeout.get_sbd_watchdog_timeout())
-            utils.set_property("stonith-watchdog-timeout", swt_value)
-        utils.set_property("stonith-enabled", "true")
-
     def _warn_diskless_sbd(self, peer=None):
         '''
         Give warning when configuring diskless sbd
