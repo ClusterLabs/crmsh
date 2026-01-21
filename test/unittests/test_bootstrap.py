@@ -106,7 +106,7 @@ class TestContext(unittest.TestCase):
 
     @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice_return(self, mock_qdevice):
-        self.ctx_inst.initialize_qdevice()
+        self.ctx_inst._initialize_qdevice()
         mock_qdevice.assert_not_called()
 
     @mock.patch('crmsh.qdevice.QDevice')
@@ -115,7 +115,7 @@ class TestContext(unittest.TestCase):
         ctx.qnetd_addr_input = "node3"
         ctx.qdevice_port = 123
         ctx.stage = ""
-        ctx.initialize_qdevice()
+        ctx._initialize_qdevice()
         mock_qdevice.assert_called_once_with(qnetd_addr='node3', port=123, ssh_user=None, algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
 
     @mock.patch('crmsh.qdevice.QDevice')
@@ -124,7 +124,7 @@ class TestContext(unittest.TestCase):
         ctx.qnetd_addr_input = "alice@node3"
         ctx.qdevice_port = 123
         ctx.stage = ""
-        ctx.initialize_qdevice()
+        ctx._initialize_qdevice()
         mock_qdevice.assert_called_once_with(qnetd_addr='node3', port=123, ssh_user='alice', algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
 
     @mock.patch('crmsh.utils.package_is_installed')
@@ -1203,129 +1203,61 @@ done
             ])
 
     @mock.patch('crmsh.service_manager.ServiceManager.disable_service')
-    @mock.patch('logging.Logger.info')
-    def test_init_qdevice_no_config(self, mock_status, mock_disable):
+    @mock.patch('crmsh.bootstrap.configure_qdevice_interactive')
+    def test_init_qdevice_no_config(self, mock_configure, mock_disable):
         bootstrap._context = mock.Mock(qdevice_inst=None)
         bootstrap.init_qdevice()
-        mock_status.assert_not_called()
+        mock_configure.assert_called_once_with()
         mock_disable.assert_called_once_with("corosync-qdevice.service")
 
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
-    @mock.patch('crmsh.utils.HostUserConfig')
-    @mock.patch('crmsh.user_of_host.UserOfHost.instance')
-    @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.corosync.is_qdevice_configured')
-    @mock.patch('crmsh.bootstrap.configure_ssh_key')
-    @mock.patch('crmsh.utils.check_ssh_passwd_need')
-    @mock.patch('crmsh.sh.LocalShell')
-    @mock.patch('logging.Logger.info')
-    def test_init_qdevice_already_configured(
-            self,
-            mock_status, mock_local_shell, mock_ssh, mock_configure_ssh_key,
-            mock_qdevice_configured, mock_confirm, mock_list_nodes, mock_user_of_host,
-            mock_host_user_config_class,
-            mock_select_user_pair_for_ssh,
-            mock_check_all_nodes
-    ):
-        mock_list_nodes.return_value = []
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob")
-        mock_ssh.return_value = False
-        mock_user_of_host.return_value = mock.MagicMock(crmsh.user_of_host.UserOfHost)
-        mock_qdevice_configured.return_value = True
-        mock_confirm.return_value = False
-        self.qdevice_with_ip.start_qdevice_service = mock.Mock()
-        mock_select_user_pair_for_ssh.return_value = ("bob", "bob", 'qnetd-node')
-
-        bootstrap.init_qdevice()
-
-        mock_status.assert_called_once_with("Configure Qdevice/Qnetd:")
-        mock_local_shell.assert_has_calls([
-            mock.call(additional_environ={'SSH_AUTH_SOCK': ''}),
-            mock.call(additional_environ={'SSH_AUTH_SOCK': ''}),
-        ])
-        mock_ssh.assert_called_once_with("bob", "bob", "qnetd-node", mock_local_shell.return_value)
-        mock_configure_ssh_key.assert_not_called()
-        mock_host_user_config_class.return_value.save_remote.assert_called_once_with(mock_list_nodes.return_value)
-        mock_qdevice_configured.assert_called_once_with()
-        mock_confirm.assert_called_once_with("Qdevice is already configured - overwrite?")
-        self.qdevice_with_ip.start_qdevice_service.assert_called_once_with()
-        mock_check_all_nodes.assert_called_once_with("setup Qdevice")
-
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
-    @mock.patch('crmsh.utils.HostUserConfig')
-    @mock.patch('crmsh.user_of_host.UserOfHost.instance')
-    @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
-    @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
-    @mock.patch('crmsh.utils.list_cluster_nodes')
-    @mock.patch('crmsh.utils.this_node')
-    @mock.patch('crmsh.corosync.is_qdevice_configured')
-    @mock.patch('crmsh.bootstrap.configure_ssh_key')
-    @mock.patch('crmsh.utils.check_ssh_passwd_need')
-    @mock.patch('crmsh.sh.LocalShell')
-    @mock.patch('logging.Logger.info')
-    def test_init_qdevice(self, mock_info, mock_local_shell, mock_ssh, mock_configure_ssh_key, mock_qdevice_configured,
-                          mock_this_node, mock_list_nodes, mock_adjust_priority, mock_adjust_fence_delay,
-                          mock_user_of_host, mock_host_user_config_class, mock_select_user_pair_for_ssh, mock_check_all_nodes):
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, current_user="bob")
-        mock_this_node.return_value = "192.0.2.100"
-        mock_list_nodes.return_value = []
-        mock_ssh.return_value = False
-        mock_user_of_host.return_value = mock.MagicMock(crmsh.user_of_host.UserOfHost)
-        mock_qdevice_configured.return_value = False
-        self.qdevice_with_ip.set_cluster_name = mock.Mock()
-        self.qdevice_with_ip.valid_qnetd = mock.Mock()
-        self.qdevice_with_ip.config_and_start_qdevice = mock.Mock()
-        mock_select_user_pair_for_ssh.return_value = ("bob", "bob", "qnetd-node")
-
-        bootstrap.init_qdevice()
-
-        mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
-        mock_local_shell.assert_has_calls([
-            mock.call(additional_environ={'SSH_AUTH_SOCK': ''}),
-            mock.call(additional_environ={'SSH_AUTH_SOCK': ''}),
-        ])
-        mock_ssh.assert_called_once_with("bob", "bob", "qnetd-node", mock_local_shell.return_value)
-        mock_host_user_config_class.return_value.add.assert_has_calls([
-            mock.call('bob', '192.0.2.100'),
-            mock.call('bob', 'qnetd-node'),
-        ])
-        mock_host_user_config_class.return_value.save_remote.assert_called_once_with(mock_list_nodes.return_value)
-        mock_qdevice_configured.assert_called_once_with()
-        self.qdevice_with_ip.set_cluster_name.assert_called_once_with()
-        self.qdevice_with_ip.valid_qnetd.assert_called_once_with()
-        self.qdevice_with_ip.config_and_start_qdevice.assert_called_once_with()
-        mock_check_all_nodes.assert_called_once_with("setup Qdevice")
-
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    @mock.patch('crmsh.utils.fatal')
-    @mock.patch('crmsh.utils.HostUserConfig')
-    @mock.patch('crmsh.service_manager.ServiceManager.service_is_available')
+    @mock.patch('crmsh.bootstrap._setup_passwordless_ssh_for_qnetd')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice_service_not_available(
-            self,
-            mock_info, mock_list_nodes, mock_available,
-            mock_host_user_config_class,
-            mock_fatal,
-            mock_check_all_nodes
-    ):
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip)
+    def test_init_qdevice_already_configured(self, mock_info,
+            mock_list_nodes, mock_setup_passwordless_ssh_for_qnetd,
+            mock_is_qdevice_configured,  mock_confirm):
+        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
         mock_list_nodes.return_value = ["node1"]
-        mock_available.return_value = False
-        mock_fatal.side_effect = SystemExit
+        mock_is_qdevice_configured.return_value = True
+        mock_confirm.return_value = False
+        bootstrap._context.qdevice_inst.start_qdevice_service = mock.Mock()
 
-        with self.assertRaises(SystemExit):
-            bootstrap.init_qdevice()
+        bootstrap.init_qdevice()
 
-        mock_host_user_config_class.return_value.save_local.assert_not_called()
-        mock_host_user_config_class.return_value.save_remote.assert_not_called()
-        mock_fatal.assert_called_once_with("corosync-qdevice.service is not available on node1")
-        mock_available.assert_called_once_with("corosync-qdevice.service", "node1")
         mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
-        mock_check_all_nodes.assert_called_once_with("setup Qdevice")
+        mock_list_nodes.assert_called_once_with()
+        mock_is_qdevice_configured.assert_called_once_with()
+        mock_confirm.assert_called_once_with("Qdevice is already configured - overwrite?")
+        mock_setup_passwordless_ssh_for_qnetd.assert_called_once_with(["node1"])
+        bootstrap._context.qdevice_inst.start_qdevice_service.assert_called_once_with()
+
+    @mock.patch('crmsh.bootstrap.adjust_properties')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
+    @mock.patch('crmsh.bootstrap._setup_passwordless_ssh_for_qnetd')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('logging.Logger.info')
+    def test_init_qdevice(self, mock_info, mock_list_nodes, mock_setup_passwordless_ssh_for_qnetd,
+            mock_is_qdevice_configured, mock_adjust_properties):
+        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
+        mock_list_nodes.return_value = ["node1"]
+        mock_is_qdevice_configured.return_value = False
+        self.qdevice_with_ip.set_cluster_name = mock.Mock()
+        self.qdevice_with_ip.validate_and_start_qnetd = mock.Mock()
+        self.qdevice_with_ip.certificate_and_config_qdevice = mock.Mock()
+        bootstrap._context.qdevice_inst.start_qdevice_service = mock.Mock()
+
+        bootstrap.init_qdevice()
+
+        mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
+        mock_list_nodes.assert_called_once_with()
+        mock_is_qdevice_configured.assert_called_once_with()
+        mock_setup_passwordless_ssh_for_qnetd.assert_called_once_with(["node1"])
+        self.qdevice_with_ip.set_cluster_name.assert_called_once_with()
+        self.qdevice_with_ip.validate_and_start_qnetd.assert_called_once_with()
+        self.qdevice_with_ip.certificate_and_config_qdevice.assert_called_once_with()
+        bootstrap._context.qdevice_inst.start_qdevice_service.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.prompt_for_string')
     def test_configure_qdevice_interactive_return(self, mock_prompt):
@@ -1342,13 +1274,13 @@ done
         mock_confirm.assert_called_once_with("Do you want to configure QDevice?")
 
     @mock.patch('logging.Logger.error')
-    @mock.patch('crmsh.qdevice.QDevice.check_package_installed')
+    @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.confirm')
     def test_configure_qdevice_interactive_not_installed(self, mock_confirm, mock_info, mock_installed, mock_error):
         bootstrap._context = mock.Mock(yes_to_all=False)
         mock_confirm.side_effect = [True, False]
-        mock_installed.side_effect = ValueError("corosync-qdevice not installed")
+        mock_installed.return_value = False
         bootstrap.configure_qdevice_interactive()
         mock_confirm.assert_has_calls([
             mock.call("Do you want to configure QDevice?"),
@@ -1357,12 +1289,13 @@ done
 
     @mock.patch('crmsh.qdevice.QDevice')
     @mock.patch('crmsh.bootstrap.prompt_for_string')
-    @mock.patch('crmsh.qdevice.QDevice.check_package_installed')
+    @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.confirm')
     def test_configure_qdevice_interactive(self, mock_confirm, mock_info, mock_installed, mock_prompt, mock_qdevice):
         bootstrap._context = mock.Mock(yes_to_all=False)
         mock_confirm.return_value = True
+        mock_installed.return_value = True
         mock_prompt.side_effect = ["alice@qnetd-node", 5403, "ffsplit", "lowest", "on", None]
         mock_qdevice_inst = mock.Mock()
         mock_qdevice.return_value = mock_qdevice_inst
@@ -1450,12 +1383,14 @@ done
         mock_remove_db.assert_called_once_with()
         mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-cfgtool -R")
 
+    @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
     @mock.patch('crmsh.qdevice.QDevice')
     @mock.patch('crmsh.corosync.get_value')
     @mock.patch('crmsh.corosync.is_qdevice_tls_on')
     @mock.patch('crmsh.log.LoggerUtils.status_long')
-    def test_start_qdevice_on_join_node(self, mock_status_long, mock_qdevice_tls, mock_get_value, mock_qdevice, mock_start_service):
+    def test_start_qdevice_on_join_node(self, mock_status_long, mock_qdevice_tls, mock_get_value, mock_qdevice, mock_start_service, mock_this_node):
+        mock_this_node.return_value = "node1"
         mock_qdevice_tls.return_value = True
         mock_get_value.return_value = "10.10.10.123"
         mock_qdevice_inst = mock.Mock()
@@ -1464,7 +1399,7 @@ done
 
         bootstrap.start_qdevice_on_join_node("node2")
 
-        mock_status_long.assert_called_once_with("Starting corosync-qdevice.service")
+        mock_status_long.assert_called_once_with("Starting and enable corosync-qdevice.service on node1")
         mock_qdevice_tls.assert_called_once_with()
         mock_get_value.assert_called_once_with("quorum.device.net.host")
         mock_qdevice.assert_called_once_with("10.10.10.123", cluster_node="node2")
