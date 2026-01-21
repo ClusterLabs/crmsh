@@ -1483,9 +1483,7 @@ op_defaults op-options: timeout=600
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    if ServiceManager().service_is_enabled(constants.SBD_SERVICE):
-        _context.sbd_manager.configure_sbd()
-
+    adjust_properties()
 
 
 def init_admin():
