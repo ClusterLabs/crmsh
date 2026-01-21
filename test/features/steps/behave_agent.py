@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # behave_agent.py - a simple agent to execute command
 # NO AUTHENTICATIONS. It should only be used in behave test.
+import contextlib
 import io
+import itertools
 import os
 import pwd
 import socket
 import struct
-import subprocess
+import time
 import typing
 
 
@@ -59,14 +61,8 @@ class SocketIO(io.RawIOBase):
 
 
 def call(host: str, port: int, cmdline: str, user: typing.Optional[str] = None):
-    family, type, proto, _, sockaddr =  socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)[0]
-    with socket.socket(family, type, proto) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        if hasattr(socket, "TCP_KEEPIDLE"):
-            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 30)   # start after 30s idle
-            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 10)  # probe every 10s
-            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)     # 3 probes
-        s.connect(sockaddr)
+    family, type, proto, _, sockaddr =  socket.getaddrinfo(host, port, family=socket.AF_INET, type=socket.SOCK_STREAM)[0]
+    with _socket_connect(family, type, proto, sockaddr) as s:
         sout = io.BufferedWriter(SocketIO(s), 4096)
         Message.write(sout, MSG_USER, user.encode('utf-8') if user else _getuser().encode('utf-8'))
         Message.write(sout, MSG_CMD, cmdline.encode('utf-8'))
@@ -92,48 +88,27 @@ def call(host: str, port: int, cmdline: str, user: typing.Optional[str] = None):
                 raise ValueError(f"Unknown message type: {type}")
 
 
-def serve(stdin, stdout, stderr):
-    # This is an xinetd-style service.
-    assert os.geteuid() == 0
-    user = None
-    cmd = None
-    sin = io.BufferedReader(stdin)
-    while True:
-        type, buf = Message.read(sin)
-        if type == MSG_USER:
-            user = buf.decode('utf-8')
-        elif type == MSG_CMD:
-            cmd = buf.decode('utf-8')
-        elif type == MSG_EOF:
-            assert user is not None
-            assert cmd is not None
-            break
-        else:
-            raise ValueError(f"Unknown message type: {type}")
-    if user == 'root':
-        args = ['/bin/sh']
-    else:
-        args = ['/bin/su', '-', user, '-c', '/bin/sh']
-    result = subprocess.run(
-        args,
-        input=cmd.encode('utf-8'),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    sout = io.BufferedWriter(stdout)
-    Message.write(sout, MSG_RC, struct.pack('!i', result.returncode))
-    Message.write(sout, MSG_OUT, result.stdout)
-    Message.write(sout, MSG_ERR, result.stderr)
-    Message.write(sout, MSG_EOF, b'')
-    stdout.flush()
-
-
 def _getuser():
     return pwd.getpwuid(os.geteuid()).pw_name
 
 
-if __name__ == '__main__':
-    with open(0, 'rb') as stdin, \
-         open(1, 'wb') as stdout, \
-         open(2, 'wb') as stderr:
-        serve(stdin, stdout, stderr)
+@contextlib.contextmanager
+def _socket_connect(family, type, proto, sockaddr):
+    for retry_count in itertools.count():
+        with socket.socket(family, type, proto) as s:
+            try:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                s.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 60)
+                s.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 3)
+                s.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
+            except Exception:
+                pass
+            try:
+                s.connect(sockaddr)
+                yield s
+                return
+            except PermissionError as e:
+                if retry_count < 3:
+                    time.sleep((retry_count + 1) * 3)
+                else:
+                    raise

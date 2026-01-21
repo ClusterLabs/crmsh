@@ -233,6 +233,7 @@ deploy_ha_node() {
 
 
 create_node() {
+        echo 1 > /proc/sys/net/ipv4/tcp_tw_reuse
         echo 16777216 > /proc/sys/net/core/rmem_max
         echo 16777216 > /proc/sys/net/core/wmem_max
         info "Create ha specific container networks..."
@@ -241,6 +242,7 @@ create_node() {
 		podman network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network
 	done
 
+	podman image pull $CONTAINER_IMAGE
 	for node in $*;do
 		deploy_ha_node $node &
 	done
@@ -483,6 +485,8 @@ for case_num in $*;do
 	setup_cluster ${node_arry[@]}
 	adjust_test_case ${node_arry[0]} $case_file_in_container
 	echo
+        bpftrace $(dirname $(realpath $0))/trace_access.bt &
+        BPFTRACE_PID=$!
         prepare_coverage_env "${node_arry[@]}"
 	if [ "$NORMAL_USER_FLAG" -eq 0 ];then
 		info "Running \"$case_file_in_container\" under 'root'..."
@@ -491,6 +495,7 @@ for case_num in $*;do
 		info "Running \"$case_file_in_container\" under normal user 'alice'..."
                 podman_exec ${node_arry[0]} "su - alice -c 'sudo behave --no-logcapture $case_file_in_container || exit 1'" || exit 1
 	fi
+        kill $BPFTRACE_PID
 	fetch_coverage_report "${node_arry[@]}"
 	echo
 done

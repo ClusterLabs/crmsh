@@ -17,6 +17,8 @@ jobs:
   general_check:
     runs-on: ubuntu-24.04
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: check data-manifest
       run: |
@@ -39,6 +41,8 @@ jobs:
       fail-fast: false
     timeout-minutes: 5
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -60,6 +64,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for crm_report bugs
       run:  |
@@ -74,6 +80,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for crm_report normal
       run:  |
@@ -88,6 +96,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for bootstrap bugs
       run:  |
@@ -102,6 +112,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for bootstrap bugs, under non root user
       run:  |
@@ -116,6 +128,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for bootstrap common
       run:  |
@@ -130,6 +144,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for bootstrap common, under non root user
       run:  |
@@ -144,6 +160,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for bootstrap options
       run:  |
@@ -158,6 +176,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for bootstrap firewalld
       run:  |
@@ -172,6 +192,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for bootstrap using password
       run:  |
@@ -187,6 +209,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for crm corosync subcommand
       run:  |
@@ -201,6 +225,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for bootstrap options, under non root user
       run:  |
@@ -215,6 +241,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for qdevice setup and remove
       run:  |
@@ -229,6 +257,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for qdevice setup and remove, under non root user
       run:  |
@@ -243,6 +273,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for qdevice options
       run:  |
@@ -257,6 +289,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for qdevice validate
       run:  |
@@ -271,6 +305,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for qdevice validate, under non root user
       run:  |
@@ -285,6 +321,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for qdevice user case
       run:  |
@@ -299,6 +337,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for resource failcount
       run:  |
@@ -313,6 +353,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for resource set
       run:  |
@@ -327,6 +369,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for resource set, under non root user
       run:  |
@@ -341,6 +385,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for configure sublevel bugs
       run:  |
@@ -355,6 +401,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for constraints bugs
       run:  |
@@ -369,6 +417,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for geo cluster
       run:  |
@@ -383,6 +433,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for healthcheck
       run:  |
@@ -397,6 +449,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for cluster api
       run:  |
@@ -410,6 +464,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for user access
       run:  |
@@ -423,6 +479,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for ssh agent
       run:  |
@@ -436,6 +494,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for blocking ssh
       run:  |
@@ -449,11 +509,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for migration
       run:  |
-        echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
-        sudo systemctl restart docker.service
         $CONTAINER_SCRIPT `$GET_INDEX_OF migration` && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT -u `$GET_INDEX_OF migration`
     - uses: codecov/codecov-action@v4
       with:
@@ -464,6 +524,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: functional test for pacemaker remote
       run:  |
@@ -477,6 +539,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
+    - name: Remove docker
+      run: sudo apt-get purge -y docker-ce
     - uses: actions/checkout@v4
     - name: original regression test
       run:  |
