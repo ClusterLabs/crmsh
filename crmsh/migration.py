@@ -342,6 +342,7 @@ def check_unsupported_resource_agents(handler: CheckResultHandler):
         )
     _check_ocfs2(handler, cib)
     _check_obseleted_sap_ascs_ers_mount(handler, cib)
+    _check_obsolete_sap_ascs_ers_ensa1(handler, cib)
 
 
 def _check_saphana_resource_agent(handler: CheckResultHandler, resource_agents: typing.Iterable[cibquery.ResourceAgent]):
@@ -483,3 +484,50 @@ def _check_obseleted_sap_ascs_ers_mount(handler: CheckResultHandler, cib: lxml.e
                         "Cluster-controlled filesystem setup for SAP ENSA2 is not supported in SLES 16. Please migrate to simple-mount setup.",
                         [f'* Filesystem resource "{fs_id}" is ordered to start before SAPInstance ERS resource "{ers_id}" in group "{group_id}".']
                     )
+
+
+def _check_obsolete_sap_ascs_ers_ensa1(handler: CheckResultHandler, cib: lxml.etree.Element):
+    """
+    Checks for obsolete SAP ASCS/ERS ENSA1 setups.
+
+    This setup is identified by the combination of:
+    1. An SAPInstance primitive with IS_ERS=true.
+    2. Another SAPInstance primitive for ASCS.
+    3. A location rule on the ASCS instance with score > 0 and an expression
+       like 'runs_ers_... eq 1'.
+    """
+    ers_primitives = cib.xpath(
+        '/cib/configuration/resources//primitive[@class="ocf" and @provider="heartbeat" and @type="SAPInstance"]'
+        '[instance_attributes/nvpair[@name="IS_ERS" and translate(@value, "TRUE", "true")="true"]]'
+    )
+    if not ers_primitives:
+        return
+
+    ascs_primitives = cib.xpath(
+        '/cib/configuration/resources//primitive[@class="ocf" and @provider="heartbeat" and @type="SAPInstance"]'
+        '[not(instance_attributes/nvpair[@name="IS_ERS" and translate(@value, "TRUE", "true")="true"])]'
+    )
+    if not ascs_primitives:
+        return
+
+    for ascs_primitive in ascs_primitives:
+        ascs_id = ascs_primitive.get('id')
+        # Find location constraints for this ASCS resource that contain the specific rule structure.
+        # This xpath finds a location for the ascs_id, with a rule with score > 0,
+        # which has an expression child with the specified attributes.
+        xpath_expr = (
+            f"/cib/configuration/constraints/rsc_location[@rsc='{ascs_id}']/"
+            "rule[number(@score) > 0]/"
+            "expression[@operation='eq' and starts-with(@attribute, 'runs_ers_') and @value='1']"
+        )
+        expressions = cib.xpath(xpath_expr)
+
+        if expressions:
+            # We found at least one matching expression, so the pattern is present.
+            expression_attribute = expressions[0].get('attribute')
+            handler.handle_problem(
+                False,
+                "SAP ASCS/ERS ENSA1 is obsolete and not supported in SLES 16. Please migrate to ENSA2.",
+                [f'* SAPInstance resource "{ascs_id}" has a location constraint with a rule matching the ENSA1 pattern (attribute "{expression_attribute}").']
+            )
+            return
