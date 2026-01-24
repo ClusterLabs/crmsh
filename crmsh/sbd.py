@@ -417,10 +417,12 @@ class SBDTimeout(object):
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
             logger.error("Can't set stonith-watchdog-timeout because sbd.service is not active")
             return False
-        sbd_watchdog_timeout = SBDTimeout.get_sbd_watchdog_timeout()
-        if value < sbd_watchdog_timeout:
-            logger.error("Can't set stonith-watchdog-timeout to %d because it is less than SBD_WATCHDOG_TIMEOUT(now: %d)",
-                         value, sbd_watchdog_timeout)
+        expected_stonith_watchdog_timeout = 2 * SBDTimeout.get_sbd_watchdog_timeout()
+        if value == -1:
+            logger.warning("It's recommended to set stonith-watchdog-timeout to a positive value (at least 2*SBD_WATCHDOG_TIMEOUT: %d)", expected_stonith_watchdog_timeout)
+            return True
+        elif value < expected_stonith_watchdog_timeout:
+            logger.error("It's required to set stonith-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: %d", expected_stonith_watchdog_timeout)
             return False
         return True
 
