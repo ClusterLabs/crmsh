@@ -767,6 +767,10 @@ class SBDTimeoutChecker(SBDTimeout):
 
     def _check_stonith_watchdog_timeout(self) -> CheckResult:
         value = utils.get_property("stonith-watchdog-timeout")
+        if value and int(value) == -1:
+            if not self.quiet:
+                logger.warning("It's recommended that stonith-watchdog-timeout is et to %d, now is -1", self.stonith_watchdog_timeout)
+            return CheckResult.WARNING
         value = int(utils.crm_msec(value)/1000)
         if self.disk_based:
             if value > 0:
