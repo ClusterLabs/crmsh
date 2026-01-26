@@ -1294,7 +1294,7 @@ Usage:
 
 Remove one or more nodes from the cluster.
 
-This command can remove the last node in the cluster, thus effectively removing the whole cluster. To remove the last node, pass --force argument to crm or set the config.core.force option.
+This command can remove the last node in the cluster, thus effectively removing the whole cluster. To remove the last node, pass --force argument to crm.
 
 Options:
 
