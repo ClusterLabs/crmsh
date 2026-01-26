@@ -13,7 +13,7 @@ from unittest import mock
 from itertools import chain
 
 import crmsh.utils
-from crmsh import utils, config, tmpfiles, constants, parallax
+from crmsh import utils, config, tmpfiles, constants, options
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -1361,7 +1361,7 @@ def test_check_user_access_cluster(mock_user, mock_in, mock_sudo, mock_error):
 @mock.patch('logging.Logger.warning')
 @mock.patch('crmsh.utils.is_dc_idle')
 def test_leverage_maintenance_mode_skip(mock_idle, mock_warn):
-    config.core.force = True
+    options.force = True
     mock_idle.return_value = False
     with utils.leverage_maintenance_mode() as result:
         assert result is False
@@ -1373,7 +1373,7 @@ def test_leverage_maintenance_mode_skip(mock_idle, mock_warn):
 @mock.patch('logging.Logger.info')
 @mock.patch('crmsh.utils.is_dc_idle')
 def test_leverage_maintenance_mode(mock_idle, mock_info, mock_set, mock_delete):
-    config.core.force = True
+    options.force = True
     mock_idle.return_value = True
     with utils.leverage_maintenance_mode() as result:
         assert result is True

@@ -2,7 +2,6 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
 import os
-import re
 import copy
 import subprocess
 from lxml import etree
@@ -19,6 +18,7 @@ from . import idmgmt
 from .cliformat import cli_nvpairs, nvpairs2list
 from . import term
 from . import cibconfig
+from . import options
 from .sh import ShellUtils
 from . import log
 
@@ -490,7 +490,7 @@ class NodeMgmt(command.UI):
         if not utils.has_stonith_running():
             logger.error("fence command requires stonith device configured and running")
             return False
-        if not config.core.force and \
+        if not options.force and \
                 not utils.ask("Fencing %s will shut down the node and migrate any resources that are running on it! Do you want to fence %s?" % (node, node)):
             return False
         if xmlutil.is_remote_node(node):
@@ -506,7 +506,7 @@ class NodeMgmt(command.UI):
             node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
-        if not config.core.force and \
+        if not options.force and \
                 not utils.ask("Do you really want to drop state for node %s?" % node):
             return False
 
@@ -540,7 +540,7 @@ class NodeMgmt(command.UI):
                 rc = False
         cmd = "%s --force -R %s" % (cls.crm_node, node)
         if not rc:
-            if config.core.force:
+            if options.force:
                 logger.info('proceeding with node %s removal', node)
             else:
                 return False
@@ -562,7 +562,7 @@ class NodeMgmt(command.UI):
     def do_delete(self, context, node):
         'usage: delete <node>'
         logger.warning('`crm node delete` is deprecated and will very likely be dropped in the near future. It is auto-replaced as `crm cluster remove -c {}`.'.format(node))
-        if config.core.force:
+        if options.force:
             args = ['crm', 'cluster', 'remove', '-F', '-c', node]
         else:
             args = ['crm', 'cluster', 'remove', '-c', node]
