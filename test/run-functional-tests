@@ -204,6 +204,7 @@ deploy_ha_node() {
 	podman run --rm -d $podman_options $podman_capabilties $podman_security $CONTAINER_IMAGE
         podman network connect ha_network_second $node_name
 
+	sleep 2
 	if [ "$node_name" != "qnetd-node" ];then
 		rm_qnetd_cmd="rpm -q corosync-qnetd && rpm -e corosync-qnetd"
 		podman_exec $node_name "$rm_qnetd_cmd"
