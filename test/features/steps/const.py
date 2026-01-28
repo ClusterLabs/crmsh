@@ -157,8 +157,8 @@ Stage can be one of:
     firewalld   Add high-availability service to firewalld
     csync2      Configure csync2
     corosync    Configure corosync
-    sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
+    sbd         Configure SBD (requires -s <dev>)
     ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
     gfs2        Configure GFS2 (requires -g <dev>) NOTE: this is a Technical Preview
     admin       Create administration virtual IP (optional)
