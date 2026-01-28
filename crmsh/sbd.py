@@ -212,7 +212,9 @@ class SBDTimeout(object):
         self.crashdump_watchdog_timeout = None
         self.sbd_msgwait_expected = None
         self.sbd_watchdog_timeout_expected = None
+        self.quiet = False
         if self.context:
+            self.quiet = self.context.quiet
             self._initialize_timeout_from_bootstrap()
 
     def _initialize_timeout_from_bootstrap(self):
@@ -230,7 +232,8 @@ class SBDTimeout(object):
         if "sbd.watchdog_timeout" in self.context.profiles_dict:
             self.sbd_watchdog_timeout = int(self.context.profiles_dict["sbd.watchdog_timeout"])
         if self.context.is_s390 and self.sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390:
-            logger.warning("sbd_watchdog_timeout is set to %d for s390, it was %d", self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self.sbd_watchdog_timeout)
+            if not self.quiet:
+                logger.warning("sbd_watchdog_timeout is set to %d for s390, it was %d", self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self.sbd_watchdog_timeout)
             self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390
 
     def _set_sbd_msgwait(self):
@@ -243,7 +246,8 @@ class SBDTimeout(object):
         if "sbd.msgwait" in self.context.profiles_dict:
             sbd_msgwait = int(self.context.profiles_dict["sbd.msgwait"])
             if sbd_msgwait < sbd_msgwait_default:
-                logger.warning("sbd msgwait is set to %d, it was %d", sbd_msgwait_default, sbd_msgwait)
+                if not self.quiet:
+                    logger.warning("sbd msgwait is set to %d, it was %d", sbd_msgwait_default, sbd_msgwait)
                 sbd_msgwait = sbd_msgwait_default
         self.sbd_msgwait = sbd_msgwait
 
@@ -256,18 +260,20 @@ class SBDTimeout(object):
             qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
             if self.sbd_watchdog_timeout <= qdevice_sync_timeout:
                 watchdog_timeout_with_qdevice = qdevice_sync_timeout + self.QDEVICE_SYNC_TIMEOUT_MARGIN
-                logger.warning(
-                    "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
-                    watchdog_timeout_with_qdevice, self.sbd_watchdog_timeout
-                )
+                if not self.quiet:
+                    logger.warning(
+                        "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
+                        watchdog_timeout_with_qdevice, self.sbd_watchdog_timeout
+                    )
                 self.sbd_watchdog_timeout = watchdog_timeout_with_qdevice
         # add sbd and qdevice together from beginning
         elif self.context.qdevice_inst:
             if self.sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
-                logger.warning(
-                    "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
-                    self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self.sbd_watchdog_timeout
-                )
+                if not self.quiet:
+                    logger.warning(
+                        "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
+                        self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self.sbd_watchdog_timeout
+                    )
                 self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
 
     @staticmethod
@@ -1046,21 +1052,6 @@ class SBDManager:
             if not service_manager.service_is_enabled(constants.SBD_SERVICE, node):
                 logger.info("Enable %s on node %s", constants.SBD_SERVICE, node)
                 service_manager.enable_service(constants.SBD_SERVICE, node)
-
-    def configure_sbd(self):
-        '''
-        Configure fence_sbd resource and related properties
-        '''
-        if SBDUtils.get_sbd_device_from_config():
-            if utils.get_property("stonith-watchdog-timeout", get_default=False):
-                utils.delete_property("stonith-watchdog-timeout")
-            if not xmlutil.CrmMonXmlParser().is_resource_configured(self.SBD_RA):
-                cmd = f"crm configure primitive {self.SBD_RA_ID} {self.SBD_RA}"
-                sh.cluster_shell().get_stdout_or_raise_error(cmd)
-        else:
-            swt_value = self.timeout_dict.get("stonith-watchdog", 2*SBDTimeout.get_sbd_watchdog_timeout())
-            utils.set_property("stonith-watchdog-timeout", swt_value)
-        utils.set_property("stonith-enabled", "true")
 
     def _warn_diskless_sbd(self, peer=None):
         '''

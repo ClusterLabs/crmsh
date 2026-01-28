@@ -304,7 +304,7 @@ class Context(object):
         if self.type == "init":
             if self.stage not in INIT_STAGES_ALL:
                 utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(INIT_STAGES_EXTERNAL)})")
-            if self.stage in ("admin", "qdevice", "ocfs2") and not self.cluster_is_running:
+            if self.stage in ("admin", "sbd", "qdevice", "ocfs2") and not self.cluster_is_running:
                 utils.fatal(f"Cluster is inactive, can't run '{self.stage}' stage")
             if self.stage in ("corosync", "cluster") and self.cluster_is_running:
                 utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
@@ -1483,9 +1483,7 @@ op_defaults op-options: timeout=600
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    if ServiceManager().service_is_enabled(constants.SBD_SERVICE):
-        _context.sbd_manager.configure_sbd()
-
+    adjust_properties()
 
 
 def init_admin():
@@ -2204,7 +2202,6 @@ INIT_STAGE_CHECKER = {
         "ssh": ssh_stage_finished,
         "firewalld": FirewallManager.firewalld_stage_finished,
         "corosync": corosync_stage_finished,
-        "sbd": lambda: True,
         "cluster": is_online
 }
 
