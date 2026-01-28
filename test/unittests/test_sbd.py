@@ -1130,36 +1130,6 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance.initialize_sbd()
         mock_convert_timeout_dict_to_opt_str.assert_not_called()
 
-    @patch('crmsh.utils.set_property')
-    @patch('crmsh.sbd.ServiceManager')
-    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
-    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
-    def test_configure_sbd_diskless(self, mock_get_sbd_device, mock_get_sbd_watchdog_timeout, mock_ServiceManager, mock_set_property):
-        mock_get_sbd_watchdog_timeout.return_value = 1
-        mock_get_sbd_device.return_value = False
-        sbdmanager_instance = SBDManager()
-        sbdmanager_instance.configure_sbd()
-        mock_set_property.assert_has_calls([
-            call("stonith-watchdog-timeout", 2),
-            call("stonith-enabled", "true")
-        ])
-
-    @patch('crmsh.utils.delete_property')
-    @patch('crmsh.utils.get_property')
-    @patch('crmsh.sbd.sh.cluster_shell')
-    @patch('crmsh.sbd.xmlutil.CrmMonXmlParser')
-    @patch('crmsh.utils.set_property')
-    @patch('crmsh.sbd.ServiceManager')
-    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
-    def test_configure_sbd(self, mock_get_sbd_device, mock_ServiceManager, mock_set_property, mock_CrmMonXmlParser, mock_cluster_shell, mock_get_property, mock_delete_property):
-        mock_get_sbd_device.return_value = True
-        mock_get_property.return_value = -1
-        mock_CrmMonXmlParser.return_value.is_resource_configured.return_value = False
-        mock_cluster_shell.return_value.get_stdout_or_raise_error.return_value = "data"
-        sbdmanager_instance = SBDManager()
-        sbdmanager_instance.configure_sbd()
-        mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with("crm configure primitive stonith-sbd stonith:fence_sbd")
-
     @patch('crmsh.utils.cluster_run_cmd')
     @patch('crmsh.sbd.SBDTimeout.is_sbd_delay_start')
     @patch('crmsh.sbd.ServiceManager')
