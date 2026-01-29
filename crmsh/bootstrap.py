@@ -75,7 +75,7 @@ STATIC_FILES_TO_SYNC = (BOOTH_DIR, COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, PCMK_REMOTE_AUTH, PROFILES_FILE, CRM_CFG)
 
-INIT_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "corosync", "sbd", "cluster", "ocfs2", "gfs2", "admin", "qdevice")
+INIT_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "corosync", "cluster", "ocfs2", "gfs2", "admin", "sbd", "qdevice")
 INIT_STAGES_INTERNAL = ("qnetd_remote", )
 INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
 JOIN_STAGES_EXTERNAL = ("ssh", "firewalld", "ssh_merge", "cluster")
@@ -153,7 +153,7 @@ class Context(object):
         ctx.initialize_user()
         return ctx
 
-    def initialize_qdevice(self):
+    def _initialize_qdevice(self):
         """
         Initialize qdevice instance
         """
@@ -304,7 +304,7 @@ class Context(object):
         if self.type == "init":
             if self.stage not in INIT_STAGES_ALL:
                 utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(INIT_STAGES_EXTERNAL)})")
-            if self.stage in ("admin", "qdevice", "ocfs2") and not self.cluster_is_running:
+            if self.stage in ("admin", "sbd", "qdevice", "ocfs2") and not self.cluster_is_running:
                 utils.fatal(f"Cluster is inactive, can't run '{self.stage}' stage")
             if self.stage in ("corosync", "cluster") and self.cluster_is_running:
                 utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
@@ -324,6 +324,7 @@ class Context(object):
         for package in self.CORE_PACKAGES:
             if not utils.package_is_installed(package):
                 utils.fatal(f"Package '{package}' is not installed")
+        self._initialize_qdevice()
         if self.qdevice_inst:
             self.qdevice_inst.valid_qdevice_options()
         if self.ocfs2_devices or self.gfs2_devices or self.stage in ("ocfs2", "gfs2"):
@@ -703,9 +704,6 @@ def init_cluster_local():
             logger.warning("Failed to reset password of hacluster user: %s" % (outp + errp))
         else:
             pass_msg = ", password 'linux'"
-
-    # evil, but necessary
-    invoke("rm -f /var/lib/pacemaker/cib/*")
 
     # only try to start hawk if hawk is installed
     service_manager = ServiceManager()
@@ -1483,9 +1481,11 @@ op_defaults op-options: timeout=600
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    if ServiceManager().service_is_enabled(constants.SBD_SERVICE):
-        _context.sbd_manager.configure_sbd()
+    if corosync.is_qdevice_configured():
+        logger.info("Starting and enable corosync-qdevice.service on %s", utils.this_node())
+        ServiceManager().start_service("corosync-qdevice.service", enable=True)
 
+    adjust_properties()
 
 
 def init_admin():
@@ -1527,11 +1527,10 @@ def configure_qdevice_interactive():
     if not confirm("Do you want to configure QDevice?"):
         return
     while True:
-        try:
-            qdevice.QDevice.check_package_installed("corosync-qdevice")
+        if utils.package_is_installed("corosync-qdevice"):
             break
-        except ValueError as err:
-            logger.error(err)
+        else:
+            logger.error("Package corosync-qdevice is not installed")
             if confirm("Please install the package manually and press 'y' to continue"):
                 continue
             else:
@@ -1621,20 +1620,22 @@ def init_qdevice():
 
     logger.info("""Configure Qdevice/Qnetd:""")
     utils.check_all_nodes_reachable("setup Qdevice")
-    cluster_node_list = utils.list_cluster_nodes()
-    for node in cluster_node_list:
-        if not ServiceManager().service_is_available("corosync-qdevice.service", node):
-            utils.fatal("corosync-qdevice.service is not available on {}".format(node))
+    cluster_node_list = utils.list_cluster_nodes() or [utils.this_node()]
 
     _setup_passwordless_ssh_for_qnetd(cluster_node_list)
 
     qdevice_inst = _context.qdevice_inst
     if corosync.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
-        qdevice_inst.start_qdevice_service()
+        if _context.stage == "qdevice":
+            qdevice_inst.start_qdevice_service()
         return
+
     qdevice_inst.set_cluster_name()
-    qdevice_inst.valid_qnetd()
-    qdevice_inst.config_and_start_qdevice()
+    qdevice_inst.validate_and_start_qnetd()
+    qdevice_inst.certificate_and_config_qdevice()
+
+    if _context.stage == "qdevice":
+        qdevice_inst.start_qdevice_service()
     adjust_properties()
 
 
@@ -2011,7 +2012,6 @@ def join_cluster(seed_host, remote_user):
             ringXaddr_res.append(ringXaddr)
             break
     print("")
-    invoke("rm -f /var/lib/pacemaker/cib/*")
     try:
         corosync.add_node_config(ringXaddr_res)
     except corosync.IPAlreadyConfiguredError as e:
@@ -2081,7 +2081,7 @@ def start_qdevice_on_join_node(seed_host):
     """
     Doing qdevice certificate process and start qdevice service on join node
     """
-    with logger_utils.status_long("Starting corosync-qdevice.service"):
+    with logger_utils.status_long(f"Starting and enable corosync-qdevice.service on {utils.this_node()}"):
         if corosync.is_qdevice_tls_on():
             qnetd_addr = corosync.get_value("quorum.device.net.host")
             qdevice_inst = qdevice.QDevice(qnetd_addr, cluster_node=seed_host)
@@ -2204,7 +2204,6 @@ INIT_STAGE_CHECKER = {
         "ssh": ssh_stage_finished,
         "firewalld": FirewallManager.firewalld_stage_finished,
         "corosync": corosync_stage_finished,
-        "sbd": lambda: True,
         "cluster": is_online
 }
 
@@ -2236,6 +2235,8 @@ def bootstrap_init(context):
     _context = context
     stage = _context.stage
 
+    _context.validate()
+
     init()
 
     _context.load_profiles()
@@ -2252,6 +2253,9 @@ def bootstrap_init(context):
         if not check_prereqs():
             return
 
+    if not _context.cluster_is_running:
+        invoke("rm -f /var/lib/pacemaker/cib/*")
+
     if stage != "":
         check_stage_dependency(stage)
         globals()["init_" + stage]()
@@ -2264,9 +2268,9 @@ def bootstrap_init(context):
         lock_inst = lock.Lock()
         try:
             with lock_inst.lock():
+                init_qdevice()
                 init_cluster()
                 init_admin()
-                init_qdevice()
                 init_ocfs2()
                 init_gfs2()
         except lock.ClaimLockError as err:
@@ -2325,6 +2329,8 @@ def bootstrap_join(context):
     global _context
     _context = context
 
+    _context.validate()
+
     init()
     _context.init_sbd_manager()
 
@@ -2332,6 +2338,9 @@ def bootstrap_join(context):
 
     if not check_prereqs():
         return
+
+    if not _context.cluster_is_running:
+        invoke("rm -f /var/lib/pacemaker/cib/*")
 
     if _context.stage != "":
         remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
