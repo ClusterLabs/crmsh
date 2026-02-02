@@ -3,6 +3,7 @@ import re
 import typing
 import shutil
 import time
+import logging
 from enum import Enum
 from . import utils, sh
 from . import bootstrap
@@ -217,6 +218,10 @@ class SBDTimeout(object):
             self.quiet = self.context.quiet
             self._initialize_timeout_from_bootstrap()
 
+    def _log_when_not_quiet(self, level, message, *args, **kwargs):
+        if not self.quiet:
+            logger.log(level, message, *args, **kwargs)
+
     def _initialize_timeout_from_bootstrap(self):
         self._set_sbd_watchdog_timeout()
         if self.context.diskless_sbd:
@@ -232,8 +237,11 @@ class SBDTimeout(object):
         if "sbd.watchdog_timeout" in self.context.profiles_dict:
             self.sbd_watchdog_timeout = int(self.context.profiles_dict["sbd.watchdog_timeout"])
         if self.context.is_s390 and self.sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390:
-            if not self.quiet:
-                logger.warning("sbd_watchdog_timeout is set to %d for s390, it was %d", self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self.sbd_watchdog_timeout)
+            self._log_when_not_quiet(
+                logging.WARNING,
+                "sbd watchdog_timeout is set to %d for s390, it was %d",
+                self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self.sbd_watchdog_timeout
+            )
             self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390
 
     def _set_sbd_msgwait(self):
@@ -246,8 +254,11 @@ class SBDTimeout(object):
         if "sbd.msgwait" in self.context.profiles_dict:
             sbd_msgwait = int(self.context.profiles_dict["sbd.msgwait"])
             if sbd_msgwait < sbd_msgwait_default:
-                if not self.quiet:
-                    logger.warning("sbd msgwait is set to %d, it was %d", sbd_msgwait_default, sbd_msgwait)
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "sbd msgwait is set to %d, it was %d",
+                    sbd_msgwait_default, sbd_msgwait
+                )
                 sbd_msgwait = sbd_msgwait_default
         self.sbd_msgwait = sbd_msgwait
 
@@ -260,20 +271,20 @@ class SBDTimeout(object):
             qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
             if self.sbd_watchdog_timeout <= qdevice_sync_timeout:
                 watchdog_timeout_with_qdevice = qdevice_sync_timeout + self.QDEVICE_SYNC_TIMEOUT_MARGIN
-                if not self.quiet:
-                    logger.warning(
-                        "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
-                        watchdog_timeout_with_qdevice, self.sbd_watchdog_timeout
-                    )
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
+                    watchdog_timeout_with_qdevice, self.sbd_watchdog_timeout
+                )
                 self.sbd_watchdog_timeout = watchdog_timeout_with_qdevice
         # add sbd and qdevice together from beginning
         elif self.context.qdevice_inst:
             if self.sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
-                if not self.quiet:
-                    logger.warning(
-                        "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
-                        self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self.sbd_watchdog_timeout
-                    )
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
+                    self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self.sbd_watchdog_timeout
+                )
                 self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
 
     @staticmethod
@@ -680,12 +691,18 @@ class SBDTimeoutChecker(SBDTimeout):
         if self.disk_based:
             self.sbd_watchdog_timeout_expected, self.sbd_msgwait_expected = SBDTimeout.get_sbd_metadata_expected()
             if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
-                if not self.quiet:
-                    logger.error("It's required that SBD watchdog timeout(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "It's required that SBD watchdog timeout(now %d) >= %d",
+                    self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected
+                )
                 return CheckResult.ERROR
             if self.sbd_msgwait < self.sbd_msgwait_expected:
-                if not self.quiet:
-                    logger.error("It's required that SBD msgwait(now %d) >= %d", self.sbd_msgwait, self.sbd_msgwait_expected)
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "It's required that SBD msgwait(now %d) >= %d",
+                    self.sbd_msgwait, self.sbd_msgwait_expected
+                )
                 return CheckResult.ERROR
         return CheckResult.SUCCESS
 
@@ -705,8 +722,11 @@ class SBDTimeoutChecker(SBDTimeout):
         if not self.disk_based:
             self.sbd_watchdog_timeout_expected = SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=True)
             if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
-                if not self.quiet:
-                    logger.error("It's required that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected)
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "It's required that SBD_WATCHDOG_TIMEOUT(now %d) >= %d",
+                    self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected
+                )
                 return CheckResult.ERROR
         return CheckResult.SUCCESS
 
@@ -720,19 +740,25 @@ class SBDTimeoutChecker(SBDTimeout):
             return CheckResult.SUCCESS
         elif config_value.isdigit() and expected_value.isdigit():
             if int(config_value) < int(expected_value):
-                if not self.quiet:
-                    logger.error("It's required that SBD_DELAY_START is set to %s, now is %s",
-                                 expected_value, config_value)
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "It's required that SBD_DELAY_START is set to %s, now is %s",
+                    expected_value, config_value
+                )
                 return CheckResult.ERROR
             else:
-                if not self.quiet:
-                    logger.warning("It's recommended that SBD_DELAY_START is set to %s, now is %s",
-                                   expected_value, config_value)
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "It's recommended that SBD_DELAY_START is set to %s, now is %s",
+                    expected_value, config_value
+                )
                 return CheckResult.WARNING
         else:
-            if not self.quiet:
-                logger.error("It's required that SBD_DELAY_START is set to %s, now is %s",
-                            expected_value, config_value)
+            self._log_when_not_quiet(
+                logging.ERROR,
+                "It's required that SBD_DELAY_START is set to %s, now is %s",
+                expected_value, config_value
+            )
             return CheckResult.ERROR
 
     def _fix_sbd_delay_start(self):
@@ -747,18 +773,18 @@ class SBDTimeoutChecker(SBDTimeout):
             if actual_start_timeout == expected_start_timeout:
                 check_res_list.append(CheckResult.SUCCESS)
             elif actual_start_timeout < expected_start_timeout:
-                if not self.quiet:
-                    logger.error(
-                        "It's required that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
-                        expected_start_timeout, actual_start_timeout, node
-                    )
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "It's required that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
+                    expected_start_timeout, actual_start_timeout, node
+                )
                 check_res_list.append(CheckResult.ERROR)
             else:
-                if not self.quiet:
-                    logger.warning(
-                        "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
-                        expected_start_timeout, actual_start_timeout, node
-                    )
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
+                    expected_start_timeout, actual_start_timeout, node
+                )
                 check_res_list.append(CheckResult.WARNING)
 
         return SBDTimeoutChecker._return_helper(check_res_list)
@@ -774,30 +800,41 @@ class SBDTimeoutChecker(SBDTimeout):
     def _check_stonith_watchdog_timeout(self) -> CheckResult:
         value = utils.get_property("stonith-watchdog-timeout")
         if value and int(value) == -1:
-            if not self.quiet:
-                logger.warning("It's recommended that stonith-watchdog-timeout is et to %d, now is -1", self.stonith_watchdog_timeout)
+            self._log_when_not_quiet(
+                logging.WARNING,
+                "It's recommended that stonith-watchdog-timeout is set to %d, now is -1",
+                self.stonith_watchdog_timeout
+            )
             return CheckResult.WARNING
         value = int(utils.crm_msec(value)/1000)
         if self.disk_based:
             if value > 0:
-                if not self.quiet:
-                    logger.warning("It's recommended that stonith-watchdog-timeout is not set when using disk-based SBD")
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "It's recommended that stonith-watchdog-timeout is not set when using disk-based SBD"
+                )
                 return CheckResult.WARNING
         else:
             if value == 0:
-                if not self.quiet:
-                    logger.error("It's required that stonith-watchdog-timeout is set to %d, now is not set",
-                                self.stonith_watchdog_timeout)
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "It's required that stonith-watchdog-timeout is set to %d, now is not set",
+                    self.stonith_watchdog_timeout
+                )
                 return CheckResult.ERROR
             if value < self.stonith_watchdog_timeout:
-                if not self.quiet:
-                    logger.error("It's required that stonith-watchdog-timeout is set to %d, now is %d",
-                                 self.stonith_watchdog_timeout, value)
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "It's required that stonith-watchdog-timeout is set to %d, now is %d",
+                    self.stonith_watchdog_timeout, value
+                )
                 return CheckResult.ERROR
             elif value > self.stonith_watchdog_timeout:
-                if not self.quiet:
-                    logger.warning("It's recommended that stonith-watchdog-timeout is set to %d, now is %d",
-                                   self.stonith_watchdog_timeout, value)
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "It's recommended that stonith-watchdog-timeout is set to %d, now is %d",
+                    self.stonith_watchdog_timeout, value
+                )
                 return CheckResult.WARNING
         return CheckResult.SUCCESS
 
@@ -815,14 +852,18 @@ class SBDTimeoutChecker(SBDTimeout):
         # will get default value from pacemaker metadata if not set
         value = int(utils.crm_msec(value)/1000)
         if value < expected_value:
-            if not self.quiet:
-                logger.error("It's required that stonith-timeout is set to %d, now is %d",
-                             expected_value, value)
+            self._log_when_not_quiet(
+                logging.ERROR,
+                "It's required that stonith-timeout is set to %d, now is %d",
+                expected_value, value
+            )
             return CheckResult.ERROR
         elif value > expected_value:
-            if not self.quiet:
-                logger.warning("It's recommended that stonith-timeout is set to %d, now is %d",
-                               expected_value, value)
+            self._log_when_not_quiet(
+                logging.WARNING,
+                "It's recommended that stonith-timeout is set to %d, now is %d",
+                expected_value, value
+            )
             return CheckResult.WARNING
         return CheckResult.SUCCESS
 
@@ -834,8 +875,10 @@ class SBDTimeoutChecker(SBDTimeout):
     def _check_stonith_enabled(self) -> CheckResult:
         value = utils.get_property("stonith-enabled", get_default=False)
         if utils.is_boolean_false(value):
-            if not self.quiet:
-                logger.error("It's required that stonith-enabled is set to true, now is false")
+            self._log_when_not_quiet(
+                logging.ERROR,
+                "It's required that stonith-enabled is set to true, now is false"
+            )
             return CheckResult.ERROR
         return CheckResult.SUCCESS
 
@@ -855,9 +898,11 @@ class SBDTimeoutChecker(SBDTimeout):
             if rc == 0:
                 check_res_list.append(CheckResult.SUCCESS)
             else:
-                if not self.quiet:
-                    logger.warning("Runtime drop-in file %s to unset SBD_DELAY_START is missing on node %s",
-                                   SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE, node)
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "Runtime drop-in file %s to unset SBD_DELAY_START is missing on node %s",
+                    SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE, node
+                )
                 check_res_list.append(CheckResult.WARNING)
 
         return SBDTimeoutChecker._return_helper(check_res_list)
@@ -874,8 +919,11 @@ class SBDTimeoutChecker(SBDTimeout):
             if service_manager.service_is_enabled(constants.SBD_SERVICE, node):
                 check_res_list.append(CheckResult.SUCCESS)
             else:
-                if not self.quiet:
-                    logger.error("%s is not enabled on node %s", constants.SBD_SERVICE, node)
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "%s is not enabled on node %s",
+                    constants.SBD_SERVICE, node
+                )
                 self.service_disabled_node_list.append(node)
                 check_res_list.append(CheckResult.ERROR)
         return SBDTimeoutChecker._return_helper(check_res_list)
@@ -897,16 +945,25 @@ class SBDTimeoutChecker(SBDTimeout):
             if configured:
                 return CheckResult.SUCCESS
             else:
-                if not self.quiet:
-                    logger.error("Fence agent %s is not configured", SBDManager.SBD_RA)
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "Fence agent %s is not configured",
+                    SBDManager.SBD_RA
+                )
                 return CheckResult.ERROR
         if not xml_inst.is_resource_configured(SBDManager.SBD_RA):
-            if not self.quiet:
-                logger.error("Fence agent %s is not configured", SBDManager.SBD_RA)
+            self._log_when_not_quiet(
+                logging.ERROR,
+                "Fence agent %s is not configured",
+                SBDManager.SBD_RA
+            )
             return CheckResult.ERROR
         elif not xml_inst.is_resource_started(SBDManager.SBD_RA) and not utils.is_cluster_in_maintenance_mode():
-            if not self.quiet:
-                logger.error("Fence agent %s is not started", SBDManager.SBD_RA)
+            self._log_when_not_quiet(
+                logging.ERROR,
+                "Fence agent %s is not started",
+                SBDManager.SBD_RA
+            )
             return CheckResult.ERROR
         return CheckResult.SUCCESS
 
