@@ -7,6 +7,7 @@ import shutil
 import logging
 import logging.config
 import typing
+import time
 from contextlib import contextmanager
 
 from . import options
@@ -194,6 +195,14 @@ class GroupWriteRotatingFileHandler(logging.handlers.RotatingFileHandler):
         return rtv
 
 
+class ISO8601Formatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        ct = self.converter(record.created)
+        s = time.strftime(datefmt, ct)
+        tz = time.strftime('%z', ct)
+        return f"{s}.{int(record.msecs):03d}{tz}"
+
+
 LOGGING_CFG = {
     "version": 1,
     "disable_existing_loggers": "False",
@@ -215,8 +224,9 @@ LOGGING_CFG = {
             },
         },
         "file": {
+            "()": ISO8601Formatter,
             "format": "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
-            "datefmt": "%Y-%m-%dT%H:%M:%S%z",
+            "datefmt": "%Y-%m-%dT%H:%M:%S",
         }
     },
     "filters": {
