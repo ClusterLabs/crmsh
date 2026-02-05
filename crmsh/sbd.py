@@ -489,7 +489,7 @@ class SBDCheckItem(IntEnum):
     ENABLE_SBD_SERVICE = auto()
 
 
-class SBDTimeoutChecker(SBDTimeout):
+class SBDConfigChecker(SBDTimeout):
 
     def __init__(self, quiet=False, fix=False):
         super().__init__()
@@ -664,7 +664,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 else:
                     raise FixFailure(f"Failed to fix {name} issue")
 
-        return SBDTimeoutChecker._return_helper(check_res_list)
+        return SBDConfigChecker._return_helper(check_res_list)
 
     def _check_config_consistency(self, error_msg: str = "") -> bool:
         consistent = True
@@ -808,7 +808,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 )
                 check_res_list.append(CheckResult.WARNING)
 
-        return SBDTimeoutChecker._return_helper(check_res_list)
+        return SBDConfigChecker._return_helper(check_res_list)
 
     def _fix_sbd_systemd_start_timeout(self):
         logger.info("Adjusting systemd start timeout for sbd.service to %ds", self.sbd_systemd_start_timeout_expected)
@@ -926,7 +926,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 )
                 check_res_list.append(CheckResult.WARNING)
 
-        return SBDTimeoutChecker._return_helper(check_res_list)
+        return SBDConfigChecker._return_helper(check_res_list)
 
     def _fix_sbd_delay_start_unset_dropin(self):
         logger.info("Createing runtime drop-in file %s to unset SBD_DELAY_START",
@@ -947,7 +947,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 )
                 self.service_disabled_node_list.append(node)
                 check_res_list.append(CheckResult.ERROR)
-        return SBDTimeoutChecker._return_helper(check_res_list)
+        return SBDConfigChecker._return_helper(check_res_list)
 
     def _fix_sbd_service_is_enabled(self):
         service_manager = ServiceManager()
