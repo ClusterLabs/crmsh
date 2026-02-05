@@ -267,11 +267,11 @@ class TestSBDTimeout(unittest.TestCase):
         self.assertEqual(result, 80)
 
 
-class TestSBDTimeoutChecker(unittest.TestCase):
+class TestSBDConfigChecker(unittest.TestCase):
 
     def setUp(self):
-        self.instance_check = sbd.SBDTimeoutChecker(fix=False)
-        self.instance_fix = sbd.SBDTimeoutChecker(fix=True)
+        self.instance_check = sbd.SBDConfigChecker(fix=False)
+        self.instance_fix = sbd.SBDConfigChecker(fix=True)
 
     @patch('logging.Logger.info')
     def test_log_and_return_success(self, mock_logger_info):
@@ -513,7 +513,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_fix._fix_sbd_delay_start()
         mock_update_sbd_configuration.assert_called_once_with({"SBD_DELAY_START": "80"})
 
-    @patch('crmsh.sbd.SBDTimeoutChecker._return_helper')
+    @patch('crmsh.sbd.SBDConfigChecker._return_helper')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout')
     @patch('crmsh.utils.this_node')
     def test_check_sbd_systemd_start_timeout(self, mock_this_node, mock_get_sbd_systemd_start_timeout, mock_return_helper):
@@ -620,7 +620,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         mock_is_sbd_delay_start.return_value = False
         self.assertEqual(self.instance_check._check_sbd_delay_start_unset_dropin(), sbd.CheckResult.SUCCESS)
 
-    @patch('crmsh.sbd.SBDTimeoutChecker._return_helper')
+    @patch('crmsh.sbd.SBDConfigChecker._return_helper')
     @patch('crmsh.utils.this_node')
     @patch('crmsh.sh.cluster_shell')
     @patch('crmsh.sbd.SBDTimeout.is_sbd_delay_start')
@@ -649,7 +649,7 @@ class TestSBDTimeoutChecker(unittest.TestCase):
         self.instance_check.disk_based = False
         self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.SUCCESS)
 
-    @patch('crmsh.sbd.SBDTimeoutChecker._return_helper')
+    @patch('crmsh.sbd.SBDConfigChecker._return_helper')
     @patch('crmsh.utils.this_node')
     @patch('crmsh.sbd.ServiceManager')
     def test_check_sbd_service_is_enabled(self, mock_ServiceManager, mock_this_node, mock_return_helper):

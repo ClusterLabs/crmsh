@@ -239,7 +239,7 @@ class TestSBD(unittest.TestCase):
             res = self.sbd_instance_diskbased._configure_show(["xxx1", "xxx2"])
         self.assertEqual(str(e.exception), f"Unknown argument: xxx2")
 
-    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
     def test_configure_show_disk_metadata(self, mock_sbd_timeout_checker):
         mock_sbd_timeout_checker_instance = mock.Mock()
         mock_sbd_timeout_checker.return_value = mock_sbd_timeout_checker_instance
@@ -250,7 +250,7 @@ class TestSBD(unittest.TestCase):
         mock_sbd_timeout_checker.assert_called_once_with()
         mock_sbd_timeout_checker_instance.check_and_fix.assert_called_once()
 
-    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
     @mock.patch('crmsh.ui_sbd.SBD._show_sysconfig')
     def test_configure_show_sysconfig(self, mock_show_sysconfig, mock_sbd_timeout_checker):
         mock_sbd_timeout_checker_instance = mock.Mock()
@@ -261,7 +261,7 @@ class TestSBD(unittest.TestCase):
         mock_sbd_timeout_checker.assert_called_once_with()
         mock_sbd_timeout_checker_instance.check_and_fix.assert_called_once()
 
-    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
     def test_configure_show_property(self, mock_sbd_timeout_checker):
         mock_sbd_timeout_checker_instance = mock.Mock()
         mock_sbd_timeout_checker.return_value = mock_sbd_timeout_checker_instance
@@ -285,7 +285,7 @@ class TestSBD(unittest.TestCase):
             self.assertIsNotNone(match)
             self.assertEqual(match.groups(), expected)
 
-    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
     @mock.patch('crmsh.ui_sbd.SBD._show_sysconfig')
     @mock.patch('builtins.print')
     def test_configure_show(self, mock_print, mock_show_sysconfig, mock_sbd_timeout_checker):
