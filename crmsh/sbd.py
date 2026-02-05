@@ -523,8 +523,8 @@ class SBDConfigChecker(SBDTimeout):
             logger.info('SBD: Check sbd timeout configuration: OK.')
             return True
 
-    def check_and_fix(self) -> CheckResult:
-        checks_and_fixes = [
+    def _check_and_fix_items(self) -> list[tuple]:
+        return  [
             # issue name, check method, fix method, SSH required, prerequisites checks
             (
                 "SBD disk metadata",
@@ -622,6 +622,7 @@ class SBDConfigChecker(SBDTimeout):
             ),
         ]
 
+    def check_and_fix(self) -> CheckResult:
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
             if self.fix:
                 raise FixAborted("%s is not active, skip fixing SBD timeout issues" % constants.SBD_SERVICE)
@@ -643,9 +644,11 @@ class SBDConfigChecker(SBDTimeout):
 
         self._load_configurations_from_runtime()
 
-        check_res_list = [CheckResult.SUCCESS for _ in range(len(checks_and_fixes))]
-        for index, (name, check_method, fix_method, ssh_required, prereq_checks) in enumerate(checks_and_fixes):
+        check_and_fix_items = self._check_and_fix_items()
+        check_res_list = [CheckResult.SUCCESS for _ in range(len(check_and_fix_items))]
+        for index, (name, check_method, fix_method, ssh_required, prereq_checks) in enumerate(check_and_fix_items):
             if prereq_checks and any(check_res_list[p.value] != CheckResult.SUCCESS for p in prereq_checks):
+                check_res_list[index] = CheckResult.ERROR
                 continue
             check_res = check_method()
             logger.debug("SBD Checking: %s, result: %s", name, check_res)
