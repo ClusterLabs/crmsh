@@ -4,7 +4,7 @@ import typing
 import shutil
 import time
 import logging
-from enum import Enum
+from enum import Enum, IntEnum, auto
 from . import utils, sh
 from . import bootstrap
 from . import log
@@ -475,6 +475,20 @@ class CheckResult(Enum):
     __str__ = lambda self: self.name
 
 
+class SBDCheckItem(IntEnum):
+    SBD_DISK_METADATA = 0
+    SBD_DEVICE_METADATA_CONSISTENCY = auto()
+    SBD_WATCHDOG_TIMEOUT = auto()
+    FENCE_SBD_AGENT = auto()
+    SBD_DELAY_START = auto()
+    SBD_SYSTEMD_START_TIMEOUT = auto()
+    STONITH_WATCHDOG_TIMEOUT_PROPERTY = auto()
+    STONITH_TIMEOUT_PROPERTY = auto()
+    STONITH_ENABLED_PROPERTY = auto()
+    UNSET_SBD_DELAY_START_IN_DROPIN = auto()
+    ENABLE_SBD_SERVICE = auto()
+
+
 class SBDTimeoutChecker(SBDTimeout):
 
     def __init__(self, quiet=False, fix=False):
@@ -525,7 +539,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 self._check_sbd_device_metadata_consistency,
                 self._fix_sbd_device_metadata_consistency,
                 True,
-                [0]
+                [SBDCheckItem.SBD_DISK_METADATA]
             ),
 
             (
@@ -549,7 +563,11 @@ class SBDTimeoutChecker(SBDTimeout):
                 self._check_sbd_delay_start,
                 self._fix_sbd_delay_start,
                 True,
-                [0, 2, 3]
+                [
+                    SBDCheckItem.SBD_DISK_METADATA,
+                    SBDCheckItem.SBD_WATCHDOG_TIMEOUT,
+                    SBDCheckItem.FENCE_SBD_AGENT
+                ]
             ),
 
             (
@@ -557,7 +575,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 self._check_sbd_systemd_start_timeout,
                 self._fix_sbd_systemd_start_timeout,
                 True,
-                [4]
+                [SBDCheckItem.SBD_DELAY_START]
             ),
 
             (
@@ -565,7 +583,7 @@ class SBDTimeoutChecker(SBDTimeout):
                 self._check_stonith_watchdog_timeout,
                 self._fix_stonith_watchdog_timeout,
                 False,
-                [2]
+                [SBDCheckItem.SBD_WATCHDOG_TIMEOUT]
             ),
 
             (
@@ -573,7 +591,10 @@ class SBDTimeoutChecker(SBDTimeout):
                 self._check_stonith_timeout,
                 self._fix_stonith_timeout,
                 False,
-                [0, 2]
+                [
+                    SBDCheckItem.SBD_DISK_METADATA,
+                    SBDCheckItem.SBD_WATCHDOG_TIMEOUT
+                ]
             ),
 
             (
@@ -624,7 +645,7 @@ class SBDTimeoutChecker(SBDTimeout):
 
         check_res_list = [CheckResult.SUCCESS for _ in range(len(checks_and_fixes))]
         for index, (name, check_method, fix_method, ssh_required, prereq_checks) in enumerate(checks_and_fixes):
-            if prereq_checks and any(check_res_list[i] != CheckResult.SUCCESS for i in prereq_checks):
+            if prereq_checks and any(check_res_list[p.value] != CheckResult.SUCCESS for p in prereq_checks):
                 continue
             check_res = check_method()
             logger.debug("SBD Checking: %s, result: %s", name, check_res)
