@@ -357,6 +357,7 @@ Stage can be one of:
     ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
     gfs2        Configure GFS2 (requires -g <dev>) NOTE: this is a Technical Preview
     admin       Create administration virtual IP (optional)
+    sbd         Configure SBD (requires -s <dev>)
     qdevice     Configure qdevice and qnetd
 
 Note:
@@ -492,8 +493,6 @@ Examples:
         boot_context.args = args
         boot_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         boot_context.type = "init"
-        boot_context.initialize_qdevice()
-        boot_context.validate()
 
         bootstrap.bootstrap_init(boot_context)
         bootstrap.bootstrap_add(boot_context)
@@ -551,7 +550,6 @@ Examples:
         join_context.stage = stage
         join_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         join_context.type = "join"
-        join_context.validate()
 
         bootstrap.bootstrap_join(join_context)
 
