@@ -210,7 +210,7 @@ Feature: crmsh bootstrap process - init, join and remove
 
   @skip_non_root
   Scenario: Remove offline and unreachable node
-    When    Run "init 0" on "hanode2"
+    When    Run "systemctl poweroff" on "hanode2"
     Then    Online nodes are "hanode1"
     When    Run "sleep 10" on "hanode1"
     When    Try "crm cluster remove hanode2 -y" on "hanode1"
