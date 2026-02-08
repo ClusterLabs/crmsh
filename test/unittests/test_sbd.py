@@ -943,22 +943,13 @@ class TestSBDManager(unittest.TestCase):
             sbdmanager_instance._warn_and_raise_no_sbd()
         mock_logger_warning.assert_called_once_with('%s', SBDManager.NO_SBD_WARNING)
 
-    @patch('crmsh.sbd.ServiceManager')
     @patch('crmsh.utils.get_quorum_votes_dict')
     @patch('logging.Logger.warning')
-    def test_warn_diskless_sbd(self, mock_logger_warning, mock_get_quorum_votes_dict, mock_ServiceManager):
-        mock_ServiceManager.return_value.service_is_active = MagicMock(return_value=True)
+    @patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
+    def test_warn_diskless_sbd(self, mock_is_using_sbd, mock_logger_warning, mock_get_quorum_votes_dict):
+        mock_is_using_sbd.return_value = True
         mock_get_quorum_votes_dict.return_value = {'Expected': '2', 'Total': '2'}
-        sbdmanager_instance = SBDManager()
-        sbdmanager_instance._warn_diskless_sbd(peer="node1")
-        mock_logger_warning.assert_called_once_with('%s', SBDManager.DISKLESS_SBD_WARNING)
-
-    @patch('crmsh.sbd.ServiceManager')
-    @patch('logging.Logger.warning')
-    def test_warn_diskless_sbd_init(self, mock_logger_warning, mock_ServiceManager):
-        mock_ServiceManager.return_value.service_is_active = MagicMock(return_value=False)
-        sbdmanager_instance = SBDManager(diskless_sbd=True)
-        sbdmanager_instance._warn_diskless_sbd()
+        sbd.SBDManager.warn_diskless_sbd()
         mock_logger_warning.assert_called_once_with('%s', SBDManager.DISKLESS_SBD_WARNING)
 
     @patch('crmsh.sbd.SBDUtils.check_devices_metadata_consistent')
