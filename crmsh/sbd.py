@@ -1107,7 +1107,6 @@ class SBDManager:
     def initialize_sbd(self):
         if self.diskless_sbd:
             logger.info("Configuring diskless SBD")
-            self._warn_diskless_sbd()
             return
         elif self.device_list_to_init:
             logger.info("Configuring disk-based SBD")
@@ -1134,19 +1133,16 @@ class SBDManager:
                 logger.info("Enable %s on node %s", constants.SBD_SERVICE, node)
                 service_manager.enable_service(constants.SBD_SERVICE, node)
 
-    def _warn_diskless_sbd(self, peer=None):
+    @staticmethod
+    def warn_diskless_sbd():
         '''
         Give warning when configuring diskless sbd
         '''
-        # When in sbd stage or join process
-        if (self.diskless_sbd and self.cluster_is_running) or peer:
-            vote_dict = utils.get_quorum_votes_dict(peer)
+        if SBDUtils.is_using_diskless_sbd():
+            vote_dict = utils.get_quorum_votes_dict()
             expected_vote = int(vote_dict.get('Expected', 0))
-            if expected_vote < self.DISKLESS_SBD_MIN_EXPECTED_VOTE:
-                logger.warning('%s', self.DISKLESS_SBD_WARNING)
-        # When in init process
-        elif self.diskless_sbd:
-            logger.warning('%s', self.DISKLESS_SBD_WARNING)
+            if expected_vote < SBDManager.DISKLESS_SBD_MIN_EXPECTED_VOTE:
+                logger.warning('%s', SBDManager.DISKLESS_SBD_WARNING)
 
     def _warn_and_raise_no_sbd(self):
         logger.warning('%s', self.NO_SBD_WARNING)
@@ -1307,8 +1303,6 @@ class SBDManager:
 
         if dev_list:
             SBDUtils.verify_sbd_device(dev_list, [peer_host])
-        else:
-            self._warn_diskless_sbd(peer_host)
 
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
         self.enable_sbd_service()

@@ -2171,9 +2171,9 @@ def remove_node_from_cluster(node, dead_node=False):
     corosync.configure_two_node(removing=True)
     logger.info("Propagating configuration changes across the remaining nodes")
     sync_path(corosync.conf())
-    adjust_properties()
-
     sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
+
+    adjust_properties()
 
     if not dead_node:
         FirewallManager(peer=node).remove_service()
@@ -2787,6 +2787,7 @@ def adjust_properties():
     adjust_stonith_timeout()
     adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
+    sbd.SBDManager.warn_diskless_sbd()
 
 
 def retrieve_files(from_node: str, file_list: list, msg: str = None):
