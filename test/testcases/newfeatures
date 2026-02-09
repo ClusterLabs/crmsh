@@ -3,7 +3,7 @@ configure
 # erase to start from scratch
 erase
 erase nodes
-property stonith-enabled=false
+property fencing-enabled=false
 node node1
 primitive p0 Dummy params $p0-state:state=1
 primitive p1 Dummy params \

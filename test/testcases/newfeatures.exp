@@ -3,7 +3,7 @@
 .INP: # erase to start from scratch
 .INP: erase
 .INP: erase nodes
-.INP: property stonith-enabled=false
+.INP: property fencing-enabled=false
 .INP: node node1
 .INP: primitive p0 Dummy params $p0-state:state=1
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
@@ -51,7 +51,7 @@ tag tag1 p0 p1 p2
 tag tag2 p0 p1 p2
 location l1 { p0 p1 p2 } inf: node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 alert notify_10 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
 	attributes trap_add_hires_timestamp_oid=false \
         select attributes { master-prmStateful test1 } \
