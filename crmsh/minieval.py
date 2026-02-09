@@ -183,8 +183,7 @@ class SimpleEval(object):  # pylint: disable=too-few-public-methods
         self.names = names
 
         self.nodes = {
-            ast.Num: self._eval_num,
-            ast.Str: self._eval_str,
+            ast.Constant: self._eval_constant,
             ast.Name: self._eval_name,
             ast.UnaryOp: self._eval_unaryop,
             ast.BinOp: self._eval_binop,
@@ -204,9 +203,13 @@ class SimpleEval(object):  # pylint: disable=too-few-public-methods
         elif isinstance(self.names, dict) and "None" not in self.names:
             self.names["None"] = None
 
-        # py3.8 uses ast.Constant instead of ast.Num, ast.Str, ast.NameConstant
-        if hasattr(ast, 'Constant'):
-            self.nodes[ast.Constant] = self._eval_constant
+        # py3.14 completely dropped ast.Num and ast.Str
+        # in favor of ast.Constant that encodes different types of value
+        # See https://docs.python.org/3/whatsnew/3.14.html#id9
+        if hasattr(ast, 'Str'):
+            self.nodes[ast.Str] = self._eval_str
+        if hasattr(ast, 'Num'):
+            self.nodes[ast.Num] = self._eval_num
 
     def evaluate(self, expr):
         """ evaluate an expresssion, using the operators, functions and
