@@ -3,7 +3,7 @@
 .INP: # erase to start from scratch
 .INP: erase
 .INP: erase nodes
-.INP: property stonith-enabled=false
+.INP: property fencing-enabled=false
 .INP: node node1
 .INP: primitive d1 ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
@@ -21,7 +21,7 @@ primitive d2 ocf:pacemaker:Dummy \
 	op stop timeout=20s interval=0s
 location d1-pref d1 100: node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: _test
 .INP: rename d1 p1
 INFO: 12: modified location:d1-pref from d1 to p1
@@ -37,7 +37,7 @@ primitive p1 ocf:pacemaker:Dummy \
 	op stop timeout=20s interval=0s
 location d1-pref p1 100: node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: # delete primitive
 .INP: delete d2
 .INP: _test
@@ -49,7 +49,7 @@ primitive p1 ocf:pacemaker:Dummy \
 	op stop timeout=20s interval=0s
 location d1-pref p1 100: node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: # delete primitive with constraint
 .INP: delete p1
 INFO: 19: hanging location:d1-pref deleted
@@ -57,7 +57,7 @@ INFO: 19: hanging location:d1-pref deleted
 .INP: show
 node node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: primitive d1 ocf:pacemaker:Dummy
 .INP: location d1-pref d1 100: node1
 .INP: _test
@@ -76,7 +76,7 @@ primitive d1 ocf:pacemaker:Dummy \
 group g1 d1
 location d1-pref g1 100: node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: _test
 .INP: delete g1
 INFO: 32: modified location:d1-pref from g1 to d1
@@ -88,7 +88,7 @@ primitive d1 ocf:pacemaker:Dummy \
 	op stop timeout=20s interval=0s
 location d1-pref d1 100: node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: verify
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crm_resource --list-options=primitive --all --output-as=xml
@@ -113,7 +113,7 @@ primitive d2 ocf:pacemaker:Dummy \
 	op stop timeout=20s interval=0s
 location d1-pref d2 100: node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: _test
 .INP: group g1 d2 d1
 INFO: 42: modified location:d1-pref from d2 to g1
@@ -136,7 +136,7 @@ primitive d2 ocf:pacemaker:Dummy \
 	op stop timeout=20s interval=0s
 location d1-pref d2 100: node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: _test
 .INP: group g1 d2 d1
 INFO: 49: modified location:d1-pref from d2 to g1
@@ -150,7 +150,7 @@ INFO: 52: hanging location:d1-pref deleted
 .INP: show
 node node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: _test
 .INP: # verify
 .INP: verify

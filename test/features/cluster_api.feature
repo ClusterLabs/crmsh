@@ -156,14 +156,14 @@ Feature: Functional test to cover SAP clusterAPI
     Then    Expected return code is "0"
     When    Try "crm configure verify"
     Then    Expected return code is "1"
-    Then    Expected "Configuration invalid (with errors)" in stdout
+    Then    Expected "Configuration invalid" in stdout
     When    Run "crm configure property stonith-enabled=false" on "hanode1"
     Then    Expected return code is "0"
 
     When    Run "crm -F configure primitive d-require-fence Dummy meta requires=fencing" on "hanode1"
     When    Try "crm configure verify"
-    Then    Expected return code is "1"
-    Then    Expected "Configuration invalid (with warnings)" in stdout
+    Then    Expected return code is "0"
+    Then    Expected "Configuration may need attention" in stdout
 
     When    Try "crm -F configure primitive d-unknown-param Dummy params xxx=xxx"
     When    Try "crm configure verify"
