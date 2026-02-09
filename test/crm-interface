@@ -25,7 +25,7 @@ crm_mksample() {
 	$CRM_NO_REG -c $CIB<<EOF
 configure
 node node1
-property stonith-enabled=false
+property fencing-enabled=false
 primitive p0 ocf:pacemaker:Dummy
 primitive p1 ocf:pacemaker:Dummy
 primitive p2 ocf:heartbeat:Delay \
@@ -44,7 +44,7 @@ configure
 _regtest on
 erase
 erase nodes
-property stonith-enabled=false
+property fencing-enabled=false
 `cat`
 show
 commit
@@ -56,7 +56,7 @@ configure
 _regtest on
 erase
 erase nodes
-property stonith-enabled=false
+property fencing-enabled=false
 `cat`
 show xml
 commit

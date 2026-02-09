@@ -1,5 +1,5 @@
 configure
-property stonith-enabled=false
+property fencing-enabled=false
 primitive testfs ocf:heartbeat:Dummy \
 	params fake=1
 clone testfs-clone testfs \
