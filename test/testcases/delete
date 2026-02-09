@@ -3,7 +3,7 @@ configure
 # erase to start from scratch
 erase
 erase nodes
-property stonith-enabled=false
+property fencing-enabled=false
 node node1
 primitive d1 ocf:pacemaker:Dummy
 primitive d2 ocf:pacemaker:Dummy

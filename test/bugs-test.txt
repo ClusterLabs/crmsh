@@ -1,4 +1,4 @@
-property stonith-enabled=false
+property fencing-enabled=false
 node node1
 op_defaults timeout=60s
 group g1 gr1 gr2

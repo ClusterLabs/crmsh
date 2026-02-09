@@ -22,7 +22,7 @@ role silly-role \
 	read type:node attribute:uname \
 	read type:node attribute:type \
 	read utilization:d0 \
-	read property:stonith-enabled \
+	read property:fencing-enabled \
 	write property \
 	read node \
 	read node:node1 \

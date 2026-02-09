@@ -4,7 +4,7 @@
 .INP: up
 .INP: configure
 .INP: erase
-.INP: property stonith-enabled=false
+.INP: property fencing-enabled=false
 .INP: primitive p4 Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .INP: primitive p3 Dummy
@@ -52,7 +52,7 @@ clone cl-p5 p5 \
        meta interleave=true
 colocation c2 inf: ( p1 p2 ) p3 p4
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: commit
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crm_resource --list-options=primitive --all --output-as=xml
@@ -88,7 +88,7 @@ clone cl-p5 p5 \
        meta interleave=true
 colocation c2 inf: ( p1 p2 ) p3 p4
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .TRY Unordered load file
 .INP: options
 .INP: sort-elements false
@@ -135,7 +135,7 @@ colocation c2 inf: ( p1 p2 ) p3 p4
 location loc1 g1 \
 	rule 200: #uname eq node1
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 op_defaults op-options: \
 	timeout=60s
 .INP: commit
@@ -149,14 +149,14 @@ op_defaults op-options: \
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: constraint colocation:c2 updated
 INFO: 2: modified location:loc1 from g1 to gr2
-.INP: property stonith-enabled=false
+.INP: property fencing-enabled=false
 .INP: property SAPHanaSR:     hana_ha1_site_lss_WDF1=4
 .INP: show
 node node1
 property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: commit
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: _test
@@ -170,14 +170,14 @@ property SAPHanaSR_2: \
 	hana_ha1_site_iss_WDF1=cde \
 	hana_ha1_site_bss_WDF1=abc
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: commit
 .INP: _test
 .INP: verify
 .TRY template
 .INP: configure
 .INP: erase
-.INP: property stonith-enabled=false
+.INP: property fencing-enabled=false
 .INP: node node1
 .INP: template
 .INP: new vip virtual-ip params ip=10.10.10.123

@@ -23,7 +23,7 @@ clone c1 p1 \
 clone m1 p2 \
        meta promotable=true interleave=true
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 rsc_defaults build-resource-defaults: \
        resource-stickiness=1
 op_defaults op-options: \
@@ -59,7 +59,7 @@ primitive p3 ocf:pacemaker:Dummy \
         op start timeout=20s interval=0s \
         op stop timeout=20s interval=0s
 property cib-bootstrap-options: \
-	stonith-enabled=false \
+	fencing-enabled=false \
 	cluster-recheck-interval=10m
 rsc_defaults build-resource-defaults: \
        resource-stickiness=1

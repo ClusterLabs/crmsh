@@ -3,7 +3,7 @@
 .INP: _regtest on
 .INP: erase
 .INP: erase nodes
-.INP: property stonith-enabled=false
+.INP: property fencing-enabled=false
 .INP: node node1
 .INP: primitive d1 ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
@@ -59,5 +59,5 @@ colocation c2 inf: d3 d1
 colocation c3 inf: d3 d1
 order o1 Serialize: d1 d3
 property cib-bootstrap-options: \
-	stonith-enabled=false
+	fencing-enabled=false
 .INP: commit

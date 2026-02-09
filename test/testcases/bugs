@@ -4,7 +4,7 @@ sort-elements false
 up
 configure
 erase
-property stonith-enabled=false
+property fencing-enabled=false
 primitive p4 Dummy
 primitive p3 Dummy
 primitive p2 Dummy
@@ -39,7 +39,7 @@ verify
 session Unknown properties
 configure
 erase
-property stonith-enabled=false
+property fencing-enabled=false
 property SAPHanaSR: \
     hana_ha1_site_lss_WDF1=4
 show
@@ -57,7 +57,7 @@ verify
 session template
 configure
 erase
-property stonith-enabled=false
+property fencing-enabled=false
 node node1
 template
 new vip virtual-ip params ip=10.10.10.123
