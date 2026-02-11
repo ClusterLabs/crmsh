@@ -22,13 +22,15 @@ def test_evaluate_qdevice_quorum_effect_reload(mock_get_dict, mock_quorate):
     mock_quorate.assert_called_once_with(3, 2)
 
 
+@mock.patch('crmsh.utils.is_cluster_in_maintenance_mode')
 @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
 @mock.patch('crmsh.utils.calculate_quorate_status')
 @mock.patch('crmsh.utils.get_quorum_votes_dict')
-def test_evaluate_qdevice_quorum_effect_later(mock_get_dict, mock_quorate, mock_parser):
+def test_evaluate_qdevice_quorum_effect_later(mock_get_dict, mock_quorate, mock_parser, mock_maintenance):
     mock_get_dict.return_value = {'Expected': '2', 'Total': '2'}
     mock_quorate.return_value = False
     mock_parser().is_non_stonith_resource_running.return_value = True
+    mock_maintenance.return_value = False
     res = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
     assert res == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER
     mock_get_dict.assert_called_once_with()
@@ -828,7 +830,7 @@ Membership information
 
         mock_get_sbd_value.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
         mock_update_config.assert_called_once_with({"SBD_WATCHDOG_TIMEOUT": str(sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)})
-        mock_set.assert_called_once_with("stonith-watchdog-timeout", 2*sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
+        mock_set.assert_called_once_with("fencing-watchdog-timeout", 2*sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
 
     @mock.patch('crmsh.sh.cluster_shell')
     @mock.patch('crmsh.utils.cluster_run_cmd')

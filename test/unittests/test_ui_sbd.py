@@ -206,8 +206,8 @@ class TestSBD(unittest.TestCase):
         dc-version="2.1.7+20240711.239cba384-1.1-2.1.7+20240711.239cba384" \
         cluster-infrastructure=corosync \
         cluster-name=hacluster \
-        stonith-enabled=true \
-        stonith-timeout=83 \
+        fencing-enabled=true \
+        fencing-timeout=83 \
         priority-fencing-delay=60
         """
         data2 = "fence_sbd parameters"
@@ -221,8 +221,8 @@ class TestSBD(unittest.TestCase):
         ])
         mock_print.assert_has_calls([
             mock.call("have-watchdog=true"),
-            mock.call("stonith-enabled=true"),
-            mock.call("stonith-timeout=83"),
+            mock.call("fencing-enabled=true"),
+            mock.call("fencing-timeout=83"),
             mock.call(),
             mock.call("fence_sbd parameters"),
             mock.call(),
@@ -452,7 +452,7 @@ class TestSBD(unittest.TestCase):
         mock_SBDManager.return_value.init_and_deploy_sbd = mock.Mock()
         self.sbd_instance_diskless._configure_diskless(parameter_dict)
         mock_SBDManager.assert_called_once_with(
-            timeout_dict={'stonith-watchdog': 24},
+            timeout_dict={'fencing-watchdog': 24},
             update_dict={'SBD_WATCHDOG_TIMEOUT': '12', 'SBD_WATCHDOG_DEV': '/dev/watchdog100', 'SBD_TIMEOUT_ACTION': 'flush,crashdump', 'SBD_OPTS': '-C 12 -Z'},
             diskless_sbd=True
         )
@@ -494,10 +494,18 @@ class TestSBD(unittest.TestCase):
             self.sbd_instance_diskbased._device_remove(["/dev/sda1"])
         self.assertEqual(str(e.exception), "Not allowed to remove all devices")
 
+    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     @mock.patch('logging.Logger.info')
-    def test_device_remove(self, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster):
+    def test_device_remove(self, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster):
+        enable_value = True
+        cm = mock.Mock()
+        cm.__enter__ = mock.Mock(return_value=enable_value)
+        cm.__exit__ = mock.Mock(return_value=True)
+        mock_leverage_maintenance_mode.return_value = cm
+        mock_able_to_restart_cluster.return_value = True
         self.sbd_instance_diskbased.device_list_from_config = ["/dev/sda1", "/dev/sda2"]
         self.sbd_instance_diskbased._device_remove(["/dev/sda1"])
         mock_update_sbd_configuration.assert_called_once_with({"SBD_DEVICE": "/dev/sda2"})
@@ -596,10 +604,18 @@ class TestSBD(unittest.TestCase):
         self.assertFalse(res)
         mock_purge_sbd_from_cluster.assert_not_called()
 
+    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.sbd.purge_sbd_from_cluster')
-    def test_do_purge(self, mock_purge_sbd_from_cluster, mock_check_all_nodes_reachable, mock_restart_cluster):
+    def test_do_purge(self, mock_purge_sbd_from_cluster, mock_check_all_nodes_reachable, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster):
+        enable_value = True
+        cm = mock.Mock()
+        cm.__enter__ = mock.Mock(return_value=enable_value)
+        cm.__exit__ = mock.Mock(return_value=True)
+        mock_leverage_maintenance_mode.return_value = cm
+        mock_able_to_restart_cluster.return_value = True
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         res = self.sbd_instance_diskbased.do_purge(mock.Mock())
@@ -700,7 +716,8 @@ Driver: iTCO_wdt
         self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error.side_effect = [data_node1, "10", data_node2, "10"]
         self.sbd_instance_diskbased._print_watchdog_info()
 
-    def test_do_status(self):
+    @mock.patch('crmsh.ui_sbd.SBD.check_timeout_configurations')
+    def test_do_status(self, mock_check_timeout):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._print_sbd_type = mock.Mock()
         self.sbd_instance_diskbased._print_sbd_status = mock.Mock()
