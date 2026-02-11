@@ -1465,22 +1465,22 @@ done
 
     @mock.patch('crmsh.sbd.SBDConfigChecker')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_adjust_stonith_timeout_sbd(self, mock_is_active, mock_sbd_checker):
+    def test_adjust_fencing_timeout_sbd(self, mock_is_active, mock_sbd_checker):
         mock_sbd_checker_inst = mock.Mock()
         mock_sbd_checker.return_value = mock_sbd_checker_inst
         mock_sbd_checker_inst.check_and_fix = mock.Mock()
         mock_is_active.return_value = True
-        bootstrap.adjust_stonith_timeout()
+        bootstrap.adjust_fencing_timeout()
         mock_sbd_checker.assert_called_once_with(quiet=True, fix=True)
 
     @mock.patch('crmsh.utils.set_property')
-    @mock.patch('crmsh.bootstrap.get_stonith_timeout_generally_expected')
+    @mock.patch('crmsh.bootstrap.get_fencing_timeout_generally_expected')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_adjust_stonith_timeout(self, mock_is_active, mock_get_timeout, mock_set):
+    def test_adjust_fencing_timeout(self, mock_is_active, mock_get_timeout, mock_set):
         mock_is_active.return_value = False
         mock_get_timeout.return_value = 30
-        bootstrap.adjust_stonith_timeout()
-        mock_set.assert_called_once_with("stonith-timeout", 30, conditional=True)
+        bootstrap.adjust_fencing_timeout()
+        mock_set.assert_called_once_with("fencing-timeout", 30, conditional=True)
 
     @mock.patch('crmsh.utils.set_property')
     def test_adjust_priority_in_rsc_defaults_2node(self, mock_set):
@@ -1515,17 +1515,17 @@ done
     @mock.patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
     @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
     @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
-    @mock.patch('crmsh.bootstrap.adjust_stonith_timeout')
+    @mock.patch('crmsh.bootstrap.adjust_fencing_timeout')
     @mock.patch('crmsh.bootstrap.adjust_pcmk_delay_max')
     @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_adjust_properties(self, mock_is_active, mock_2node_qdevice, mock_adj_pcmk, mock_adj_stonith, mock_adj_priority, mock_adj_fence, mock_warn_sbd):
+    def test_adjust_properties(self, mock_is_active, mock_2node_qdevice, mock_adj_pcmk, mock_adj_fencing, mock_adj_priority, mock_adj_fence, mock_warn_sbd):
         mock_is_active.return_value = True
         mock_2node_qdevice.return_value = True
         bootstrap.adjust_properties()
         mock_is_active.assert_called_once_with("pacemaker.service")
         mock_adj_pcmk.assert_called_once_with(True)
-        mock_adj_stonith.assert_called_once_with()
+        mock_adj_fencing.assert_called_once_with()
         mock_adj_priority.assert_called_once_with(True)
         mock_adj_fence.assert_called_once_with(True)
         mock_warn_sbd.assert_called_once_with()

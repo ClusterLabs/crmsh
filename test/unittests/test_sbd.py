@@ -236,34 +236,34 @@ class TestSBDTimeout(unittest.TestCase):
         mock_token_and_consensus_timeout.return_value = 10
         self.assertEqual(inst.get_sbd_delay_start_expected(), 20)
 
-    @patch('crmsh.sbd.SBDTimeout.get_stonith_timeout_expected')
+    @patch('crmsh.sbd.SBDTimeout.get_fencing_timeout_expected')
     @patch('crmsh.sbd.SBDTimeout._load_configurations_from_runtime')
-    def test_get_stonith_timeout(self, mock_load_configurations_from_runtime, mock_get_sbd_delay_start_expected):
+    def test_get_fencing_timeout(self, mock_load_configurations_from_runtime, mock_get_sbd_delay_start_expected):
         mock_get_sbd_delay_start_expected.return_value = 10
-        res = sbd.SBDTimeout.get_stonith_timeout()
+        res = sbd.SBDTimeout.get_fencing_timeout()
         self.assertEqual(res, 10)
         mock_load_configurations_from_runtime.assert_called_once()
         mock_get_sbd_delay_start_expected.assert_called_once()
 
     @patch('logging.Logger.debug')
     @patch('crmsh.corosync.token_and_consensus_timeout')
-    def test_get_stonith_timeout_expected_diskbased(self, mock_token_and_consensus_timeout, mock_logger_debug):
+    def test_get_fencing_timeout_expected_diskbased(self, mock_token_and_consensus_timeout, mock_logger_debug):
         inst = sbd.SBDTimeout()
         inst.disk_based = True
         inst.sbd_msgwait = 5
         mock_token_and_consensus_timeout.return_value = 10
-        result = inst.get_stonith_timeout_expected()
+        result = inst.get_fencing_timeout_expected()
         self.assertEqual(result, 70)
 
     @patch('logging.Logger.debug')
     @patch('crmsh.corosync.token_and_consensus_timeout')
-    def test_get_stonith_timeout_expected_diskless(self, mock_token_and_consensus_timeout, mock_logger_debug):
+    def test_get_fencing_timeout_expected_diskless(self, mock_token_and_consensus_timeout, mock_logger_debug):
         inst = sbd.SBDTimeout()
         inst.disk_based = False
         inst.sbd_watchdog_timeout = 5
-        inst.stonith_watchdog_timeout = 20
+        inst.fencing_watchdog_timeout = 20
         mock_token_and_consensus_timeout.return_value = 20
-        result = inst.get_stonith_timeout_expected()
+        result = inst.get_fencing_timeout_expected()
         self.assertEqual(result, 80)
 
 
@@ -342,8 +342,8 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check._check_sbd_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_check._check_sbd_delay_start = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_check._check_sbd_systemd_start_timeout = Mock(return_value=sbd.CheckResult.ERROR)
-        self.instance_check._check_stonith_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
-        self.instance_check._check_stonith_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_fencing_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_fencing_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_check._check_sbd_delay_start_unset_dropin = Mock(return_value=sbd.CheckResult.SUCCESS)
 
         res = self.instance_check.check_and_fix()
@@ -385,10 +385,10 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix._check_sbd_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_delay_start = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_systemd_start_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
-        self.instance_fix._check_stonith_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
-        self.instance_fix._check_stonith_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_fix._check_fencing_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_fix._check_fencing_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_delay_start_unset_dropin = Mock(return_value=sbd.CheckResult.SUCCESS)
-        self.instance_fix._check_stonith_enabled = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_fix._check_fencing_enabled = Mock(return_value=sbd.CheckResult.SUCCESS)
 
         res = self.instance_fix.check_and_fix()
         self.assertEqual(res, sbd.CheckResult.SUCCESS)
@@ -400,8 +400,8 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix._check_sbd_watchdog_timeout.assert_called_once()
         self.instance_fix._check_sbd_delay_start.assert_called_once()
         self.instance_fix._check_sbd_systemd_start_timeout.assert_called_once()
-        self.instance_fix._check_stonith_watchdog_timeout.assert_called_once()
-        self.instance_fix._check_stonith_timeout.assert_called_once()
+        self.instance_fix._check_fencing_watchdog_timeout.assert_called_once()
+        self.instance_fix._check_fencing_timeout.assert_called_once()
         self.instance_fix._check_sbd_delay_start_unset_dropin.assert_called_once()
 
     @patch('logging.Logger.error')
@@ -545,75 +545,75 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_logger_info.assert_called_once_with("Adjusting systemd start timeout for sbd.service to %ds", 120)
 
     @patch('crmsh.utils.get_property')
-    def test_check_stonith_watchdog_timeout_disk_based_failure(self, mock_get_property):
+    def test_check_fencing_watchdog_timeout_disk_based_failure(self, mock_get_property):
         self.instance_check.disk_based = True
         mock_get_property.return_value = 5
         self.instance_check._log_when_not_quiet = Mock()
-        self.assertEqual(self.instance_check._check_stonith_watchdog_timeout(), sbd.CheckResult.WARNING)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.WARNING, "It's recommended that stonith-watchdog-timeout is not set when using disk-based SBD")
+        self.assertEqual(self.instance_check._check_fencing_watchdog_timeout(), sbd.CheckResult.WARNING)
+        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.WARNING, "It's recommended that fencing-watchdog-timeout is not set when using disk-based SBD")
 
     @patch('crmsh.utils.get_property')
-    def test_check_stonith_watchdog_timeout_disk_less_failure(self, mock_get_property):
+    def test_check_fencing_watchdog_timeout_disk_less_failure(self, mock_get_property):
         self.instance_check.disk_based = False
-        self.instance_check.stonith_watchdog_timeout = 15
+        self.instance_check.fencing_watchdog_timeout = 15
         mock_get_property.return_value = ""
         self.instance_check._log_when_not_quiet = Mock()
-        self.assertEqual(self.instance_check._check_stonith_watchdog_timeout(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that stonith-watchdog-timeout is set to %d, now is not set", 15)
+        self.assertEqual(self.instance_check._check_fencing_watchdog_timeout(), sbd.CheckResult.ERROR)
+        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that fencing-watchdog-timeout is set to %d, now is not set", 15)
 
     @patch('crmsh.utils.get_property')
-    def test_check_stonith_watchdog_timeout_success(self, mock_get_property):
+    def test_check_fencing_watchdog_timeout_success(self, mock_get_property):
         self.instance_check.disk_based = False
-        self.instance_check.stonith_watchdog_timeout = 20
+        self.instance_check.fencing_watchdog_timeout = 20
         mock_get_property.return_value = 25
-        self.assertTrue(self.instance_check._check_stonith_watchdog_timeout())
+        self.assertTrue(self.instance_check._check_fencing_watchdog_timeout())
 
     @patch('crmsh.utils.delete_property')
     @patch('logging.Logger.info')
-    def test_fix_stonith_watchdog_timeout_disk_based_success(self, mock_logger_info, mock_delete_property):
+    def test_fix_fencing_watchdog_timeout_disk_based_success(self, mock_logger_info, mock_delete_property):
         self.instance_fix.disk_based = True
-        self.instance_fix._fix_stonith_watchdog_timeout()
-        mock_logger_info.assert_called_once_with("Removing stonith-watchdog-timeout property")
-        mock_delete_property.assert_called_once_with('stonith-watchdog-timeout')
+        self.instance_fix._fix_fencing_watchdog_timeout()
+        mock_logger_info.assert_called_once_with("Removing fencing-watchdog-timeout property")
+        mock_delete_property.assert_called_once_with('fencing-watchdog-timeout')
 
     @patch('crmsh.utils.set_property')
     @patch('logging.Logger.info')
-    def test_fix_stonith_watchdog_timeout_disk_less_success(self, mock_logger_info, mock_set_property):
+    def test_fix_fencing_watchdog_timeout_disk_less_success(self, mock_logger_info, mock_set_property):
         self.instance_fix.disk_based = False
-        self.instance_fix.stonith_watchdog_timeout = 15
-        self.instance_fix._fix_stonith_watchdog_timeout()
-        mock_logger_info.assert_called_once_with("Adjusting stonith-watchdog-timeout to %d", 15)
-        mock_set_property.assert_called_once_with('stonith-watchdog-timeout', 15)
+        self.instance_fix.fencing_watchdog_timeout = 15
+        self.instance_fix._fix_fencing_watchdog_timeout()
+        mock_logger_info.assert_called_once_with("Adjusting fencing-watchdog-timeout to %d", 15)
+        mock_set_property.assert_called_once_with('fencing-watchdog-timeout', 15)
 
     @patch('crmsh.utils.get_property')
-    def test_check_stonith_timeout_failure(self, mock_get_property):
-        self.instance_check.get_stonith_timeout_expected = Mock(return_value=60)
+    def test_check_fencing_timeout_failure(self, mock_get_property):
+        self.instance_check.get_fencing_timeout_expected = Mock(return_value=60)
         mock_get_property.return_value = 30
         self.instance_check._log_when_not_quiet = Mock()
-        self.assertEqual(self.instance_check._check_stonith_timeout(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that stonith-timeout is set to %d, now is %d", 60, 30)
+        self.assertEqual(self.instance_check._check_fencing_timeout(), sbd.CheckResult.ERROR)
+        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that fencing-timeout is set to %d, now is %d", 60, 30)
 
     @patch('crmsh.utils.get_property')
-    def test_check_stonith_timeout_warning(self, mock_get_property):
-        self.instance_check.get_stonith_timeout_expected = Mock(return_value=80)
+    def test_check_fencing_timeout_warning(self, mock_get_property):
+        self.instance_check.get_fencing_timeout_expected = Mock(return_value=80)
         mock_get_property.return_value = 90
         self.instance_check._log_when_not_quiet = Mock()
-        self.assertEqual(self.instance_check._check_stonith_timeout(), sbd.CheckResult.WARNING)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.WARNING, "It's recommended that stonith-timeout is set to %d, now is %d", 80, 90)
+        self.assertEqual(self.instance_check._check_fencing_timeout(), sbd.CheckResult.WARNING)
+        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.WARNING, "It's recommended that fencing-timeout is set to %d, now is %d", 80, 90)
 
     @patch('crmsh.utils.get_property')
-    def test_check_stonith_timeout_success(self, mock_get_property):
-        self.instance_check.get_stonith_timeout_expected = Mock(return_value=50)
+    def test_check_fencing_timeout_success(self, mock_get_property):
+        self.instance_check.get_fencing_timeout_expected = Mock(return_value=50)
         mock_get_property.return_value = 50
-        self.assertTrue(self.instance_check._check_stonith_timeout())
+        self.assertTrue(self.instance_check._check_fencing_timeout())
 
     @patch('crmsh.utils.set_property')
     @patch('logging.Logger.info')
-    def test_fix_stonith_timeout(self, mock_logger_info, mock_set_property):
-        self.instance_fix.get_stonith_timeout_expected = Mock(return_value=70)
-        self.instance_fix._fix_stonith_timeout()
-        mock_logger_info.assert_called_once_with("Adjusting stonith-timeout to %d", 70)
-        mock_set_property.assert_called_once_with('stonith-timeout', 70)
+    def test_fix_fencing_timeout(self, mock_logger_info, mock_set_property):
+        self.instance_fix.get_fencing_timeout_expected = Mock(return_value=70)
+        self.instance_fix._fix_fencing_timeout()
+        mock_logger_info.assert_called_once_with("Adjusting fencing-timeout to %d", 70)
+        mock_set_property.assert_called_once_with('fencing-timeout', 70)
 
     @patch('crmsh.sbd.SBDTimeout.is_sbd_delay_start')
     def test_check_sbd_delay_start_unset_dropin_not_set_delay_start(self, mock_is_sbd_delay_start):
@@ -783,26 +783,26 @@ class TestSBDConfigChecker(unittest.TestCase):
 
     @patch('crmsh.utils.is_boolean_false')
     @patch('crmsh.utils.get_property')
-    def test_check_stonith_enabled_success(self, mock_get_property, mock_is_boolean_false):
+    def test_check_fencing_enabled_success(self, mock_get_property, mock_is_boolean_false):
         mock_get_property.return_value = "true"
         mock_is_boolean_false.return_value = False
-        self.assertEqual(self.instance_check._check_stonith_enabled(), sbd.CheckResult.SUCCESS)
+        self.assertEqual(self.instance_check._check_fencing_enabled(), sbd.CheckResult.SUCCESS)
 
     @patch('crmsh.utils.is_boolean_false')
     @patch('crmsh.utils.get_property')
-    def test_check_stonith_enabled_failure(self, mock_get_property, mock_is_boolean_false):
+    def test_check_fencing_enabled_failure(self, mock_get_property, mock_is_boolean_false):
         mock_get_property.return_value = "false"
         mock_is_boolean_false.return_value = True
         self.instance_check._log_when_not_quiet = Mock()
-        self.assertEqual(self.instance_check._check_stonith_enabled(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that stonith-enabled is set to true, now is false")
+        self.assertEqual(self.instance_check._check_fencing_enabled(), sbd.CheckResult.ERROR)
+        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that fencing-enabled is set to true, now is false")
 
     @patch('logging.Logger.info')
     @patch('crmsh.utils.set_property')
-    def test_fix_stonith_enabled(self, mock_set_property, mock_logger_info):
-        self.instance_fix._fix_stonith_enabled()
-        mock_logger_info.assert_called_once_with("Setting stonith-enabled to true")
-        mock_set_property.assert_called_once_with('stonith-enabled', 'true')
+    def test_fix_fencing_enabled(self, mock_set_property, mock_logger_info):
+        self.instance_fix._fix_fencing_enabled()
+        mock_logger_info.assert_called_once_with("Setting fencing-enabled to true")
+        mock_set_property.assert_called_once_with('fencing-enabled', 'true')
 
 
 class TestSBDManager(unittest.TestCase):
@@ -1169,23 +1169,23 @@ class TestOutterFunctions(unittest.TestCase):
         ])
 
     @patch('crmsh.sbd.cleanup_sbd_configurations')
-    @patch('crmsh.utils.cleanup_stonith_related_properties')
+    @patch('crmsh.utils.cleanup_fencing_related_properties')
     @patch('crmsh.sbd.sh.cluster_shell')
     @patch('logging.Logger.info')
     @patch('crmsh.sbd.ServiceManager')
     @patch('crmsh.utils.list_cluster_nodes')
     @patch('crmsh.sbd.cleanup_existing_sbd_resource')
-    def test_purge_sbd_from_cluster(self, mock_cleanup_existing_sbd_resource, mock_list_cluster_nodes, mock_ServiceManager, mock_logger_info, mock_cluster_shell, mock_cleanup_stonith_related_properties, mock_rm_sbd_configuration_files):
+    def test_purge_sbd_from_cluster(self, mock_cleanup_existing_sbd_resource, mock_list_cluster_nodes, mock_ServiceManager, mock_logger_info, mock_cluster_shell, mock_cleanup_fencing_related_properties, mock_rm_sbd_configuration_files):
         mock_list_cluster_nodes.return_value = ['node1', 'node2']
         mock_ServiceManager.return_value.service_is_enabled.side_effect = [True, True]
-        stonith_data = """stonith-sbd
+        fencing_data = """fencing-sbd
 1 fence device found
         """
-        mock_cluster_shell.return_value.get_stdout_or_raise_error.return_value = stonith_data
+        mock_cluster_shell.return_value.get_stdout_or_raise_error.return_value = fencing_data
         sbd.purge_sbd_from_cluster()
         mock_logger_info.assert_has_calls([
             call("Disable %s on node %s", constants.SBD_SERVICE, 'node1'),
             call("Disable %s on node %s", constants.SBD_SERVICE, 'node2'),
         ])
-        mock_cleanup_stonith_related_properties.assert_called_once()
+        mock_cleanup_fencing_related_properties.assert_called_once()
         mock_rm_sbd_configuration_files.assert_has_calls([call("node1"), call("node2")])

@@ -429,19 +429,19 @@ class TestCliParser(unittest.TestCase):
 
     @mock.patch('logging.Logger.error')
     def test_property(self, mock_error):
-        out = self._parse('property stonith-enabled=true')
-        self.assertEqual(['true'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
+        out = self._parse('property fencing-enabled=true')
+        self.assertEqual(['true'], out.xpath('//nvpair[@name="fencing-enabled"]/@value'))
 
         # missing score
-        out = self._parse('property rule #uname eq node1 stonith-enabled=no')
+        out = self._parse('property rule #uname eq node1 fencing-enabled=no')
         self.assertEqual(['INFINITY'], out.xpath('//@score'))
 
-        out = self._parse('property rule 10: #uname eq node1 stonith-enabled=no')
-        self.assertEqual(['no'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
+        out = self._parse('property rule 10: #uname eq node1 fencing-enabled=no')
+        self.assertEqual(['no'], out.xpath('//nvpair[@name="fencing-enabled"]/@value'))
         self.assertEqual(['node1'], out.xpath('//expression[@attribute="#uname"]/@value'))
 
-        out = self._parse('property rule +inf: date spec years=2014 stonith-enabled=no')
-        self.assertEqual(['no'], out.xpath('//nvpair[@name="stonith-enabled"]/@value'))
+        out = self._parse('property rule +inf: date spec years=2014 fencing-enabled=no')
+        self.assertEqual(['no'], out.xpath('//nvpair[@name="fencing-enabled"]/@value'))
         self.assertEqual(['2014'], out.xpath('//date_spec/@years'))
 
         out = self._parse('rsc_defaults failure-timeout=3m')
@@ -477,8 +477,8 @@ class TestCliParser(unittest.TestCase):
         out = self._parse('fencing_topology node-a: poison-pill power node-b: ipmi serial')
         self.assertEqual(4, len(out))
 
-        devs = ['stonith-vbox3-1-off', 'stonith-vbox3-2-off',
-                'stonith-vbox3-1-on', 'stonith-vbox3-2-on']
+        devs = ['fencing-vbox3-1-off', 'fencing-vbox3-2-off',
+                'fencing-vbox3-1-on', 'fencing-vbox3-2-on']
         out = self._parse('fencing_topology vbox4: %s' % ','.join(devs))
         print(xml_tostring(out))
         self.assertEqual(1, len(out))
@@ -595,7 +595,7 @@ class TestCliParser(unittest.TestCase):
         self.assertEqual(out.get('id'), 'web-server')
 
     def test_nvpair_novalue(self):
-        inp = """primitive stonith_ipmi-karl stonith:fence_ipmilan \
+        inp = """primitive fencing_ipmi-karl stonith:fence_ipmilan \
         params pcmk_host_list=karl verbose action=reboot \
         ipaddr=10.43.242.221 login=root passwd=dummy method=onoff \
         op start interval=0 timeout=60 \
@@ -682,7 +682,7 @@ class TestCliParser(unittest.TestCase):
             """rsc_ticket ticket-B_m6_m5 ticket-B: m6 m5 loss-policy=fence""",
             """rsc_ticket ticket-C_master ticket-C: m6 m5:Master loss-policy=fence""",
             """fencing_topology st st2""",
-            """property stonith-enabled=true""",
+            """property fencing-enabled=true""",
             """property $id=cpset2 maintenance-mode=true""",
             """rsc_defaults failure-timeout=10m""",
             """op_defaults $id=opsdef2 record-pending=true"""]
@@ -722,7 +722,7 @@ class TestCliParser(unittest.TestCase):
             '<rsc_ticket id="ticket-B_m6_m5" ticket="ticket-B" loss-policy="fence"><resource_set><resource_ref id="m6"/><resource_ref id="m5"/></resource_set></rsc_ticket>',
             '<rsc_ticket id="ticket-C_master" ticket="ticket-C" loss-policy="fence"><resource_set><resource_ref id="m6"/></resource_set><resource_set role="Master"><resource_ref id="m5"/></resource_set></rsc_ticket>',
             '<fencing-topology><fencing-level target="ha-one" index="1" devices="st"/><fencing-level target="ha-one" index="2" devices="st2"/><fencing-level target="ha-three" index="1" devices="st"/><fencing-level target="ha-three" index="2" devices="st2"/><fencing-level target="ha-two" index="1" devices="st"/><fencing-level target="ha-two" index="2" devices="st2"/></fencing-topology>',
-            '<cluster_property_set><nvpair name="stonith-enabled" value="true"/></cluster_property_set>',
+            '<cluster_property_set><nvpair name="fencing-enabled" value="true"/></cluster_property_set>',
             '<cluster_property_set id="cpset2"><nvpair name="maintenance-mode" value="true"/></cluster_property_set>',
             '<rsc_defaults><meta_attributes><nvpair name="failure-timeout" value="10m"/></meta_attributes></rsc_defaults>',
             '<op_defaults><meta_attributes id="opsdef2"><nvpair name="record-pending" value="true"/></meta_attributes></op_defaults>',

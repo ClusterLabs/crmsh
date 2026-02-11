@@ -843,7 +843,7 @@ Membership information
 
         mock_get_sbd_value.assert_called_once_with("SBD_WATCHDOG_TIMEOUT")
         mock_update_config.assert_called_once_with({"SBD_WATCHDOG_TIMEOUT": str(sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)})
-        mock_set.assert_called_once_with("stonith-watchdog-timeout", 2*sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
+        mock_set.assert_called_once_with("fencing-watchdog-timeout", 2*sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
 
     @mock.patch('crmsh.sh.cluster_shell')
     @mock.patch('crmsh.qdevice.QDevice.start_qnetd')
