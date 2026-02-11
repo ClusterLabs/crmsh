@@ -2603,14 +2603,14 @@ def detect_duplicate_device_path(device_list: typing.List[str]):
             raise ValueError(f"Duplicated device path detected: {','.join(dev_list)}. They are all pointing to {path}")
 
 
-def has_stonith_running():
+def has_fence_device_registered():
     """
-    Check if any stonith device registered
+    Check if any fence device registered
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
-    has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
+    has_fence_device = re.search("[1-9]+ fence device[s]* found", out) is not None
     using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
-    return has_stonith_device or using_diskless_sbd
+    return has_fence_device or using_diskless_sbd
 
 
 def has_disk_mounted(dev):
@@ -3296,12 +3296,12 @@ def fuzzy_get(items, s):
     return None
 
 
-def cleanup_stonith_related_properties():
-    for p in ("stonith-watchdog-timeout", "stonith-timeout", "priority-fencing-delay"):
+def cleanup_fencing_related_properties():
+    for p in ("fencing-watchdog-timeout", "fencing-timeout", "priority-fencing-delay"):
         if get_property(p, get_default=False):
             delete_property(p)
-    if get_property("stonith-enabled") == "true":
-        set_property("stonith-enabled", "false")
+    if get_property("fencing-enabled") == "true":
+        set_property("fencing-enabled", "false")
 
 
 def strip_ansi_escape_sequences(text):

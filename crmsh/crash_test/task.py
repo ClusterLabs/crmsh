@@ -102,16 +102,16 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
         """
         Prerequisite check
           * pacemaker.service is active
-          * stonith is enabled
+          * fencing is enabled
         """
         if not ServiceManager().service_is_active("pacemaker.service"):
             raise TaskError("Cluster not running!")
         if need_fence:
             self.get_fence_info()
             if not self.fence_enabled:
-                raise TaskError("Require stonith enabled")
+                raise TaskError("Require fencing enabled")
             if not self.fence_configured:
-                raise TaskError("Require stonith device configured and running")
+                raise TaskError("Require fence device configured and running")
 
 
     def get_fence_info(self):
