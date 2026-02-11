@@ -189,8 +189,8 @@ e.g. crm cluster init {self.type.lower()} -o <device>
         """
         Verify after cluster running on init node
         """
-        if not utils.has_stonith_running():
-            msg = f"{self.type} requires stonith device configured and running." + self.error_hints_for_stage
+        if not utils.has_fence_device_registered():
+            msg = f"{self.type} requires fence device configured and running." + self.error_hints_for_stage
             raise Error(msg)
 
         self._check_device_with_sbd_device()

@@ -97,6 +97,9 @@ class SBD(command.UI):
     DISKLESS_SHOW_TYPES = ("sysconfig", "property")
     PCMK_ATTRS = (
         "have-watchdog",
+        "fencing-timeout",
+        "fencing-enabled",
+        "fencing-watchdog-timeout",
         "stonith-timeout",
         "stonith-enabled",
         "stonith-watchdog-timeout"
@@ -471,18 +474,18 @@ class SBD(command.UI):
             result_dict = self._set_crashdump_in_sysconfig(crashdump_watchdog_timeout, diskless=True)
             update_dict = {**update_dict, **result_dict}
             sbd_watchdog_timeout = watchdog_timeout or self.watchdog_timeout_from_config
-            stonith_watchdog_timeout = sbd_watchdog_timeout + crashdump_watchdog_timeout
-            logger.info("Set stonith-watchdog-timeout to SBD_WATCHDOG_TIMEOUT + crashdump-watchdog-timeout: %s", stonith_watchdog_timeout)
-            timeout_dict["stonith-watchdog"] = stonith_watchdog_timeout
+            fencing_watchdog_timeout = sbd_watchdog_timeout + crashdump_watchdog_timeout
+            logger.info("Set fencing-watchdog-timeout to SBD_WATCHDOG_TIMEOUT + crashdump-watchdog-timeout: %s", fencing_watchdog_timeout)
+            timeout_dict["fencing-watchdog"] = fencing_watchdog_timeout
         if not update_dict:
             logger.info("No change in SBD configuration")
             return
 
         restart_first = False
         if watchdog_timeout:
-            expected_stonith_watchdog_timeout = timeout_dict.get("stonith-watchdog", 2*watchdog_timeout)
-            # If the expected stonith-watchdog-timeout is smaller than runtime SBD_WATCHDOG_TIMEOUT, restart cluster first
-            if expected_stonith_watchdog_timeout < self.watchdog_timeout_from_config:
+            expected_fencing_watchdog_timeout = timeout_dict.get("fencing-watchdog", 2*watchdog_timeout)
+            # If the expected fencing-watchdog-timeout is smaller than runtime SBD_WATCHDOG_TIMEOUT, restart cluster first
+            if expected_fencing_watchdog_timeout < self.watchdog_timeout_from_config:
                 restart_first = True
 
         sbd_manager = sbd.SBDManager(

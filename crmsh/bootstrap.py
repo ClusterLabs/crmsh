@@ -39,7 +39,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from .constants import QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT,\
+from .constants import QDEVICE_HELP_INFO, FENCING_TIMEOUT_DEFAULT,\
         REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX, CSYNC2_SERVICE, WAIT_TIMEOUT_MS_DEFAULT
 from . import cluster_fs
 from . import qdevice
@@ -1484,7 +1484,7 @@ def init_cluster():
 
     logger.info("Loading initial cluster configuration")
 
-    crm_configure_load("update", """property cib-bootstrap-options: stonith-enabled=false
+    crm_configure_load("update", """property cib-bootstrap-options: fencing-enabled=false
 op_defaults op-options: timeout=600
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
@@ -2735,18 +2735,18 @@ def bootstrap_arbitrator(context):
     ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("booth@booth", enable=True)
 
 
-def get_stonith_timeout_generally_expected():
+def get_fencing_timeout_generally_expected():
     """
-    Adjust stonith-timeout for all scenarios, formula is:
+    Adjust fencing-timeout for all scenarios, formula is:
 
-    stonith-timeout = STONITH_TIMEOUT_DEFAULT + token + consensus
+    fencing-timeout = FENCING_TIMEOUT_DEFAULT + token + consensus
     """
-    stonith_enabled = utils.get_property("stonith-enabled")
-    # When stonith disabled, return
-    if utils.is_boolean_false(stonith_enabled):
+    fencing_enabled = utils.get_property("fencing-enabled")
+    # When fencing disabled, return
+    if utils.is_boolean_false(fencing_enabled):
         return None
 
-    return STONITH_TIMEOUT_DEFAULT + corosync.token_and_consensus_timeout()
+    return FENCING_TIMEOUT_DEFAULT + corosync.token_and_consensus_timeout()
 
 
 def adjust_pcmk_delay_max(is_2node_wo_qdevice):
@@ -2771,23 +2771,23 @@ def adjust_pcmk_delay_max(is_2node_wo_qdevice):
             logger.info("Delete parameter 'pcmk_delay_max' for resource '{}'".format(res))
 
 
-def adjust_stonith_timeout():
+def adjust_fencing_timeout():
     """
-    Adjust stonith-timeout for sbd and other scenarios
+    Adjust fencing-timeout for sbd and other scenarios
     """
     if ServiceManager().service_is_active(constants.SBD_SERVICE):
         sbd.SBDConfigChecker(quiet=True, fix=True).check_and_fix()
     else:
-        value = get_stonith_timeout_generally_expected()
+        value = get_fencing_timeout_generally_expected()
         if value:
-            utils.set_property("stonith-timeout", value, conditional=True)
+            utils.set_property("fencing-timeout", value, conditional=True)
 
 
 def adjust_properties():
     """
     Adjust properties for the cluster:
     - pcmk_delay_max
-    - stonith-timeout
+    - fencing-timeout
     - priority in rsc_defaults
     - priority-fencing-delay
 
@@ -2801,7 +2801,7 @@ def adjust_properties():
         return
     is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
     adjust_pcmk_delay_max(is_2node_wo_qdevice)
-    adjust_stonith_timeout()
+    adjust_fencing_timeout()
     adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
     sbd.SBDManager.warn_diskless_sbd()

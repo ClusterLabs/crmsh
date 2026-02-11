@@ -635,7 +635,7 @@ class QDevice(object):
                 sbd_watchdog_timeout_qdevice = sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
                 sbd.SBDManager.update_sbd_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
                 if self.is_stage:
-                    utils.set_property("stonith-watchdog-timeout", 2*sbd_watchdog_timeout_qdevice)
+                    utils.set_property("fencing-watchdog-timeout", 2*sbd_watchdog_timeout_qdevice)
 
     @qnetd_lock_for_same_cluster_name
     def certificate_and_config_qdevice(self):
