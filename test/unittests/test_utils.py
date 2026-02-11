@@ -946,13 +946,13 @@ def test_has_disk_mounted(mock_run):
 
 @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-def test_has_stonith_running(mock_run, mock_diskless):
+def test_has_fence_device_registered(mock_run, mock_diskless):
     mock_run.return_value = """
-stonith-sbd
+fencing-sbd
 1 fence device found
     """
     mock_diskless.return_value = True
-    res = utils.has_stonith_running()
+    res = utils.has_fence_device_registered()
     assert res is True
     mock_run.assert_called_once_with("stonith_admin -L")
     mock_diskless.assert_called_once_with()
