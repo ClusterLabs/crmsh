@@ -25,7 +25,7 @@ Feature: crm sbd ui test cases
     Then    Cluster service is "started" on "hanode1"
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode1"
-    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
+    And     Resource "fencing-sbd" type "fence_sbd" is "Started"
 
     When    Try "crm sbd configure show sysconfig xxx"
     Then    Except "ERROR: Invalid argument"
@@ -56,14 +56,14 @@ Feature: crm sbd ui test cases
     When    Run "crm sbd configure crashdump-watchdog-timeout=60" on "hanode1"
     Then    Run "crm sbd configure show disk_metadata|grep -E "watchdog.*30"" OK
     Then    Run "crm sbd configure show disk_metadata|grep -E "msgwait.*120"" OK
-    Then    Run "crm configure show stonith-sbd|grep crashdump=1" OK
+    Then    Run "crm configure show fencing-sbd|grep crashdump=1" OK
     Then    Run "crm sbd configure show sysconfig |grep SBD_TIMEOUT_ACTION=flush,crashdump" OK
     Then    Run "crm sbd configure show sysconfig |grep "SBD_OPTS=\"-C 60\""" OK
     When    Run "crm sbd configure crashdump-watchdog-timeout=60" on "hanode1"
     Then    Expected "No change in SBD configuration" in stdout
     # Purge crashdump
     When    Run "crm sbd purge crashdump" on "hanode1"
-    And     Try "crm configure show stonith-sbd|grep crashdump"
+    And     Try "crm configure show fencing-sbd|grep crashdump"
     Then    Expected return code is "1"
     When    Try "crm sbd configure show sysconfig |grep SBD_TIMEOUT_ACTION=flush,crashdump"
     Then    Expected return code is "1"
@@ -118,7 +118,7 @@ Feature: crm sbd ui test cases
     When    Run "crm sbd configure crashdump-watchdog-timeout=60" on "hanode1"
     Then    Run "crm sbd configure show sysconfig |grep SBD_TIMEOUT_ACTION=flush,crashdump" OK
     Then    Run "crm sbd configure show sysconfig |grep "SBD_OPTS=\"-C 60 -Z\""" OK
-    Then    Run "crm sbd configure show property |grep stonith-watchdog-timeout=75" OK
+    Then    Run "crm sbd configure show property |grep fencing-watchdog-timeout=75" OK
     When    Run "crm sbd configure crashdump-watchdog-timeout=60" on "hanode1"
     Then    Expected "No change in SBD configuration" in stdout
     # Purge crashdump

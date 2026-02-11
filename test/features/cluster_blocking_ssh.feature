@@ -65,7 +65,7 @@ Feature: cluster testing with ssh blocked
       [core]
       no_ssh = yes
       """
-    When    Run "crm configure property stonith-enabled=false" on "hanode1"
+    When    Run "crm configure property fencing-enabled=false" on "hanode1"
     And     Run "crm report -d /tmp/report" on "hanode1"
     Then    Directory "/tmp/report/hanode1" created
     Then    Directory "/tmp/report/hanode2" not created
