@@ -1465,6 +1465,11 @@ def init_cluster():
     """
     Initial cluster configuration.
     """
+    if _context.stage == "cluster":
+        service_manager = ServiceManager()
+        if service_manager.service_is_enabled(constants.SBD_SERVICE):
+            service_manager.disable_service(constants.SBD_SERVICE)
+
     generate_pacemaker_remote_auth()
 
     init_cluster_local()
