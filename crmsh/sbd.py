@@ -822,7 +822,7 @@ class SBDConfigChecker(SBDTimeout):
         utils.cluster_run_cmd("systemctl daemon-reload")
 
     def _check_fencing_watchdog_timeout(self) -> CheckResult:
-        value = utils.get_property("fencing-watchdog-timeout")
+        value = utils.get_property("fencing-watchdog-timeout", quiet=self.quiet)
         if value and int(value) == -1:
             self._log_when_not_quiet(
                 logging.WARNING,
@@ -863,6 +863,7 @@ class SBDConfigChecker(SBDTimeout):
         return CheckResult.SUCCESS
 
     def _fix_fencing_watchdog_timeout(self):
+        utils.remove_legacy_properties("stonith-watchdog-timeout")
         if self.disk_based:
             logger.info("Removing fencing-watchdog-timeout property")
             utils.delete_property("fencing-watchdog-timeout")
@@ -872,7 +873,7 @@ class SBDConfigChecker(SBDTimeout):
 
     def _check_fencing_timeout(self) -> CheckResult:
         expected_value = self.get_fencing_timeout_expected()
-        value = utils.get_property("fencing-timeout")
+        value = utils.get_property("fencing-timeout", quiet=self.quiet)
         # will get default value from pacemaker metadata if not set
         value = int(utils.crm_msec(value)/1000)
         if value < expected_value:
@@ -892,12 +893,13 @@ class SBDConfigChecker(SBDTimeout):
         return CheckResult.SUCCESS
 
     def _fix_fencing_timeout(self):
+        utils.remove_legacy_properties("stonith-timeout")
         expected_value = self.get_fencing_timeout_expected()
         logger.info("Adjusting fencing-timeout to %d", expected_value)
         utils.set_property("fencing-timeout", expected_value)
 
     def _check_fencing_enabled(self) -> CheckResult:
-        value = utils.get_property("fencing-enabled", get_default=False)
+        value = utils.get_property("fencing-enabled", get_default=False, quiet=self.quiet)
         if utils.is_boolean_false(value):
             self._log_when_not_quiet(
                 logging.ERROR,
@@ -907,6 +909,7 @@ class SBDConfigChecker(SBDTimeout):
         return CheckResult.SUCCESS
 
     def _fix_fencing_enabled(self):
+        utils.remove_legacy_properties("stonith-enabled")
         logger.info("Setting fencing-enabled to true")
         utils.set_property("fencing-enabled", "true")
 
