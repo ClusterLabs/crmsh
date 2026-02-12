@@ -49,9 +49,6 @@ def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False, is_stage=False):
     if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
         # safe to use reload
         return QdevicePolicy.QDEVICE_RELOAD
-    elif mode == QDEVICE_ADD and not is_stage:
-        # Add qdevice from init process, safe to restart
-        return QdevicePolicy.QDEVICE_RESTART
     elif xmlutil.CrmMonXmlParser().is_non_stonith_resource_running():
         # will lose quorum, with non-stonith resource running
         # no reload, no restart cluster service
@@ -97,6 +94,14 @@ def qnetd_lock_for_multi_cluster(func):
     return wrapper
 
 
+def get_node_list(is_stage: bool) -> list[str]:
+    me = utils.this_node()
+    if is_stage:
+        return utils.list_cluster_nodes() or [me]
+    else:
+        return [me]
+
+
 class QDevice(object):
     """Class to manage qdevice configuration and services
 
@@ -129,7 +134,6 @@ class QDevice(object):
         self.cluster_name = cluster_name
         self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
         self.is_stage = is_stage
-        self.using_diskless_sbd = False
 
     @property
     def qnetd_cacert_on_qnetd(self):
@@ -250,16 +254,19 @@ class QDevice(object):
             if not os.path.exists(cmd.split()[0]):
                 raise ValueError("command {} not exist".format(cmd.split()[0]))
 
-    @staticmethod
-    def check_package_installed(pkg, remote=None):
-        if not utils.package_is_installed(pkg, remote_addr=remote):
-            raise ValueError("Package \"{}\" not installed on {}".format(pkg, remote if remote else "this node"))
+    def check_corosync_qdevice_available(self):
+        service_manager = ServiceManager()
+        for node in get_node_list(self.is_stage):
+            if not service_manager.service_is_available("corosync-qdevice.service", remote_addr=node):
+                raise ValueError(f"corosync-qdevice.service is not available on {node}")
 
     def valid_qdevice_options(self):
         """
         Validate qdevice related options
         """
-        self.check_package_installed("corosync-qdevice")
+        if self.is_stage:
+            utils.check_all_nodes_reachable("setup Qdevice")
+        self.check_corosync_qdevice_available()
         self.check_qnetd_addr(self.qnetd_addr)
         self.check_qdevice_port(self.port)
         self.check_qdevice_algo(self.algo)
@@ -268,30 +275,24 @@ class QDevice(object):
         self.check_qdevice_heuristics(self.cmds)
         self.check_qdevice_heuristics_mode(self.mode)
 
-    def valid_qnetd(self):
-        """
-        Validate on qnetd node
-        """
+    def validate_and_start_qnetd(self):
         exception_msg = ""
-        suggest = ""
+        suggestion_msg= ""
         shell = sh.cluster_shell()
-        if not utils.package_is_installed("corosync-qnetd", remote_addr=self.qnetd_addr):
-            exception_msg = "Package \"corosync-qnetd\" not installed on {}!".format(self.qnetd_addr)
-            suggest = "install \"corosync-qnetd\" on {}".format(self.qnetd_addr)
-        else:
+        if utils.package_is_installed("corosync-qnetd", remote_addr=self.qnetd_addr):
             self.init_tls_certs_on_qnetd()
+            self.config_qnetd_port()
             self.start_qnetd()
-            cmd = "corosync-qnetd-tool -l -c {}".format(self.cluster_name)
+            cmd = f"corosync-qnetd-tool -l -c {self.cluster_name}"
             if shell.get_stdout_or_raise_error(cmd, self.qnetd_addr):
-                exception_msg = "This cluster's name \"{}\" already exists on qnetd server!".format(self.cluster_name)
-                suggest = "consider to use the different cluster-name property"
+                exception_msg = f"This cluster's name \"{self.cluster_name}\" already exists on qnetd server!"
+                suggestion_msg = "Please consider to use the different cluster-name property"
+        else:
+            exception_msg = f"Package \"corosync-qnetd\" not installed on {self.qnetd_addr}!"
+            suggestion_msg = f"Please install \"corosync-qnetd\" on {self.qnetd_addr}"
 
         if exception_msg:
-            if self.is_stage:
-                exception_msg += "\nPlease {}.".format(suggest)
-            else:
-                exception_msg += "\nCluster service already successfully started on this node except qdevice service.\nIf you still want to use qdevice, {}.\nThen run command \"crm cluster init\" with \"qdevice\" stage, like:\n  crm cluster init qdevice qdevice_related_options\nThat command will setup qdevice separately.".format(suggest)
-            raise ValueError(exception_msg)
+            raise ValueError(f"{exception_msg}\n{suggestion_msg}")
 
     def enable_qnetd(self):
         ServiceManager().enable_service(self.qnetd_service, remote_addr=self.qnetd_addr)
@@ -337,6 +338,8 @@ class QDevice(object):
 
     def copy_qnetd_crt_to_cluster(self, log: typing.Callable[[str, typing.Optional[str]], None]):
         """Copy exported QNetd CA certificate (qnetd-cacert.crt) to every node"""
+        if not self.is_stage:
+            return
         node_list = utils.list_cluster_nodes_except_me()
         if not node_list:
             return
@@ -365,9 +368,9 @@ class QDevice(object):
         On one of cluster node initialize database by running
         /usr/sbin/corosync-qdevice-net-certutil -i -c qnetd-cacert.crt
         """
-        node_list = utils.list_cluster_nodes()
-        cmd = "corosync-qdevice-net-certutil -i -c {}".format(self.qnetd_cacert_on_local)
-        desc = "Initialize database on {}".format(node_list)
+        node_list = get_node_list(self.is_stage)
+        cmd = f"corosync-qdevice-net-certutil -i -c {self.qnetd_cacert_on_local}"
+        desc = f"Initialize database on {node_list}"
         log(desc, cmd)
         crmsh.parallax.parallax_call(node_list, cmd)
 
@@ -412,6 +415,8 @@ class QDevice(object):
 
     def copy_p12_to_cluster(self, log: typing.Callable[[str, typing.Optional[str]], None]):
         """Copy output qdevice-net-node.p12 to all other cluster nodes"""
+        if not self.is_stage:
+            return
         node_list = utils.list_cluster_nodes_except_me()
         if not node_list:
             return
@@ -424,6 +429,8 @@ class QDevice(object):
         """Import cluster certificate and key on all other cluster nodes:
         /usr/sbin/corosync-qdevice-net-certutil -m -c qdevice-net-node.p12
         """
+        if not self.is_stage:
+            return
         node_list = utils.list_cluster_nodes_except_me()
         if not node_list:
             return
@@ -549,15 +556,16 @@ class QDevice(object):
         inst.save()
 
     @staticmethod
-    def remove_qdevice_db(addr_list=[]):
+    def remove_qdevice_db(addr_list=[], is_stage=True):
         """
         Remove qdevice database
         """
         if not os.path.exists(QDevice.qdevice_db_path):
             return
-        node_list = addr_list if addr_list else utils.list_cluster_nodes()
-        cmd = "rm -rf {}/*".format(QDevice.qdevice_path)
+
+        cmd = f"rm -rf {QDevice.qdevice_path}/*"
         QDevice.log_only_to_file("Remove qdevice database", cmd)
+        node_list = addr_list or get_node_list(is_stage)
         parallax.parallax_call(node_list, cmd)
 
     @classmethod
@@ -575,17 +583,6 @@ class QDevice(object):
         shell.get_stdout_or_raise_error(cmd, qnetd_host)
         cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=cls_inst.qdevice_crq_on_qnetd)
         shell.get_stdout_or_raise_error(cmd, qnetd_host)
-
-    def config_qdevice(self) -> None:
-        """
-        Update configuration and reload corosync if necessary
-        """
-        self.write_qdevice_config()
-        with logger_utils.status_long("Update configuration"):
-            corosync.configure_two_node(qdevice_adding=True)
-            bootstrap.sync_path(corosync.conf())
-            if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
-                sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
 
     def config_qnetd_port(self):
         """
@@ -608,14 +605,17 @@ class QDevice(object):
         """
         Start qdevice and qnetd service
         """
+        using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
+        self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd, self.is_stage)
         logger.info("Enable corosync-qdevice.service in cluster")
         utils.cluster_run_cmd("systemctl enable corosync-qdevice")
         if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+            sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
             logger.info("Starting corosync-qdevice.service in cluster")
             utils.cluster_run_cmd("systemctl restart corosync-qdevice")
         elif self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
             bootstrap.restart_cluster()
-        else:
+        else: # QdevicePolicy.QDEVICE_RESTART_LATER
             logger.warning("To use qdevice service, need to restart cluster service manually on each node")
 
         logger.info("Enable corosync-qnetd.service on {}".format(self.qnetd_addr))
@@ -627,29 +627,30 @@ class QDevice(object):
         """
         Adjust SBD_WATCHDOG_TIMEOUT when configuring qdevice and diskless SBD
         """
-        self.using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
-        # add qdevice after diskless sbd started
-        if self.using_diskless_sbd:
+        sbd_service_enabled = ServiceManager().service_is_enabled("sbd.service")
+        sbd_device = sbd.SBDUtils.get_sbd_device_from_config()
+        if sbd_service_enabled and not sbd_device: # configured diskless SBD
             res = sbd.SBDUtils.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
             if not res or int(res) < sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
                 sbd_watchdog_timeout_qdevice = sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
                 sbd.SBDManager.update_sbd_configuration({"SBD_WATCHDOG_TIMEOUT": str(sbd_watchdog_timeout_qdevice)})
-                utils.set_property("stonith-watchdog-timeout", 2 * sbd_watchdog_timeout_qdevice)
+                if self.is_stage:
+                    utils.set_property("stonith-watchdog-timeout", 2*sbd_watchdog_timeout_qdevice)
 
     @qnetd_lock_for_same_cluster_name
-    def config_and_start_qdevice(self):
-        """
-        Wrap function to collect functions to config and start qdevice
-        """
-        QDevice.remove_qdevice_db()
+    def certificate_and_config_qdevice(self):
+        QDevice.remove_qdevice_db(is_stage=self.is_stage)
+
         if self.tls == "on" or self.tls == 'required':
             with logger_utils.status_long("Qdevice certification process"):
                 self.certificate_process_on_init()
+
         self.adjust_sbd_watchdog_timeout_with_qdevice()
-        self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, self.using_diskless_sbd, self.is_stage)
-        self.config_qdevice()
-        self.config_qnetd_port()
-        self.start_qdevice_service()
+        self.write_qdevice_config()
+        if self.is_stage:
+            with logger_utils.status_long("Updating and syncing qdevice configuration"):
+                corosync.configure_two_node(qdevice_adding=True)
+                bootstrap.sync_path(corosync.conf())
 
     @staticmethod
     def check_qdevice_vote():

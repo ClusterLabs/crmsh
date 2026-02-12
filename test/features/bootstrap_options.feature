@@ -34,15 +34,15 @@ Feature: crmsh bootstrap process - options
       """
     When    Try "crm cluster init -N hanode2" on "hanode1"
     Then    Expected "Can't use -N/--nodes option without -y/--yes option" in stderr
-    When    Try "crm cluster init sbd -N hanode1 -N hanode2 -y" on "hanode1"
-    Then    Expected "Can't use -N/--nodes option and stage(sbd) together" in stderr
+    When    Try "crm cluster init cluster -N hanode1 -N hanode2 -y" on "hanode1"
+    Then    Expected "Can't use -N/--nodes option and stage(cluster) together" in stderr
     When    Try "crm corosync link help add" on "hanode1"
     Then    Expected return code is "0"
 
   @clean
   Scenario: Stage validation
     When    Try "crm cluster init fdsf -y" on "hanode1"
-    Then    Expected "Invalid stage: fdsf(available stages: ssh, firewalld, csync2, corosync, sbd, cluster, ocfs2, gfs2, admin, qdevice)" in stderr
+    Then    Expected "Invalid stage: fdsf(available stages: ssh, firewalld, csync2, corosync, cluster, ocfs2, gfs2, admin, sbd, qdevice)" in stderr
     When    Try "crm cluster join fdsf -y" on "hanode1"
     Then    Expected "Invalid stage: fdsf(available stages: ssh, firewalld, ssh_merge, cluster)" in stderr
     When    Try "crm cluster join ssh -y" on "hanode1"

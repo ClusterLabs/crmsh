@@ -352,11 +352,12 @@ Stage can be one of:
     firewalld   Add high-availability service to firewalld
     csync2      Configure csync2
     corosync    Configure corosync
-    sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
+    sbd         Configure SBD (requires -s <dev>)
     ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
     gfs2        Configure GFS2 (requires -g <dev>) NOTE: this is a Technical Preview
     admin       Create administration virtual IP (optional)
+    sbd         Configure SBD (requires -s <dev>)
     qdevice     Configure qdevice and qnetd
 
 Note:
@@ -478,8 +479,6 @@ Examples:
             stage = args[0]
 
         if options.qnetd_addr_input:
-            if not ServiceManager().service_is_available("corosync-qdevice.service"):
-                utils.fatal("corosync-qdevice.service is not available")
             if options.qdevice_heuristics_mode and not options.qdevice_heuristics:
                 parser.error("Option --qdevice-heuristics is required if want to configure heuristics mode")
             options.qdevice_heuristics_mode = options.qdevice_heuristics_mode or "sync"
@@ -494,8 +493,6 @@ Examples:
         boot_context.args = args
         boot_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         boot_context.type = "init"
-        boot_context.initialize_qdevice()
-        boot_context.validate()
 
         bootstrap.bootstrap_init(boot_context)
         bootstrap.bootstrap_add(boot_context)
@@ -553,7 +550,6 @@ Examples:
         join_context.stage = stage
         join_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         join_context.type = "join"
-        join_context.validate()
 
         bootstrap.bootstrap_join(join_context)
 
@@ -847,7 +843,7 @@ to get the geo cluster configuration.""",
             case 'sbd':
                 fix = parsed_args.fix
                 try:
-                    result = sbd.SBDTimeoutChecker(quiet=fix, fix=fix).check_and_fix()
+                    result = sbd.SBDConfigChecker(quiet=fix, fix=fix).check_and_fix()
                 except sbd.FixFailure as e:
                     logger.error('%s', e)
                     return False
@@ -855,7 +851,7 @@ to get the geo cluster configuration.""",
                     logger.error('%s', e)
                     logger.error('SBD: Check sbd timeout configuration: FAIL.')
                     return False
-                return sbd.SBDTimeoutChecker.log_and_return(result, fix)
+                return sbd.SBDConfigChecker.log_and_return(result, fix)
 
             case 'sles16':
                 try:

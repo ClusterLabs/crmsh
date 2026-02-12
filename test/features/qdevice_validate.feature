@@ -64,16 +64,8 @@ Feature: corosync qdevice/qnetd options validate
   Scenario: Node for qnetd not installed corosync-qnetd
     Given   Cluster service is "stopped" on "hanode2"
     When    Try "crm cluster init --qnetd-hostname=hanode2 -y"
-    Then    Except multiple lines
-      """
-      ERROR: cluster.init: Package "corosync-qnetd" not installed on hanode2!
-      Cluster service already successfully started on this node except qdevice service.
-      If you still want to use qdevice, install "corosync-qnetd" on hanode2.
-      Then run command "crm cluster init" with "qdevice" stage, like:
-        crm cluster init qdevice qdevice_related_options
-      That command will setup qdevice separately.
-      """
-    And     Cluster service is "started" on "hanode1"
+    Then    Expected "ERROR: cluster.init: Package "corosync-qnetd" not installed on hanode2!" in stderr
+    And     Cluster service is "stopped" on "hanode1"
 
   @clean
   Scenario: Raise error when adding qdevice stage with the same cluster name
@@ -94,17 +86,8 @@ Feature: corosync qdevice/qnetd options validate
     Given   Cluster service is "stopped" on "hanode2"
     When    Try "crm cluster init -n cluster1 --qnetd-hostname=qnetd-node -y" on "hanode2"
     When    Try "crm cluster init -n cluster1 --qnetd-hostname=qnetd-node -y"
-    Then    Except multiple lines
-      """
-      ERROR: cluster.init: This cluster's name "cluster1" already exists on qnetd server!
-      Cluster service already successfully started on this node except qdevice service.
-      If you still want to use qdevice, consider to use the different cluster-name property.
-      Then run command "crm cluster init" with "qdevice" stage, like:
-        crm cluster init qdevice qdevice_related_options
-      That command will setup qdevice separately.
-      """
-    And     Cluster service is "started" on "hanode1"
-    And     Cluster service is "started" on "hanode2"
+    Then    Expected "ERROR: cluster.init: This cluster's name "cluster1" already exists on qnetd server!" in stderr
+    And     Cluster service is "stopped" on "hanode1"
 
   @clean
   Scenario: Run qdevice stage on inactive cluster node
