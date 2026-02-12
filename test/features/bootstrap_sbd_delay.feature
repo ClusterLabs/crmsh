@@ -15,13 +15,13 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
     And     Resource "stonith-sbd" type "fence_sbd" is "Started"
-    And     SBD option "SBD_DELAY_START" value is "no"
+    And     SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     # original value is 43, which is calculated by external/sbd RA
     # now fence_sbd doesn't calculate it, so this value is the default one
     # from pacemaker
-    And     Cluster property "stonith-timeout" is "60"
+    And     Cluster property "stonith-timeout" is "71"
     And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
 
     Given   Has disk "/dev/sda1" on "hanode2"
@@ -78,7 +78,7 @@ Feature: configure sbd delay start correctly
     And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
 
   @clean
-  Scenario: disk-less SBD with small sbd_watchdog_timeout
+  Scenario: diskless SBD with small sbd_watchdog_timeout
     Given   Run "test -f /etc/crm/profiles.yml" OK
     Given   Yaml "default:corosync.totem.token" value is "5000"
     Given   Yaml "default:sbd.watchdog_timeout" value is "15"
@@ -86,17 +86,17 @@ Feature: configure sbd delay start correctly
     Given   Cluster service is "stopped" on "hanode1"
     When    Run "crm cluster init -S -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     SBD option "SBD_DELAY_START" value is "no"
+    And     SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
-    And     Cluster property "stonith-timeout" is "60"
+    And     Cluster property "stonith-timeout" is "71"
 
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    # SBD_DELAY_START >= (token + consensus + 2*SBD_WATCHDOG_TIMEOUT) # for disk-less sbd
+    # SBD_DELAY_START >= (token + consensus + 2*SBD_WATCHDOG_TIMEOUT) # for diskless sbd
     And     SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
-    # stonith-timeout >= 1.2 * max(stonith_watchdog_timeout, 2*SBD_WATCHDOG_TIMEOUT)  # for disk-less sbd
+    # stonith-timeout >= 1.2 * max(stonith_watchdog_timeout, 2*SBD_WATCHDOG_TIMEOUT)  # for diskless sbd
     # stonith_timeout >= max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + token + consensus
     And     Cluster property "stonith-timeout" is "71"
 
@@ -114,7 +114,7 @@ Feature: configure sbd delay start correctly
     And     Cluster property "stonith-timeout" is "71"
 
     When    Try "crm configure property stonith-watchdog-timeout=1" on "hanode1"
-    Then    Except "Can't set stonith-watchdog-timeout to 1 because it is less than SBD_WATCHDOG_TIMEOUT(now: 15)" in stderr
+    Then    Except "It's required to set stonith-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
 
   @clean
   Scenario: disk-based SBD with big sbd_watchdog_timeout
@@ -128,13 +128,13 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
     And     Resource "stonith-sbd" type "fence_sbd" is "Started"
-    And     SBD option "SBD_DELAY_START" value is "no"
+    And     SBD option "SBD_DELAY_START" value is "131"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
     # original value is 172, which is calculated by external/sbd RA
     # now fence_sbd doesn't calculate it, so this value is the default one
     # from pacemaker
-    And     Cluster property "stonith-timeout" is "60"
+    And     Cluster property "stonith-timeout" is "155"
     And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
 
     Given   Has disk "/dev/sda1" on "hanode2"
@@ -230,7 +230,7 @@ Feature: configure sbd delay start correctly
     And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
 
   @clean
-  Scenario: Add disk-less sbd with qdevice
+  Scenario: Add diskless sbd with qdevice
     Given   Run "test -f /etc/crm/profiles.yml" OK
     Given   Yaml "default:corosync.totem.token" value is "5000"
     Given   Yaml "default:sbd.watchdog_timeout" value is "15"

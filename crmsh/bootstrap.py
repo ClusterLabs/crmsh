@@ -304,7 +304,7 @@ class Context(object):
         if self.type == "init":
             if self.stage not in INIT_STAGES_ALL:
                 utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(INIT_STAGES_EXTERNAL)})")
-            if self.stage in ("admin", "qdevice", "ocfs2") and not self.cluster_is_running:
+            if self.stage in ("admin", "sbd", "qdevice", "ocfs2") and not self.cluster_is_running:
                 utils.fatal(f"Cluster is inactive, can't run '{self.stage}' stage")
             if self.stage in ("corosync", "cluster") and self.cluster_is_running:
                 utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
@@ -1465,6 +1465,11 @@ def init_cluster():
     """
     Initial cluster configuration.
     """
+    if _context.stage == "cluster":
+        service_manager = ServiceManager()
+        if service_manager.service_is_enabled(constants.SBD_SERVICE):
+            service_manager.disable_service(constants.SBD_SERVICE)
+
     generate_pacemaker_remote_auth()
 
     init_cluster_local()
@@ -1483,9 +1488,7 @@ op_defaults op-options: timeout=600
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    if ServiceManager().service_is_enabled(constants.SBD_SERVICE):
-        _context.sbd_manager.configure_sbd()
-
+    adjust_properties()
 
 
 def init_admin():
@@ -2173,9 +2176,9 @@ def remove_node_from_cluster(node, dead_node=False):
     corosync.configure_two_node(removing=True)
     logger.info("Propagating configuration changes across the remaining nodes")
     sync_path(corosync.conf())
-    adjust_properties()
-
     sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
+
+    adjust_properties()
 
     if not dead_node:
         FirewallManager(peer=node).remove_service()
@@ -2204,7 +2207,6 @@ INIT_STAGE_CHECKER = {
         "ssh": ssh_stage_finished,
         "firewalld": FirewallManager.firewalld_stage_finished,
         "corosync": corosync_stage_finished,
-        "sbd": lambda: True,
         "cluster": is_online
 }
 
@@ -2762,7 +2764,7 @@ def adjust_stonith_timeout():
     Adjust stonith-timeout for sbd and other scenarios
     """
     if ServiceManager().service_is_active(constants.SBD_SERVICE):
-        sbd.SBDTimeoutChecker(quiet=True, fix=True).check_and_fix()
+        sbd.SBDConfigChecker(quiet=True, fix=True).check_and_fix()
     else:
         value = get_stonith_timeout_generally_expected()
         if value:
@@ -2790,6 +2792,7 @@ def adjust_properties():
     adjust_stonith_timeout()
     adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
+    sbd.SBDManager.warn_diskless_sbd()
 
 
 def retrieve_files(from_node: str, file_list: list, msg: str = None):
