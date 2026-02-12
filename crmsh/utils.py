@@ -2866,9 +2866,16 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True):
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
     else:
+        check_deprecated_term(name)
         cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
     rc, stdout, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return stdout if rc == 0 else None
+
+
+def property_configured(name, property_type="crm_config", peer=None):
+    cmd = f"crm_attribute -t {property_type} -n {name} -Gq"
+    rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
+    return rc == 0
 
 
 def delete_property(name, property_type="crm_config") -> bool:
@@ -3297,7 +3304,14 @@ def fuzzy_get(items, s):
 
 
 def cleanup_fencing_related_properties():
-    for p in ("fencing-watchdog-timeout", "fencing-timeout", "priority-fencing-delay"):
+    related_properties = [
+        "stonith-watchdog-timeout",
+        "stonith-timeout",
+        "fencing-watchdog-timeout",
+        "fencing-timeout",
+        "priority-fencing-delay"
+    ]
+    for p in related_properties:
         if get_property(p, get_default=False):
             delete_property(p)
     if get_property("fencing-enabled") == "true":
@@ -3400,4 +3414,55 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
         logger.warning("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
         logger.info("Aborting the configuration change attempt")
         return False
+
+
+def check_deprecated_term(original_term: str, existing_xml_node = None) -> None:
+    other_deprecated_new_term_mapping = {
+        "fence-reaction": "fencing-reaction",
+        "stop-orphan-resources": "stop-removed-resources",
+        "stop-orphan-actions": "cancel-removed-actions"
+    }
+    other_new_deprecated_term_mapping = {
+        v: k for k, v in other_deprecated_new_term_mapping.items()
+    }
+
+    deprecated_term, new_term = None, None
+    use_deprecated_term, use_new_term = False, False
+
+    # case1
+    if original_term.startswith("stonith-"):
+        use_deprecated_term = True
+        deprecated_term = original_term
+        new_term = original_term.replace("stonith-", "fencing-", 1)
+    # case2
+    elif original_term in other_deprecated_new_term_mapping:
+        use_deprecated_term = True
+        deprecated_term = original_term
+        new_term = other_deprecated_new_term_mapping[original_term]
+    # case3, includes "fencing-reaction", so need to put it before case4
+    elif original_term in other_new_deprecated_term_mapping:
+        use_new_term = True
+        new_term = original_term
+        deprecated_term = other_new_deprecated_term_mapping[original_term]
+    # case4
+    elif original_term.startswith("fencing-"):
+        use_new_term = True
+        new_term = original_term
+        deprecated_term = original_term.replace("fencing-", "stonith-", 1)
+    else:
+        return
+
+    if existing_xml_node is not None:
+        deprecated_term_configured = existing_xml_node.find(f".//*[@name='{deprecated_term}']") is not None
+        new_term_configured = existing_xml_node.find(f".//*[@name='{new_term}']") is not None
+    else:
+        deprecated_term_configured = property_configured(deprecated_term)
+        new_term_configured = property_configured(new_term)
+
+    if deprecated_term_configured and new_term_configured:
+        if use_deprecated_term:
+            logger.warning(
+                "The new property name \"%s\" is configured, the value of deprecated name \"%s\" will be ignored",
+                new_term, deprecated_term
+            )
 # vim:ts=4:sw=4:et:
