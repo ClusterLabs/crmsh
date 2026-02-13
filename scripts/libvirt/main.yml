@@ -2,14 +2,14 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-shortdesc: STONITH for libvirt (kvm / Xen)
+shortdesc: FENCING for libvirt (kvm / Xen)
 longdesc: >
-  Uses libvirt as a STONITH device to fence a guest node.
+  Uses libvirt as a FENCING device to fence a guest node.
   Create a separate resource for each guest node in the cluster.
 
   Note that the recommended fencing mechanism is SBD whenever
   a shared storage device (like a SAN) is available.
-category: Stonith
+category: Fencing
 parameters:
   - name: id
     shortdesc: Resource ID (Name)

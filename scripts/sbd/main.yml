@@ -3,10 +3,10 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-category: Stonith
+category: Fencing
 shortdesc: "SBD, Shared storage based fencing"
 longdesc: |
-  Create a SBD STONITH resource. SBD must be configured to use
+  Create a SBD FENCING resource. SBD must be configured to use
   a particular shared storage device using /etc/sysconfig/sbd.
 
   This wizard can optionally create and configure a SBD device.

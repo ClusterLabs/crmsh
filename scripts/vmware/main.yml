@@ -2,7 +2,7 @@
 #
 # License: GNU General Public License (GPL)
 version: 2.2
-category: Stonith
+category: Fencing
 shortdesc: Fencing using vCenter / ESX Server
 longdesc: |
   Note that SBD is the recommended fencing mechanism for VMware

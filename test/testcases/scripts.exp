@@ -26,7 +26,13 @@ db2              IBM DB2 Database
 db2-hadr         IBM DB2 Database with HADR
 oracle           Oracle Database
 
-Filesystem:
+Fencing:
+
+libvirt          FENCING for libvirt (kvm / Xen)
+sbd              SBD, Shared storage based fencing
+vmware           Fencing using vCenter / ESX Server
+
+File system:
 
 drbd             DRBD Block Device
 filesystem       File System (mount point)
@@ -45,7 +51,7 @@ SAP:
 sap-as           SAP ASCS Instance
 sap-ci           SAP Central Instance
 sap-db           SAP Database Instance
-sap-simple-stack SAP Simple Stack Instance
+sap-simple-stack SAP SimpleStack Instance
 sap-simple-stack-plus SAP SimpleStack+ Instance
 
 Server:
@@ -53,12 +59,6 @@ Server:
 apache           Apache Webserver
 haproxy          HAProxy
 nginx            Nginx Webserver
-
-Stonith:
-
-libvirt          STONITH for libvirt (kvm / Xen)
-sbd              SBD, Shared storage based fencing
-vmware           Fencing using vCenter / ESX Server
 
 System management:
 
@@ -78,7 +78,13 @@ db2              IBM DB2 Database
 db2-hadr         IBM DB2 Database with HADR
 oracle           Oracle Database
 
-Filesystem:
+Fencing:
+
+libvirt          FENCING for libvirt (kvm / Xen)
+sbd              SBD, Shared storage based fencing
+vmware           Fencing using vCenter / ESX Server
+
+File system:
 
 drbd             DRBD Block Device
 filesystem       File System (mount point)
@@ -97,7 +103,7 @@ SAP:
 sap-as           SAP ASCS Instance
 sap-ci           SAP Central Instance
 sap-db           SAP Database Instance
-sap-simple-stack SAP Simple Stack Instance
+sap-simple-stack SAP SimpleStack Instance
 sap-simple-stack-plus SAP SimpleStack+ Instance
 
 Script:
@@ -115,12 +121,6 @@ Server:
 apache           Apache Webserver
 haproxy          HAProxy
 nginx            Nginx Webserver
-
-Stonith:
-
-libvirt          STONITH for libvirt (kvm / Xen)
-sbd              SBD, Shared storage based fencing
-vmware           Fencing using vCenter / ESX Server
 
 System management:
 
