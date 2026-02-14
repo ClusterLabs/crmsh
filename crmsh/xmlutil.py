@@ -161,7 +161,7 @@ def read_cib(fun, params=None):
 def sanity_check_nvpairs(ident, node, attr_list) -> utils.VerifyResult:
     rc = utils.VerifyResult.SUCCESS
     for nvpair in node.iterchildren("nvpair"):
-        rc |= check_fencing_watchdog_timeout(nvpair)
+        rc |= sanity_check_fencing_watchdog_timeout(nvpair, node)
         n = nvpair.get("name")
         if n and n not in attr_list:
             logger.warning("%s: unknown attribute '%s'", ident, n)
@@ -169,17 +169,26 @@ def sanity_check_nvpairs(ident, node, attr_list) -> utils.VerifyResult:
     return rc
 
 
-def check_fencing_watchdog_timeout(nvpair) -> utils.VerifyResult:
+def sanity_check_fencing_watchdog_timeout(nvpair, node) -> utils.VerifyResult:
     rc = utils.VerifyResult.SUCCESS
+
     name, value = nvpair.get("name"), nvpair.get("value")
-    if name and name == "fencing-watchdog-timeout" and value:
+    if name in ("fencing-watchdog-timeout", "stonith-watchdog-timeout") and value:
+
+        if name == "stonith-watchdog-timeout":
+            for nv in node.iterchildren("nvpair"):
+                if nv.get("name") == "fencing-watchdog-timeout":
+                    # ignore stonith-watchdog-timeout if fencing-watchdog-timeout is set
+                    return utils.VerifyResult.SUCCESS
+
         try:
             intval = int(value)
-            if not sbd.SBDTimeout.able_to_set_fencing_watchdog_timeout(intval):
+            if not sbd.SBDTimeout.able_to_set_fencing_watchdog_timeout(name, intval):
                 rc = utils.VerifyResult.FATAL_ERROR
         except ValueError:
-            logger.error("fencing-watchdog-timeout must be an integer")
+            logger.error("%s must be an integer", name)
             rc = utils.VerifyResult.FATAL_ERROR
+
     return rc
 
 
