@@ -183,7 +183,7 @@ crm(live)# node standby node4
   #
   # cluster properties
   #
-  property stonith-enabled=true
+  property fencing-enabled=true
   commit
 EOF
 ........
@@ -300,7 +300,7 @@ crm(test-2)configure# commit
 === TimeoutFormulas
 
 If you use `crm cluster init` command to set up a cluster, especially
-with SBD as the STONITH device, crmsh configures several fencing related
+with SBD as the fence device, crmsh configures several fencing related
 settings based on the calculations with a set of formulas.
 
 .SBD related timeouts
@@ -349,25 +349,25 @@ settings based on the calculations with a set of formulas.
 	TimeoutSec = default_value
 ...............
 .Pacemaker related timeouts
-`stonith-watchdog-timeout`: (only for diskless SBD)
+`fencing-watchdog-timeout`: (only for diskless SBD)
 ...............
-    stonith-watchdog-timeout = 2 * SBD_WATCHDOG_TIMEOUT
+    fencing-watchdog-timeout = 2 * SBD_WATCHDOG_TIMEOUT
 
     # When setting crashdump watchdog timeout
-    stonith-watchdog-timeout = SBD_WATCHDOG_TIMEOUT + crashdump_watchdog_timeout
+    fencing-watchdog-timeout = SBD_WATCHDOG_TIMEOUT + crashdump_watchdog_timeout
 ...............
-`stonith-timeout`:
+`fencing-timeout`:
 ...............
     # For disk-based SBD
     _value_from_sbd = 1.2 * msgwait
-    stonith-timeout = max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
+    fencing-timeout = max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
 
     # For diskless SBD
-    _value_from_sbd = 1.2 * max(stonith-watchdog-timeout, 2*SBD_WATCHDOG_TIMEOUT)
-    stonith-timeout = max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
+    _value_from_sbd = 1.2 * max(fencing-watchdog-timeout, 2*SBD_WATCHDOG_TIMEOUT)
+    fencing-timeout = max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
 
     # For general scenarios
-    stonith-timeout = 60s + corosync.token + corosync.consensus
+    fencing-timeout = 60s + corosync.token + corosync.consensus
 ...............
 
 [[topics.Features.Checks,Configuration semantic checks]]
@@ -3277,7 +3277,7 @@ get-property [-t|--true] [<name>]
 
 Example:
 ...............
-get-property stonith-enabled
+get-property fencing-enabled
 get-property -t maintenance-mode
 ...............
 
@@ -3726,9 +3726,9 @@ property [<set_id>:] [rule ...] <option>=<value> [<option>=<value> ...]
 ...............
 Example:
 ...............
-property stonith-enabled --help
-property stonith-enabled=true
-property rule date spec years=2014 stonith-enabled=false
+property fencing-enabled --help
+property fencing-enabled=true
+property rule date spec years=2014 fencing-enabled=false
 ...............
 
 [[cmdhelp.configure.ptest,show cluster actions if changes were committed]]

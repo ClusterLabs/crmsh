@@ -643,6 +643,7 @@ class CibConfig(command.UI):
                 print(v)
         cib_factory.ensure_cib_updated()
         for p in properties:
+            p = utils.translate_fencing_term(p)
             v = cib_factory.get_property_w_default(p)
             if v is not None:
                 print_value(v)

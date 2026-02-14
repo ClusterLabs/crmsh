@@ -14,15 +14,15 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
-    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
-    And     SBD option "SBD_DELAY_START" value is "no"
+    And     Resource "fencing-sbd" type "fence_sbd" is "Started"
+    And     SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     # original value is 43, which is calculated by external/sbd RA
     # now fence_sbd doesn't calculate it, so this value is the default one
     # from pacemaker
-    And     Cluster property "stonith-timeout" is "60"
-    And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
+    And     Cluster property "fencing-timeout" is "71"
+    And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
 
     Given   Has disk "/dev/sda1" on "hanode2"
     Given   Cluster service is "stopped" on "hanode2"
@@ -34,9 +34,9 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     # value_from_sbd >= 1.2 * msgwait  # for disk-based sbd
-    # stonith_timeout >= max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + token + consensus
-    And     Cluster property "stonith-timeout" is "71"
-    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
+    # fencing_timeout >= max(value_from_sbd, constants.FENCING_TIMEOUT_DEFAULT) + token + consensus
+    And     Cluster property "fencing-timeout" is "71"
+    And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
 
     Given   Has disk "/dev/sda1" on "hanode3"
     Given   Cluster service is "stopped" on "hanode3"
@@ -49,23 +49,23 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
     # value_from_sbd >= 1.2 * msgwait  # for disk-based sbd
-    # stonith_timeout >= max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + token + consensus
+    # fencing_timeout >= max(value_from_sbd, constants.FENCING_TIMEOUT_DEFAULT) + token + consensus
     # runtime value is "71", we keep ther larger one here
-    And     Cluster property "stonith-timeout" is "71"
-    And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
+    And     Cluster property "fencing-timeout" is "71"
+    And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
 
     # Increase expected value
     When    Run "crm sbd configure watchdog-timeout=45" on "hanode1"
     Then    SBD option "SBD_DELAY_START" value is "101"
     And     SBD option "msgwait" value for "/dev/sda1" is "90"
-    And     Cluster property "stonith-timeout" is "119"
+    And     Cluster property "fencing-timeout" is "119"
     And     Start timeout for sbd.service is "121" seconds
 
     # Decrease expected value
     When    Run "crm sbd configure watchdog-timeout=15" on "hanode1"
     Then    SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
-    And     Cluster property "stonith-timeout" is "71"
+    And     Cluster property "fencing-timeout" is "71"
     And     Start timeout for sbd.service is "90" seconds
 
     When    Run "crm cluster remove hanode3 -y" on "hanode1"
@@ -74,11 +74,11 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_DELAY_START" value is "71"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
-    And     Cluster property "stonith-timeout" is "71"
-    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
+    And     Cluster property "fencing-timeout" is "71"
+    And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
 
   @clean
-  Scenario: disk-less SBD with small sbd_watchdog_timeout
+  Scenario: diskless SBD with small sbd_watchdog_timeout
     Given   Run "test -f /etc/crm/profiles.yml" OK
     Given   Yaml "default:corosync.totem.token" value is "5000"
     Given   Yaml "default:sbd.watchdog_timeout" value is "15"
@@ -86,35 +86,41 @@ Feature: configure sbd delay start correctly
     Given   Cluster service is "stopped" on "hanode1"
     When    Run "crm cluster init -S -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     SBD option "SBD_DELAY_START" value is "no"
+    And     SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
-    And     Cluster property "stonith-timeout" is "60"
+    And     Cluster property "fencing-timeout" is "71"
 
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
-    # SBD_DELAY_START >= (token + consensus + 2*SBD_WATCHDOG_TIMEOUT) # for disk-less sbd
+    # SBD_DELAY_START >= (token + consensus + 2*SBD_WATCHDOG_TIMEOUT) # for diskless sbd
     And     SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
-    # stonith-timeout >= 1.2 * max(stonith_watchdog_timeout, 2*SBD_WATCHDOG_TIMEOUT)  # for disk-less sbd
-    # stonith_timeout >= max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + token + consensus
-    And     Cluster property "stonith-timeout" is "71"
+    # fencing-timeout >= 1.2 * max(fencing_watchdog_timeout, 2*SBD_WATCHDOG_TIMEOUT)  # for diskless sbd
+    # fencing_timeout >= max(value_from_sbd, constants.FENCING_TIMEOUT_DEFAULT) + token + consensus
+    And     Cluster property "fencing-timeout" is "71"
 
     Given   Cluster service is "stopped" on "hanode3"
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     And     SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
-    And     Cluster property "stonith-timeout" is "71"
+    And     Cluster property "fencing-timeout" is "71"
 
     When    Run "crm cluster remove hanode3 -y" on "hanode1"
     Then    Cluster service is "stopped" on "hanode3"
     And     SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
-    And     Cluster property "stonith-timeout" is "71"
+    And     Cluster property "fencing-timeout" is "71"
 
-    When    Try "crm configure property stonith-watchdog-timeout=1" on "hanode1"
-    Then    Except "Can't set stonith-watchdog-timeout to 1 because it is less than SBD_WATCHDOG_TIMEOUT(now: 15)" in stderr
+    When    Try "crm configure property fencing-watchdog-timeout=1" on "hanode1"
+    Then    Except "It's required to set fencing-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
+    # Expect successfully set stonith-watchdog-timeout=5 since already set fencing-watchdog-timeout
+    When    Run "crm configur proerty stonith-watchdog-timeout=5" on "hanode1"
+    Then    Cluster property "fencing-watchdog-timeout" is "30"
+    When    Try "crm -F configure filter "sed 's/fencing-watchdog-timeout=30/#fencing-watchdog-timeout=30/g'"" on "hanode1"
+    Then    Expected "It's required to set stonith-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
+    Then    Cluster property "fencing-watchdog-timeout" is "30"
 
   @clean
   Scenario: disk-based SBD with big sbd_watchdog_timeout
@@ -127,15 +133,15 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster init -s /dev/sda1 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
-    And     Resource "stonith-sbd" type "fence_sbd" is "Started"
-    And     SBD option "SBD_DELAY_START" value is "no"
+    And     Resource "fencing-sbd" type "fence_sbd" is "Started"
+    And     SBD option "SBD_DELAY_START" value is "131"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
     # original value is 172, which is calculated by external/sbd RA
     # now fence_sbd doesn't calculate it, so this value is the default one
     # from pacemaker
-    And     Cluster property "stonith-timeout" is "60"
-    And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
+    And     Cluster property "fencing-timeout" is "155"
+    And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
 
     Given   Has disk "/dev/sda1" on "hanode2"
     Given   Cluster service is "stopped" on "hanode2"
@@ -146,10 +152,10 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_DELAY_START" value is "161"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
-    # stonith-timeout >= 1.2 * msgwait  # for disk-based sbd
-    # stonith_timeout >= max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + token + consensus
-    And     Cluster property "stonith-timeout" is "155"
-    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
+    # fencing-timeout >= 1.2 * msgwait  # for disk-based sbd
+    # fencing_timeout >= max(value_from_sbd, constants.FENCING_TIMEOUT_DEFAULT) + token + consensus
+    And     Cluster property "fencing-timeout" is "155"
+    And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
     # since SBD_DELAY_START value(161s) > default systemd startup value(1min 30s)
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
     # 1.2*SBD_DELAY_START
@@ -163,8 +169,8 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_DELAY_START" value is "131"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
-    And     Cluster property "stonith-timeout" is "155"
-    And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
+    And     Cluster property "fencing-timeout" is "155"
+    And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
     And     Run "grep 'TimeoutStartSec=157' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
 
@@ -174,8 +180,8 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_DELAY_START" value is "161"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
-    And     Cluster property "stonith-timeout" is "155"
-    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
+    And     Cluster property "fencing-timeout" is "155"
+    And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
     And     Run "grep 'TimeoutStartSec=193' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
     When    Run "sed -i 's/watchdog_timeout: 60/watchdog_timeout: 15/g' /etc/crm/profiles.yml" on "hanode1"
@@ -201,8 +207,8 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_DELAY_START" value is "71"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
-    And     Cluster property "stonith-timeout" is "71"
-    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
+    And     Cluster property "fencing-timeout" is "71"
+    And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
 
   @clean
   Scenario: Add disk-based sbd with qdevice
@@ -226,11 +232,11 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_DELAY_START" value is "41"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "30"
-    And     Cluster property "stonith-timeout" is "71"
-    And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
+    And     Cluster property "fencing-timeout" is "71"
+    And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
 
   @clean
-  Scenario: Add disk-less sbd with qdevice
+  Scenario: Add diskless sbd with qdevice
     Given   Run "test -f /etc/crm/profiles.yml" OK
     Given   Yaml "default:corosync.totem.token" value is "5000"
     Given   Yaml "default:sbd.watchdog_timeout" value is "15"
@@ -248,8 +254,8 @@ Feature: configure sbd delay start correctly
 
     And     SBD option "SBD_DELAY_START" value is "81"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "35"
-    And     Cluster property "stonith-timeout" is "95"
-    And     Cluster property "stonith-watchdog-timeout" is "70"
+    And     Cluster property "fencing-timeout" is "95"
+    And     Cluster property "fencing-watchdog-timeout" is "70"
 
   @clean
   Scenario: Add qdevice on a diskless SBD cluster (bsc#1254571)
@@ -260,8 +266,8 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
     Then    Service "corosync-qdevice" is "started" on "hanode1"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "35"
-    And     Cluster property "stonith-timeout" is "95"
-    And     Cluster property "stonith-watchdog-timeout" is "70"
+    And     Cluster property "fencing-timeout" is "95"
+    And     Cluster property "fencing-watchdog-timeout" is "70"
 
   @clean
   Scenario: Add and remove qdevice from cluster with sbd running
@@ -273,15 +279,15 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
-    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
+    And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
     Then    Service "corosync-qdevice" is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode2"
-    And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
+    And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
     When    Run "crm cluster remove --qdevice -y" on "hanode1"
     Then    Service "corosync-qdevice" is "stopped" on "hanode1"
     And     Service "corosync-qdevice" is "stopped" on "hanode2"
-    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
+    And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
 
   @clean
   Scenario: Test priority-fence-delay and priority
@@ -309,14 +315,14 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
-    And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
-    And     Cluster property "stonith-timeout" is "71"
+    And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
+    And     Cluster property "fencing-timeout" is "71"
     And     Cluster property "priority-fencing-delay" is "60"
     When    Run "crm cluster remove hanode2 -y" on "hanode1"
     Then    Cluster service is "stopped" on "hanode2"
     And     Property "priority" in "rsc_defaults" is "0"
     And     Cluster property "priority-fencing-delay" is "0"
-    And     Parameter "pcmk_delay_max" not configured in "stonith-sbd"
+    And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
 
   @clean
   Scenario: Check and fix sbd-related timeout values for disk-based sbd
@@ -355,12 +361,12 @@ Feature: configure sbd delay start correctly
     Then    Expected "It's required that SBD_DELAY_START is set to 71, now is 40" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
-    # check stonith-timeout
-    When    Run "crm configure property stonith-timeout=50" on "hanode1"
+    # check fencing-timeout
+    When    Run "crm configure property fencing-timeout=50" on "hanode1"
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's required that stonith-timeout is set to 71, now is 50" in stderr
+    Then    Expected "It's required that fencing-timeout is set to 71, now is 50" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's required that stonith-timeout is set to 71, now is 50" in stderr
+    Then    Expected "It's required that fencing-timeout is set to 71, now is 50" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
     # Adjust token timeout in corosync.conf
@@ -385,11 +391,11 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster init sbd -S -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
-    # Delete stonith-watchdog-timeout
-    When    Delete property "stonith-watchdog-timeout" from cluster
+    # Delete fencing-watchdog-timeout
+    When    Delete property "fencing-watchdog-timeout" from cluster
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's required that stonith-watchdog-timeout is set to 30, now is not set" in stderr
+    Then    Expected "It's required that fencing-watchdog-timeout is set to 30, now is not set" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's required that stonith-watchdog-timeout is set to 30, now is not set" in stderr
+    Then    Expected "It's required that fencing-watchdog-timeout is set to 30, now is not set" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout

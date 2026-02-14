@@ -39,7 +39,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from .constants import QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT,\
+from .constants import QDEVICE_HELP_INFO, FENCING_TIMEOUT_DEFAULT,\
         REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX, CSYNC2_SERVICE, WAIT_TIMEOUT_MS_DEFAULT
 from . import cluster_fs
 from . import qdevice
@@ -75,7 +75,7 @@ STATIC_FILES_TO_SYNC = (BOOTH_DIR, COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, PCMK_REMOTE_AUTH, PROFILES_FILE, CRM_CFG)
 
-INIT_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "corosync", "sbd", "cluster", "ocfs2", "gfs2", "admin", "qdevice")
+INIT_STAGES_EXTERNAL = ("ssh", "firewalld", "csync2", "corosync", "cluster", "ocfs2", "gfs2", "admin", "sbd", "qdevice")
 INIT_STAGES_INTERNAL = ("qnetd_remote", )
 INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
 JOIN_STAGES_EXTERNAL = ("ssh", "firewalld", "ssh_merge", "cluster")
@@ -153,7 +153,7 @@ class Context(object):
         ctx.initialize_user()
         return ctx
 
-    def initialize_qdevice(self):
+    def _initialize_qdevice(self):
         """
         Initialize qdevice instance
         """
@@ -304,7 +304,7 @@ class Context(object):
         if self.type == "init":
             if self.stage not in INIT_STAGES_ALL:
                 utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(INIT_STAGES_EXTERNAL)})")
-            if self.stage in ("admin", "qdevice", "ocfs2") and not self.cluster_is_running:
+            if self.stage in ("admin", "sbd", "qdevice", "ocfs2") and not self.cluster_is_running:
                 utils.fatal(f"Cluster is inactive, can't run '{self.stage}' stage")
             if self.stage in ("corosync", "cluster") and self.cluster_is_running:
                 utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
@@ -324,6 +324,7 @@ class Context(object):
         for package in self.CORE_PACKAGES:
             if not utils.package_is_installed(package):
                 utils.fatal(f"Package '{package}' is not installed")
+        self._initialize_qdevice()
         if self.qdevice_inst:
             self.qdevice_inst.valid_qdevice_options()
         if self.ocfs2_devices or self.gfs2_devices or self.stage in ("ocfs2", "gfs2"):
@@ -1465,6 +1466,11 @@ def init_cluster():
     """
     Initial cluster configuration.
     """
+    service_manager = ServiceManager()
+    if _context.stage == "cluster":
+        if service_manager.service_is_enabled(constants.SBD_SERVICE):
+            service_manager.disable_service(constants.SBD_SERVICE)
+
     generate_pacemaker_remote_auth()
 
     init_cluster_local()
@@ -1478,14 +1484,18 @@ def init_cluster():
 
     logger.info("Loading initial cluster configuration")
 
-    crm_configure_load("update", """property cib-bootstrap-options: stonith-enabled=false
+    crm_configure_load("update", """property cib-bootstrap-options: fencing-enabled=false
 op_defaults op-options: timeout=600
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
 
-    if ServiceManager().service_is_enabled(constants.SBD_SERVICE):
-        _context.sbd_manager.configure_sbd()
+    if corosync.is_qdevice_configured():
+        logger.info("Starting and enable corosync-qdevice.service on %s", utils.this_node())
+        service_manager.start_service("corosync-qdevice.service", enable=True)
+    elif service_manager.service_is_enabled("corosync-qdevice.service"):
+        service_manager.disable_service("corosync-qdevice.service")
 
+    adjust_properties()
 
 
 def init_admin():
@@ -1527,11 +1537,10 @@ def configure_qdevice_interactive():
     if not confirm("Do you want to configure QDevice?"):
         return
     while True:
-        try:
-            qdevice.QDevice.check_package_installed("corosync-qdevice")
+        if utils.package_is_installed("corosync-qdevice"):
             break
-        except ValueError as err:
-            logger.error(err)
+        else:
+            logger.error("Package corosync-qdevice is not installed")
             if confirm("Please install the package manually and press 'y' to continue"):
                 continue
             else:
@@ -1618,23 +1627,25 @@ def init_qdevice():
     if not _context.qdevice_inst:
         ServiceManager().disable_service("corosync-qdevice.service")
         return
+    is_qdevice_stage = _context.stage == "qdevice"
 
     logger.info("""Configure Qdevice/Qnetd:""")
-    utils.check_all_nodes_reachable("setup Qdevice")
-    cluster_node_list = utils.list_cluster_nodes()
-    for node in cluster_node_list:
-        if not ServiceManager().service_is_available("corosync-qdevice.service", node):
-            utils.fatal("corosync-qdevice.service is not available on {}".format(node))
 
+    cluster_node_list = qdevice.get_node_list(is_qdevice_stage)
     _setup_passwordless_ssh_for_qnetd(cluster_node_list)
 
     qdevice_inst = _context.qdevice_inst
     if corosync.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
-        qdevice_inst.start_qdevice_service()
+        if is_qdevice_stage:
+            qdevice_inst.start_qdevice_service()
         return
+
     qdevice_inst.set_cluster_name()
-    qdevice_inst.valid_qnetd()
-    qdevice_inst.config_and_start_qdevice()
+    qdevice_inst.validate_and_start_qnetd()
+    qdevice_inst.certificate_and_config_qdevice()
+
+    if is_qdevice_stage:
+        qdevice_inst.start_qdevice_service()
     adjust_properties()
 
 
@@ -2081,7 +2092,7 @@ def start_qdevice_on_join_node(seed_host):
     """
     Doing qdevice certificate process and start qdevice service on join node
     """
-    with logger_utils.status_long("Starting corosync-qdevice.service"):
+    with logger_utils.status_long(f"Starting and enable corosync-qdevice.service on {utils.this_node()}"):
         if corosync.is_qdevice_tls_on():
             qnetd_addr = corosync.get_value("quorum.device.net.host")
             qdevice_inst = qdevice.QDevice(qnetd_addr, cluster_node=seed_host)
@@ -2173,9 +2184,9 @@ def remove_node_from_cluster(node, dead_node=False):
     corosync.configure_two_node(removing=True)
     logger.info("Propagating configuration changes across the remaining nodes")
     sync_path(corosync.conf())
-    adjust_properties()
-
     sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
+
+    adjust_properties()
 
     if not dead_node:
         FirewallManager(peer=node).remove_service()
@@ -2204,7 +2215,6 @@ INIT_STAGE_CHECKER = {
         "ssh": ssh_stage_finished,
         "firewalld": FirewallManager.firewalld_stage_finished,
         "corosync": corosync_stage_finished,
-        "sbd": lambda: True,
         "cluster": is_online
 }
 
@@ -2236,6 +2246,8 @@ def bootstrap_init(context):
     _context = context
     stage = _context.stage
 
+    _context.validate()
+
     init()
 
     _context.load_profiles()
@@ -2264,9 +2276,9 @@ def bootstrap_init(context):
         lock_inst = lock.Lock()
         try:
             with lock_inst.lock():
+                init_qdevice()
                 init_cluster()
                 init_admin()
-                init_qdevice()
                 init_ocfs2()
                 init_gfs2()
         except lock.ClaimLockError as err:
@@ -2324,6 +2336,8 @@ def bootstrap_join(context):
     """
     global _context
     _context = context
+
+    _context.validate()
 
     init()
     _context.init_sbd_manager()
@@ -2721,18 +2735,18 @@ def bootstrap_arbitrator(context):
     ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("booth@booth", enable=True)
 
 
-def get_stonith_timeout_generally_expected():
+def get_fencing_timeout_generally_expected():
     """
-    Adjust stonith-timeout for all scenarios, formula is:
+    Adjust fencing-timeout for all scenarios, formula is:
 
-    stonith-timeout = STONITH_TIMEOUT_DEFAULT + token + consensus
+    fencing-timeout = FENCING_TIMEOUT_DEFAULT + token + consensus
     """
-    stonith_enabled = utils.get_property("stonith-enabled")
-    # When stonith disabled, return
-    if utils.is_boolean_false(stonith_enabled):
+    fencing_enabled = utils.get_property("fencing-enabled")
+    # When fencing disabled, return
+    if utils.is_boolean_false(fencing_enabled):
         return None
 
-    return STONITH_TIMEOUT_DEFAULT + corosync.token_and_consensus_timeout()
+    return FENCING_TIMEOUT_DEFAULT + corosync.token_and_consensus_timeout()
 
 
 def adjust_pcmk_delay_max(is_2node_wo_qdevice):
@@ -2757,23 +2771,23 @@ def adjust_pcmk_delay_max(is_2node_wo_qdevice):
             logger.info("Delete parameter 'pcmk_delay_max' for resource '{}'".format(res))
 
 
-def adjust_stonith_timeout():
+def adjust_fencing_timeout():
     """
-    Adjust stonith-timeout for sbd and other scenarios
+    Adjust fencing-timeout for sbd and other scenarios
     """
     if ServiceManager().service_is_active(constants.SBD_SERVICE):
-        sbd.SBDTimeoutChecker(quiet=True, fix=True).check_and_fix()
+        sbd.SBDConfigChecker(quiet=True, fix=True).check_and_fix()
     else:
-        value = get_stonith_timeout_generally_expected()
+        value = get_fencing_timeout_generally_expected()
         if value:
-            utils.set_property("stonith-timeout", value, conditional=True)
+            utils.set_property("fencing-timeout", value, conditional=True)
 
 
 def adjust_properties():
     """
     Adjust properties for the cluster:
     - pcmk_delay_max
-    - stonith-timeout
+    - fencing-timeout
     - priority in rsc_defaults
     - priority-fencing-delay
 
@@ -2787,9 +2801,10 @@ def adjust_properties():
         return
     is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
     adjust_pcmk_delay_max(is_2node_wo_qdevice)
-    adjust_stonith_timeout()
+    adjust_fencing_timeout()
     adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
+    sbd.SBDManager.warn_diskless_sbd()
 
 
 def retrieve_files(from_node: str, file_list: list, msg: str = None):

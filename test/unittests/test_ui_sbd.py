@@ -206,8 +206,8 @@ class TestSBD(unittest.TestCase):
         dc-version="2.1.7+20240711.239cba384-1.1-2.1.7+20240711.239cba384" \
         cluster-infrastructure=corosync \
         cluster-name=hacluster \
-        stonith-enabled=true \
-        stonith-timeout=83 \
+        fencing-enabled=true \
+        fencing-timeout=83 \
         priority-fencing-delay=60
         """
         data2 = "fence_sbd parameters"
@@ -221,8 +221,8 @@ class TestSBD(unittest.TestCase):
         ])
         mock_print.assert_has_calls([
             mock.call("have-watchdog=true"),
-            mock.call("stonith-enabled=true"),
-            mock.call("stonith-timeout=83"),
+            mock.call("fencing-enabled=true"),
+            mock.call("fencing-timeout=83"),
             mock.call(),
             mock.call("fence_sbd parameters"),
             mock.call(),
@@ -239,7 +239,7 @@ class TestSBD(unittest.TestCase):
             res = self.sbd_instance_diskbased._configure_show(["xxx1", "xxx2"])
         self.assertEqual(str(e.exception), f"Unknown argument: xxx2")
 
-    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
     def test_configure_show_disk_metadata(self, mock_sbd_timeout_checker):
         mock_sbd_timeout_checker_instance = mock.Mock()
         mock_sbd_timeout_checker.return_value = mock_sbd_timeout_checker_instance
@@ -250,7 +250,7 @@ class TestSBD(unittest.TestCase):
         mock_sbd_timeout_checker.assert_called_once_with()
         mock_sbd_timeout_checker_instance.check_and_fix.assert_called_once()
 
-    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
     @mock.patch('crmsh.ui_sbd.SBD._show_sysconfig')
     def test_configure_show_sysconfig(self, mock_show_sysconfig, mock_sbd_timeout_checker):
         mock_sbd_timeout_checker_instance = mock.Mock()
@@ -261,7 +261,7 @@ class TestSBD(unittest.TestCase):
         mock_sbd_timeout_checker.assert_called_once_with()
         mock_sbd_timeout_checker_instance.check_and_fix.assert_called_once()
 
-    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
     def test_configure_show_property(self, mock_sbd_timeout_checker):
         mock_sbd_timeout_checker_instance = mock.Mock()
         mock_sbd_timeout_checker.return_value = mock_sbd_timeout_checker_instance
@@ -285,7 +285,7 @@ class TestSBD(unittest.TestCase):
             self.assertIsNotNone(match)
             self.assertEqual(match.groups(), expected)
 
-    @mock.patch('crmsh.sbd.SBDTimeoutChecker')
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
     @mock.patch('crmsh.ui_sbd.SBD._show_sysconfig')
     @mock.patch('builtins.print')
     def test_configure_show(self, mock_print, mock_show_sysconfig, mock_sbd_timeout_checker):
@@ -452,7 +452,7 @@ class TestSBD(unittest.TestCase):
         mock_SBDManager.return_value.init_and_deploy_sbd = mock.Mock()
         self.sbd_instance_diskless._configure_diskless(parameter_dict)
         mock_SBDManager.assert_called_once_with(
-            timeout_dict={'stonith-watchdog': 24},
+            timeout_dict={'fencing-watchdog': 24},
             update_dict={'SBD_WATCHDOG_TIMEOUT': '12', 'SBD_WATCHDOG_DEV': '/dev/watchdog100', 'SBD_TIMEOUT_ACTION': 'flush,crashdump', 'SBD_OPTS': '-C 12 -Z'},
             diskless_sbd=True
         )

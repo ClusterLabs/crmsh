@@ -2502,8 +2502,12 @@ def check_all_nodes_reachable(
 
     crm_mon_inst = xmlutil.CrmMonXmlParser(peer_node)
     if crm_mon_inst.not_connected():
-        nodes_to_check = list_cluster_nodes_except_me()
-        offline_nodes = list_cluster_nodes_except_me()
+        try:
+            nodes_to_check = list_cluster_nodes_except_me()
+            offline_nodes = list_cluster_nodes_except_me()
+        except ValueError:
+            nodes_to_check = []
+            offline_nodes = []
     else:
         nodes_to_check = crm_mon_inst.get_node_list(online=True, node_type="member")
         offline_nodes = crm_mon_inst.get_node_list(online=False)
@@ -2599,14 +2603,14 @@ def detect_duplicate_device_path(device_list: typing.List[str]):
             raise ValueError(f"Duplicated device path detected: {','.join(dev_list)}. They are all pointing to {path}")
 
 
-def has_stonith_running():
+def has_fence_device_registered():
     """
-    Check if any stonith device registered
+    Check if any fence device registered
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
-    has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
+    has_fence_device = re.search("[1-9]+ fence device[s]* found", out) is not None
     using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
-    return has_stonith_device or using_diskless_sbd
+    return has_fence_device or using_diskless_sbd
 
 
 def has_disk_mounted(dev):
@@ -2850,7 +2854,7 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
         return 0
 
 
-def get_property(name, property_type="crm_config", peer=None, get_default=True):
+def get_property(name, property_type="crm_config", peer=None, get_default=True, quiet=False):
     """
     Get cluster properties
 
@@ -2858,6 +2862,7 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True):
     "get_default" is used to get the default value from cluster metadata,
     when it is False, the property value will be got from cib
     """
+    name = translate_fencing_term(name, quiet=quiet)
     if property_type == "crm_config" and get_default:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
@@ -2865,6 +2870,12 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True):
         cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
     rc, stdout, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return stdout if rc == 0 else None
+
+
+def property_configured(name, property_type="crm_config", peer=None):
+    cmd = f"crm_attribute -t {property_type} -n {name} -Gq"
+    rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
+    return rc == 0
 
 
 def delete_property(name, property_type="crm_config") -> bool:
@@ -3292,12 +3303,19 @@ def fuzzy_get(items, s):
     return None
 
 
-def cleanup_stonith_related_properties():
-    for p in ("stonith-watchdog-timeout", "stonith-timeout", "priority-fencing-delay"):
+def cleanup_fencing_related_properties():
+    related_properties = [
+        "stonith-watchdog-timeout",
+        "stonith-timeout",
+        "fencing-watchdog-timeout",
+        "fencing-timeout",
+        "priority-fencing-delay"
+    ]
+    for p in related_properties:
         if get_property(p, get_default=False):
             delete_property(p)
-    if get_property("stonith-enabled") == "true":
-        set_property("stonith-enabled", "false")
+    if get_property("fencing-enabled") == "true":
+        set_property("fencing-enabled", "false")
 
 
 def strip_ansi_escape_sequences(text):
@@ -3396,4 +3414,48 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
         logger.warning("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
         logger.info("Aborting the configuration change attempt")
         return False
+
+
+def translate_fencing_term(original_term: str, quiet: bool = False) -> str:
+    """
+    Translate fencing related term between legacy stonith- and new fencing- prefix,
+    and give warning if needed.
+    """
+    if not re.match(r'^(stonith|fencing)-', original_term):
+        return original_term
+
+    stonith_term, fencing_term = None, None
+    use_stonith, use_fencing = False, False
+    if original_term.startswith("stonith-"):
+        use_stonith = True
+        stonith_term = original_term
+        fencing_term = original_term.replace("stonith-", "fencing-", 1)
+    elif original_term.startswith("fencing-"):
+        use_fencing = True
+        fencing_term = original_term
+        stonith_term = original_term.replace("fencing-", "stonith-", 1)
+
+    stonith_term_configured = property_configured(stonith_term)
+    fencing_term_configured = property_configured(fencing_term)
+
+    if stonith_term_configured and not fencing_term_configured:
+        if use_fencing and not quiet:
+            logger.warning("Querying the value of \"%s\" but it is not configured, return the value of legacy name \"%s\"", fencing_term, stonith_term)
+        return stonith_term
+    elif fencing_term_configured and not stonith_term_configured:
+        if use_stonith and not quiet:
+            logger.warning("Querying the value of \"%s\" but it is not configured, return the value of new name \"%s\"", stonith_term, fencing_term)
+        return fencing_term
+    elif stonith_term_configured and fencing_term_configured:
+        if use_stonith and not quiet:
+            logger.warning("Querying the value of legacy name \"%s\", return the value of new name \"%s\"", stonith_term, fencing_term)
+        return fencing_term
+    else:
+        return original_term
+
+
+def remove_legacy_properties(property_name: str):
+    if property_configured(property_name):
+        logger.info("Removing legacy \"%s\" property", property_name)
+        delete_property(property_name)
 # vim:ts=4:sw=4:et:

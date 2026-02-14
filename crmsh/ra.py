@@ -112,7 +112,7 @@ def ra_meta(ra_class, ra_type, ra_provider):
 
 
 @functools.cache
-def get_stonithd_meta():
+def get_fenced_meta():
     return RAInfo(utils.pacemaker_fenced(), "metadata")
 
 
@@ -264,7 +264,7 @@ class RAInfo(object):
             self.error("meta-data contains no resource-agent element")
             return None
         if self.ra_class == "stonith":
-            self.add_ra_params(get_stonithd_meta())
+            self.add_ra_params(get_fenced_meta())
         self.broken_ra = False
         return self.ra_elem
 

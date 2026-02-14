@@ -24,8 +24,8 @@ class TestCibQuery(unittest.TestCase):
         <nvpair id="cib-bootstrap-options-dc-version" name="dc-version" value="2.1.5+20221208.a3f44794f-150500.4.9-2.1.5+20221208.a3f44794f"/>
         <nvpair id="cib-bootstrap-options-cluster-infrastructure" name="cluster-infrastructure" value="corosync"/>
         <nvpair id="cib-bootstrap-options-cluster-name" name="cluster-name" value="hacluster"/>
-        <nvpair name="stonith-enabled" value="true" id="cib-bootstrap-options-stonith-enabled"/>
-        <nvpair id="cib-bootstrap-options-stonith-timeout" name="stonith-timeout" value="71"/>
+        <nvpair name="fencing-enabled" value="true" id="cib-bootstrap-options-fencing-enabled"/>
+        <nvpair id="cib-bootstrap-options-fencing-timeout" name="fencing-timeout" value="71"/>
       </cluster_property_set>
     </crm_config>
     <nodes>
@@ -40,11 +40,11 @@ class TestCibQuery(unittest.TestCase):
           <op name="monitor" interval="10" timeout="20" id="admin-ip-monitor-10"/>
         </operations>
       </primitive>
-      <primitive id="stonith-sbd" class="stonith" type="external/sbd">
+      <primitive id="fencing-sbd" class="stonith" type="external/sbd">
         <operations>
-          <op name="monitor" timeout="20" interval="3600" id="stonith-sbd-monitor-3600"/>
-          <op name="start" timeout="20" interval="0s" id="stonith-sbd-start-0s"/>
-          <op name="stop" timeout="15" interval="0s" id="stonith-sbd-stop-0s"/>
+          <op name="monitor" timeout="20" interval="3600" id="fencing-sbd-monitor-3600"/>
+          <op name="start" timeout="20" interval="0s" id="fencing-sbd-start-0s"/>
+          <op name="stop" timeout="15" interval="0s" id="fencing-sbd-stop-0s"/>
         </operations>
       </primitive>
       <clone id="ocfs2-clone">
