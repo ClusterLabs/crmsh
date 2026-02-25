@@ -40,8 +40,6 @@ python:
 
 install-non-python: non-python
 	# additional directories
-	install -d -m0770 $(DESTDIR)$(localstatedir)/cache/crm
-	install -d -m0770 $(DESTDIR)$(localstatedir)/log/crmsh
 	install -d -m0755 $(DESTDIR)${tmpfilesdir}
 	# install configuration
 	install -Dm0644 -t $(DESTDIR)$(confdir)/crm etc/{crm.conf,profiles.yml}
@@ -68,8 +66,6 @@ install-python: python
 
 uninstall-non-python:
 	$(RM) -r $(DESTDIR)$(confdir)/crm
-	$(RM) -r $(DESTDIR)$(localstatedir)/cache/crm
-	$(RM) -r $(DESTDIR)$(localstatedir)/log/crm
 	$(RM) -r $(DESTDIR)$(datadir)/crmsh
 	$(RM) -r $(DESTDIR)$(datadir)/bash-completion/completions/crm
 	$(RM) $(DESTDIR)$(mandir)/man8/crm.8
