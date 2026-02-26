@@ -259,11 +259,11 @@ class SBD(command.UI):
     def check_timeout_configurations() -> bool:
         check_rc = sbd.CheckResult.SUCCESS
         try:
-            check_rc = sbd.SBDTimeoutChecker().check_and_fix()
+            check_rc = sbd.SBDConfigChecker().check_and_fix()
         except sbd.FixAborted as e:
             logger.error('%s', e)
             return False
-        return sbd.SBDTimeoutChecker.log_and_return(check_rc)
+        return sbd.SBDConfigChecker.log_and_return(check_rc)
 
     def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str]:
         '''

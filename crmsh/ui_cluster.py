@@ -352,8 +352,8 @@ Stage can be one of:
     firewalld   Add high-availability service to firewalld
     csync2      Configure csync2
     corosync    Configure corosync
-    sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
+    sbd         Configure SBD (requires -s <dev>)
     ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
     gfs2        Configure GFS2 (requires -g <dev>) NOTE: this is a Technical Preview
     admin       Create administration virtual IP (optional)
@@ -847,7 +847,7 @@ to get the geo cluster configuration.""",
             case 'sbd':
                 fix = parsed_args.fix
                 try:
-                    result = sbd.SBDTimeoutChecker(quiet=fix, fix=fix).check_and_fix()
+                    result = sbd.SBDConfigChecker(quiet=fix, fix=fix).check_and_fix()
                 except sbd.FixFailure as e:
                     logger.error('%s', e)
                     return False
@@ -855,7 +855,7 @@ to get the geo cluster configuration.""",
                     logger.error('%s', e)
                     logger.error('SBD: Check sbd timeout configuration: FAIL.')
                     return False
-                return sbd.SBDTimeoutChecker.log_and_return(result, fix)
+                return sbd.SBDConfigChecker.log_and_return(result, fix)
 
             case 'sles16':
                 try:
