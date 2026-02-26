@@ -361,7 +361,7 @@ adjust_test_case() {
 		podman_exec $node_name "sed -i s/$item/$ip/g $2"
 	done
 
-	vip_replace_array=(`podman_exec $node_name "grep -o -E '@vip\.[0-9]' $2|sort -u|dos2unix"`)
+	vip_replace_array=(`podman_exec $node_name "grep -o -E '@vip\.[0-9]' $2|sort -u"`)
 	for item in ${vip_replace_array[@]};do
 		index=`echo $item|cut -d "." -f 2|tr -d "\r"`
 		suffix=$((123+index))
