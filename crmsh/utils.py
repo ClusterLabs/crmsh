@@ -3042,7 +3042,7 @@ def retry_with_timeout(callable, timeout_sec: float, interval_sec=1):
             except Exception:
                 pass
             await asyncio.sleep(interval_sec)
-    return asyncio.get_event_loop_policy().get_event_loop().run_until_complete(asyncio.wait_for(wrapper(), timeout_sec))
+    return asyncio.run(asyncio.wait_for(wrapper(), timeout_sec))
 
 
 def fetch_cluster_node_list_from_node(init_node):
