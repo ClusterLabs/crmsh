@@ -207,7 +207,6 @@ fi
 %firewalld_reload
 %endif
 
-
 %if %{with regression_tests}
 # Run regression tests after installing the package
 # NB: this is called twice by OBS, that's why we touch the file
