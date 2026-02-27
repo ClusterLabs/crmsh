@@ -86,7 +86,6 @@ Requires:       python3-dateutil
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  python3-dateutil
 BuildRequires:  python3-devel
-BuildRequires:  python3-setuptools
 %endif
 
 # Required for core functionality
