@@ -32,7 +32,7 @@ class QdevicePolicy(Enum):
     QDEVICE_RESTART_LATER = 2
 
 
-def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
+def evaluate_qdevice_quorum_effect(mode):
     """
     While adding/removing qdevice, get current expected votes and actual total votes,
     to calculate after adding/removing qdevice, whether cluster has quorum
@@ -45,11 +45,12 @@ def evaluate_qdevice_quorum_effect(mode, diskless_sbd=False):
         expected_votes += 1
     elif mode == QDEVICE_REMOVE:
         actual_votes -= 1
+    diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
 
     if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
         # safe to use reload
         return QdevicePolicy.QDEVICE_RELOAD
-    elif xmlutil.CrmMonXmlParser().is_non_stonith_resource_running():
+    elif xmlutil.CrmMonXmlParser().is_non_stonith_resource_running() and not utils.is_cluster_in_maintenance_mode():
         # will lose quorum, with non-stonith resource running
         # no reload, no restart cluster service
         # just leave a warning
@@ -597,17 +598,15 @@ class QDevice(object):
         logger.info("Enable corosync-qdevice.service in cluster")
         utils.cluster_run_cmd("systemctl enable corosync-qdevice")
 
-        using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
-        self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD, using_diskless_sbd)
+        self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD)
 
         if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+            logger.info("Reloading cluster configuration before starting corosync-qdevice.service")
             sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
             logger.info("Starting corosync-qdevice.service in cluster")
             utils.cluster_run_cmd("systemctl restart corosync-qdevice")
         elif self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
             bootstrap.restart_cluster()
-        else: # QdevicePolicy.QDEVICE_RESTART_LATER
-            logger.warning("To use qdevice service, need to restart cluster service manually on each node")
 
     def adjust_sbd_watchdog_timeout_with_qdevice(self):
         """

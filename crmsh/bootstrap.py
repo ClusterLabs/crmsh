@@ -1629,16 +1629,29 @@ def init_qdevice():
     if not _context.qdevice_inst:
         ServiceManager().disable_service("corosync-qdevice.service")
         return
-    is_qdevice_stage = _context.stage == "qdevice"
 
     logger.info("""Configure Qdevice/Qnetd:""")
 
-    cluster_node_list = qdevice.get_node_list(is_qdevice_stage)
+    is_qdevice_stage = _context.stage == "qdevice"
+    if is_qdevice_stage:
+        qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_ADD)
+        if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER:
+            with utils.leverage_maintenance_mode() as enabled:
+                if not utils.able_to_restart_cluster(enabled):
+                    return
+                do_init_qdevice(is_qdevice_stage)
+            return
+
+    do_init_qdevice(is_qdevice_stage)
+
+
+def do_init_qdevice(in_stage: bool = False):
+    cluster_node_list = qdevice.get_node_list(in_stage)
     _setup_passwordless_ssh_for_qnetd(cluster_node_list)
 
     qdevice_inst = _context.qdevice_inst
     if corosync.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
-        if is_qdevice_stage:
+        if in_stage:
             qdevice_inst.start_qdevice_service()
         return
 
@@ -1646,8 +1659,9 @@ def init_qdevice():
     qdevice_inst.validate_and_start_qnetd()
     qdevice_inst.certificate_and_config_qdevice()
 
-    if is_qdevice_stage:
+    if in_stage:
         qdevice_inst.start_qdevice_service()
+
     adjust_properties()
 
 
@@ -2411,7 +2425,17 @@ def remove_qdevice() -> None:
 
     utils.check_all_nodes_reachable("removing QDevice from the cluster")
     qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
+    if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER:
+        with utils.leverage_maintenance_mode() as enabled:
+            if not utils.able_to_restart_cluster(enabled):
+                return
+            do_remove_qdevice(qdevice.QdevicePolicy.QDEVICE_RESTART)
+        return
 
+    do_remove_qdevice(qdevice_reload_policy)
+
+
+def do_remove_qdevice(qdevice_reload_policy: qdevice.QdevicePolicy) -> None:
     logger.info("Disable corosync-qdevice.service")
     invoke("crm cluster run 'systemctl disable corosync-qdevice'")
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
@@ -2425,11 +2449,10 @@ def remove_qdevice() -> None:
         corosync.configure_two_node(removing=True)
         sync_path(corosync.conf())
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RELOAD:
+        logger.info("Reloading cluster configuration after removing QDevice")
         sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
     elif qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART:
         restart_cluster()
-    else:
-        logger.warning("To remove qdevice service, need to restart cluster service manually on each node")
 
     adjust_properties()
 
