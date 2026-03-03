@@ -2,6 +2,7 @@ import logging
 import typing
 import re
 import os
+import time
 
 from crmsh import sbd
 from crmsh import watchdog
@@ -123,6 +124,7 @@ class SBD(command.UI):
         self.service_manager: ServiceManager = None
         self.cluster_shell: sh.cluster_shell = None
         self.cluster_nodes: list[str] = None
+        self.sysconfig_modified_time: float = None
 
         command.UI.__init__(self)
 
@@ -645,17 +647,21 @@ class SBD(command.UI):
     def _print_sbd_type(self):
         if not self.service_manager.service_is_active(constants.SBD_SERVICE):
             return
+        self.sysconfig_modified_time = os.path.getmtime(sbd.SBDManager.SYSCONFIG_SBD)
+        formatted_time = time.strftime('%a %Y-%m-%d %H:%M:%S CST', time.localtime(self.sysconfig_modified_time))
+        modified_time_str = f"{sbd.SBDManager.SYSCONFIG_SBD} modified at {formatted_time}"
         print("# Type of SBD:")
         if self.device_list_from_config:
-            print("Disk-based SBD configured")
+            print(f"Disk-based SBD configured, {modified_time_str}")
         else:
-            print("Diskless SBD configured")
+            print(f"Diskless SBD configured, {modified_time_str}")
         print()
 
     def _print_sbd_status(self):
         padding = 2
         status_len = 8
         max_node_len = max(len(node) for node in self.cluster_nodes) + padding
+        warn_str = ""
 
         print(f"# Status of {constants.SBD_SERVICE}:")
         print(f"{'Node':<{max_node_len}}|{'Active':<{status_len}}|{'Enabled':<{status_len}}|Since")
@@ -667,9 +673,20 @@ class SBD(command.UI):
             systemd_property = "ActiveEnterTimestamp" if is_active else "ActiveExitTimestamp"
             since_str_prefix = "active since" if is_active else "disactive since"
             systemctl_show_cmd = f"systemctl show {constants.SBD_SERVICE} --property={systemd_property} --value"
-            since = self.cluster_shell.get_stdout_or_raise_error(systemctl_show_cmd, node) or "N/A"
+            since = self.cluster_shell.get_stdout_or_raise_error(systemctl_show_cmd, node)
+            if since:
+                if node == utils.this_node():
+                    since_timestamp = utils.parse_to_timestamp(since)
+                    if since_timestamp and since_timestamp < self.sysconfig_modified_time:
+                        warn_str = f"{sbd.SBDManager.SYSCONFIG_SBD} was modified while sbd is active. Restart cluster service is highly recommended."
+            else:
+                since = "N/A"
             print(f"{node:<{max_node_len}}|{is_active_str:<{status_len}}|{is_enabled_str:<{status_len}}|{since_str_prefix}: {since}")
         print()
+
+        if warn_str:
+            logger.warning(warn_str)
+            print()
 
     def _print_watchdog_info(self):
         padding = 2
