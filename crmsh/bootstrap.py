@@ -3178,7 +3178,16 @@ def sync_file(path):
 
 
 def restart_cluster():
+    service_manager = ServiceManager()
+    node_list = utils.list_cluster_nodes()
+    for node in node_list[:]:
+        if not service_manager.service_is_active("pacemaker.service", remote_addr=node):
+            logger.warning("Cluster is inactive on %s, skip restarting cluster service on it", node)
+            node_list.remove(node)
+    if not node_list:
+        return
+
     logger.info("Restarting cluster service")
-    utils.cluster_run_cmd("crm cluster restart")
+    utils.cluster_run_cmd("crm cluster restart", node_list)
     wait_for_cluster()
 # EOF
