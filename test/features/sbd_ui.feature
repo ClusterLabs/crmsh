@@ -132,3 +132,21 @@ Feature: crm sbd ui test cases
     And     Run "crm cluster restart --all" on "hanode1"
     Then    Service "sbd.service" is "stopped" on "hanode1"
     Then    Service "sbd.service" is "stopped" on "hanode2"
+
+  @clean
+  Scenario: Leverage maintenance mode
+    When    Run "crm cluster init -y" on "hanode1"
+    And     Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode1"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "crm configure primitive d Dummy" on "hanode1"
+    When    Try "crm cluster init sbd -s /dev/sda5 -y"
+    Then    Expected "Or use 'crm -F/--force' option to leverage maintenance mode" in stderr
+    When    Run "crm -F cluster init sbd -s /dev/sda5 -y" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    When    Try "crm sbd purge"
+    Then    Expected "Or use 'crm -F/--force' option to leverage maintenance mode" in stderr
+    When    Run "crm -F sbd purge" on "hanode1"
+    Then    Service "sbd.service" is "stopped" on "hanode1"
+    Then    Service "sbd.service" is "stopped" on "hanode2"
