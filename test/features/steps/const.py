@@ -162,6 +162,7 @@ Stage can be one of:
     ocfs2       Configure OCFS2 (requires -o <dev>) NOTE: this is a Technical Preview
     gfs2        Configure GFS2 (requires -g <dev>) NOTE: this is a Technical Preview
     admin       Create administration virtual IP (optional)
+    sbd         Configure SBD (requires -s <dev>)
     qdevice     Configure qdevice and qnetd
 
 Note:
