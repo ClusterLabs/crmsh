@@ -2425,6 +2425,8 @@ def remove_qdevice() -> None:
 
     utils.check_all_nodes_reachable("removing QDevice from the cluster")
     qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
+    if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_REMOVE_REJECT:
+        utils.fatal("Can't remove QDevice since the quorum will be lost for diskless SBD cluster")
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER:
         with utils.leverage_maintenance_mode() as enabled:
             if not utils.able_to_restart_cluster(enabled):

@@ -30,6 +30,7 @@ class QdevicePolicy(Enum):
     QDEVICE_RELOAD = 0
     QDEVICE_RESTART = 1
     QDEVICE_RESTART_LATER = 2
+    QDEVICE_REMOVE_REJECT = 3
 
 
 def evaluate_qdevice_quorum_effect(mode):
@@ -44,10 +45,16 @@ def evaluate_qdevice_quorum_effect(mode):
     if mode == QDEVICE_ADD:
         expected_votes += 1
     elif mode == QDEVICE_REMOVE:
-        actual_votes -= 1
+        vote = corosync.get_value("quorum.device.votes") or 1
+        actual_votes -= int(vote)
     diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
 
-    if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
+    quorate = utils.calculate_quorate_status(expected_votes, actual_votes)
+    if not quorate and diskless_sbd and mode == QDEVICE_REMOVE:
+        # Reject to remove qdevice, as it will lose quorum
+        # then diskless SBD will self-fence the node
+        return QdevicePolicy.QDEVICE_REMOVE_REJECT
+    elif quorate and not diskless_sbd:
         # safe to use reload
         return QdevicePolicy.QDEVICE_RELOAD
     elif xmlutil.CrmMonXmlParser().is_non_stonith_resource_running() and not utils.is_cluster_in_maintenance_mode():
@@ -59,7 +66,6 @@ def evaluate_qdevice_quorum_effect(mode):
         # will lose quorum, without resource running or just stonith resource running
         # safe to restart cluster service
         return QdevicePolicy.QDEVICE_RESTART
-
 
 def qnetd_lock_for_same_cluster_name(func):
     """
