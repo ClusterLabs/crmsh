@@ -2822,7 +2822,6 @@ def adjust_properties():
     adjust_fencing_timeout()
     adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
-    sbd.SBDManager.warn_diskless_sbd()
 
 
 def retrieve_files(from_node: str, file_list: list, msg: str = None):

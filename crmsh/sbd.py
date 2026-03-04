@@ -685,6 +685,7 @@ class SBDConfigChecker(SBDTimeout):
                     raise FixFailure(f"Failed to fix {name} issue")
 
         SBDConfigChecker._check_deprecated_property()
+        SBDManager.warn_diskless_sbd()
 
         return SBDConfigChecker._return_helper(check_res_list)
 
