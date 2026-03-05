@@ -715,7 +715,7 @@ Driver: iTCO_wdt
         self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error.side_effect = [data_node1, "10", data_node2, "10"]
         self.sbd_instance_diskbased._print_watchdog_info()
 
-    @mock.patch('crmsh.ui_sbd.SBD.check_timeout_configurations')
+    @mock.patch('crmsh.ui_sbd.SBD.check_sbd_health')
     def test_do_status(self, mock_check_timeout):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._print_sbd_type = mock.Mock()
