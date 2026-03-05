@@ -1169,7 +1169,17 @@ class CibConfig(command.UI):
         if not args:
             utils.multicolumn(ra.get_properties_list())
             return
-        return self.__conf_object(context.get_command_name(), *args)
+
+        arg_list = []
+        for arg in args:
+            key, sep, value = arg.partition('=')
+            if not sep:
+                arg_list.append(arg)
+                continue
+            new_key = utils.translate_deprecated_term(key, setting=True)
+            arg_list.append(arg if new_key == key else f"{new_key}={value}")
+
+        return self.__conf_object(context.get_command_name(), *arg_list)
 
     @command.skill_level('administrator')
     @command.completers_repeating(_rsc_meta_completer)

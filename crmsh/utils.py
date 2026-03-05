@@ -2854,7 +2854,7 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
         return 0
 
 
-def get_property(name, property_type="crm_config", peer=None, get_default=True, quiet=False):
+def get_property(name, property_type="crm_config", peer=None, get_default=True):
     """
     Get cluster properties
 
@@ -2862,7 +2862,7 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True, 
     "get_default" is used to get the default value from cluster metadata,
     when it is False, the property value will be got from cib
     """
-    name = translate_deprecated_term(name, quiet=quiet)
+    name = translate_deprecated_term(name)
     if property_type == "crm_config" and get_default:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
@@ -3416,7 +3416,7 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
         return False
 
 
-def translate_deprecated_term(original_term: str, quiet: bool = False) -> str:
+def translate_deprecated_term(original_term: str, setting: bool = False) -> str:
     """
     Translate deprecated term to the new one, and give warning if needed.
     """
@@ -3435,19 +3435,23 @@ def translate_deprecated_term(original_term: str, quiet: bool = False) -> str:
     deprecated_term, new_term = None, None
     use_deprecated_term, use_new_term = False, False
 
+    # case1
     if original_term.startswith("stonith-"):
         use_deprecated_term = True
         deprecated_term = original_term
         new_term = original_term.replace("stonith-", "fencing-", 1)
+    # case2
     elif original_term in other_deprecated_new_term_mapping:
         use_deprecated_term = True
         deprecated_term = original_term
         new_term = other_deprecated_new_term_mapping[original_term]
+    # case3, includes "fencing-reaction", so need to put it before case4
     elif original_term in other_new_terms:
         other_new_deprecated_term_mapping = {v: k for k, v in other_deprecated_new_term_mapping.items()}
         use_new_term = True
         new_term = original_term
         deprecated_term = other_new_deprecated_term_mapping[original_term]
+    # case4
     elif original_term.startswith("fencing-"):
         use_new_term = True
         new_term = original_term
@@ -3456,17 +3460,40 @@ def translate_deprecated_term(original_term: str, quiet: bool = False) -> str:
     deprecated_term_configured = property_configured(deprecated_term)
     new_term_configured = property_configured(new_term)
 
+    if setting:
+        if deprecated_term_configured:
+            logger.warning(
+                "Using the new property name \"%s\", the value of deprecated name \"%s\" will be ignored",
+                new_term, deprecated_term
+            )
+        elif use_deprecated_term:
+            logger.warning(
+                "\"%s\" has been deprecated, use the new property name \"%s\" instead",
+                deprecated_term, new_term
+            )
+        return new_term
+
+    # for querying
     if deprecated_term_configured and not new_term_configured:
-        if use_new_term and not quiet:
-            logger.warning("Querying the value of \"%s\" but it is not configured, return the value of legacy name \"%s\"", new_term, deprecated_term)
+        if use_new_term:
+            logger.warning(
+                "Querying the value of \"%s\" but it is not configured, return the value of deprecated name \"%s\"",
+                new_term, deprecated_term
+            )
         return deprecated_term
     elif new_term_configured and not deprecated_term_configured:
-        if use_deprecated_term and not quiet:
-            logger.warning("Querying the value of \"%s\" but it is not configured, return the value of new name \"%s\"", deprecated_term, new_term)
+        if use_deprecated_term:
+            logger.warning(
+                "Querying the value of \"%s\" but it is not configured, return the value of new name \"%s\"",
+                deprecated_term, new_term
+            )
         return new_term
     elif deprecated_term_configured and new_term_configured:
-        if use_deprecated_term and not quiet:
-            logger.warning("Querying the value of legacy name \"%s\", return the value of new name \"%s\"", deprecated_term, new_term)
+        if use_deprecated_term:
+            logger.warning(
+                "Querying the value of deprecated name \"%s\", return the value of new name \"%s\"",
+                deprecated_term, new_term
+            )
         return new_term
     else:
         return original_term

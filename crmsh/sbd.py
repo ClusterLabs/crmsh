@@ -829,7 +829,7 @@ class SBDConfigChecker(SBDTimeout):
         utils.cluster_run_cmd("systemctl daemon-reload")
 
     def _check_fencing_watchdog_timeout(self) -> CheckResult:
-        value = utils.get_property("fencing-watchdog-timeout", quiet=self.quiet)
+        value = utils.get_property("fencing-watchdog-timeout")
         if value and int(value) == -1:
             self._log_when_not_quiet(
                 logging.WARNING,
@@ -880,7 +880,7 @@ class SBDConfigChecker(SBDTimeout):
 
     def _check_fencing_timeout(self) -> CheckResult:
         expected_value = self.get_fencing_timeout_expected()
-        value = utils.get_property("fencing-timeout", quiet=self.quiet)
+        value = utils.get_property("fencing-timeout")
         # will get default value from pacemaker metadata if not set
         value = int(utils.crm_msec(value)/1000)
         if value < expected_value:
@@ -906,7 +906,7 @@ class SBDConfigChecker(SBDTimeout):
         utils.set_property("fencing-timeout", expected_value)
 
     def _check_fencing_enabled(self) -> CheckResult:
-        value = utils.get_property("fencing-enabled", get_default=False, quiet=self.quiet)
+        value = utils.get_property("fencing-enabled", get_default=False)
         if utils.is_boolean_false(value):
             self._log_when_not_quiet(
                 logging.ERROR,
