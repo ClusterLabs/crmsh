@@ -2603,14 +2603,14 @@ def detect_duplicate_device_path(device_list: typing.List[str]):
             raise ValueError(f"Duplicated device path detected: {','.join(dev_list)}. They are all pointing to {path}")
 
 
-def has_stonith_running():
+def has_fence_device_registered():
     """
-    Check if any stonith device registered
+    Check if any fence device registered
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
-    has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
+    has_fence_device = re.search("[1-9]+ fence device[s]* found", out) is not None
     using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
-    return has_stonith_device or using_diskless_sbd
+    return has_fence_device or using_diskless_sbd
 
 
 def has_disk_mounted(dev):
@@ -2862,6 +2862,7 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True):
     "get_default" is used to get the default value from cluster metadata,
     when it is False, the property value will be got from cib
     """
+    name = translate_deprecated_term(name)
     if property_type == "crm_config" and get_default:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
@@ -2869,6 +2870,12 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True):
         cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
     rc, stdout, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return stdout if rc == 0 else None
+
+
+def property_configured(name, property_type="crm_config", peer=None):
+    cmd = f"crm_attribute -t {property_type} -n {name} -Gq"
+    rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
+    return rc == 0
 
 
 def delete_property(name, property_type="crm_config") -> bool:
@@ -3296,12 +3303,19 @@ def fuzzy_get(items, s):
     return None
 
 
-def cleanup_stonith_related_properties():
-    for p in ("stonith-watchdog-timeout", "stonith-timeout", "priority-fencing-delay"):
+def cleanup_fencing_related_properties():
+    related_properties = [
+        "stonith-watchdog-timeout",
+        "stonith-timeout",
+        "fencing-watchdog-timeout",
+        "fencing-timeout",
+        "priority-fencing-delay"
+    ]
+    for p in related_properties:
         if get_property(p, get_default=False):
             delete_property(p)
-    if get_property("stonith-enabled") == "true":
-        set_property("stonith-enabled", "false")
+    if get_property("fencing-enabled") == "true":
+        set_property("fencing-enabled", "false")
 
 
 def strip_ansi_escape_sequences(text):
@@ -3400,4 +3414,93 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
         logger.warning("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
         logger.info("Aborting the configuration change attempt")
         return False
+
+
+def translate_deprecated_term(original_term: str, setting: bool = False) -> str:
+    """
+    Translate deprecated term to the new one, and give warning if needed.
+    """
+    other_deprecated_new_term_mapping = {
+        "fence-reaction": "fencing-reaction",
+        "stop-orphan-resources": "stop-removed-resources",
+        "stop-orphan-actions": "cancel-removed-actions"
+    }
+    other_new_terms = set(other_deprecated_new_term_mapping.values())
+
+    if not re.match(r'^(stonith|fencing)-', original_term) and \
+            original_term not in other_deprecated_new_term_mapping and \
+            original_term not in other_new_terms:
+        return original_term
+
+    deprecated_term, new_term = None, None
+    use_deprecated_term, use_new_term = False, False
+
+    # case1
+    if original_term.startswith("stonith-"):
+        use_deprecated_term = True
+        deprecated_term = original_term
+        new_term = original_term.replace("stonith-", "fencing-", 1)
+    # case2
+    elif original_term in other_deprecated_new_term_mapping:
+        use_deprecated_term = True
+        deprecated_term = original_term
+        new_term = other_deprecated_new_term_mapping[original_term]
+    # case3, includes "fencing-reaction", so need to put it before case4
+    elif original_term in other_new_terms:
+        other_new_deprecated_term_mapping = {v: k for k, v in other_deprecated_new_term_mapping.items()}
+        use_new_term = True
+        new_term = original_term
+        deprecated_term = other_new_deprecated_term_mapping[original_term]
+    # case4
+    elif original_term.startswith("fencing-"):
+        use_new_term = True
+        new_term = original_term
+        deprecated_term = original_term.replace("fencing-", "stonith-", 1)
+
+    deprecated_term_configured = property_configured(deprecated_term)
+    new_term_configured = property_configured(new_term)
+
+    if setting:
+        if deprecated_term_configured:
+            logger.warning(
+                "Using the new property name \"%s\", the value of deprecated name \"%s\" will be ignored",
+                new_term, deprecated_term
+            )
+        elif use_deprecated_term:
+            logger.warning(
+                "\"%s\" has been deprecated, use the new property name \"%s\" instead",
+                deprecated_term, new_term
+            )
+        return new_term
+
+    # for querying
+    if deprecated_term_configured and not new_term_configured:
+        if use_new_term:
+            logger.warning(
+                "Querying the value of \"%s\" but it is not configured, return the value of deprecated name \"%s\"",
+                new_term, deprecated_term
+            )
+        return deprecated_term
+    elif new_term_configured and not deprecated_term_configured:
+        if use_deprecated_term:
+            logger.warning(
+                "Querying the value of \"%s\" but it is not configured, return the value of new name \"%s\"",
+                deprecated_term, new_term
+            )
+        return new_term
+    elif deprecated_term_configured and new_term_configured:
+        if use_deprecated_term:
+            logger.warning(
+                "Querying the value of deprecated name \"%s\", return the value of new name \"%s\"",
+                deprecated_term, new_term
+            )
+        return new_term
+    else:
+        return original_term
+
+
+def remove_legacy_properties(property_name: str):
+    if property_configured(property_name):
+        logger.info("Removing legacy \"%s\" property", property_name)
+        delete_property(property_name)
 # vim:ts=4:sw=4:et:
