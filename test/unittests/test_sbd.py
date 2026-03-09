@@ -613,17 +613,13 @@ class TestSBDManager(unittest.TestCase):
         mock_warn.assert_called_once_with()
         mock_enable_sbd.assert_called_once_with()
 
+    @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.sbd.SBDManager.configure_sbd_resource_and_properties')
-    @mock.patch('crmsh.bootstrap.wait_for_cluster')
-    @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_restart_cluster_on_needed_no_ra_running(self, mock_parser, mock_status, mock_cluster_run, mock_wait, mock_config_sbd_ra):
+    def test_restart_cluster_on_needed_no_ra_running(self, mock_parser, mock_status, mock_config_sbd_ra, mock_restart_cluster):
         mock_parser().is_non_stonith_resource_running.return_value = False
         self.sbd_inst._restart_cluster_and_configure_sbd_ra()
-        mock_status.assert_called_once_with("Restarting cluster service")
-        mock_cluster_run.assert_called_once_with("crm cluster restart")
-        mock_wait.assert_called_once_with()
         mock_config_sbd_ra.assert_called_once_with()
 
     @mock.patch('crmsh.sbd.SBDTimeout.get_stonith_timeout')

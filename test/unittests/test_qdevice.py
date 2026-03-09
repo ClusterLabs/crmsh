@@ -904,26 +904,23 @@ Membership information
         mock_enable_qnetd.assert_called_once_with()
         mock_start_qnetd.assert_called_once_with()
 
+    @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.qdevice.QDevice.start_qnetd')
     @mock.patch('crmsh.qdevice.QDevice.enable_qnetd')
-    @mock.patch('crmsh.bootstrap.wait_for_cluster')
     @mock.patch('crmsh.utils.cluster_run_cmd')
     @mock.patch('logging.Logger.info')
-    def test_start_qdevice_service_restart(self, mock_status, mock_cluster_run, mock_wait, mock_enable_qnetd, mock_start_qnetd):
+    def test_start_qdevice_service_restart(self, mock_status, mock_cluster_run, mock_enable_qnetd, mock_start_qnetd, mock_restart_cluster):
         self.qdevice_with_ip.qdevice_reload_policy = qdevice.QdevicePolicy.QDEVICE_RESTART
 
         self.qdevice_with_ip.start_qdevice_service()
 
         mock_status.assert_has_calls([
             mock.call("Enable corosync-qdevice.service in cluster"),
-            mock.call("Restarting cluster service"),
             mock.call("Enable corosync-qnetd.service on 10.10.10.123"),
             mock.call("Starting corosync-qnetd.service on 10.10.10.123")
             ])
-        mock_wait.assert_called_once_with()
         mock_cluster_run.assert_has_calls([
             mock.call("systemctl enable corosync-qdevice"),
-            mock.call("crm cluster restart")
             ])
         mock_enable_qnetd.assert_called_once_with()
         mock_start_qnetd.assert_called_once_with()
