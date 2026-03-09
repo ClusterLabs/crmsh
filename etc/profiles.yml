@@ -14,7 +14,7 @@
 # More details please see man corosync.conf, man sbd
 
 default:
-  corosync.totem.crypto_hash: sha1
+  corosync.totem.crypto_hash: sha256
   corosync.totem.crypto_cipher: aes256
   corosync.totem.token: 5000
   corosync.totem.join: 60
@@ -27,3 +27,9 @@ default:
 microsoft-azure:
   corosync.totem.token: 30000
   sbd.watchdog_timeout: 60
+
+amazon-web-services:
+  corosync.totem.token: 30000
+
+google-cloud-platform:
+  corosync.totem.token: 20000
