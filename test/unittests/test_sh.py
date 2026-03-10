@@ -1,3 +1,6 @@
+import os
+import sys
+import shlex
 import subprocess
 import unittest
 import pickle
@@ -23,8 +26,11 @@ class TestLocalShell(unittest.TestCase):
             'alice', 'foo',
             input=b'bar',
         )
+        sh_helper = os.path.join(os.path.dirname(crmsh.sh.__file__), 'sh_helper.py')
+        helper_args = [sys.executable, sh_helper, 'foo']
+        shell_cmd = ' '.join(shlex.quote(a) for a in helper_args)
         mock_run.assert_called_once_with(
-            ['su', 'alice', '--login', '-s', '/bin/sh', '-c', 'foo'],
+            ['su', '-s', '/bin/sh', '-c', shell_cmd, 'alice'],
             input=b'bar',
             env=mock_environ,
         )
