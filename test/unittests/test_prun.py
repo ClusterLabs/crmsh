@@ -1,4 +1,6 @@
 import typing
+import sys
+import shlex
 
 import crmsh.constants
 import crmsh.prun.prun
@@ -38,16 +40,26 @@ class TestPrun(unittest.TestCase):
             mock.call("host1"),
             mock.call("host2"),
         ])
+        shell1 = 'ssh {} bob@host1 sudo -H /bin/bash'.format(crmsh.constants.SSH_OPTION)
+        helper_args1 = [sys.executable, crmsh.prun.prun._SH_HELPER, shell1]
+        shell_cmd1 = ' '.join(shlex.quote(a) for a in helper_args1)
+        args1 = ['su', '-s', '/bin/sh', '-c', shell_cmd1, 'alice']
+
+        shell2 = 'ssh {} bob@host2 sudo -H /bin/bash'.format(crmsh.constants.SSH_OPTION)
+        helper_args2 = [sys.executable, crmsh.prun.prun._SH_HELPER, shell2]
+        shell_cmd2 = ' '.join(shlex.quote(a) for a in helper_args2)
+        args2 = ['su', '-s', '/bin/sh', '-c', shell_cmd2, 'alice']
+
         mock_runner_add_task.assert_has_calls([
             mock.call(TaskArgumentsEq(
-                ['su', 'alice', '--login', '-c', 'ssh {} bob@host1 sudo -H /bin/bash'.format(crmsh.constants.SSH_OPTION)],
+                args1,
                 b'foo',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,
                 context={"host": 'host1', "ssh_user": 'bob'},
             )),
             mock.call(TaskArgumentsEq(
-                ['su', 'alice', '--login', '-c', 'ssh {} bob@host2 sudo -H /bin/bash'.format(crmsh.constants.SSH_OPTION)],
+                args2,
                 b'bar',
                 stdout=crmsh.prun.runner.Task.Capture,
                 stderr=crmsh.prun.runner.Task.Capture,

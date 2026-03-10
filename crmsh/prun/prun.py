@@ -1,6 +1,8 @@
 # prun.py - run command or copy files on multiple hosts concurrently
 import os
+import shlex
 import socket
+import sys
 import tempfile
 import typing
 
@@ -11,6 +13,8 @@ from crmsh.user_of_host import UserOfHost
 from crmsh.sh import Utils
 
 _DEFAULT_CONCURRENCY = 32
+
+_SH_HELPER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'sh_helper.py')
 
 _SUDO_SFTP_SERVER_OPTION = '-s \'sudo PATH=/usr/lib/ssh:/usr/lib/openssh:/usr/libexec/ssh:/usr/libexec/openssh /bin/sh -c "exec sftp-server"\''
 
@@ -124,7 +128,9 @@ def _build_run_task(remote: str, cmdline: str) -> Task:
         if local_sudoer == crmsh.userdir.getuser():
             args = ['/bin/sh', '-c', shell]
         elif os.geteuid() == 0:
-            args = ['su', local_sudoer, '--login', '-c', shell]
+            helper_args = [sys.executable, _SH_HELPER, shell]
+            shell_cmd = ' '.join(shlex.quote(a) for a in helper_args)
+            args = ['su', '-s', '/bin/sh', '-c', shell_cmd, local_sudoer]
         else:
             raise AssertionError('trying to run su as a non-root user')
         return Task(
