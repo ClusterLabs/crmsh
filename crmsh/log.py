@@ -284,7 +284,7 @@ LOGGING_CFG = {
 NO_COLOR_FORMATTERS = {
     "console_report": {
         "()": LeveledFormatter,
-        "base_formatter_factory": logging.Formatter,
+        "base_formatter_factory": NoBacktraceFormatter,
         "default_fmt": "{}: %(levelname)s: %(message)s".format(socket.gethostname()),
         "level_fmt": {
             DEBUG2: "{}: %(levelname)s: %(funcName)s: %(message)s".format(socket.gethostname()),
@@ -292,7 +292,7 @@ NO_COLOR_FORMATTERS = {
     },
     "console": {
         "()": LeveledFormatter,
-        "base_formatter_factory": logging.Formatter,
+        "base_formatter_factory": NoBacktraceFormatter,
         "default_fmt": "%(levelname)s: %(message)s",
         "level_fmt": {
             DEBUG2: "%(levelname)s: %(funcName)s %(message)s",
@@ -568,10 +568,11 @@ def setup_logging(only_help=False):
     if os.environ.get('CRMSH_REGRESSION_TEST'):
         logging.setLoggerClass(NumberedLogger)
         LOGGING_CFG['formatters'] = NO_COLOR_FORMATTERS
-        logging.config.dictConfig(LOGGING_CFG)
     else:
         logging.setLoggerClass(NumberedLoggerInterface)
-        logging.config.dictConfig(LOGGING_CFG)
+    if not all(os.isatty(fd) for fd in range(3)):
+        LOGGING_CFG['formatters'] = NO_COLOR_FORMATTERS
+    logging.config.dictConfig(LOGGING_CFG)
 
 
 def setup_logger(name):
