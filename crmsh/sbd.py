@@ -674,6 +674,8 @@ class SBDConfigChecker(SBDTimeout):
                 else:
                     raise FixFailure(f"Failed to fix {name} issue")
 
+        SBDConfigChecker._check_deprecated_property()
+
         return SBDConfigChecker._return_helper(check_res_list)
 
     def _check_config_consistency(self, error_msg: str = "") -> bool:
@@ -1015,6 +1017,14 @@ class SBDConfigChecker(SBDTimeout):
                 shell.get_stdout_or_raise_error(cmd)
         time.sleep(2)
 
+    @staticmethod
+    def _check_deprecated_property() -> None:
+        for prop in (
+            "stonith-watchdog-timeout",
+            "stonith-timeout",
+            "stonith-enabled"
+        ):
+            utils.check_deprecated_term(prop)
 
 class SBDManager:
     SYSCONFIG_SBD = "/etc/sysconfig/sbd"

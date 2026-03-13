@@ -620,7 +620,13 @@ class CibConfig(command.UI):
                 self._show_diff()
                 return True
             set_obj = cibconfig.mkset_obj(*args)
-            return set_obj.show()
+            set_obj.show()
+
+        if not args:
+            for obj in set_obj.all_set:
+                if obj.obj_type == "property":
+                    for nvpair in obj.node.iterchildren("nvpair"):
+                        utils.check_deprecated_term(nvpair.get("name"))
 
     @command.name("get_property")
     @command.alias("get-property")
