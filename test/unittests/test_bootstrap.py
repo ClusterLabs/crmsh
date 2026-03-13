@@ -139,9 +139,14 @@ class TestContext(unittest.TestCase):
             ctx._validate_sbd_option()
         mock_error.assert_called_once_with("Can't use -s and -S options together")
 
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.fatal')
-    def test_validate_sbd_option_error_sbd_stage_no_option(self, mock_error, mock_installed):
+    def test_validate_sbd_option_error_sbd_stage_no_option(self, mock_error, mock_installed, mock_quorate, mock_check_all, mock_list):
+        mock_list.return_value = ["node1"]
+        mock_quorate.return_value = True
         mock_installed.return_value = True
         mock_error.side_effect = SystemExit
         ctx = crmsh.bootstrap.Context()
@@ -151,10 +156,15 @@ class TestContext(unittest.TestCase):
             ctx._validate_sbd_option()
         mock_error.assert_called_once_with("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
 
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_validate_sbd_option_error_sbd_stage_service(self, mock_active, mock_error, mock_installed):
+    def test_validate_sbd_option_error_sbd_stage_service(self, mock_active, mock_error, mock_installed, mock_quorate, mock_check_all, mock_list):
+        mock_list.return_value = ["node1"]
+        mock_quorate.return_value = True
         mock_installed.return_value = True
         mock_error.side_effect = SystemExit
         ctx = crmsh.bootstrap.Context()
@@ -166,18 +176,19 @@ class TestContext(unittest.TestCase):
         mock_error.assert_called_once_with("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
         mock_active.assert_called_once_with("sbd.service")
 
+    @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    def test_validate_sbd_option_error_sbd_stage(self, mock_check_all, mock_installed, mock_list, mock_fatal):
+    def test_validate_sbd_option_error_sbd_stage(self, mock_check_all, mock_installed, mock_list, mock_fatal, mock_quorate):
+        mock_quorate.return_value = True
         mock_fatal.side_effect = ValueError
         mock_list.return_value = ["node1", "node2"]
         mock_installed.side_effect = [True, False]
         ctx = crmsh.bootstrap.Context()
         ctx.stage = "sbd"
         ctx.diskless_sbd = True
-        ctx.cluster_is_running = True
         with self.assertRaises(ValueError):
             ctx._validate_sbd_option()
         mock_check_all.assert_called_once_with("setup SBD")
@@ -186,18 +197,19 @@ class TestContext(unittest.TestCase):
             mock.call("sbd", "node2")
         ])
 
+    @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    def test_validate_sbd_option_sbd_package_not_installed(self, mock_check_all, mock_list, mock_installed, mock_fatal):
+    def test_validate_sbd_option_sbd_package_not_installed(self, mock_check_all, mock_list, mock_installed, mock_fatal, mock_quorate):
+        mock_quorate.return_value = True
         mock_fatal.side_effect = ValueError
         mock_list.return_value = ["node1", "node2"]
         mock_installed.return_value = False
         ctx = crmsh.bootstrap.Context()
         ctx.stage = "sbd"
         ctx.diskless_sbd = True
-        ctx.cluster_is_running = True
 
         with self.assertRaises(ValueError):
             ctx._validate_sbd_option()
@@ -206,13 +218,16 @@ class TestContext(unittest.TestCase):
         mock_installed.assert_called_once_with("sbd", "node1")
         mock_fatal.assert_called_once_with(sbd.SBDManager.SBD_NOT_INSTALLED_MSG + " on node1")
 
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.package_is_installed')
-    @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
-    def test_validate_sbd_option_fence_sbd_package_not_installed(self, mock_verify, mock_this_node, mock_installed, mock_fatal):
+    def test_validate_sbd_option_fence_sbd_package_not_installed(self, mock_verify, mock_installed, mock_fatal, mock_quorate, mock_check_all, mock_list):
+        mock_quorate.return_value = True
+        mock_list.return_value = ["node1"]
         mock_fatal.side_effect = ValueError
-        mock_this_node.return_value = "node1"
         mock_installed.side_effect = [True, False]
         ctx = crmsh.bootstrap.Context()
         ctx.sbd_devices = ["/dev/sda1"]

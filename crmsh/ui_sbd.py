@@ -253,10 +253,10 @@ class SBD(command.UI):
             self._show_property()
 
         print()
-        return SBD.check_timeout_configurations()
+        return SBD.check_sbd_health()
 
     @staticmethod
-    def check_timeout_configurations() -> bool:
+    def check_sbd_health() -> bool:
         check_rc = sbd.CheckResult.SUCCESS
         try:
             check_rc = sbd.SBDConfigChecker().check_and_fix()
@@ -742,4 +742,4 @@ done
         self._print_sbd_cgroup_status()
         self._print_watchdog_info()
         self._print_sbd_agent_status()
-        return SBD.check_timeout_configurations()
+        return SBD.check_sbd_health()

@@ -667,6 +667,8 @@ class SBDConfigChecker(SBDTimeout):
                 else:
                     raise FixFailure(f"Failed to fix {name} issue")
 
+        SBDManager.warn_diskless_sbd()
+
         return SBDConfigChecker._return_helper(check_res_list)
 
     def _check_config_consistency(self, error_msg: str = "") -> bool:
