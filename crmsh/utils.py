@@ -166,6 +166,7 @@ def is_program(prog):
     return None
 
 
+@cache
 def get_cluster_option_metadata(show_xml=True) -> str:
     output_type = "xml" if show_xml else "text"
     cmd = f"crm_attribute --list-options=cluster --all --output-as={output_type}"
@@ -173,6 +174,20 @@ def get_cluster_option_metadata(show_xml=True) -> str:
     if rc == 0 and out:
         return out
     return None
+
+
+def get_deprecated_cluster_option_with_replacement_dict() -> dict:
+    option_metadata_xml = get_cluster_option_metadata()
+    if not option_metadata_xml:
+        return {}
+    deprecated_dict = {}
+    root = etree.fromstring(option_metadata_xml)
+    for param in root.findall(".//parameter[@name][deprecated]"):
+        name = param.get("name")
+        replaced_with = param.find(".//deprecated/replaced-with")
+        if replaced_with is not None and "name" in replaced_with.attrib:
+            deprecated_dict[name] = replaced_with.get("name")
+    return deprecated_dict
 
 
 def get_resource_metadata(show_xml=True) -> str:
@@ -3417,38 +3432,24 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
 
 
 def check_deprecated_term(original_term: str, existing_xml_node = None) -> None:
-    other_deprecated_new_term_mapping = {
-        "fence-reaction": "fencing-reaction",
-        "stop-orphan-resources": "stop-removed-resources",
-        "stop-orphan-actions": "cancel-removed-actions"
-    }
-    other_new_deprecated_term_mapping = {
-        v: k for k, v in other_deprecated_new_term_mapping.items()
+    deprecated_new_mapping = get_deprecated_cluster_option_with_replacement_dict()
+    if not deprecated_new_mapping:
+        return
+    new_deprecated_mapping = {
+        v: k for k, v in deprecated_new_mapping.items()
     }
 
     deprecated_term, new_term = None, None
     use_deprecated_term, use_new_term = False, False
 
-    # case1
-    if original_term.startswith("stonith-"):
+    if original_term in deprecated_new_mapping:
         use_deprecated_term = True
         deprecated_term = original_term
-        new_term = original_term.replace("stonith-", "fencing-", 1)
-    # case2
-    elif original_term in other_deprecated_new_term_mapping:
-        use_deprecated_term = True
-        deprecated_term = original_term
-        new_term = other_deprecated_new_term_mapping[original_term]
-    # case3, includes "fencing-reaction", so need to put it before case4
-    elif original_term in other_new_deprecated_term_mapping:
+        new_term = deprecated_new_mapping[original_term]
+    elif original_term in new_deprecated_mapping:
         use_new_term = True
         new_term = original_term
-        deprecated_term = other_new_deprecated_term_mapping[original_term]
-    # case4
-    elif original_term.startswith("fencing-"):
-        use_new_term = True
-        new_term = original_term
-        deprecated_term = original_term.replace("fencing-", "stonith-", 1)
+        deprecated_term = new_deprecated_mapping[original_term]
     else:
         return
 
