@@ -22,6 +22,7 @@ primitive d2 ocf:pacemaker:Dummy \
 location d1-pref d1 100: node1
 property cib-bootstrap-options: \
 	fencing-enabled=false
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: _test
 .INP: rename d1 p1
 INFO: 12: modified location:d1-pref from d1 to p1
@@ -90,7 +91,6 @@ location d1-pref d1 100: node1
 property cib-bootstrap-options: \
 	fencing-enabled=false
 .INP: verify
-.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: # delete a group which is in a clone
 .INP: primitive d2 ocf:pacemaker:Dummy

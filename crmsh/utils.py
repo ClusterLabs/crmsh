@@ -166,6 +166,7 @@ def is_program(prog):
     return None
 
 
+@cache
 def get_cluster_option_metadata(show_xml=True) -> str:
     output_type = "xml" if show_xml else "text"
     cmd = f"crm_attribute --list-options=cluster --all --output-as={output_type}"
@@ -173,6 +174,20 @@ def get_cluster_option_metadata(show_xml=True) -> str:
     if rc == 0 and out:
         return out
     return None
+
+
+def get_deprecated_cluster_option_with_replacement_dict() -> dict:
+    option_metadata_xml = get_cluster_option_metadata()
+    if not option_metadata_xml:
+        return {}
+    deprecated_dict = {}
+    root = etree.fromstring(option_metadata_xml)
+    for param in root.findall(".//parameter[@name][deprecated]"):
+        name = param.get("name")
+        replaced_with = param.find(".//deprecated/replaced-with")
+        if replaced_with is not None and "name" in replaced_with.attrib:
+            deprecated_dict[name] = replaced_with.get("name")
+    return deprecated_dict
 
 
 def get_resource_metadata(show_xml=True) -> str:
@@ -2603,14 +2618,14 @@ def detect_duplicate_device_path(device_list: typing.List[str]):
             raise ValueError(f"Duplicated device path detected: {','.join(dev_list)}. They are all pointing to {path}")
 
 
-def has_stonith_running():
+def has_fence_device_registered():
     """
-    Check if any stonith device registered
+    Check if any fence device registered
     """
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
-    has_stonith_device = re.search("[1-9]+ fence device[s]* found", out) is not None
+    has_fence_device = re.search("[1-9]+ fence device[s]* found", out) is not None
     using_diskless_sbd = sbd.SBDUtils.is_using_diskless_sbd()
-    return has_stonith_device or using_diskless_sbd
+    return has_fence_device or using_diskless_sbd
 
 
 def has_disk_mounted(dev):
@@ -2866,9 +2881,16 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True):
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
     else:
+        check_deprecated_term(name)
         cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
     rc, stdout, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return stdout if rc == 0 else None
+
+
+def property_configured(name, property_type="crm_config", peer=None):
+    cmd = f"crm_attribute -t {property_type} -n {name} -Gq"
+    rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
+    return rc == 0
 
 
 def delete_property(name, property_type="crm_config") -> bool:
@@ -3296,12 +3318,19 @@ def fuzzy_get(items, s):
     return None
 
 
-def cleanup_stonith_related_properties():
-    for p in ("stonith-watchdog-timeout", "stonith-timeout", "priority-fencing-delay"):
+def cleanup_fencing_related_properties():
+    related_properties = [
+        "stonith-watchdog-timeout",
+        "stonith-timeout",
+        "fencing-watchdog-timeout",
+        "fencing-timeout",
+        "priority-fencing-delay"
+    ]
+    for p in related_properties:
         if get_property(p, get_default=False):
             delete_property(p)
-    if get_property("stonith-enabled") == "true":
-        set_property("stonith-enabled", "false")
+    if get_property("fencing-enabled") == "true":
+        set_property("fencing-enabled", "false")
 
 
 def strip_ansi_escape_sequences(text):
@@ -3400,4 +3429,41 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
         logger.warning("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
         logger.info("Aborting the configuration change attempt")
         return False
+
+
+def check_deprecated_term(original_term: str, existing_xml_node = None) -> None:
+    deprecated_new_mapping = get_deprecated_cluster_option_with_replacement_dict()
+    if not deprecated_new_mapping:
+        return
+    new_deprecated_mapping = {
+        v: k for k, v in deprecated_new_mapping.items()
+    }
+
+    deprecated_term, new_term = None, None
+    use_deprecated_term, use_new_term = False, False
+
+    if original_term in deprecated_new_mapping:
+        use_deprecated_term = True
+        deprecated_term = original_term
+        new_term = deprecated_new_mapping[original_term]
+    elif original_term in new_deprecated_mapping:
+        use_new_term = True
+        new_term = original_term
+        deprecated_term = new_deprecated_mapping[original_term]
+    else:
+        return
+
+    if existing_xml_node is not None:
+        deprecated_term_configured = existing_xml_node.find(f".//*[@name='{deprecated_term}']") is not None
+        new_term_configured = existing_xml_node.find(f".//*[@name='{new_term}']") is not None
+    else:
+        deprecated_term_configured = property_configured(deprecated_term)
+        new_term_configured = property_configured(new_term)
+
+    if deprecated_term_configured and new_term_configured:
+        if use_deprecated_term:
+            logger.warning(
+                "The new property name \"%s\" is configured, the value of deprecated name \"%s\" will be ignored",
+                new_term, deprecated_term
+            )
 # vim:ts=4:sw=4:et:

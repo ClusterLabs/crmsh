@@ -177,12 +177,12 @@ class TestClusterFSManager(unittest.TestCase):
         mock_confirm.assert_called_once_with("/dev/sda1 contains a ext4 file system - overwrite?")
         mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with("wipefs -a /dev/sda1")
 
-    @mock.patch("crmsh.utils.has_stonith_running")
-    def test_init_verify_no_stonith(self, mock_has_stonith_running):
-        mock_has_stonith_running.return_value = False
+    @mock.patch("crmsh.utils.has_fence_device_registered")
+    def test_init_verify_no_fence_device(self, mock_has_fence_device_registered):
+        mock_has_fence_device_registered.return_value = False
         with self.assertRaises(cluster_fs.Error) as context:
             self.instance_ocfs2_stage_with_device.init_verify()
-        self.assertIn("OCFS2 requires stonith device configured and running", str(context.exception))
+        self.assertIn("OCFS2 requires fence device configured and running", str(context.exception))
 
     def test_gen_ra_scripts_unsupport_type(self):
         with self.assertRaises(cluster_fs.Error) as context:
