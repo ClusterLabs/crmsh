@@ -53,8 +53,8 @@ clone cl-p5 p5 \
 colocation c2 inf: ( p1 p2 ) p3 p4
 property cib-bootstrap-options: \
 	fencing-enabled=false
-.INP: commit
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
+.INP: commit
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: _test
 .INP: verify
@@ -138,11 +138,11 @@ property cib-bootstrap-options: \
 	fencing-enabled=false
 op_defaults op-options: \
 	timeout=60s
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: commit
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: _test
 .INP: verify
-.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .TRY Unknown properties
 .INP: configure
 .INP: erase
@@ -157,8 +157,8 @@ property SAPHanaSR: \
 	hana_ha1_site_lss_WDF1=4
 property cib-bootstrap-options: \
 	fencing-enabled=false
-.INP: commit
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
+.INP: commit
 .INP: _test
 .INP: verify
 .INP: property SAPHanaSR_2:     hana_ha1_site_iss_WDF1=cde     hana_ha1_site_bss_WDF1=abc

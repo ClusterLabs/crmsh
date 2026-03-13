@@ -62,8 +62,8 @@ alert notify_11 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
 alert notify_9 "/usr/share/pacemaker/alerts/alert_snmp.sh" \
 	attributes trap_add_hires_timestamp_oid=false trap_node_states=non-trap trap_resource_tasks="start,stop,monitor,promote,demote" \
 	to 192.168.40.9
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: _test
 .INP: verify
-.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .EXT crm_resource --list-options=primitive --all --output-as=xml
 .INP: commit

@@ -25,6 +25,7 @@ property cib-bootstrap-options: \
 	fencing-enabled=false
 op_defaults op-options: \
 	timeout=2m
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: filter "sed 's/p2/p3/;$aprimitive p3 ocf:heartbeat:Dummy'" g1
 .INP: show
 node node1 \
@@ -173,7 +174,6 @@ op_defaults op-options: \
 	timeout=60s
 .INP: commit
 .EXT crm_resource --list-options=primitive --all --output-as=xml
-.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: _test
 .INP: verify
 .INP: primitive a0 ocf:heartbeat:Dummy

@@ -789,6 +789,7 @@ INFO: Stop tracing p0 for operation stop
 
 .TRY configure clone cg g
 .EXT crm_resource --list-options=primitive --all --output-as=xml
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -1135,6 +1136,7 @@ INFO: Stop tracing p0 for operation stop
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Delay
 .EXT crm_resource --list-options=primitive --all --output-as=xml
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .TRY configure primitive p3 Dummy
 .EXT crm_resource --show-metadata ocf:heartbeat:Dummy
 .EXT crm_resource --show-metadata ocf:pacemaker:Dummy
@@ -1148,6 +1150,7 @@ WARNING: This command 'rm' is deprecated, please use 'delete'
 INFO: "rm" is accepted as "delete"
 .TRY configure clone msg g meta promotable=true
 .EXT crm_resource --list-options=primitive --all --output-as=xml
+.EXT crm_attribute --list-options=cluster --all --output-as=xml
 .TRY resource scores
 .EXT crm_simulate -sUL
 2 of 5 resource instances DISABLED and 0 BLOCKED from further action due to failure
