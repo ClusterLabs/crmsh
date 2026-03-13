@@ -22,8 +22,10 @@ import logging
 import os
 import pwd
 import re
+import shlex
 import socket
 import subprocess
+import sys
 import typing
 from io import StringIO
 from functools import cache
@@ -35,6 +37,8 @@ from .user_of_host import UserOfHost
 import crmsh.options
 
 logger = logging.getLogger(__name__)
+
+_SH_HELPER = os.path.join(os.path.dirname(__file__), 'sh_helper.py')
 
 
 class Error(ValueError):
@@ -140,12 +144,19 @@ class LocalShell:
         if user is None or self.get_effective_user_name() == user:
             args = ['/bin/sh', '-c', cmd]
         elif 0 == self.geteuid():
-            args = ['su', user, '--login', '-s', '/bin/sh', '-c', cmd]
+            helper_args = [sys.executable, _SH_HELPER]
+            if self.preserve_env:
+                helper_args.extend(['--preserve-env', ','.join(self.preserve_env)])
+            helper_args.append(cmd)
+            shell_cmd = ' '.join(shlex.quote(a) for a in helper_args)
+
+            args = ['su', '-s', '/bin/sh']
             if tty:
                 args.append('--pty')
             if self.preserve_env:
                 args.append('-w')
                 args.append(','.join(self.preserve_env))
+            args.extend(['-c', shell_cmd, user])
         else:
             raise AuthorizationError(
                 cmd, None, user,
