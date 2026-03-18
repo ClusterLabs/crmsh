@@ -1024,7 +1024,7 @@ class SBDConfigChecker(SBDTimeout):
             "stonith-timeout",
             "stonith-enabled"
         ):
-            utils.check_deprecated_term(prop)
+            utils.DeprecatedTermTranslator(prop).check()
 
 class SBDManager:
     SYSCONFIG_SBD = "/etc/sysconfig/sbd"
