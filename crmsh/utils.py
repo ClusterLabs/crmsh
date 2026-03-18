@@ -46,6 +46,7 @@ from . import log
 from . import xmlutil
 from . import cibconfig
 from . import sbd
+from . import ra
 from .prun import prun
 from .sh import ShellUtils
 from .service_manager import ServiceManager
@@ -3417,52 +3418,52 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
 
 
 def check_deprecated_term(original_term: str, existing_xml_node = None) -> None:
-    other_deprecated_new_term_mapping = {
-        "fence-reaction": "fencing-reaction",
-        "stop-orphan-resources": "stop-removed-resources",
-        "stop-orphan-actions": "cancel-removed-actions"
-    }
-    other_new_deprecated_term_mapping = {
-        v: k for k, v in other_deprecated_new_term_mapping.items()
+    deprecated_new_mapping = ra.get_properties_meta().get_deprecated_params_dict()
+    if not deprecated_new_mapping:
+        return
+    new_deprecated_mapping = {
+        v: k for k, v in deprecated_new_mapping.items()
+        if v is not None
     }
 
     deprecated_term, new_term = None, None
     use_deprecated_term, use_new_term = False, False
+    new_term_configured, deprecated_term_configured = False, False
 
-    # case1
-    if original_term.startswith("stonith-"):
+    if original_term in deprecated_new_mapping:
         use_deprecated_term = True
         deprecated_term = original_term
-        new_term = original_term.replace("stonith-", "fencing-", 1)
-    # case2
-    elif original_term in other_deprecated_new_term_mapping:
-        use_deprecated_term = True
-        deprecated_term = original_term
-        new_term = other_deprecated_new_term_mapping[original_term]
-    # case3, includes "fencing-reaction", so need to put it before case4
-    elif original_term in other_new_deprecated_term_mapping:
+        new_term = deprecated_new_mapping[original_term] # might be None, no replacement term
+    elif original_term in new_deprecated_mapping:
         use_new_term = True
         new_term = original_term
-        deprecated_term = other_new_deprecated_term_mapping[original_term]
-    # case4
-    elif original_term.startswith("fencing-"):
-        use_new_term = True
-        new_term = original_term
-        deprecated_term = original_term.replace("fencing-", "stonith-", 1)
+        deprecated_term = new_deprecated_mapping[original_term]
     else:
         return
 
     if existing_xml_node is not None:
         deprecated_term_configured = existing_xml_node.find(f".//*[@name='{deprecated_term}']") is not None
-        new_term_configured = existing_xml_node.find(f".//*[@name='{new_term}']") is not None
+        if new_term:
+            new_term_configured = existing_xml_node.find(f".//*[@name='{new_term}']") is not None
     else:
         deprecated_term_configured = property_configured(deprecated_term)
-        new_term_configured = property_configured(new_term)
+        if new_term:
+            new_term_configured = property_configured(new_term)
 
-    if deprecated_term_configured and new_term_configured:
-        if use_deprecated_term:
+    if use_deprecated_term and deprecated_term_configured:
+        if new_term_configured:
             logger.warning(
-                "The new property name \"%s\" is configured, the value of deprecated name \"%s\" will be ignored",
+                "\"%s\" is configured; \"%s\" is deprecated and ignored.",
                 new_term, deprecated_term
+            )
+        elif new_term:
+            logger.warning(
+                "\"%s\" is deprecated, please consider using \"%s\"",
+                deprecated_term, new_term
+            )
+        else:
+            logger.warning(
+                "\"%s\" is deprecated, please consider removing it",
+                deprecated_term
             )
 # vim:ts=4:sw=4:et:
