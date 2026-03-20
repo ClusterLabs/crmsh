@@ -163,7 +163,7 @@ def sanity_check_nvpairs(ident, node, attr_list) -> utils.VerifyResult:
     for nvpair in node.iterchildren("nvpair"):
         rc |= sanity_check_fencing_watchdog_timeout(nvpair, node)
         n = nvpair.get("name")
-        utils.DeprecatedTermTranslator(n, node).check()
+        utils.DeprecatedTermTranslator(n, node).check(internal=False)
         if n and n not in attr_list:
             logger.warning("%s: unknown attribute '%s'", ident, n)
             rc |= utils.VerifyResult.WARNING

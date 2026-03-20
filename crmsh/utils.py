@@ -2864,20 +2864,15 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True):
     when it is False, the property value will be got from cib
     """
     translate_inst = DeprecatedTermTranslator(name)
-    if translate_inst.use_new_term and \
-            translate_inst.deprecated_term_configured and \
-            not translate_inst.new_term_configured:
-        logger.warning(
-            "\"%s\" is not configured; using configured deprecated \"%s\"",
-            name, translate_inst.deprecated_term
-        )
+    if translate_inst.using_new_term and \
+            translate_inst.deprecated_configured and \
+            not translate_inst.new_configured:
         name = translate_inst.deprecated_term
 
     if property_type == "crm_config" and get_default:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
     else:
-        translate_inst.check()
         cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
     rc, stdout, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return stdout if rc == 0 else None
@@ -2893,11 +2888,11 @@ def delete_property(name, property_type="crm_config") -> bool:
 
     delete_list = [name]
     translate_inst = DeprecatedTermTranslator(name)
-    if translate_inst.use_new_term:
+    if translate_inst.using_new_term:
         if translate_inst.both_configured:
             # delete deprecated first
             delete_list = [translate_inst.deprecated_term, name]
-        elif translate_inst.deprecated_term_configured:
+        elif translate_inst.deprecated_configured:
             delete_list = [translate_inst.deprecated_term]
 
     shell_inst = ShellUtils()
@@ -2968,6 +2963,12 @@ def set_property(property_name, property_value, property_type="crm_config", cond
     "property_type" can be crm_config|rsc_defaults|op_defaults
     When "conditional" is True, set the property if given "property_value" is larger then value from cib
     """
+    translate_inst = DeprecatedTermTranslator(property_name)
+    if translate_inst.using_new_term and \
+            translate_inst.deprecated_configured and \
+            not translate_inst.new_configured:
+        property_name = translate_inst.deprecated_term
+
     origin_value = get_property(property_name, property_type)
     if origin_value and str(origin_value) == str(property_value):
         return
@@ -3444,19 +3445,19 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
         return False
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class TermResolution:
     deprecated_term: str
-    new_term: typing.Optional[str] # None means deprecated term has no replacement
-    use_deprecated_term: bool # True means using deprecated term, False means using new term
-    deprecated_term_configured: bool
-    new_term_configured: bool
+    new_term: str|None # None means deprecated term has no replacement
+    using_deprecated: bool # True means using deprecated term, False means using new term
+    deprecated_configured: bool
+    new_configured: bool
 
 
 class DeprecatedTermTranslator:
 
-    _cached_deprecated_to_new: typing.Optional[dict] = None
-    _cached_new_to_deprecated: typing.Optional[dict] = None
+    _cached_deprecated_to_new: dict|None = None
+    _cached_new_to_deprecated: dict|None = None
 
     def __init__(
         self,
@@ -3464,61 +3465,64 @@ class DeprecatedTermTranslator:
         existing_xml_node: typing.Optional[etree.Element] = None
     ):
         self.original_term = term
-        self.exiting_xml_node = existing_xml_node
-        self._resolve_res = self._resolve()
+        self.existing_xml_node = existing_xml_node
+        self._resolve_res: TermResolution|None = self._resolve()
 
     @classmethod
     def _get_maps(cls) -> tuple[dict, dict]:
-        if cls._cached_deprecated_to_new is None or cls._cached_new_to_deprecated is None:
-            deprecated_to_new = ra.get_properties_meta().get_deprecated_params_dict() or {}
-            new_to_deprecated = {
-                v: k for k, v in deprecated_to_new.items()
+        dep_to_new = cls._cached_deprecated_to_new
+        new_to_dep = cls._cached_new_to_deprecated
+
+        if dep_to_new is None or new_to_dep is None:
+            dep_to_new = ra.get_properties_meta().get_deprecated_params_dict()
+            new_to_dep = {
+                v: k for k, v in dep_to_new.items()
                 if v is not None
             }
-            cls._cached_deprecated_to_new = deprecated_to_new
-            cls._cached_new_to_deprecated = new_to_deprecated
-        return cls._cached_deprecated_to_new, cls._cached_new_to_deprecated
+            cls._cached_deprecated_to_new = dep_to_new
+            cls._cached_new_to_deprecated = new_to_dep
 
-    def _resolve(self) -> typing.Optional[TermResolution]:
-        deprecated_to_new, new_to_deprecated = self._get_maps()
-        deprecated_term, new_term = None, None
-        use_deprecated_term = False
+        return dep_to_new, new_to_dep
 
-        if self.original_term in deprecated_to_new:
-            deprecated_term = self.original_term
-            new_term = deprecated_to_new[self.original_term] # might be None, no replacement term
-            use_deprecated_term = True
-        elif self.original_term in new_to_deprecated:
-            new_term = self.original_term
-            deprecated_term = new_to_deprecated[self.original_term]
-            use_deprecated_term = False
+    def _is_configured(self, term: str) -> bool:
+        if self.existing_xml_node is not None:
+            return self.existing_xml_node.find(f".//*[@name='{term}']") is not None
+        else:
+            return property_configured(term)
+
+    def _resolve(self) -> TermResolution|None:
+        dep_to_new, new_to_dep = self._get_maps()
+        term = self.original_term
+
+        if term in dep_to_new:
+            deprecated_term = term
+            new_term = dep_to_new[term] # might be None, no replacement term
+            using_deprecated = True
+        elif term in new_to_dep:
+            deprecated_term = new_to_dep[term]
+            new_term = term
+            using_deprecated = False
         else:
             return None
 
-        deprecated_term_configured = self._is_configured(deprecated_term)
-        new_term_configured = self._is_configured(new_term) if new_term else False
+        deprecated_configured = self._is_configured(deprecated_term)
+        new_configured = self._is_configured(new_term) if new_term else False
 
         return TermResolution(
             deprecated_term=deprecated_term,
             new_term=new_term,
-            use_deprecated_term=use_deprecated_term,
-            deprecated_term_configured=deprecated_term_configured,
-            new_term_configured=new_term_configured
+            using_deprecated=using_deprecated,
+            deprecated_configured=deprecated_configured,
+            new_configured=new_configured
         )
 
-    def _is_configured(self, term: str) -> bool:
-        if self.exiting_xml_node is not None:
-            return self.exiting_xml_node.find(f".//*[@name='{term}']") is not None
-        else:
-            return property_configured(term)
-
-    def check(self) -> None:
-        if not self._resolve_res:
+    def check(self, internal: bool = True) -> None:
+        res = self._resolve_res
+        if not res:
             return
 
-        res = self._resolve_res
-        if res.use_deprecated_term and res.deprecated_term_configured:
-            if res.new_term_configured:
+        if res.using_deprecated and res.deprecated_configured:
+            if res.new_configured:
                 logger.warning(
                     "\"%s\" is configured; \"%s\" is deprecated and ignored.",
                     res.new_term, res.deprecated_term
@@ -3534,48 +3538,69 @@ class DeprecatedTermTranslator:
                     res.deprecated_term
                 )
 
-        if not res.use_deprecated_term and res.deprecated_term_configured:
-            if not res.new_term_configured:
+        if internal:
+            return
+
+        if not res.using_deprecated and res.deprecated_configured:
+            if not res.new_configured:
                 logger.warning(
                     "\"%s\" is not configured but deprecated \"%s\" is; Cluster now is using the deprecated property, instead of the default value of \"%s\".",
                     res.new_term, res.deprecated_term, res.new_term
                 )
 
-        if res.use_deprecated_term and res.new_term_configured:
-            if not res.deprecated_term_configured:
+        if res.using_deprecated and res.new_configured:
+            if not res.deprecated_configured:
                 logger.warning(
                     "\"%s\" is deprecated and not configured but \"%s\" is; Cluster now is using the new property, instead of the default value of \"%s\".",
                     res.deprecated_term, res.new_term, res.deprecated_term
                 )
 
+    @classmethod
+    def get_working_term(cls, term: str) -> str:
+        inst = cls(term)
+        if not inst._resolve_res:
+            return inst.original_term
+
+        if inst.new_configured:
+            return inst.new_term
+        elif inst.deprecated_configured:
+            return inst.deprecated_term
+        else:
+            return inst.original_term
+
     @property
     def both_configured(self) -> bool:
         if not self._resolve_res:
             return False
-        return self._resolve_res.deprecated_term_configured and \
-                self._resolve_res.new_term_configured
+        return self._resolve_res.deprecated_configured and self._resolve_res.new_configured
 
     @property
-    def new_term_configured(self) -> bool:
+    def new_configured(self) -> bool:
         if not self._resolve_res:
             return False
-        return self._resolve_res.new_term_configured
+        return self._resolve_res.new_configured
 
     @property
-    def deprecated_term_configured(self) -> bool:
+    def deprecated_configured(self) -> bool:
         if not self._resolve_res:
             return False
-        return self._resolve_res.deprecated_term_configured
+        return self._resolve_res.deprecated_configured
 
     @property
-    def deprecated_term(self) -> typing.Optional[str]:
+    def deprecated_term(self) -> str|None:
         if not self._resolve_res:
             return None
         return self._resolve_res.deprecated_term
 
     @property
-    def use_new_term(self) -> bool:
+    def new_term(self) -> str|None:
+        if not self._resolve_res:
+            return None
+        return self._resolve_res.new_term
+
+    @property
+    def using_new_term(self) -> bool:
         if not self._resolve_res:
             return False
-        return not self._resolve_res.use_deprecated_term
+        return not self._resolve_res.using_deprecated
 # vim:ts=4:sw=4:et:

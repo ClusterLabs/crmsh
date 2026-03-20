@@ -627,7 +627,7 @@ class CibConfig(command.UI):
                 if obj.obj_type == "property":
                     for nvpair in obj.node.iterchildren("nvpair"):
                         name = nvpair.get("name")
-                        utils.DeprecatedTermTranslator(name).check()
+                        utils.DeprecatedTermTranslator(name).check(internal=False)
 
     @command.name("get_property")
     @command.alias("get-property")
@@ -650,7 +650,7 @@ class CibConfig(command.UI):
                 print(v)
         cib_factory.ensure_cib_updated()
         for p in properties:
-            utils.DeprecatedTermTranslator(p).check()
+            utils.DeprecatedTermTranslator(p).check(internal=False)
             v = cib_factory.get_property_w_default(p)
             if v is not None:
                 print_value(v)

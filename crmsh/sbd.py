@@ -586,7 +586,7 @@ class SBDConfigChecker(SBDTimeout):
             ),
 
             (
-                "fencing-watchdog-timeout property",
+                f"{self.current_watchdog_timeout_term} property",
                 self._check_fencing_watchdog_timeout,
                 self._fix_fencing_watchdog_timeout,
                 False,
@@ -594,7 +594,7 @@ class SBDConfigChecker(SBDTimeout):
             ),
 
             (
-                "fencing-timeout property",
+                f"{self.current_timeout_term} property",
                 self._check_fencing_timeout,
                 self._fix_fencing_timeout,
                 False,
@@ -605,7 +605,7 @@ class SBDConfigChecker(SBDTimeout):
             ),
 
             (
-                "fencing-enabled property",
+                f"{self.current_enabled_term} property",
                 self._check_fencing_enabled,
                 self._fix_fencing_enabled,
                 False,
@@ -629,6 +629,12 @@ class SBDConfigChecker(SBDTimeout):
             ),
         ]
 
+
+    def _get_current_terms(self):
+        self.current_watchdog_timeout_term = utils.DeprecatedTermTranslator.get_working_term("fencing-watchdog-timeout")
+        self.current_timeout_term = utils.DeprecatedTermTranslator.get_working_term("fencing-timeout")
+        self.current_enabled_term = utils.DeprecatedTermTranslator.get_working_term("fencing-enabled")
+
     def check_and_fix(self) -> CheckResult:
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
             if self.fix:
@@ -650,6 +656,7 @@ class SBDConfigChecker(SBDTimeout):
             raise FixAborted("All other checks aborted due to inconsistent configurations")
 
         self._load_configurations_from_runtime()
+        self._get_current_terms()
 
         check_and_fix_items = self._check_and_fix_items()
         check_res_list = [CheckResult.SUCCESS for _ in range(len(check_and_fix_items))]
@@ -831,12 +838,13 @@ class SBDConfigChecker(SBDTimeout):
         utils.cluster_run_cmd("systemctl daemon-reload")
 
     def _check_fencing_watchdog_timeout(self) -> CheckResult:
-        value = utils.get_property("fencing-watchdog-timeout")
+        current_term = self.current_watchdog_timeout_term
+        value = utils.get_property(current_term)
         if value and int(value) == -1:
             self._log_when_not_quiet(
                 logging.WARNING,
-                "It's recommended that fencing-watchdog-timeout is set to %d, now is -1",
-                self.fencing_watchdog_timeout
+                "It's recommended that %s is set to %d, now is -1",
+                current_term, self.fencing_watchdog_timeout
             )
             return CheckResult.WARNING
         value = int(utils.crm_msec(value)/1000)
@@ -844,80 +852,90 @@ class SBDConfigChecker(SBDTimeout):
             if value > 0:
                 self._log_when_not_quiet(
                     logging.WARNING,
-                    "It's recommended that fencing-watchdog-timeout is not set when using disk-based SBD"
+                    "It's recommended that %s is not set when using disk-based SBD",
+                    current_term
                 )
                 return CheckResult.WARNING
         else:
             if value == 0:
                 self._log_when_not_quiet(
                     logging.ERROR,
-                    "It's required that fencing-watchdog-timeout is set to %d, now is not set",
-                    self.fencing_watchdog_timeout
+                    "It's required that %s is set to %d, now is not set",
+                    current_term, self.fencing_watchdog_timeout
                 )
                 return CheckResult.ERROR
             if value < self.fencing_watchdog_timeout:
                 self._log_when_not_quiet(
                     logging.ERROR,
-                    "It's required that fencing-watchdog-timeout is set to %d, now is %d",
-                    self.fencing_watchdog_timeout, value
+                    "It's required that %s is set to %d, now is %d",
+                    current_term, self.fencing_watchdog_timeout, value
                 )
                 return CheckResult.ERROR
             elif value > self.fencing_watchdog_timeout:
                 self._log_when_not_quiet(
                     logging.WARNING,
-                    "It's recommended that fencing-watchdog-timeout is set to %d, now is %d",
-                    self.fencing_watchdog_timeout, value
+                    "It's recommended that %s is set to %d, now is %d",
+                    current_term, self.fencing_watchdog_timeout, value
                 )
                 return CheckResult.WARNING
         return CheckResult.SUCCESS
 
     def _fix_fencing_watchdog_timeout(self):
+        current_term = self.current_watchdog_timeout_term
         if self.disk_based:
-            logger.info("Removing fencing-watchdog-timeout property")
-            utils.delete_property("fencing-watchdog-timeout")
+            logger.info("Removing %s property", current_term)
+            utils.delete_property(current_term)
         else:
-            logger.info("Adjusting fencing-watchdog-timeout to %d", self.fencing_watchdog_timeout)
-            utils.set_property("fencing-watchdog-timeout", self.fencing_watchdog_timeout)
+            logger.info(
+                "Adjusting %s to %d",
+                current_term, self.fencing_watchdog_timeout
+            )
+            utils.set_property(current_term, self.fencing_watchdog_timeout)
 
     def _check_fencing_timeout(self) -> CheckResult:
         expected_value = self.get_fencing_timeout_expected()
-        value = utils.get_property("fencing-timeout")
+        current_term = self.current_timeout_term
+        value = utils.get_property(current_term)
         # will get default value from pacemaker metadata if not set
         value = int(utils.crm_msec(value)/1000)
         if value < expected_value:
             self._log_when_not_quiet(
                 logging.ERROR,
-                "It's required that fencing-timeout is set to %d, now is %d",
-                expected_value, value
+                "It's required that %s is set to %d, now is %d",
+                current_term, expected_value, value
             )
             return CheckResult.ERROR
         elif value > expected_value:
             self._log_when_not_quiet(
                 logging.WARNING,
-                "It's recommended that fencing-timeout is set to %d, now is %d",
-                expected_value, value
+                "It's recommended that %s is set to %d, now is %d",
+                current_term, expected_value, value
             )
             return CheckResult.WARNING
         return CheckResult.SUCCESS
 
     def _fix_fencing_timeout(self):
         expected_value = self.get_fencing_timeout_expected()
-        logger.info("Adjusting fencing-timeout to %d", expected_value)
-        utils.set_property("fencing-timeout", expected_value)
+        current_term = self.current_timeout_term
+        logger.info("Adjusting %s to %d", current_term, expected_value)
+        utils.set_property(current_term, expected_value)
 
     def _check_fencing_enabled(self) -> CheckResult:
-        value = utils.get_property("fencing-enabled", get_default=False)
+        current_term = self.current_enabled_term
+        value = utils.get_property(current_term, get_default=False)
         if value == "false": # have to check if the value is explicitly set to false
             self._log_when_not_quiet(
                 logging.ERROR,
-                "It's required that fencing-enabled is set to true, now is false"
+                "It's required that %s is set to true, now is false",
+                current_term
             )
             return CheckResult.ERROR
         return CheckResult.SUCCESS
 
     def _fix_fencing_enabled(self):
-        logger.info("Setting fencing-enabled to true")
-        utils.set_property("fencing-enabled", "true")
+        current_term = self.current_enabled_term
+        logger.info("Setting %s to true", current_term)
+        utils.set_property(current_term, "true")
 
     def _check_sbd_delay_start_unset_dropin(self) -> CheckResult:
         if not SBDTimeout.is_sbd_delay_start():
