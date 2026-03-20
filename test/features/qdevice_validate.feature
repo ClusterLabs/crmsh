@@ -45,7 +45,7 @@ Feature: corosync qdevice/qnetd options validate
   @clean
   Scenario: Option "--qnetd-hostname" is required by other qdevice options
     When    Try "crm cluster init --qdevice-port=1234"
-    Then    Except multiple lines
+    Then    Expected multiple lines in stderr
       """
       usage: init [options] [STAGE]
       crm: error: Option --qnetd-hostname is required if want to configure qdevice
@@ -54,7 +54,7 @@ Feature: corosync qdevice/qnetd options validate
   @clean
   Scenario: Option --qdevice-heuristics is required if want to configure heuristics mode
     When    Try "crm cluster init --qnetd-hostname=qnetd-node --qdevice-heuristics-mode="on""
-    Then    Except multiple lines
+    Then    Expected multiple lines in stderr
       """
       usage: init [options] [STAGE]
       crm: error: Option --qdevice-heuristics is required if want to configure heuristics mode
@@ -101,7 +101,7 @@ Feature: corosync qdevice/qnetd options validate
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Try "crm cluster init qdevice -y"
-    Then    Except multiple lines
+    Then    Expected multiple lines in stderr
       """
       usage: init [options] [STAGE]
       crm: error: Option --qnetd-hostname is required if want to configure qdevice

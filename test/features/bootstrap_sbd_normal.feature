@@ -10,7 +10,7 @@ Feature: crmsh bootstrap sbd management
     When    Try "crm cluster init -s "/dev/sda1;/dev/sdaxxxx" -y"
     Then    Except "ERROR: cluster.init: /dev/sdaxxxx doesn't look like a block device"
     When    Try "crm cluster init -s "/dev/sda1;/dev/sda1" -y"
-    Then    Except multiple lines
+    Then    Expected multiple lines in stderr
       """
       usage: init [options] [STAGE]
       crm: error: Duplicated input for '-s/--sbd-device' option
