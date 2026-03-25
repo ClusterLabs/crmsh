@@ -216,15 +216,17 @@ def step_impl(context, msg):
     context.stderr = None
 
 
-@then('Except multiple lines')
+@then('Expected multiple lines in stderr')
 def step_impl(context):
-    assert_in(context.text, context.stderr)
+    for line in context.text.split('\n'):
+        assert_in(line, context.stderr)
     context.stderr = None
 
 
 @then('Expected multiple lines in output')
 def step_impl(context):
-    assert_in(context.text, context.stdout)
+    for line in context.text.split('\n'):
+        assert_in(line, context.stdout)
     context.stdout = None
 
 
@@ -491,7 +493,8 @@ def step_impl(context, value):
 
 @when('Delete property "{key}" from cluster')
 def step_impl(context, key):
-    crmutils.delete_property(key)
+    cmd = f"crm_attribute -D -t crm_config -n {key}"
+    run_command(context, cmd)
 
 
 @then('Cluster property "{key}" is "{value}"')
@@ -737,3 +740,9 @@ def step_impl(context, service, node):
 def step_impl(context, service, node):
     services = firewalld_list_services(context, node)
     assert service not in services.split()
+
+
+@then('Cluster property "{key}" is not configured')
+def step_impl(context, key):
+    res = crmutils.property_configured(key)
+    assert res is False

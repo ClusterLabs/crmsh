@@ -603,7 +603,7 @@ class TestTask(TestCase):
         self.task_inst.fence_enabled = False
         with self.assertRaises(task.TaskError) as err:
             self.task_inst.task_pre_check()
-        self.assertEqual("Require stonith enabled", str(err.exception))
+        self.assertEqual("Require fencing enabled", str(err.exception))
         mock_active.assert_called_once_with("pacemaker.service")
         self.task_inst.get_fence_info.assert_called_once_with()
 

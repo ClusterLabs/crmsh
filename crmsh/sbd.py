@@ -184,7 +184,7 @@ class SBDUtils:
 
     @staticmethod
     def diskless_sbd_configured() -> bool:
-        value = utils.get_property("stonith-watchdog-timeout")
+        value = utils.get_property("fencing-watchdog-timeout")
         return value and utils.crm_msec(value) > 0
 
 
@@ -206,9 +206,9 @@ class SBDTimeout(object):
         self.context = context
         self.disk_based = None
         self.sbd_msgwait = None
-        self.stonith_timeout = None
+        self.fencing_timeout = None
         self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT
-        self.stonith_watchdog_timeout = None
+        self.fencing_watchdog_timeout = None
         self.two_node_without_qdevice = False
         self.crashdump_watchdog_timeout = None
         self.sbd_msgwait_expected = None
@@ -297,7 +297,7 @@ class SBDTimeout(object):
             raise ValueError("Cannot get the value of SBD_WATCHDOG_TIMEOUT")
         return int(res)
 
-    def get_stonith_watchdog_timeout_expected(self):
+    def get_fencing_watchdog_timeout_expected(self):
         if self.crashdump_watchdog_timeout:
             return SBDTimeout.get_sbd_watchdog_timeout() + self.crashdump_watchdog_timeout
         else:
@@ -320,7 +320,7 @@ class SBDTimeout(object):
         else:  # disk-less
             self.disk_based = False
             self.sbd_watchdog_timeout = SBDTimeout.get_sbd_watchdog_timeout()
-            self.stonith_watchdog_timeout = self.get_stonith_watchdog_timeout_expected()
+            self.fencing_watchdog_timeout = self.get_fencing_watchdog_timeout_expected()
         self.sbd_delay_start_value_expected = self.get_sbd_delay_start_expected() if utils.detect_virt() else "no"
         self.sbd_delay_start_value_from_config = SBDUtils.get_sbd_value_from_config("SBD_DELAY_START")
         if not self.sbd_delay_start_value_from_config:
@@ -362,29 +362,29 @@ class SBDTimeout(object):
         context.load_profiles()
         return cls(context).sbd_watchdog_timeout
 
-    def get_stonith_timeout_expected(self) -> int:
+    def get_fencing_timeout_expected(self) -> int:
         '''
-        Get stonith-timeout value for sbd cases, formulas are:
+        Get fencing-timeout value for sbd cases, formulas are:
 
         value_from_sbd = 1.2 * msgwait # for disk-based sbd
-        value_from_sbd = 1.2 * max (stonith_watchdog_timeout, 2*SBD_WATCHDOG_TIMEOUT) # for disk-less sbd
+        value_from_sbd = 1.2 * max (fencing_watchdog_timeout, 2*SBD_WATCHDOG_TIMEOUT) # for disk-less sbd
 
-        stonith_timeout = max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + token + consensus
+        fencing_timeout = max(value_from_sbd, constants.FENCING_TIMEOUT_DEFAULT) + token + consensus
         '''
         if self.disk_based:
             value_from_sbd = int(1.2*self.sbd_msgwait)
         else:
-            value_from_sbd = int(1.2*max(self.stonith_watchdog_timeout, 2*self.sbd_watchdog_timeout))
+            value_from_sbd = int(1.2*max(self.fencing_watchdog_timeout, 2*self.sbd_watchdog_timeout))
 
-        value = max(value_from_sbd, constants.STONITH_TIMEOUT_DEFAULT) + corosync.token_and_consensus_timeout()
-        logger.debug("Result of SBDTimeout.get_stonith_timeout_expected %d", value)
+        value = max(value_from_sbd, constants.FENCING_TIMEOUT_DEFAULT) + corosync.token_and_consensus_timeout()
+        logger.debug("Result of SBDTimeout.get_fencing_timeout_expected %d", value)
         return value
 
     @classmethod
-    def get_stonith_timeout(cls) -> int:
+    def get_fencing_timeout(cls) -> int:
         cls_inst = cls()
         cls_inst._load_configurations_from_runtime()
-        return cls_inst.get_stonith_timeout_expected()
+        return cls_inst.get_fencing_timeout_expected()
 
     def get_sbd_delay_start_expected(self) -> int:
         '''
@@ -427,19 +427,26 @@ class SBDTimeout(object):
         return utils.get_systemd_timeout_start_in_sec(out)
 
     @staticmethod
-    def able_to_set_stonith_watchdog_timeout(value: int) -> bool:
+    def able_to_set_fencing_watchdog_timeout(name: str, value: int) -> bool:
         '''
-        Check if able to set stonith-watchdog-timeout property
+        Check if able to set fencing-watchdog-timeout or stonith-watchdog-timeout property
         '''
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
-            logger.error("Can't set stonith-watchdog-timeout because sbd.service is not active")
+            logger.error("Can't set %s because sbd.service is not active", name)
             return False
-        expected_stonith_watchdog_timeout = 2 * SBDTimeout.get_sbd_watchdog_timeout()
+
+        expected_fencing_watchdog_timeout = 2 * SBDTimeout.get_sbd_watchdog_timeout()
         if value == -1:
-            logger.warning("It's recommended to set stonith-watchdog-timeout to a positive value (at least 2*SBD_WATCHDOG_TIMEOUT: %d)", expected_stonith_watchdog_timeout)
+            logger.warning(
+                "It's recommended to set %s to a positive value (at least 2*SBD_WATCHDOG_TIMEOUT: %d)",
+                name, expected_fencing_watchdog_timeout
+            )
             return True
-        elif value < expected_stonith_watchdog_timeout:
-            logger.error("It's required to set stonith-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: %d", expected_stonith_watchdog_timeout)
+        elif value < expected_fencing_watchdog_timeout:
+            logger.error(
+                "It's required to set %s to at least 2*SBD_WATCHDOG_TIMEOUT: %d",
+                name, expected_fencing_watchdog_timeout
+            )
             return False
         return True
 
@@ -482,8 +489,8 @@ class SBDCheckItem(IntEnum):
     FENCE_SBD_AGENT = auto()
     SBD_DELAY_START = auto()
     SBD_SYSTEMD_START_TIMEOUT = auto()
-    STONITH_WATCHDOG_TIMEOUT_PROPERTY = auto()
-    STONITH_TIMEOUT_PROPERTY = auto()
+    FENCING_WATCHDOG_TIMEOUT_PROPERTY = auto()
+    FENCING_TIMEOUT_PROPERTY = auto()
     STONITH_ENABLED_PROPERTY = auto()
     UNSET_SBD_DELAY_START_IN_DROPIN = auto()
     ENABLE_SBD_SERVICE = auto()
@@ -579,17 +586,17 @@ class SBDConfigChecker(SBDTimeout):
             ),
 
             (
-                "stonith-watchdog-timeout property",
-                self._check_stonith_watchdog_timeout,
-                self._fix_stonith_watchdog_timeout,
+                f"{self.current_watchdog_timeout_term} property",
+                self._check_fencing_watchdog_timeout,
+                self._fix_fencing_watchdog_timeout,
                 False,
                 [SBDCheckItem.SBD_WATCHDOG_TIMEOUT]
             ),
 
             (
-                "stonith-timeout property",
-                self._check_stonith_timeout,
-                self._fix_stonith_timeout,
+                f"{self.current_timeout_term} property",
+                self._check_fencing_timeout,
+                self._fix_fencing_timeout,
                 False,
                 [
                     SBDCheckItem.SBD_DISK_METADATA,
@@ -598,9 +605,9 @@ class SBDConfigChecker(SBDTimeout):
             ),
 
             (
-                "stonith-enabled property",
-                self._check_stonith_enabled,
-                self._fix_stonith_enabled,
+                f"{self.current_enabled_term} property",
+                self._check_fencing_enabled,
+                self._fix_fencing_enabled,
                 False,
                 []
             ),
@@ -621,6 +628,12 @@ class SBDConfigChecker(SBDTimeout):
                 []
             ),
         ]
+
+
+    def _get_current_terms(self):
+        self.current_watchdog_timeout_term = utils.DeprecatedTermTranslator.get_working_term("fencing-watchdog-timeout")
+        self.current_timeout_term = utils.DeprecatedTermTranslator.get_working_term("fencing-timeout")
+        self.current_enabled_term = utils.DeprecatedTermTranslator.get_working_term("fencing-enabled")
 
     def check_and_fix(self) -> CheckResult:
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
@@ -643,6 +656,7 @@ class SBDConfigChecker(SBDTimeout):
             raise FixAborted("All other checks aborted due to inconsistent configurations")
 
         self._load_configurations_from_runtime()
+        self._get_current_terms()
 
         check_and_fix_items = self._check_and_fix_items()
         check_res_list = [CheckResult.SUCCESS for _ in range(len(check_and_fix_items))]
@@ -666,6 +680,8 @@ class SBDConfigChecker(SBDTimeout):
                     check_res_list[index] = check_res
                 else:
                     raise FixFailure(f"Failed to fix {name} issue")
+
+        SBDConfigChecker._check_deprecated_property()
 
         return SBDConfigChecker._return_helper(check_res_list)
 
@@ -821,13 +837,14 @@ class SBDConfigChecker(SBDTimeout):
         bootstrap.sync_path(SBDManager.SBD_SYSTEMD_DELAY_START_DIR)
         utils.cluster_run_cmd("systemctl daemon-reload")
 
-    def _check_stonith_watchdog_timeout(self) -> CheckResult:
-        value = utils.get_property("stonith-watchdog-timeout")
+    def _check_fencing_watchdog_timeout(self) -> CheckResult:
+        current_term = self.current_watchdog_timeout_term
+        value = utils.get_property(current_term)
         if value and int(value) == -1:
             self._log_when_not_quiet(
                 logging.WARNING,
-                "It's recommended that stonith-watchdog-timeout is set to %d, now is -1",
-                self.stonith_watchdog_timeout
+                "It's recommended that %s is set to %d, now is -1",
+                current_term, self.fencing_watchdog_timeout
             )
             return CheckResult.WARNING
         value = int(utils.crm_msec(value)/1000)
@@ -835,80 +852,90 @@ class SBDConfigChecker(SBDTimeout):
             if value > 0:
                 self._log_when_not_quiet(
                     logging.WARNING,
-                    "It's recommended that stonith-watchdog-timeout is not set when using disk-based SBD"
+                    "It's recommended that %s is not set when using disk-based SBD",
+                    current_term
                 )
                 return CheckResult.WARNING
         else:
             if value == 0:
                 self._log_when_not_quiet(
                     logging.ERROR,
-                    "It's required that stonith-watchdog-timeout is set to %d, now is not set",
-                    self.stonith_watchdog_timeout
+                    "It's required that %s is set to %d, now is not set",
+                    current_term, self.fencing_watchdog_timeout
                 )
                 return CheckResult.ERROR
-            if value < self.stonith_watchdog_timeout:
+            if value < self.fencing_watchdog_timeout:
                 self._log_when_not_quiet(
                     logging.ERROR,
-                    "It's required that stonith-watchdog-timeout is set to %d, now is %d",
-                    self.stonith_watchdog_timeout, value
+                    "It's required that %s is set to %d, now is %d",
+                    current_term, self.fencing_watchdog_timeout, value
                 )
                 return CheckResult.ERROR
-            elif value > self.stonith_watchdog_timeout:
+            elif value > self.fencing_watchdog_timeout:
                 self._log_when_not_quiet(
                     logging.WARNING,
-                    "It's recommended that stonith-watchdog-timeout is set to %d, now is %d",
-                    self.stonith_watchdog_timeout, value
+                    "It's recommended that %s is set to %d, now is %d",
+                    current_term, self.fencing_watchdog_timeout, value
                 )
                 return CheckResult.WARNING
         return CheckResult.SUCCESS
 
-    def _fix_stonith_watchdog_timeout(self):
+    def _fix_fencing_watchdog_timeout(self):
+        current_term = self.current_watchdog_timeout_term
         if self.disk_based:
-            logger.info("Removing stonith-watchdog-timeout property")
-            utils.delete_property("stonith-watchdog-timeout")
+            logger.info("Removing %s property", current_term)
+            utils.delete_property(current_term)
         else:
-            logger.info("Adjusting stonith-watchdog-timeout to %d", self.stonith_watchdog_timeout)
-            utils.set_property("stonith-watchdog-timeout", self.stonith_watchdog_timeout)
+            logger.info(
+                "Adjusting %s to %d",
+                current_term, self.fencing_watchdog_timeout
+            )
+            utils.set_property(current_term, self.fencing_watchdog_timeout)
 
-    def _check_stonith_timeout(self) -> CheckResult:
-        expected_value = self.get_stonith_timeout_expected()
-        value = utils.get_property("stonith-timeout")
+    def _check_fencing_timeout(self) -> CheckResult:
+        expected_value = self.get_fencing_timeout_expected()
+        current_term = self.current_timeout_term
+        value = utils.get_property(current_term)
         # will get default value from pacemaker metadata if not set
         value = int(utils.crm_msec(value)/1000)
         if value < expected_value:
             self._log_when_not_quiet(
                 logging.ERROR,
-                "It's required that stonith-timeout is set to %d, now is %d",
-                expected_value, value
+                "It's required that %s is set to %d, now is %d",
+                current_term, expected_value, value
             )
             return CheckResult.ERROR
         elif value > expected_value:
             self._log_when_not_quiet(
                 logging.WARNING,
-                "It's recommended that stonith-timeout is set to %d, now is %d",
-                expected_value, value
+                "It's recommended that %s is set to %d, now is %d",
+                current_term, expected_value, value
             )
             return CheckResult.WARNING
         return CheckResult.SUCCESS
 
-    def _fix_stonith_timeout(self):
-        expected_value = self.get_stonith_timeout_expected()
-        logger.info("Adjusting stonith-timeout to %d", expected_value)
-        utils.set_property("stonith-timeout", expected_value)
+    def _fix_fencing_timeout(self):
+        expected_value = self.get_fencing_timeout_expected()
+        current_term = self.current_timeout_term
+        logger.info("Adjusting %s to %d", current_term, expected_value)
+        utils.set_property(current_term, expected_value)
 
-    def _check_stonith_enabled(self) -> CheckResult:
-        value = utils.get_property("stonith-enabled", get_default=False)
-        if utils.is_boolean_false(value):
+    def _check_fencing_enabled(self) -> CheckResult:
+        current_term = self.current_enabled_term
+        value = utils.get_property(current_term, get_default=False)
+        if value == "false": # have to check if the value is explicitly set to false
             self._log_when_not_quiet(
                 logging.ERROR,
-                "It's required that stonith-enabled is set to true, now is false"
+                "It's required that %s is set to true, now is false",
+                current_term
             )
             return CheckResult.ERROR
         return CheckResult.SUCCESS
 
-    def _fix_stonith_enabled(self):
-        logger.info("Setting stonith-enabled to true")
-        utils.set_property("stonith-enabled", "true")
+    def _fix_fencing_enabled(self):
+        current_term = self.current_enabled_term
+        logger.info("Setting %s to true", current_term)
+        utils.set_property(current_term, "true")
 
     def _check_sbd_delay_start_unset_dropin(self) -> CheckResult:
         if not SBDTimeout.is_sbd_delay_start():
@@ -1008,6 +1035,14 @@ class SBDConfigChecker(SBDTimeout):
                 shell.get_stdout_or_raise_error(cmd)
         time.sleep(2)
 
+    @staticmethod
+    def _check_deprecated_property() -> None:
+        for prop in (
+            "stonith-watchdog-timeout",
+            "stonith-timeout",
+            "stonith-enabled"
+        ):
+            utils.DeprecatedTermTranslator(prop).check()
 
 class SBDManager:
     SYSCONFIG_SBD = "/etc/sysconfig/sbd"
@@ -1024,13 +1059,13 @@ class SBDManager:
   are a good choice.  Note that all data on the partition you
   specify here will be destroyed.
 '''
-    NO_SBD_WARNING = "Not configuring SBD - STONITH will be disabled."
+    NO_SBD_WARNING = "Not configuring SBD - fence will be disabled."
     DISKLESS_SBD_MIN_EXPECTED_VOTE = 3
     DISKLESS_SBD_WARNING = "Diskless SBD requires cluster with three or more nodes. If you want to use diskless SBD for 2-node cluster, should be combined with QDevice."
     SBD_NOT_INSTALLED_MSG = "Package sbd is not installed"
     FENCE_SBD_NOT_INSTALLED_MSG = "Package fence-agents-sbd is not installed"
     SBD_RA = "stonith:fence_sbd"
-    SBD_RA_ID = "stonith-sbd"
+    SBD_RA_ID = "fencing-sbd"
     SBD_DEVICE_MAX = 3
 
     class NotConfigSBD(Exception):
@@ -1241,7 +1276,7 @@ class SBDManager:
         2. Write config file /etc/sysconfig/sbd
         3. Enable sbd.service
         4. Restart cluster service if possible
-        5. Configure stonith-sbd resource and related properties
+        5. Configure fencing-sbd resource and related properties
         '''
         if self.bootstrap_context:
             try:
@@ -1265,7 +1300,7 @@ class SBDManager:
                 #     crm cluster init sbd -S -y
                 # the cluster must be restarted first to activate sbd.service on all nodes.
                 # Only then should additional properties be configured,
-                # because the stonith-watchdog-timeout property requires sbd.service to be active.
+                # because the fencing-watchdog-timeout property requires sbd.service to be active.
                 restart_cluster_first = restart_first or \
                         not self.diskless_sbd or \
                         not ServiceManager().service_is_active(constants.SBD_SERVICE)
@@ -1361,6 +1396,6 @@ def purge_sbd_from_cluster():
 
     out = sh.cluster_shell().get_stdout_or_raise_error("stonith_admin -L")
     res = re.search("([0-9]+) fence device[s]* found", out)
-    # after disable sbd.service, check if sbd is the last stonith device
+    # after disable sbd.service, check if sbd is the last fence device
     if res and int(res.group(1)) <= 1:
-        utils.cleanup_stonith_related_properties()
+        utils.cleanup_fencing_related_properties()

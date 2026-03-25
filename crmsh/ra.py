@@ -112,7 +112,7 @@ def ra_meta(ra_class, ra_type, ra_provider):
 
 
 @functools.cache
-def get_stonithd_meta():
+def get_fenced_meta():
     return RAInfo(utils.pacemaker_fenced(), "metadata")
 
 
@@ -136,6 +136,14 @@ def get_property_options(property_name):
 def get_properties_list():
     try:
         return list(get_properties_meta().params().keys())
+    except:
+        return []
+
+
+@functools.cache
+def get_properties_without_deprecated():
+    try:
+        return get_properties_meta().get_param_list_without_deprecated()
     except:
         return []
 
@@ -264,9 +272,53 @@ class RAInfo(object):
             self.error("meta-data contains no resource-agent element")
             return None
         if self.ra_class == "stonith":
-            self.add_ra_params(get_stonithd_meta())
+            self.add_ra_params(get_fenced_meta())
         self.broken_ra = False
         return self.ra_elem
+
+    def _parse_deprecated_from_param(self, param: etree.Element):
+        """
+        For stonith class agent, 'deprecated' is an attribute of parameter
+        For other classes, 'deprecated' is a child element of parameter
+
+        Return a tuple of (deprecated, replaced_with), where:
+          - deprecated is "1" if the parameter is deprecated, "0" otherwise
+          - replaced_with is the name of the parameter that replaces the deprecated one,
+            or None if there is no such parameter
+        """
+        replaced_with = None
+        if self.ra_class == "stonith":
+            deprecated = param.get("deprecated", "0")
+            return deprecated, replaced_with
+
+        deprecated_elem = param.find("deprecated")
+        if deprecated_elem is None:
+            return "0", replaced_with
+
+        deprecated = "1"
+        replaced_with_elem = deprecated_elem.find("replaced-with")
+        if replaced_with_elem is not None:
+            replaced_with = replaced_with_elem.get("name")
+        return deprecated, replaced_with
+
+    def get_deprecated_params_dict(self):
+        params = self.params()
+        if not params:
+            return {}
+        return {
+            name: params[name]["replaced_with"]
+            for name in params
+            if params[name]["deprecated"] == "1"
+        }
+
+    def get_param_list_without_deprecated(self):
+        params = self.params()
+        if not params:
+            return []
+        return [
+            name for name in params
+            if params[name]["deprecated"] != "1"
+        ]
 
     def params(self):
         '''
@@ -289,7 +341,7 @@ class RAInfo(object):
             if not name or name in self.excluded_from_completion:
                 continue
 
-            deprecated = param.get("deprecated", "0")
+            deprecated, replaced_with = self._parse_deprecated_from_param(param)
             required = param.get("required", "0") if deprecated != "1" else "0"
             obsoletes = param.get("obsoletes")
             advanced = param.get("advanced", "0")
@@ -300,6 +352,7 @@ class RAInfo(object):
             params_dict[name] = {
                 "required": required,
                 "deprecated": deprecated,
+                "replaced_with": replaced_with,
                 "obsoletes": obsoletes,
                 "advanced": advanced,
                 "generated": generated,

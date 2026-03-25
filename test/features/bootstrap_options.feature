@@ -27,7 +27,7 @@ Feature: crmsh bootstrap process - options
     When    Run "crm cluster geo_init_arbitrator -h" on "hanode1"
     Then    Output is the same with expected "crm cluster geo-init-arbitrator" help output
     When    Try "crm cluster init -i eth1 -i eth1 -y"
-    Then    Except multiple lines
+    Then    Expected multiple lines in stderr
       """
       usage: init [options] [STAGE]
       crm: error: Duplicated input for '-i/--interface' option

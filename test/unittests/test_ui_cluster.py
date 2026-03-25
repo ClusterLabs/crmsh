@@ -98,6 +98,7 @@ class TestCluster(unittest.TestCase):
         mock_node_ready_to_stop_cluster_service.assert_has_calls([mock.call("node1"), mock.call("node2")])
         mock_dc.assert_not_called()
 
+    @mock.patch('crmsh.utils.is_cluster_in_maintenance_mode')
     @mock.patch('logging.Logger.debug')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.ui_cluster.ServiceManager')
@@ -106,13 +107,14 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
     @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
     def test_do_stop(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc,
-                     mock_set_dlm, mock_service_manager, mock_info, mock_debug):
+                     mock_set_dlm, mock_service_manager, mock_info, mock_debug, mock_is_in_maintenance_mode):
         mock_parse_nodes.return_value = ["node1", "node2"]
         mock_node_ready_to_stop_cluster_service.side_effect = [True, False]
         mock_service_manager_inst = mock.Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.stop_service.side_effect = [["node1"], ["node1"], ["node1"]]
         mock_service_manager_inst.service_is_active.return_value = True
+        mock_is_in_maintenance_mode.return_value = False
 
         context_inst = mock.Mock()
         self.ui_cluster_inst.do_stop(context_inst, "node1", "node2")

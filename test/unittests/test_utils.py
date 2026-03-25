@@ -946,13 +946,13 @@ def test_has_disk_mounted(mock_run):
 
 @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-def test_has_stonith_running(mock_run, mock_diskless):
+def test_has_fence_device_registered(mock_run, mock_diskless):
     mock_run.return_value = """
-stonith-sbd
+fencing-sbd
 1 fence device found
     """
     mock_diskless.return_value = True
-    res = utils.has_stonith_running()
+    res = utils.has_fence_device_registered()
     assert res is True
     mock_run.assert_called_once_with("stonith_admin -L")
     mock_diskless.assert_called_once_with()
@@ -1128,9 +1128,13 @@ def test_list_cluster_nodes(mock_run, mock_env, mock_isfile, mock_file2elem, moc
     mock_get_cluster_nodes.assert_called_once_with(mock_cib_inst)
 
 
+@mock.patch('crmsh.utils.DeprecatedTermTranslator')
 @mock.patch('os.getenv')
 @mock.patch('crmsh.sh.cluster_shell')
-def test_get_property(mock_run, mock_env):
+def test_get_property(mock_run, mock_env, mock_translator):
+    mock_inst = mock.Mock()
+    mock_translator.return_value = mock_inst
+    mock_inst.translate = mock.Mock(return_value="no-quorum-policy")
     mock_run_inst = mock.Mock()
     mock_run.return_value = mock_run_inst
     mock_run_inst.get_rc_stdout_stderr_without_input.return_value = (0, "data", "")
@@ -1139,26 +1143,39 @@ def test_get_property(mock_run, mock_env):
     mock_run_inst.get_rc_stdout_stderr_without_input.assert_called_once_with(None, "CIB_file=cib.xml sudo --preserve-env=CIB_file crm configure get_property no-quorum-policy")
 
 
+@mock.patch('crmsh.utils.delete_property')
+@mock.patch('crmsh.utils.DeprecatedTermTranslator')
 @mock.patch('logging.Logger.warning')
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.utils.get_property')
-def test_set_property(mock_get, mock_run, mock_warn):
+def test_set_property(mock_get, mock_run, mock_warn, mock_translator, mock_delete):
+    mock_inst = mock.Mock()
+    mock_translator.return_value = mock_inst
+    mock_inst.both_configured = mock.Mock(return_value=True)
     mock_get.return_value = "start"
     utils.set_property("no-quorum-policy", "stop")
     mock_run.assert_called_once_with("crm configure property no-quorum-policy=stop")
     mock_warn.assert_called_once_with('"%s" in %s is set to %s, it was %s', 'no-quorum-policy', 'crm_config', 'stop', 'start')
 
 
+@mock.patch('crmsh.utils.DeprecatedTermTranslator')
 @mock.patch('crmsh.utils.get_property')
-def test_set_property_the_same(mock_get):
+def test_set_property_the_same(mock_get, mock_translator):
+    mock_inst = mock.Mock()
+    mock_translator.return_value = mock_inst
+    mock_translator.using_new_term = False
     mock_get.return_value = "value1"
     utils.set_property("no-quorum-policy", "value1")
     mock_get.assert_called_once_with("no-quorum-policy", "crm_config")
 
 
+@mock.patch('crmsh.utils.DeprecatedTermTranslator')
 @mock.patch('crmsh.utils.crm_msec')
 @mock.patch('crmsh.utils.get_property')
-def test_set_property_conditional(mock_get, mock_msec):
+def test_set_property_conditional(mock_get, mock_msec, mock_translator):
+    mock_inst = mock.Mock()
+    mock_translator.return_value = mock_inst
+    mock_translator.using_new_term = False
     mock_get.return_value = "10s"
     mock_msec.side_effect = ["1000", "1000"]
     utils.set_property("timeout", "10", conditional=True)
@@ -1356,7 +1373,9 @@ def test_check_user_access_cluster(mock_user, mock_in, mock_sudo, mock_error):
 
 @mock.patch('logging.Logger.warning')
 @mock.patch('crmsh.utils.is_dc_idle')
-def test_leverage_maintenance_mode_skip(mock_idle, mock_warn):
+@mock.patch('crmsh.utils.is_cluster_in_maintenance_mode')
+def test_leverage_maintenance_mode_skip(mock_cluster_maintenance, mock_idle, mock_warn):
+    mock_cluster_maintenance.return_value = False
     options.force = True
     mock_idle.return_value = False
     with utils.leverage_maintenance_mode() as result:
@@ -1368,7 +1387,9 @@ def test_leverage_maintenance_mode_skip(mock_idle, mock_warn):
 @mock.patch('crmsh.utils.set_property')
 @mock.patch('logging.Logger.info')
 @mock.patch('crmsh.utils.is_dc_idle')
-def test_leverage_maintenance_mode(mock_idle, mock_info, mock_set, mock_delete):
+@mock.patch('crmsh.utils.is_cluster_in_maintenance_mode')
+def test_leverage_maintenance_mode(mock_cluster_maintenance, mock_idle, mock_info, mock_set, mock_delete):
+    mock_cluster_maintenance.return_value = False
     options.force = True
     mock_idle.return_value = True
     with utils.leverage_maintenance_mode() as result:

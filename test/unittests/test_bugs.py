@@ -172,8 +172,8 @@ def test_comments():
 
 def test_eq1():
     xml1 = """<cluster_property_set id="cib-bootstrap-options">
-    <nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"></nvpair>
-    <nvpair id="cib-bootstrap-options-stonith-timeout" name="stonith-timeout" value="180"></nvpair>
+    <nvpair id="cib-bootstrap-options-fencing-enabled" name="fencing-enabled" value="true"></nvpair>
+    <nvpair id="cib-bootstrap-options-fencing-timeout" name="fencing-timeout" value="180"></nvpair>
     <nvpair id="cib-bootstrap-options-symmetric-cluster" name="symmetric-cluster" value="false"></nvpair>
     <nvpair id="cib-bootstrap-options-no-quorum-policy" name="no-quorum-policy" value="freeze"></nvpair>
     <nvpair id="cib-bootstrap-options-batch-limit" name="batch-limit" value="20"></nvpair>
@@ -184,8 +184,8 @@ def test_eq1():
   </cluster_property_set>
   """
     xml2 = """<cluster_property_set id="cib-bootstrap-options">
-    <nvpair id="cib-bootstrap-options-stonith-enabled" name="stonith-enabled" value="true"></nvpair>
-    <nvpair id="cib-bootstrap-options-stonith-timeout" name="stonith-timeout" value="180"></nvpair>
+    <nvpair id="cib-bootstrap-options-fencing-enabled" name="fencing-enabled" value="true"></nvpair>
+    <nvpair id="cib-bootstrap-options-fencing-timeout" name="fencing-timeout" value="180"></nvpair>
     <nvpair id="cib-bootstrap-options-symmetric-cluster" name="symmetric-cluster" value="false"></nvpair>
     <nvpair id="cib-bootstrap-options-no-quorum-policy" name="no-quorum-policy" value="freeze"></nvpair>
     <nvpair id="cib-bootstrap-options-batch-limit" name="batch-limit" value="20"></nvpair>
@@ -285,25 +285,25 @@ def test_copy_nvpairs():
 
     to = etree.fromstring('''
     <node>
-    <nvpair name="stonith-enabled" value="true"/>
+    <nvpair name="fencing-enabled" value="true"/>
     </node>
     ''')
     copy_nvpairs(to, etree.fromstring('''
     <node>
-    <nvpair name="stonith-enabled" value="false"/>
+    <nvpair name="fencing-enabled" value="false"/>
     </node>
     '''))
 
-    assert ['stonith-enabled'] == to.xpath('./nvpair/@name')
+    assert ['fencing-enabled'] == to.xpath('./nvpair/@name')
     assert ['false'] == to.xpath('./nvpair/@value')
 
     copy_nvpairs(to, etree.fromstring('''
     <node>
-    <nvpair name="stonith-enabled" value="true"/>
+    <nvpair name="fencing-enabled" value="true"/>
     </node>
     '''))
 
-    assert ['stonith-enabled'] == to.xpath('./nvpair/@name')
+    assert ['fencing-enabled'] == to.xpath('./nvpair/@name')
     assert ['true'] == to.xpath('./nvpair/@value')
 
 
@@ -745,7 +745,7 @@ property cib-bootstrap-options: \
 	dc-version="1.1.13+git20150917.20c2178-224.2-1.1.13+git20150917.20c2178" \
 	cluster-infrastructure=corosync \
 	cluster-name=hacluster \
-	stonith-enabled=true \
+	fencing-enabled=true \
 	no-quorum-policy=ignore
 rsc_defaults rsc-options: \
 	resource-stickiness=1 \
@@ -773,9 +773,9 @@ def test_bug_110():
     """
     configuring attribute-based fencing-topology
     """
-    factory.create_object(*"primitive stonith-libvirt stonith:fence_sbd".split())
+    factory.create_object(*"primitive fencing-libvirt stonith:fence_sbd".split())
     factory.create_object(*"primitive fence-nova stonith:fence_sbd".split())
-    cmd = "fencing_topology attr:OpenStack-role=compute stonith-libvirt,fence-nova".split()
+    cmd = "fencing_topology attr:OpenStack-role=compute fencing-libvirt,fence-nova".split()
     ok = factory.create_object(*cmd)
     assert ok
     obj = cibconfig.mkset_obj()
