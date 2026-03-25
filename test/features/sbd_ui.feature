@@ -121,6 +121,8 @@ Feature: crm sbd ui test cases
     Then    Run "crm sbd configure show property |grep stonith-watchdog-timeout=75" OK
     When    Run "crm sbd configure crashdump-watchdog-timeout=60" on "hanode1"
     Then    Expected "No change in SBD configuration" in stdout
+    When    Run "crm sbd configure crashdump-watchdog-timeout=10" on "hanode1"
+    Then    Run "crm sbd configure show property |grep stonith-watchdog-timeout=30" OK
     # Purge crashdump
     When    Run "crm sbd purge crashdump" on "hanode1"
     When    Try "crm sbd configure show sysconfig |grep SBD_TIMEOUT_ACTION=flush,crashdump"
