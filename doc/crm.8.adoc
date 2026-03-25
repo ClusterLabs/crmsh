@@ -354,7 +354,7 @@ settings based on the calculations with a set of formulas.
     fencing-watchdog-timeout = 2 * SBD_WATCHDOG_TIMEOUT
 
     # When setting crashdump watchdog timeout
-    fencing-watchdog-timeout = SBD_WATCHDOG_TIMEOUT + crashdump_watchdog_timeout
+    fencing-watchdog-timeout = max(SBD_WATCHDOG_TIMEOUT + crashdump_watchdog_timeout, 2 * SBD_WATCHDOG_TIMEOUT)
 ...............
 `fencing-timeout`:
 ...............
