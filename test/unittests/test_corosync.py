@@ -346,7 +346,7 @@ class TestCorosyncParser(unittest.TestCase):
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("crmsh.utils.read_from_file")
-    def test_find_configured_ip_no_exception(self, mock_read_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
+    def test_assert_ip_not_configured_no_exception(self, mock_read_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
         mock_conf.return_value = "/etc/corosync/corosync.conf"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
@@ -357,7 +357,7 @@ class TestCorosyncParser(unittest.TestCase):
         mock_isv6.return_value = False
         mock_ip_local.return_value = ["192.168.1.1", "10.10.10.2", "20.20.20.2"]
 
-        corosync.find_configured_ip(["10.10.10.2"])
+        corosync.assert_ip_not_configured(["10.10.10.2"])
 
         mock_conf.assert_called_once_with()
         mock_parser.assert_called_once_with("data")
@@ -373,7 +373,7 @@ class TestCorosyncParser(unittest.TestCase):
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.corosync.conf")
     @mock.patch("crmsh.utils.read_from_file")
-    def test_find_configured_ip_exception(self, mock_read_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
+    def test_assert_ip_not_configured_exception(self, mock_read_file, mock_conf, mock_parser, mock_search, mock_isv6, mock_ip_local):
         mock_conf.return_value = "/etc/corosync/corosync.conf"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
@@ -385,7 +385,7 @@ class TestCorosyncParser(unittest.TestCase):
         mock_ip_local.return_value = ["192.168.1.1", "10.10.10.2", "20.20.20.2"]
 
         with self.assertRaises(corosync.IPAlreadyConfiguredError) as err:
-            corosync.find_configured_ip(["10.10.10.2"])
+            corosync.assert_ip_not_configured(["10.10.10.2"])
         self.assertEqual("IP 10.10.10.2 was already configured", str(err.exception))
 
         mock_conf.assert_called_once_with()
@@ -402,16 +402,18 @@ class TestCorosyncParser(unittest.TestCase):
     @mock.patch("crmsh.corosync.get_values")
     @mock.patch("crmsh.corosync.make_value")
     @mock.patch("crmsh.corosync.get_free_nodeid")
+    @mock.patch("crmsh.corosync.get_nodeid_by_ip_from_cmap")
     @mock.patch("crmsh.corosync.Parser")
     @mock.patch("crmsh.utils.read_from_file")
     @mock.patch("crmsh.corosync.conf")
-    @mock.patch("crmsh.corosync.find_configured_ip")
-    def test_add_node_ucast(self, mock_find_ip, mock_conf, mock_read_file, mock_parser,
-            mock_free_id, mock_make_value, mock_get_values, mock_make_section, mock_str2file):
+    @mock.patch("crmsh.corosync.assert_ip_not_configured")
+    def test_add_node_ucast(self, mock_assert_ip, mock_conf, mock_read_file, mock_parser,
+            mock_get_node_id_by_ip, mock_free_id, mock_make_value, mock_get_values, mock_make_section, mock_str2file):
         mock_parser_inst = mock.Mock()
         mock_conf.side_effect = ["corosync.conf", "corosync.conf"]
         mock_read_file.return_value = "data"
         mock_parser.return_value = mock_parser_inst
+        mock_get_node_id_by_ip.return_value = None
         mock_free_id.return_value = 2
         mock_make_value.side_effect = [["value1"], ["value2"]]
         mock_get_values.return_value = []
@@ -422,9 +424,10 @@ class TestCorosyncParser(unittest.TestCase):
 
         corosync.add_node_ucast(['10.10.10.1'])
 
-        mock_find_ip.assert_called_once_with(['10.10.10.1'])
+        mock_assert_ip.assert_called_once_with(['10.10.10.1'])
         mock_parser.assert_called_once_with("data")
-        mock_free_id.assert_called_once_with(mock_parser_inst)
+        mock_get_node_id_by_ip.assert_called_once_with(['10.10.10.1'], remote=None)
+        mock_free_id.assert_called_once_with(mock_parser_inst, remote=None)
         mock_make_value.assert_has_calls([
             mock.call('nodelist.node.ring0_addr', '10.10.10.1'),
             mock.call('nodelist.node.nodeid', '2')
@@ -477,7 +480,16 @@ class TestCorosyncParser(unittest.TestCase):
         _valid(p)
         self.assertEqual(p.count('service.ver'), 1)
 
-    def test_get_free_nodeid(self):
+    @mock.patch('crmsh.utils.get_nodeinfo_from_cmaptool')
+    def test_get_nodeid_by_ip_from_cmap(self, mock_cmap):
+        mock_cmap.return_value = {'1': ['192.0.2.1'], '2': ['192.0.2.2']}
+        self.assertEqual(1, corosync.get_nodeid_by_ip_from_cmap(['192.0.2.1']))
+        self.assertEqual(2, corosync.get_nodeid_by_ip_from_cmap(['192.0.2.2']))
+        self.assertEqual(None, corosync.get_nodeid_by_ip_from_cmap(['192.0.2.3']))
+
+    @mock.patch('crmsh.utils.get_nodeinfo_from_cmaptool')
+    def test_get_free_nodeid(self, mock_cmap):
+        mock_cmap.return_value = {}
         def ids(*lst):
             class Ids(object):
                 def get_all(self, _arg):
@@ -486,6 +498,11 @@ class TestCorosyncParser(unittest.TestCase):
         self.assertEqual(1, corosync.get_free_nodeid(ids('2', '5')))
         self.assertEqual(3, corosync.get_free_nodeid(ids('1', '2', '5')))
         self.assertEqual(4, corosync.get_free_nodeid(ids('1', '2', '3')))
+
+        mock_cmap.return_value = {'2': ['192.0.2.2'], '3': ['192.0.2.3']}
+        self.assertEqual(4, corosync.get_free_nodeid(ids('1')))
+        self.assertEqual(1, corosync.get_free_nodeid(ids()))
+        self.assertEqual(5, corosync.get_free_nodeid(ids('1', '4')))
 
 
 if __name__ == '__main__':

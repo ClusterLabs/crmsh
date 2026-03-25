@@ -2091,7 +2091,7 @@ def join_cluster(seed_host, remote_user):
                 break
         invoke("rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*")
         try:
-            corosync.add_node_ucast(ringXaddr_res)
+            corosync.add_node_ucast(ringXaddr_res, remote=seed_host)
         except corosync.IPAlreadyConfiguredError as e:
             logger.warning(e)
         sync_file(corosync.conf())

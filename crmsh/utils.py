@@ -2413,9 +2413,13 @@ def is_qdevice_tls_on():
     return corosync.get_value("quorum.device.net.tls") == "on"
 
 
-def get_nodeinfo_from_cmaptool():
+def get_nodeinfo_from_cmaptool(remote=None):
     nodeid_ip_dict = {}
-    rc, out = get_stdout("corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+    cmd = "corosync-cmapctl -b runtime.totem.pg.mrp.srp.members"
+    if remote:
+        rc, out, _ = get_stdout_stderr_auto_ssh_no_input(remote, cmd)
+    else:
+        rc, out = get_stdout(cmd)
     if rc != 0:
         return nodeid_ip_dict
 

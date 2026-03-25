@@ -123,6 +123,7 @@ def query_qnetd_status():
 
 
 def add_nodelist_from_cmaptool():
+    # Retrieving nodelist from cmap is unreliable (bsc#1259683). DO NOT USE THIS WITH UNICAST.
     for nodeid, iplist in utils.get_nodeinfo_from_cmaptool().items():
         try:
             add_node_ucast(iplist, nodeid)
@@ -427,16 +428,34 @@ def diff_configuration(nodes, checksum=False):
         utils.remote_diff(local_path, nodes)
 
 
-def get_free_nodeid(parser):
-    ids = parser.get_all('nodelist.node.nodeid')
+def get_free_nodeid(parser, remote=None):
+    ids = {int(i) for i in parser.get_all('nodelist.node.nodeid')}
+    cmap_nodes = utils.get_nodeinfo_from_cmaptool(remote=remote)
+    for node_id in cmap_nodes.keys():
+        if node_id.isdigit():
+            ids.add(int(node_id))
+
     if not ids:
         return 1
-    ids = [int(i) for i in ids]
+
     max_id = max(ids) + 1
     for i in range(1, max_id):
         if i not in ids:
             return i
     return max_id
+
+
+def get_nodeid_by_ip_from_cmap(ip_list, remote=None):
+    """
+    Check if any IP in ip_list is already in cmap runtime info,
+    if yes, return the nodeid.
+    """
+    ip_set = set(ip_list)
+    cmap_nodes = utils.get_nodeinfo_from_cmaptool(remote=remote)
+    for nid, ips in cmap_nodes.items():
+        if any(ip in ip_set for ip in ips):
+            return int(nid)
+    return None
 
 
 def get_ip(node):
@@ -471,7 +490,7 @@ class IPAlreadyConfiguredError(Exception):
     pass
 
 
-def find_configured_ip(ip_list):
+def assert_ip_not_configured(ip_list):
     """
     find if the same IP already configured
     If so, raise IPAlreadyConfiguredError
@@ -500,13 +519,15 @@ def find_configured_ip(ip_list):
         raise IPAlreadyConfiguredError("IP {} was already configured".format(','.join(configured_ip)))
 
 
-def add_node_ucast(ip_list, node_id=None):
+def add_node_ucast(ip_list, node_id=None, remote=None):
 
-    find_configured_ip(ip_list)
+    assert_ip_not_configured(ip_list)
 
     p = Parser(utils.read_from_file(conf()))
     if node_id is None:
-        node_id = get_free_nodeid(p)
+        node_id = get_nodeid_by_ip_from_cmap(ip_list, remote=remote)
+    if node_id is None:
+        node_id = get_free_nodeid(p, remote=remote)
     node_value = []
     for i, addr in enumerate(ip_list):
         node_value += make_value('nodelist.node.ring{}_addr'.format(i), addr)
@@ -524,7 +545,7 @@ def add_node_ucast(ip_list, node_id=None):
     utils.str2file(p.to_string(), conf())
 
 
-def add_node(addr, name=None):
+def add_node(addr, name=None, remote=None):
     '''
     Add node to corosync.conf
     '''
@@ -554,7 +575,9 @@ def add_node(addr, name=None):
     p = Parser(utils.read_from_file(conf()))
 
     node_addr = addr
-    node_id = get_free_nodeid(p)
+    node_id = get_nodeid_by_ip_from_cmap([ipaddr], remote=remote) if ipaddr else None
+    if node_id is None:
+        node_id = get_free_nodeid(p)
     node_name = name
     node_value = (make_value('nodelist.node.ring0_addr', node_addr) +
                   make_value('nodelist.node.nodeid', str(node_id)))

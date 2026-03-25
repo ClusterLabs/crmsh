@@ -460,6 +460,15 @@ def test_get_nodeinfo_from_cmaptool(mock_get_stdout, mock_search, mock_findall):
         mock.call(r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', 'runtime.totem.pg.mrp.srp.members.2.ip (str) = r(0) ip(192.168.43.128)')
     ])
 
+
+@mock.patch("crmsh.utils.get_stdout_stderr_auto_ssh_no_input")
+def test_get_nodeinfo_from_cmaptool_remote(mock_get_stdout):
+    mock_get_stdout.return_value = (0, 'runtime.totem.pg.mrp.srp.members.1.ip (str) = r(0) ip(192.0.2.1)', None)
+
+    result = utils.get_nodeinfo_from_cmaptool(remote="node1")
+    assert result['1'] == ["192.0.2.1"]
+    mock_get_stdout.assert_called_once_with("node1", "corosync-cmapctl -b runtime.totem.pg.mrp.srp.members")
+
 @mock.patch("crmsh.utils.get_nodeinfo_from_cmaptool")
 @mock.patch("crmsh.utils.service_is_active")
 def test_valid_nodeid_false_service_not_active(mock_is_active, mock_nodeinfo):
