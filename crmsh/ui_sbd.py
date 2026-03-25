@@ -459,7 +459,6 @@ class SBD(command.UI):
         Configure diskless SBD based on input parameters and runtime config
         '''
         update_dict = {}
-        timeout_dict = {}
 
         watchdog_timeout = parameter_dict.get("watchdog")
         if watchdog_timeout and watchdog_timeout != self.watchdog_timeout_from_config:
@@ -473,23 +472,21 @@ class SBD(command.UI):
             self._check_kdump_service()
             result_dict = self._set_crashdump_in_sysconfig(crashdump_watchdog_timeout, diskless=True)
             update_dict = {**update_dict, **result_dict}
-            sbd_watchdog_timeout = watchdog_timeout or self.watchdog_timeout_from_config
-            fencing_watchdog_timeout = sbd_watchdog_timeout + crashdump_watchdog_timeout
-            logger.info("Set fencing-watchdog-timeout to SBD_WATCHDOG_TIMEOUT + crashdump-watchdog-timeout: %s", fencing_watchdog_timeout)
-            timeout_dict["fencing-watchdog"] = fencing_watchdog_timeout
         if not update_dict:
             logger.info("No change in SBD configuration")
             return
 
         restart_first = False
         if watchdog_timeout:
-            expected_fencing_watchdog_timeout = timeout_dict.get("fencing-watchdog", 2*watchdog_timeout)
+            expected_fencing_watchdog_timeout = sbd.SBDTimeout.get_fencing_watchdog_timeout_expected(
+                crashdump_watchdog_timeout,
+                watchdog_timeout
+            )
             # If the expected fencing-watchdog-timeout is smaller than runtime SBD_WATCHDOG_TIMEOUT, restart cluster first
             if expected_fencing_watchdog_timeout < self.watchdog_timeout_from_config:
                 restart_first = True
 
         sbd_manager = sbd.SBDManager(
-            timeout_dict=timeout_dict,
             update_dict=update_dict,
             diskless_sbd=True
         )

@@ -297,11 +297,14 @@ class SBDTimeout(object):
             raise ValueError("Cannot get the value of SBD_WATCHDOG_TIMEOUT")
         return int(res)
 
-    def get_fencing_watchdog_timeout_expected(self):
-        if self.crashdump_watchdog_timeout:
-            return SBDTimeout.get_sbd_watchdog_timeout() + self.crashdump_watchdog_timeout
-        else:
-            return 2 * SBDTimeout.get_sbd_watchdog_timeout()
+    @staticmethod
+    def get_fencing_watchdog_timeout_expected(
+            crashdump_watchdog_timeout: int|None = None,
+            sbd_watchdog_timeout: int|None = None
+        ):
+        cwt = crashdump_watchdog_timeout or SBDUtils.get_crashdump_watchdog_timeout()
+        swt = sbd_watchdog_timeout or SBDTimeout.get_sbd_watchdog_timeout()
+        return max(swt+cwt, 2*swt) if cwt else 2 * swt
 
     def _load_configurations_from_runtime(self):
         '''
@@ -320,7 +323,7 @@ class SBDTimeout(object):
         else:  # disk-less
             self.disk_based = False
             self.sbd_watchdog_timeout = SBDTimeout.get_sbd_watchdog_timeout()
-            self.fencing_watchdog_timeout = self.get_fencing_watchdog_timeout_expected()
+            self.fencing_watchdog_timeout = SBDTimeout.get_fencing_watchdog_timeout_expected()
         self.sbd_delay_start_value_expected = self.get_sbd_delay_start_expected() if utils.detect_virt() else "no"
         self.sbd_delay_start_value_from_config = SBDUtils.get_sbd_value_from_config("SBD_DELAY_START")
         if not self.sbd_delay_start_value_from_config:
