@@ -488,5 +488,135 @@ class TestCorosyncParser(unittest.TestCase):
         self.assertEqual(4, corosync.get_free_nodeid(ids('1', '2', '3')))
 
 
+@mock.patch("crmsh.utils.str2file")
+@mock.patch("crmsh.utils.read_from_file")
+@mock.patch("crmsh.corosync.conf")
+def test_del_node_by_nodeid(mock_conf, mock_read, mock_str2file):
+    mock_conf.return_value = "corosync.conf"
+    mock_read.return_value = F2
+
+    # F2 has 5 nodes. Nodeid 1 and 2 exist.
+    assert corosync.del_node_by_nodeid(2) is True
+
+    args, _ = mock_str2file.call_args
+    updated_conf = args[0]
+    # Check nodeid 2 is gone
+    assert "nodeid: 2" not in updated_conf
+    assert "nodeid: 1" in updated_conf
+    # 5 -> 4 nodes, two_node should be 0
+    assert "two_node: 0" in updated_conf
+
+
+@mock.patch("crmsh.utils.read_from_file")
+@mock.patch("crmsh.corosync.conf")
+def test_del_node_by_nodeid_not_found(mock_conf, mock_read):
+    mock_conf.return_value = "corosync.conf"
+    mock_read.return_value = F2
+
+    assert corosync.del_node_by_nodeid(99) is False
+
+
+@mock.patch("crmsh.utils.str2file")
+@mock.patch("crmsh.utils.read_from_file")
+@mock.patch("crmsh.corosync.conf")
+def test_del_node_list(mock_conf, mock_read, mock_str2file):
+    mock_conf.return_value = "corosync.conf"
+    mock_read.return_value = F2
+
+    # Test list-based removal, stop at first match
+    # IPs in F2: 10.16.35.101 to 105
+    assert corosync.del_node(["10.16.35.200", "10.16.35.103"]) is True
+
+    args, _ = mock_str2file.call_args
+    updated_conf = args[0]
+    assert "ring0_addr: 10.16.35.103" not in updated_conf
+    assert "ring0_addr: 10.16.35.101" in updated_conf
+    assert "ring0_addr: 10.16.35.102" in updated_conf
+
+
+@mock.patch("crmsh.utils.read_from_file")
+@mock.patch("crmsh.corosync.conf")
+def test_del_node_not_found(mock_conf, mock_read):
+    mock_conf.return_value = "corosync.conf"
+    mock_read.return_value = F2
+
+    assert corosync.del_node(["10.16.35.200", "10.16.35.201"]) is False
+
+
+@mock.patch("crmsh.utils.str2file")
+@mock.patch("crmsh.utils.read_from_file")
+@mock.patch("crmsh.corosync.conf")
+def test_del_node_two_node_update(mock_conf, mock_read, mock_str2file):
+    mock_conf.return_value = "corosync.conf"
+    # Create a config with 3 nodes
+    conf_3 = """
+nodelist {
+    node {
+        ring0_addr: 1.1.1.1
+        nodeid: 1
+    }
+    node {
+        ring0_addr: 1.1.1.2
+        nodeid: 2
+    }
+    node {
+        ring0_addr: 1.1.1.3
+        nodeid: 3
+    }
+}
+quorum {
+    provider: corosync_votequorum
+    two_node: 0
+}
+"""
+    mock_read.return_value = conf_3
+
+    assert corosync.del_node_by_nodeid(3) is True
+
+    args, _ = mock_str2file.call_args
+    updated_conf = args[0]
+    # Now 2 nodes, two_node should be 1
+    assert "two_node: 1" in updated_conf
+
+
+@mock.patch("crmsh.utils.str2file")
+@mock.patch("crmsh.utils.read_from_file")
+@mock.patch("crmsh.corosync.conf")
+def test_del_node_qdevice_net(mock_conf, mock_read, mock_str2file):
+    mock_conf.return_value = "corosync.conf"
+    # Create a config with 3 nodes and qdevice net
+    conf_3_qdev = """
+nodelist {
+    node {
+        ring0_addr: 1.1.1.1
+        nodeid: 1
+    }
+    node {
+        ring0_addr: 1.1.1.2
+        nodeid: 2
+    }
+    node {
+        ring0_addr: 1.1.1.3
+        nodeid: 3
+    }
+}
+quorum {
+    provider: corosync_votequorum
+    two_node: 0
+    device {
+        model: net
+    }
+}
+"""
+    mock_read.return_value = conf_3_qdev
+
+    assert corosync.del_node_by_nodeid(3) is True
+
+    args, _ = mock_str2file.call_args
+    updated_conf = args[0]
+    # Even with 2 nodes, two_node should remain 0 because of qdevice net
+    assert "two_node: 0" in updated_conf
+
+
 if __name__ == '__main__':
     unittest.main()

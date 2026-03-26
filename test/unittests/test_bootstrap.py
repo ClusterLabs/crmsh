@@ -1843,3 +1843,82 @@ class TestValidation(unittest.TestCase):
             mock.call(bootstrap.CSYNC2_CFG),
             mock.call("/etc/corosync/corosync.conf")
             ])
+
+    @mock.patch('crmsh.bootstrap.get_cluster_node_ips')
+    @mock.patch('crmsh.corosync.del_node')
+    @mock.patch('crmsh.utils.HostUserConfig')
+    @mock.patch.object(NodeMgmt, 'call_delnode')
+    @mock.patch('crmsh.bootstrap.rm_configuration_files')
+    @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
+    @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
+    @mock.patch('crmsh.bootstrap.sync_file')
+    @mock.patch('crmsh.bootstrap.decrease_expected_votes')
+    @mock.patch('crmsh.corosync.del_node_by_nodeid')
+    @mock.patch('crmsh.corosync.get_values')
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('crmsh.bootstrap.invokerc')
+    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.bootstrap.stop_services')
+    @mock.patch('crmsh.utils.get_nodeid_from_name')
+    def test_remove_node_from_cluster_fallback_success(self, mock_get_nodeid, mock_stop, mock_status,
+            mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del_by_id, mock_decrease, mock_csync2,
+            mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_cal_delnode, mock_host_user_config,
+            mock_del_node, mock_get_ips):
+        mock_get_nodeid.return_value = "1"
+        mock_cal_delnode.return_value = True
+        mock_invoke.side_effect = [(True, None, None)]
+        mock_invokerc.return_value = True
+        mock_get_values.return_value = ["10.10.10.1"]
+        mock_del_by_id.return_value = False
+        mock_get_ips.return_value = ["10.10.10.2"]
+        mock_del_node.return_value = True
+
+        bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
+        bootstrap.remove_node_from_cluster('node1')
+
+        mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
+        mock_del_by_id.assert_called_once_with("1")
+        mock_get_ips.assert_called_once_with("node1")
+        mock_del_node.assert_called_once_with(["10.10.10.2", "node1"])
+        mock_error.assert_not_called()
+
+    @mock.patch('crmsh.bootstrap.get_cluster_node_ips')
+    @mock.patch('crmsh.corosync.del_node')
+    @mock.patch('crmsh.utils.HostUserConfig')
+    @mock.patch.object(NodeMgmt, 'call_delnode')
+    @mock.patch('crmsh.bootstrap.rm_configuration_files')
+    @mock.patch('crmsh.bootstrap.adjust_priority_fencing_delay')
+    @mock.patch('crmsh.bootstrap.adjust_priority_in_rsc_defaults')
+    @mock.patch('crmsh.bootstrap.sync_file')
+    @mock.patch('crmsh.bootstrap.decrease_expected_votes')
+    @mock.patch('crmsh.corosync.del_node_by_nodeid')
+    @mock.patch('crmsh.corosync.get_values')
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('crmsh.bootstrap.invokerc')
+    @mock.patch('crmsh.bootstrap.invoke')
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.bootstrap.stop_services')
+    @mock.patch('crmsh.utils.get_nodeid_from_name')
+    def test_remove_node_from_cluster_del_node_failed(self, mock_get_nodeid, mock_stop, mock_status,
+            mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del_by_id, mock_decrease, mock_csync2,
+            mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_cal_delnode, mock_host_user_config,
+            mock_del_node, mock_get_ips):
+        mock_get_nodeid.return_value = None
+        mock_cal_delnode.return_value = True
+        mock_invoke.side_effect = [(True, None, None)]
+        mock_invokerc.return_value = True
+        mock_get_values.return_value = ["10.10.10.1"]
+        mock_get_ips.return_value = ["10.10.10.2"]
+        mock_del_node.return_value = False
+        mock_error.side_effect = SystemExit
+
+        bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
+        with self.assertRaises(SystemExit):
+            bootstrap.remove_node_from_cluster('node1')
+
+        mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
+        mock_del_by_id.assert_not_called()
+        mock_get_ips.assert_called_once_with("node1")
+        mock_del_node.assert_called_once_with(["10.10.10.2", "node1"])
+        mock_error.assert_called_once_with("Failed to remove node node1 from corosync configuration")

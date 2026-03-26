@@ -2289,7 +2289,8 @@ def remove_node_from_cluster(node):
         else:
             node_ips = get_cluster_node_ips(node)
             node_ips.append(node)
-            corosync.del_node(node_ips)
+            if not corosync.del_node(node_ips):
+                utils.fatal("Failed to remove node {} from corosync configuration".format(node))
 
     decrease_expected_votes()
 
