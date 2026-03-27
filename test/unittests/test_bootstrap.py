@@ -1810,10 +1810,12 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
+    @mock.patch('crmsh.corosync.del_node_by_name')
     @mock.patch('crmsh.utils.get_nodeid_from_name')
-    def test_remove_node_from_cluster_hostname(self, mock_get_nodeid, mock_stop, mock_status,
+    def test_remove_node_from_cluster_hostname(self, mock_get_nodeid, mock_del_by_name, mock_stop, mock_status,
             mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del_by_id, mock_decrease, mock_csync2,
             mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_cal_delnode, mock_host_user_config):
+        mock_del_by_name.return_value = False
         mock_get_nodeid.return_value = "1"
         mock_cal_delnode.return_value = True
         mock_invoke.side_effect = [(True, None, None)]
@@ -1860,11 +1862,13 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
+    @mock.patch('crmsh.corosync.del_node_by_name')
     @mock.patch('crmsh.utils.get_nodeid_from_name')
-    def test_remove_node_from_cluster_fallback_success(self, mock_get_nodeid, mock_stop, mock_status,
+    def test_remove_node_from_cluster_fallback_success(self, mock_get_nodeid, mock_del_by_name, mock_stop, mock_status,
             mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del_by_id, mock_decrease, mock_csync2,
             mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_cal_delnode, mock_host_user_config,
             mock_del_node, mock_get_ips):
+        mock_del_by_name.return_value = False
         mock_get_nodeid.return_value = "1"
         mock_cal_delnode.return_value = True
         mock_invoke.side_effect = [(True, None, None)]
@@ -1899,11 +1903,13 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_services')
+    @mock.patch('crmsh.corosync.del_node_by_name')
     @mock.patch('crmsh.utils.get_nodeid_from_name')
-    def test_remove_node_from_cluster_del_node_failed(self, mock_get_nodeid, mock_stop, mock_status,
+    def test_remove_node_from_cluster_del_node_failed(self, mock_get_nodeid, mock_del_by_name, mock_stop, mock_status,
             mock_invoke, mock_invokerc, mock_error, mock_get_values, mock_del_by_id, mock_decrease, mock_csync2,
             mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_cal_delnode, mock_host_user_config,
             mock_del_node, mock_get_ips):
+        mock_del_by_name.return_value = False
         mock_get_nodeid.return_value = None
         mock_cal_delnode.return_value = True
         mock_invoke.side_effect = [(True, None, None)]

@@ -491,6 +491,55 @@ class TestCorosyncParser(unittest.TestCase):
 @mock.patch("crmsh.utils.str2file")
 @mock.patch("crmsh.utils.read_from_file")
 @mock.patch("crmsh.corosync.conf")
+def test_del_node_by_name(mock_conf, mock_read, mock_str2file):
+    mock_conf.return_value = "corosync.conf"
+    conf_name = """
+nodelist {
+    node {
+        ring0_addr: 10.16.35.101
+        name: node1
+        nodeid: 1
+    }
+    node {
+        ring0_addr: 10.16.35.102
+        name: node2
+        nodeid: 2
+    }
+    node {
+        ring0_addr: 10.16.35.103
+        name: node3
+        nodeid: 3
+    }
+}
+quorum {
+    provider: corosync_votequorum
+}
+"""
+    mock_read.return_value = conf_name
+
+    assert corosync.del_node_by_name("node2") is True
+
+    args, _ = mock_str2file.call_args
+    updated_conf = args[0]
+    assert "name: node2" not in updated_conf
+    assert "name: node1" in updated_conf
+    assert "name: node3" in updated_conf
+    # 3 -> 2 nodes, two_node should be 1
+    assert "two_node: 1" in updated_conf
+
+
+@mock.patch("crmsh.utils.read_from_file")
+@mock.patch("crmsh.corosync.conf")
+def test_del_node_by_name_not_found(mock_conf, mock_read):
+    mock_conf.return_value = "corosync.conf"
+    mock_read.return_value = F2
+
+    assert corosync.del_node_by_name("nonexistent") is False
+
+
+@mock.patch("crmsh.utils.str2file")
+@mock.patch("crmsh.utils.read_from_file")
+@mock.patch("crmsh.corosync.conf")
 def test_del_node_by_nodeid(mock_conf, mock_read, mock_str2file):
     mock_conf.return_value = "corosync.conf"
     mock_read.return_value = F2

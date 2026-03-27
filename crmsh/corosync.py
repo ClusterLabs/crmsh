@@ -584,6 +584,24 @@ def add_node(addr, name=None):
                            "str", node_name], shell=False)
 
 
+def del_node_by_name(name):
+    '''
+    Remove node from corosync by node name
+    '''
+    p = Parser(utils.read_from_file(conf()))
+    nth = p.remove_section_where('nodelist.node', 'name', name)
+    if nth == -1:
+        return False
+
+    num_nodes = p.count('nodelist.node')
+    p.set('quorum.two_node', '1' if num_nodes == 2 else '0')
+    if p.get("quorum.device.model") == "net":
+        p.set('quorum.two_node', '0')
+
+    utils.str2file(p.to_string(), conf())
+    return True
+
+
 def del_node_by_nodeid(nodeid):
     '''
     Remove node from corosync by nodeid

@@ -2284,7 +2284,9 @@ def remove_node_from_cluster(node):
 
     # Remove node from nodelist
     if corosync.get_values("nodelist.node.ring0_addr"):
-        if nodeid and corosync.del_node_by_nodeid(nodeid):
+        if corosync.del_node_by_name(node):
+            pass
+        elif nodeid and corosync.del_node_by_nodeid(nodeid):
             pass
         else:
             node_ips = get_cluster_node_ips(node)
