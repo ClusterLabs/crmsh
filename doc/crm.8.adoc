@@ -521,8 +521,8 @@ though it is still equivalent, after being digested at the
 crm(live)configure template# apply
 crm(live)configure template# cd ..
 crm(live)configure# show
-node xen-b
-node xen-c
+node kvm-b
+node kvm-c
 primitive apache apache \
     params configfile="/etc/apache2/httpd.conf" \
     op monitor interval=120s timeout=60s
@@ -540,7 +540,7 @@ To complete our example, we should also define the preferred node
 to run the service:
 
 ...............
-crm(live)configure# location websvc-pref websvc 100: xen-b
+crm(live)configure# location websvc-pref websvc 100: kvm-b
 ...............
 
 If you are not happy with some resource names which are provided
@@ -549,15 +549,15 @@ by default, you can rename them now:
 ...............
 crm(live)configure# rename virtual-ip intranet-ip
 crm(live)configure# show
-node xen-b
-node xen-c
+node kvm-b
+node kvm-c
 primitive apache apache \
     params configfile="/etc/apache2/httpd.conf" \
     op monitor interval=120s timeout=60s
 primitive intranet-ip IPaddr \
     params ip=192.168.1.101
 group websvc apache intranet-ip
-location websvc-pref websvc 100: xen-b
+location websvc-pref websvc 100: kvm-b
 ...............
 
 To summarize, working with templates typically consists of the
@@ -579,12 +579,12 @@ wear.
 
 Let's say that we entered the following configuration:
 ...............
-node xen-b
-node xen-c
-node xen-d
+node kvm-b
+node kvm-c
+node kvm-d
 primitive fencer stonith:external/libvirt \
     params hypervisor_uri="qemu+tcp://10.2.13.1/system" \
-        hostlist="xen-b xen-c xen-d" \
+        hostlist="kvm-b kvm-c kvm-d" \
     op monitor interval=2h
 primitive svc Xinetd \
     params service=systat \
@@ -596,7 +596,7 @@ primitive apache apache \
     params configfile="/etc/apache2/httpd.conf" \
     op monitor interval=120s timeout=60s
 group websvc apache intranet-ip
-location websvc-pref websvc 100: xen-b
+location websvc-pref websvc 100: kvm-b
 ...............
 
 Before typing `commit` to submit the configuration to the cib we
@@ -2192,7 +2192,7 @@ utilization <rsc> show <attr>
 ...............
 Example:
 ...............
-utilization xen1 set memory 4096
+utilization kvm1 set memory 4096
 ...............
 
 [[cmdhelp.sbd,SBD management]]
@@ -2612,7 +2612,7 @@ actually running because all its members have the +target-role+
 set to +Started+:
 ...............
 crm(live)# resource show svc
-resource svc is running on: xen-f
+resource svc is running on: kvm-f
 ...............
 
 Hence, if the user invokes +resource stop svc+ the intention is
@@ -3670,7 +3670,7 @@ primitive r0 ocf:linbit:drbd \
   op monitor role=Promoted interval=60s \
   op monitor role=Unpromoted interval=300s
 
-primitive xen0 @vm_scheme1 xmfile=/etc/xen/vm/xen0
+primitive kvm0 @vm_scheme1 xmfile=/etc/kvm/vm/kvm0
 
 primitive mySpecialRsc Special \
   params 3: rule #uname eq node1 interface=eth1 \
@@ -3895,16 +3895,16 @@ op_type :: start | stop | monitor
 ...............
 Example:
 ...............
-rsc_template public_vm Xen \
+rsc_template public_vm VirtualDomain \
   op start timeout=300s \
   op stop timeout=300s \
   op monitor interval=30s timeout=60s \
   op migrate_from timeout=600s \
   op migrate_to timeout=600s
-primitive xen0 @public_vm \
-  params xmfile=/etc/xen/xen0
-primitive xen1 @public_vm \
-  params xmfile=/etc/xen/xen1
+primitive kvm0 @public_vm \
+  params xmfile=/etc/kvm/kvm0
+primitive kvm1 @public_vm \
+  params xmfile=/etc/kvm/kvm1
 ...............
 
 [[cmdhelp.configure.rsc_ticket,resources ticket dependency]]
@@ -4453,7 +4453,7 @@ node <node> {online|offline|unclean}
 ...............
 Example:
 ...............
-node xen-b unclean
+node kvm-b unclean
 ...............
 
 [[cmdhelp.cibstatus.op,edit outcome of a resource operation]]
@@ -4483,10 +4483,10 @@ rc :: numeric exit code in range 0..9
 ...............
 Example:
 ...............
-op start d1 xen-b generic
-op start d1 xen-b 1
-op monitor d1 xen-b not_running
-op stop d1 xen-b 0 timeout
+op start d1 kvm-b generic
+op start d1 kvm-b 1
+op monitor d1 kvm-b not_running
+op stop d1 kvm-b 0 timeout
 ...............
 
 [[cmdhelp.cibstatus.origin,display origin of the CIB status section]]
