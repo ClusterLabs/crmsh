@@ -187,6 +187,22 @@ class SBDUtils:
         value = utils.get_property("fencing-watchdog-timeout")
         return value and utils.crm_msec(value) > 0
 
+    @staticmethod
+    def get_fence_sbd_parameters() -> list[dict]:
+        configure_show_output = sh.cluster_shell().get_stdout_or_raise_error("crm configure show xml")
+        configure_show_in_xml = xmlutil.text2elem(configure_show_output)
+        ra_inst = cibquery.ResourceAgent("stonith", "", "fence_sbd")
+        res_id_list = cibquery.get_primitives_with_ra(configure_show_in_xml, ra_inst)
+
+        parameter_list = []
+        for res in res_id_list:
+            parameter_list.append({
+                "resource_id": res,
+                "crashdump": cibquery.get_parameter_value(configure_show_in_xml, res, "crashdump"),
+                "pcmk_delay_max": cibquery.get_parameter_value(configure_show_in_xml, res, "pcmk_delay_max"),
+            })
+        return parameter_list
+
 
 class SBDTimeout(object):
     '''
@@ -320,6 +336,7 @@ class SBDTimeout(object):
             self.sbd_msgwait = device_metadata.get("msgwait")
             self.sbd_watchdog_timeout = device_metadata.get("watchdog")
             self.pcmk_delay_max = utils.get_pcmk_delay_max(self.two_node_without_qdevice)
+            self.fence_sbd_parameters = SBDUtils.get_fence_sbd_parameters()
         else:  # disk-less
             self.disk_based = False
             self.sbd_watchdog_timeout = SBDTimeout.get_sbd_watchdog_timeout()
@@ -490,6 +507,7 @@ class SBDCheckItem(IntEnum):
     SBD_DEVICE_METADATA_CONSISTENCY = auto()
     SBD_WATCHDOG_TIMEOUT = auto()
     FENCE_SBD_AGENT = auto()
+    FENCE_SBD_AGENT_PARAMETERS = auto()
     SBD_DELAY_START = auto()
     SBD_SYSTEMD_START_TIMEOUT = auto()
     FENCING_WATCHDOG_TIMEOUT_PROPERTY = auto()
@@ -569,6 +587,14 @@ class SBDConfigChecker(SBDTimeout):
             ),
 
             (
+                "fence_sbd agent parameters",
+                self._check_fence_sbd_parameters,
+                self._fix_fence_sbd_parameters,
+                False,
+                [SBDCheckItem.FENCE_SBD_AGENT]
+            ),
+
+            (
                 "SBD_DELAY_START",
                 self._check_sbd_delay_start,
                 self._fix_sbd_delay_start,
@@ -576,7 +602,7 @@ class SBDConfigChecker(SBDTimeout):
                 [
                     SBDCheckItem.SBD_DISK_METADATA,
                     SBDCheckItem.SBD_WATCHDOG_TIMEOUT,
-                    SBDCheckItem.FENCE_SBD_AGENT
+                    SBDCheckItem.FENCE_SBD_AGENT_PARAMETERS
                 ]
             ),
 
@@ -992,6 +1018,7 @@ class SBDConfigChecker(SBDTimeout):
     def _check_fence_sbd(self) -> CheckResult:
         if not self.disk_based:
             return CheckResult.SUCCESS
+
         xml_inst = xmlutil.CrmMonXmlParser()
         if xml_inst.not_connected():
             cib = xmlutil.text2elem(sh.cluster_shell().get_stdout_or_raise_error("crm configure show xml"))
@@ -1020,6 +1047,7 @@ class SBDConfigChecker(SBDTimeout):
                 SBDManager.SBD_RA
             )
             return CheckResult.ERROR
+
         return CheckResult.SUCCESS
 
     def _fix_fence_sbd(self):
@@ -1029,8 +1057,9 @@ class SBDConfigChecker(SBDTimeout):
             logger.info("Configuring fence agent %s", SBDManager.SBD_RA)
             cmd = f"crm configure primitive {SBDManager.SBD_RA_ID} {SBDManager.SBD_RA}"
             shell.get_stdout_or_raise_error(cmd)
-            is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
-            bootstrap.adjust_pcmk_delay_max(is_2node_wo_qdevice)
+            if self.two_node_without_qdevice:
+                cmd = f"crm resource param {SBDManager.SBD_RA_ID} set pcmk_delay_max {constants.PCMK_DELAY_MAX}s"
+                shell.get_stdout_or_raise_error(cmd)
         elif not xml_inst.is_resource_started(SBDManager.SBD_RA):
             res_id_list = xml_inst.get_resource_id_list_via_type(SBDManager.SBD_RA)
             for res_id in res_id_list:
@@ -1047,6 +1076,77 @@ class SBDConfigChecker(SBDTimeout):
             "stonith-enabled"
         ):
             utils.DeprecatedTermTranslator(prop).check()
+
+    def _check_fence_sbd_parameters(self) -> CheckResult:
+        if not self.disk_based:
+            return CheckResult.SUCCESS
+        if not self.fence_sbd_parameters:
+            self._log_when_not_quiet(
+                logging.ERROR,
+                "Fence agent %s is not configured",
+                SBDManager.SBD_RA
+            )
+            return CheckResult.ERROR
+
+        result_list = []
+        for fence_sbd_param in self.fence_sbd_parameters:
+            res_id, crashdump, pcmk_delay_max = fence_sbd_param.values()
+            if utils.is_boolean_false(crashdump) and self.crashdump_watchdog_timeout:
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "It's required that crashdump parameter is set to '1' in resource %s when sbd crashdump is configured, now is not set",
+                    res_id
+                )
+                result_list.append(CheckResult.ERROR)
+            elif utils.is_boolean_true(crashdump) and not self.crashdump_watchdog_timeout:
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "It's recommended that crashdump parameter should not be set in resource %s when sbd crashdump is not configured",
+                    res_id
+                )
+                result_list.append(CheckResult.WARNING)
+
+            if self.two_node_without_qdevice and not pcmk_delay_max:
+                self._log_when_not_quiet(
+                    logging.ERROR,
+                    "It's required that pcmk_delay_max parameter is set to %ds in resource %s for 2-node cluster without qdevice, now is not set",
+                    constants.PCMK_DELAY_MAX, res_id
+                )
+                result_list.append(CheckResult.ERROR)
+            elif pcmk_delay_max and not self.two_node_without_qdevice:
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "It's recommended that pcmk_delay_max parameter should not be set in resource %s for clusters other than 2-node cluster without qdevice",
+                    res_id
+                )
+                result_list.append(CheckResult.WARNING)
+
+        return SBDConfigChecker._return_helper(result_list)
+
+    def _fix_fence_sbd_parameters(self):
+        shell = sh.cluster_shell()
+        for fence_sbd_param in self.fence_sbd_parameters:
+            cmd_for_crashdump, cmd_for_pcmk_delay_max = None, None
+            res_id, crashdump, pcmk_delay_max = fence_sbd_param.values()
+
+            if utils.is_boolean_false(crashdump) and self.crashdump_watchdog_timeout:
+                logger.info("Setting crashdump parameter to '1' in resource %s", res_id)
+                cmd_for_crashdump = f"crm resource param {res_id} set crashdump 1"
+            elif utils.is_boolean_true(crashdump) and not self.crashdump_watchdog_timeout:
+                logger.info("Removing crashdump parameter in resource %s", res_id)
+                cmd_for_crashdump = f"crm resource param {res_id} delete crashdump"
+            if cmd_for_crashdump:
+                shell.get_stdout_or_raise_error(cmd_for_crashdump)
+
+            if self.two_node_without_qdevice and not pcmk_delay_max:
+                logger.info("Setting pcmk_delay_max parameter to %ds in resource %s", constants.PCMK_DELAY_MAX, res_id)
+                cmd_for_pcmk_delay_max = f"crm resource param {res_id} set pcmk_delay_max {constants.PCMK_DELAY_MAX}s"
+            elif pcmk_delay_max and not self.two_node_without_qdevice:
+                logger.info("Removing pcmk_delay_max parameter in resource %s", res_id)
+                cmd_for_pcmk_delay_max = f"crm resource param {res_id} delete pcmk_delay_max"
+            if cmd_for_pcmk_delay_max:
+                shell.get_stdout_or_raise_error(cmd_for_pcmk_delay_max)
+
 
 class SBDManager:
     SYSCONFIG_SBD = "/etc/sysconfig/sbd"
