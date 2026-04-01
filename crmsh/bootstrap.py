@@ -12,6 +12,7 @@
 import codecs
 import dataclasses
 import io
+import json
 import os
 import subprocess
 import sys
@@ -39,6 +40,7 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
+from . import iproute2
 from .constants import QDEVICE_HELP_INFO, STONITH_TIMEOUT_DEFAULT,\
         REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX, CSYNC2_SERVICE, WAIT_TIMEOUT_MS_DEFAULT
 from . import cluster_fs
@@ -2189,23 +2191,24 @@ def start_qdevice_on_join_node(seed_host):
         ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("corosync-qdevice.service", enable=True)
 
 
-def get_cluster_node_ip(node: str) -> str:
+def get_cluster_node_ips(node: str) -> list[str]:
     """
-    ringx_addr might be hostname or IP
-    _context.cluster_node by now is always hostname
-
-    If ring0_addr is IP, we should get the configured iplist which belong _context.cluster_node
-    Then filter out which one is configured as ring0_addr
-    At last assign that ip to _context.cluster_node_ip which will be removed later
+    Get all IP addresses of the target node remotely.
+    If it fails, fall back to utils.get_iplist_from_name(node).
     """
-    addr_list = corosync.get_values('nodelist.node.ring0_addr')
-    if node in addr_list:
-        return
+    rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(node, "ip -j addr show")
+    if rc == 0:
+        try:
+            addr_info = iproute2.IPAddr(json.loads(out))
+            ips = []
+            for iface in addr_info.interfaces():
+                for addr in iface.addr_info:
+                    ips.append(str(addr.ip))
+            return ips
+        except Exception as e:
+            logger.warning("Failed to parse ip output from node {}: {}".format(node, e))
 
-    ip_list = utils.get_iplist_from_name(node)
-    for ip in ip_list:
-        if ip in addr_list:
-            return ip
+    return utils.get_iplist_from_name(node)
 
 
 def stop_services(stop_list, remote_addr=None):
@@ -2233,7 +2236,7 @@ def remove_node_from_cluster(node, dead_node=False):
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
     """
-    node_ip = get_cluster_node_ip(node)
+    nodeid = utils.get_nodeid_from_name(node)
     if not dead_node:
         stop_services(SERVICES_STOP_LIST, remote_addr=node)
         qdevice.QDevice.remove_qdevice_db([node])
@@ -2249,7 +2252,15 @@ def remove_node_from_cluster(node, dead_node=False):
 
     # Remove node from nodelist
     if corosync.get_values("nodelist.node.ring0_addr"):
-        corosync.del_node(node_ip if node_ip is not None else node)
+        if corosync.del_node_by_name(node):
+            pass
+        elif nodeid and corosync.del_node_by_nodeid(nodeid):
+            pass
+        else:
+            node_ips = get_cluster_node_ips(node)
+            node_ips.append(node)
+            if not corosync.del_node(node_ips):
+                utils.fatal("Failed to remove node {} from corosync configuration".format(node))
 
     corosync.configure_two_node(removing=True)
     adjust_properties()
