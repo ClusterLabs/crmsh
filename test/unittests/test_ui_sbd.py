@@ -452,7 +452,6 @@ class TestSBD(unittest.TestCase):
         mock_SBDManager.return_value.init_and_deploy_sbd = mock.Mock()
         self.sbd_instance_diskless._configure_diskless(parameter_dict)
         mock_SBDManager.assert_called_once_with(
-            timeout_dict={'fencing-watchdog': 24},
             update_dict={'SBD_WATCHDOG_TIMEOUT': '12', 'SBD_WATCHDOG_DEV': '/dev/watchdog100', 'SBD_TIMEOUT_ACTION': 'flush,crashdump', 'SBD_OPTS': '-C 12 -Z'},
             diskless_sbd=True
         )
