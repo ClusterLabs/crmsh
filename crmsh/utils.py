@@ -2460,10 +2460,14 @@ def get_reachable_node_list(node_list:list[str]) -> list[str]:
     return reachable_node_list
 
 
-def calculate_quorate_status(expected_votes, actual_votes):
+def calculate_quorate_status(expected_votes=-1, actual_votes=-1):
     """
     Given expected votes and actual votes, calculate if is quorated
     """
+    if expected_votes <= 0 or actual_votes < 0:
+        quorum_votes_dict = get_quorum_votes_dict()
+        expected_votes = quorum_votes_dict.get("Expected")
+        actual_votes = quorum_votes_dict.get("Total")
     return int(actual_votes)/int(expected_votes) > 0.5
 
 

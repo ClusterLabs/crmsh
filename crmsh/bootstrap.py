@@ -243,12 +243,11 @@ class Context(object):
         with_sbd_option = self.sbd_devices or self.diskless_sbd
 
         if self.stage == "sbd":
-            if self.cluster_is_running:
-                utils.check_all_nodes_reachable("setup SBD")
-                node_list = utils.list_cluster_nodes()
-            else:
-                node_list = [utils.this_node()]
-            for node in node_list:
+            utils.check_all_nodes_reachable("setup SBD")
+            if not utils.calculate_quorate_status():
+                utils.fatal("Cluster is not quorate, can't run 'sbd' stage")
+
+            for node in utils.list_cluster_nodes():
                 if not utils.package_is_installed("sbd", node):
                     utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
                 if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd", node):
@@ -2822,7 +2821,6 @@ def adjust_properties():
     adjust_fencing_timeout()
     adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
-    sbd.SBDManager.warn_diskless_sbd()
 
 
 def retrieve_files(from_node: str, file_list: list, msg: str = None):
