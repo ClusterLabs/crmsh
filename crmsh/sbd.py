@@ -284,19 +284,9 @@ class SBDTimeout(object):
 
     @staticmethod
     def get_stonith_watchdog_timeout_expected():
-        '''
-        Returns the value of the stonith-watchdog-timeout cluster property.
-
-        If the Pacemaker service is inactive, returns the default value (2 * SBD_WATCHDOG_TIMEOUT).
-        If the property is set and its value is equal to or greater than the default, returns the property value.
-        Otherwise, returns the default value.
-        '''
-        default = 2 * SBDTimeout.get_sbd_watchdog_timeout()
-        if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
-            return default
-        value = utils.get_property("stonith-watchdog-timeout", get_default=False)
-        return_value = value if utils.crm_msec(value) >= utils.crm_msec(default) else default
-        return int(utils.crm_msec(return_value)/1000)  # convert msec to sec
+        cwt = SBDUtils.get_crashdump_watchdog_timeout()
+        swt = SBDTimeout.get_sbd_watchdog_timeout()
+        return max(swt + cwt, 2*swt) if cwt else 2*swt
 
     def _load_configurations(self):
         '''
@@ -597,7 +587,7 @@ class SBDManager:
                 cmd = f"crm configure primitive {self.SBD_RA_ID} {self.SBD_RA}"
                 sh.cluster_shell().get_stdout_or_raise_error(cmd)
         else:
-            swt_value = self.timeout_dict.get("stonith-watchdog", SBDTimeout.get_stonith_watchdog_timeout_expected())
+            swt_value = SBDTimeout.get_stonith_watchdog_timeout_expected()
             utils.set_property("stonith-watchdog-timeout", swt_value)
         utils.set_property("stonith-enabled", "true")
 

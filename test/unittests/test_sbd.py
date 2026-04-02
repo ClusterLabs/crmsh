@@ -212,23 +212,13 @@ class TestSBDTimeout(unittest.TestCase):
         result = sbd.SBDTimeout.get_sbd_watchdog_timeout()
         self.assertEqual(result, 5)
 
-    @patch('crmsh.sbd.ServiceManager')
+    @patch('crmsh.sbd.SBDUtils.get_crashdump_watchdog_timeout')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
-    def test_get_stonith_watchdog_timeout_expected_default(self, mock_get_sbd_watchdog_timeout, mock_ServiceManager):
-        mock_get_sbd_watchdog_timeout.return_value = 1
-        mock_ServiceManager.return_value.service_is_active = MagicMock(return_value=False)
+    def test_get_stonith_watchdog_timeout_expected(self, mock_get_sbd_watchdog_timeout, mock_get_crashdump_watchdog_timeout):
+        mock_get_crashdump_watchdog_timeout.return_value = 10
+        mock_get_sbd_watchdog_timeout.return_value = 5
         result = sbd.SBDTimeout.get_stonith_watchdog_timeout_expected()
-        self.assertEqual(result, 2)
-
-    @patch('crmsh.utils.get_property')
-    @patch('crmsh.sbd.ServiceManager')
-    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
-    def test_get_stonith_watchdog_timeout_expected(self, mock_get_sbd_watchdog_timeout, mock_ServiceManager, mock_get_property):
-        mock_get_sbd_watchdog_timeout.return_value = 1
-        mock_ServiceManager.return_value.service_is_active = MagicMock(return_value=True)
-        mock_get_property.return_value = "5"
-        result = sbd.SBDTimeout.get_stonith_watchdog_timeout_expected()
-        self.assertEqual(result, 5)
+        self.assertEqual(result, 15)
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
     @patch('crmsh.utils.is_boolean_true')

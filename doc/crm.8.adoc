@@ -354,7 +354,7 @@ settings based on the calculations with a set of formulas.
     stonith-watchdog-timeout = 2 * SBD_WATCHDOG_TIMEOUT
 
     # When setting crashdump watchdog timeout
-    stonith-watchdog-timeout = SBD_WATCHDOG_TIMEOUT + crashdump_watchdog_timeout
+    stonith-watchdog-timeout = max(SBD_WATCHDOG_TIMEOUT + crashdump_watchdog_timeout, 2 * SBD_WATCHDOG_TIMEOUT)
 ...............
 `stonith-timeout`:
 ...............
