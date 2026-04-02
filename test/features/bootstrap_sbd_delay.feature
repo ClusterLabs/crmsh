@@ -369,6 +369,17 @@ Feature: configure sbd delay start correctly
     Then    Expected "It's required that fencing-timeout is set to 71, now is 50" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    # check crashdump and pcmk_delay_max
+    When    Run "crm resource param fencing-sbd set crashdump 1" on "hanode1"
+    When    Run "crm resource param fencing-sbd delete pcmk_delay_max" on "hanode1"
+    When    Try "crm cluster health sbd" on "hanode1"
+    Then    Expected multiple lines in stderr
+      """
+      It's recommended that crashdump parameter should not be set in resource fencing-sbd when sbd crashdump is not configured
+      It's required that pcmk_delay_max parameter is set to 30s in resource fencing-sbd for 2-node cluster without qdevice, now is not set
+      """
+    When    Run "crm cluster health sbd --fix" on "hanode1"
+    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
     # Adjust token timeout in corosync.conf
     When    Run "sed -i 's/token: .*/token: 10000/' /etc/corosync/corosync.conf" on "hanode1"
     When    Run "sed -i 's/token: .*/token: 10000/' /etc/corosync/corosync.conf" on "hanode2"

@@ -1493,21 +1493,9 @@ done
         bootstrap.adjust_pcmk_delay_max(False)
         mock_run.assert_called_once_with("crm resource param res_1 delete pcmk_delay_max")
 
-    @mock.patch('crmsh.sbd.SBDConfigChecker')
-    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_adjust_fencing_timeout_sbd(self, mock_is_active, mock_sbd_checker):
-        mock_sbd_checker_inst = mock.Mock()
-        mock_sbd_checker.return_value = mock_sbd_checker_inst
-        mock_sbd_checker_inst.check_and_fix = mock.Mock()
-        mock_is_active.return_value = True
-        bootstrap.adjust_fencing_timeout()
-        mock_sbd_checker.assert_called_once_with(quiet=True, fix=True)
-
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.bootstrap.get_fencing_timeout_generally_expected')
-    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_adjust_fencing_timeout(self, mock_is_active, mock_get_timeout, mock_set):
-        mock_is_active.return_value = False
+    def test_adjust_fencing_timeout(self, mock_get_timeout, mock_set):
         mock_get_timeout.return_value = 30
         bootstrap.adjust_fencing_timeout()
         mock_set.assert_called_once_with("fencing-timeout", 30, conditional=True)
@@ -1549,10 +1537,13 @@ done
     @mock.patch('crmsh.utils.is_2node_cluster_without_qdevice')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     def test_adjust_properties(self, mock_is_active, mock_2node_qdevice, mock_adj_pcmk, mock_adj_fencing, mock_adj_priority, mock_adj_fence):
-        mock_is_active.return_value = True
+        mock_is_active.side_effect = [True, False]
         mock_2node_qdevice.return_value = True
         bootstrap.adjust_properties()
-        mock_is_active.assert_called_once_with("pacemaker.service")
+        mock_is_active.assert_has_calls([
+            mock.call("pacemaker.service"),
+            mock.call("sbd.service")
+        ])
         mock_adj_pcmk.assert_called_once_with(True)
         mock_adj_fencing.assert_called_once_with()
         mock_adj_priority.assert_called_once_with(True)

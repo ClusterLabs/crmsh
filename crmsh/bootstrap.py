@@ -2790,14 +2790,11 @@ def adjust_pcmk_delay_max(is_2node_wo_qdevice):
 
 def adjust_fencing_timeout():
     """
-    Adjust fencing-timeout for sbd and other scenarios
+    Adjust fencing-timeout for non sbd scenarios
     """
-    if ServiceManager().service_is_active(constants.SBD_SERVICE):
-        sbd.SBDConfigChecker(quiet=True, fix=True).check_and_fix()
-    else:
-        value = get_fencing_timeout_generally_expected()
-        if value:
-            utils.set_property("fencing-timeout", value, conditional=True)
+    value = get_fencing_timeout_generally_expected()
+    if value:
+        utils.set_property("fencing-timeout", value, conditional=True)
 
 
 def adjust_properties():
@@ -2814,11 +2811,15 @@ def adjust_properties():
     - remove qdevice
     - add sbd via stage
     """
-    if not ServiceManager().service_is_active("pacemaker.service"):
+    service_manager = ServiceManager()
+    if not service_manager.service_is_active("pacemaker.service"):
         return
     is_2node_wo_qdevice = utils.is_2node_cluster_without_qdevice()
-    adjust_pcmk_delay_max(is_2node_wo_qdevice)
-    adjust_fencing_timeout()
+    if service_manager.service_is_active(constants.SBD_SERVICE):
+        sbd.SBDConfigChecker(quiet=True, fix=True).check_and_fix()
+    else:
+        adjust_pcmk_delay_max(is_2node_wo_qdevice)
+        adjust_fencing_timeout()
     adjust_priority_in_rsc_defaults(is_2node_wo_qdevice)
     adjust_priority_fencing_delay(is_2node_wo_qdevice)
 
