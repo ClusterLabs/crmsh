@@ -331,59 +331,6 @@ class TestSBD(unittest.TestCase):
         res = ui_sbd.SBD._adjust_timeout_dict(timeout_dict)
         self.assertEqual(res, {"watchdog": 5, "msgwait": 10})
 
-    @mock.patch('logging.Logger.error')
-    @mock.patch('crmsh.cibquery.get_primitives_with_ra')
-    @mock.patch('crmsh.cibquery.ResourceAgent')
-    @mock.patch('crmsh.xmlutil.text2elem')
-    def test_set_crashdump_option_exception(self, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra, mock_logger_error):
-        self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error = mock.Mock(return_value="<dummy></dummy>")
-        mock_text2elem.return_value = "dummy"
-        mock_ra_instance = mock.Mock()
-        mock_ResourceAgent.return_value = mock_ra_instance
-        mock_get_primitives_with_ra.return_value = []
-
-        with self.assertRaises(utils.TerminateSubCommand):
-            self.sbd_instance_diskbased._set_crashdump_option()
-
-        self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error.assert_called_once_with("crm configure show xml")
-        mock_logger_error.assert_called_once_with("No fence_sbd resource found")
-
-    @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.is_boolean_false')
-    @mock.patch('crmsh.cibquery.get_parameter_value')
-    @mock.patch('crmsh.cibquery.get_primitives_with_ra')
-    @mock.patch('crmsh.cibquery.ResourceAgent')
-    @mock.patch('crmsh.xmlutil.text2elem')
-    def test_set_crashdump_option(self, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra, mock_get_parameter_value, mock_is_boolean_false, mock_logger_info):
-        self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error = mock.Mock(side_effect=["<dummy></dummy>", ""])
-        mock_text2elem.return_value = "dummy"
-        mock_ra_instance = mock.Mock()
-        mock_ResourceAgent.return_value = mock_ra_instance
-        mock_get_primitives_with_ra.return_value = ["fence_sbd"]
-        mock_get_parameter_value.return_value = None
-        mock_is_boolean_false.return_value = True
-
-        self.sbd_instance_diskbased._set_crashdump_option()
-        mock_logger_info.assert_called_once_with("Set crashdump option for fence_sbd resource")
-
-    @mock.patch('logging.Logger.info')
-    @mock.patch('crmsh.utils.is_boolean_false')
-    @mock.patch('crmsh.cibquery.get_parameter_value')
-    @mock.patch('crmsh.cibquery.get_primitives_with_ra')
-    @mock.patch('crmsh.cibquery.ResourceAgent')
-    @mock.patch('crmsh.xmlutil.text2elem')
-    def test_set_crashdump_option_delete(self, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra, mock_get_parameter_value, mock_is_boolean_false, mock_logger_info):
-        self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error = mock.Mock(side_effect=["<dummy></dummy>", ""])
-        mock_text2elem.return_value = "dummy"
-        mock_ra_instance = mock.Mock()
-        mock_ResourceAgent.return_value = mock_ra_instance
-        mock_get_primitives_with_ra.return_value = ["fence_sbd"]
-        mock_get_parameter_value.return_value = None
-        mock_is_boolean_false.return_value = False
-
-        self.sbd_instance_diskbased._set_crashdump_option(delete=True)
-        mock_logger_info.assert_called_once_with("Delete crashdump option for fence_sbd resource")
-
     @mock.patch('logging.Logger.warning')
     def test_check_kdump_service(self, mock_logger_warning):
         self.sbd_instance_diskbased.service_manager.service_is_active = mock.Mock(side_effect=[True, False])
@@ -420,18 +367,19 @@ class TestSBD(unittest.TestCase):
         parameter_dict = {"watchdog": 12, "watchdog-device": "/dev/watchdog100", "crashdump-watchdog": 12}
         self.sbd_instance_diskbased._should_configure_crashdump = mock.Mock(return_value=True)
         self.sbd_instance_diskbased._check_kdump_service = mock.Mock()
-        self.sbd_instance_diskbased._set_crashdump_option = mock.Mock()
-        self.sbd_instance_diskbased._set_crashdump_in_sysconfig = mock.Mock(return_value={"SBD_TIMEOUT_ACTION": "flush,crashdump", "SBD_OPTS": "-C 12"})
+        self.sbd_instance_diskbased._set_sbd_opts = mock.Mock()
+        self.sbd_instance_diskbased._set_sbd_opts = mock.Mock(return_value={"SBD_TIMEOUT_ACTION": "flush,crashdump", "SBD_OPTS": "-C 12"})
         mock_SBDManager.return_value.init_and_deploy_sbd = mock.Mock()
         self.sbd_instance_diskbased._configure_diskbase(parameter_dict)
         mock_SBDManager.assert_called_once_with(
             device_list_to_init=self.sbd_instance_diskbased.device_list_from_config,
             timeout_dict={'watchdog': 12, 'allocate': 5, 'loop': 5, 'msgwait': 36},
-            update_dict={'SBD_TIMEOUT_ACTION': 'flush,crashdump', 'SBD_OPTS': '-C 12', 'SBD_WATCHDOG_DEV': '/dev/watchdog100'}
+            update_dict={'SBD_TIMEOUT_ACTION': 'flush,crashdump', 'SBD_OPTS': '-C 12', 'SBD_WATCHDOG_DEV': '/dev/watchdog100'},
+            crashdump_mode="set"
         )
         mock_SBDManager.return_value.init_and_deploy_sbd.assert_called_once()
         self.sbd_instance_diskbased._check_kdump_service.assert_called_once()
-        self.sbd_instance_diskbased._set_crashdump_option.assert_called_once()
+        self.sbd_instance_diskbased._set_sbd_opts.assert_called_once()
 
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDManager')
@@ -448,12 +396,13 @@ class TestSBD(unittest.TestCase):
         self.sbd_instance_diskless._should_configure_crashdump = mock.Mock(return_value=True)
         self.sbd_instance_diskless._check_kdump_service = mock.Mock()
         self.sbd_instance_diskless._check_kdump_service = mock.Mock()
-        self.sbd_instance_diskless._set_crashdump_in_sysconfig = mock.Mock(return_value={"SBD_TIMEOUT_ACTION": "flush,crashdump", "SBD_OPTS": "-C 12 -Z"})
+        self.sbd_instance_diskless._set_sbd_opts = mock.Mock(return_value={"SBD_TIMEOUT_ACTION": "flush,crashdump", "SBD_OPTS": "-C 12 -Z"})
         mock_SBDManager.return_value.init_and_deploy_sbd = mock.Mock()
         self.sbd_instance_diskless._configure_diskless(parameter_dict)
         mock_SBDManager.assert_called_once_with(
             update_dict={'SBD_WATCHDOG_TIMEOUT': '12', 'SBD_WATCHDOG_DEV': '/dev/watchdog100', 'SBD_TIMEOUT_ACTION': 'flush,crashdump', 'SBD_OPTS': '-C 12 -Z'},
-            diskless_sbd=True
+            diskless_sbd=True,
+            crashdump_mode="set"
         )
         mock_SBDManager.return_value.init_and_deploy_sbd.assert_called_once()
         self.sbd_instance_diskless._check_kdump_service.assert_called_once()
@@ -603,26 +552,16 @@ class TestSBD(unittest.TestCase):
         self.assertFalse(res)
         mock_purge_sbd_from_cluster.assert_not_called()
 
-    @mock.patch('crmsh.utils.able_to_restart_cluster')
-    @mock.patch('crmsh.utils.leverage_maintenance_mode')
-    @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    @mock.patch('crmsh.sbd.purge_sbd_from_cluster')
-    def test_do_purge(self, mock_purge_sbd_from_cluster, mock_check_all_nodes_reachable, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster):
-        enable_value = True
-        cm = mock.Mock()
-        cm.__enter__ = mock.Mock(return_value=enable_value)
-        cm.__exit__ = mock.Mock(return_value=True)
-        mock_leverage_maintenance_mode.return_value = cm
-        mock_able_to_restart_cluster.return_value = True
+    def test_do_purge(self, mock_check_all_nodes_reachable):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
+        self.sbd_instance_diskbased._purge_sbd = mock.Mock()
         res = self.sbd_instance_diskbased.do_purge(mock.Mock())
         self.assertTrue(res)
-        mock_purge_sbd_from_cluster.assert_called_once()
+        self.sbd_instance_diskbased._purge_sbd.assert_called_once_with()
         self.sbd_instance_diskbased._load_attributes.assert_called_once()
         self.sbd_instance_diskbased._service_is_active.assert_called_once_with(constants.SBD_SERVICE)
-        mock_purge_sbd_from_cluster.assert_called_once_with()
         mock_check_all_nodes_reachable.assert_called_once_with("purging SBD")
 
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
