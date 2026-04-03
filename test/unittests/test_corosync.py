@@ -710,5 +710,113 @@ class TestLinkManagerAddLink(unittest.TestCase):
         mock_update_link.assert_not_called()
 
 
+F2 = """
+nodelist {
+    node {
+        ring0_addr: 10.16.35.101
+        nodeid: 1
+    }
+    node {
+        ring0_addr: 10.16.35.102
+        nodeid: 2
+    }
+    node {
+        ring0_addr: 10.16.35.103
+    }
+    node {
+        ring0_addr: 10.16.35.104
+    }
+    node {
+        ring0_addr: 10.16.35.105
+    }
+}
+"""
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_del_node_by_name(mock_parser):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = ["node1", "node2"]
+
+    assert corosync.del_node_by_name("node2") is True
+    mock_inst.get_all.assert_called_once_with("nodelist.node.name")
+    mock_inst.remove.assert_called_once_with("nodelist.node", 1)
+    mock_inst.save.assert_called_once()
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_del_node_by_name_not_found(mock_parser):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = ["node1", "node2"]
+
+    assert corosync.del_node_by_name("node3") is False
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_del_node_by_nodeid(mock_parser):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = ["1", "2"]
+
+    assert corosync.del_node_by_nodeid(2) is True
+    mock_inst.get_all.assert_called_once_with("nodelist.node.nodeid")
+    mock_inst.remove.assert_called_once_with("nodelist.node", 1)
+    mock_inst.save.assert_called_once()
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_del_node_by_nodeid_not_found(mock_parser):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = ["1", "2"]
+
+    assert corosync.del_node_by_nodeid(99) is False
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_del_node_list(mock_parser):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = ["10.16.35.101", "10.16.35.102", "10.16.35.103"]
+
+    assert corosync.del_node(["10.16.35.200", "10.16.35.103"]) is True
+    mock_inst.get_all.assert_called_once_with("nodelist.node.ring0_addr")
+    mock_inst.remove.assert_called_once_with("nodelist.node", 2)
+    mock_inst.save.assert_called_once()
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_del_node_not_found(mock_parser):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = ["10.16.35.101", "10.16.35.102"]
+
+    assert corosync.del_node(["10.16.35.200", "10.16.35.201"]) is False
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_del_node_two_node_update(mock_parser):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = ["1", "2", "3"]
+
+    assert corosync.del_node_by_nodeid(3) is True
+    mock_inst.remove.assert_called_once_with("nodelist.node", 2)
+    mock_inst.save.assert_called_once()
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_del_node_qdevice_net(mock_parser):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = ["1", "2", "3"]
+
+    assert corosync.del_node_by_nodeid(3) is True
+    mock_inst.remove.assert_called_once_with("nodelist.node", 2)
+    mock_inst.save.assert_called_once()
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -300,15 +300,56 @@ def add_node_config(ip_list: typing.List[str]) -> None:
     inst.save()
 
 
-def del_node(addr: str) -> None:
+def del_node_by_name(name: str) -> bool:
+    '''
+    Remove node from corosync by node name
+    '''
+    try:
+        inst = ConfParser()
+        name_list = inst.get_all("nodelist.node.name")
+        index = name_list.index(name)
+        inst.remove("nodelist.node", index)
+        inst.save()
+        return True
+    except (ValueError, KeyError, IndexError):
+        return False
+
+
+def del_node_by_nodeid(nodeid: int | str) -> bool:
+    '''
+    Remove node from corosync by nodeid
+    '''
+    try:
+        inst = ConfParser()
+        nodeid_list = inst.get_all("nodelist.node.nodeid")
+        index = nodeid_list.index(str(nodeid))
+        inst.remove("nodelist.node", index)
+        inst.save()
+        return True
+    except (ValueError, KeyError, IndexError):
+        return False
+
+
+def del_node(addrs: list[str]) -> bool:
     '''
     Remove node from corosync
     '''
-    inst = ConfParser()
-    name_list = inst.get_all("nodelist.node.ring0_addr")
-    index = name_list.index(addr)
-    inst.remove("nodelist.node", index)
-    inst.save()
+    try:
+        inst = ConfParser()
+        addr_list = inst.get_all("nodelist.node.ring0_addr")
+        index = -1
+        for addr in addrs:
+            if addr in addr_list:
+                index = addr_list.index(addr)
+                break
+        if index == -1:
+            return False
+        inst.remove("nodelist.node", index)
+        inst.save()
+        return True
+    except (ValueError, KeyError, IndexError):
+        return False
+
 
 
 def get_corosync_value(key, cmapctl_prefix="runtime.config"):
