@@ -1171,6 +1171,7 @@ class SBDManager:
     SBD_RA = "stonith:fence_sbd"
     SBD_RA_ID = "fencing-sbd"
     SBD_DEVICE_MAX = 3
+    SBD_CRASHDUMP_ACTION = "flush,crashdump"
 
     class NotConfigSBD(Exception):
         pass
@@ -1181,7 +1182,8 @@ class SBDManager:
         timeout_dict: typing.Dict[str, int] | None = None,
         update_dict: typing.Dict[str, str] | None = None,
         diskless_sbd: bool = False,
-        bootstrap_context: 'bootstrap.Context | None' = None
+        bootstrap_context: 'bootstrap.Context | None' = None,
+        crashdump_mode: str | None = None
     ):
         '''
         Init function which can be called from crm sbd subcommand or bootstrap
@@ -1193,6 +1195,7 @@ class SBDManager:
         self.cluster_is_running = ServiceManager().service_is_active(constants.PCMK_SERVICE)
         self.bootstrap_context = bootstrap_context
         self.overwrite_sysconfig = False
+        self.crashdump_mode = crashdump_mode
 
         # From bootstrap init or join process, override the values
         if self.bootstrap_context:
@@ -1233,7 +1236,10 @@ class SBDManager:
             utils.copy_local_file(self.SYSCONFIG_SBD_TEMPLATE, self.SYSCONFIG_SBD)
 
         for key, value in self.update_dict.items():
-            logger.info("Update %s in %s: %s", key, self.SYSCONFIG_SBD, value)
+            if value:
+                logger.info("Update %s in %s: %s", key, self.SYSCONFIG_SBD, value)
+            else:
+                logger.info("Set %s in %s to empty", key, self.SYSCONFIG_SBD)
         utils.sysconfig_set(self.SYSCONFIG_SBD, **self.update_dict)
         if self.cluster_is_running:
             bootstrap.sync_path(self.SYSCONFIG_SBD)
@@ -1395,6 +1401,7 @@ class SBDManager:
                 return
 
             self.initialize_sbd()
+            self.set_crashdump_action()
             self.update_configuration()
             self.enable_sbd_service()
 
@@ -1453,6 +1460,34 @@ class SBDManager:
                   f"echo -e '[Service]\\nUnsetEnvironment=SBD_DELAY_START' > {SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE} && " \
                   "systemctl daemon-reload"
             utils.cluster_run_cmd(cmd, node_list)
+
+    def set_crashdump_action(self):
+        '''
+        Set crashdump timeout action in /etc/sysconfig/sbd
+        '''
+        if not self.crashdump_mode or self.crashdump_mode not in ("set", "restore"):
+            return
+
+        comment_action_line = f"sed -i '/^SBD_TIMEOUT_ACTION/s/^/#__sbd_crashdump_backup__ /' {self.SYSCONFIG_SBD}"
+        add_action_line = f"sed -i '/^#__sbd_crashdump_backup__/a SBD_TIMEOUT_ACTION={self.SBD_CRASHDUMP_ACTION}' {self.SYSCONFIG_SBD}"
+        comment_out_action_line = f"sed -i 's/^#__sbd_crashdump_backup__ SBD_TIMEOUT_ACTION/SBD_TIMEOUT_ACTION/' {self.SYSCONFIG_SBD}"
+        delete_action_line = f"sed -i '/^SBD_TIMEOUT_ACTION/d' {self.SYSCONFIG_SBD}"
+
+        sbd_timeout_action_configured = SBDUtils.get_sbd_value_from_config("SBD_TIMEOUT_ACTION")
+        shell = sh.cluster_shell()
+
+        if self.crashdump_mode == "set":
+            if not sbd_timeout_action_configured:
+                logger.info("Set SBD_TIMEOUT_ACTION in %s: %s", self.SYSCONFIG_SBD, self.SBD_CRASHDUMP_ACTION)
+                self.update_dict["SBD_TIMEOUT_ACTION"] = self.SBD_CRASHDUMP_ACTION
+            elif sbd_timeout_action_configured != self.SBD_CRASHDUMP_ACTION:
+                logger.info("Update SBD_TIMEOUT_ACTION in %s: %s", self.SYSCONFIG_SBD, self.SBD_CRASHDUMP_ACTION)
+                shell.get_stdout_or_raise_error(f"{comment_action_line} && {add_action_line}")
+
+        elif self.crashdump_mode == "restore":
+            if sbd_timeout_action_configured and sbd_timeout_action_configured == self.SBD_CRASHDUMP_ACTION:
+                logger.info("Restore SBD_TIMEOUT_ACTION in %s", self.SYSCONFIG_SBD)
+                shell.get_stdout_or_raise_error(f"{delete_action_line} && {comment_out_action_line}")
 
 
 def cleanup_existing_sbd_resource():

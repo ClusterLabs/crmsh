@@ -77,26 +77,19 @@ Feature: crm sbd ui test cases
     Then    Run "crm sbd configure show sysconfig|grep -E "SBD_DEVICE=\"/dev/sda5;/dev/sda6\""" OK
     Then    Run "crm sbd configure show sysconfig|grep -E "SBD_DEVICE=\"/dev/sda5;/dev/sda6\""" OK on "hanode2"
     And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda6'|grep -E "watchdog.*30"" OK
-    And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda6'|grep -E "msgwait.*120"" OK
-    When    Run "crm cluster restart --all" on "hanode1"
-    And     Wait for DC
+    And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda6'|grep -E "msgwait.*60"" OK
     # Remove a sbd disk
     When    Run "crm sbd device remove /dev/sda5" on "hanode1"
     Then    Run "crm sbd configure show sysconfig|grep "SBD_DEVICE=/dev/sda6"" OK
     Then    Run "crm sbd configure show sysconfig|grep "SBD_DEVICE=/dev/sda6"" OK on "hanode2"
-    When    Run "crm cluster restart --all" on "hanode1"
-    And     Wait for DC
     # Replace a sbd disk
     When    Run "crm -F sbd device add /dev/sda7" on "hanode1"
     Then    Run "crm sbd configure show sysconfig|grep -E "SBD_DEVICE=\"/dev/sda6;/dev/sda7\""" OK
     Then    Run "crm sbd configure show sysconfig|grep -E "SBD_DEVICE=\"/dev/sda6;/dev/sda7\""" OK on "hanode2"
     And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda7'|grep -E "watchdog.*30"" OK
-    And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda7'|grep -E "msgwait.*120"" OK
-    When    Run "crm cluster restart --all" on "hanode1"
-    And     Wait for DC
+    And     Run "crm sbd configure show disk_metadata |grep -A 8 '/dev/sda7'|grep -E "msgwait.*60"" OK
     # Purge sbd from cluster
     When    Run "crm sbd purge" on "hanode1"
-    And     Run "crm cluster restart --all" on "hanode1"
     Then    Service "sbd.service" is "stopped" on "hanode1"
     Then    Service "sbd.service" is "stopped" on "hanode2"
 
@@ -131,7 +124,6 @@ Feature: crm sbd ui test cases
     Then    Expected return code is "1"
     # Purge sbd from cluster
     When    Run "crm sbd purge" on "hanode1"
-    And     Run "crm cluster restart --all" on "hanode1"
     Then    Service "sbd.service" is "stopped" on "hanode1"
     Then    Service "sbd.service" is "stopped" on "hanode2"
 
