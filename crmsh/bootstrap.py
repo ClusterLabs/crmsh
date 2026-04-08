@@ -1487,8 +1487,8 @@ def init_cluster():
 
     init_cluster_local()
 
-    _rc, nnodes = ShellUtils().get_stdout("crm_node -l")
-    nnodes = len(nnodes.splitlines())
+    node_list = xmlutil.CrmMonXmlParser().get_node_list(online=True, node_type="member")
+    nnodes = len(node_list)
     if nnodes < 1:
         utils.fatal("No nodes found in cluster")
     if nnodes > 1:
@@ -1837,7 +1837,8 @@ def join_ssh_merge(cluster_node, remote_user):
         stderr=subprocess.DEVNULL,
     )
 
-    hosts = utils.fetch_cluster_node_list_from_node(cluster_node) + [utils.this_node()]
+    node_list = xmlutil.CrmMonXmlParser(cluster_node).get_node_list(online=True, node_type="member")
+    hosts = node_list + [utils.this_node()]
     known_hosts_new: set[str] = set()
     cat_cmd = "[ -e ~/.ssh/known_hosts ] && cat ~/.ssh/known_hosts || true"
     for host in hosts:
@@ -2871,7 +2872,7 @@ def sync_path(path, peer_node=None):
     """
     node_list = []
     if peer_node:
-        node_list = utils.fetch_cluster_node_list_from_node(peer_node)
+        node_list = xmlutil.CrmMonXmlParser(peer_node).get_node_list(online=True, node_type="member")
     utils.cluster_copy_path(path, nodes=node_list)
 
 
