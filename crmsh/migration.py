@@ -246,7 +246,7 @@ def check_dependency_version(handler: CheckResultHandler):
     )
     _check_version_range(
         handler,
-        'Pacemaker', (2, 1, 7), (3,),
+        'Pacemaker', (2, 1, 5), (3,),
         re.compile(r"^Pacemaker\s+(\d+(?:\.\d+)*)"),
         utils.get_stdout_or_raise_error('pacemakerd --version', None),
     )
