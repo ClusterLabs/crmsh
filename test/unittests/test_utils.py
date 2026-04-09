@@ -26,53 +26,26 @@ def test_package_is_installed_local(mock_run):
     mock_run.assert_called_once_with("rpm -q --quiet crmsh")
 
 
-@mock.patch('re.search')
-@mock.patch('crmsh.sh.ShellUtils.get_stdout')
 @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
-def test_get_nodeid_from_name_run_None1(mock_parser, mock_get_stdout, mock_re_search):
+def test_get_nodeid_from_name_remote(mock_parser):
+    mock_parser_inst = mock.Mock()
+    mock_parser.return_value = mock_parser_inst
+    mock_parser_inst.is_node_remote.return_value = True
+    assert utils.get_nodeid_from_name("node1") == "node1"
+    mock_parser.assert_called_once_with()
+    mock_parser_inst.is_node_remote.assert_called_once_with("node1")
+
+
+@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+def test_get_nodeid_from_name(mock_parser):
     mock_parser_inst = mock.Mock()
     mock_parser.return_value = mock_parser_inst
     mock_parser_inst.is_node_remote.return_value = False
-    mock_get_stdout.return_value = (1, None)
-    mock_re_search_inst = mock.Mock()
-    mock_re_search.return_value = mock_re_search_inst
-    res = utils.get_nodeid_from_name("node1")
-    assert res is None
-    mock_get_stdout.assert_called_once_with('crm_node -l')
-    mock_re_search.assert_not_called()
-
-
-@mock.patch('re.search')
-@mock.patch('crmsh.sh.ShellUtils.get_stdout')
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
-def test_get_nodeid_from_name_run_None2(mock_parser, mock_get_stdout, mock_re_search):
-    mock_parser_inst = mock.Mock()
-    mock_parser.return_value = mock_parser_inst
-    mock_parser_inst.is_node_remote.return_value = False
-    mock_get_stdout.return_value = (0, "172167901 node1 member\n172168231 node2 member")
-    mock_re_search.return_value = None
-    res = utils.get_nodeid_from_name("node111")
-    assert res is None
-    mock_get_stdout.assert_called_once_with('crm_node -l')
-    mock_re_search.assert_called_once_with(r'^([0-9]+) node111 ', mock_get_stdout.return_value[1], re.M)
-
-
-@mock.patch('re.search')
-@mock.patch('crmsh.sh.ShellUtils.get_stdout')
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
-def test_get_nodeid_from_name(mock_parser, mock_get_stdout, mock_re_search):
-    mock_parser_inst = mock.Mock()
-    mock_parser.return_value = mock_parser_inst
-    mock_parser_inst.is_node_remote.return_value = False
-    mock_get_stdout.return_value = (0, "172167901 node1 member\n172168231 node2 member")
-    mock_re_search_inst = mock.Mock()
-    mock_re_search.return_value = mock_re_search_inst
-    mock_re_search_inst.group.return_value = '172168231'
-    res = utils.get_nodeid_from_name("node2")
-    assert res == '172168231'
-    mock_get_stdout.assert_called_once_with('crm_node -l')
-    mock_re_search.assert_called_once_with(r'^([0-9]+) node2 ', mock_get_stdout.return_value[1], re.M)
-    mock_re_search_inst.group.assert_called_once_with(1)
+    mock_parser_inst.get_node_id_from_name.return_value = "1"
+    assert utils.get_nodeid_from_name("node1") == "1"
+    mock_parser.assert_called_once_with()
+    mock_parser_inst.is_node_remote.assert_called_once_with("node1")
+    mock_parser_inst.get_node_id_from_name.assert_called_once_with("node1")
 
 
 @mock.patch('crmsh.sh.LocalShell.get_rc_and_error')
@@ -1270,23 +1243,6 @@ def test_handle_role_for_ocf_1_1_return_not_role():
 
 def test_compatible_role():
     assert utils.compatible_role("Slave", "Unpromoted") is True
-
-
-@mock.patch('logging.Logger.warning')
-@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
-def test_fetch_cluster_node_list_from_node(mock_run, mock_warn):
-    mock_run.return_value = """
-
-    1 node1
-    2 node2 lost
-    3 node3 member
-    """
-    assert utils.fetch_cluster_node_list_from_node("node1") == ["node3"]
-    mock_run.assert_called_once_with("crm_node -l", "node1")
-    mock_warn.assert_has_calls([
-        mock.call("The node '%s' has no known name and/or state information", "1"),
-        mock.call("The node '%s'(state '%s') is not a current member", "node2", "lost")
-        ])
 
 
 @mock.patch('crmsh.utils.list_cluster_nodes_except_me')

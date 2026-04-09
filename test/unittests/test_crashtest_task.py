@@ -490,21 +490,20 @@ Fence timeout:     60
         mock_run.assert_called_once_with("which crm_node")
         mock_pre_check.assert_called_once_with()
 
-    @mock.patch('crmsh.crash_test.utils.check_node_status')
+    @mock.patch('crmsh.crash_test.utils.online_nodes')
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
-    def test_pre_check_error(self, mock_pre_check, mock_run, mock_node_status):
+    def test_pre_check_error(self, mock_pre_check, mock_run, mock_online_nodes):
         mock_run.side_effect = [(0, None, None), (0, None, None), (0, None, None)]
-        mock_node_status.return_value = False
+        mock_online_nodes.return_value = []
         with self.assertRaises(task.TaskError) as err:
             self.task_fence_inst.pre_check()
-        self.assertEqual("Node \"node1\" not in cluster!", str(err.exception))
+        self.assertEqual("Node \"node1\" is not in cluster!", str(err.exception))
         mock_run.assert_has_calls([
             mock.call("which crm_node"),
             mock.call("which stonith_admin"),
             mock.call("which crm_attribute")
             ])
-        mock_node_status.assert_called_once_with("node1", "member")
 
     @mock.patch('crmsh.crash_test.task.Task.fence_action_monitor')
     @mock.patch('threading.Thread')

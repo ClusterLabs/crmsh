@@ -1550,11 +1550,14 @@ done
         mock_adj_fence.assert_called_once_with(True)
 
     @mock.patch('crmsh.utils.cluster_copy_path')
-    @mock.patch('crmsh.utils.fetch_cluster_node_list_from_node')
-    def test_sync_path_peer(self, mock_fetch_nodes, mock_cluster_copy):
-        mock_fetch_nodes.return_value = ["node1", "node2"]
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_sync_path_peer(self, mock_parser, mock_cluster_copy):
+        mock_parser_inst = mock.Mock()
+        mock_parser.return_value = mock_parser_inst
+        mock_parser_inst.get_node_list.return_value = ["node1", "node2"]
         bootstrap.sync_path("/file1", peer_node="node3")
-        mock_fetch_nodes.assert_called_once_with("node3")
+        mock_parser.assert_called_once_with("node3")
+        mock_parser_inst.get_node_list.assert_called_once_with(online=True, node_type="member")
         mock_cluster_copy.assert_called_once_with("/file1", nodes=["node1", "node2"])
 
 

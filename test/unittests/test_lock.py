@@ -163,26 +163,6 @@ class TestRemoteLock(unittest.TestCase):
         config.core.lock_timeout = "130"
         self.assertEqual(self.lock_inst.lock_timeout, 130)
 
-    @mock.patch('crmsh.lock.RemoteLock._run')
-    def test_get_online_nodelist_error(self, mock_run):
-        mock_run.return_value = (1, None, "error data")
-        with self.assertRaises(ValueError) as err:
-            self.lock_inst._get_online_nodelist()
-        self.assertEqual("error data", str(err.exception))
-        mock_run.assert_called_once_with("crm_node -l")
-
-    @mock.patch('crmsh.lock.RemoteLock._run')
-    def test_get_online_nodelist(self, mock_run):
-        output = """
-        1084783297 15sp2-1 member
-        1084783193 15sp2-2 lost
-        1084783331 15sp2-3 member
-        """
-        mock_run.return_value = (0, output, None)
-        res = self.lock_inst._get_online_nodelist()
-        self.assertEqual(res, ["15sp2-1", "15sp2-3"])
-        mock_run.assert_called_once_with("crm_node -l")
-
     @mock.patch('crmsh.lock.Lock._create_lock_dir')
     @mock.patch('crmsh.lock.RemoteLock.lock_timeout', new_callable=mock.PropertyMock)
     @mock.patch('time.time')
@@ -198,16 +178,18 @@ class TestRemoteLock(unittest.TestCase):
 
     @mock.patch('time.sleep')
     @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.lock.RemoteLock._get_online_nodelist')
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     @mock.patch('crmsh.lock.Lock._create_lock_dir')
     @mock.patch('crmsh.lock.RemoteLock.lock_timeout', new_callable=mock.PropertyMock)
     @mock.patch('time.time')
     def test_lock_or_wait_timed_out(self, mock_time, mock_time_out, mock_create,
-            mock_get_nodelist, mock_warn, mock_sleep):
+            mock_parser, mock_warn, mock_sleep):
         mock_time.side_effect = [10000, 10121]
         mock_time_out.return_value = 120
         mock_create.return_value = False
-        mock_get_nodelist.return_value = ["node2"]
+        mock_parser_inst = mock.Mock()
+        mock_parser.return_value = mock_parser_inst
+        mock_parser_inst.get_nodelist.return_value = ["node2"]
 
         with self.assertRaises(lock.ClaimLockError) as err:
             self.lock_inst._lock_or_wait()
@@ -216,29 +198,31 @@ class TestRemoteLock(unittest.TestCase):
         mock_time.assert_has_calls([ mock.call(), mock.call()])
         mock_time_out.assert_has_calls([mock.call(), mock.call(), mock.call()])
         mock_create.assert_called_once_with()
-        mock_get_nodelist.assert_called_once_with()
         mock_warn.assert_called_once_with('Might have unfinished process on other nodes, wait %ss...', 120)
         mock_sleep.assert_called_once_with(10)
 
     @mock.patch('time.sleep')
     @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.lock.RemoteLock._get_online_nodelist')
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     @mock.patch('crmsh.lock.Lock._create_lock_dir')
     @mock.patch('crmsh.lock.RemoteLock.lock_timeout', new_callable=mock.PropertyMock)
     @mock.patch('time.time')
     def test_lock_or_wait_again(self, mock_time, mock_time_out, mock_create,
-            mock_get_nodelist, mock_warn, mock_sleep):
+            mock_parser, mock_warn, mock_sleep):
         mock_time.side_effect = [10000, 10010, 10020]
         mock_time_out.side_effect = [120, 120, 120]
         mock_create.side_effect = [False, False, True]
-        mock_get_nodelist.side_effect = [["node1"], ["node1", "node2"]]
+        mock_parser_inst1 = mock.Mock()
+        mock_parser_inst2 = mock.Mock()
+        mock_parser.side_effect = [mock_parser_inst1, mock_parser_inst2]
+        mock_parser_inst1.get_nodelist.return_value = ["node1"]
+        mock_parser_inst2.get_nodelist.return_value = ["node1", "node2"]
 
         self.lock_inst._lock_or_wait()
 
         mock_time.assert_has_calls([mock.call(), mock.call(), mock.call()])
         mock_time_out.assert_has_calls([mock.call(), mock.call(), mock.call()])
         mock_create.assert_has_calls([mock.call(), mock.call(), mock.call()])
-        mock_get_nodelist.assert_has_calls([mock.call(), mock.call()])
         mock_warn.assert_called_once_with('Might have unfinished process on other nodes, wait %ss...', 120)
         mock_sleep.assert_has_calls([mock.call(10), mock.call(10)])
 
