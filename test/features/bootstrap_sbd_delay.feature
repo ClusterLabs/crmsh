@@ -115,11 +115,6 @@ Feature: configure sbd delay start correctly
 
     When    Try "crm configure property fencing-watchdog-timeout=1" on "hanode1"
     Then    Except "It's required to set fencing-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
-    # Expect successfully set stonith-watchdog-timeout=5 since already set fencing-watchdog-timeout
-    When    Run "crm configur proerty stonith-watchdog-timeout=5" on "hanode1"
-    Then    Cluster property "fencing-watchdog-timeout" is "30"
-    When    Try "crm -F configure filter "sed 's/fencing-watchdog-timeout=30/#fencing-watchdog-timeout=30/g'"" on "hanode1"
-    Then    Expected "It's required to set stonith-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
     Then    Cluster property "fencing-watchdog-timeout" is "30"
 
   @clean
@@ -402,11 +397,11 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster init sbd -S -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
-    # Delete fencing-watchdog-timeout
-    When    Delete property "fencing-watchdog-timeout" from cluster
+    # Delete stonith-watchdog-timeout
+    When    Delete property "stonith-watchdog-timeout" from cluster
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's required that fencing-watchdog-timeout is set to 30, now is not set" in stderr
+    Then    Expected "It's required that stonith-watchdog-timeout is set to 30, now is not set" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's required that fencing-watchdog-timeout is set to 30, now is not set" in stderr
+    Then    Expected "It's required that stonith-watchdog-timeout is set to 30, now is not set" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
