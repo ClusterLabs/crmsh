@@ -254,7 +254,7 @@ def _prim_params_completer(agent, args):
     elif '=' in completing:
         return []
     command.enable_custom_sort_order()
-    return utils.filter_keys(agent.get_param_list_without_deprecated(), args)
+    return utils.filter_keys(agent.params(), args)
 
 
 def _prim_meta_completer(agent, args):
@@ -632,7 +632,7 @@ class CibConfig(command.UI):
     @command.name("get_property")
     @command.alias("get-property")
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(ra.get_properties_without_deprecated))
+    @command.completers_repeating(compl.call(ra.get_properties_list))
     def do_get_property(self, context, *args):
         "usage: get-property [-t|--true [<name>...]"
         utils.load_cib_file_env()
@@ -640,7 +640,7 @@ class CibConfig(command.UI):
         truth = any(a for a in args if a in ('-t', '--true'))
 
         if not properties:
-            utils.multicolumn(ra.get_properties_without_deprecated())
+            utils.multicolumn(ra.get_properties_list())
             return
 
         def print_value(v):
@@ -1174,7 +1174,7 @@ class CibConfig(command.UI):
         "usage: property [$id=<set_id>] <option>=<value>"
         self.__override_lower_level_attrs(*args)
         if not args:
-            utils.multicolumn(ra.get_properties_without_deprecated())
+            utils.multicolumn(ra.get_properties_list())
             return
         return self.__conf_object(context.get_command_name(), *args)
 
