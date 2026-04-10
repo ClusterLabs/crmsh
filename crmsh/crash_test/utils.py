@@ -122,7 +122,8 @@ class FenceInfo(object):
         action_result = crmshutils.get_property("fencing-action")
         supported_actions = ra.get_property_options("fencing-action")
         if action_result is None or action_result not in supported_actions:
-            msg_error(f"Cluster property \"fencing-action\" should be {'|'.join(supported_actions)}")
+            current_action_term = crmshutils.DeprecatedTermTranslator.get_working_term("stonith-action")
+            msg_error(f"Cluster property \"{current_action_term}\" should be {'|'.join(supported_actions)}")
             return None
         return action_result
 

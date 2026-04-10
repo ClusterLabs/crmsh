@@ -1496,7 +1496,7 @@ def init_cluster():
 
     logger.info("Loading initial cluster configuration")
 
-    crm_configure_load("update", """property cib-bootstrap-options: fencing-enabled=false
+    crm_configure_load("update", """property cib-bootstrap-options: stonith-enabled=false
 op_defaults op-options: timeout=600
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 """)
@@ -2805,7 +2805,7 @@ def adjust_fencing_timeout():
     """
     value = get_fencing_timeout_generally_expected()
     if value:
-        utils.set_property("fencing-timeout", value, conditional=True)
+        utils.set_property("stonith-timeout", value, conditional=True)
 
 
 def adjust_properties():
