@@ -1498,7 +1498,7 @@ done
     def test_adjust_fencing_timeout(self, mock_get_timeout, mock_set):
         mock_get_timeout.return_value = 30
         bootstrap.adjust_fencing_timeout()
-        mock_set.assert_called_once_with("fencing-timeout", 30, conditional=True)
+        mock_set.assert_called_once_with("stonith-timeout", 30, conditional=True)
 
     @mock.patch('crmsh.utils.set_property')
     def test_adjust_priority_in_rsc_defaults_2node(self, mock_set):
