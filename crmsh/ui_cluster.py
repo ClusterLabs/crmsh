@@ -611,23 +611,19 @@ Finally run `crm cluster init qdevice` on any node in the cluster to re-deploy t
             logger.info(suggestion)
             return
 
-        cib_factory = cibconfig.cib_factory_instance()
-        old_name = cib_factory.get_property('cluster-name')
+        old_name = corosync.get_value('totem.cluster_name')
         if old_name and new_name == old_name:
-            context.fatal_error("Expected a different name")
-
-        # Update config file with the new name on all nodes
-        nodes = utils.list_cluster_nodes()
+            context.fatal_error("Expected a different cluster name")
+        logger.info("Setting totem.cluster_name to %s in corosync.conf", new_name)
         corosync.set_value('totem.cluster_name', new_name)
+
+        nodes = utils.list_cluster_nodes_except_me()
         if len(nodes) > 1:
-            nodes.remove(utils.this_node())
-            context.info("Copy cluster config file to \"{}\"".format(' '.join(nodes)))
+            logger.info("Syncing corosync.conf to other nodes in the cluster")
             corosync.push_configuration(nodes)
 
-        # Change the cluster-name property in the CIB
-        cib_factory.create_object("property", "cluster-name={}".format(new_name))
-        if not cib_factory.commit():
-            context.fatal_error("Change property cluster-name failed!")
+        logger.info("Setting cluster-name property to %s in CIB", new_name)
+        utils.set_property("cluster-name", new_name)
 
         if xmlutil.CrmMonXmlParser().is_non_stonith_resource_running():
             context.info("To apply the change, restart the cluster service at convenient time")
