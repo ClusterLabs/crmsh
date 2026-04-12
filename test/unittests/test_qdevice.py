@@ -295,7 +295,7 @@ class TestQDevice(unittest.TestCase):
         mock_cluster_shell.return_value = mock_cluster_inst
         mock_cluster_inst.get_stdout_or_raise_error.return_value = "data"
         mock_installed.return_value = True
-        excepted_err_string = "This cluster's name \"cluster1\" already exists on qnetd server!\nPlease consider to use the different cluster-name property"
+        excepted_err_string = "This cluster's name \"cluster1\" already exists on qnetd server!\nPlease consider to use `crm cluster rename` to change a different cluster name.\nOr, run `crm cluster remove --qdevice` on the existing cluster beforehand."
 
         with self.assertRaises(ValueError) as err:
             self.qdevice_with_stage_cluster_name.validate_and_start_qnetd()
