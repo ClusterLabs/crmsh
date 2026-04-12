@@ -271,7 +271,11 @@ class QDevice(object):
             cmd = f"corosync-qnetd-tool -l -c {self.cluster_name}"
             if shell.get_stdout_or_raise_error(cmd, self.qnetd_addr):
                 exception_msg = f"This cluster's name \"{self.cluster_name}\" already exists on qnetd server!"
-                suggestion_msg = "Please consider to use the different cluster-name property"
+                if self.is_stage:
+                    suggestion_msg = "Please consider to use `crm cluster rename` to change a different cluster name."
+                else:
+                    suggestion_msg = "Please consider to use -n option to specify a different cluster name."
+                suggestion_msg += "\nOr, run `crm cluster remove --qdevice` on the existing cluster beforehand."
         else:
             exception_msg = f"Package \"corosync-qnetd\" not installed on {self.qnetd_addr}!"
             suggestion_msg = f"Please install \"corosync-qnetd\" on {self.qnetd_addr}"
