@@ -76,12 +76,14 @@ class TestFenceInfo(TestCase):
         self.assertEqual(res, True)
         mock_get_property.assert_called_once_with("fencing-enabled")
 
+    @mock.patch('crmsh.utils.DeprecatedTermTranslator.get_working_term')
     @mock.patch('crmsh.crash_test.utils.msg_error')
     @mock.patch('crmsh.ra.get_property_options')
     @mock.patch('crmsh.crash_test.utils.crmshutils.get_property')
-    def test_fence_action_none(self, mock_get_property, mock_get_property_options, mock_error):
+    def test_fence_action_none(self, mock_get_property, mock_get_property_options, mock_error, mock_get_working_term):
         mock_get_property_options.return_value = ["off", "reboot"]
         mock_get_property.return_value = None
+        mock_get_working_term.return_value = "fencing-action"
         res = self.fence_info_inst.fence_action
         self.assertEqual(res, None)
         mock_get_property.assert_called_once_with("fencing-action")

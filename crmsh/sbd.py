@@ -660,9 +660,9 @@ class SBDConfigChecker(SBDTimeout):
 
 
     def _get_current_terms(self):
-        self.current_watchdog_timeout_term = utils.DeprecatedTermTranslator.get_working_term("fencing-watchdog-timeout")
-        self.current_timeout_term = utils.DeprecatedTermTranslator.get_working_term("fencing-timeout")
-        self.current_enabled_term = utils.DeprecatedTermTranslator.get_working_term("fencing-enabled")
+        self.current_watchdog_timeout_term = utils.DeprecatedTermTranslator.get_working_term("stonith-watchdog-timeout")
+        self.current_timeout_term = utils.DeprecatedTermTranslator.get_working_term("stonith-timeout")
+        self.current_enabled_term = utils.DeprecatedTermTranslator.get_working_term("stonith-enabled")
 
     def check_and_fix(self) -> CheckResult:
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
