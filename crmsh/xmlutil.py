@@ -1681,4 +1681,9 @@ class CrmMonXmlParser(object):
             'completed': last_event.get('completed', '')
         }
         return fence_event_info
+
+    def get_node_id_from_name(self, name) -> str|None:
+        xpath = f'//node[@name="{name}"]'
+        res = self.xml_elem.xpath(xpath)
+        return res[0].get('id') if res else None
 # vim:ts=4:sw=4:et:

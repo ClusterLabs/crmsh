@@ -93,6 +93,7 @@ Feature: corosync qdevice/qnetd setup/remove process
     When    Run "crm cluster restart" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode1"
+    When    Wait "10" seconds
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     And     Service "corosync-qdevice" is "started" on "hanode2"

@@ -2149,16 +2149,10 @@ def valid_nodeid(nodeid):
 
 
 def get_nodeid_from_name(name):
-    if xmlutil.CrmMonXmlParser().is_node_remote(name):
+    crm_mon_xml_parser = xmlutil.CrmMonXmlParser()
+    if crm_mon_xml_parser.is_node_remote(name):
         return name
-    rc, out = ShellUtils().get_stdout('crm_node -l')
-    if rc != 0:
-        return None
-    res = re.search(r'^([0-9]+) {} '.format(name), out, re.M)
-    if res:
-        return res.group(1)
-    else:
-        return None
+    return crm_mon_xml_parser.get_node_id_from_name(name)
 
 
 def check_empty_option_value(options):
@@ -3089,26 +3083,6 @@ def retry_with_timeout(callable, timeout_sec: float, interval_sec=1):
                 pass
             await asyncio.sleep(interval_sec)
     return asyncio.run(asyncio.wait_for(wrapper(), timeout_sec))
-
-
-def fetch_cluster_node_list_from_node(init_node):
-    """
-    Fetch cluster member list from one known cluster node
-    """
-    cluster_nodes_list = []
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l", init_node)
-    for line in out.splitlines():
-        # Parse line in format: <id> <nodename> <state>, and collect the nodename.
-        tokens = line.split()
-        if len(tokens) == 0:
-            pass  # Skip any spurious empty line.
-        elif len(tokens) < 3:
-            logger.warning("The node '%s' has no known name and/or state information", tokens[0])
-        elif tokens[2] != "member":
-            logger.warning("The node '%s'(state '%s') is not a current member", tokens[1], tokens[2])
-        else:
-            cluster_nodes_list.append(tokens[1])
-    return cluster_nodes_list
 
 
 def has_sudo_access():

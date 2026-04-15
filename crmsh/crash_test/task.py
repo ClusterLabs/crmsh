@@ -199,8 +199,8 @@ Fence timeout:     {}
             if rc != 0 and err:
                 raise TaskError(err)
 
-        if not utils.check_node_status(self.target_node, 'member'):
-            raise TaskError("Node \"{}\" not in cluster!".format(self.target_node))
+        if self.target_node not in utils.online_nodes():
+            raise TaskError(f"Node \"{self.target_node}\" is not in cluster!")
 
     def run(self):
         """

@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from . import sh
 from . import config
 from . import log
+from . import xmlutil
 from .sh import ShellUtils
 
 
@@ -134,15 +135,6 @@ class RemoteLock(Lock):
             raise ValueError("Minimum value of core.lock_timeout should be {}".format(self.MIN_LOCK_TIMEOUT))
         return value
 
-    def _get_online_nodelist(self):
-        """
-        Get the online node list from remote node
-        """
-        rc, out, err = self._run("crm_node -l")
-        if rc != 0 and err:
-            raise ValueError(err)
-        return re.findall('[0-9]+ (.*) member', out)
-
     def _lock_or_wait(self):
         """
         Try to claim lock on remote node, wait if failed to claim
@@ -164,7 +156,7 @@ class RemoteLock(Lock):
 
             if self.for_join:
                 # Might lose claiming lock again, start to wait again
-                online_list = self._get_online_nodelist()
+                online_list = xmlutil.CrmMonXmlParser(self.remote_node).get_node_list(online=True, node_type="member")
                 if pre_online_list and pre_online_list != online_list:
                     timeout = current_time + self.lock_timeout
                 pre_online_list = online_list

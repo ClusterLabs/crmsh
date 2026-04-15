@@ -135,20 +135,6 @@ class FenceInfo(object):
         return config.FENCE_TIMEOUT
 
 
-def check_node_status(node, state):
-    """
-    Check whether the node has expected state
-    """
-    rc, stdout, stderr = ShellUtils().get_stdout_stderr('crm_node -l')
-    if rc != 0:
-        msg_error(stderr)
-        return False
-    pattern = re.compile(r'^.* {} {}'.format(node, state), re.MULTILINE)
-    if not pattern.search(stdout):
-        return False
-    return True
-
-
 def online_nodes():
     """
     Get online node list

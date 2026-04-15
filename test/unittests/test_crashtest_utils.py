@@ -322,35 +322,6 @@ class TestUtils(TestCase):
             mock.call(b'/usr/sbin/sbd\x00')
             ])
 
-    @mock.patch('crmsh.crash_test.utils.msg_error')
-    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-    def test_check_node_status_error_cmd(self, mock_run, mock_error):
-        mock_run.return_value = (1, None, "error")
-        res = utils.check_node_status("node1", "member")
-        self.assertEqual(res, False)
-        mock_run.assert_called_once_with("crm_node -l")
-        mock_error.assert_called_once_with("error")
-
-    @mock.patch('crmsh.crash_test.utils.msg_error')
-    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
-    def test_check_node_status(self, mock_run, mock_error):
-        output = """
-1084783297 15sp2-1 member
-1084783193 15sp2-2 lost
-        """
-        mock_run.return_value = (0, output, None)
-
-        res = utils.check_node_status("15sp2-2", "member")
-        self.assertEqual(res, False)
-        res = utils.check_node_status("15sp2-1", "member")
-        self.assertEqual(res, True)
-
-        mock_run.assert_has_calls([
-            mock.call("crm_node -l"),
-            mock.call("crm_node -l")
-            ])
-        mock_error.assert_not_called()
-
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_online_nodes(self, mock_crmmon_parser):
         mock_inst = mock.Mock()
