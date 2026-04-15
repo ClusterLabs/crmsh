@@ -25,10 +25,11 @@ options:
                         Choose one of the output options: plain, color-always,
                         color, or uppercase. The default is color if the
                         terminal emulation supports colors, else plain.
-  -F, --force           Make crm proceed with applying changes where it would
-                        normally ask the user to confirm before proceeding.
-                        This option is mainly useful in scripts, and should be
-                        used with care.
+  -F, --force           Make `crm` proceed with applying changes where it
+                        would normally ask the user to confirm before
+                        proceeding, or the operation risks interfering HA
+                        protection. This option is intended primarily for
+                        scripts and must be used with care.
   -n, --no              Automatically answer no when prompted
   -w, --wait            Make crm wait for the cluster transition to finish
                         (for the changes to take effect) after each processed
@@ -82,6 +83,11 @@ options:
                         Skip csync2 initialization (default, deprecated)
   --use-ssh-agent, --no-use-ssh-agent
                         Try to use an existing key from ssh-agent (default)
+  -F, --force           Make `crm` proceed with applying changes where it
+                        would normally ask the user to confirm before
+                        proceeding, or the operation risks interfering HA
+                        protection. This option is intended primarily for
+                        scripts and must be used with care.
 
 Network configuration:
   Options for configuring the network and messaging layer.
