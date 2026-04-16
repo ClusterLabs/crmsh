@@ -1,7 +1,7 @@
 import re
 from . import utils
-from .constants import SSH_OPTION
 from .sh import ShellUtils
+from . import sh
 from . import sbd
 
 
@@ -90,9 +90,7 @@ class Watchdog(object):
         """
         Given watchdog device name, get driver name on remote node
         """
-        # FIXME
-        cmd = "ssh {} {}@{} {}".format(SSH_OPTION, self._remote_user, self._peer_host, self.QUERY_CMD)
-        rc, out, err = ShellUtils().get_stdout_stderr(cmd)
+        rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(self._peer_host, self.QUERY_CMD)
         if rc == 0 and out:
             # output format might like:
             #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
