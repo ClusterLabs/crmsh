@@ -11,6 +11,7 @@ import tempfile
 import tarfile
 import subprocess
 import glob
+import time
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
@@ -200,6 +201,7 @@ class Cluster(command.UI):
             logger.info("The cluster stack started on %s", node)
 
         if start_qdevice and success_list:
+            time.sleep(1)
             qdevice.QDevice.check_qdevice_vote()
 
         return success_flag
@@ -911,7 +913,6 @@ to get the geo cluster configuration.""",
     @command.completers_repeating(compl.choice(['10', '60', '600']))
     def do_wait_for_startup(self, context, timeout='10'):
         "usage: wait_for_startup [<timeout>]"
-        import time
         t0 = time.time()
         timeout = float(timeout)
         cmd = 'crm_mon -bD1 >/dev/null 2>&1'

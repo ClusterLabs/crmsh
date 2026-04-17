@@ -16,6 +16,7 @@ from . import parallax
 from . import log
 from . import corosync_config_format
 from . import xmlutil
+from . import qdevice
 from .sh import ShellUtils
 
 
@@ -114,6 +115,7 @@ def query_status(status_type):
         out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l")
         print(f"{out}\n")
         print(status_func_dict[status_type]())
+        qdevice.QDevice.check_qdevice_vote()
     else:
         raise ValueError("Wrong type \"{}\" to query status".format(status_type))
 
