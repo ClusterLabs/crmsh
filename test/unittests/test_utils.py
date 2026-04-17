@@ -250,35 +250,43 @@ def test_sysconfig_set_bsc1145823():
 
 @mock.patch("socket.getaddrinfo")
 @mock.patch("socket.socket")
-@mock.patch("crmsh.utils.closing")
-def test_check_port_open_false(mock_closing, mock_socket, mock_getaddrinfo):
+@mock.patch("selectors.DefaultSelector")
+@mock.patch("time.sleep")
+def test_check_port_open_false(mock_sleep, mock_selector_cls, mock_socket, mock_getaddrinfo):
     sock_inst = mock.Mock()
     mock_socket.return_value = sock_inst
-    mock_closing.return_value.__enter__.return_value = sock_inst
     sock_inst.connect_ex.return_value = 1
     mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 22))]
 
+    mock_selector = mock.Mock()
+    mock_selector_cls.return_value = mock_selector
+    mock_selector.select.return_value = []
+
     assert utils.check_port_open("localhost", 22) is False
 
-    mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM, 6)
-    mock_closing.assert_called_once_with(sock_inst)
-    sock_inst.connect_ex.assert_called_once_with(("127.0.0.1", 22))
+    assert mock_socket.call_count == 3
+    assert sock_inst.connect_ex.call_count == 3
+    assert mock_selector_cls.call_count == 3
+    assert mock_selector.select.call_count == 3
+    assert mock_sleep.call_count == 2
 
 @mock.patch("socket.getaddrinfo")
 @mock.patch("socket.socket")
-@mock.patch("crmsh.utils.closing")
-def test_check_port_open_true(mock_closing, mock_socket, mock_getaddrinfo):
+@mock.patch("selectors.DefaultSelector")
+def test_check_port_open_true(mock_selector_cls, mock_socket, mock_getaddrinfo):
     sock_inst = mock.Mock()
     mock_socket.return_value = sock_inst
-    mock_closing.return_value.__enter__.return_value = sock_inst
     sock_inst.connect_ex.return_value = 0
     mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 22))]
 
+    mock_selector = mock.Mock()
+    mock_selector_cls.return_value = mock_selector
+
     assert utils.check_port_open("localhost", 22) is True
 
-    mock_socket.assert_called_once_with(socket.AF_INET, socket.SOCK_STREAM, 6)
-    mock_closing.assert_called_once_with(sock_inst)
-    sock_inst.connect_ex.assert_called_once_with(("127.0.0.1", 22))
+    assert mock_socket.call_count == 1
+    assert sock_inst.connect_ex.call_count == 1
+    assert mock_selector_cls.call_count == 1
 
 def test_valid_port():
     assert utils.valid_port(1) is False
