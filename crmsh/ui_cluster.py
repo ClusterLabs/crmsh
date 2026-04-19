@@ -620,7 +620,7 @@ Finally run `crm cluster init qdevice` on any node in the cluster to re-deploy t
         corosync.set_value('totem.cluster_name', new_name)
 
         nodes = utils.list_cluster_nodes_except_me()
-        if len(nodes) > 1:
+        if len(nodes) >= 1:
             logger.info("Syncing corosync.conf to other nodes in the cluster")
             corosync.push_configuration(nodes)
 
