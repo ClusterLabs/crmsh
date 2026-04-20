@@ -318,7 +318,7 @@ settings based on the calculations with a set of formulas.
 ...............
     # For diskless SBD
     SBD_WATCHDOG_TIMEOUT = Default value is 15s. This value is from the definition
-    in +/etc/crm/profiles.xml+, can be a different value with a different profile.
+    in /etc/crm/profiles.xml, can be a different value with a different profile.
 
     # When adding diskless SBD and QDevice together from crm cluster init
     if SBD_WATCHDOG_TIMEOUT < 35s:
