@@ -25,6 +25,7 @@ import bz2
 import lzma
 import json
 import socket
+import selectors
 from pathlib import Path
 from collections import defaultdict
 from contextlib import contextmanager, closing
@@ -2087,21 +2088,63 @@ def check_ssh_passwd_need(local_user, remote_user, host, shell: sh.LocalShell = 
     return rc != 0
 
 
-def check_port_open(host, port, timeout=3) -> bool:
+def check_port_open(host, port, timeout=1.0, retry=3) -> bool:
     """
     Check whether the port is open on the host
     Use getaddrinfo to support both IPv4 and IPv6
     """
     try:
-        addrinfo = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
-        af, socktype, proto, canonname, sa = addrinfo[0]
-        with closing(socket.socket(af, socktype, proto)) as sock:
-            sock.settimeout(timeout)
-            if sock.connect_ex(sa) == 0:
-                return True
-        return False
+        addrinfos = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
     except socket.error:
         return False
+
+    for i in range(retry):
+        start_time = time.time()
+        sel = selectors.DefaultSelector()
+        sockets = []
+
+        for addrinfo in addrinfos:
+            af, socktype, proto, canonname, sa = addrinfo
+            sock = None
+            try:
+                sock = socket.socket(af, socktype, proto)
+                sock.setblocking(False)
+                if hasattr(socket, 'TCP_SYNCNT'):
+                    try:
+                        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_SYNCNT, 1)
+                    except OSError:
+                        pass
+
+                err = sock.connect_ex(sa)
+                if err == 0:
+                    sel.close()
+                    for s in sockets:
+                        s.close()
+                    sock.close()
+                    return True
+
+                sel.register(sock, selectors.EVENT_WRITE)
+                sockets.append(sock)
+            except socket.error:
+                if sock:
+                    sock.close()
+
+        try:
+            events = sel.select(timeout)
+            for key, mask in events:
+                if key.fileobj.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR) == 0:
+                    return True
+        finally:
+            sel.close()
+            for sock in sockets:
+                sock.close()
+
+        if i < retry - 1:
+            elapsed = time.time() - start_time
+            if elapsed < timeout:
+                time.sleep(timeout - elapsed)
+
+    return False
 
 
 def valid_port(port):
