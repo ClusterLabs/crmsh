@@ -1556,7 +1556,7 @@ def configure_qdevice_interactive():
     ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
     qdevice.QDevice.check_qnetd_addr(qnetd_host)
     _context.qnetd_addr_input = qnetd_addr_input
-    qdevice_port = prompt_for_string("TCP PORT of QNetd server", default=5403,
+    qdevice_port = prompt_for_string("TCP PORT of QNetd server",
             valid_func=qdevice.QDevice.check_qdevice_port)
     qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
             valid_func=qdevice.QDevice.check_qdevice_algo)

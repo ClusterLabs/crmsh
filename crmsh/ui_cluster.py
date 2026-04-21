@@ -450,8 +450,8 @@ Examples:
         qdevice_group = parser.add_argument_group("QDevice configuration", re.sub('  ', '', constants.QDEVICE_HELP_INFO) + "\n\nOptions for configuring QDevice and QNetd.")
         qdevice_group.add_argument("--qnetd-hostname", dest="qnetd_addr_input", metavar="[USER@]HOST",
                                    help="User and host of the QNetd server. The host can be specified in either hostname or IP address.")
-        qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int, default=5403,
-                                   help="TCP PORT of QNetd server (default:5403)")
+        qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int,
+                                   help=f"TCP PORT of QNetd server (default:{qdevice.QNETD_DEFAULT_PORT})")
         qdevice_group.add_argument("--qdevice-algo", dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit", choices=['ffsplit', 'lms'],
                                    help="QNetd decision ALGORITHM (ffsplit/lms, default:ffsplit)")
         qdevice_group.add_argument("--qdevice-tie-breaker", dest="qdevice_tie_breaker", metavar="TIE_BREAKER", default="lowest",
