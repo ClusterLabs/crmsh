@@ -113,7 +113,7 @@ class TestContext(unittest.TestCase):
     def test_initialize_qdevice(self, mock_qdevice):
         ctx = crmsh.bootstrap.Context()
         ctx.qnetd_addr_input = "node3"
-        ctx.qdevice_port = 123
+        ctx.qnetd_port = 123
         ctx.stage = ""
         ctx._initialize_qdevice()
         mock_qdevice.assert_called_once_with(qnetd_addr='node3', port=123, ssh_user=None, algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
@@ -122,7 +122,7 @@ class TestContext(unittest.TestCase):
     def test_initialize_qdevice_with_user(self, mock_qdevice):
         ctx = crmsh.bootstrap.Context()
         ctx.qnetd_addr_input = "alice@node3"
-        ctx.qdevice_port = 123
+        ctx.qnetd_port = 123
         ctx.stage = ""
         ctx._initialize_qdevice()
         mock_qdevice.assert_called_once_with(qnetd_addr='node3', port=123, ssh_user='alice', algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
@@ -1357,8 +1357,8 @@ done
         mock_confirm.assert_called_once_with("Do you want to configure QDevice?")
         mock_prompt.assert_has_calls([
             mock.call("HOST or IP of the QNetd server to be used"),
-            mock.call("TCP PORT of QNetd server", default=5403,
-                valid_func=qdevice.QDevice.check_qdevice_port),
+            mock.call("TCP PORT of QNetd server",
+                valid_func=qdevice.QDevice.check_qnetd_port),
             mock.call("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
                 valid_func=qdevice.QDevice.check_qdevice_algo),
             mock.call("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest",
