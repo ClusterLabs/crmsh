@@ -67,8 +67,9 @@ OPTIONS
 
 *-F, --force*::
     Make `crm` proceed with applying changes where it would normally
-    ask the user to confirm before proceeding. This option is mainly
-    useful in scripts, and should be used with care.
+    ask the user to confirm before proceeding, or the operation risks
+    interfering HA protection. This option is intended primarily for
+    scripts and must be used with care
 
 *-w, --wait*::
     Make `crm` wait for the cluster transition to finish (for the
@@ -2235,11 +2236,11 @@ Usage:
 ...............
 # For disk-based SBD
 crm sbd configure show [disk_metadata|sysconfig|property]
-crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device|driver>]
+crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device|driver>] [-F|--force]
 
 # For disk-less SBD
 crm sbd configure show [sysconfig|property]
-crm sbd configure [watchdog-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device|driver>]
+crm sbd configure [watchdog-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device|driver>] [-F|--force]
 ...............
 
 example:
