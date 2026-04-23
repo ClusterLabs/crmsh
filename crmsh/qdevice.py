@@ -1,3 +1,5 @@
+import ipaddress
+import json
 import os
 import re
 import socket
@@ -6,7 +8,7 @@ import typing
 from enum import Enum
 
 import crmsh.parallax
-from . import sh
+from . import sh, iproute2
 from . import utils
 from . import parallax
 from . import corosync
@@ -185,22 +187,25 @@ class QDevice(object):
 
     @staticmethod
     def check_qnetd_addr(qnetd_addr):
-        qnetd_ip = None
-        try:
-            # socket.getaddrinfo works for both ipv4 and ipv6 address
-            # The function returns a list of 5-tuples with the following structure:
-            # (family, type, proto, canonname, sockaddr)
-            # sockaddr is a tuple describing a socket address, whose format depends on the returned family
-            # (a (address, port) 2-tuple for AF_INET, a (address, port, flow info, scope id) 4-tuple for AF_INET6)
-            res = socket.getaddrinfo(qnetd_addr, None)
-            qnetd_ip = res[0][-1][0]
-        except socket.error:
-            raise ValueError("host \"{}\" is unreachable".format(qnetd_addr))
-
         utils.ssh_port_reachable_check(qnetd_addr)
+        try:
+            qnetd_ip_addresses = [
+                ipaddress.ip_address(sockaddr[0])
+                for af, tpe, proto, canonname, sockaddr in socket.getaddrinfo(qnetd_addr, None)
+            ]
+        except socket.error as e:
+            raise ValueError(f"{e}: {qnetd_addr}")
+        try:
+            local_interfaces = iproute2.IPAddr(json.loads(
+                sh.LocalShell().get_stdout_or_raise_error(None, 'ip -j addr show')
+            ))
+        except ValueError:
+            return
+        local_ip_addresses = set(addr_info.ip for interface in local_interfaces.interfaces() for addr_info in interface.addr_info)
+        for ip_addr in qnetd_ip_addresses:
+            if ip_addr in local_ip_addresses:
+                raise ValueError("host for qnetd must be a remote one")
 
-        if utils.InterfacesInfo.ip_in_local(qnetd_ip):
-            raise ValueError("host for qnetd must be a remote one")
 
     @staticmethod
     def check_qdevice_port(qdevice_port):

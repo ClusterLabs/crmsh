@@ -1,5 +1,6 @@
 import unittest
 import socket
+import json
 
 try:
     from unittest import mock
@@ -184,24 +185,45 @@ class TestQDevice(unittest.TestCase):
         res = self.qdevice_with_ip.qdevice_p12_on_local
         self.assertEqual(res, "/etc/corosync/qdevice/net/nssdb/qdevice-net-node.p12")
 
-    @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
+    @mock.patch('crmsh.sh.LocalShell')
     @mock.patch('crmsh.utils.ssh_port_reachable_check')
     @mock.patch('socket.getaddrinfo')
-    def test_check_qnetd_addr_local(self, mock_getaddrinfo, mock_reachable, mock_in_local):
-        mock_getaddrinfo.return_value = [(None, ("10.10.10.123",)),]
-        mock_in_local.return_value = True
+    def test_check_qnetd_addr_local(self, mock_getaddrinfo, mock_reachable, mock_shell):
+        mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, '', ("10.10.10.123", 0)),]
+        mock_shell.return_value.get_stdout_or_raise_error.return_value = json.dumps([
+            {
+                "ifname": "eth0",
+                "flags": ["UP", "LOWER_UP"],
+                "addr_info": [{"local": "10.10.10.123", "prefixlen": 24}]
+            }
+        ])
         with self.assertRaises(ValueError) as err:
             qdevice.QDevice.check_qnetd_addr("qnetd-node")
         excepted_err_string = "host for qnetd must be a remote one"
         self.assertEqual(excepted_err_string, str(err.exception))
 
+    @mock.patch('crmsh.utils.ssh_port_reachable_check')
     @mock.patch('socket.getaddrinfo')
-    def test_check_qnetd_addr(self, mock_getaddrinfo):
-        mock_getaddrinfo.side_effect = socket.error
+    def test_check_qnetd_addr(self, mock_getaddrinfo, mock_reachable):
+        mock_getaddrinfo.side_effect = socket.error("getaddrinfo failed")
         with self.assertRaises(ValueError) as err:
             qdevice.QDevice.check_qnetd_addr("qnetd-node")
-        excepted_err_string = "host \"qnetd-node\" is unreachable"
+        excepted_err_string = "getaddrinfo failed: qnetd-node"
         self.assertEqual(excepted_err_string, str(err.exception))
+
+    @mock.patch('crmsh.sh.LocalShell')
+    @mock.patch('crmsh.utils.ssh_port_reachable_check')
+    @mock.patch('socket.getaddrinfo')
+    def test_check_qnetd_addr_success(self, mock_getaddrinfo, mock_reachable, mock_shell):
+        mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, '', ("10.10.10.124", 0)),]
+        mock_shell.return_value.get_stdout_or_raise_error.return_value = json.dumps([
+            {
+                "ifname": "eth0",
+                "flags": ["UP", "LOWER_UP"],
+                "addr_info": [{"local": "10.10.10.123", "prefixlen": 24}]
+            }
+        ])
+        qdevice.QDevice.check_qnetd_addr("qnetd-node")
 
     @mock.patch('crmsh.utils.valid_port')
     def test_check_qdevice_port(self, mock_port):
