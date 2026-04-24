@@ -113,9 +113,7 @@ See the crm(8) man page or call %(prog)s help for more details.""")
                         "The default is color if the terminal emulation supports colors, " +
                         "else plain.")
     parser.add_argument("-F", "--force", action="store_true", default=False, dest="force",
-                        help="Make crm proceed with applying changes where it would normally " +
-                        "ask the user to confirm before proceeding. This option is mainly useful " +
-                        "in scripts, and should be used with care.")
+                        help=constants.FORCE_HELP)
     parser.add_argument("-n", "--no", action="store_true", default=False, dest="ask_no",
                         help="Automatically answer no when prompted")
     parser.add_argument("-w", "--wait", action="store_true", default=False, dest="wait",

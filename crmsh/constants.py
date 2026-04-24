@@ -434,6 +434,7 @@ Allowed value is nic name or IP address.
 If a nic name is provided, the first IP of that nic will be used. 
 Use multiple -i for more links. Note: Only one link is allowed for the non knet transport type
 """
+FORCE_HELP = "Make `crm` proceed with applying changes where it would normally ask the user to confirm before proceeding, or the operation risks interfering HA protection. This option is intended primarily for scripts and must be used with care."
 
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
 

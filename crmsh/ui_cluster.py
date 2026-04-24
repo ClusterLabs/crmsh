@@ -32,6 +32,7 @@ from . import constants
 from . import sbd
 from . import log
 from .utils import TerminateSubCommand
+import crmsh.options
 
 logger = log.setup_logger(__name__)
 
@@ -434,6 +435,8 @@ Examples:
                             help="Skip csync2 initialization (default, deprecated)")
         parser.add_argument('--use-ssh-agent', action=argparse.BooleanOptionalAction, dest='use_ssh_agent', default=True,
                             help="Try to use an existing key from ssh-agent (default)")
+        parser.add_argument("-F", "--force", dest="force", action="store_true", default=False,
+                            help=constants.FORCE_HELP)
 
         network_group = parser.add_argument_group("Network configuration", "Options for configuring the network and messaging layer.")
         network_group.add_argument("-i", "--interface", dest="nic_addr_list", metavar="IF", action=CustomAppendAction, default=[], help=constants.INTERFACE_HELP)
@@ -475,6 +478,8 @@ Examples:
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
+
+        crmsh.options.force |= options.force
 
         stage = ""
         if len(args):
@@ -581,6 +586,8 @@ the last node, pass --force argument to crm.
         options, args = parse_options(parser, args)
         if options is None or args is None:
             return
+
+        crmsh.options.force |= options.force
 
         if options.cluster_node is not None and options.cluster_node not in args:
             args = list(args) + [options.cluster_node]
