@@ -301,7 +301,7 @@ class NodeMgmt(command.UI):
             args = args[:-1]
 
         # Parse node option
-        node_list = ui_utils.parse_and_validate_node_args("standby", *args)
+        node_list, _ = ui_utils.parse_and_validate_node_args("standby", *args)
         if not node_list:
             return
 
@@ -389,7 +389,7 @@ class NodeMgmt(command.UI):
         To avoid race condition for --all option, melt all online values into one cib replace session
         """
         # Parse node option
-        node_list = ui_utils.parse_and_validate_node_args("online", *args)
+        node_list, _ = ui_utils.parse_and_validate_node_args("online", *args)
         if not node_list:
             return
 

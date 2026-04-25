@@ -165,10 +165,10 @@ def validate_arguments(f, args, nskip=0):
                          (mknamed(), max_args-nskip, len(args)-nskip))
 
 
-def parse_and_validate_node_args(command_name, *args) -> list:
+def parse_and_validate_node_args(command_name, *args) -> tuple[list[str], bool]:
     '''
     Parses option for node-related commands
-    Then validates and returns the reachable node list
+    Then validates and returns the reachable node list and now flag
     '''
     action_target = "node" if command_name in ["standby", "online"] else "cluster service"
     action = f"{command_name} {action_target}"
@@ -193,6 +193,9 @@ keep the node in standby after reboot. The life time defaults to
     )
     parser.add_argument("-h", "--help", action="store_true", dest="help", help="Show this help message")
     parser.add_argument("--all", help=f"To {action} on all nodes", action="store_true", dest="all")
+    if command_name in ["enable", "disable"]:
+        help_str = "start" if command_name == "enable" else "stop"
+        parser.add_argument("--now", action="store_true", dest="now", help=f"To {help_str} cluster service immediately")
 
     options, args = parser.parse_known_args(args)
     if options.help:
@@ -204,4 +207,6 @@ keep the node in standby after reboot. The life time defaults to
         raise ValueError("Should either use --all or specific node(s)")
 
     include_remote = command_name in ["standby", "online"]
-    return utils.validate_and_get_reachable_nodes(args, options.all, include_remote)
+    nodes = utils.validate_and_get_reachable_nodes(args, options.all, include_remote)
+
+    return nodes, getattr(options, "now", False)
