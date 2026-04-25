@@ -76,9 +76,9 @@ class TestServiceManager(unittest.TestCase):
     def test_enable_service(self, mock_call_with_parallax: mock.MagicMock):
         self.service_manager._call.return_value = ['node1']
         self.assertEqual(['node1'], self.service_manager.enable_service('service1', remote_addr='node1'))
-        self.service_manager._call.assert_called_once_with('node1', [], "systemctl enable 'service1'")
+        self.service_manager._call.assert_called_once_with('node1', [], "systemctl enable service1")
 
     def test_disable_service(self, mock_call_with_parallax: mock.MagicMock):
         self.service_manager._call.return_value = ['node1']
         self.assertEqual(['node1'], self.service_manager.disable_service('service1', remote_addr='node1'))
-        self.service_manager._call.assert_called_once_with('node1', [], "systemctl disable 'service1'")
+        self.service_manager._call.assert_called_once_with('node1', [], "systemctl disable service1")

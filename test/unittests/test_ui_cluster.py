@@ -43,7 +43,7 @@ class TestCluster(unittest.TestCase):
     def test_do_start_already_started(self, mock_qdevice_configured, mock_parse_nodes, mock_active, mock_info):
         mock_qdevice_configured.return_value = False
         context_inst = mock.Mock()
-        mock_parse_nodes.return_value = ["node1", "node2"]
+        mock_parse_nodes.return_value = ["node1", "node2"], False
         mock_active.side_effect = [True, True]
         self.ui_cluster_inst.do_start(context_inst, "node1", "node2")
         mock_parse_nodes.assert_called_once_with("start", "node1", "node2")
@@ -67,7 +67,7 @@ class TestCluster(unittest.TestCase):
     def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_error, mock_start_pacemaker, mock_check_qdevice):
         context_inst = mock.Mock()
         mock_start_pacemaker.return_value = ["node1"]
-        mock_parse_nodes.return_value = ["node1", "node2"]
+        mock_parse_nodes.return_value = ["node1", "node2"], False
         mock_active.side_effect = [False, False, False, False]
         mock_qdevice_configured.return_value = True
 
@@ -88,7 +88,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
     @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
     def test_do_stop_return(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc):
-        mock_parse_nodes.return_value = ["node1", "node2"]
+        mock_parse_nodes.return_value = ["node1", "node2"], False
         mock_node_ready_to_stop_cluster_service.side_effect = [False, False]
 
         context_inst = mock.Mock()
@@ -108,7 +108,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
     def test_do_stop(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc,
                      mock_set_dlm, mock_service_manager, mock_info, mock_debug, mock_is_in_maintenance_mode):
-        mock_parse_nodes.return_value = ["node1", "node2"]
+        mock_parse_nodes.return_value = ["node1", "node2"], False
         mock_node_ready_to_stop_cluster_service.side_effect = [True, False]
         mock_service_manager_inst = mock.Mock()
         mock_service_manager.return_value = mock_service_manager_inst
