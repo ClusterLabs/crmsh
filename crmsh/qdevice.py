@@ -212,9 +212,9 @@ class QDevice(object):
 
 
     @staticmethod
-    def check_qdevice_port(qdevice_port):
-        if qdevice_port and not utils.valid_port(qdevice_port):
-            raise ValueError("invalid qdevice port range(1024 - 65535)")
+    def check_qnetd_port(qnetd_port):
+        if qnetd_port and not utils.valid_port(qnetd_port):
+            raise ValueError("invalid qnetd port range(1024 - 65535)")
 
     @staticmethod
     def check_qdevice_algo(qdevice_algo):
@@ -262,7 +262,7 @@ class QDevice(object):
             utils.check_all_nodes_reachable("setup Qdevice")
         self.check_corosync_qdevice_available()
         self.check_qnetd_addr(self.qnetd_addr)
-        self.check_qdevice_port(self.port)
+        self.check_qnetd_port(self.port)
         self.check_qdevice_algo(self.algo)
         self.check_qdevice_tie_breaker(self.tie_breaker)
         self.check_qdevice_tls(self.tls)
@@ -526,7 +526,7 @@ class QDevice(object):
             port_in_qnetd = int(res.group(1))
             if self.port is not None and self.port != port_in_qnetd:
                 error_msg = f"The port {self.port} is different from the port {port_in_qnetd} that corosync-qnetd is using"
-                suggestion_msg = f"Please use '--qdevice-port {port_in_qnetd}' to keep consistent"
+                suggestion_msg = f"Please use '--qnetd-port {port_in_qnetd}' to keep consistent"
                 raise ValueError(f"{error_msg}\n{suggestion_msg}")
             else:
                 self.port = port_in_qnetd
@@ -555,7 +555,7 @@ class QDevice(object):
                     port_in_sysconfig = int(res.group(1))
                     if self.port is not None and self.port != port_in_sysconfig:
                         error_msg = f"The port {self.port} is different from the port {port_in_sysconfig} in {self.SYSCONFIG_QNETD}"
-                        suggestion_msg = f"Please use '--qdevice-port {port_in_sysconfig}' to keep consistent"
+                        suggestion_msg = f"Please use '--qnetd-port {port_in_sysconfig}' to keep consistent"
                         raise ValueError(f"{error_msg}\n{suggestion_msg}")
                     else:
                         self.port = port_in_sysconfig
