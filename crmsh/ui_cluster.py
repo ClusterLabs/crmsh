@@ -451,6 +451,8 @@ Examples:
         qdevice_group.add_argument("--qnetd-hostname", dest="qnetd_addr_input", metavar="[USER@]HOST",
                                    help="User and host of the QNetd server. The host can be specified in either hostname or IP address.")
         qdevice_group.add_argument("--qdevice-port", dest="qdevice_port", metavar="PORT", type=int,
+                                   help=f"TCP PORT of QNetd server (default:{qdevice.QNETD_DEFAULT_PORT}, deprecated, use --qnetd-port instead)")
+        qdevice_group.add_argument("--qnetd-port", dest="qnetd_port", metavar="PORT", type=int,
                                    help=f"TCP PORT of QNetd server (default:{qdevice.QNETD_DEFAULT_PORT})")
         qdevice_group.add_argument("--qdevice-algo", dest="qdevice_algo", metavar="ALGORITHM", default="ffsplit", choices=['ffsplit', 'lms'],
                                    help="QNetd decision ALGORITHM (ffsplit/lms, default:ffsplit)")
