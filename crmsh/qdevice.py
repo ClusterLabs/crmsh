@@ -123,19 +123,19 @@ class QDevice(object):
     qdevice_path = "/etc/corosync/qdevice/net"
     qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
 
-    def __init__(self, qnetd_addr, port=None, algo="ffsplit", tie_breaker="lowest",
-            tls="on", ssh_user=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
+    def __init__(self, qnetd_addr, port=None, algo=None, tie_breaker=None,
+            tls=None, ssh_user=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
         """
         Init function
         """
         self.qnetd_addr = qnetd_addr
         self.port = port
-        self.algo = algo
-        self.tie_breaker = tie_breaker
-        self.tls = tls
+        self.algo = algo or "ffsplit"
+        self.tie_breaker = tie_breaker or "lowest"
+        self.tls = tls or "on"
         self.ssh_user = ssh_user
         self.cmds = cmds
-        self.mode = mode
+        self.mode = mode or "sync"
         self.cluster_name = cluster_name
         self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
         self.is_stage = is_stage

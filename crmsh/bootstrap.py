@@ -156,14 +156,31 @@ class Context(object):
         ctx.initialize_user()
         return ctx
 
+    def _any_qdevice_options_set(self):
+        return any([
+            self.qdevice_port,
+            self.qnetd_port,
+            self.qdevice_algo,
+            self.qdevice_tie_breaker,
+            self.qdevice_tls,
+            self.qdevice_heuristics,
+            self.qdevice_heuristics_mode,
+        ])
+
     def _initialize_qdevice(self):
         """
         Initialize qdevice instance
         """
         if not self.qnetd_addr_input:
+            if self._any_qdevice_options_set() or self.stage == "qdevice":
+                utils.fatal("Option --qnetd-hostname is required if want to configure qdevice")
             return
+
         if self.qdevice_port is not None:
             logger.warning("Option --qdevice-port is deprecated and will be removed in future release, please use --qnetd-port instead")
+        if self.qdevice_heuristics_mode and not self.qdevice_heuristics:
+            utils.fatal("Option --qdevice-heuristics is required if want to configure heuristics mode")
+
         qnetd_port = self.qnetd_port or self.qdevice_port
         ssh_user, qnetd_host = utils.parse_user_at_host(self.qnetd_addr_input)
         self.qdevice_inst = qdevice.QDevice(
