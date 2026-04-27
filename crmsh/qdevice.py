@@ -105,12 +105,16 @@ def get_node_list(is_stage: bool) -> list[str]:
         return [me]
 
 
+QNETD_DEFAULT_PORT = 5403
+
+
 class QDevice(object):
     """Class to manage qdevice configuration and services
 
     Call `certificate_process_on_init` to generate all of CA, server, and client certs.
     """
 
+    SYSCONFIG_QNETD = "/etc/sysconfig/corosync-qnetd"
     qnetd_service = "corosync-qnetd.service"
     qnetd_cacert_filename = "qnetd-cacert.crt"
     qdevice_crq_filename = "qdevice-net-node.crq"
@@ -119,19 +123,19 @@ class QDevice(object):
     qdevice_path = "/etc/corosync/qdevice/net"
     qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
 
-    def __init__(self, qnetd_addr, port=5403, algo="ffsplit", tie_breaker="lowest",
-            tls="on", ssh_user=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
+    def __init__(self, qnetd_addr, port=None, algo=None, tie_breaker=None,
+            tls=None, ssh_user=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
         """
         Init function
         """
         self.qnetd_addr = qnetd_addr
         self.port = port
-        self.algo = algo
-        self.tie_breaker = tie_breaker
-        self.tls = tls
+        self.algo = algo or "ffsplit"
+        self.tie_breaker = tie_breaker or "lowest"
+        self.tls = tls or "on"
         self.ssh_user = ssh_user
         self.cmds = cmds
-        self.mode = mode
+        self.mode = mode or "sync"
         self.cluster_name = cluster_name
         self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
         self.is_stage = is_stage
@@ -208,9 +212,9 @@ class QDevice(object):
 
 
     @staticmethod
-    def check_qdevice_port(qdevice_port):
-        if not utils.valid_port(qdevice_port):
-            raise ValueError("invalid qdevice port range(1024 - 65535)")
+    def check_qnetd_port(qnetd_port):
+        if qnetd_port and not utils.valid_port(qnetd_port):
+            raise ValueError("invalid qnetd port range(1024 - 65535)")
 
     @staticmethod
     def check_qdevice_algo(qdevice_algo):
@@ -258,7 +262,7 @@ class QDevice(object):
             utils.check_all_nodes_reachable("setup Qdevice")
         self.check_corosync_qdevice_available()
         self.check_qnetd_addr(self.qnetd_addr)
-        self.check_qdevice_port(self.port)
+        self.check_qnetd_port(self.port)
         self.check_qdevice_algo(self.algo)
         self.check_qdevice_tie_breaker(self.tie_breaker)
         self.check_qdevice_tls(self.tls)
@@ -289,8 +293,11 @@ class QDevice(object):
             raise ValueError(f"{exception_msg}\n{suggestion_msg}")
 
     def start_qnetd(self):
+        service_manager = ServiceManager()
+        if service_manager.service_is_active(self.qnetd_service, self.qnetd_addr):
+            return
         logger.info("Starting and enable corosync-qnetd.service on %s" % self.qnetd_addr)
-        ServiceManager().start_service(self.qnetd_service, enable=True, remote_addr=self.qnetd_addr)
+        service_manager.start_service(self.qnetd_service, enable=True, remote_addr=self.qnetd_addr)
 
     def set_cluster_name(self):
         if not self.cluster_name:
@@ -511,10 +518,80 @@ class QDevice(object):
         cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=cls_inst.qdevice_crq_on_qnetd)
         shell.get_stdout_or_raise_error(cmd, qnetd_host)
 
+    def _handle_port_when_qnetd_active(self):
+        cmd = "corosync-qnetd-tool -s"
+        out = sh.cluster_shell().get_stdout_or_raise_error(cmd, self.qnetd_addr)
+        res = re.search(r'QNetd address:\s+\S+:(\d+)', out)
+        if res:
+            port_in_qnetd = int(res.group(1))
+            if self.port is not None and self.port != port_in_qnetd:
+                error_msg = f"The port {self.port} is different from the port {port_in_qnetd} that corosync-qnetd is using"
+                suggestion_msg = f"Please use '--qnetd-port {port_in_qnetd}' to keep consistent"
+                raise ValueError(f"{error_msg}\n{suggestion_msg}")
+            else:
+                self.port = port_in_qnetd
+        else:
+            # this should not happen, just in case
+            raise ValueError(f"Failed to get qnetd port from corosync-qnetd-tool output on {self.qnetd_addr}")
+
+    def _handle_port_when_qnetd_inactive(self):
+        shell = sh.cluster_shell()
+        action_cmd = ""
+
+        cmd = f"test -f {self.SYSCONFIG_QNETD}"
+        rc, _, _ = shell.get_rc_stdout_stderr_without_input(self.qnetd_addr, cmd)
+        if rc != 0:
+            port_option = "" if self.port is None else f"-p {self.port}"
+            options = f"COROSYNC_QNETD_OPTIONS=\"{port_option}\"\nCOROSYNC_QNETD_RUNAS=\"\""
+            logger.info(f"Write qnetd options to {self.SYSCONFIG_QNETD} on {self.qnetd_addr}: {options.strip()}")
+            action_cmd = f"echo -e '{options}' > {self.SYSCONFIG_QNETD}"
+
+        else:
+            cmd = f"grep '^[[:space:]]*COROSYNC_QNETD_OPTIONS=' {self.SYSCONFIG_QNETD}"
+            rc, out, _ = shell.get_rc_stdout_stderr_without_input(self.qnetd_addr, cmd)
+            if rc == 0 and out:
+                res = re.search(r'-p\s+(\d+)', out)
+                if res:
+                    port_in_sysconfig = int(res.group(1))
+                    if self.port is not None and self.port != port_in_sysconfig:
+                        error_msg = f"The port {self.port} is different from the port {port_in_sysconfig} in {self.SYSCONFIG_QNETD}"
+                        suggestion_msg = f"Please use '--qnetd-port {port_in_sysconfig}' to keep consistent"
+                        raise ValueError(f"{error_msg}\n{suggestion_msg}")
+                    else:
+                        self.port = port_in_sysconfig
+
+                elif self.port is not None:
+                    value_of_options = out.strip().split('=', 1)[1].strip('"')
+                    if value_of_options:
+                        options = f'COROSYNC_QNETD_OPTIONS="{value_of_options} -p {self.port}"'
+                    else:
+                        options = f'COROSYNC_QNETD_OPTIONS="-p {self.port}"'
+                    logger.info(f"Update qnetd options in {self.SYSCONFIG_QNETD} on {self.qnetd_addr} to: {options}")
+                    action_cmd = f"sed -i 's|COROSYNC_QNETD_OPTIONS=.*|{options}|' {self.SYSCONFIG_QNETD}"
+            else:
+                options = "COROSYNC_QNETD_OPTIONS=\"\"" if self.port is None else f"COROSYNC_QNETD_OPTIONS=\"-p {self.port}\""
+                logger.info(f"Add qnetd options to {self.SYSCONFIG_QNETD} on {self.qnetd_addr}: {options}")
+                action_cmd = f"echo '{options}' >> {self.SYSCONFIG_QNETD}"
+
+        if action_cmd:
+            shell.get_stdout_or_raise_error(action_cmd, self.qnetd_addr)
+
+    def config_qnetd_port_in_sysconfig(self):
+        if ServiceManager().service_is_active("corosync-qnetd.service", self.qnetd_addr):
+            self._handle_port_when_qnetd_active()
+        else:
+            self._handle_port_when_qnetd_inactive()
+
+        if self.port is None:
+            self.port = QNETD_DEFAULT_PORT
+        logger.info(f"Use port {self.port} for corosync-qnetd on {self.qnetd_addr}")
+
     def config_qnetd_port(self):
         """
         Enable qnetd port in firewalld
         """
+        self.config_qnetd_port_in_sysconfig()
+
         if not ServiceManager().service_is_active("firewalld.service", self.qnetd_addr):
             return
         if utils.check_port_open(self.qnetd_addr, self.port):

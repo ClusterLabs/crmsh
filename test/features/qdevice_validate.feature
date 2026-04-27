@@ -26,9 +26,9 @@ Feature: corosync qdevice/qnetd options validate
     Then    Except "ERROR: cluster.init: host "node-without-ssh" is unreachable via SSH"
 
   @clean
-  Scenario: Option "--qdevice-port" set wrong port
-    When    Try "crm cluster init --qnetd-hostname=qnetd-node --qdevice-port=1"
-    Then    Except "ERROR: cluster.init: invalid qdevice port range(1024 - 65535)"
+  Scenario: Option "--qnetd-port" set wrong port
+    When    Try "crm cluster init --qnetd-hostname=qnetd-node --qnetd-port=1"
+    Then    Except "ERROR: cluster.init: invalid qnetd port range(1024 - 65535)"
 
   @clean
   Scenario: Option "--qdevice-tie-breaker" set wrong value
@@ -44,21 +44,13 @@ Feature: corosync qdevice/qnetd options validate
 
   @clean
   Scenario: Option "--qnetd-hostname" is required by other qdevice options
-    When    Try "crm cluster init --qdevice-port=1234"
-    Then    Expected multiple lines in stderr
-      """
-      usage: init [options] [STAGE]
-      crm: error: Option --qnetd-hostname is required if want to configure qdevice
-      """
+    When    Try "crm cluster init --qnetd-port=1234"
+    Then    Except "ERROR: cluster.init: Option --qnetd-hostname is required if want to configure qdevice"
 
   @clean
   Scenario: Option --qdevice-heuristics is required if want to configure heuristics mode
     When    Try "crm cluster init --qnetd-hostname=qnetd-node --qdevice-heuristics-mode="on""
-    Then    Expected multiple lines in stderr
-      """
-      usage: init [options] [STAGE]
-      crm: error: Option --qdevice-heuristics is required if want to configure heuristics mode
-      """
+    Then    Except "ERROR: cluster.init: Option --qdevice-heuristics is required if want to configure heuristics mode"
 
   @clean
   Scenario: Node for qnetd not installed corosync-qnetd
@@ -101,11 +93,7 @@ Feature: corosync qdevice/qnetd options validate
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Try "crm cluster init qdevice -y"
-    Then    Expected multiple lines in stderr
-      """
-      usage: init [options] [STAGE]
-      crm: error: Option --qnetd-hostname is required if want to configure qdevice
-      """
+    Then    Except "ERROR: cluster.init: Option --qnetd-hostname is required if want to configure qdevice"
 
   @clean
   Scenario: Setup qdevice on a single node cluster with RA running(bsc#1181415)
@@ -142,3 +130,36 @@ Feature: corosync qdevice/qnetd options validate
     When    Run "crm -F cluster remove --qdevice -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "stopped" on "hanode1"
+
+  @clean
+  Scenario: Port conflict between qnetd and corosync
+    Given   Service "corosync-qnetd" is "started" on "qnetd-node"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Try "crm cluster init qdevice --qnetd-hostname=qnetd-node --qnetd-port 5402 -y" on "hanode1"
+    Then    Expected multiple lines in stderr
+      """
+      The port 5402 is different from the port 5403 that corosync-qnetd is using
+      Please use '--qnetd-port 5403' to keep consistent
+      """
+    Then    Service "corosync-qdevice" is "stopped" on "hanode1"
+    When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node --qnetd-port 5403 -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+
+    When    Run "crm cluster remove --qdevice -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "stopped" on "hanode1"
+    When    Run "systemctl stop corosync-qnetd" on "qnetd-node"
+    Then    Service "corosync-qnetd" is "stopped" on "qnetd-node"
+    When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node --qnetd-port 5402 -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    And     Service "corosync-qnetd" is "started" on "qnetd-node"
+    And     Run "cat /etc/sysconfig/corosync-qnetd|grep "\-p 5402"" OK on "qnetd-node"
+
+    When    Run "crm cluster remove --qdevice -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "stopped" on "hanode1"
+    When    Run "systemctl stop corosync-qnetd" on "qnetd-node"
+    Then    Service "corosync-qnetd" is "stopped" on "qnetd-node"
+    When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
+    Then    Service "corosync-qdevice" is "started" on "hanode1"
+    And     Service "corosync-qnetd" is "started" on "qnetd-node"
+    And     Run "cat /etc/corosync/corosync.conf|grep "port: 5402"" OK on "hanode1"
