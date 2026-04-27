@@ -81,18 +81,20 @@ class ServiceManager(object):
             cmd = "systemctl stop '{}'".format(name)
         return self._call(remote_addr, node_list, cmd)
 
-    def enable_service(self, name, remote_addr=None, node_list=[]):
+    def enable_service(self, name, remote_addr=None, node_list=[], now=False):
         """
         Enable service
         Return success node list
         """
-        cmd = "systemctl enable '{}'".format(name)
+        now_flag = "--now " if now else ""
+        cmd = f"systemctl {now_flag}enable {name}"
         return self._call(remote_addr, node_list, cmd)
 
-    def disable_service(self, name, remote_addr=None, node_list=[]):
+    def disable_service(self, name, remote_addr=None, node_list=[], now=False):
         """
         Disable service
         Return success node list
         """
-        cmd = "systemctl disable '{}'".format(name)
+        now_flag = "--now " if now else ""
+        cmd = f"systemctl {now_flag}disable {name}"
         return self._call(remote_addr, node_list, cmd)
