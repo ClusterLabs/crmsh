@@ -105,9 +105,6 @@ def get_node_list(is_stage: bool) -> list[str]:
         return [me]
 
 
-QNETD_DEFAULT_PORT = 5403
-
-
 class QDevice(object):
     """Class to manage qdevice configuration and services
 
@@ -115,6 +112,7 @@ class QDevice(object):
     """
 
     SYSCONFIG_QNETD = "/etc/sysconfig/corosync-qnetd"
+    QNETD_DEFAULT_PORT = 5403
     qnetd_service = "corosync-qnetd.service"
     qnetd_cacert_filename = "qnetd-cacert.crt"
     qdevice_crq_filename = "qdevice-net-node.crq"
@@ -123,19 +121,19 @@ class QDevice(object):
     qdevice_path = "/etc/corosync/qdevice/net"
     qdevice_db_path = "/etc/corosync/qdevice/net/nssdb"
 
-    def __init__(self, qnetd_addr, port=None, algo="ffsplit", tie_breaker="lowest",
-            tls="on", ssh_user=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
+    def __init__(self, qnetd_addr, port=None, algo=None, tie_breaker=None,
+            tls=None, ssh_user=None, cmds=None, mode=None, cluster_name=None, is_stage=False):
         """
         Init function
         """
         self.qnetd_addr = qnetd_addr
         self.port = port
-        self.algo = algo
-        self.tie_breaker = tie_breaker
-        self.tls = tls
+        self.algo = algo or "ffsplit"
+        self.tie_breaker = tie_breaker or "lowest"
+        self.tls = tls or "on"
         self.ssh_user = ssh_user
         self.cmds = cmds
-        self.mode = mode
+        self.mode = mode or "sync"
         self.cluster_name = cluster_name
         self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
         self.is_stage = is_stage
@@ -583,7 +581,7 @@ class QDevice(object):
             self._handle_port_when_qnetd_inactive()
 
         if self.port is None:
-            self.port = QNETD_DEFAULT_PORT
+            self.port = self.QNETD_DEFAULT_PORT
         logger.info(f"Use port {self.port} for corosync-qnetd on {self.qnetd_addr}")
 
     def config_qnetd_port(self):
