@@ -1393,9 +1393,9 @@ def test_fetch_cluster_node_list_from_node(mock_run, mock_warn):
 
 
 @mock.patch('crmsh.utils.list_cluster_nodes_except_me')
-def test_cluster_copy_file_return(mock_list_nodes):
+def test_cluster_copy_path_return(mock_list_nodes):
     mock_list_nodes.return_value = []
-    assert utils.cluster_copy_file("/file1") == True
+    assert utils.cluster_copy_path("/file1") == True
 
 
 @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
