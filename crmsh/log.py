@@ -203,6 +203,13 @@ class ISO8601Formatter(logging.Formatter):
         return f"{s}.{int(record.msecs):03d}{tz}"
 
 
+LOGFILE_FORMATTER = {
+    "()": ISO8601Formatter,
+    "format": "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
+    "datefmt": "%Y-%m-%dT%H:%M:%S",
+}
+
+
 LOGGING_CFG = {
     "version": 1,
     "disable_existing_loggers": "False",
@@ -223,11 +230,7 @@ LOGGING_CFG = {
                 DEBUG2: "%(levelname)s: %(funcName)s %(message)s",
             },
         },
-        "file": {
-            "()": ISO8601Formatter,
-            "format": "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
-            "datefmt": "%Y-%m-%dT%H:%M:%S",
-        }
+        "file": LOGFILE_FORMATTER
     },
     "filters": {
         "filter": {
@@ -298,10 +301,7 @@ NO_COLOR_FORMATTERS = {
             DEBUG2: "%(levelname)s: %(funcName)s %(message)s",
         },
     },
-    "file": {
-        "format": "%(asctime)s {} %(name)s: %(levelname)s: %(message)s".format(socket.gethostname()),
-        "datefmt": "%b %d %H:%M:%S",
-    }
+    "file": LOGFILE_FORMATTER
 }
 
 
