@@ -1560,6 +1560,22 @@ done
         mock_parser_inst.get_node_list.assert_called_once_with(online=True, node_type="member")
         mock_cluster_copy.assert_called_once_with("/file1", nodes=["node1", "node2"])
 
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_get_failed_services(self, mock_cluster_shell):
+        mock_cluster_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.get_stdout_or_raise_error.side_effect = ["active", "active", "failed", "active"]
+
+        res = bootstrap.get_failed_services()
+        self.assertEqual(res, [constants.SBD_SERVICE])
+        mock_cluster_shell.assert_called_once_with()
+        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_has_calls([
+            mock.call(f"systemctl show -p ActiveState --value {constants.COROSYNC_SERVICE}", None),
+            mock.call(f"systemctl show -p ActiveState --value {constants.COROSYNC_QDEVICE_SERVICE}", None),
+            mock.call(f"systemctl show -p ActiveState --value {constants.SBD_SERVICE}", None),
+            mock.call(f"systemctl show -p ActiveState --value {constants.PCMK_SERVICE}", None)
+        ])
+
 
 class TestValidation(unittest.TestCase):
     """
