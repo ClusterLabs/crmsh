@@ -1436,6 +1436,22 @@ class TestBootstrap(unittest.TestCase):
         bootstrap.sync_file("/file1")
         mock_csync2_update.assert_called_once_with("/file1")
 
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_get_failed_services(self, mock_cluster_shell):
+        mock_cluster_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.get_stdout_or_raise_error.side_effect = ["active", "active", "failed", "active"]
+
+        res = bootstrap.get_failed_services()
+        self.assertEqual(res, [constants.SBD_SERVICE])
+        mock_cluster_shell.assert_called_once_with()
+        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_has_calls([
+            mock.call(f"systemctl show -p ActiveState --value {constants.COROSYNC_SERVICE}", None),
+            mock.call(f"systemctl show -p ActiveState --value {constants.COROSYNC_QDEVICE_SERVICE}", None),
+            mock.call(f"systemctl show -p ActiveState --value {constants.SBD_SERVICE}", None),
+            mock.call(f"systemctl show -p ActiveState --value {constants.PCMK_SERVICE}", None)
+        ])
+
 
 class TestValidation(unittest.TestCase):
     """
