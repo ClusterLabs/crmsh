@@ -821,7 +821,10 @@ def init_cluster_local():
         logger.warning("You should change the hacluster password to something more secure!")
 
     if not start_pacemaker(enable_flag=True):
-        utils.fatal("Failed to start cluster services")
+        failed_services = get_failed_services()
+        failed_services_str = f" Please check failed services: {', '.join(failed_services)}" if failed_services else ""
+        utils.fatal(f"Failed to start cluster services.{failed_services_str}")
+
     wait_for_cluster()
 
 
@@ -3209,4 +3212,20 @@ def restart_cluster():
     logger.info("Restarting cluster service")
     utils.cluster_run_cmd("crm cluster restart", node_list)
     wait_for_cluster()
+
+
+def get_failed_services(peer=None) -> list:
+    failed_services = []
+    shell = sh.cluster_shell()
+    for service in (
+        constants.COROSYNC_SERVICE,
+        constants.COROSYNC_QDEVICE_SERVICE,
+        constants.SBD_SERVICE,
+        constants.PCMK_SERVICE
+    ):
+        cmd = f"systemctl is-failed {service}"
+        rc, _, _ = shell.get_rc_stdout_stderr_without_input(peer, cmd)
+        if rc == 0:
+            failed_services.append(service)
+    return failed_services
 # EOF
