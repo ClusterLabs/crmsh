@@ -517,4 +517,9 @@ PCMK_MIN_VERSION_SUPPORT_LIST_OPTIONS = "2.1.8"
 COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
 
 NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
+
+COROSYNC_SERVICE = "corosync.service"
+COROSYNC_QDEVICE_SERVICE = "corosync-qdevice.service"
+PCMK_SERVICE = "pacemaker.service"
+SBD_SERVICE = "sbd.service"
 # vim:ts=4:sw=4:et:
