@@ -2270,7 +2270,8 @@ def bootstrap_init(context):
 
     init()
 
-    _context.load_profiles()
+    if not stage or stage in ('corosync', 'sbd'):
+        _context.load_profiles()
     _context.init_sbd_manager()
 
     if stage in ('qnetd_remote', ):
