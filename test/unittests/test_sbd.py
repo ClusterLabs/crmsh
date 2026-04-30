@@ -863,7 +863,8 @@ class TestSBDManager(unittest.TestCase):
     @patch('crmsh.bootstrap.prompt_for_string')
     def test_prompt_for_sbd_device_diskless(self, mock_prompt_for_string):
         mock_prompt_for_string.return_value = "none"
-        sbdmanager_instance = SBDManager()
+        mock_bootstrap_ctx = Mock(diskless_sbd=False)
+        sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
         result = sbdmanager_instance._prompt_for_sbd_device()
         self.assertEqual(result, [])
 
