@@ -1368,6 +1368,7 @@ class SBDManager:
         # else if not use -S option, get sbd device interactively
         if not device_list and not self.bootstrap_context.diskless_sbd:
             device_list = self.get_sbd_device_interactive()
+            self.bootstrap_context.diskless_sbd = self.diskless_sbd
         if not device_list:
             return
 
