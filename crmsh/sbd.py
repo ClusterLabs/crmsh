@@ -372,6 +372,7 @@ class SBDManager(object):
             dev = bootstrap.prompt_for_string('Path to storage device (e.g. /dev/disk/by-id/...), or "none" for diskless sbd, use ";" as separator for multi path', r'none|\/.*')
             if dev == "none":
                 self.diskless_sbd = True
+                self._context.diskless_sbd = True
                 return
 
             dev_list = utils.re_split_string(self.PARSE_RE, dev)
