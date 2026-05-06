@@ -37,9 +37,10 @@ class ServiceManager(object):
         Return success node list
         """
         if enable:
-            cmd = "systemctl enable --now '{}'".format(name)
+            cmd = f"systemctl enable --now '{name}'"
         else:
-            cmd = "systemctl start '{}'".format(name)
+            cmd = f"systemctl start '{name}'"
+        cmd += f"; systemctl is-active '{name}'"
         return self._call(remote_addr, node_list, cmd)
 
     def _call(self, remote_addr: str, node_list: typing.List[str], cmd: str) -> typing.List[str]:
