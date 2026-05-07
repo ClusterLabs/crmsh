@@ -17,6 +17,7 @@ from . import bootstrap
 from . import lock
 from . import log
 from . import sbd
+from . import constants
 from .service_manager import ServiceManager
 
 
@@ -105,6 +106,12 @@ def get_node_list(is_stage: bool) -> list[str]:
         return [me]
 
 
+def is_qdevice_running_on_cluster() -> bool:
+    service_manager = ServiceManager()
+    node_list = utils.list_cluster_nodes()
+    return all(service_manager.service_is_active(constants.COROSYNC_QDEVICE_SERVICE, node) for node in node_list)
+
+
 class QDevice(object):
     """Class to manage qdevice configuration and services
 
@@ -133,7 +140,6 @@ class QDevice(object):
         self.cmds = cmds
         self.mode = mode
         self.cluster_name = cluster_name
-        self.qdevice_reload_policy = QdevicePolicy.QDEVICE_RESTART
         self.is_stage = is_stage
 
     @property
@@ -528,18 +534,19 @@ class QDevice(object):
         logger.info("Add port {} to firewalld on {}".format(self.port, self.qnetd_addr))
         shell.get_stdout_or_raise_error("firewall-cmd --reload", self.qnetd_addr)
 
-    def start_qdevice_service(self):
+    @staticmethod
+    def start_qdevice_service():
         logger.info("Enable corosync-qdevice.service in cluster")
         utils.cluster_run_cmd("systemctl enable corosync-qdevice")
 
-        self.qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD)
+        qdevice_reload_policy = evaluate_qdevice_quorum_effect(QDEVICE_ADD)
 
-        if self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
+        if qdevice_reload_policy == QdevicePolicy.QDEVICE_RELOAD:
             logger.info("Reloading cluster configuration before starting corosync-qdevice.service")
             sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R")
             logger.info("Starting corosync-qdevice.service in cluster")
             utils.cluster_run_cmd("systemctl restart corosync-qdevice")
-        elif self.qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
+        elif qdevice_reload_policy == QdevicePolicy.QDEVICE_RESTART:
             bootstrap.restart_cluster()
 
     def adjust_sbd_watchdog_timeout_with_qdevice(self):
