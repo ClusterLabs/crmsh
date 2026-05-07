@@ -112,6 +112,7 @@ class Context(object):
         self.qdevice_inst = None
         self.qnetd_addr_input = None
         self.qdevice_port = None
+        self.qnetd_port = None
         self.qdevice_algo = None
         self.qdevice_tie_breaker = None
         self.qdevice_tls = None
@@ -155,16 +156,36 @@ class Context(object):
         ctx.initialize_user()
         return ctx
 
+    def _any_qdevice_options_set(self):
+        return any([
+            self.qdevice_port,
+            self.qnetd_port,
+            self.qdevice_algo,
+            self.qdevice_tie_breaker,
+            self.qdevice_tls,
+            self.qdevice_heuristics,
+            self.qdevice_heuristics_mode,
+        ])
+
     def _initialize_qdevice(self):
         """
         Initialize qdevice instance
         """
         if not self.qnetd_addr_input:
+            if self._any_qdevice_options_set() or self.stage == "qdevice":
+                utils.fatal("Option --qnetd-hostname is required if want to configure qdevice")
             return
+
+        if self.qdevice_port is not None:
+            logger.warning("Option --qdevice-port is deprecated and will be removed in future release, please use --qnetd-port instead")
+        if self.qdevice_heuristics_mode and not self.qdevice_heuristics:
+            utils.fatal("Option --qdevice-heuristics is required if want to configure heuristics mode")
+
+        qnetd_port = self.qnetd_port or self.qdevice_port
         ssh_user, qnetd_host = utils.parse_user_at_host(self.qnetd_addr_input)
         self.qdevice_inst = qdevice.QDevice(
                 qnetd_addr=qnetd_host,
-                port=self.qdevice_port,
+                port=qnetd_port,
                 algo=self.qdevice_algo,
                 tie_breaker=self.qdevice_tie_breaker,
                 tls=self.qdevice_tls,
@@ -1556,8 +1577,8 @@ def configure_qdevice_interactive():
     ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
     qdevice.QDevice.check_qnetd_addr(qnetd_host)
     _context.qnetd_addr_input = qnetd_addr_input
-    qdevice_port = prompt_for_string("TCP PORT of QNetd server", default=5403,
-            valid_func=qdevice.QDevice.check_qdevice_port)
+    qnetd_port = prompt_for_string("TCP PORT of QNetd server",
+            valid_func=qdevice.QDevice.check_qnetd_port)
     qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
             valid_func=qdevice.QDevice.check_qdevice_algo)
     qdevice_tie_breaker = prompt_for_string("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest",
@@ -1572,7 +1593,7 @@ def configure_qdevice_interactive():
 
     _context.qdevice_inst = qdevice.QDevice(
             qnetd_host,
-            port=qdevice_port,
+            port=qnetd_port,
             algo=qdevice_algo,
             tie_breaker=qdevice_tie_breaker,
             tls=qdevice_tls,

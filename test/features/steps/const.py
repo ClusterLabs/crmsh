@@ -116,7 +116,9 @@ QDevice configuration:
   --qnetd-hostname [USER@]HOST
                         User and host of the QNetd server. The host can be
                         specified in either hostname or IP address.
-  --qdevice-port PORT   TCP PORT of QNetd server (default:5403)
+  --qdevice-port PORT   TCP PORT of QNetd server (default:5403, deprecated,
+                        use --qnetd-port instead)
+  --qnetd-port PORT     TCP PORT of QNetd server (default:5403)
   --qdevice-algo ALGORITHM
                         QNetd decision ALGORITHM (ffsplit/lms,
                         default:ffsplit)
