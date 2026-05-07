@@ -1,3 +1,213 @@
+* Thu May 7 2026 Xin Liang <XLiang@suse.com>
+- Release 5.1.0 rc1
+- Dev: bootstrap: Load profiles if needed (#2102)
+- Dev: log: Sync the file formatter for NO_COLOR_FORMATTERS (#2088)
+- Dev: ui_cluster: Add --now option for crm cluster enable/disable commands (#2099)
+- Dev: ui_cluster: Add -F/--force option for 'crm cluster init' command (#2082)
+- Dev: doc: Adjust crm.8.adoc about -F/--force option
+- Dev: ui_sbd: Add -F/--force option for crm sbd configure/device/purge commands
+- Dev: qdevice: Improve local address check for qnetd (bsc#1262094) (#2098)
+- Fix: ui_cluster: rename: Sync corosync.conf when at least one peer exists (#2090)
+- Dev: utils: Improve check_port_open to concurrently try all addresses (bsc#1262094) (#2085)
+- Dev: ui_cluster: Sleep 1s before checking qdevice vote (#2087)
+- Dev: corosync: Check qdevice vote while checking corosync status
+- Fix: watchdog: use cluster_shell() for remote watchdog query (#2078) (#2083)
+- Dev: ui_cluster: Improve 'rename' subcommand (#2079)
+- Dev: Use xmlutil.CrmMonXmlParser.get_node_list instead of parsing output of 'crm_node -l' (#2074)
+- Fix: qdevice: Change suggestion message when detecting cluster name conflict (bsc#1261884)
+- Dev: bootstrap: Still set deprecated properties during bootstrap (#2077)
+- Dev: ui_configure: Don't hide deprecated properties from the completion results
+- Dev: ui_sbd: Refactor SBD crashdump set/purge flow to avoid inconsistent /etc/sysconfig/sbd (#1978)
+- Fix: bootstrap: Ensure robust node identification when removing from cluster (bsc#1259683) (#2069)
+- Dev: sbd: And check and fix methods for fence_sbd pcmk_delay_max and crashdump parameter (#2071)
+- Dev: sbd: Add diskless SBD warning while doing sbd health check (#2043)
+- Dev: bootstrap: Reject setup sbd stage if cluster is not quorate
+- Dev: ui_sbd: Rename SBD.check_timeout_configurations to SBD.check_sbd_health
+- Fix: sbd: Update the formular to calculate the expected fencing-watchdog-timeout (#2059)
+- Fix: crm.8.adoc: Use cluster inside KVM guest as example instead of Xen (#2068)
+- Dev: doc: Update the formular to calculate the expected fencing-watchdog-timeout
+- Fix: bootstrap: On join node, retrieve qdevice certification files before starting qdevice (bsc#1254243) (#1984)
+- Dev: qdevice: Remove unused codes
+- Dev: Replace terminology 'stonith' with 'fencing' (jsc#PED-14631) (#2030)
+- Dev: sbd: Check and fix based on the current property term
+- Dev: utils: Use class DeprecatedTermTranslator
+- Dev: utils: Get deprecated cluster options dynamically
+- Dev: ui_configure: Hide deprecated name while running get_property/property
+- Dev: Check deprecated properties for multiple commands
+- Dev: Check deprecated property name and give warning
+- Dev: doc: Replace terminology 'stonith' with 'fencing' in crm.8.adoc
+- Dev: xmlutil: Consider both 'stonith' and 'fencing' terms when checking watchdog timeout
+- Fix: sh: Use sh_helper.py for su commands (bsc#1254757) (#2048)
+- Fix: log: Disable color when not on a TTY (bsc#1259178) (#2052)
+- Dev: bootstrap: Skip inactive cluster node when calling restart_cluster function (#2042)
+- Dev: sh: Use sh_helper.py for su commands (bsc#1254757)
+- Dev: ui_cluster: Hint the watchdog option should be used with sbd option (#1947)
+- Dev: doc: Mention about watchdog-device option also acceptes driver name
+- Dev: watchdog: Improve the fatal error logging message
+- Dev: spec: create dirs in /var with tmpfiles.d (jsc#PED-14865) (#2033)
+- Dev: qdevice: Refactor the process of configuring QDevice (#2014)
+- Dev: qdevice: Leverage maintenance mode while adding and removing qdevice
+- Dev: qdevice: Configure the QDevice statically
+- Apply suggestion from @Copilot
+- Fix: fix asyncio usage with python 3.14 and later (#2037)
+- Dev: qdevice: Remove duplicated code for checking qdevice installation
+- Chore: codecov: update expected report count
+- Minor improvement for sbd (#2021)
+- Dev: bootstrap: Disable sbd.service when the process is in 'cluster' stage
+- Dev: sbd: Move diskless SBD warning to adjust_properties
+- Dev: sbd: record ERROR when prerequisite checks fail
+- Dev: sbd: rename SBDTimeoutChecker to SBDConfigChecker
+- Dev: sbd: Replace magic numbers with IntEnum for check prerequisites
+- Dev: sbd: Add self._log_when_not_quiet() method to avoid checking self.quiet everywhere
+- Dev: bootstrap: The sbd stage now requires a running cluster
+- Dev: sbd: Adjust related properties after cluster started on init process
+- Dev: sbd: Add quiet attribute to class SBDTimeout
+- Dev: workflows: Enable Python 3.14 for unit test (#2029)
+- minieval.py : remove ast.Num and ast.Str no longer available in Python 3.14* (#2028)
+- Fix: cibverify: If no errors found, treat crm_verify result as success (bsc#1250349)  (#1929)
+- Handle errors raised from the latest CI image (#2025)
+- Dev: Dockerfile: Explicitly install diffutils
+- Fix: log: Add milliseconds time format to crmsh.log (bsc#1255021) (#1996)
+- Dev: corosync: Add milliseconds to log time format
+- Fix: ui_cluster: Stop dlm in maintenance mode correctly (bsc#1253733) (#2022)
+- Dev: run-functional-tests: Sleep 2s after creating contaier and attaching network (#2007)
+- Fix: sbd: Allow setting -1 to stonith-watchdog-timeout (bsc#1257143) (#2015)
+- Dev: run-functional-tests: Add timestamp logging for better debugging
+- Dev: sbd: Give warning when `crm cluster health sbd` detects stonith-watchdog-timeout set to -1
+- Dev: sbd: Check and fix stonith_enabled property (#2013)
+- Dev: sbd: Replace "recommend" with "required" for log error message
+- Dev: options: Change 'force' option to be session-only (bsc#1254892) (#2009)
+- Improve 'cluster health sbd' command (#2003)
+- Dev: sbd: Refactor to enable checking when cluster is down
+- Dev: sbd: Add debug log for sbd checking results
+- Dev: sbd: Check and fix fence_sbd agent
+- Dev: sbd: Check if sbd.service is enabled on all nodes
+- Dev: ui_sbd: Do sbd timeout-related configurations check on 'crm sbd status' as well
+- Dev: sbd: Ignore comment line and blank line when checking consistency
+- Dev: sbd: Check sbd systemd start timeout on all nodes
+- Dev: sbd: Check if the drop-in file which to unset SBD_DELAY_START exists on all nodes
+- Dev: sbd: Show multi errors or warnings at once if detected
+- Dev: sbd: Enable to fix devices metadata consistency issue
+- Dev: sbd: Show diff output after error output when checking consistency
+- Dev: sbd: Check configurations consistency only if there are reachable nodes
+- Dev: utils: Refactor utils.check_all_nodes_reachable
+- Dev: sbd: Check and fix drop-in file which to unset SBD_DELAY_START
+- Dev: ui_sbd: Get minimum timeout value dynamically
+- Dev: sbd: Calculate expected msgwait timeout correctly with crashdump timeout
+- Dev: sbd: check SBD_DELAY_START for non integer case
+- Dev: sbd: Check all nodes are reachable when checking SBD-related timeouts (jsc#PED-14995)
+- Dev: bootstrap: Sync file /etc/systemd/system/sbd.service.d/sbd_delay_start.conf when joining cluster (#2005)
+- Dev: bootstrap: Sync directory sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DIR
+- Dev: bootstrap: Refactor retrieve_all_config_files function
+- Check and fix SBD-related timeout values (#1932)
+- Dev: sbd: Don't use category when checking sbd timeout
+- Dev: sbd: Allow some timeout values bigger than expected
+- Dev: sbd: Adjust check/fix functions for watchdog timeout and msgwait timeout
+- Dev: sbd: Remove unused function
+- Dev: sbd: Rename attribute warn to quiet in class SBDTimeoutChecker
+- Dev: utils: check_ssh_passwd_need: Add SSH_AUTH_SOCK if detected in environment
+- Dev: sbd: Minor improvements for log clarity
+- Dev: sbd: Take crashdump watchdog timeout into account
+- Dev: doc: Add help info for `crm cluster health sbd`
+- Dev: sbd: Introduce class sbd.SBDTimeoutChecker
+- Dev: ui_cluster: Introduce sbd option for 'crm cluster health' command
+- Dev: crash_test: Removed unused codes related to check.py (#1993)
+- Dev: utils: Reuse methods in xmlutil.CrmMonXmlParser (#1952)
+- Dev: utils: Rename utils.is_quorate to utils.cluster_with_quorum
+- Dev: crash_test: Reuse get_node_list in xmlutil.CrmMonXmlParser
+- Fix: qdevice: Make sure stonith-watchdog-timeout is 2 times of SBD_WATCHDOG_TIMEOUT (bsc#1254571) (#1991)
+- Revert "Dev: Update Docker image" (#1989)
+- Dev: run-functional-tests: Stop firewalld.service before tests
+- Fix: migration: Avoid exception inside thread (#1979)
+- Dev: utils: Check if the peer node needs password to access (#1987)
+- Dev: utils: Rename utils.ssh_reachable_check to utils.ssh_port_reachable_check
+- Fix: utils: Raise UnreachableNodeError for those ssh unreachable nodes (bsc#1250645) (#1860)
+- Dev: utils: Rename utils.node_reachable_check to utils.ssh_reachable_check
+- Dev: ui_utils: Move ui_node.parse_option_for_nodes to ui_utils.parse_and_validate_node_args
+- Dev: utils: Adjust node_reachable_check function and the way it is used
+- Dev: sbd: Improve the process of leveraging maintenance mode (#1950)
+- Dev: ui_sbd: Validate purge option first
+- Dev: Update Docker image (#1982)
+- Dev: sbd: Remove sbd configuration directories while removing cluster node (#1962)
+- Dev: report: Collect xml format output from crm_mon (#1954)
+- Dev: report: mix stderr and stdout in one stream when collecting command outputs (#1975)
+- Fix: unittest: should mock shell calling in SBDTimout.get_default_systemd_start_timeout
+- Dev: report: Collect corosync status in crm report (#1971)
+- Dev: ui_sbd: Check if crashdump is configured before purging crashdump options (#1963)
+- Fix: bootstrap: ignore ssh authentication failure to localhost when merging known_hosts (#1931) (#1970)
+- Fix: ui_configure: Check if able to set stonith-watchdog-timeout property (#1923)
+- Fix: sh: Avoid unnecessary sudo calls in ClusterShell SSH commands (bsc#1229416) (#1941)
+- Fix: prun: Avoid unnecessary sudo in sftp and ssh commands (bsc#1229416)
+- Fix: bootstrap: Correctly identify root user with host
+- Dev: doc: Add formula for crashdump watchdog timeout in TimeoutFormulas section (#1942)
+- Dev: bootstrap: Disable pacemaker and sbd services after removing node (#1957)
+- Dev: ui_sbd: Add and check the minimum SBD timeout value (#1944)
+- Dev: sbd: Decrease sbd related timeouts when expected value decreases (#1934)
+- Dev: sbd: Dynamically retrieve and use DefaultTimeoutStartUSec for sbd.service
+- Dev: ui_sbd: Minor changes for log info
+- Dev: sbd: If the expected stonith-watchdog-timeout is smaller than the
+- Dev: Improve to avoid circular imports (#1940)
+- Dev: bootstrap: Avoid circular import by refactoring FILES_TO_SYNC to use get_files_to_sync()
+- Dev: Get instance of CibFactory by using cibconfig.cib_factory_instance()
+- Dev: bootstrap: Lazily initialize tempfile to store original corosync.conf in Context to avoid circular import
+- Dev: Import only module instead of functions from module
+- Dev: Use functools.cache instead of custom memoize (#1939)
+- Fix: corosync: Handle missing node names in configuration and migration (bsc#1250585) (#1937)
+- Fix: migration: Populate node name during corosync configuration migration (bsc#1250585)
+- Fix: corosync: Fallback to CIB when node name is missing (bsc#1250585)
+- Fix: bootstrap: public keys from ssh-agent are not added to local authorized_keys in `crm cluster join` (#1916)
+- Fix: log: divided-by-zero when terminal width is 0 in progress bar
+- Dev: test_container: add expect and remove automake (#1921)
+- Fix: cibconfig: Add utils.auto_convert_role=True flag in method CibObjectSetCli.save (#1919)
+- Dev: bootstrap: Skip csync2 by default (#1824)
+- Dev: spec: Change csync2 from requies to recommends
+- Dev: bootstrap: For compatibility concerns, add -x option back
+- Dev: doc: Update help text for crm cluster copy subcommand
+- Dev: Rename function utils.cluster_copy_file to utils.cluster_copy_path
+- Dev: Rename function bootstrap.sync_file to bootstrap.sync_path
+- Dev: utils: Improve cluster_copy_file with absolute path, dir check, mkdir on remote
+- Dev: bootstrap: Add -d option for cpio, to create directories as needed
+- Dev: sbd: Only sync /etc/sysconfig/sbd when cluster is running
+- Dev: bootstrap: Remove csync2 stage from join side
+- Dev: bootstrap: Remove node_list_in_cluster from Context
+- Dev: bootstrap: Don't remove csync2-related files when removing cluster node
+- Dev: bootstrap: Remove csync2 from stage dependency list
+- Dev: ui_cluster: Drop -x option, skip configuring and using csync2 by default
+- Dev: sbd: Minor refactor enable_sbd_service method in SBDManager (#1908)
+- Dev: sbd: Check if fence-agents-sbd is installed for other cases (#1907)
+- Dev: ui_node: Don't unpack node info from node_state for `node show` command (#1861)
+- Dev: sbd: Check if fence-agents-sbd is installed on join node
+- Dev: sbd: Check if fence-agents-sbd is installed on interactive mode
+- Dev: sbd: Check if fence-agents-sbd is installed for non sbd stage
+- Fix: sbd: Ensure proper cluster restart when adding diskless SBD (bsc#1248874) (#1906)
+- Dev: sbd: Check if fence-agents-sbd is installed on all nodes (#1905)
+- Dev: bootstrap: Remove pacemaker remote node (#1825)
+- Fix: Makefile: should uninstall man pages (#1904)
+- Fix: packaging: use `CURDIR` instead of `PWD` in Makefile (#1902)
+- Dev: packaging: add `--help` text of all subcommands to the man page (#1900)
+- Dev: report: Update HA related packages for crm report to check and verify (#1901)
+- Fix: doc: the usage parser in help2adoc should support multiline usages
+- Dev: packaging: add some runtime deps to build deps to support running `crm help` during builds
+- Dev: packaing: add doc subdir to Makefile
+- Refactor: packaging: merge the build steps in crmsh.spec and Makefile.am (#1882)
+- Refactor: packaging: kill automake and move build steps from crmsh.spec into Makefile
+- Fix: ui_cluster: Call crm report directly for the legacy `crm cluster health` command (bsc#1230324) (#1570)
+- Dev: bootstrap: Enable to remove pacemaker remote node
+- Dev: run-functional-tests: Add -i option for podman exec command to support interactive mode (#1898)
+- Dev: xmlutil: Add instance method get_res_id_of_remote_node
+- Dev: ui_node: Enable standby and maintenance on pacemaker remote node (#1855)
+- Dev: bootstrap: No need to remove /var/lib/crmsh (#1896)
+- Dev: xmlutil: Refactor CrmMonXmlParser.get_node_list to be an instance method
+- Dev: utils: Refactor validate_and_get_reachable_nodes for clearer logic
+- Dev: xmlutil: Use a single node_type parameter instead of two mutually exclusive parameters
+- Dev: utils: Skip reachable checking for pacemaker remote node
+- Dev: cibquery: Remove filter condition for pacemaker remote node
+- Dev: ui_node: Enable maintenance pacemaker remote node
+- Dev: ui_node: Enable standby/online pacemaker remote node
+- Dev: xmlutil: Drop xmlutil.listnodes function
+- Dev: packaging: remove deprecated `data_files`
+- Dev: add asciidoc to the test image (#1895)
+
 * Thu Aug 14 2025 Xin Liang <XLiang@suse.com>
 - Release 5.0.0
 - Fix: log: missing LF after a progress bar (#1886)
