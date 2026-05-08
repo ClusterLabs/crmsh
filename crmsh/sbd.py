@@ -411,6 +411,7 @@ class SBDManager(object):
                 self.no_update_config = True
         elif not self.diskless_sbd:
             dev_list = self._get_sbd_device_interactive()
+            self._context.diskless_sbd = self.diskless_sbd
         self._sbd_devices = dev_list
 
     def _initialize_sbd(self):
