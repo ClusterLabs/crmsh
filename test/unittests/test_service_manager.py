@@ -56,17 +56,17 @@ class TestServiceManager(unittest.TestCase):
     def test_start_service(self, mock_call_with_parallax: mock.MagicMock):
         self.service_manager._call.return_value = ['node1']
         self.assertEqual(['node1'], self.service_manager.start_service('service1', remote_addr='node1'))
-        self.service_manager._call.assert_called_once_with('node1', [], "systemctl start 'service1'")
+        self.service_manager._call.assert_called_once_with('node1', [], "systemctl start 'service1'; systemctl is-active 'service1'")
 
     def test_start_service_on_multiple_host(self, mock_call_with_parallax: mock.MagicMock):
         self.service_manager._call.return_value = ['node1', 'node2']
         self.assertEqual(['node1', 'node2'], self.service_manager.start_service('service1', node_list=['node1', 'node2']))
-        self.service_manager._call.assert_called_once_with(None, ['node1', 'node2'], "systemctl start 'service1'")
+        self.service_manager._call.assert_called_once_with(None, ['node1', 'node2'], "systemctl start 'service1'; systemctl is-active 'service1'")
 
     def test_start_and_enable_service(self, mock_call_with_parallax: mock.MagicMock):
         self.service_manager._call.return_value = ['node1']
         self.assertEqual(['node1'], self.service_manager.start_service('service1', enable=True, remote_addr='node1'))
-        self.service_manager._call.assert_called_once_with('node1', [], "systemctl enable --now 'service1'")
+        self.service_manager._call.assert_called_once_with('node1', [], "systemctl enable --now 'service1'; systemctl is-active 'service1'")
 
     def test_stop_service(self, mock_call_with_parallax: mock.MagicMock):
         self.service_manager._call.return_value = ['node1']
