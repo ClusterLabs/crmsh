@@ -732,8 +732,9 @@ def init_cluster_local():
 
     if _context and _context.type == "init":
         if corosync.is_qdevice_configured():
-            logger.info("Starting and enable corosync-qdevice.service on %s", utils.this_node())
-            service_manager.start_service("corosync-qdevice.service", enable=True)
+            logger.info("Starting and enable %s on %s", constants.COROSYNC_QDEVICE_SERVICE, utils.this_node())
+            if not service_manager.start_service(constants.COROSYNC_QDEVICE_SERVICE, enable=True):
+                logger.error("Failed to start %s on %s", constants.COROSYNC_QDEVICE_SERVICE, utils.this_node())
         elif service_manager.service_is_enabled("corosync-qdevice.service"):
             service_manager.disable_service("corosync-qdevice.service")
 
@@ -2911,7 +2912,6 @@ def get_failed_services(peer=None) -> list[str]:
     shell = sh.cluster_shell()
     for service in (
         constants.COROSYNC_SERVICE,
-        constants.COROSYNC_QDEVICE_SERVICE,
         constants.SBD_SERVICE,
         constants.PCMK_SERVICE
     ):

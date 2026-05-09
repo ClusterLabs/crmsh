@@ -190,7 +190,10 @@ class Cluster(command.UI):
             return
 
         if start_qdevice:
-            service_manager.start_service("corosync-qdevice", node_list=node_list)
+            success_list = service_manager.start_service("corosync-qdevice", node_list=node_list)
+            for node in node_list:
+                if node not in success_list:
+                    logger.error("Failed to start %s on %s", constants.COROSYNC_QDEVICE_SERVICE, node)
 
         success_flag = True
         success_list = bootstrap.start_pacemaker(node_list=node_list)
