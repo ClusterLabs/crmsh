@@ -3220,7 +3220,6 @@ def get_failed_services(peer=None) -> list:
     shell = sh.cluster_shell()
     for service in (
         constants.COROSYNC_SERVICE,
-        constants.COROSYNC_QDEVICE_SERVICE,
         constants.SBD_SERVICE,
         constants.PCMK_SERVICE
     ):
