@@ -2522,7 +2522,10 @@ def bootstrap_remove(context):
     else:
         configured_nodes = xmlutil.CrmMonXmlParser().get_node_list()
         if cluster_node in configured_nodes:
-            remove_node_from_cluster(cluster_node)
+            with utils.leverage_maintenance_mode() as enabled:
+                if not utils.able_to_restart_cluster(enabled):
+                    return
+                remove_node_from_cluster(cluster_node)
         else:
             utils.fatal(f"Node {cluster_node} is not configured in cluster! (valid nodes: {', '.join(configured_nodes)})")
 

@@ -57,7 +57,7 @@ Feature: crmsh bootstrap process - init, join and remove
     Then    File "/etc/pacemaker/authkey" exists on "hanode2"
     Then    Directory "/var/lib/pacemaker/cib/" not empty on "hanode2"
     Then    Directory "/var/lib/corosync/" not empty on "hanode2"
-    When    Run "crm cluster remove hanode2 -y" on "hanode1"
+    When    Run "crm cluster remove hanode2 -y --force" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "stopped" on "hanode2"
     And     Online nodes are "hanode1"

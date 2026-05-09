@@ -41,7 +41,7 @@ Feature: Test deployment of pacemaker remote
     Then    Expected "Cannot put remote resource 'pcmk-remote-node1' in colocation constraint" in stderr
 
   Scenario: Remove pacemaker remove node
-    When    Run "crm cluster remove pcmk-remote-node1 -y" on "hanode1"
+    When    Run "crm cluster remove pcmk-remote-node1 -y --force" on "hanode1"
     Then    Remote online nodes are "pcmk-remote-node2"
-    When    Run "crm cluster remove pcmk-remote-node2 -y" on "hanode1"
+    When    Run "crm cluster remove pcmk-remote-node2 -y --force" on "hanode1"
     Then    No remote nodes

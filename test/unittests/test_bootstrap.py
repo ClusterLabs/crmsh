@@ -1861,6 +1861,8 @@ class TestValidation(unittest.TestCase):
         mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     @mock.patch('crmsh.utils.this_node')
@@ -1873,7 +1875,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node,
-            mock_crm_mon_parser, mock_remove, mock_check_all_nodes):
+            mock_crm_mon_parser, mock_remove, mock_leverage_maintenance_mode, mock_able_to_restart, mock_check_all_nodes):
         mock_context_inst = mock.Mock(cluster_node="node2", qdevice_rm_flag=None, force=True)
         mock_context.return_value = mock_context_inst
         mock_active.side_effect = [True, True]
@@ -1882,6 +1884,11 @@ class TestValidation(unittest.TestCase):
         mock_crm_mon_parser_inst = mock.Mock()
         mock_crm_mon_parser.return_value = mock_crm_mon_parser_inst
         mock_crm_mon_parser_inst.get_node_list.return_value = ["node1", "node2"]
+        cm = mock.Mock()
+        cm.__enter__ = mock.Mock(return_value=True)
+        cm.__exit__ = mock.Mock(return_value=True)
+        mock_leverage_maintenance_mode.return_value = cm
+        mock_able_to_restart.return_value = True
 
         bootstrap.bootstrap_remove(mock_context_inst)
 
