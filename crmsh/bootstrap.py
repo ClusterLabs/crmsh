@@ -726,12 +726,15 @@ def init_cluster_local():
         logger.warning("You should change the hacluster password to something more secure!")
 
     if not start_pacemaker(enable_flag=True):
-        utils.fatal("Failed to start cluster services")
+        failed_services = get_failed_services()
+        failed_services_str = f" Please check failed services: {', '.join(failed_services)}" if failed_services else ""
+        utils.fatal(f"Failed to start cluster services.{failed_services_str}")
 
     if _context and _context.type == "init":
         if corosync.is_qdevice_configured():
-            logger.info("Starting and enable corosync-qdevice.service on %s", utils.this_node())
-            service_manager.start_service("corosync-qdevice.service", enable=True)
+            logger.info("Starting and enable %s on %s", constants.COROSYNC_QDEVICE_SERVICE, utils.this_node())
+            if not service_manager.start_service(constants.COROSYNC_QDEVICE_SERVICE, enable=True):
+                logger.error("Failed to start %s on %s", constants.COROSYNC_QDEVICE_SERVICE, utils.this_node())
         elif service_manager.service_is_enabled("corosync-qdevice.service"):
             service_manager.disable_service("corosync-qdevice.service")
 
@@ -2902,4 +2905,19 @@ def get_files_to_sync():
             sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_DIR
         ) + STATIC_FILES_TO_SYNC
     )
+
+
+def get_failed_services(peer=None) -> list[str]:
+    failed_services = []
+    shell = sh.cluster_shell()
+    for service in (
+        constants.COROSYNC_SERVICE,
+        constants.SBD_SERVICE,
+        constants.PCMK_SERVICE
+    ):
+        cmd = f"systemctl is-failed {service}"
+        rc, _, _ = shell.get_rc_stdout_stderr_without_input(peer, cmd)
+        if rc == 0:
+            failed_services.append(service)
+    return failed_services
 # EOF
