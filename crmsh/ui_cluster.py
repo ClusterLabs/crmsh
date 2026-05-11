@@ -188,14 +188,19 @@ class Cluster(command.UI):
             return
 
         if start_qdevice:
-            service_manager.start_service("corosync-qdevice", node_list=node_list)
+            success_list = service_manager.start_service("corosync-qdevice", node_list=node_list)
+            for node in node_list:
+                if node not in success_list:
+                    logger.error("Failed to start %s on %s", constants.COROSYNC_QDEVICE_SERVICE, node)
 
         success_flag = True
         success_list = bootstrap.start_pacemaker(node_list=node_list)
         for node in node_list:
             if node not in success_list:
+                failed_services = bootstrap.get_failed_services(node)
+                failed_services_str = f" Please check failed services: {', '.join(failed_services)}" if failed_services else ""
+                logger.error("The cluster stack failed to start on %s.%s", node, failed_services_str)
                 success_flag = False
-                logger.error("The cluster stack failed to start on %s", node)
                 continue
             logger.info("The cluster stack started on %s", node)
 
