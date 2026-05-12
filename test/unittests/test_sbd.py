@@ -307,19 +307,20 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.assertTrue("sbd.service is not active" in str(context.exception))
         mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
 
+    @patch('logging.Logger.warning')
     @patch('crmsh.sbd.SBDUtils.diskless_sbd_configured')
     @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_sbd_not_configured(self, mock_service_manager, mock_diskbased_sbd_configured, mock_diskless_sbd_configured):
+    def test_check_and_fix_sbd_not_configured(self, mock_service_manager, mock_diskbased_sbd_configured, mock_diskless_sbd_configured, mock_logger_warning):
         self.instance_check.fix = False
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=False)
         mock_diskbased_sbd_configured.return_value = False
         mock_diskless_sbd_configured.return_value = False
-        with self.assertRaises(sbd.FixAborted) as context:
+        with self.assertRaises(utils.TerminateSubCommand) as context:
             self.instance_check.check_and_fix()
-        self.assertTrue("Neither disk-based nor disk-less SBD is configured" in str(context.exception))
+        mock_logger_warning.assert_called_once_with("Neither disk-based nor diskless SBD is configured, skip checking SBD timeout issues")
 
     @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.utils.check_all_nodes_reachable')

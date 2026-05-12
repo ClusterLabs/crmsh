@@ -160,20 +160,19 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.package_is_installed')
-    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('logging.Logger.warning')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
-    def test_validate_sbd_option_error_sbd_stage_service(self, mock_active, mock_error, mock_installed, mock_quorate, mock_check_all, mock_list):
+    def test_validate_sbd_option_error_sbd_stage_service(self, mock_active, mock_warning, mock_installed, mock_quorate, mock_check_all, mock_list):
         mock_list.return_value = ["node1"]
         mock_quorate.return_value = True
         mock_installed.return_value = True
-        mock_error.side_effect = SystemExit
         ctx = crmsh.bootstrap.Context()
         ctx.stage = "sbd"
         ctx.diskless_sbd = True
         mock_active.return_value = True
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(crmsh.utils.TerminateSubCommand):
             ctx._validate_sbd_option()
-        mock_error.assert_called_once_with("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
+        mock_warning.assert_called_once_with("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
         mock_active.assert_called_once_with("sbd.service")
 
     @mock.patch('crmsh.utils.calculate_quorate_status')
