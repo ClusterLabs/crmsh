@@ -286,6 +286,11 @@ class TestSBDConfigChecker(unittest.TestCase):
         inst.current_timeout_term = "fencing-timeout"
         inst.current_enabled_term = "fencing-enabled"
 
+    @patch("logging.Logger.info")
+    def test_log_and_return_skipped(self, mock_logger_info):
+        self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.SKIPPED))
+        mock_logger_info.assert_not_called()
+
     @patch('logging.Logger.info')
     def test_log_and_return_success(self, mock_logger_info):
         self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.SUCCESS))
@@ -353,8 +358,11 @@ class TestSBDConfigChecker(unittest.TestCase):
         for translator_inst in translator_insts:
             translator_inst.fix.assert_called_once_with()
 
+    @patch('crmsh.sbd.SBDUtils.diskless_sbd_configured')
+    @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_sbd_not_active(self, mock_service_manager):
+    def test_check_and_fix_sbd_not_active(self, mock_service_manager, mock_diskbased_sbd_configured, mock_diskless_sbd_configured):
+        mock_diskbased_sbd_configured.return_value = True
         self.instance_check.fix = True
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
@@ -362,24 +370,25 @@ class TestSBDConfigChecker(unittest.TestCase):
         with self.assertRaises(sbd.FixAborted) as context:
             self.instance_check.check_and_fix()
         self.assertTrue("sbd.service is not active" in str(context.exception))
-        mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
+        mock_service_manager_inst.service_is_active.assert_called_with(constants.SBD_SERVICE)
 
+    @patch('logging.Logger.warning')
     @patch('crmsh.sbd.SBDUtils.diskless_sbd_configured')
     @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_sbd_not_configured(self, mock_service_manager, mock_diskbased_sbd_configured, mock_diskless_sbd_configured):
-        self.instance_check.fix = False
-        mock_service_manager_inst = Mock()
-        mock_service_manager.return_value = mock_service_manager_inst
-        mock_service_manager_inst.service_is_active = Mock(return_value=False)
+    def test_check_and_fix_sbd_not_configured(self, mock_service_manager, mock_diskbased_sbd_configured, mock_diskless_sbd_configured, mock_logger_warning):
         mock_diskbased_sbd_configured.return_value = False
         mock_diskless_sbd_configured.return_value = False
-        with self.assertRaises(sbd.FixAborted) as context:
-            self.instance_check.check_and_fix()
-        self.assertTrue("Neither disk-based nor disk-less SBD is configured" in str(context.exception))
+        mock_service_manager.return_value.service_is_active.return_value = False
+        for fix in (False, True):
+            mock_logger_warning.reset_mock()
+            self.instance_check.fix = fix
+            self.assertEqual(sbd.CheckResult.SKIPPED, self.instance_check.check_and_fix())
+            mock_logger_warning.assert_called_once_with("Neither disk-based nor diskless SBD is configured, skip checking and fixing SBD timeout issues")
 
     @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured', new=Mock(return_value=True))
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_sbd_inconsistent(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me):
         mock_service_manager_inst = Mock()
@@ -395,6 +404,7 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
     @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured', new=Mock(return_value=True))
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_not_fix(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_check_deprecated_property):
         mock_service_manager_inst = Mock()
@@ -428,6 +438,7 @@ class TestSBDConfigChecker(unittest.TestCase):
 
     @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured', new=Mock(return_value=True))
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_fix_failure(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me):
         mock_service_manager_inst = Mock()
@@ -448,6 +459,7 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
     @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured', new=Mock(return_value=True))
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_fix_success(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_check_deprecated_property):
         mock_service_manager_inst = Mock()

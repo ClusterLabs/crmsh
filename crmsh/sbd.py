@@ -523,6 +523,7 @@ class CheckResult(Enum):
     SUCCESS = 0
     WARNING = 1
     ERROR = 2
+    SKIPPED = 3
     __str__ = lambda self: self.name
 
 
@@ -566,6 +567,8 @@ class SBDConfigChecker:
 
     @staticmethod
     def log_and_return(check_res: CheckResult, fix_flag: bool = False) -> bool:
+        if check_res == CheckResult.SKIPPED:
+            return True
         if check_res == CheckResult.SUCCESS:
             logger.info('SBD: Check SBD-related configurations: OK.')
             return True
@@ -711,13 +714,18 @@ class SBDConfigChecker:
 
     def check_and_fix(self) -> CheckResult:
         service_manager = ServiceManager()
+        if (
+            not service_manager.service_is_active(constants.SBD_SERVICE)
+            and not SBDUtils.diskbased_sbd_configured()
+            and not SBDUtils.diskless_sbd_configured()
+        ):
+            logger.warning("Neither disk-based nor diskless SBD is configured, skip checking and fixing SBD timeout issues")
+            return CheckResult.SKIPPED
+
         if self.fix:
             for service in (constants.SBD_SERVICE, constants.PCMK_SERVICE):
                 if not service_manager.service_is_active(service):
                     raise FixAborted(f"{service} is not active, skip fixing SBD-related configuration issues")
-        elif not service_manager.service_is_active(constants.SBD_SERVICE):
-            if not SBDUtils.diskbased_sbd_configured() and not SBDUtils.diskless_sbd_configured():
-                raise FixAborted("Neither disk-based nor disk-less SBD is configured, skip checking SBD timeout issues")
 
         all_nodes_reachable = True
         self.peer_node_list = utils.list_cluster_nodes_except_me()
