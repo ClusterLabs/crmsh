@@ -711,13 +711,18 @@ class SBDConfigChecker:
 
     def check_and_fix(self) -> CheckResult:
         service_manager = ServiceManager()
+        if (
+            not service_manager.service_is_active(constants.SBD_SERVICE)
+            and not SBDUtils.diskbased_sbd_configured()
+            and not SBDUtils.diskless_sbd_configured()
+        ):
+            logger.warning("Neither disk-based nor diskless SBD is configured, skip checking and fixing SBD timeout issues")
+            raise utils.TerminateSubCommand(success=True)
+
         if self.fix:
             for service in (constants.SBD_SERVICE, constants.PCMK_SERVICE):
                 if not service_manager.service_is_active(service):
                     raise FixAborted(f"{service} is not active, skip fixing SBD-related configuration issues")
-        elif not service_manager.service_is_active(constants.SBD_SERVICE):
-            if not SBDUtils.diskbased_sbd_configured() and not SBDUtils.diskless_sbd_configured():
-                raise FixAborted("Neither disk-based nor disk-less SBD is configured, skip checking SBD timeout issues")
 
         all_nodes_reachable = True
         self.peer_node_list = utils.list_cluster_nodes_except_me()
