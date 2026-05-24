@@ -89,12 +89,17 @@ class SBDUtils:
     def verify_sbd_device(dev_list, node_list=None, compare_uuid=False):
         if len(dev_list) > SBDManager.SBD_DEVICE_MAX:
             raise ValueError(f"Maximum number of SBD device is {SBDManager.SBD_DEVICE_MAX}")
+
         for dev in dev_list:
             failed_nodes = utils.get_non_block_device_nodes(dev, node_list)
             if failed_nodes:
                 raise ValueError(f"{dev} is not a block device on {', '.join(failed_nodes)}")
+
+            utils.MultipathInspector.check_device_under_multipath(dev)
+
             if compare_uuid:
                 SBDUtils.compare_device_uuid(dev, node_list)
+
         utils.detect_duplicate_device_path(dev_list)
 
     @staticmethod

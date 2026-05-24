@@ -1478,3 +1478,105 @@ node1(1): member
     assert res == ["node2"]
 
     mock_error.assert_called_once_with("From the view of node '%s', node '%s' is not a member of the cluster", 'node1', 'node2')
+
+
+class TestMultipathInspector(unittest.TestCase):
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_init(self, mock_cluster_shell):
+        """Test MultipathInspector initialization"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),  # lsblk output for parent device
+            (0, "dev multipath\nsda mpatha", "")  # multipathd show paths output
+        ]
+
+        inspector = utils.MultipathInspector("/dev/sda1")
+
+        assert inspector._shell == mock_shell_inst
+        assert inspector._device_info.device == "/dev/sda1"
+        assert inspector._device_info.parent_device == "sda"
+        assert inspector._device_info.under_multipath is True
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_get_parent_device(self, mock_cluster_shell):
+        """Test _get_parent_device method"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),  # lsblk output for __init__
+            (0, "", ""),  # multipathd show paths output for __init__
+            (0, "sda", "")  # lsblk output for test call
+        ]
+
+        inspector = utils.MultipathInspector("/dev/sda1")
+        parent = inspector._get_parent_device("/dev/sda1")
+
+        assert parent == "sda"
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_get_multipath_mapping(self, mock_cluster_shell):
+        """Test _get_multipath_mapping method with valid output"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        multipathd_output = """dev multipath
+sda mpatha
+sdb mpatha
+sdc mpathb"""
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),  # lsblk for __init__
+            (0, multipathd_output, ""),  # multipathd for __init__
+            (0, multipathd_output, "")  # multipathd for test call
+        ]
+
+        inspector = utils.MultipathInspector("/dev/sda1")
+        mapping = inspector._get_multipath_mapping()
+
+        assert mapping == {"sda": "mpatha", "sdb": "mpatha", "sdc": "mpathb"}
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_inspect_device_under_multipath(self, mock_cluster_shell):
+        """Test _inspect method when device is under multipath"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),
+            (0, "dev multipath\nsda mpatha", "")
+        ]
+
+        inspector = utils.MultipathInspector("/dev/sda1")
+        device_info = inspector._device_info
+
+        assert device_info.device == "/dev/sda1"
+        assert device_info.parent_device == "sda"
+        assert device_info.under_multipath is True
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_is_under_multipath_true(self, mock_cluster_shell):
+        """Test _is_under_multipath returns True"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),
+            (0, "dev multipath\nsda mpatha", "")
+        ]
+
+        inspector = utils.MultipathInspector("/dev/sda1")
+
+        assert inspector._is_under_multipath() is True
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_check_device_under_multipath_raises_error(self, mock_cluster_shell):
+        """Test check_device_under_multipath raises ValueError when device is under multipath"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),
+            (0, "dev multipath\nsda mpatha", "")
+        ]
+
+        with pytest.raises(ValueError) as exc_info:
+            utils.MultipathInspector.check_device_under_multipath("/dev/sda1")
+
+        assert str(exc_info.value) == "Device /dev/sda1 is under multipath, please provide the multipath device instead"
