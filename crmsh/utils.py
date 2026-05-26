@@ -3219,4 +3219,15 @@ def check_function_with_timeout(check_function, wait_timeout=30, interval=1, *ar
         time.sleep(interval)
         current_time = int(time.time())
     raise TimeoutError
+
+
+def load_cib_file_env():
+    if options.regression_tests or ServiceManager.service_is_active("pacemaker.service"):
+        return
+    cib_file = os.environ.setdefault('CIB_file', constants.CIB_RAW_FILE)
+    logger.warning("Cluster is not running, loading the CIB file from %s", cib_file)
+    if not os.path.exists(cib_file):
+        raise ValueError(f"Cannot find cib file: {cib_file}")
+
+
 # vim:ts=4:sw=4:et:
