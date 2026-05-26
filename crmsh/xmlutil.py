@@ -4,6 +4,8 @@
 
 import os
 import subprocess
+import typing
+
 from lxml import etree, doctestcompare
 import copy
 import bz2
@@ -25,7 +27,7 @@ logger = log.setup_logger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 
-def xmlparse(f):
+def xmlparse(f: typing.IO[typing.AnyStr]) -> etree.Element:
     try:
         cib_elem = etree.parse(f).getroot()
     except Exception as msg:
@@ -121,7 +123,7 @@ def cibdump2tmp():
     return None
 
 
-def text2elem(text):
+def text2elem(text: str) -> etree.Element:
     """
     Convert a text format CIB to
     an XML tree.
@@ -133,7 +135,7 @@ def text2elem(text):
         return None
 
 
-def cibdump2elem(section=None):
+def cibdump2elem(section=None, no_side_effects=False):
     if section:
         cmd = "%s -o %s" % (cib_dump, section)
     else:
@@ -141,7 +143,7 @@ def cibdump2elem(section=None):
     rc, outp, errp = sudocall(cmd)
     if rc == 0:
         return text2elem(outp)
-    else:
+    elif not no_side_effects:
         logger.error("running %s: %s", cmd, errp)
     return None
 

@@ -9,6 +9,7 @@ import re
 import stat
 import pwd
 import datetime
+import subprocess
 
 from crmsh import log
 from crmsh import utils as crmutils
@@ -270,3 +271,14 @@ def collect_sys_info():
 
     sys_info_f = os.path.join(constants.WORKDIR, constants.SYSINFO_F)
     crmutils.str2file(out_string, sys_info_f)
+
+
+def collect_pre_migration_info() -> None:
+    cmd = "crm cluster health sles16"
+    target_file = os.path.join(constants.WORKDIR, constants.PRE_MIGRATION_F)
+    with open(target_file, 'w') as f:
+        f.write(f"#### Run command: {cmd} ####\n")
+        f.flush()
+        process = subprocess.Popen(cmd, shell=True, stdout=f, stderr=subprocess.STDOUT)
+        process.communicate()
+    logger.debug(f"Dump pre-migration information into {os.path.realpath(target_file)}")

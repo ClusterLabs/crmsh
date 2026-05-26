@@ -144,5 +144,6 @@ SYSSTATS_F = "sysstats.txt"
 TIME_F = "time.txt"
 OCFS2_F = "ocfs2.txt"
 SBD_F = "sbd.txt"
+PRE_MIGRATION_F = "pre_migration.txt"
 OSRELEASE = "/etc/os-release"
 # vim:ts=4:sw=4:et:
