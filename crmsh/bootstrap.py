@@ -262,8 +262,6 @@ class Context(object):
             utils.fatal("-w option should be used with -s or -S option")
         if self.sbd_devices and self.diskless_sbd:
             utils.fatal("Can't use -s and -S options together")
-        if self.sbd_devices:
-            sbd.SBDUtils.verify_sbd_device(self.sbd_devices)
 
         with_sbd_option = self.sbd_devices or self.diskless_sbd
 
@@ -272,7 +270,10 @@ class Context(object):
             if not utils.calculate_quorate_status():
                 utils.fatal("Cluster is not quorate, can't run 'sbd' stage")
 
-            for node in utils.list_cluster_nodes():
+            node_list = utils.list_cluster_nodes()
+            if self.sbd_devices:
+                sbd.SBDUtils.verify_sbd_device(self.sbd_devices, node_list)
+            for node in node_list:
                 if not utils.package_is_installed("sbd", node):
                     utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
                 if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd", node):
@@ -286,8 +287,10 @@ class Context(object):
         elif with_sbd_option:
             if not utils.package_is_installed("sbd"):
                 utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG)
-            if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd"):
-                utils.fatal(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG)
+            if self.sbd_devices:
+                if not utils.package_is_installed("fence-agents-sbd"):
+                    utils.fatal(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG)
+                sbd.SBDUtils.verify_sbd_device(self.sbd_devices)
 
     def _validate_nodes_option(self):
         """

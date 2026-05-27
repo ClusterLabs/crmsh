@@ -57,24 +57,26 @@ class TestSBDUtils(unittest.TestCase):
         with self.assertRaises(ValueError):
             SBDUtils.compare_device_uuid("/dev/sbd_device", ["node1"])
 
-    @patch('crmsh.utils.is_block_device')
+    @patch('crmsh.utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
-    def test_verify_sbd_device_exceeds_max(self, mock_compare_device_uuid, mock_is_block_device):
+    def test_verify_sbd_device_exceeds_max(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
         dev_list = [f"/dev/sbd_device_{i}" for i in range(SBDManager.SBD_DEVICE_MAX + 1)]
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             SBDUtils.verify_sbd_device(dev_list)
+        self.assertTrue(f"Maximum number of SBD device is {SBDManager.SBD_DEVICE_MAX}" in str(context.exception))
 
-    @patch('crmsh.utils.is_block_device')
+    @patch('crmsh.utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
-    def test_verify_sbd_device_non_block(self, mock_compare_device_uuid, mock_is_block_device):
-        mock_is_block_device.return_value = False
-        with self.assertRaises(ValueError):
+    def test_verify_sbd_device_non_block(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
+        mock_get_non_block_device_nodes.return_value = ["node1"]
+        with self.assertRaises(ValueError) as context:
             SBDUtils.verify_sbd_device(["/dev/not_a_block_device"])
+        self.assertTrue(f"/dev/not_a_block_device is not a block device on node1" in str(context.exception))
 
-    @patch('crmsh.utils.is_block_device')
+    @patch('crmsh.utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
-    def test_verify_sbd_device_valid(self, mock_compare_device_uuid, mock_is_block_device):
-        mock_is_block_device.return_value = True
+    def test_verify_sbd_device_valid(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
+        mock_get_non_block_device_nodes.return_value = []
         SBDUtils.verify_sbd_device(["/dev/sbd_device"], ["node1", "node2"])
 
     @patch('crmsh.utils.parse_sysconfig')

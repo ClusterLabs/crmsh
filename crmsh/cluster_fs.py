@@ -119,9 +119,11 @@ class ClusterFSManager(object):
         """
         Verify OCFS2/GFS2 devices
         """
+        node_list = utils.list_cluster_nodes() if self.use_stage else [utils.this_node()]
         for dev in self.devices:
-            if not utils.is_block_device(dev):
-                raise Error(f"{dev} doesn't look like a block device")
+            failed_nodes = utils.get_non_block_device_nodes(dev, node_list)
+            if failed_nodes:
+                raise Error(f"{dev} is not a block device on {', '.join(failed_nodes)}")
             if utils.is_dev_used_for_lvm(dev) and self.use_cluster_lvm2:
                 raise Error(f"{dev} is a Logical Volume, cannot be used with the -C option")
             if utils.has_disk_mounted(dev):

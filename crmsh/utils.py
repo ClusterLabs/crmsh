@@ -26,6 +26,7 @@ import lzma
 import json
 import socket
 import selectors
+import shlex
 from pathlib import Path
 from collections import defaultdict
 from contextlib import contextmanager, closing
@@ -2621,15 +2622,21 @@ def re_split_string(reg, string):
     return [x for x in re.split(reg, string) if x]
 
 
-def is_block_device(dev):
+def get_non_block_device_nodes(dev, node_list=None) -> list[str]:
     """
-    Check if dev is a block device
+    Return a list of nodes where the device is not a block device or does not exist
     """
-    try:
-        rc = S_ISBLK(os.stat(dev).st_mode)
-    except OSError:
-        return False
-    return rc
+    shell = sh.cluster_shell()
+    cluster_nodes = node_list or [this_node()]
+    failed_nodes = []
+    for node in cluster_nodes:
+        rc, _, _ = shell.get_rc_stdout_stderr_without_input(
+            node,
+            f"test -b {shlex.quote(dev)}"
+        )
+        if rc != 0:
+            failed_nodes.append(node)
+    return failed_nodes
 
 
 def detect_duplicate_device_path(device_list: typing.List[str]):

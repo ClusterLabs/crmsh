@@ -423,7 +423,7 @@ class TestSBD(unittest.TestCase):
         mock_handle_input_sbd_devices.return_value = [["/dev/sda2"], ["/dev/sda1"]]
         mock_SBDManager.return_value.init_and_deploy_sbd = mock.Mock()
         self.sbd_instance_diskbased._device_add(["/dev/sda2"])
-        mock_verify_sbd_device.assert_called_once_with(["/dev/sda1", "/dev/sda2"])
+        mock_verify_sbd_device.assert_called_once_with(["/dev/sda1", "/dev/sda2"], self.sbd_instance_diskbased.cluster_nodes)
         mock_handle_input_sbd_devices.assert_called_once_with(["/dev/sda2"], ["/dev/sda1"])
         mock_SBDManager.assert_called_once_with(
             device_list_to_init=["/dev/sda2"],

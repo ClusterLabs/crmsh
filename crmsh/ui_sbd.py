@@ -467,7 +467,7 @@ class SBD(command.UI):
         Implement sbd device add command, add devices to sbd configuration
         '''
         all_device_list = self.device_list_from_config + devices_to_add
-        sbd.SBDUtils.verify_sbd_device(all_device_list)
+        sbd.SBDUtils.verify_sbd_device(all_device_list, self.cluster_nodes)
 
         devices_to_init, _ = sbd.SBDUtils.handle_input_sbd_devices(
             devices_to_add,
