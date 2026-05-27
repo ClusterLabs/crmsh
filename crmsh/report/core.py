@@ -6,6 +6,7 @@ import argparse
 import multiprocessing
 import os
 import re
+import logging
 import subprocess
 import sys
 import shutil
@@ -475,10 +476,21 @@ def _interactive_ssh_run_as_root(host: str, ssh_user: str, cmd: str):
 
 def adjust_verbosity(context: Context) -> None:
     if context.debug > 0:
-        config.report.verbosity = context.debug
+        config.report.verbosity = str(context.debug)
     elif config.core.debug:
-        config.report.verbosity = 1
+        config.report.verbosity = "1"
         context.debug = 1
+
+    verbosity = int(config.report.verbosity)
+
+    if verbosity > 1:
+        level = log.DEBUG2
+    elif verbosity == 1:
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+
+    logging.getLogger('crmsh').setLevel(level)
 
 
 def parse_arguments(context: Context) -> None:

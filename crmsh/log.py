@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from . import options
 from . import constants
 
-DEBUG2 = logging.DEBUG + 5
+DEBUG2 = logging.DEBUG - 1
 CRMSH_LOG_FILE = "/var/log/crmsh/crmsh.log"
 
 
@@ -108,8 +108,7 @@ class NoBacktraceFormatter(logging.Formatter):
         it is formatted using formatException() and appended to the message.
         """
         if record.exc_info or record.stack_info:
-            from crmsh import config
-            if config.core.debug:
+            if logging.getLogger('crmsh').isEnabledFor(logging.DEBUG):
                 return super().format(record)
             else:
                 record.message = record.getMessage()
@@ -161,20 +160,6 @@ class LeveledFormatter(logging.Formatter):
         if formatter is None:
             formatter = self.default_formatter
         return formatter.format(record)
-
-
-class DebugCustomFilter(logging.Filter):
-    """
-    A custom filter for debug and debug2 messages
-    """
-    def filter(self, record):
-        from .config import core, report
-        if record.levelno == logging.DEBUG:
-            return core.debug or int(report.verbosity) >= 1
-        elif record.levelno == DEBUG2:
-            return int(report.verbosity) > 1
-        else:
-            return True
 
 
 class GroupWriteRotatingFileHandler(logging.handlers.RotatingFileHandler):
@@ -232,24 +217,17 @@ LOGGING_CFG = {
         },
         "file": LOGFILE_FORMATTER
     },
-    "filters": {
-        "filter": {
-            "()": DebugCustomFilter
-        },
-    },
     "handlers": {
         'null': {
             'class': 'logging.NullHandler'
         },
         "console_report": {
             "()": ConsoleCustomHandler,
-            "formatter": "console_report",
-            "filters": ["filter"]
+            "formatter": "console_report"
         },
         "console": {
             "()": ConsoleCustomHandler,
-            "formatter": "console",
-            "filters": ["filter"]
+            "formatter": "console"
         },
         "buffer": {
             "class": "logging.handlers.MemoryHandler",
@@ -260,7 +238,6 @@ LOGGING_CFG = {
             "()": GroupWriteRotatingFileHandler,
             "filename": CRMSH_LOG_FILE,
             "formatter": "file",
-            "filters": ["filter"],
             "maxBytes": 1*1024*1024,
             "backupCount": 10
         }
@@ -268,17 +245,15 @@ LOGGING_CFG = {
     "loggers": {
         "crmsh": {
             "handlers": ["null", "file", "console", "buffer"],
-            "level": "DEBUG"
+            "level": "INFO"
         },
         "crmsh.crash_test": {
             "handlers": ["null", "file", "console"],
-            "propagate": False,
-            "level": "DEBUG"
+            "propagate": False
         },
         "crmsh.report": {
             "handlers": ["null", "file", "console_report"],
-            "propagate": False,
-            "level": "DEBUG"
+            "propagate": False
         }
     }
 }
@@ -361,8 +336,7 @@ class LoggerUtils(object):
             self.logger.addHandler(console_handler)
 
     def log_only_to_file(self, msg, level=logging.INFO):
-        from .config import core
-        if core.debug:
+        if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.log(logging.DEBUG, msg)
         else:
             with self.only_file():
