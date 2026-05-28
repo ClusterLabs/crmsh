@@ -3,8 +3,9 @@
 
 import logging
 import re
-from io import StringIO
 import typing
+
+from .log import DEBUG2
 
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class Parser:
                 tokens = self._tokenize(line)
             except ValueError as e:
                 raise MalformedLineException(lineno, line)
-            logger.debug('tokens: %s', tokens)
+            logger.log(DEBUG2, 'tokens: %s', tokens)
             if tokens[1] == '#':
                 fake_key = f'{COMMENT_PREFIX}_{lineno}'
                 self.on_key_value(fake_key, tokens[2])
