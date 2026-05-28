@@ -226,11 +226,11 @@ class TestQDevice(unittest.TestCase):
         qdevice.QDevice.check_qnetd_addr("qnetd-node")
 
     @mock.patch('crmsh.utils.valid_port')
-    def test_check_qdevice_port(self, mock_port):
+    def test_check_qnetd_port(self, mock_port):
         mock_port.return_value = False
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qdevice_port("1")
-        excepted_err_string = "invalid qdevice port range(1024 - 65535)"
+            qdevice.QDevice.check_qnetd_port("1")
+        excepted_err_string = "invalid qnetd port range(1024 - 65535)"
         self.assertEqual(excepted_err_string, str(err.exception))
 
     def test_check_qdevice_algo(self):
@@ -278,7 +278,7 @@ class TestQDevice(unittest.TestCase):
     @mock.patch('crmsh.qdevice.QDevice.check_qdevice_tls')
     @mock.patch('crmsh.qdevice.QDevice.check_qdevice_tie_breaker')
     @mock.patch('crmsh.qdevice.QDevice.check_qdevice_algo')
-    @mock.patch('crmsh.qdevice.QDevice.check_qdevice_port')
+    @mock.patch('crmsh.qdevice.QDevice.check_qnetd_port')
     @mock.patch('crmsh.qdevice.QDevice.check_qnetd_addr')
     @mock.patch('crmsh.qdevice.QDevice.check_corosync_qdevice_available')
     def test_valid_qdevice_options(self, mock_installed, mock_check_qnetd, mock_check_port,
@@ -326,8 +326,10 @@ class TestQDevice(unittest.TestCase):
         mock_installed.assert_called_once_with("corosync-qnetd", remote_addr="10.10.10.123")
         mock_init_tls_certs_on_qnetd.assert_called_once()
 
+    @mock.patch("crmsh.service_manager.ServiceManager.service_is_active")
     @mock.patch("crmsh.service_manager.ServiceManager.start_service")
-    def test_start_qnetd(self, mock_start):
+    def test_start_qnetd(self, mock_start, mock_active):
+        mock_active.return_value = False
         self.qdevice_with_ip.start_qnetd()
         mock_start.assert_called_once_with("corosync-qnetd.service", enable=True, remote_addr="10.10.10.123")
 
@@ -685,6 +687,7 @@ Membership information
         mock_service_instance = mock.Mock()
         mock_service.return_value = mock_service_instance
         mock_service_instance.service_is_active.return_value = False
+        self.qdevice_with_ip.config_qnetd_port_in_sysconfig = mock.Mock()
 
         self.qdevice_with_ip.config_qnetd_port()
 
@@ -704,6 +707,7 @@ Membership information
         mock_cluster_shell.return_value = mock_cluster_shell_instance
         mock_cluster_shell_instance.get_rc_stdout_stderr_without_input = mock.Mock(return_value=(0, None, None))
         mock_cluster_shell_instance.get_stdout_or_raise_error = mock.Mock(return_value=None)
+        self.qdevice_with_ip.config_qnetd_port_in_sysconfig = mock.Mock()
         self.qdevice_with_ip.port = 5403
 
         self.qdevice_with_ip.config_qnetd_port()
