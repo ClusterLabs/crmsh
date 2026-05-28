@@ -16,7 +16,7 @@ jobs:
       run:
         working-directory: ./test_container
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: build container image
         run: podman image build -t haleap:ci .
       - name: push container image

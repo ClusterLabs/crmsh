@@ -17,7 +17,7 @@ jobs:
   general_check:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: check data-manifest
       run: |
         ./update-data-manifest.sh
@@ -39,9 +39,9 @@ jobs:
       fail-fast: false
     timeout-minutes: 5
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -51,7 +51,7 @@ jobs:
     - name: Test with pytest in tox
       run: |
         tox -v -e${{ matrix.python-version }}
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: unit
@@ -60,12 +60,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for crm_report bugs
       run:  |
         index=`$GET_INDEX_OF crm_report_bugs`
         $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -74,12 +74,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for crm_report normal
       run:  |
         index=`$GET_INDEX_OF crm_report_normal`
         $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -88,12 +88,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for bootstrap bugs
       run:  |
         index=`$GET_INDEX_OF bootstrap_bugs`
         $CONTAINER_SCRIPT $index
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -102,12 +102,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for bootstrap bugs, under non root user
       run:  |
         index=`$GET_INDEX_OF bootstrap_bugs`
         $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -116,12 +116,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for bootstrap common
       run:  |
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
         $CONTAINER_SCRIPT $index
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -130,12 +130,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for bootstrap common, under non root user
       run:  |
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
         $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -144,12 +144,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for bootstrap options
       run:  |
         index=`$GET_INDEX_OF bootstrap_options`
         $CONTAINER_SCRIPT $index
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -158,12 +158,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for bootstrap firewalld
       run:  |
         index=`$GET_INDEX_OF bootstrap_firewalld`
         $CONTAINER_SCRIPT $index
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -172,12 +172,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for bootstrap using password
       run:  |
         index=`$GET_INDEX_OF bootstrap_password`
         $CONTAINER_SCRIPT $index
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -187,12 +187,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for crm corosync subcommand
       run:  |
         index=`$GET_INDEX_OF corosync_ui`
         $CONTAINER_SCRIPT $index
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -201,12 +201,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for bootstrap options, under non root user
       run:  |
         index=`$GET_INDEX_OF bootstrap_options`
         $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -215,12 +215,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for qdevice setup and remove
       run:  |
         index=`$GET_INDEX_OF qdevice_setup_remove`
         $CONTAINER_SCRIPT $index
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -229,12 +229,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for qdevice setup and remove, under non root user
       run:  |
         index=`$GET_INDEX_OF qdevice_setup_remove`
         $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -243,12 +243,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for qdevice options
       run:  |
         index=`$GET_INDEX_OF qdevice_options`
         $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -257,12 +257,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for qdevice validate
       run:  |
         index=`$GET_INDEX_OF qdevice_validate`
         $CONTAINER_SCRIPT $index
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -271,12 +271,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for qdevice validate, under non root user
       run:  |
         index=`$GET_INDEX_OF qdevice_validate`
         $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -285,12 +285,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for qdevice user case
       run:  |
         index=`$GET_INDEX_OF qdevice_usercase`
         $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -299,12 +299,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for resource failcount
       run:  |
         index=`$GET_INDEX_OF resource_failcount`
         $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -313,12 +313,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for resource set
       run:  |
         index=`$GET_INDEX_OF resource_set`
         $CONTAINER_SCRIPT $index
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -327,12 +327,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for resource set, under non root user
       run:  |
         index=`$GET_INDEX_OF resource_set`
         $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -341,12 +341,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for configure sublevel bugs
       run:  |
         index=`$GET_INDEX_OF configure_bugs`
         $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -355,12 +355,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for constraints bugs
       run:  |
         index=`$GET_INDEX_OF constraints_bugs`
         $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -369,12 +369,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for geo cluster
       run:  |
         index=`$GET_INDEX_OF geo_setup`
         $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -383,12 +383,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for healthcheck
       run:  |
         index=`$GET_INDEX_OF healthcheck`
         $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -397,11 +397,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for cluster api
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF cluster_api`
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -410,11 +410,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for user access
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF user_access`
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -423,11 +423,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for ssh agent
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF ssh_agent` && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT -u `$GET_INDEX_OF ssh_agent`
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -436,11 +436,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for blocking ssh
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF cluster_blocking_ssh`
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -449,13 +449,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for migration
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker.service
         $CONTAINER_SCRIPT `$GET_INDEX_OF migration` && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT -u `$GET_INDEX_OF migration`
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -464,11 +464,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: functional test for pacemaker remote
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF pacemaker_remote`
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
@@ -477,7 +477,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: original regression test
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF "regression test"`
