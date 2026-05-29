@@ -3,6 +3,7 @@ import re
 import typing
 import shutil
 import time
+import shlex
 import logging
 from enum import Enum, IntEnum, auto
 from . import utils, sh
@@ -29,9 +30,13 @@ class SBDUtils:
         Extract metadata from sbd device header
         '''
         sbd_info = {}
-        pattern = r"UUID\s+:\s+(\S+)|Timeout\s+\((\w+)\)\s+:\s+(\d+)"
 
-        out = sh.cluster_shell().get_stdout_or_raise_error(f"sbd -d {dev} dump", remote)
+        cmd = f"sbd -d {shlex.quote(dev)} dump"
+        rc, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote, cmd)
+        if rc != 0 or not out:
+            return sbd_info
+
+        pattern = r"UUID\s+:\s+(\S+)|Timeout\s+\((\w+)\)\s+:\s+(\d+)"
         matches = re.findall(pattern, out)
         for uuid, timeout_type, timeout_value in matches:
             if uuid and not timeout_only:
@@ -47,14 +52,12 @@ class SBDUtils:
         return sbd_info
 
     @staticmethod
-    def get_device_uuid(dev, node=None):
+    def get_device_uuid(dev, node=None) -> str|None:
         '''
         Get UUID for specific device and node
         '''
-        res = SBDUtils.get_sbd_device_metadata(dev, remote=node).get("uuid")
-        if not res:
-            raise ValueError(f"Cannot find sbd device UUID for {dev}")
-        return res
+        metadata_info = SBDUtils.get_sbd_device_metadata(dev, remote=node)
+        return metadata_info.get("uuid")
 
     @staticmethod
     def compare_device_uuid(dev, node_list):
@@ -64,13 +67,17 @@ class SBDUtils:
         if not node_list:
             return
         local_uuid = SBDUtils.get_device_uuid(dev)
+        if not local_uuid:
+            raise ValueError(f"Cannot get sbd device UUID for {dev} on {utils.this_node()}")
         for node in node_list:
             remote_uuid = SBDUtils.get_device_uuid(dev, node)
+            if not remote_uuid:
+                raise ValueError(f"Cannot get sbd device UUID for {dev} on {node}")
             if local_uuid != remote_uuid:
                 raise ValueError(f"Device {dev} doesn't have the same UUID with {node}")
 
     @staticmethod
-    def verify_sbd_device(dev_list, compare_node_list=[]):
+    def verify_sbd_device(dev_list, compare_node_list=None):
         if len(dev_list) > SBDManager.SBD_DEVICE_MAX:
             raise ValueError(f"Maximum number of SBD device is {SBDManager.SBD_DEVICE_MAX}")
         for dev in dev_list:
@@ -1266,6 +1273,12 @@ class SBDManager:
             logger.debug("Running command: %s", cmd)
             shell.get_stdout_or_raise_error(cmd)
 
+        if self.cluster_is_running:
+            nodes = utils.list_cluster_nodes_except_me()
+            if nodes:
+                for dev in self.device_list_to_init:
+                    SBDUtils.compare_device_uuid(dev, nodes)
+
     def enable_sbd_service(self):
         if self.cluster_is_running:
             cluster_nodes = utils.list_cluster_nodes()
@@ -1449,7 +1462,7 @@ class SBDManager:
         self._watchdog_inst.join_watchdog()
 
         if dev_list:
-            SBDUtils.verify_sbd_device(dev_list, [peer_host])
+            SBDUtils.verify_sbd_device(dev_list, compare_node_list=[peer_host])
 
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
         self.enable_sbd_service()
