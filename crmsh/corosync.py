@@ -7,6 +7,8 @@ configuration file, and also the corosync-* utilities.
 import dataclasses
 import os
 import re
+import subprocess
+import sys
 import typing
 from io import StringIO
 
@@ -98,26 +100,40 @@ def cfgtool(*args):
     return ShellUtils().get_stdout(['corosync-cfgtool'] + list(args), shell=False)
 
 
-def query_status(status_type):
+def query_status(status_type=None):
     """
     Query status of corosync
 
     Possible types could be ring/quorum/qdevice/qnetd/cpg
     """
-    status_func_dict = {
-            "ring": query_ring_status,
-            "quorum": query_quorum_status,
-            "qdevice": query_qdevice_status,
-            "qnetd": query_qnetd_status,
-            "cpg": query_cpg_status
-            }
-    if status_type in status_func_dict:
-        out = sh.cluster_shell().get_stdout_or_raise_error("crm_node -l")
-        print(f"{out}\n")
-        print(status_func_dict[status_type]())
-        qdevice.QDevice.check_qdevice_vote()
-    else:
+    if status_type is not None and status_type not in STATUS_FUNC_DICT:
         raise ValueError("Wrong type \"{}\" to query status".format(status_type))
+
+    print(utils.term_render("${BOLD}Node Status${NORMAL}"))
+    print(utils.term_render("${BOLD}===================${NORMAL}"))
+    sys.stdout.flush()
+    ret = subprocess.run(["crm_node", "-l"])
+    if ret.returncode != 0:
+        raise ValueError("Failed to query nodes status")
+    print()
+
+    status_types = [status_type] if status_type else COROSYNC_STATUS_TYPES
+    for st in status_types:
+        try:
+            res = STATUS_FUNC_DICT[st]()
+            if res:
+                header = "{} Status".format(st.capitalize())
+                print(utils.term_render(f"\n${{BOLD}}{header}${{NORMAL}}"))
+                print(utils.term_render(f"${{BOLD}}{'=' * (len(header) + 8)}${{NORMAL}}"))
+                print(f"{res.strip()}\n")
+        except ValueError as e:
+            if status_type is None:
+                logger.warning("\nFailed to query %s status: %s\n", st, e)
+                continue
+            else:
+                raise
+
+    qdevice.QDevice.check_qdevice_vote()
 
 
 def query_ring_status():
@@ -181,6 +197,17 @@ def query_cpg_status():
     """
     cmd = "corosync-cpgtool -e"
     return sh.cluster_shell().get_stdout_or_raise_error(cmd)
+
+
+STATUS_FUNC_DICT = {
+    "ring": query_ring_status,
+    "quorum": query_quorum_status,
+    "qdevice": query_qdevice_status,
+    "cpg": query_cpg_status,
+    "qnetd": query_qnetd_status,
+}
+
+COROSYNC_STATUS_TYPES = tuple(STATUS_FUNC_DICT.keys())
 
 
 def push_configuration(nodes):
