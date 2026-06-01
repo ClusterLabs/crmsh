@@ -92,6 +92,18 @@ class ConsoleCustomHandler(logging.StreamHandler):
         stream.write(self.terminator)
 
 
+class LevelFilter(logging.Filter):
+    """
+    A filter to block log records
+    """
+    def __init__(self, level: int):
+        super().__init__()
+        self.level = level
+
+    def filter(self, record):
+        return record.levelno >= self.level
+
+
 class NoBacktraceFormatter(logging.Formatter):
     """Suppress backtrace unless option debug is set."""
     def format(self, record):
@@ -195,6 +207,11 @@ LOGFILE_FORMATTER = {
 }
 
 
+CONSOLE_FILTER = LevelFilter(DEBUG2)
+BUFFERED_FILTER = LevelFilter(logging.CRITICAL + 1)
+LOGFILE_FILTER = LevelFilter(DEBUG2)
+
+
 LOGGING_CFG = {
     "version": 1,
     "disable_existing_loggers": "False",
@@ -223,28 +240,41 @@ LOGGING_CFG = {
         },
         "console_report": {
             "()": ConsoleCustomHandler,
-            "formatter": "console_report"
+            "formatter": "console_report",
+            "filters": [
+                CONSOLE_FILTER,
+            ]
         },
         "console": {
             "()": ConsoleCustomHandler,
-            "formatter": "console"
+            "formatter": "console",
+            "filters": [
+                CONSOLE_FILTER,
+            ]
         },
-        "buffer": {
+        "buffered_console": {
             "class": "logging.handlers.MemoryHandler",
             "capacity": 1024*100,
             "flushLevel": logging.CRITICAL,
+            "target": "console",
+            "filters": [
+                BUFFERED_FILTER,
+            ]
         },
         "file": {
             "()": GroupWriteRotatingFileHandler,
             "filename": CRMSH_LOG_FILE,
             "formatter": "file",
             "maxBytes": 1*1024*1024,
-            "backupCount": 10
+            "backupCount": 10,
+            "filters": [
+                LOGFILE_FILTER,
+            ]
         }
     },
     "loggers": {
         "crmsh": {
-            "handlers": ["null", "file", "console", "buffer"],
+            "handlers": ["null", "file", "console", "buffered_console"],
             "level": "INFO"
         },
         "crmsh.crash_test": {
@@ -294,22 +324,23 @@ class LoggerUtils(object):
         # used in regression test
         self.__save_lineno = 0
 
-    def get_handler(self, _type):
+    def get_handler(self, name):
         """
-        Get logger specific handler
+        Find a handler by name from known root loggers.
         """
-        for h in self.logger.handlers:
-            if getattr(h, '_name') == _type:
-                return h
-        else:
-            raise ValueError("Failed to find \"{}\" handler in logger \"{}\"".format(_type, self.logger.name))
+        if hasattr(logging, 'getHandlerByName'):
+            return logging.getHandlerByName(name)
+        for logger_name in ("crmsh", "crmsh.report"):
+            for h in logging.getLogger(logger_name).handlers:
+                if getattr(h, 'name', None) == name or getattr(h, '_name', None) == name:
+                    return h
+        raise KeyError(f'Log handler not found: {name}')
 
     def disable_info_in_console(self):
         """
         Set log level as warning in console
         """
-        console_handler = self.get_handler("console")
-        console_handler.setLevel(logging.WARNING)
+        CONSOLE_FILTER.level = logging.WARNING
 
     def reset_lineno(self, to=0):
         """
@@ -328,12 +359,12 @@ class LoggerUtils(object):
         """
         Only log to file in bootstrap logger
         """
-        console_handler = self.get_handler("console")
+        saved_level = CONSOLE_FILTER.level
+        CONSOLE_FILTER.level = logging.CRITICAL + 1
         try:
-            self.logger.removeHandler(console_handler)
             yield
         finally:
-            self.logger.addHandler(console_handler)
+            CONSOLE_FILTER.level = saved_level
 
     def log_only_to_file(self, msg, level=logging.INFO):
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -347,21 +378,18 @@ class LoggerUtils(object):
         """
         Keep log messages in memory and finally show them in console
         """
-        console_handler = self.get_handler("console")
-        buffer_handler = self.get_handler("buffer")
+        buffer_handler = self.get_handler("buffered_console")
+        saved_console_level = CONSOLE_FILTER.level
         try:
-            # remove console handler temporarily
-            self.logger.removeHandler(console_handler)
             buffer_handler.buffer.clear()
-            # set the target of buffer handler as console
-            buffer_handler.setTarget(console_handler)
+            CONSOLE_FILTER.level = logging.CRITICAL + 1
+            BUFFERED_FILTER.level = DEBUG2
             yield
         finally:
             empty = not buffer_handler.buffer
-            # close the buffer handler(flush to console handler)
-            buffer_handler.close()
-            # add console handler back
-            self.logger.addHandler(console_handler)
+            BUFFERED_FILTER.level = logging.CRITICAL + 1
+            CONSOLE_FILTER.level = saved_console_level
+            buffer_handler.flush()
             if not empty and not options.batch:
                 try:
                     input("Press enter to continue... ")
@@ -553,12 +581,8 @@ def setup_logger(name):
     """
     Get the logger
     name could be any module name
-    should assign parent's handlers for inherit
     """
-    logger = logging.getLogger(name)
-    logger.handlers = logger.parent.handlers
-    logger.propagate = False
-    return logger
+    return logging.getLogger(name)
 
 
 def setup_report_logger(name):
