@@ -1,6 +1,6 @@
 # Copyright (C) 2013 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
+import logging
 import re
 from . import config
 from . import tmpfiles
@@ -8,7 +8,7 @@ from . import utils
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 # graphviz stuff
 
 

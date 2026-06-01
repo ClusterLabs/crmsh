@@ -1,6 +1,6 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
+import logging
 import os
 import sys
 from .utils import rmdir_r, quote, this_node, ext_cmd
@@ -8,7 +8,7 @@ from .xmlutil import get_topmost_rsc, get_op_timeout, get_child_nvset_node, is_m
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 #
 # Resource testing suite

@@ -5,6 +5,7 @@ Functions that abstract creating and editing the corosync.conf
 configuration file, and also the corosync-* utilities.
 '''
 import dataclasses
+import logging
 import os
 import re
 import typing
@@ -20,7 +21,7 @@ from . import qdevice
 from .sh import ShellUtils
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 COROSYNC_TOKEN_DEFAULT = 3000  # in ms units

@@ -3,6 +3,7 @@
 
 import bz2
 import gzip
+import logging
 import re
 import os
 import sys
@@ -17,7 +18,7 @@ from . import log_patterns
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 _METADATA_FILENAME = "__meta.json"

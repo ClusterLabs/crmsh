@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import copy
+import logging
 import os
 import sys
 import re
@@ -31,7 +32,7 @@ from . import cliformat
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 

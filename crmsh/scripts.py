@@ -1,6 +1,6 @@
 # Copyright (C) 2015 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import logging
 import os
 import re
 import subprocess
@@ -31,7 +31,7 @@ from .sh import ShellUtils
 import crmsh.parallax
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 _script_cache = None

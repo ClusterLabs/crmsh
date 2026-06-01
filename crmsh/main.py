@@ -1,6 +1,6 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
+import logging
 import sys
 import os
 import atexit
@@ -19,7 +19,7 @@ from . import ui_context
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 

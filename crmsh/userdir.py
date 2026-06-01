@@ -1,6 +1,6 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import logging
 import os
 import typing
 import pwd
@@ -8,7 +8,7 @@ import pwd
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def getuser():

@@ -24,8 +24,7 @@ from crmsh import constants as crmconstants
 from crmsh import config, log, tmpfiles, ui_cluster
 from crmsh.sh import ShellUtils
 
-
-logger = log.setup_report_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Context:

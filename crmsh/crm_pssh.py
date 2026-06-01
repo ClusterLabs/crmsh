@@ -10,7 +10,7 @@ For each node, this essentially does an "ssh host -l user prog [arg0] [arg1]
 directory.  Each output file in that directory will be named by the
 corresponding remote node's hostname or IP address.
 """
-
+import logging
 import os
 import glob
 import typing
@@ -19,7 +19,7 @@ from . import config
 from . import log
 from .prun import prun
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 _DEFAULT_TIMEOUT = 60
