@@ -1,7 +1,7 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013-2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import logging
 import shlex
 import re
 import inspect
@@ -16,7 +16,7 @@ from . import cibconfig
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 

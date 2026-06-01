@@ -1,6 +1,6 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
+import logging
 import os
 from tempfile import mkstemp
 from lxml import etree
@@ -11,7 +11,7 @@ from . import config
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_tag_by_id(node, tag, ident):

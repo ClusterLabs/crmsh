@@ -14,7 +14,7 @@ from crmsh import constants
 from crmsh import xmlutil
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 CRED = constants.RED

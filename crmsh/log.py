@@ -575,19 +575,3 @@ def setup_logging(only_help=False):
     if not all(os.isatty(fd) for fd in range(3)):
         LOGGING_CFG['formatters'] = NO_COLOR_FORMATTERS
     logging.config.dictConfig(LOGGING_CFG)
-
-
-def setup_logger(name):
-    """
-    Get the logger
-    name could be any module name
-    """
-    return logging.getLogger(name)
-
-
-def setup_report_logger(name):
-    """
-    Get the logger for crm report
-    """
-    logger = setup_logger(name)
-    return logger

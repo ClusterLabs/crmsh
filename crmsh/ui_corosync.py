@@ -4,6 +4,7 @@ import dataclasses
 import io
 import ipaddress
 import json
+import logging
 import re
 import subprocess
 import os
@@ -20,7 +21,7 @@ from . import constants
 from .prun import prun
 from .service_manager import ServiceManager
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _push_completer(args):

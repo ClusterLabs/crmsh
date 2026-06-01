@@ -1,5 +1,6 @@
 import ipaddress
 import json
+import logging
 import os
 import re
 import socket
@@ -20,7 +21,7 @@ from . import sbd
 from .service_manager import ServiceManager
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 

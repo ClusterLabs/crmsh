@@ -1,7 +1,7 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import logging
 import re
 import inspect
 from . import utils
@@ -9,7 +9,7 @@ from . import log
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 

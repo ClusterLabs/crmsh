@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import threading
@@ -13,7 +14,7 @@ from . import config
 from ..service_manager import ServiceManager
 from ..sh import ShellUtils
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class TaskError(Exception):

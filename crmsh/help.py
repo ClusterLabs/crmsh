@@ -27,6 +27,7 @@ Help for the level itself is like this:
 import dataclasses
 import functools
 import io
+import logging
 import os
 import re
 import typing
@@ -39,7 +40,7 @@ from . import log
 from . import ra
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class HelpFilter(object):
