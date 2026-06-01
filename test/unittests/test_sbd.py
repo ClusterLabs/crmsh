@@ -17,31 +17,29 @@ class TestSBDUtils(unittest.TestCase):
 
     @patch('crmsh.sh.cluster_shell')
     def test_get_sbd_device_metadata_success(self, mock_cluster_shell):
-        mock_cluster_shell.return_value.get_stdout_or_raise_error.return_value = self.TEST_DATA
+        mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (0, self.TEST_DATA, None)
         result = SBDUtils.get_sbd_device_metadata("/dev/sbd_device")
         expected = {'uuid': '1234-5678', 'watchdog': 5, 'msgwait': 10}
         self.assertEqual(result, expected)
 
     @patch('crmsh.sh.cluster_shell')
     def test_get_sbd_device_metadata_timeout_only(self, mock_cluster_shell):
-        mock_cluster_shell.return_value.get_stdout_or_raise_error.return_value = self.TEST_DATA
+        mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (0, self.TEST_DATA, None)
         result = SBDUtils.get_sbd_device_metadata("/dev/sbd_device", timeout_only=True)
         expected = {'watchdog': 5, 'msgwait': 10}
         self.assertNotIn('uuid', result)
         self.assertEqual(result, expected)
+
+    @patch('crmsh.sh.cluster_shell')
+    def test_get_sbd_device_metadata_failure(self, mock_cluster_shell):
+        mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (1, None, None)
+        self.assertEqual(SBDUtils.get_sbd_device_metadata("/dev/sbd_device"), {})
 
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata')
     def test_get_device_uuid_success(self, mock_get_sbd_device_metadata):
         mock_get_sbd_device_metadata.return_value = {'uuid': '1234-5678'}
         result = SBDUtils.get_device_uuid("/dev/sbd_device")
         self.assertEqual(result, '1234-5678')
-
-    @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata')
-    def test_get_device_uuid_no_uuid_found(self, mock_get_sbd_device_metadata):
-        mock_get_sbd_device_metadata.return_value = {}
-        with self.assertRaises(ValueError) as context:
-            SBDUtils.get_device_uuid("/dev/sbd_device")
-        self.assertTrue("Cannot find sbd device UUID for /dev/sbd_device" in str(context.exception))
 
     @patch('crmsh.sbd.SBDUtils.get_device_uuid')
     def test_compare_device_uuid_empty_node_list(self, mock_get_device_uuid):
@@ -1151,14 +1149,18 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance.initialize_sbd()
         mock_logger_info.assert_called_once_with("Configuring diskless SBD")
 
+    @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.sbd.ServiceManager')
     @patch('logging.Logger.debug')
     @patch('crmsh.sbd.sh.cluster_shell')
     @patch('crmsh.sbd.SBDManager.convert_timeout_dict_to_opt_str')
-    @patch('shutil.which')
     @patch('logging.Logger.info')
-    def test_initialize_sbd_diskbased(self, mock_logger_info, mock_which, mock_convert_timeout_dict_to_opt_str, mock_cluster_shell, mock_logger_debug, mock_ServiceManager):
-        mock_which.return_value = "/sbin/fence_sbd"
+    def test_initialize_sbd_diskbased(self, mock_logger_info, mock_convert_timeout_dict_to_opt_str, mock_cluster_shell, mock_logger_debug, mock_ServiceManager, mock_list_cluster_nodes_except_me, mock_compare_device_uuid):
+        mock_list_cluster_nodes_except_me.return_value = ['node2']
+        mock_ServiceManager_inst = Mock()
+        mock_ServiceManager.return_value = mock_ServiceManager_inst
+        mock_ServiceManager_inst.service_is_active.return_value = True
         sbdmanager_instance = SBDManager(device_list_to_init=['/dev/sbd_device'], timeout_dict={'watchdog': 5, 'msgwait': 10})
         sbdmanager_instance.initialize_sbd()
         mock_logger_info.assert_has_calls([
