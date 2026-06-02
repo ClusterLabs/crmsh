@@ -3,6 +3,7 @@
 
 import datetime
 import glob
+import logging
 import os
 import re
 import shutil
@@ -18,8 +19,7 @@ from crmsh import corosync, log, userdir, tmpfiles, config, sh
 from crmsh.report import constants, collect, core
 from crmsh.sh import ShellUtils
 
-
-logger = log.setup_report_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class LogType(Enum):

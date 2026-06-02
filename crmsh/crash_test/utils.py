@@ -14,7 +14,7 @@ from crmsh import constants
 from crmsh import xmlutil
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 CRED = constants.RED
@@ -60,22 +60,20 @@ def now(form="%Y/%m/%d %H:%M:%S"):
 
 
 @contextmanager
-def manage_handler(_type, keep=True):
+def manage_log_filter(filter: log.LevelFilter, allow=True):
     """
     Define a contextmanager to remove specific logging handler temporarily
     """
+    saved_level = filter.level
+    filter.level = log.DEBUG2 if allow else logging.CRITICAL + 1
     try:
-        handler = get_handler(logger, _type)
-        if not keep:
-            logger.removeHandler(handler)
         yield
     finally:
-        if not keep:
-            logger.addHandler(handler)
+        filter.level = saved_level
 
 
 def msg_raw(level, msg, to_stdout=True):
-    with manage_handler("console", to_stdout):
+    with manage_log_filter(log.CONSOLE_FILTER, to_stdout):
         logger.log(level, msg)
 
 

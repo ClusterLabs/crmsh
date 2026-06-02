@@ -1,6 +1,6 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
+import logging
 import sys
 import os
 import atexit
@@ -19,8 +19,19 @@ from . import ui_context
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
+
+
+def _update_core_debug(enabled):
+    """
+    Update crmsh logger level based on core.debug
+    """
+    level = log.logging.DEBUG if enabled else log.logging.INFO
+    log.logging.getLogger('crmsh').setLevel(level)
+
+
+config.add_change_listener('core', 'debug', _update_core_debug)
 
 
 random.seed()

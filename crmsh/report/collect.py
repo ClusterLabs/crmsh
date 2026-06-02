@@ -2,6 +2,7 @@
 Define functions to collect log and info
 Function starts with "collect_" will be called in parallel
 """
+import logging
 import sys
 import os
 import shutil
@@ -19,8 +20,7 @@ from crmsh.report import constants, utils, core
 from crmsh.sh import ShellUtils
 from crmsh.service_manager import ServiceManager
 
-
-logger = log.setup_report_logger(__name__)
+logger = logging.getLogger(__name__)
 DIVIDER = "=" * 50
 
 

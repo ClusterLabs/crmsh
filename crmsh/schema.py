@@ -1,13 +1,13 @@
 # Copyright (C) 2012 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # See COPYING for license information.
-
+import logging
 import re
 from . import config
 from .pacemaker import CrmSchema, PacemakerError
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 PCMK_MIN_SCHEMA_VERSION = 1.0
 
 

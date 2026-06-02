@@ -7,6 +7,7 @@
 #   inside the functions.
 
 import inspect
+import logging
 import re
 import ctypes.util
 from . import help as help_module
@@ -16,7 +17,7 @@ from . import constants
 from . import utils
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def name(n):

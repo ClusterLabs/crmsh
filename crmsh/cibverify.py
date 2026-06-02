@@ -1,12 +1,12 @@
 # Copyright (C) 2014 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import logging
 import re
 from .sh import ShellUtils
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 cib_verify = "crm_verify -VV -p"
 VALIDATE_RE = re.compile(r"^Entity: line (\d)+: element (\w+): " +
                          r"Relax-NG validity error : (.+)$")

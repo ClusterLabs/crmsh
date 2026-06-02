@@ -8,6 +8,7 @@ except ImportError:
     import mock
 import logging
 
+from crmsh import log
 from crmsh.crash_test import utils, main, config
 
 
@@ -152,26 +153,12 @@ class TestUtils(TestCase):
         mock_datetime.now.assert_called_once_with()
         mock_now.strftime.assert_called_once_with("%Y/%m/%d %H:%M:%S")
 
-    @mock.patch('crmsh.crash_test.utils.get_handler')
-    def test_manage_handler(self, mock_get_handler):
-        mock_get_handler.return_value = "handler"
-        utils.logger = mock.Mock()
-        utils.logger.removeHandler = mock.Mock()
-        utils.logger.addHandler = mock.Mock()
-
-        with utils.manage_handler("type1", keep=False):
-            pass
-
-        mock_get_handler.assert_called_once_with(utils.logger, "type1")
-        utils.logger.removeHandler.assert_called_once_with("handler")
-        utils.logger.addHandler.assert_called_once_with("handler")
-
-    @mock.patch('crmsh.crash_test.utils.manage_handler')
+    @mock.patch('crmsh.crash_test.utils.manage_log_filter')
     def test_msg_raw(self, mock_handler):
         utils.logger = mock.Mock()
         utils.logger.log = mock.Mock()
         utils.msg_raw("level1", "msg1")
-        mock_handler.assert_called_once_with("console", True)
+        mock_handler.assert_called_once_with(log.CONSOLE_FILTER, True)
         utils.logger.log.assert_called_once_with("level1", "msg1")
 
     @mock.patch('crmsh.crash_test.utils.msg_raw')
