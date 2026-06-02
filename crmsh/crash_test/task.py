@@ -243,8 +243,8 @@ class TaskCheck(Task):
         """
         Define the format of results to stdout
         """
-        with utils.manage_handler("file", keep=False):
-            utils.get_handler(logger, "stream").setFormatter(utils.MyLoggingFormatter(flush=False))
+        with utils.block_log_filter(log.LOGFILE_FILTER):
+            utils.get_handler(logger, "console").setFormatter(utils.MyLoggingFormatter(flush=False))
 
             if self.passed:
                 message = "{} [{}]".format(self.description, utils.CGREEN + "Pass" + utils.CEND)
@@ -255,7 +255,7 @@ class TaskCheck(Task):
             for msg in self.messages:
                 logger.log(utils.LEVEL[msg[0]], msg[1], extra={'timestamp': '  '})
 
-            utils.get_handler(logger, "stream").setFormatter(utils.MyLoggingFormatter())
+            utils.get_handler(logger, "console").setFormatter(utils.MyLoggingFormatter())
 
     def to_json(self):
         """
