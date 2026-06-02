@@ -153,12 +153,10 @@ class TestUtils(TestCase):
         mock_datetime.now.assert_called_once_with()
         mock_now.strftime.assert_called_once_with("%Y/%m/%d %H:%M:%S")
 
-    @mock.patch('crmsh.crash_test.utils.manage_log_filter')
-    def test_msg_raw(self, mock_handler):
+    def test_msg_raw(self):
         utils.logger = mock.Mock()
         utils.logger.log = mock.Mock()
         utils.msg_raw("level1", "msg1")
-        mock_handler.assert_called_once_with(log.CONSOLE_FILTER, True)
         utils.logger.log.assert_called_once_with("level1", "msg1")
 
     @mock.patch('crmsh.crash_test.utils.msg_raw')

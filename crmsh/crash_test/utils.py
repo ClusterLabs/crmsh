@@ -60,12 +60,12 @@ def now(form="%Y/%m/%d %H:%M:%S"):
 
 
 @contextmanager
-def manage_log_filter(filter: log.LevelFilter, allow=True):
+def block_log_filter(filter: log.LevelFilter):
     """
-    Define a contextmanager to remove specific logging handler temporarily
+    Define a contextmanager to block a logging filter temporarily
     """
     saved_level = filter.level
-    filter.level = log.DEBUG2 if allow else logging.CRITICAL + 1
+    filter.level = logging.CRITICAL + 1
     try:
         yield
     finally:
@@ -73,8 +73,11 @@ def manage_log_filter(filter: log.LevelFilter, allow=True):
 
 
 def msg_raw(level, msg, to_stdout=True):
-    with manage_log_filter(log.CONSOLE_FILTER, to_stdout):
+    if to_stdout:
         logger.log(level, msg)
+    else:
+        with block_log_filter(log.CONSOLE_FILTER):
+            logger.log(level, msg)
 
 
 def msg_info(msg, to_stdout=True):

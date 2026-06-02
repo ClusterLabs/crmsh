@@ -227,10 +227,10 @@ class TestTaskCheck(TestCase):
 
     @mock.patch('crmsh.crash_test.utils.MyLoggingFormatter')
     @mock.patch('crmsh.crash_test.utils.get_handler')
-    @mock.patch('crmsh.crash_test.utils.manage_log_filter')
-    def test_to_stdout(self, mock_manage_log_filter, mock_get_handler, mock_myformatter):
-        mock_manage_log_filter.return_value.__enter__ = mock.Mock()
-        mock_manage_log_filter.return_value.__exit__ = mock.Mock()
+    @mock.patch('crmsh.crash_test.utils.block_log_filter')
+    def test_to_stdout(self, mock_block_log_filter, mock_get_handler, mock_myformatter):
+        mock_block_log_filter.return_value.__enter__ = mock.Mock()
+        mock_block_log_filter.return_value.__exit__ = mock.Mock()
 
         task.logger = mock.Mock()
         task.logger.info = mock.Mock()
@@ -253,7 +253,7 @@ class TestTaskCheck(TestCase):
 
         self.task_check_inst.to_stdout()
 
-        mock_manage_log_filter.assert_called_once_with(log.LOGFILE_FILTER, allow=False)
+        mock_block_log_filter.assert_called_once_with(log.LOGFILE_FILTER)
         mock_get_handler.assert_has_calls([
             mock.call(task.logger, "stream"),
             mock.call(task.logger, "stream")

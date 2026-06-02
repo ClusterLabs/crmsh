@@ -243,7 +243,7 @@ class TaskCheck(Task):
         """
         Define the format of results to stdout
         """
-        with utils.manage_log_filter(log.LOGFILE_FILTER, allow=False):
+        with utils.block_log_filter(log.LOGFILE_FILTER):
             utils.get_handler(logger, "stream").setFormatter(utils.MyLoggingFormatter(flush=False))
 
             if self.passed:
