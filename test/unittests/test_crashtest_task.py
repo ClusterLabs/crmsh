@@ -7,6 +7,7 @@ except ImportError:
     import mock
 from datetime import datetime
 
+from crmsh import log
 from crmsh import utils as crmshutils
 from crmsh.crash_test import utils, main, config, task
 
@@ -226,10 +227,10 @@ class TestTaskCheck(TestCase):
 
     @mock.patch('crmsh.crash_test.utils.MyLoggingFormatter')
     @mock.patch('crmsh.crash_test.utils.get_handler')
-    @mock.patch('crmsh.crash_test.utils.manage_handler')
-    def test_to_stdout(self, mock_manage_handler, mock_get_handler, mock_myformatter):
-        mock_manage_handler.return_value.__enter__ = mock.Mock()
-        mock_manage_handler.return_value.__exit__ = mock.Mock()
+    @mock.patch('crmsh.crash_test.utils.manage_log_filter')
+    def test_to_stdout(self, mock_manage_log_filter, mock_get_handler, mock_myformatter):
+        mock_manage_log_filter.return_value.__enter__ = mock.Mock()
+        mock_manage_log_filter.return_value.__exit__ = mock.Mock()
 
         task.logger = mock.Mock()
         task.logger.info = mock.Mock()
@@ -252,7 +253,7 @@ class TestTaskCheck(TestCase):
 
         self.task_check_inst.to_stdout()
 
-        mock_manage_handler.assert_called_once_with("file", keep=False)
+        mock_manage_log_filter.assert_called_once_with(log.LOGFILE_FILTER, allow=False)
         mock_get_handler.assert_has_calls([
             mock.call(task.logger, "stream"),
             mock.call(task.logger, "stream")
