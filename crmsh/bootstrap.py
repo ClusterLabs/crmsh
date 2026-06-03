@@ -2053,6 +2053,8 @@ def join_cluster(seed_host, remote_user):
     if not os.path.exists(corosync.conf()):
         utils.fatal("{} is not readable. Please ensure that hostnames are resolvable.".format(corosync.conf()))
 
+    _context.sbd_manager.join_sbd(remote_user, seed_host)
+
     ringXaddr_res = []
     for i in range(link_number):
         while True:
@@ -2073,8 +2075,6 @@ def join_cluster(seed_host, remote_user):
         logger.warning(e)
     sync_path(corosync.conf(), seed_host)
     shell.get_stdout_or_raise_error('corosync-cfgtool -R', seed_host)
-
-    _context.sbd_manager.join_sbd(remote_user, seed_host)
 
     # Initialize the cluster before adjusting quorum. This is so
     # that we can query the cluster to find out how many nodes
