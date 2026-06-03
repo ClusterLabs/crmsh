@@ -1,6 +1,8 @@
 import os
 import re
 import shutil
+import shlex
+from typing import Optional
 from . import utils, sh
 from . import bootstrap
 from .bootstrap import SYSCONFIG_SBD, SBD_SYSTEMD_DELAY_START_DIR
@@ -305,15 +307,16 @@ class SBDManager(object):
         self.no_update_config = False
 
     @staticmethod
-    def _get_device_uuid(dev, node=None):
+    def _get_device_uuid(dev, node=None) -> Optional[str]:
         """
         Get UUID for specific device and node
         """
-        out = sh.cluster_shell().get_stdout_or_raise_error("sbd -d {} dump".format(dev), node)
+        cmd = f"sbd -d {shlex.quote(dev)} dump"
+        rc, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(node, cmd)
+        if rc != 0 or not out:
+            return None
         res = re.search("UUID\s*:\s*(.*)\n", out)
-        if not res:
-            raise ValueError("Cannot find sbd device UUID for {}".format(dev))
-        return res.group(1)
+        return res.group(1) if res else None
 
     def _compare_device_uuid(self, dev, node_list):
         """
@@ -322,12 +325,16 @@ class SBDManager(object):
         if not node_list:
             return
         local_uuid = self._get_device_uuid(dev)
+        if not local_uuid:
+            raise ValueError(f"Cannot get sbd device UUID for {dev} on {utils.this_node()}")
         for node in node_list:
             remote_uuid = self._get_device_uuid(dev, node)
+            if not remote_uuid:
+                raise ValueError(f"Cannot get sbd device UUID for {dev} on {node}")
             if local_uuid != remote_uuid:
                 raise ValueError("Device {} doesn't have the same UUID with {}".format(dev, node))
 
-    def _verify_sbd_device(self, dev_list, compare_node_list=[]):
+    def _verify_sbd_device(self, dev_list, compare_node_list=None):
         """
         Verify sbd device
         """
@@ -441,6 +448,12 @@ class SBDManager(object):
             rc, _, err = bootstrap.invoke("sbd {} -d {} create".format(opt, dev))
             if not rc:
                 utils.fatal("Failed to initialize SBD device {}: {}".format(dev, err))
+
+        if self._context.cluster_is_running:
+            nodes = utils.list_cluster_nodes_except_me()
+            if nodes:
+                for dev in self._sbd_devices:
+                    self._compare_device_uuid(dev, nodes)
 
     def _update_sbd_configuration(self):
         """
@@ -576,7 +589,7 @@ class SBDManager(object):
         self._watchdog_inst.join_watchdog()
         dev_list = self._get_sbd_device_from_config()
         if dev_list:
-            self._verify_sbd_device(dev_list, [peer_host])
+            self._verify_sbd_device(dev_list, compare_node_list=[peer_host])
         else:
             self._warn_diskless_sbd(peer_host)
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
