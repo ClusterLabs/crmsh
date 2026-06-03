@@ -183,13 +183,13 @@ class TestSBD(unittest.TestCase):
 
     @mock.patch('logging.Logger.info')
     def test_show_disk_metadata(self, mock_logger_info):
-        self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error.return_value = "disk metadata: data"
+        self.sbd_instance_diskbased.cluster_shell.get_rc_stdout_stderr_without_input.return_value = (0, "disk metadata: data", None)
         with mock.patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
             self.sbd_instance_diskbased._show_disk_metadata()
             self.assertTrue(mock_logger_info.called)
             mock_logger_info.assert_called_with("crm sbd configure show disk_metadata")
-            self.assertEqual(mock_stdout.getvalue(), "disk metadata: data\n\n")
-        self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error.assert_called_with("sbd -d /dev/sda1 dump")
+            self.assertEqual(mock_stdout.getvalue(), "disk metadata: data\n")
+        self.sbd_instance_diskbased.cluster_shell.get_rc_stdout_stderr_without_input.assert_called_with(None, "sbd -d /dev/sda1 dump")
 
     def test_do_configure_no_service(self):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()

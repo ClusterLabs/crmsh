@@ -694,6 +694,14 @@ class SBDConfigChecker(SBDTimeout):
         if not self._check_config_consistency(error_msg):
             raise FixAborted("All other checks aborted due to inconsistent configurations")
 
+        dev_list = SBDUtils.get_sbd_device_from_config()
+        if dev_list:
+            try:
+                nodes_to_check = [utils.this_node()] + (self.peer_node_list or [])
+                SBDUtils.verify_sbd_device(dev_list, nodes_to_check)
+            except ValueError as e:
+                raise FixAborted(f"SBD device verification failed: {e}")
+
         self._load_configurations_from_runtime()
         self._get_current_terms()
 
