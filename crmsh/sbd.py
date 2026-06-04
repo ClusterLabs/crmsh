@@ -79,14 +79,15 @@ class SBDUtils:
                 raise ValueError(f"Device {dev} doesn't have the same UUID with {node}")
 
     @staticmethod
-    def verify_sbd_device(dev_list, node_list=None):
+    def verify_sbd_device(dev_list, node_list=None, compare_uuid=False):
         if len(dev_list) > SBDManager.SBD_DEVICE_MAX:
             raise ValueError(f"Maximum number of SBD device is {SBDManager.SBD_DEVICE_MAX}")
         for dev in dev_list:
             failed_nodes = utils.get_non_block_device_nodes(dev, node_list)
             if failed_nodes:
                 raise ValueError(f"{dev} is not a block device on {', '.join(failed_nodes)}")
-            SBDUtils.compare_device_uuid(dev, node_list)
+            if compare_uuid:
+                SBDUtils.compare_device_uuid(dev, node_list)
         utils.detect_duplicate_device_path(dev_list)
 
     @staticmethod
@@ -698,7 +699,7 @@ class SBDConfigChecker(SBDTimeout):
         if dev_list:
             try:
                 nodes_to_check = [utils.this_node()] + (self.peer_node_list or [])
-                SBDUtils.verify_sbd_device(dev_list, nodes_to_check)
+                SBDUtils.verify_sbd_device(dev_list, nodes_to_check, compare_uuid=True)
             except ValueError as e:
                 raise FixAborted(f"SBD device verification failed: {e}")
 
@@ -1473,7 +1474,7 @@ class SBDManager:
         self._watchdog_inst.join_watchdog()
 
         if dev_list:
-            SBDUtils.verify_sbd_device(dev_list, [utils.this_node(), peer_host])
+            SBDUtils.verify_sbd_device(dev_list, [utils.this_node(), peer_host], compare_uuid=True)
 
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
         self.enable_sbd_service()
