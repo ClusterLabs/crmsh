@@ -383,6 +383,8 @@ class SBD(command.UI):
         '''
         Configure disk-based SBD based on input parameters and runtime config
         '''
+        sbd.SBDUtils.verify_sbd_device(self.device_list_from_config, self.cluster_nodes)
+
         update_dict = {}
         watchdog_device = parameter_dict.get("watchdog-device")
         if watchdog_device != self.watchdog_device_from_config:
@@ -406,8 +408,7 @@ class SBD(command.UI):
             result_dict = self._set_sbd_opts(crashdump_watchdog_timeout)
             update_dict = {**update_dict, **result_dict}
 
-        device_list = sbd.SBDUtils.get_sbd_device_from_config()
-        devices_consistent = sbd.SBDUtils.check_devices_metadata_consistent(device_list, quiet=True)
+        devices_consistent = sbd.SBDUtils.check_devices_metadata_consistent(self.device_list_from_config, quiet=True)
         if timeout_dict == self.device_meta_dict_runtime and not update_dict and devices_consistent:
             logger.info("No change in SBD configuration")
             return
@@ -486,6 +487,8 @@ class SBD(command.UI):
         '''
         Implement sbd device remove command, remove devices from sbd configuration
         '''
+        sbd.SBDUtils.verify_sbd_device(self.device_list_from_config, self.cluster_nodes)
+
         for dev in devices_to_remove:
             if dev not in self.device_list_from_config:
                 raise self.SyntaxError(f"Device {dev} is not in config")
@@ -612,6 +615,8 @@ class SBD(command.UI):
         self._load_attributes()
         if not self._service_is_active(constants.SBD_SERVICE):
             return False
+        if self.device_list_from_config:
+            sbd.SBDUtils.verify_sbd_device(self.device_list_from_config, self.cluster_nodes)
 
         args = _handle_force_option(args)
         purge_crashdump = False

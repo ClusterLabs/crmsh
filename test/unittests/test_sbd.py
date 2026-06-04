@@ -962,10 +962,11 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance._wants_to_overwrite.assert_not_called()
         sbdmanager_instance._prompt_for_sbd_device.assert_called_once()
 
+    @patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @patch('crmsh.sbd.SBDUtils.check_devices_metadata_consistent')
     @patch('crmsh.bootstrap.confirm')
     @patch('crmsh.sbd.ServiceManager')
-    def test_wants_to_overwrite_exception(self, mock_ServiceManager, mock_confirm, mock_check_devices_metadata_consistent):
+    def test_wants_to_overwrite_exception(self, mock_ServiceManager, mock_confirm, mock_check_devices_metadata_consistent, mock_verify_sbd_device):
         sbdmanager_instance = SBDManager()
         mock_confirm.return_value = False
         mock_check_devices_metadata_consistent.return_value = False
@@ -988,10 +989,11 @@ class TestSBDManager(unittest.TestCase):
         sbd.SBDManager.warn_diskless_sbd()
         mock_logger_warning.assert_called_once_with('%s', SBDManager.DISKLESS_SBD_WARNING)
 
+    @patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @patch('crmsh.sbd.SBDUtils.check_devices_metadata_consistent')
     @patch('crmsh.bootstrap.confirm')
     @patch('crmsh.sbd.ServiceManager')
-    def test_wants_to_overwrite_return_false(self, mock_ServiceManager, mock_confirm, mock_check_devices_metadata_consistent):
+    def test_wants_to_overwrite_return_false(self, mock_ServiceManager, mock_confirm, mock_check_devices_metadata_consistent, mock_verify_sbd_device):
         sbdmanager_instance = SBDManager()
         mock_confirm.return_value = False
         mock_check_devices_metadata_consistent.return_value = True

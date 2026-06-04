@@ -1328,6 +1328,7 @@ class SBDManager:
     def _wants_to_overwrite(self, configured_devices):
         wants_to_overwrite_msg = f"SBD_DEVICE in {self.SYSCONFIG_SBD} is already configured to use '{';'.join(configured_devices)}' - overwrite?"
         if not bootstrap.confirm(wants_to_overwrite_msg):
+            SBDUtils.verify_sbd_device(configured_devices)
             if not SBDUtils.check_devices_metadata_consistent(configured_devices):
                 raise utils.TerminateSubCommand
             self.overwrite_sysconfig = False
