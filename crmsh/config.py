@@ -413,6 +413,26 @@ class _Configuration(object):
 _configuration = _Configuration()
 
 
+_change_listeners = {}
+
+
+def add_change_listener(section, option, callback):
+    """Register a callback for when a specific option is changed."""
+    key = (section, option)
+    if key not in _change_listeners:
+        _change_listeners[key] = []
+    _change_listeners[key].append(callback)
+    # Notify immediately with current value
+    callback(get_option(section, option))
+
+
+def _notify_change_listeners(section, option, value):
+    """Notify all registered listeners for an option."""
+    listeners = _change_listeners.get((section, option), [])
+    for callback in listeners:
+        callback(value)
+
+
 class _Section(object):
     def __init__(self, section):
         object.__setattr__(self, 'section', section)
@@ -422,6 +442,7 @@ class _Section(object):
 
     def __setattr__(self, name, value):
         _configuration.set(self.section, name, value)
+        _notify_change_listeners(self.section, name, get_option(self.section, name))
 
     def items(self):
         return _configuration.items(self.section)
@@ -443,6 +464,7 @@ def save():
 def set_option(section, option, value):
     if not isinstance(value, List):
         _configuration.set(section, option, value)
+        _notify_change_listeners(section, option, get_option(section, option))
         return
     string = ""
     first = True
@@ -453,6 +475,7 @@ def set_option(section, option, value):
             string += ", "
         string += str(item)
     _configuration.set(section, option, string)
+    _notify_change_listeners(section, option, get_option(section, option))
 
 
 def get_option(section, option, raw=False):

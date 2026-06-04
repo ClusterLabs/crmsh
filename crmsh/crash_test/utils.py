@@ -14,7 +14,7 @@ from crmsh import constants
 from crmsh import xmlutil
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 CRED = constants.RED
@@ -60,23 +60,24 @@ def now(form="%Y/%m/%d %H:%M:%S"):
 
 
 @contextmanager
-def manage_handler(_type, keep=True):
+def block_log_filter(filter: log.LevelFilter):
     """
-    Define a contextmanager to remove specific logging handler temporarily
+    Define a contextmanager to block a logging filter temporarily
     """
+    saved_level = filter.level
+    filter.level = logging.CRITICAL + 1
     try:
-        handler = get_handler(logger, _type)
-        if not keep:
-            logger.removeHandler(handler)
         yield
     finally:
-        if not keep:
-            logger.addHandler(handler)
+        filter.level = saved_level
 
 
 def msg_raw(level, msg, to_stdout=True):
-    with manage_handler("console", to_stdout):
+    if to_stdout:
         logger.log(level, msg)
+    else:
+        with block_log_filter(log.CONSOLE_FILTER):
+            logger.log(level, msg)
 
 
 def msg_info(msg, to_stdout=True):
@@ -169,13 +170,16 @@ def str_to_datetime(str_time, fmt):
     return datetime.strptime(str_time, fmt)
 
 
-def get_handler(logger, _type):
+def get_handler(logger, name):
     """
-    Get logger specific handler
+    Find a handler by name from crmsh.crash_test logger.
     """
-    for h in logger.handlers:
-        if getattr(h, '_name') == _type:
+    if hasattr(logging, 'getHandlerByName'):
+        return logging.getHandlerByName(name)
+    for h in logging.getLogger("crmsh.crash_test").handlers:
+        if getattr(h, 'name', None) == name or getattr(h, '_name', None) == name:
             return h
+    return None
 
 
 def is_root():

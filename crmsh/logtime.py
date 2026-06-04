@@ -4,7 +4,7 @@
 """
 Helpers for handling log timestamps.
 """
-
+import logging
 import re
 import time
 import datetime
@@ -12,7 +12,7 @@ from . import utils
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 YEAR = None

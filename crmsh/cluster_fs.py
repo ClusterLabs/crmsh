@@ -1,3 +1,4 @@
+import logging
 import re
 from contextlib import contextmanager
 from . import utils, sh
@@ -10,7 +11,7 @@ from . import constants
 from . import sbd
 from .service_manager import ServiceManager
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 

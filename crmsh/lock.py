@@ -1,7 +1,6 @@
 # Copyright (C) 2020 Xin Liang <XLiang@suse.com>
 # See COPYING for license information.
-
-
+import logging
 import re
 import time
 from contextlib import contextmanager
@@ -13,7 +12,7 @@ from . import xmlutil
 from .sh import ShellUtils
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SSHError(Exception):

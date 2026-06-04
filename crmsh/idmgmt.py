@@ -2,7 +2,7 @@
 # See COPYING for license information.
 #
 # Make sure that ids are unique.
-
+import logging
 import re
 import copy
 from . import constants
@@ -10,7 +10,7 @@ from . import xmlutil
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 _id_store = {}
 _state = []

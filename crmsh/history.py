@@ -1,7 +1,7 @@
 # Copyright (C) 2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013-2016 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import logging
 import os
 import time
 import re
@@ -18,7 +18,7 @@ from .sh import ShellUtils
 from crmsh.report import core
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 _LOG_FILES = ("ha-log.txt", "messages", "ha-log", "cluster-log.txt", "journal.log", "pacemaker.log")

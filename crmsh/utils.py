@@ -2,6 +2,7 @@
 # See COPYING for license information.
 import asyncio
 import errno
+import logging
 import os
 import sys
 import typing
@@ -52,7 +53,7 @@ from .prun import prun
 from .sh import ShellUtils
 from .service_manager import ServiceManager
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 

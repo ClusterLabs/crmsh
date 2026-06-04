@@ -4,6 +4,8 @@
 
 # import annotations to avoid circular import issues when using type hints
 from __future__ import annotations
+
+import logging
 import os
 import subprocess
 import typing
@@ -26,7 +28,7 @@ from . import sbd
 from . import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 

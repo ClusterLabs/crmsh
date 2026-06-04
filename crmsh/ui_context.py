@@ -1,6 +1,6 @@
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import logging
 import shlex
 import sys
 from . import config
@@ -13,7 +13,7 @@ from . import log
 from . import main
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 _NON_FUNCTIONAL_COMMANDS = {'help', 'ls'}

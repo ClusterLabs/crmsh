@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import argparse
@@ -9,7 +10,7 @@ from crmsh import utils as crmshutils
 from crmsh import log
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Context(object):

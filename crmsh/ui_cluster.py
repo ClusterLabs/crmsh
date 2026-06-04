@@ -1,7 +1,7 @@
 # Copyright (C) 2008-2011 Dejan Muhamedagic <dmuhamedagic@suse.de>
 # Copyright (C) 2013 Kristoffer Gronlund <kgronlund@suse.com>
 # See COPYING for license information.
-
+import logging
 import os
 import sys
 import re
@@ -34,7 +34,7 @@ from . import log
 from .utils import TerminateSubCommand
 import crmsh.options
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def parse_options(parser, args):

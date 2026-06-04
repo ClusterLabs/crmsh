@@ -8,6 +8,7 @@ except ImportError:
     import mock
 import logging
 
+from crmsh import log
 from crmsh.crash_test import utils, main, config
 
 
@@ -152,26 +153,10 @@ class TestUtils(TestCase):
         mock_datetime.now.assert_called_once_with()
         mock_now.strftime.assert_called_once_with("%Y/%m/%d %H:%M:%S")
 
-    @mock.patch('crmsh.crash_test.utils.get_handler')
-    def test_manage_handler(self, mock_get_handler):
-        mock_get_handler.return_value = "handler"
-        utils.logger = mock.Mock()
-        utils.logger.removeHandler = mock.Mock()
-        utils.logger.addHandler = mock.Mock()
-
-        with utils.manage_handler("type1", keep=False):
-            pass
-
-        mock_get_handler.assert_called_once_with(utils.logger, "type1")
-        utils.logger.removeHandler.assert_called_once_with("handler")
-        utils.logger.addHandler.assert_called_once_with("handler")
-
-    @mock.patch('crmsh.crash_test.utils.manage_handler')
-    def test_msg_raw(self, mock_handler):
+    def test_msg_raw(self):
         utils.logger = mock.Mock()
         utils.logger.log = mock.Mock()
         utils.msg_raw("level1", "msg1")
-        mock_handler.assert_called_once_with("console", True)
         utils.logger.log.assert_called_once_with("level1", "msg1")
 
     @mock.patch('crmsh.crash_test.utils.msg_raw')
@@ -233,12 +218,23 @@ class TestUtils(TestCase):
         utils.str_to_datetime("Mon Nov  2 15:37:11 2020", "%a %b %d %H:%M:%S %Y")
         mock_datetime.strptime.assert_called_once_with("Mon Nov  2 15:37:11 2020", "%a %b %d %H:%M:%S %Y")
 
-    def test_get_handler(self):
+    @mock.patch('logging.getLogger')
+    def test_get_handler(self, mock_get_logger):
         mock_handler1 = mock.Mock(_name="test1_handler")
         mock_handler2 = mock.Mock(_name="test2_handler")
-        mock_logger = mock.Mock(handlers=[mock_handler1, mock_handler2])
-        res = utils.get_handler(mock_logger, "test1_handler")
-        self.assertEqual(res, mock_handler1)
+        mock_get_logger.return_value = mock.Mock(handlers=[mock_handler1, mock_handler2])
+
+        # If getHandlerByName exists (Python 3.12+), it will be called first
+        if hasattr(logging, 'getHandlerByName'):
+            with mock.patch('logging.getHandlerByName') as mock_get_handler_by_name:
+                mock_get_handler_by_name.return_value = mock_handler1
+                res = utils.get_handler(None, "test1_handler")
+                self.assertEqual(res, mock_handler1)
+                mock_get_handler_by_name.assert_called_once_with("test1_handler")
+        else:
+            res = utils.get_handler(None, "test1_handler")
+            self.assertEqual(res, mock_handler1)
+            mock_get_logger.assert_called_once_with("crmsh.crash_test")
 
     @mock.patch('os.getuid')
     def test_is_root(self, mock_getuid):

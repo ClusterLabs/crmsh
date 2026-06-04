@@ -13,6 +13,7 @@ import codecs
 import dataclasses
 import io
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -56,7 +57,7 @@ from . import watchdog
 import crmsh.healthcheck
 
 
-logger = log.setup_logger(__name__)
+logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 
