@@ -61,9 +61,6 @@ Requires:       python3-packaging
 Recommends:     bash-completion
 BuildRequires:  python3-PyYAML
 BuildRequires:  python3-lxml
-BuildRequires:  python3-pip
-BuildRequires:  python3-setuptools
-BuildRequires:  python3-wheel
 
 %if 0%{?suse_version}
 # only require csync2 on SUSE since bootstrap
@@ -90,8 +87,8 @@ BuildRequires:  python3-devel
 
 # Required for core functionality
 BuildRequires:  asciidoc
-BuildRequires:  autoconf
-BuildRequires:  automake
+BuildRequires:  meson
+BuildRequires:  ninja
 BuildRequires:  pkgconfig
 BuildRequires:  python3
 
@@ -158,22 +155,12 @@ find . -type f -exec sed -i \
 sed -i -e '1{\@^#!%{_bindir}/python3@d}' crmsh/report/core.py
 
 %build
-./autogen.sh
+%meson \
+    -Dpackage_version=%{version} \
+    -Dtmpfilesdir=%{_tmpfilesdir} \
+    -Dfwdefdir=%{_fwdefdir}
 
-%{configure}            \
-    --sysconfdir=%{_sysconfdir} \
-    --localstatedir=%{_var}             \
-    --with-version=%{version}    \
-    --docdir=%{crmsh_docdir}
-
-%if 0%{?suse_version}
-%python3_pyproject_wheel
-%else
-%pyproject_buildrequires -t
-%pyproject_wheel
-%endif
-
-make all
+%meson_build
 
 %if %{with regression_tests}
 tox
@@ -184,13 +171,7 @@ fi
 %endif
 
 %install
-%if 0%{?suse_version}
-%python3_pyproject_install
-%else
-%pyproject_install
-%endif
-
-make DESTDIR=%{buildroot} tmpfilesdir=%{_tmpfilesdir} fwdefdir=%{_fwdefdir} install
+%meson_install
 
 if [ -f %{buildroot}%{_bindir}/crm ]; then
 	install -d %{buildroot}%{_sbindir}/
