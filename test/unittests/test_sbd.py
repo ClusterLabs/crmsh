@@ -15,25 +15,27 @@ class TestSBDUtils(unittest.TestCase):
     Timeout (msgwait) : 10
     """
 
-    @patch('crmsh.sh.cluster_shell')
-    def test_get_sbd_device_metadata_success(self, mock_cluster_shell):
-        mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (0, self.TEST_DATA, None)
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata_raw')
+    def test_get_sbd_device_metadata_success(self, mock_get_sbd_device_metadata_raw):
+        mock_get_sbd_device_metadata_raw.return_value = self.TEST_DATA
         result = SBDUtils.get_sbd_device_metadata("/dev/sbd_device")
         expected = {'uuid': '1234-5678', 'watchdog': 5, 'msgwait': 10}
         self.assertEqual(result, expected)
 
-    @patch('crmsh.sh.cluster_shell')
-    def test_get_sbd_device_metadata_timeout_only(self, mock_cluster_shell):
-        mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (0, self.TEST_DATA, None)
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata_raw')
+    def test_get_sbd_device_metadata_timeout_only(self, mock_get_sbd_device_metadata_raw):
+        mock_get_sbd_device_metadata_raw.return_value = self.TEST_DATA
         result = SBDUtils.get_sbd_device_metadata("/dev/sbd_device", timeout_only=True)
         expected = {'watchdog': 5, 'msgwait': 10}
         self.assertNotIn('uuid', result)
         self.assertEqual(result, expected)
 
     @patch('crmsh.sh.cluster_shell')
-    def test_get_sbd_device_metadata_failure(self, mock_cluster_shell):
-        mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (1, None, None)
-        self.assertEqual(SBDUtils.get_sbd_device_metadata("/dev/sbd_device"), {})
+    def test_get_sbd_device_metadata_raw_failure(self, mock_cluster_shell):
+        mock_cluster_shell.return_value.get_stdout_or_raise_error.side_effect = ValueError("Command failed")
+        with self.assertRaises(ValueError):
+            SBDUtils.get_sbd_device_metadata_raw("/dev/sbd_device")
+        mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with("sbd -d /dev/sbd_device dump", None)
 
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata')
     def test_get_device_uuid_success(self, mock_get_sbd_device_metadata):

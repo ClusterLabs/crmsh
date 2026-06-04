@@ -2,7 +2,6 @@ import logging
 import typing
 import re
 import os
-import shlex
 
 from crmsh import sbd
 from crmsh import watchdog
@@ -216,9 +215,7 @@ class SBD(command.UI):
         if self.device_list_from_config:
             logger.info("crm sbd configure show disk_metadata")
         for dev in self.device_list_from_config:
-            cmd = f"sbd -d {shlex.quote(dev)} dump"
-            _, out, _ = self.cluster_shell.get_rc_stdout_stderr_without_input(None, cmd)
-            print(out)
+            print(sbd.SBDUtils.get_sbd_device_metadata_raw(dev))
 
     def _show_property(self) -> None:
         '''

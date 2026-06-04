@@ -25,18 +25,25 @@ class SBDUtils:
     Consolidate sbd related utility methods
     '''
     @staticmethod
+    def get_sbd_device_metadata_raw(dev, remote=None) -> str:
+        '''
+        Get raw metadata info from sbd device header
+        Raise ValueError if the command fails or the output is empty
+        '''
+        cmd = f"sbd -d {shlex.quote(dev)} dump"
+        out = sh.cluster_shell().get_stdout_or_raise_error(cmd, remote)
+        if not out: # might not possible, but just in case to avoid further parsing error
+            raise ValueError(f"Cannot get metadata from SBD device {dev} on {remote or utils.this_node()}")
+        return out
+
+    @staticmethod
     def get_sbd_device_metadata(dev, timeout_only=False, remote=None) -> dict:
         '''
         Extract metadata from sbd device header
         '''
         sbd_info = {}
-
-        cmd = f"sbd -d {shlex.quote(dev)} dump"
-        rc, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote, cmd)
-        if rc != 0 or not out:
-            return sbd_info
-
         pattern = r"UUID\s+:\s+(\S+)|Timeout\s+\((\w+)\)\s+:\s+(\d+)"
+        out = SBDUtils.get_sbd_device_metadata_raw(dev, remote)
         matches = re.findall(pattern, out)
         for uuid, timeout_type, timeout_value in matches:
             if uuid and not timeout_only:
