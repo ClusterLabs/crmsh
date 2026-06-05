@@ -4,13 +4,9 @@ project('crmsh',
 )
 
 # Configuration Options
-package_name = get_option('package_name')
-if package_name == ''
-  package_name = meson.project_name()
-endif
-version = get_option('package_version')
-if version == ''
-  version = meson.project_version()
+package_version = get_option('package_version')
+if package_version == ''
+  package_version = meson.project_version()
 endif
 
 ocf_root = get_option('ocf_root')
@@ -18,6 +14,7 @@ daemon_user = get_option('daemon_user')
 tmpfilesdir = get_option('tmpfilesdir')
 fwdefdir = get_option('fwdefdir')
 
+datadir = get_option('datadir')
 sysconfdir = get_option('sysconfdir')
 localstatedir = get_option('localstatedir')
 prefix = get_option('prefix')
@@ -31,9 +28,7 @@ crm_cache_dir = localstatedir / 'cache' / 'crm'
 
 # Prepare configuration substitutions
 conf_data = configuration_data()
-conf_data.set('PACKAGE', package_name)
-conf_data.set('VERSION', version)
-conf_data.set('PACKAGE_VERSION', version)
+conf_data.set('PACKAGE_VERSION', package_version)
 conf_data.set('OCF_ROOT_DIR', ocf_root)
 conf_data.set('CRM_DAEMON_USER', daemon_user)
 conf_data.set('CRM_CACHE_DIR', crm_cache_dir)
@@ -72,7 +67,7 @@ install_data('crmsh.tmpfiles.d.conf',
 
 # Install bash completion
 install_data('contrib/bash_completion.sh',
-  install_dir: get_option('datadir') / 'bash-completion/completions',
+  install_dir: datadir / 'bash-completion/completions',
   rename: 'crm'
 )
 
