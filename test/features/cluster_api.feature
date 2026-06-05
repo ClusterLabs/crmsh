@@ -22,6 +22,23 @@ Feature: Functional test to cover SAP clusterAPI
     When    Run "echo 'export PATH=$PATH:/usr/sbin/' > ~hacluster/.bashrc" on "hanode2"
 
   @clean
+  Scenario: Test cluster copy
+    When    Try "crm cluster copy /tmp/none"
+    Then    Expected "/tmp/none does not exist" in stderr
+    When    Run "touch /tmp/file1" on "hanode1"
+    When    Run "crm cluster copy /tmp/file1" on "hanode1"
+    When    Run "ls /tmp/file1" on "hanode2"
+    Then    Expected return code is "0"
+    When    Run "touch /tmp/file2" on "hanode1"
+    When    Run "cd /tmp; crm cluster copy file2" on "hanode1"
+    When    Run "ls /tmp/file2" on "hanode2"
+    Then    Expected return code is "0"
+    When    Run "mkdir -p /tmp/dir1/dir2" on "hanode1"
+    When    Run "crm cluster copy /tmp/dir1/dir2" on "hanode1"
+    When    Run "test -d /tmp/dir1/dir2" on "hanode2"
+    Then    Expected return code is "0"
+
+  @clean
   Scenario: Start and stop resource by hacluster
     When    Run "su - hacluster -c 'crm resource stop d'" on "hanode1"
     Then    Expected return code is "0"
