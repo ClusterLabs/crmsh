@@ -77,13 +77,14 @@ class HelpFilter(object):
 
 
 class HelpEntry(object):
-    def __init__(self, short_help, long_help='', alias_for=None, generated=False):
+    def __init__(self, short_help, long_help='', alias_for=None, alias_name=None, generated=False):
         if short_help:
             self.short = short_help[0].upper() + short_help[1:]
         else:
             self.short = 'Help'
         self._long_help = long_help
         self.alias_for = alias_for
+        self.alias_name = alias_name
         self.generated = generated
 
     @property
@@ -113,7 +114,9 @@ class HelpEntry(object):
 
         prefix = ''
         if self.is_alias():
-            prefix = helpfilter("(Redirected from `%s` to `%s`)\n" % self.alias_for)
+            msg_alias = f"Command `{self.alias_name}` is an alias for `{self.alias_for}`"
+            msg_deprecated = f"`{self.alias_name}` is deprecated and will be removed in a future release"
+            prefix = helpfilter(f"({msg_alias}. {msg_deprecated})\n")
 
         utils.page_string(short_help + '\n' + prefix + long_help)
 
@@ -124,6 +127,20 @@ class HelpEntry(object):
 
     def __repr__(self):
         return str(self)
+
+
+class AliasHelpEntry(HelpEntry):
+    """
+    Represents an alias help entry.
+    Delegates long_help to the target HelpEntry to preserve lazy loading.
+    """
+    def __init__(self, target: HelpEntry, alias_for: str, alias_name: str):
+        super().__init__(target.short, alias_for=alias_for, alias_name=alias_name, generated=target.generated)
+        self.target = target
+
+    @property
+    def long_help(self):
+        return self.target.long_help
 
 
 class LazyHelpEntryFromCli(HelpEntry):
@@ -441,9 +458,20 @@ def _load_help():
         "add help for aliases"
         for name, childinfo in childinfo.children.items():
             if name in help_node.children:
+                if name != childinfo.name:  # Skip alias entries during canonical traversal
+                    continue
                 fixup_help_aliases(help_node.children[name], childinfo)
                 for alias in childinfo.aliases:
-                    help_node.children[alias] = help_node.children[name]
+                    target = help_node.children[name]
+                    help_node.children[alias] = SubcommandTreeNode(
+                        alias,
+                        AliasHelpEntry(
+                            target.help,
+                            alias_for=target.name,
+                            alias_name=alias
+                        ),
+                        target.children
+                    )
         return
 
     def fixup_topics():
