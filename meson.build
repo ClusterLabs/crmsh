@@ -34,13 +34,6 @@ conf_data.set('CRM_DAEMON_USER', daemon_user)
 conf_data.set('CRM_CACHE_DIR', crm_cache_dir)
 
 # Substitution configurations
-version_file = configure_file(
-  input: 'version.in',
-  output: 'version',
-  configuration: conf_data,
-  install: false
-)
-
 crm_conf = configure_file(
   input: 'etc/crm.conf.in',
   output: 'crm.conf',
@@ -82,12 +75,16 @@ install_data('bin/crm', install_dir: get_option('bindir'))
 # Install Python sources dynamically using `find`
 py = import('python').find_installation('python3')
 
-find_res = run_command('find', 'crmsh', '-type', 'f', '!', '-path', '*/__pycache__/*', '!', '-name', '*.pyc', check: true)
-py_sources = find_res.stdout().strip().split('\n')
+py_sources = run_command('find', 'crmsh', '-type', 'f', '-name', '*.py', '-or', '-name', '*.txt', check: true).stdout().strip().split('\n')
+py.install_sources(py_sources, pure: true, preserve_path: true)
+build_config = configure_file(
+  input: 'crmsh/build_config.py.in',
+  output: 'build_config.py',
+  configuration: conf_data,
+  install: true,
+  install_dir: py.get_install_dir(pure: true, subdir: 'crmsh')
+)
 
-if py_sources.length() > 0 and py_sources[0] != ''
-  py.install_sources(py_sources, pure: true, preserve_path: true)
-endif
 
 # Register data-manifest installer script
 meson.add_install_script(
