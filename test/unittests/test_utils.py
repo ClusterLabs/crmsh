@@ -939,28 +939,14 @@ fencing-sbd
     mock_diskless.assert_called_once_with()
 
 
-@mock.patch('crmsh.utils.S_ISBLK')
-@mock.patch('os.stat')
-def test_is_block_device_error(mock_stat, mock_isblk):
-    mock_stat_inst = mock.Mock(st_mode=12345)
-    mock_stat.return_value = mock_stat_inst
-    mock_isblk.side_effect = OSError
-    res = utils.is_block_device("/dev/sda1")
-    assert res is False
-    mock_stat.assert_called_once_with("/dev/sda1")
-    mock_isblk.assert_called_once_with(12345)
-
-
-@mock.patch('crmsh.utils.S_ISBLK')
-@mock.patch('os.stat')
-def test_is_block_device(mock_stat, mock_isblk):
-    mock_stat_inst = mock.Mock(st_mode=12345)
-    mock_stat.return_value = mock_stat_inst
-    mock_isblk.return_value = True
-    res = utils.is_block_device("/dev/sda1")
-    assert res is True
-    mock_stat.assert_called_once_with("/dev/sda1")
-    mock_isblk.assert_called_once_with(12345)
+@mock.patch('crmsh.sh.cluster_shell')
+def test_get_non_block_device_nodes(mock_cluster_shell):
+    mock_cluster_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_cluster_shell_inst
+    mock_cluster_shell_inst.get_rc_stdout_stderr_without_input.return_value = (1, None, None)
+    res = utils.get_non_block_device_nodes("/dev/sda1", ["node1"])
+    assert res == ["node1"]
+    mock_cluster_shell_inst.get_rc_stdout_stderr_without_input.assert_called_once_with("node1", "test -b /dev/sda1")    
 
 
 @mock.patch('crmsh.utils.ssh_port_reachable_check')

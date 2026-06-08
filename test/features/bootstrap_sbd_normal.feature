@@ -8,7 +8,7 @@ Feature: crmsh bootstrap sbd management
     When    Try "crm cluster init -s "/dev/sda1;/dev/sda2;/dev/sda3;/dev/sda4" -y"
     Then    Except "ERROR: cluster.init: Maximum number of SBD device is 3"
     When    Try "crm cluster init -s "/dev/sda1;/dev/sdaxxxx" -y"
-    Then    Except "ERROR: cluster.init: /dev/sdaxxxx doesn't look like a block device"
+    Then    Expected "/dev/sdaxxxx is not a block device on" in stderr
     When    Try "crm cluster init -s "/dev/sda1;/dev/sda1" -y"
     Then    Expected multiple lines in stderr
       """

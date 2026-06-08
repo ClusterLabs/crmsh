@@ -88,17 +88,19 @@ class TestClusterFSManager(unittest.TestCase):
             self.gfs2_instance_one_device_with_mount_point._verify_options()
         self.assertIn("Mount point /mnt/gfs2 already mounted", str(context.exception))
 
-    @mock.patch("crmsh.utils.is_block_device")
-    def test_verify_devices_not_block_device(self, mock_is_block_device):
-        mock_is_block_device.return_value = False
+    @mock.patch("crmsh.utils.list_cluster_nodes")
+    @mock.patch("crmsh.utils.get_non_block_device_nodes")
+    def test_verify_devices_not_block_device(self, mock_get_non_block_device_nodes, mock_list_cluster_nodes):
+        mock_list_cluster_nodes.return_value = ["node1", "node2"]
+        mock_get_non_block_device_nodes.return_value = ["node1"]
         with self.assertRaises(cluster_fs.Error) as context:
             self.ocfs2_instance_one_device._verify_devices()
-        self.assertIn("/dev/sda1 doesn't look like a block device", str(context.exception))
+        self.assertIn("/dev/sda1 is not a block device on node1", str(context.exception))
 
     @mock.patch("crmsh.utils.is_dev_used_for_lvm")
-    @mock.patch("crmsh.utils.is_block_device")
-    def test_verify_devices_clvm2_with_lv(self, mock_is_block_device, mock_is_dev_used_for_lvm):
-        mock_is_block_device.return_value = True
+    @mock.patch("crmsh.utils.get_non_block_device_nodes")
+    def test_verify_devices_clvm2_with_lv(self, mock_get_non_block_device_nodes, mock_is_dev_used_for_lvm):
+        mock_get_non_block_device_nodes.return_value = []
         mock_is_dev_used_for_lvm.return_value = True
         with self.assertRaises(cluster_fs.Error) as context:
             self.gfs2_instance_one_device_clvm2._verify_devices()
@@ -106,9 +108,9 @@ class TestClusterFSManager(unittest.TestCase):
 
     @mock.patch("crmsh.utils.has_disk_mounted")
     @mock.patch("crmsh.utils.is_dev_used_for_lvm")
-    @mock.patch("crmsh.utils.is_block_device")
-    def test_verify_devices_already_mounted(self, mock_is_block_device, mock_is_dev_used_for_lvm, mock_has_disk_mounted):
-        mock_is_block_device.return_value = True
+    @mock.patch("crmsh.utils.get_non_block_device_nodes")
+    def test_verify_devices_already_mounted(self, mock_get_non_block_device_nodes, mock_is_dev_used_for_lvm, mock_has_disk_mounted):
+        mock_get_non_block_device_nodes.return_value = []
         mock_is_dev_used_for_lvm.return_value = False
         mock_has_disk_mounted.return_value = True
         with self.assertRaises(cluster_fs.Error) as context:

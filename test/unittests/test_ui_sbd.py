@@ -181,15 +181,15 @@ class TestSBD(unittest.TestCase):
             mock_logger_info.assert_called_with("crm sbd configure show sysconfig")
             self.assertEqual(mock_stdout.getvalue(), "KEY1=value1\nKEY2=value2\n")
 
+    @mock.patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata_raw')
     @mock.patch('logging.Logger.info')
-    def test_show_disk_metadata(self, mock_logger_info):
-        self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error.return_value = "disk metadata: data"
+    def test_show_disk_metadata(self, mock_logger_info, mock_get_sbd_device_metadata_raw):
+        mock_get_sbd_device_metadata_raw.return_value = "disk metadata: data"
         with mock.patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
             self.sbd_instance_diskbased._show_disk_metadata()
             self.assertTrue(mock_logger_info.called)
             mock_logger_info.assert_called_with("crm sbd configure show disk_metadata")
-            self.assertEqual(mock_stdout.getvalue(), "disk metadata: data\n\n")
-        self.sbd_instance_diskbased.cluster_shell.get_stdout_or_raise_error.assert_called_with("sbd -d /dev/sda1 dump")
+            self.assertEqual(mock_stdout.getvalue(), "disk metadata: data\n")
 
     def test_do_configure_no_service(self):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
@@ -361,9 +361,10 @@ class TestSBD(unittest.TestCase):
         mock_logger_error.assert_called_once_with('%s', "No argument")
         mock_print.assert_called_once_with("usage data")
 
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDManager')
-    def test_configure_diskbase(self, mock_SBDManager, mock_logger_info):
+    def test_configure_diskbase(self, mock_SBDManager, mock_logger_info, mock_verify_sbd_device):
         parameter_dict = {"watchdog": 12, "watchdog-device": "/dev/watchdog100", "crashdump-watchdog": 12}
         self.sbd_instance_diskbased._should_configure_crashdump = mock.Mock(return_value=True)
         self.sbd_instance_diskbased._check_kdump_service = mock.Mock()
@@ -381,9 +382,10 @@ class TestSBD(unittest.TestCase):
         self.sbd_instance_diskbased._check_kdump_service.assert_called_once()
         self.sbd_instance_diskbased._set_sbd_opts.assert_called_once()
 
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDManager')
-    def test_configure_diskbase_no_change(self, mock_SBDManager, mock_logger_info):
+    def test_configure_diskbase_no_change(self, mock_SBDManager, mock_logger_info, mock_verify_sbd_device):
         parameter_dict = {"msgwait": 20, "watchdog": 10, "watchdog-device": "/dev/watchdog0"}
         self.sbd_instance_diskbased._should_configure_crashdump = mock.Mock(return_value=False)
         self.sbd_instance_diskbased._configure_diskbase(parameter_dict)
@@ -423,7 +425,7 @@ class TestSBD(unittest.TestCase):
         mock_handle_input_sbd_devices.return_value = [["/dev/sda2"], ["/dev/sda1"]]
         mock_SBDManager.return_value.init_and_deploy_sbd = mock.Mock()
         self.sbd_instance_diskbased._device_add(["/dev/sda2"])
-        mock_verify_sbd_device.assert_called_once_with(["/dev/sda1", "/dev/sda2"])
+        mock_verify_sbd_device.assert_called_once_with(["/dev/sda1", "/dev/sda2"], self.sbd_instance_diskbased.cluster_nodes)
         mock_handle_input_sbd_devices.assert_called_once_with(["/dev/sda2"], ["/dev/sda1"])
         mock_SBDManager.assert_called_once_with(
             device_list_to_init=["/dev/sda2"],
@@ -432,22 +434,25 @@ class TestSBD(unittest.TestCase):
         )
         mock_logger_info.assert_called_once_with("Append devices: %s", "/dev/sda2")
 
-    def test_device_remove_dev_not_in_config(self):
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
+    def test_device_remove_dev_not_in_config(self, mock_verify_sbd_device):
         with self.assertRaises(ui_sbd.SBD.SyntaxError) as e:
             self.sbd_instance_diskbased._device_remove(["/dev/sda2"])
         self.assertEqual(str(e.exception), "Device /dev/sda2 is not in config")
 
-    def test_device_remove_last_dev(self):
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
+    def test_device_remove_last_dev(self, mock_verify_sbd_device):
         with self.assertRaises(ui_sbd.SBD.SyntaxError) as e:
             self.sbd_instance_diskbased._device_remove(["/dev/sda1"])
         self.assertEqual(str(e.exception), "Not allowed to remove all devices")
 
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @mock.patch('crmsh.utils.able_to_restart_cluster')
     @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     @mock.patch('logging.Logger.info')
-    def test_device_remove(self, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster):
+    def test_device_remove(self, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster, mock_verify_sbd_device):
         enable_value = True
         cm = mock.Mock()
         cm.__enter__ = mock.Mock(return_value=enable_value)
@@ -552,8 +557,9 @@ class TestSBD(unittest.TestCase):
         self.assertFalse(res)
         mock_purge_sbd_from_cluster.assert_not_called()
 
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    def test_do_purge(self, mock_check_all_nodes_reachable):
+    def test_do_purge(self, mock_check_all_nodes_reachable, mock_verify_sbd_device):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         self.sbd_instance_diskbased._purge_sbd = mock.Mock()

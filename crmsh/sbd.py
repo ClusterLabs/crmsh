@@ -25,18 +25,25 @@ class SBDUtils:
     Consolidate sbd related utility methods
     '''
     @staticmethod
+    def get_sbd_device_metadata_raw(dev, remote=None) -> str:
+        '''
+        Get raw metadata info from sbd device header
+        Raise ValueError if the command fails or the output is empty
+        '''
+        cmd = f"sbd -d {shlex.quote(dev)} dump"
+        out = sh.cluster_shell().get_stdout_or_raise_error(cmd, remote)
+        if not out: # might not possible, but just in case to avoid further parsing error
+            raise ValueError(f"Cannot get metadata from SBD device {dev} on {remote or utils.this_node()}")
+        return out
+
+    @staticmethod
     def get_sbd_device_metadata(dev, timeout_only=False, remote=None) -> dict:
         '''
         Extract metadata from sbd device header
         '''
         sbd_info = {}
-
-        cmd = f"sbd -d {shlex.quote(dev)} dump"
-        rc, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote, cmd)
-        if rc != 0 or not out:
-            return sbd_info
-
         pattern = r"UUID\s+:\s+(\S+)|Timeout\s+\((\w+)\)\s+:\s+(\d+)"
+        out = SBDUtils.get_sbd_device_metadata_raw(dev, remote)
         matches = re.findall(pattern, out)
         for uuid, timeout_type, timeout_value in matches:
             if uuid and not timeout_only:
@@ -70,6 +77,8 @@ class SBDUtils:
         if not local_uuid:
             raise ValueError(f"Cannot get sbd device UUID for {dev} on {utils.this_node()}")
         for node in node_list:
+            if node == utils.this_node():
+                continue
             remote_uuid = SBDUtils.get_device_uuid(dev, node)
             if not remote_uuid:
                 raise ValueError(f"Cannot get sbd device UUID for {dev} on {node}")
@@ -77,13 +86,15 @@ class SBDUtils:
                 raise ValueError(f"Device {dev} doesn't have the same UUID with {node}")
 
     @staticmethod
-    def verify_sbd_device(dev_list, compare_node_list=None):
+    def verify_sbd_device(dev_list, node_list=None, compare_uuid=False):
         if len(dev_list) > SBDManager.SBD_DEVICE_MAX:
             raise ValueError(f"Maximum number of SBD device is {SBDManager.SBD_DEVICE_MAX}")
         for dev in dev_list:
-            if not utils.is_block_device(dev):
-                raise ValueError(f"{dev} doesn't look like a block device")
-            SBDUtils.compare_device_uuid(dev, compare_node_list)
+            failed_nodes = utils.get_non_block_device_nodes(dev, node_list)
+            if failed_nodes:
+                raise ValueError(f"{dev} is not a block device on {', '.join(failed_nodes)}")
+            if compare_uuid:
+                SBDUtils.compare_device_uuid(dev, node_list)
         utils.detect_duplicate_device_path(dev_list)
 
     @staticmethod
@@ -690,6 +701,14 @@ class SBDConfigChecker(SBDTimeout):
 
         if not self._check_config_consistency(error_msg):
             raise FixAborted("All other checks aborted due to inconsistent configurations")
+
+        dev_list = SBDUtils.get_sbd_device_from_config()
+        if dev_list:
+            try:
+                nodes_to_check = [utils.this_node()] + (self.peer_node_list or [])
+                SBDUtils.verify_sbd_device(dev_list, nodes_to_check, compare_uuid=True)
+            except ValueError as e:
+                raise FixAborted(f"SBD device verification failed: {e}")
 
         self._load_configurations_from_runtime()
         self._get_current_terms()
@@ -1309,6 +1328,7 @@ class SBDManager:
     def _wants_to_overwrite(self, configured_devices):
         wants_to_overwrite_msg = f"SBD_DEVICE in {self.SYSCONFIG_SBD} is already configured to use '{';'.join(configured_devices)}' - overwrite?"
         if not bootstrap.confirm(wants_to_overwrite_msg):
+            SBDUtils.verify_sbd_device(configured_devices)
             if not SBDUtils.check_devices_metadata_consistent(configured_devices):
                 raise utils.TerminateSubCommand
             self.overwrite_sysconfig = False
@@ -1462,7 +1482,7 @@ class SBDManager:
         self._watchdog_inst.join_watchdog()
 
         if dev_list:
-            SBDUtils.verify_sbd_device(dev_list, compare_node_list=[peer_host])
+            SBDUtils.verify_sbd_device(dev_list, [utils.this_node(), peer_host], compare_uuid=True)
 
         logger.info("Got {}SBD configuration".format("" if dev_list else "diskless "))
         self.enable_sbd_service()

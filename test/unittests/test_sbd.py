@@ -15,25 +15,27 @@ class TestSBDUtils(unittest.TestCase):
     Timeout (msgwait) : 10
     """
 
-    @patch('crmsh.sh.cluster_shell')
-    def test_get_sbd_device_metadata_success(self, mock_cluster_shell):
-        mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (0, self.TEST_DATA, None)
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata_raw')
+    def test_get_sbd_device_metadata_success(self, mock_get_sbd_device_metadata_raw):
+        mock_get_sbd_device_metadata_raw.return_value = self.TEST_DATA
         result = SBDUtils.get_sbd_device_metadata("/dev/sbd_device")
         expected = {'uuid': '1234-5678', 'watchdog': 5, 'msgwait': 10}
         self.assertEqual(result, expected)
 
-    @patch('crmsh.sh.cluster_shell')
-    def test_get_sbd_device_metadata_timeout_only(self, mock_cluster_shell):
-        mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (0, self.TEST_DATA, None)
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata_raw')
+    def test_get_sbd_device_metadata_timeout_only(self, mock_get_sbd_device_metadata_raw):
+        mock_get_sbd_device_metadata_raw.return_value = self.TEST_DATA
         result = SBDUtils.get_sbd_device_metadata("/dev/sbd_device", timeout_only=True)
         expected = {'watchdog': 5, 'msgwait': 10}
         self.assertNotIn('uuid', result)
         self.assertEqual(result, expected)
 
     @patch('crmsh.sh.cluster_shell')
-    def test_get_sbd_device_metadata_failure(self, mock_cluster_shell):
-        mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (1, None, None)
-        self.assertEqual(SBDUtils.get_sbd_device_metadata("/dev/sbd_device"), {})
+    def test_get_sbd_device_metadata_raw_failure(self, mock_cluster_shell):
+        mock_cluster_shell.return_value.get_stdout_or_raise_error.side_effect = ValueError("Command failed")
+        with self.assertRaises(ValueError):
+            SBDUtils.get_sbd_device_metadata_raw("/dev/sbd_device")
+        mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with("sbd -d /dev/sbd_device dump", None)
 
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata')
     def test_get_device_uuid_success(self, mock_get_sbd_device_metadata):
@@ -57,24 +59,26 @@ class TestSBDUtils(unittest.TestCase):
         with self.assertRaises(ValueError):
             SBDUtils.compare_device_uuid("/dev/sbd_device", ["node1"])
 
-    @patch('crmsh.utils.is_block_device')
+    @patch('crmsh.utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
-    def test_verify_sbd_device_exceeds_max(self, mock_compare_device_uuid, mock_is_block_device):
+    def test_verify_sbd_device_exceeds_max(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
         dev_list = [f"/dev/sbd_device_{i}" for i in range(SBDManager.SBD_DEVICE_MAX + 1)]
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as context:
             SBDUtils.verify_sbd_device(dev_list)
+        self.assertTrue(f"Maximum number of SBD device is {SBDManager.SBD_DEVICE_MAX}" in str(context.exception))
 
-    @patch('crmsh.utils.is_block_device')
+    @patch('crmsh.utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
-    def test_verify_sbd_device_non_block(self, mock_compare_device_uuid, mock_is_block_device):
-        mock_is_block_device.return_value = False
-        with self.assertRaises(ValueError):
+    def test_verify_sbd_device_non_block(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
+        mock_get_non_block_device_nodes.return_value = ["node1"]
+        with self.assertRaises(ValueError) as context:
             SBDUtils.verify_sbd_device(["/dev/not_a_block_device"])
+        self.assertTrue(f"/dev/not_a_block_device is not a block device on node1" in str(context.exception))
 
-    @patch('crmsh.utils.is_block_device')
+    @patch('crmsh.utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
-    def test_verify_sbd_device_valid(self, mock_compare_device_uuid, mock_is_block_device):
-        mock_is_block_device.return_value = True
+    def test_verify_sbd_device_valid(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
+        mock_get_non_block_device_nodes.return_value = []
         SBDUtils.verify_sbd_device(["/dev/sbd_device"], ["node1", "node2"])
 
     @patch('crmsh.utils.parse_sysconfig')
@@ -958,10 +962,11 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance._wants_to_overwrite.assert_not_called()
         sbdmanager_instance._prompt_for_sbd_device.assert_called_once()
 
+    @patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @patch('crmsh.sbd.SBDUtils.check_devices_metadata_consistent')
     @patch('crmsh.bootstrap.confirm')
     @patch('crmsh.sbd.ServiceManager')
-    def test_wants_to_overwrite_exception(self, mock_ServiceManager, mock_confirm, mock_check_devices_metadata_consistent):
+    def test_wants_to_overwrite_exception(self, mock_ServiceManager, mock_confirm, mock_check_devices_metadata_consistent, mock_verify_sbd_device):
         sbdmanager_instance = SBDManager()
         mock_confirm.return_value = False
         mock_check_devices_metadata_consistent.return_value = False
@@ -984,10 +989,11 @@ class TestSBDManager(unittest.TestCase):
         sbd.SBDManager.warn_diskless_sbd()
         mock_logger_warning.assert_called_once_with('%s', SBDManager.DISKLESS_SBD_WARNING)
 
+    @patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @patch('crmsh.sbd.SBDUtils.check_devices_metadata_consistent')
     @patch('crmsh.bootstrap.confirm')
     @patch('crmsh.sbd.ServiceManager')
-    def test_wants_to_overwrite_return_false(self, mock_ServiceManager, mock_confirm, mock_check_devices_metadata_consistent):
+    def test_wants_to_overwrite_return_false(self, mock_ServiceManager, mock_confirm, mock_check_devices_metadata_consistent, mock_verify_sbd_device):
         sbdmanager_instance = SBDManager()
         mock_confirm.return_value = False
         mock_check_devices_metadata_consistent.return_value = True
