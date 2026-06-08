@@ -229,4 +229,3 @@ utils/crm_init.py
 utils/crm_pkg.py
 utils/crm_rpmcheck.py
 utils/crm_script.py
-version

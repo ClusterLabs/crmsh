@@ -6,6 +6,7 @@ import os
 import atexit
 import random
 
+from . import build_config
 from . import config
 from . import options
 from . import constants
@@ -111,7 +112,7 @@ Call %(prog)s with a level name as argument to start an interactive
 session from that level.
 
 See the crm(8) man page or call %(prog)s help for more details.""")
-    parser.add_argument('--version', action='version', version="%(prog)s " + config.CRM_VERSION)
+    parser.add_argument('--version', action='version', version="%(prog)s " + build_config.PACKAGE_VERSION)
     parser.add_argument("-f", "--file", dest="filename", metavar="FILE",
                         help="Load commands from the given file. If a dash (-) " +
                         "is used in place of a file name, crm will read commands " +
