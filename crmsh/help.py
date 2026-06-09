@@ -356,8 +356,8 @@ def help_contextual(levels: typing.Sequence[str]):
             else:
                 raise ValueError(f"Unknown property '{property_name}'")
         return None
-    else:
-        topic = levels[0].lower()
+    elif len(levels) <= 2:
+        topic = levels[-1].lower()
         t = utils.fuzzy_get(_TOPICS, topic)
         if t:
             return t
