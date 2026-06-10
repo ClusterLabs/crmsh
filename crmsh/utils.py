@@ -3632,4 +3632,58 @@ class DeprecatedTermTranslator:
         if not self._resolve_res:
             return False
         return not self._resolve_res.using_deprecated
+
+
+@dataclass(frozen=True)
+class DeviceInfo:
+    device: str
+    parent_device: str|None
+    under_multipath: bool
+
+
+class MultipathInspector:
+    def __init__(self, dev):
+        self._shell = sh.cluster_shell()
+        self._device_info = self._inspect(dev)
+
+    def _get_parent_device(self, dev) -> str:
+        resolved = Path(dev).resolve()
+        cmd = f"lsblk -dn -o PKNAME {shlex.quote(str(resolved))}"
+        _, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, cmd)
+        return out or resolved.name
+
+    def _get_multipath_mapping(self) -> dict[str, str]:
+        cmd = "multipathd show paths format \"%d %m\""
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, cmd)
+        mapping = dict()
+        if rc != 0:
+            return mapping
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            dev_name, map_name = parts[0], parts[1]
+            if (dev_name, map_name) == ("dev", "multipath"):
+                continue
+            mapping[dev_name] = map_name
+        return mapping
+
+    def _inspect(self, dev: str) -> DeviceInfo:
+        parent = self._get_parent_device(dev)
+        mapping = self._get_multipath_mapping()
+        return DeviceInfo(
+            device=dev,
+            parent_device=parent,
+            under_multipath=parent in mapping
+        )
+
+    def _is_under_multipath(self) -> bool:
+        return self._device_info.under_multipath
+
+    @classmethod
+    def check_device_under_multipath(cls, dev):
+        inspector = cls(dev)
+        if inspector._is_under_multipath():
+            error_msg = f"Device {dev} is under multipath, please provide the multipath device instead"
+            raise ValueError(error_msg)
 # vim:ts=4:sw=4:et:
