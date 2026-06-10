@@ -77,14 +77,12 @@ class HelpFilter(object):
 
 
 class HelpEntry(object):
-    def __init__(self, short_help, long_help='', alias_for=None, alias_name=None, generated=False):
+    def __init__(self, short_help, long_help='', generated=False):
         if short_help:
             self.short = short_help[0].upper() + short_help[1:]
         else:
             self.short = 'Help'
         self._long_help = long_help
-        self.alias_for = alias_for
-        self.alias_name = alias_name
         self.generated = generated
 
     @property
@@ -95,8 +93,8 @@ class HelpEntry(object):
     def long_help(self, value):
         self._long_help = value
 
-    def is_alias(self):
-        return self.alias_for is not None
+    def get_prefix(self):
+        return ''
 
     def paginate(self):
         '''
@@ -112,12 +110,7 @@ class HelpEntry(object):
             if not long_help.startswith('\n'):
                 long_help = '\n' + long_help
 
-        prefix = ''
-        if self.is_alias():
-            msg_alias = f"Command `{self.alias_name}` is an alias for `{self.alias_for}`"
-            msg_deprecated = f"`{self.alias_name}` is deprecated and will be removed in a future release"
-            prefix = helpfilter(f"({msg_alias}. {msg_deprecated})\n")
-
+        prefix = self.get_prefix()
         utils.page_string(short_help + '\n' + prefix + long_help)
 
     def __str__(self):
@@ -135,12 +128,20 @@ class AliasHelpEntry(HelpEntry):
     Delegates long_help to the target HelpEntry to preserve lazy loading.
     """
     def __init__(self, target: HelpEntry, alias_for: str, alias_name: str):
-        super().__init__(target.short, alias_for=alias_for, alias_name=alias_name, generated=target.generated)
+        super().__init__(target.short, generated=target.generated)
         self.target = target
+        self.alias_for = alias_for
+        self.alias_name = alias_name
 
     @property
     def long_help(self):
         return self.target.long_help
+
+    def get_prefix(self):
+        helpfilter = HelpFilter()
+        msg_alias = f"Command `{self.alias_name}` is an alias for `{self.alias_for}`"
+        msg_deprecated = f"`{self.alias_name}` is deprecated and will be removed in a future release"
+        return helpfilter(f"({msg_alias}. {msg_deprecated})\n")
 
 
 class LazyHelpEntryFromCli(HelpEntry):
@@ -149,9 +150,9 @@ class LazyHelpEntryFromCli(HelpEntry):
             self,
             short_help: str,
             cmd_args: typing.Sequence[str],
-            alias_for=None, generated=False,
+            generated=False,
     ):
-        super().__init__(short_help, '', alias_for, generated)
+        super().__init__(short_help, '', generated)
         self._cmd_args = cmd_args
 
     @functools.cached_property
@@ -186,7 +187,7 @@ class SubcommandTreeNode:
 
 HELP_FILE = os.path.join(config.path.sharedir, 'crm.8.adoc')
 
-_DEFAULT = HelpEntry('No help available', long_help='', alias_for=None, generated=True)
+_DEFAULT = HelpEntry('No help available', long_help='', generated=True)
 _REFERENCE_RE = re.compile(r'<<[^,]+,(.+)>>')
 
 # loaded on demand
