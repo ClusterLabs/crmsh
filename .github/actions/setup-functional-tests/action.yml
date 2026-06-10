@@ -1,0 +1,14 @@
+name: 'Setup Functional Tests'
+description: 'Downloads and loads the functional test container image'
+runs:
+  using: 'composite'
+  steps:
+    - name: Download container image artifact
+      uses: actions/download-artifact@v8
+      with:
+        name: haleap-image
+        path: /tmp
+    - name: Load container image
+      shell: bash
+      run: |
+        sudo podman load -i /tmp/haleap.tar
