@@ -20,7 +20,6 @@
 
 %global gname haclient
 %global uname hacluster
-%global crmsh_docdir %{_defaultdocdir}/%{name}
 
 %global upstream_version tip
 %global upstream_prefix crmsh
@@ -157,9 +156,9 @@ sed -i -e '1{\@^#!%{_bindir}/python3@d}' crmsh/report/core.py
 %build
 %meson \
     -Dpackage_version=%{version} \
+    -Ddocdir=%{_docdir}/%{name} \
     -Dtmpfilesdir=%{_tmpfilesdir} \
     -Dfwdefdir=%{_fwdefdir}
-
 %meson_build
 
 %if %{with regression_tests}
@@ -224,7 +223,7 @@ result2=$?
 
 %{_tmpfilesdir}/%{name}.conf
 
-%doc doc/*.html
+%doc %{_docdir}/%{name}/*.html
 %doc COPYING AUTHORS ChangeLog README.md
 %doc contrib/*
 %{_mandir}/man8/*

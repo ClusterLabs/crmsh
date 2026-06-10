@@ -3,21 +3,25 @@ project('crmsh',
   meson_version: '>= 0.64.0'
 )
 
+# Meson Options
+datadir = get_option('datadir')
+sysconfdir = get_option('sysconfdir')
+localstatedir = get_option('localstatedir')
+prefix = get_option('prefix')
+
 # Configuration Options
 package_version = get_option('package_version')
 if package_version == ''
   package_version = meson.project_version()
 endif
-
 ocf_root = get_option('ocf_root')
 daemon_user = get_option('daemon_user')
+docdir = get_option('docdir')
+if docdir == ''
+  docdir = datadir / 'doc/crmsh'
+endif
 tmpfilesdir = get_option('tmpfilesdir')
 fwdefdir = get_option('fwdefdir')
-
-datadir = get_option('datadir')
-sysconfdir = get_option('sysconfdir')
-localstatedir = get_option('localstatedir')
-prefix = get_option('prefix')
 
 # Absolute paths
 if not localstatedir.startswith('/')
@@ -122,12 +126,12 @@ profiles_html = custom_target('profiles_html',
   output: ['profiles.html'],
   command: [asciidoc, '--unsafe', '--backend=xhtml11', '-o', '@OUTPUT@', '@INPUT@'],
   install: true,
-  install_dir: get_option('datadir') / 'doc/crmsh'
+  install_dir: docdir
 )
 crmsh_crm_report_html = custom_target('crmsh_crm_report_html',
   input: ['doc/crmsh_crm_report.8.adoc'],
   output: ['crmsh_crm_report.8.html'],
   command: [asciidoc, '--unsafe', '--backend=xhtml11', '-o', '@OUTPUT@', '@INPUT@'],
   install: true,
-  install_dir: get_option('datadir') / 'doc/crmsh'
+  install_dir: docdir
 )
