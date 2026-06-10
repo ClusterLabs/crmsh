@@ -10,10 +10,33 @@ on:
   - workflow_dispatch
 
 env:
-  CONTAINER_SCRIPT: sudo ./test/run-functional-tests
+  CONTAINER_SCRIPT: sudo CONTAINER_IMAGE=haleap:ci ./test/run-functional-tests
   GET_INDEX_OF: ./test/run-functional-tests _get_index_of
 
 jobs:
+  build_image:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+    - name: Cache container image
+      id: cache-container
+      uses: actions/cache@v5
+      with:
+        path: /tmp/haleap.tar
+        key: test-container-${{ hashFiles('test_container/**') }}
+    - name: Build container image
+      if: steps.cache-container.outputs.cache-hit != 'true'
+      run: |
+        podman image build -t haleap:ci ./test_container
+        mkdir -p /tmp
+        podman save -o /tmp/haleap.tar haleap:ci
+    - name: Upload container image artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: haleap-image
+        path: /tmp/haleap.tar
+        retention-days: 1
+
   general_check:
     runs-on: ubuntu-24.04
     steps:
@@ -57,10 +80,13 @@ jobs:
         flags: unit
 
   functional_test_crm_report_bugs:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for crm_report bugs
       run:  |
         index=`$GET_INDEX_OF crm_report_bugs`
@@ -71,10 +97,13 @@ jobs:
         flags: integration
 
   functional_test_crm_report_normal:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for crm_report normal
       run:  |
         index=`$GET_INDEX_OF crm_report_normal`
@@ -85,10 +114,13 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_bugs:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for bootstrap bugs
       run:  |
         index=`$GET_INDEX_OF bootstrap_bugs`
@@ -99,10 +131,13 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_bugs_non_root:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for bootstrap bugs, under non root user
       run:  |
         index=`$GET_INDEX_OF bootstrap_bugs`
@@ -113,10 +148,13 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_common:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for bootstrap common
       run:  |
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
@@ -127,10 +165,13 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_common_non_root:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for bootstrap common, under non root user
       run:  |
         index=`$GET_INDEX_OF bootstrap_init_join_remove`
@@ -141,10 +182,13 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_options:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for bootstrap options
       run:  |
         index=`$GET_INDEX_OF bootstrap_options`
@@ -155,10 +199,13 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_firewalld:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for bootstrap firewalld
       run:  |
         index=`$GET_INDEX_OF bootstrap_firewalld`
@@ -169,10 +216,13 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_password:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for bootstrap using password
       run:  |
         index=`$GET_INDEX_OF bootstrap_password`
@@ -184,10 +234,13 @@ jobs:
 
 
   functional_test_corosync_ui:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for crm corosync subcommand
       run:  |
         index=`$GET_INDEX_OF corosync_ui`
@@ -198,10 +251,13 @@ jobs:
         flags: integration
 
   functional_test_bootstrap_options_non_root:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for bootstrap options, under non root user
       run:  |
         index=`$GET_INDEX_OF bootstrap_options`
@@ -212,10 +268,13 @@ jobs:
         flags: integration
 
   functional_test_qdevice_setup_remove:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for qdevice setup and remove
       run:  |
         index=`$GET_INDEX_OF qdevice_setup_remove`
@@ -226,10 +285,13 @@ jobs:
         flags: integration
 
   functional_test_qdevice_setup_remove_non_root:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for qdevice setup and remove, under non root user
       run:  |
         index=`$GET_INDEX_OF qdevice_setup_remove`
@@ -240,10 +302,13 @@ jobs:
         flags: integration
 
   functional_test_qdevice_options:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for qdevice options
       run:  |
         index=`$GET_INDEX_OF qdevice_options`
@@ -254,10 +319,13 @@ jobs:
         flags: integration
 
   functional_test_qdevice_validate:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for qdevice validate
       run:  |
         index=`$GET_INDEX_OF qdevice_validate`
@@ -268,10 +336,13 @@ jobs:
         flags: integration
 
   functional_test_qdevice_validate_non_root:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for qdevice validate, under non root user
       run:  |
         index=`$GET_INDEX_OF qdevice_validate`
@@ -282,10 +353,13 @@ jobs:
         flags: integration
 
   functional_test_qdevice_user_case:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for qdevice user case
       run:  |
         index=`$GET_INDEX_OF qdevice_usercase`
@@ -296,10 +370,13 @@ jobs:
         flags: integration
 
   functional_test_resource_failcount:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for resource failcount
       run:  |
         index=`$GET_INDEX_OF resource_failcount`
@@ -310,10 +387,13 @@ jobs:
         flags: integration
 
   functional_test_resource_set:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for resource set
       run:  |
         index=`$GET_INDEX_OF resource_set`
@@ -324,10 +404,13 @@ jobs:
         flags: integration
 
   functional_test_resource_set_non_root:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for resource set, under non root user
       run:  |
         index=`$GET_INDEX_OF resource_set`
@@ -338,10 +421,13 @@ jobs:
         flags: integration
 
   functional_test_configure_sublevel:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for configure sublevel bugs
       run:  |
         index=`$GET_INDEX_OF configure_bugs`
@@ -352,10 +438,13 @@ jobs:
         flags: integration
 
   functional_test_constraints_bugs:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for constraints bugs
       run:  |
         index=`$GET_INDEX_OF constraints_bugs`
@@ -366,10 +455,13 @@ jobs:
         flags: integration
 
   functional_test_geo_cluster:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for geo cluster
       run:  |
         index=`$GET_INDEX_OF geo_setup`
@@ -380,10 +472,13 @@ jobs:
         flags: integration
 
   functional_test_healthcheck:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for healthcheck
       run:  |
         index=`$GET_INDEX_OF healthcheck`
@@ -394,10 +489,13 @@ jobs:
         flags: integration
 
   functional_test_cluster_api:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for cluster api
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF cluster_api`
@@ -407,10 +505,13 @@ jobs:
         flags: integration
 
   functional_test_user_access:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for user access
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF user_access`
@@ -420,10 +521,13 @@ jobs:
         flags: integration
 
   functional_test_ssh_agent:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for ssh agent
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF ssh_agent` && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT -u `$GET_INDEX_OF ssh_agent`
@@ -433,10 +537,13 @@ jobs:
         flags: integration
 
   functional_test_blocking_ssh:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for blocking ssh
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF cluster_blocking_ssh`
@@ -446,10 +553,13 @@ jobs:
         flags: integration
 
   functional_test_migration:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for migration
       run:  |
         echo '{ "exec-opts": ["native.cgroupdriver=systemd"] }' | sudo tee /etc/docker/daemon.json
@@ -461,10 +571,13 @@ jobs:
         flags: integration
 
   functional_test_pacemaker_remote:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: functional test for pacemaker remote
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF pacemaker_remote`
@@ -474,10 +587,13 @@ jobs:
         flags: integration
 
   original_regression_test:
+    needs: build_image
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
+    - name: Set up test container
+      uses: ./.github/actions/setup-functional-tests
     - name: original regression test
       run:  |
         $CONTAINER_SCRIPT `$GET_INDEX_OF "regression test"`
