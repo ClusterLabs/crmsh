@@ -1837,6 +1837,8 @@ unmigrate <rsc>
 unban <rsc>
 ...............
 
+Note: `migrate` is an alias for `move` command, `unmigrate`, `unban` are aliases for `clear` command.
+
 [[cmdhelp.resource.constraints,Show constraints affecting a resource]]
 ==== `constraints`
 
@@ -3263,7 +3265,7 @@ above.
 **************************
 
 [[cmdhelp.configure.get_property,Get property value]]
-==== `get-property`
+==== `get_property`
 
 Show the value of the given property. If the value is not set, the
 command will print the default value for the property, if known.
@@ -3275,19 +3277,19 @@ If the property is set multiple times, for example using multiple
 property sets with different rule expressions, the output of this
 command is undefined.
 
-Pass the argument +-t+ or +--true+ to `get-property` to translate
+Pass the argument +-t+ or +--true+ to `get_property` to translate
 the argument value into +true+ or +false+. If the value is not
 set, the command will print +false+.
 
 Usage:
 ...............
-get-property [-t|--true] [<name>]
+get_property [-t|--true] [<name>]
 ...............
 
 Example:
 ...............
-get-property fencing-enabled
-get-property -t maintenance-mode
+get_property fencing-enabled
+get_property -t maintenance-mode
 ...............
 
 [[cmdhelp.configure.graph,generate a directed graph]]
