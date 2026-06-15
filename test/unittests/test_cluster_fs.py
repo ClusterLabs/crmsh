@@ -81,7 +81,7 @@ class TestClusterFSManager(unittest.TestCase):
             self.multi_gfs2_devices_without_clvm2._verify_options()
         self.assertIn("Without Cluster LVM2 (-C option), -g option only support one device", str(context.exception))
 
-    @mock.patch("crmsh.utils.has_mount_point_used")
+    @mock.patch("crmsh.cluster_fs.storage_utils.has_mount_point_used")
     def test_verify_options_mount_point(self, mock_has_mount_point_used):
         mock_has_mount_point_used.return_value = True
         with self.assertRaises(cluster_fs.Error) as context:
@@ -89,7 +89,7 @@ class TestClusterFSManager(unittest.TestCase):
         self.assertIn("Mount point /mnt/gfs2 already mounted", str(context.exception))
 
     @mock.patch("crmsh.utils.list_cluster_nodes")
-    @mock.patch("crmsh.utils.get_non_block_device_nodes")
+    @mock.patch("crmsh.cluster_fs.storage_utils.get_non_block_device_nodes")
     def test_verify_devices_not_block_device(self, mock_get_non_block_device_nodes, mock_list_cluster_nodes):
         mock_list_cluster_nodes.return_value = ["node1", "node2"]
         mock_get_non_block_device_nodes.return_value = ["node1"]
@@ -97,8 +97,8 @@ class TestClusterFSManager(unittest.TestCase):
             self.ocfs2_instance_one_device._verify_devices()
         self.assertIn("/dev/sda1 is not a block device on node1", str(context.exception))
 
-    @mock.patch("crmsh.utils.is_dev_used_for_lvm")
-    @mock.patch("crmsh.utils.get_non_block_device_nodes")
+    @mock.patch("crmsh.cluster_fs.storage_utils.is_dev_used_for_lvm")
+    @mock.patch("crmsh.cluster_fs.storage_utils.get_non_block_device_nodes")
     def test_verify_devices_clvm2_with_lv(self, mock_get_non_block_device_nodes, mock_is_dev_used_for_lvm):
         mock_get_non_block_device_nodes.return_value = []
         mock_is_dev_used_for_lvm.return_value = True
@@ -106,9 +106,9 @@ class TestClusterFSManager(unittest.TestCase):
             self.gfs2_instance_one_device_clvm2._verify_devices()
         self.assertIn("/dev/sda1 is a Logical Volume, cannot be used with the -C option", str(context.exception))
 
-    @mock.patch("crmsh.utils.has_disk_mounted")
-    @mock.patch("crmsh.utils.is_dev_used_for_lvm")
-    @mock.patch("crmsh.utils.get_non_block_device_nodes")
+    @mock.patch("crmsh.cluster_fs.storage_utils.has_disk_mounted")
+    @mock.patch("crmsh.cluster_fs.storage_utils.is_dev_used_for_lvm")
+    @mock.patch("crmsh.cluster_fs.storage_utils.get_non_block_device_nodes")
     def test_verify_devices_already_mounted(self, mock_get_non_block_device_nodes, mock_is_dev_used_for_lvm, mock_has_disk_mounted):
         mock_get_non_block_device_nodes.return_value = []
         mock_is_dev_used_for_lvm.return_value = False
@@ -156,7 +156,7 @@ class TestClusterFSManager(unittest.TestCase):
         self.assertEqual(str(context.exception), '/dev/sda1 cannot be the same with SBD device')
 
     @mock.patch("crmsh.bootstrap.confirm")
-    @mock.patch("crmsh.utils.has_dev_partitioned")
+    @mock.patch("crmsh.cluster_fs.storage_utils.has_dev_partitioned")
     def test_confirm_to_overwrite_device_no_overwrite(self, mock_has_dev_partitioned, mock_confirm):
         mock_has_dev_partitioned.return_value = True
         mock_confirm.return_value = False
@@ -166,8 +166,8 @@ class TestClusterFSManager(unittest.TestCase):
 
     @mock.patch("crmsh.sh.cluster_shell")
     @mock.patch("crmsh.bootstrap.confirm")
-    @mock.patch("crmsh.utils.get_dev_fs_type")
-    @mock.patch("crmsh.utils.has_dev_partitioned")
+    @mock.patch("crmsh.cluster_fs.storage_utils.get_dev_fs_type")
+    @mock.patch("crmsh.cluster_fs.storage_utils.has_dev_partitioned")
     def test_confirm_to_overwrite_device(self, mock_has_dev_partitioned, mock_get_dev_fs_type, mock_confirm, mock_cluster_shell):
         mock_has_dev_partitioned.return_value = False
         mock_get_dev_fs_type.return_value = "ext4"
@@ -296,8 +296,8 @@ class TestClusterFSManager(unittest.TestCase):
         self.ocfs2_instance_one_device.join("node1")
         mock_status_long.assert_not_called()
 
-    @mock.patch("crmsh.utils.compare_uuid_with_peer_dev")
-    @mock.patch("crmsh.utils.is_dev_a_plain_raw_disk_or_partition")
+    @mock.patch("crmsh.cluster_fs.storage_utils.compare_uuid_with_peer_dev")
+    @mock.patch("crmsh.cluster_fs.storage_utils.is_dev_a_plain_raw_disk_or_partition")
     @mock.patch("crmsh.xmlutil.CrmMonXmlParser")
     @mock.patch("crmsh.log.LoggerUtils.status_long")
     def test_join(self, mock_status_long, mock_crmmonxmlparser, mock_is_dev_a_plain_raw_disk_or_partition, mock_compare_uuid_with_peer_dev):

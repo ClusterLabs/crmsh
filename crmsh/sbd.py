@@ -6,7 +6,7 @@ import time
 import shlex
 import logging
 from enum import Enum, IntEnum, auto
-from . import utils, sh
+from . import utils, sh, storage_utils
 from . import bootstrap
 from . import log
 from . import constants
@@ -91,16 +91,16 @@ class SBDUtils:
             raise ValueError(f"Maximum number of SBD device is {SBDManager.SBD_DEVICE_MAX}")
 
         for dev in dev_list:
-            failed_nodes = utils.get_non_block_device_nodes(dev, node_list)
+            failed_nodes = storage_utils.get_non_block_device_nodes(dev, node_list)
             if failed_nodes:
                 raise ValueError(f"{dev} is not a block device on {', '.join(failed_nodes)}")
 
-            utils.MultipathInspector.check_device_under_multipath(dev)
+            storage_utils.MultipathInspector.check_device_under_multipath(dev)
 
             if compare_uuid:
                 SBDUtils.compare_device_uuid(dev, node_list)
 
-        utils.detect_duplicate_device_path(dev_list)
+        storage_utils.detect_duplicate_device_path(dev_list)
 
     @staticmethod
     def get_sbd_value_from_config(key):

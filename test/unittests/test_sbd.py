@@ -59,7 +59,7 @@ class TestSBDUtils(unittest.TestCase):
         with self.assertRaises(ValueError):
             SBDUtils.compare_device_uuid("/dev/sbd_device", ["node1"])
 
-    @patch('crmsh.utils.get_non_block_device_nodes')
+    @patch('crmsh.sbd.storage_utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
     def test_verify_sbd_device_exceeds_max(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
         dev_list = [f"/dev/sbd_device_{i}" for i in range(SBDManager.SBD_DEVICE_MAX + 1)]
@@ -67,7 +67,7 @@ class TestSBDUtils(unittest.TestCase):
             SBDUtils.verify_sbd_device(dev_list)
         self.assertTrue(f"Maximum number of SBD device is {SBDManager.SBD_DEVICE_MAX}" in str(context.exception))
 
-    @patch('crmsh.utils.get_non_block_device_nodes')
+    @patch('crmsh.sbd.storage_utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
     def test_verify_sbd_device_non_block(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
         mock_get_non_block_device_nodes.return_value = ["node1"]
@@ -75,7 +75,7 @@ class TestSBDUtils(unittest.TestCase):
             SBDUtils.verify_sbd_device(["/dev/not_a_block_device"])
         self.assertTrue(f"/dev/not_a_block_device is not a block device on node1" in str(context.exception))
 
-    @patch('crmsh.utils.get_non_block_device_nodes')
+    @patch('crmsh.sbd.storage_utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
     def test_verify_sbd_device_valid(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
         mock_get_non_block_device_nodes.return_value = []
