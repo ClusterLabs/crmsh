@@ -1601,9 +1601,52 @@ done
     @mock.patch('os.path.exists')
     def test_init_corosync_no_warning_knet(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
         mock_exists.return_value = False
-        bootstrap._context = mock.Mock(transport='knet')
+        profiles = {
+            'corosync.totem.crypto_cipher': 'aes256',
+            'corosync.totem.crypto_hash': 'sha256',
+            'corosync.totem.secauth': None
+        }
+        bootstrap._context = mock.Mock(transport='knet', profiles_dict=profiles)
         bootstrap.init_corosync()
         mock_warning.assert_not_called()
+
+    @mock.patch('crmsh.bootstrap.logger.warning')
+    @mock.patch('crmsh.bootstrap.adjust_corosync_parameters_according_to_profiles')
+    @mock.patch('crmsh.bootstrap.config_corosync_conf')
+    @mock.patch('crmsh.bootstrap.init_corosync_auth')
+    @mock.patch('os.path.exists')
+    def test_init_corosync_knet_warning_disabled(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
+        mock_exists.return_value = False
+        profiles = {
+            'corosync.totem.crypto_cipher': 'none',
+            'corosync.totem.crypto_hash': 'sha256',
+            'corosync.totem.secauth': None
+        }
+        bootstrap._context = mock.Mock(transport='knet', profiles_dict=profiles)
+        bootstrap.init_corosync()
+        mock_warning.assert_called_once_with(
+            'It is deprecated to disable knet encryption/authentication. '
+            'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.'
+        )
+
+    @mock.patch('crmsh.bootstrap.logger.warning')
+    @mock.patch('crmsh.bootstrap.adjust_corosync_parameters_according_to_profiles')
+    @mock.patch('crmsh.bootstrap.config_corosync_conf')
+    @mock.patch('crmsh.bootstrap.init_corosync_auth')
+    @mock.patch('os.path.exists')
+    def test_init_corosync_knet_warning_secauth_on_but_none(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
+        mock_exists.return_value = False
+        profiles = {
+            'corosync.totem.crypto_cipher': 'none',
+            'corosync.totem.crypto_hash': 'sha256',
+            'corosync.totem.secauth': 'on'
+        }
+        bootstrap._context = mock.Mock(transport='knet', profiles_dict=profiles)
+        bootstrap.init_corosync()
+        mock_warning.assert_called_once_with(
+            'It is deprecated to disable knet encryption/authentication. '
+            'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.'
+        )
 
 
 class TestValidation(unittest.TestCase):

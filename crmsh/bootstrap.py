@@ -1468,6 +1468,24 @@ def init_corosync() -> None:
             'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.',
             _context.transport,
         )
+    else:
+        cipher = _context.profiles_dict.get('corosync.totem.crypto_cipher')
+        hash_algo = _context.profiles_dict.get('corosync.totem.crypto_hash')
+        secauth = _context.profiles_dict.get('corosync.totem.secauth')
+
+        is_encrypted = True
+        if secauth == 'on':
+            if cipher == 'none' or hash_algo == 'none':
+                is_encrypted = False
+        else:
+            if not cipher or cipher == 'none' or not hash_algo or hash_algo == 'none':
+                is_encrypted = False
+
+        if not is_encrypted:
+            logger.warning(
+                'It is deprecated to disable knet encryption/authentication. '
+                'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.'
+            )
     config_corosync_conf()
     adjust_corosync_parameters_according_to_profiles()
 
