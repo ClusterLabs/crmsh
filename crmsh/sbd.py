@@ -532,6 +532,7 @@ class SBDCheckItem(IntEnum):
     FENCE_SBD_AGENT = auto()
     FENCE_SBD_AGENT_PARAMETERS = auto()
     SBD_DELAY_START = auto()
+    SBD_PACEMAKER = auto()
     SBD_SYSTEMD_START_TIMEOUT = auto()
     FENCING_WATCHDOG_TIMEOUT_PROPERTY = auto()
     FENCING_TIMEOUT_PROPERTY = auto()
@@ -627,6 +628,14 @@ class SBDConfigChecker(SBDTimeout):
                     SBDCheckItem.SBD_WATCHDOG_TIMEOUT,
                     SBDCheckItem.FENCE_SBD_AGENT_PARAMETERS
                 ]
+            ),
+
+            (
+                "SBD_PACEMAKER",
+                self._check_sbd_pacemaker_in_sysconfig,
+                self._fix_sbd_pacemaker_in_sysconfig,
+                False,
+                []
             ),
 
             (
@@ -865,6 +874,64 @@ class SBDConfigChecker(SBDTimeout):
     def _fix_sbd_delay_start(self):
         advised_value = str(self.sbd_delay_start_value_expected)
         SBDManager.update_sbd_configuration({"SBD_DELAY_START": advised_value})
+
+    def _check_sbd_pacemaker_in_sysconfig(self) -> CheckResult:
+        common_warning_msg = "It's highly recommended to enable SBD_PACEMAKER to prevent unexpected self-fencing during temporary storage loss"
+
+        # -P in SBD_OPTS is to enable SBD_PACEMAKER, -PP is to disable it
+        # option in SBD_OPTS will override the value in SBD_PACEMAKER
+        value_from_opts = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
+        if value_from_opts:
+            try:
+                opts_list = shlex.split(value_from_opts)
+            except ValueError:
+                opts_list = value_from_opts.split()
+            if "-PP" in opts_list:
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    common_warning_msg
+                )
+                self._log_when_not_quiet(
+                    logging.WARNING,
+                    "In %s, SBD_OPTS contains -PP, which disables SBD_PACEMAKER, please use -P to enable it",
+                    SBDManager.SYSCONFIG_SBD
+                )
+                return CheckResult.WARNING
+
+            elif "-P" in opts_list:
+                return CheckResult.SUCCESS
+
+        value = SBDUtils.get_sbd_value_from_config("SBD_PACEMAKER")
+        if not value or value in ("yes", "true"):
+            return CheckResult.SUCCESS
+
+        self._log_when_not_quiet(
+            logging.WARNING,
+            common_warning_msg
+        )
+        self._log_when_not_quiet(
+            logging.WARNING,
+            "In %s, SBD_PACEMAKER is set to %s, please set it to yes or true",
+            SBDManager.SYSCONFIG_SBD, value
+        )
+        return CheckResult.WARNING
+
+    def _fix_sbd_pacemaker_in_sysconfig(self):
+        value_from_opts = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
+        if value_from_opts:
+            try:
+                opts_list = shlex.split(value_from_opts)
+            except ValueError:
+                opts_list = value_from_opts.split()
+            if "-PP" in opts_list:
+                opts_list = ["-P" if opt == "-PP" else opt for opt in opts_list]
+                new_opts_value = shlex.join(opts_list)
+                logger.info("Replacing -PP with -P in SBD_OPTS in %s", SBDManager.SYSCONFIG_SBD)
+                SBDManager.update_sbd_configuration({"SBD_OPTS": new_opts_value})
+                return
+
+        logger.info("Setting SBD_PACEMAKER in %s to yes", SBDManager.SYSCONFIG_SBD)
+        SBDManager.update_sbd_configuration({"SBD_PACEMAKER": "yes"})
 
     def _check_sbd_systemd_start_timeout(self) -> CheckResult:
         expected_start_timeout = self.sbd_systemd_start_timeout_expected
