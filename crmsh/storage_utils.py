@@ -91,10 +91,10 @@ def get_dev_uuid(dev, peer=None):
     Get UUID of device on local or peer node
     """
     out = get_dev_info(dev, "UUID", peer=peer).splitlines()
-    return out[0] if out else get_dev_uuid_2(dev, peer)
+    return out[0] if out else get_dev_uuid_by_blkid(dev, peer)
 
 
-def get_dev_uuid_2(dev, peer=None):
+def get_dev_uuid_by_blkid(dev, peer=None):
     """
     Get UUID of device using blkid
     """
