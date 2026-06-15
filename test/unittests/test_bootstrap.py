@@ -1579,6 +1579,32 @@ done
             mock.call(None, f"systemctl is-failed {constants.PCMK_SERVICE}")
         ])
 
+    @mock.patch('crmsh.bootstrap.logger.warning')
+    @mock.patch('crmsh.bootstrap.adjust_corosync_parameters_according_to_profiles')
+    @mock.patch('crmsh.bootstrap.config_corosync_conf')
+    @mock.patch('crmsh.bootstrap.init_corosync_auth')
+    @mock.patch('os.path.exists')
+    def test_init_corosync_warning_non_knet(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
+        mock_exists.return_value = False
+        bootstrap._context = mock.Mock(transport='udpu')
+        bootstrap.init_corosync()
+        mock_warning.assert_called_once_with(
+            'Transport %s is deprecated and does not support encryption and message authentication. '
+            'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.',
+            'udpu',
+        )
+
+    @mock.patch('crmsh.bootstrap.logger.warning')
+    @mock.patch('crmsh.bootstrap.adjust_corosync_parameters_according_to_profiles')
+    @mock.patch('crmsh.bootstrap.config_corosync_conf')
+    @mock.patch('crmsh.bootstrap.init_corosync_auth')
+    @mock.patch('os.path.exists')
+    def test_init_corosync_no_warning_knet(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
+        mock_exists.return_value = False
+        bootstrap._context = mock.Mock(transport='knet')
+        bootstrap.init_corosync()
+        mock_warning.assert_not_called()
+
 
 class TestValidation(unittest.TestCase):
     """

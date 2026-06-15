@@ -1464,7 +1464,8 @@ def init_corosync() -> None:
 
     if _context.transport != 'knet':
         logger.warning(
-            'Transport %s does not support encryption and message authentication. Corosync traffic will be in cleartext.',
+            'Transport %s is deprecated and does not support encryption and message authentication. '
+            'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.',
             _context.transport,
         )
     config_corosync_conf()
