@@ -172,7 +172,8 @@ Feature: crmsh bootstrap process - options
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -y -t udpu" on "hanode1"
-    Then    Cluster service is "started" on "hanode1"
+    Then    Except "Transport udpu is deprecated and does not support encryption and message authentication. Corosync traffic will be in cleartext. Encryption will be enforced in future versions." in stderr
+    And     Cluster service is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     Then    Cluster is using "udpu" transport mode
@@ -182,7 +183,8 @@ Feature: crmsh bootstrap process - options
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
     When    Run "crm cluster init -y -t udp" on "hanode1"
-    Then    Cluster service is "started" on "hanode1"
+    Then    Except "Transport udp is deprecated and does not support encryption and message authentication. Corosync traffic will be in cleartext. Encryption will be enforced in future versions." in stderr
+    And     Cluster service is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
     Then    Cluster service is "started" on "hanode2"
     Then    Cluster is using "udp" transport mode
