@@ -1323,22 +1323,10 @@ def parse_tag(self, cmd):
     return out
 
 
-@parser_for('user', 'role', 'acl_target', 'acl_group')
+@parser_for('role', 'acl_target', 'acl_group')
 class AclParser(BaseParser):
     def parse(self, cmd):
         return self.begin_dispatch(cmd, min_args=2)
-
-    def parse_user(self):
-        out = xmlutil.new('acl_user')
-        out.set('id', self.match_identifier())
-        while self.has_tokens():
-            # role identifier
-            if self.try_match(_ROLE_REF_RE):
-                xmlutil.child(out, 'role_ref', id=self.matched(1))
-            # acl right rule
-            else:
-                out.append(self._add_rule())
-        return out
 
     def parse_acl_target(self):
         out = xmlutil.new('acl_target')

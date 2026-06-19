@@ -1208,17 +1208,6 @@ class CibConfig(command.UI):
         return self.__conf_object(context.get_command_name(), *args)
 
     @command.skill_level('expert')
-    @command.completers_repeating(compl.null, compl.choice(["role:", "read", "write", "deny"]))
-    def do_user(self, context, *args):
-        """user <uid> {roles|rules}
-
-        roles :: role:<role-ref> [role:<role-ref> ...]
-        rules :: rule [rule ...]
-
-        (See the role command for details on rules.)"""
-        return self.__conf_object(context.get_command_name(), *args)
-
-    @command.skill_level('expert')
     @command.completers_repeating(compl.null, compl.choice(["read", "write", "deny"]))
     def do_role(self, context, *args):
         """role <role-id> rule [rule ...]

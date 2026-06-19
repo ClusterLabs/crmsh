@@ -2298,7 +2298,6 @@ cib_object_map = {
     "op_defaults": ("op_defaults", CibProperty, "op_defaults", "op-options"),
     "fencing-topology": ("fencing_topology", CibFencingOrder, "configuration"),
     "acl_role": ("role", CibAcl, "acls"),
-    "acl_user": ("user", CibAcl, "acls"),
     "acl_target": ("acl_target", CibAcl, "acls"),
     "acl_group": ("acl_group", CibAcl, "acls"),
     "tag": ("tag", CibTag, "tags"),

@@ -2846,7 +2846,6 @@ Lists (ACL) can be setup to allow access to parts of the CIB for
 users other than +root+ and +hacluster+. The following commands
 manage ACL:
 
-- `user`
 - `role`
 
 In Pacemaker 1.1.12 and up, this command replaces the `user` command
@@ -4126,7 +4125,7 @@ type :: node | primitive | group | clone | rsc_template
       | rsc_ticket
       | property | rsc_defaults | op_defaults
       | fencing_topology
-      | role | user | acl_target
+      | role | acl_target
       | tag
 ...............
 
@@ -4202,32 +4201,6 @@ upgrade <force>
 Example:
 ...............
 upgrade force
-...............
-
-[[cmdhelp.configure.user,define user access rights]]
-==== `user`
-
-Users which normally cannot view or manage cluster configuration
-can be allowed access to parts of the CIB. The access is defined
-by a set of +read+, +write+, and +deny+ rules as in role
-definitions or by referencing roles. The latter is considered
-best practice.
-
-For more information on rule expressions, see
-<<topics.Syntax.RuleExpressions,Syntax: Rule expressions>>.
-
-Usage:
-...............
-user <uid> {roles|rules}
-
-roles :: role:<role-ref> [role:<role-ref> ...]
-rules :: rule [rule ...]
-...............
-Example:
-...............
-user joe \
-    role:app1_admin \
-    role:read_all
 ...............
 
 [[cmdhelp.configure.validate_all,call agent validate-all for resource]]

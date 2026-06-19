@@ -389,8 +389,6 @@ class TestCliParser(unittest.TestCase):
     def test_acl(self, mock_error):
         out = self._parse('role user-1 error')
         self.assertFalse(out)
-        out = self._parse('user user-1 role:user-1')
-        self.assertNotEqual(out, False)
 
         out = self._parse("role bigdb_admin " +
                           "write meta:bigdb:target-role " +

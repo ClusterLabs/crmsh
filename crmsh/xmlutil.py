@@ -893,7 +893,7 @@ _sort_xml_order = make_sort_map('node',
                                 ['rsc_location', 'rsc_colocation', 'rsc_order'],
                                 ['rsc_ticket', 'fencing-topology'],
                                 'cluster_property_set', 'rsc_defaults', 'op_defaults',
-                                'acl_role', ['acl_target', 'acl_group', 'acl_user'],
+                                'acl_role', ['acl_target', 'acl_group'],
                                 'alert')
 
 _sort_cli_order = make_sort_map('node',
@@ -903,7 +903,7 @@ _sort_cli_order = make_sort_map('node',
                                 ['location', 'colocation', 'collocation', 'order'],
                                 ['rsc_ticket', 'fencing_topology'],
                                 'property', 'rsc_defaults', 'op_defaults',
-                                'role', ['acl_target', 'acl_group', 'user'],
+                                'role', ['acl_target', 'acl_group'],
                                 'alert')
 
 _SORT_LAST = 1000
