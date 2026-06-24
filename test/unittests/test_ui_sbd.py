@@ -524,7 +524,9 @@ class TestSBD(unittest.TestCase):
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
-    def test_do_device_add(self, mock_is_using_disk_based_sbd, mock_logger_info, mock_check_all_nodes_reachable):
+    @mock.patch('crmsh.ui_sbd.SBD.check_sbd_health')
+    def test_do_device_add(self, mock_check_sbd_health, mock_is_using_disk_based_sbd, mock_logger_info, mock_check_all_nodes_reachable):
+        mock_check_sbd_health.return_value = True
         mock_is_using_disk_based_sbd.return_value = True
         self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=True)
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
@@ -538,7 +540,9 @@ class TestSBD(unittest.TestCase):
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
-    def test_do_device_remove(self, mock_is_using_disk_based_sbd, mock_logger_info, mock_check_all_nodes_reachable):
+    @mock.patch('crmsh.ui_sbd.SBD.check_sbd_health')
+    def test_do_device_remove(self, mock_check_sbd_health, mock_is_using_disk_based_sbd, mock_logger_info, mock_check_all_nodes_reachable):
+        mock_check_sbd_health.return_value = True
         mock_is_using_disk_based_sbd.return_value = True
         self.sbd_instance_diskbased.service_is_active = mock.Mock(return_value=True)
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
@@ -559,7 +563,9 @@ class TestSBD(unittest.TestCase):
 
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    def test_do_purge(self, mock_check_all_nodes_reachable, mock_verify_sbd_device):
+    @mock.patch('crmsh.ui_sbd.SBD.check_sbd_health')
+    def test_do_purge(self, mock_check_sbd_health, mock_check_all_nodes_reachable, mock_verify_sbd_device):
+        mock_check_sbd_health.return_value = True
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         self.sbd_instance_diskbased._purge_sbd = mock.Mock()

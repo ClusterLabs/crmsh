@@ -526,6 +526,9 @@ class SBD(command.UI):
                 raise self.SyntaxError(f"Invalid argument: {args[0]}")
             if len(args) < 2:
                 raise self.SyntaxError("No device specified")
+            if not SBD.check_sbd_health():
+                logger.error("This command is aborted due to the above SBD issues")
+                return False
 
             utils.check_all_nodes_reachable("configuring SBD device")
 
@@ -561,6 +564,9 @@ class SBD(command.UI):
             for service in (constants.PCMK_SERVICE, constants.SBD_SERVICE):
                 if not self._service_is_active(service):
                     return False
+            if not SBD.check_sbd_health():
+                logger.error("This command is aborted due to the above SBD issues")
+                return False
 
             utils.check_all_nodes_reachable("configuring SBD")
 
@@ -630,6 +636,9 @@ class SBD(command.UI):
                 logger.error("Invalid argument: %s", ' '.join(args))
                 logger.info("Usage: crm sbd purge [crashdump] [-F|--force]")
                 return False
+        if not SBD.check_sbd_health():
+            logger.error("This command is aborted due to the above SBD issues")
+            return False
 
         msg = "purging SBD crashdump" if purge_crashdump else "purging SBD"
         utils.check_all_nodes_reachable(msg)
