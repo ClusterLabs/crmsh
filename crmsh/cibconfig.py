@@ -18,6 +18,7 @@ from . import tmpfiles
 from . import clidisplay
 from . import idmgmt
 from . import schema
+from . import storage_utils
 from . import utils
 from . import cibverify
 from . import parse
@@ -2679,7 +2680,7 @@ class CibFactory(object):
                 self.last_commit_time = t
             self.refresh()
 
-            utils.check_no_quorum_policy_with_dlm()
+            storage_utils.check_no_quorum_policy_with_dlm()
         return rc
 
     def _update_schema(self):

@@ -1,7 +1,7 @@
 import logging
 import re
 from contextlib import contextmanager
-from . import utils, sh
+from . import utils, sh, storage_utils
 from . import bootstrap
 from . import ra
 from . import corosync
@@ -113,7 +113,7 @@ class ClusterFSManager(object):
                 raise Error("Without Cluster LVM2 (-C option), -o option only support one device")
             elif len(self.gfs2_devices) > 1:
                 raise Error("Without Cluster LVM2 (-C option), -g option only support one device")
-        if self.mount_point and utils.has_mount_point_used(self.mount_point):
+        if self.mount_point and storage_utils.has_mount_point_used(self.mount_point):
             raise Error(f"Mount point {self.mount_point} already mounted")
 
     def _verify_devices(self):
@@ -122,14 +122,14 @@ class ClusterFSManager(object):
         """
         node_list = utils.list_cluster_nodes() if self.use_stage else [utils.this_node()]
         for dev in self.devices:
-            failed_nodes = utils.get_non_block_device_nodes(dev, node_list)
+            failed_nodes = storage_utils.get_non_block_device_nodes(dev, node_list)
             if failed_nodes:
                 raise Error(f"{dev} is not a block device on {', '.join(failed_nodes)}")
-            if utils.is_dev_used_for_lvm(dev) and self.use_cluster_lvm2:
+            if storage_utils.is_dev_used_for_lvm(dev) and self.use_cluster_lvm2:
                 raise Error(f"{dev} is a Logical Volume, cannot be used with the -C option")
-            if utils.has_disk_mounted(dev):
+            if storage_utils.has_disk_mounted(dev):
                 raise Error(f"{dev} is already mounted")
-            utils.MultipathInspector.check_device_under_multipath(dev)
+            storage_utils.MultipathInspector.check_device_under_multipath(dev)
 
     def _check_if_already_configured(self):
         """
@@ -176,10 +176,10 @@ e.g. crm cluster init {self.type.lower()} -o <device>
         """
         for dev in self.devices:
             msg = ""
-            if utils.has_dev_partitioned(dev):
+            if storage_utils.has_dev_partitioned(dev):
                 msg = f"Found a partition table in {dev}"
             else:
-                fs_type = utils.get_dev_fs_type(dev)
+                fs_type = storage_utils.get_dev_fs_type(dev)
                 if fs_type:
                     msg = f"{dev} contains a {fs_type} file system"
             if msg and not bootstrap.confirm(f"{msg} - overwrite?"):
@@ -254,13 +254,13 @@ e.g. crm cluster init {self.type.lower()} -o <device>
             shell.get_stdout_or_raise_error(f"pvcreate {disks_string} -y")
 
         # Create VG
-        self.vg_id = utils.gen_unused_id(utils.get_all_vg_name(), self.VG_ID)
+        self.vg_id = utils.gen_unused_id(storage_utils.get_all_vg_name(), self.VG_ID)
         with logger_utils.status_long(f"Creating VG {self.vg_id}"):
             shell.get_stdout_or_raise_error(f"vgcreate --shared {self.vg_id} {disks_string} -y")
 
         # Create LV
         with logger_utils.status_long(f"Creating LV {self.LV_ID} on VG {self.vg_id}"):
-            pe_number = utils.get_pe_number(self.vg_id)
+            pe_number = storage_utils.get_pe_number(self.vg_id)
             shell.get_stdout_or_raise_error(f"lvcreate -l {pe_number} {self.vg_id} -n {self.LV_ID} -y")
  
         return f"/dev/{self.vg_id}/{self.LV_ID}"
@@ -396,8 +396,8 @@ e.g. crm cluster init {self.type.lower()} -o <device>
         with logger_utils.status_long(f"Verify {cluster_fs_type.upper()} environment on {device}"):
             use_cluster_lvm2 = xmlutil.CrmMonXmlParser(peer).is_resource_configured(constants.LVMLOCKD_RA)
             self._verify_packages(cluster_fs_type.upper(), use_cluster_lvm2)
-            if utils.is_dev_a_plain_raw_disk_or_partition(device, peer):
-                utils.compare_uuid_with_peer_dev([device], peer)
+            if storage_utils.is_dev_a_plain_raw_disk_or_partition(device, peer):
+                storage_utils.compare_uuid_with_peer_dev([device], peer)
 
     @classmethod
     def pre_verify(cls, ctx):

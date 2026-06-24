@@ -15,7 +15,7 @@ import time
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
-from . import command, sh, healthcheck, migration
+from . import command, sh, healthcheck, migration, storage_utils
 from . import utils
 from . import scripts
 from . import completers as compl
@@ -247,9 +247,9 @@ class Cluster(command.UI):
         When dlm running and quorum is lost, before stop cluster service, should set
         enable_quorum_fencing=0, enable_quorum_lockspace=0 for dlm config option
         """
-        if utils.is_dlm_running(node) and not utils.cluster_with_quorum(node):
+        if storage_utils.is_dlm_running(node) and not utils.cluster_with_quorum(node):
             logger.debug("Quorum is lost; Set enable_quorum_fencing=0 and enable_quorum_lockspace=0 for dlm")
-            utils.set_dlm_option(peer=node, enable_quorum_fencing=0, enable_quorum_lockspace=0)
+            storage_utils.set_dlm_option(peer=node, enable_quorum_fencing=0, enable_quorum_lockspace=0)
 
     @command.skill_level('administrator')
     def do_stop(self, context, *args):
@@ -270,7 +270,7 @@ class Cluster(command.UI):
 
         cluster_in_maintenance = utils.is_cluster_in_maintenance_mode()
         for node in node_list[:]:
-            if cluster_in_maintenance and utils.is_dlm_running(on_node=node):
+            if cluster_in_maintenance and storage_utils.is_dlm_running(on_node=node):
                 logger.info("The cluster is in maintenance mode and dlm is running on %s", node)
                 logger.error("Stopping pacemaker/corosync will trigger unexpected node fencing when 'dlm_controld' is running in maintenance mode.")
                 node_list.remove(node)
