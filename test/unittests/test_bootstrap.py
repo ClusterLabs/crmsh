@@ -1225,13 +1225,13 @@ done
         mock_configure.assert_called_once_with()
         mock_disable.assert_called_once_with("corosync-qdevice.service")
 
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
+    @mock.patch('crmsh.qdevice.is_qdevice_running_on_cluster')
     @mock.patch('crmsh.bootstrap.do_init_qdevice')
     @mock.patch('crmsh.utils.able_to_restart_cluster')
     @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
-    @mock.patch('logging.Logger.info')
-    def test_init_qdevice_unable_to_restart_cluster(self, mock_info, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode,
-            mock_able_to_restart_cluster, mock_do_init_qdevice):
+    def test_init_qdevice_unable_to_restart_cluster(self, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode, mock_able_to_restart_cluster, mock_do_init_qdevice, mock_is_qdevice_running_on_cluster, mock_is_qdevice_configured):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
         mock_evaluate_qdevice_quorum_effect.return_value = qdevice.QdevicePolicy.QDEVICE_RESTART_LATER
         enable_value = True
@@ -1240,20 +1240,21 @@ done
         cm.__exit__ = mock.Mock(return_value=False)
         mock_leverage_maintenance_mode.return_value = cm
         mock_able_to_restart_cluster.return_value = False
+        mock_is_qdevice_configured.return_value = False
+        mock_is_qdevice_running_on_cluster.return_value = False
 
         bootstrap.init_qdevice()
 
-        mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
         mock_able_to_restart_cluster.assert_called_once_with(True)
         mock_do_init_qdevice.assert_not_called()
 
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
+    @mock.patch('crmsh.qdevice.is_qdevice_running_on_cluster')
     @mock.patch('crmsh.bootstrap.do_init_qdevice')
     @mock.patch('crmsh.utils.able_to_restart_cluster')
     @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
-    @mock.patch('logging.Logger.info')
-    def test_init_qdevice_able_to_restart_cluster(self, mock_info, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode,
-            mock_able_to_restart_cluster, mock_do_init_qdevice):
+    def test_init_qdevice_able_to_restart_cluster(self, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode, mock_able_to_restart_cluster, mock_do_init_qdevice, mock_is_qdevice_running_on_cluster, mock_is_qdevice_configured):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
         mock_evaluate_qdevice_quorum_effect.return_value = qdevice.QdevicePolicy.QDEVICE_RESTART_LATER
         enable_value = True
@@ -1262,55 +1263,33 @@ done
         cm.__exit__ = mock.Mock(return_value=False)
         mock_leverage_maintenance_mode.return_value = cm
         mock_able_to_restart_cluster.return_value = True
+        mock_is_qdevice_configured.return_value = False
+        mock_is_qdevice_running_on_cluster.return_value = False
 
         bootstrap.init_qdevice()
 
-        mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
         mock_able_to_restart_cluster.assert_called_once_with(True)
         mock_do_init_qdevice.assert_called_once_with(True)
 
-    @mock.patch('crmsh.bootstrap.confirm')
-    @mock.patch('crmsh.corosync.is_qdevice_configured')
-    @mock.patch('crmsh.bootstrap._setup_passwordless_ssh_for_qnetd')
-    @mock.patch('crmsh.qdevice.get_node_list')
-    def test_do_init_qdevice_already_configured(self, mock_list_nodes, mock_setup_passwordless_ssh_for_qnetd, mock_is_qdevice_configured, mock_confirm):
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
-        mock_list_nodes.return_value = ["node1"]
-        mock_is_qdevice_configured.return_value = True
-        mock_confirm.return_value = False
-        bootstrap._context.qdevice_inst.start_qdevice_service = mock.Mock()
-
-        bootstrap.do_init_qdevice(True)
-
-        mock_list_nodes.assert_called_once_with(True)
-        mock_is_qdevice_configured.assert_called_once_with()
-        mock_confirm.assert_called_once_with("Qdevice is already configured - overwrite?")
-        mock_setup_passwordless_ssh_for_qnetd.assert_called_once_with(["node1"])
-        bootstrap._context.qdevice_inst.start_qdevice_service.assert_called_once_with()
-
+    @mock.patch('crmsh.qdevice.QDevice.start_qdevice_service')
     @mock.patch('crmsh.bootstrap.adjust_properties')
-    @mock.patch('crmsh.corosync.is_qdevice_configured')
     @mock.patch('crmsh.bootstrap._setup_passwordless_ssh_for_qnetd')
     @mock.patch('crmsh.qdevice.get_node_list')
     def test_do_init_qdevice(self, mock_list_nodes, mock_setup_passwordless_ssh_for_qnetd,
-            mock_is_qdevice_configured, mock_adjust_properties):
+            mock_adjust_properties, mock_start_qdevice_service):
         bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
         mock_list_nodes.return_value = ["node1"]
-        mock_is_qdevice_configured.return_value = False
         self.qdevice_with_ip.set_cluster_name = mock.Mock()
         self.qdevice_with_ip.validate_and_start_qnetd = mock.Mock()
         self.qdevice_with_ip.certificate_and_config_qdevice = mock.Mock()
-        bootstrap._context.qdevice_inst.start_qdevice_service = mock.Mock()
 
         bootstrap.do_init_qdevice(True)
 
         mock_list_nodes.assert_called_once_with(True)
-        mock_is_qdevice_configured.assert_called_once_with()
         mock_setup_passwordless_ssh_for_qnetd.assert_called_once_with(["node1"])
         self.qdevice_with_ip.set_cluster_name.assert_called_once_with()
         self.qdevice_with_ip.validate_and_start_qnetd.assert_called_once_with()
         self.qdevice_with_ip.certificate_and_config_qdevice.assert_called_once_with()
-        bootstrap._context.qdevice_inst.start_qdevice_service.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.prompt_for_string')
     def test_configure_qdevice_interactive_return(self, mock_prompt):

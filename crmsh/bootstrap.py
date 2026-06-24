@@ -1588,9 +1588,11 @@ def configure_qdevice_interactive():
     """
     if _context.yes_to_all:
         return
+
     logger.info("Configure Qdevice/Qnetd:\n" + QDEVICE_HELP_INFO + "\n")
     if not confirm("Do you want to configure QDevice?"):
         return
+
     while True:
         if utils.package_is_installed("corosync-qdevice"):
             break
@@ -1677,16 +1679,15 @@ def init_qdevice():
     """
     Setup qdevice and qnetd service
     """
-    if not _context.qdevice_inst:
-        configure_qdevice_interactive()
-    if not _context.qdevice_inst:
-        ServiceManager().disable_service("corosync-qdevice.service")
-        return
-
-    logger.info("""Configure Qdevice/Qnetd:""")
-
     is_qdevice_stage = _context.stage == "qdevice"
     if is_qdevice_stage:
+        if qdevice.is_qdevice_running_on_cluster():
+            logger.info("Qdevice is already running on this cluster - will not reconfigure")
+            return
+        elif corosync.is_qdevice_configured():
+            qdevice.QDevice.start_qdevice_service()
+            return
+
         qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_ADD)
         if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER:
             with utils.leverage_maintenance_mode() as enabled:
@@ -1699,21 +1700,25 @@ def init_qdevice():
 
 
 def do_init_qdevice(in_stage: bool = False):
+    if not _context.qdevice_inst:
+        configure_qdevice_interactive()
+    if not _context.qdevice_inst:
+        if not in_stage:
+            ServiceManager().disable_service("corosync-qdevice.service")
+        return
+
+    logger.info("""Configure Qdevice/Qnetd:""")
+
     cluster_node_list = qdevice.get_node_list(in_stage)
     _setup_passwordless_ssh_for_qnetd(cluster_node_list)
 
     qdevice_inst = _context.qdevice_inst
-    if corosync.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
-        if in_stage:
-            qdevice_inst.start_qdevice_service()
-        return
-
     qdevice_inst.set_cluster_name()
     qdevice_inst.validate_and_start_qnetd()
     qdevice_inst.certificate_and_config_qdevice()
 
     if in_stage:
-        qdevice_inst.start_qdevice_service()
+        qdevice.QDevice.start_qdevice_service()
 
     adjust_properties()
 
