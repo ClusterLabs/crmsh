@@ -1,3 +1,39 @@
+* Mon Jun 29 2026 Xin Liang <XLiang@suse.com>
+- Release 5.1.0 rc2
+- Dev: Refactor storage helpers out of utils.py (#2132)
+- Chore: unittests: reduce output verbosity and stop printing coverage report (#2139)
+- Dev: storage_utils: Rename blkid UUID helper
+- Dev: storage_utils: Refactor storage helpers out of utils.py
+- Dev: bootstrap: Warn about deprecating legacy and unencrypted/unauthenticated knet transports (jsc#PED-16433) (#2131)
+- Dev: bootstrap: add a warning about deprecating unencrypted/unauthenticated knet transport (jsc#PED-16433)
+- Dev: bootstrap: update warning about deprecating legacy transports (jsc#PED-16433)
+- Dev: help: Show alias command info (#2128)
+- Dev: help: Refactor to encapsulate alias help logic in subclass
+- Dev: help: Give the correct level index to fuzzy search for topic help
+- Dev: crm.8.adoc: Improve crm.8.adoc
+- Dev: utils: Add class MultipathInspector to inspect multipath devices (#2116)
+- Fix: sbd: Verify sbd devices on all nodes (#2118)
+- Dev: ui_sbd: Call SBDUtils.verify_sbd_device in multiple places
+- Dev: sbd: Introduce function sbd.SBDUtils.get_sbd_device_metadata_raw
+- Dev: sbd: Compare SBD device UUID optionally
+- Dev: sbd: Call SBDUtils.verify_sbd_device when doing sbd health check
+- Dev: bootstrap: Call join_sbd before changing corosync.conf
+- Dev: log: Lower corosync config tokenizer log level to reduce noise and decouple logging from config (#2123)
+- Refactor: crash_test: Use log filters to control output instead of removing handlers
+- Refactor: log: replace crmsh.log.setup_logger with logging.setupLogger
+- Dev: log: Use filters to control handler output and simplify logger setup
+- Dev: corosync_config_format: lower the level of debug logs from tokenizer to DEBUG2
+- Refactor: log: Decouple logging from config module
+- Fix: sbd: Compare SBD device UUID when adding SBD via sbd stage (#2120)
+- Chore: github-actions: update to node.js 24 actions (#2119)
+- Dev: qdevice: Configure "-p <port>" for /etc/sysconfig/corosync-qnetd on qnetd server (#2094)
+- Dev: ui_cluster: Refactor qdevice options validation
+- Dev: ui_cluster: Add --qnetd-port option and deprecate --qdevice-port option
+- Dev: bootstrap: Find and show failed services (#2104)
+- Dev: Separately check if corosync-qdevice.service is successfully started
+- Dev: service_manager: Use systemctl is-active to make sure the service is really active
+- Fix: sbd: Set bootstrap_context.diskless_sbd to True when diskless SBD is enabled on interactive mode (#2106)
+
 * Thu May 7 2026 Xin Liang <XLiang@suse.com>
 - Release 5.1.0 rc1
 - Dev: bootstrap: Load profiles if needed (#2102)
