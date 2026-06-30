@@ -283,7 +283,8 @@ class Context(object):
             if not with_sbd_option and self.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
             if ServiceManager().service_is_active(constants.SBD_SERVICE) and not crmsh.options.force:
-                utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
+                logger.warning("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
+                raise utils.TerminateSubCommand(success=True)
 
         elif with_sbd_option:
             if not utils.package_is_installed("sbd"):
