@@ -1,7 +1,7 @@
 ; crmsh configuration file
 ; To override per user, create a file ~/.config/crm/crm.conf
 ;
-; [core]
+[core]
 ; editor = $EDITOR
 ; pager = $PAGER
 ; user =
@@ -54,7 +54,7 @@ ocf_root = @OCF_ROOT_DIR@
 ; pe_state_dir = <detected>
 ; heartbeat_dir = <detected>
 
-; [color]
+[color]
 ; style = color
 ; error = red bold
 ; ok = green bold
@@ -73,7 +73,7 @@ ocf_root = @OCF_ROOT_DIR@
 ; score = magenta
 ; ticket = magenta
 
-; [report]
+[report]
 ; from_time = -12H
 ; compress = yes
 ; compress_prog = gzip
