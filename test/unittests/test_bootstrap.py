@@ -140,7 +140,7 @@ class TestContext(unittest.TestCase):
         mock_error.assert_called_once_with("Can't use -s and -S options together")
 
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.fatal')
@@ -149,6 +149,7 @@ class TestContext(unittest.TestCase):
         mock_quorate.return_value = True
         mock_installed.return_value = True
         mock_error.side_effect = SystemExit
+        crmsh.options.force = False
         ctx = crmsh.bootstrap.Context()
         ctx.stage = "sbd"
         ctx.yes_to_all = True
@@ -157,7 +158,7 @@ class TestContext(unittest.TestCase):
         mock_error.assert_called_once_with("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
 
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.fatal')
@@ -180,7 +181,7 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     @mock.patch('crmsh.utils.package_is_installed')
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     def test_validate_sbd_option_error_sbd_stage(self, mock_check_all, mock_installed, mock_list, mock_fatal, mock_quorate):
         mock_quorate.return_value = True
         mock_fatal.side_effect = ValueError
@@ -201,7 +202,7 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.package_is_installed')
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     def test_validate_sbd_option_sbd_package_not_installed(self, mock_check_all, mock_list, mock_installed, mock_fatal, mock_quorate):
         mock_quorate.return_value = True
         mock_fatal.side_effect = ValueError
@@ -219,7 +220,7 @@ class TestContext(unittest.TestCase):
         mock_fatal.assert_called_once_with(sbd.SBDManager.SBD_NOT_INSTALLED_MSG + " on node1")
 
     @mock.patch('crmsh.utils.list_cluster_nodes')
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('crmsh.utils.calculate_quorate_status')
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.utils.package_is_installed')
@@ -244,7 +245,7 @@ class TestContext(unittest.TestCase):
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('socket.gethostbyname')
-    @mock.patch('crmsh.utils.InterfacesInfo.ip_in_local')
+    @mock.patch('crmsh.network_utils.InterfacesInfo.ip_in_local')
     def test_validate_cluster_node_same_name(self, mock_ip_in_local, mock_gethost, mock_fatal):
         options = mock.Mock(cluster_node="me", type="join")
         ctx = crmsh.bootstrap.Context()
@@ -1167,7 +1168,7 @@ done
             ])
         mock_warn.assert_called_once_with("/etc/corosync.conf was not synced")
 
-    @mock.patch('crmsh.utils.InterfacesInfo')
+    @mock.patch('crmsh.network_utils.InterfacesInfo')
     def test_init_network_input_nic_list(self, mock_interface_info):
         bootstrap._context = mock.Mock(ipv6=None, nic_addr_list=["eth1", "eth2"])
         mock_interface_info_inst = mock.Mock()
@@ -1180,7 +1181,7 @@ done
         self.assertEqual(bootstrap._context.default_nic, "eth1")
         self.assertEqual(bootstrap._context.default_ip_list, mock_interface_info_inst.input_addr_list)
 
-    @mock.patch('crmsh.utils.InterfacesInfo')
+    @mock.patch('crmsh.network_utils.InterfacesInfo')
     def test_init_network_input(self, mock_interface_info):
         bootstrap._context = mock.Mock(ipv6=None, nic_addr_list=[])
         bootstrap.init_network()
@@ -1192,7 +1193,7 @@ done
     @mock.patch('crmsh.ssh_key.fetch_public_key_content_list')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.ssh_copy_id_no_raise')
-    @mock.patch('crmsh.utils.check_ssh_passwd_need')
+    @mock.patch('crmsh.network_utils.check_ssh_passwd_need')
     @mock.patch('crmsh.bootstrap.UserOfHost.instance')
     @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
     def test_setup_passwordless_ssh_for_qnetd_add_keys(self, mock_select, mock_user_of_host, mock_check_passwd, mock_ssh_copy_id, mock_this_node, mock_remote_public_key_from, mock_in_memory_public_key, mock_cluster_shell, mock_authorized_key_manager, mock_host_user_config_class):
@@ -1405,7 +1406,7 @@ done
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_remove_qdevice_reload(self, mock_qdevice_configured, mock_confirm, mock_reachable, mock_evaluate,
@@ -1678,7 +1679,7 @@ class TestValidation(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.utils.IP.is_mcast')
+    @mock.patch('crmsh.network_utils.IP.is_mcast')
     def test_is_mcast_addr(self, mock_mcast):
         mock_mcast.return_value = False
         with self.assertRaises(ValueError) as err:
@@ -1726,7 +1727,7 @@ class TestValidation(unittest.TestCase):
         mock_port.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.invokerc')
-    @mock.patch('crmsh.utils.IP.is_ipv6')
+    @mock.patch('crmsh.network_utils.IP.is_ipv6')
     def test_valid_admin_ip_in_use(self, mock_ipv6, mock_invoke):
         mock_ipv6.return_value = False
         mock_invoke.return_value = True
@@ -1819,7 +1820,7 @@ class TestValidation(unittest.TestCase):
         mock_prompt.assert_called_once_with("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
         mock_error.assert_called_once_with("No existing IP/hostname specified (use -c option)")
 
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.bootstrap.remove_qdevice')
@@ -1829,6 +1830,8 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.Context')
     def test_bootstrap_remove_no_confirm(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_check_all_nodes):
+        crmsh.options.force = False
+        crmsh.options.force = False
         mock_context_inst = mock.Mock(cluster_node="node1", force=False, qdevice_rm_flag=None)
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
@@ -1847,7 +1850,7 @@ class TestValidation(unittest.TestCase):
         mock_confirm.assert_called_once_with('Removing node "node1" from the cluster: Are you sure?')
         mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
@@ -1879,7 +1882,7 @@ class TestValidation(unittest.TestCase):
         mock_this_node.assert_called_once_with()
         mock_error.assert_called_once_with("Removing self requires --force")
 
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap.bootstrap_finished')
     @mock.patch('crmsh.bootstrap.remove_self')
     @mock.patch('crmsh.utils.this_node')
@@ -1912,7 +1915,7 @@ class TestValidation(unittest.TestCase):
         mock_self.assert_called_once_with(True)
         mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
@@ -1948,7 +1951,7 @@ class TestValidation(unittest.TestCase):
         mock_error.assert_called_once_with("Node node2 is not configured in cluster! (valid nodes: node1, node3)")
         mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     @mock.patch('crmsh.utils.this_node')

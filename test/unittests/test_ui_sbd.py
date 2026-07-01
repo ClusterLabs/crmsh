@@ -521,7 +521,7 @@ class TestSBD(unittest.TestCase):
         mock_logger_error.assert_called_once_with('%s', "No device specified")
         mock_logger_info.assert_called_once_with("Usage: crm sbd device <add|remove> <device>...")
 
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
     def test_do_device_add(self, mock_is_using_disk_based_sbd, mock_logger_info, mock_check_all_nodes_reachable):
@@ -535,7 +535,7 @@ class TestSBD(unittest.TestCase):
         mock_logger_info.assert_called_once_with("Configured sbd devices: %s", "/dev/sda1")
         mock_check_all_nodes_reachable.assert_called_once_with("configuring SBD device")
 
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
     def test_do_device_remove(self, mock_is_using_disk_based_sbd, mock_logger_info, mock_check_all_nodes_reachable):
@@ -558,7 +558,7 @@ class TestSBD(unittest.TestCase):
         mock_purge_sbd_from_cluster.assert_not_called()
 
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
-    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.network_utils.check_all_nodes_reachable')
     def test_do_purge(self, mock_check_all_nodes_reachable, mock_verify_sbd_device):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)

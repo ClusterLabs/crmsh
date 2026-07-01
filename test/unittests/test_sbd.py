@@ -324,7 +324,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.assertTrue("Neither disk-based nor disk-less SBD is configured" in str(context.exception))
 
     @patch('crmsh.utils.list_cluster_nodes_except_me')
-    @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.network_utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_sbd_inconsistent(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me):
         mock_service_manager_inst = Mock()
@@ -339,7 +339,7 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.sbd.SBDConfigChecker._check_deprecated_property')
     @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
     @patch('crmsh.utils.list_cluster_nodes_except_me')
-    @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.network_utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_not_fix(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_check_deprecated_property):
         mock_service_manager_inst = Mock()
@@ -370,7 +370,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check._check_sbd_disk_metadata.assert_called_once()
 
     @patch('crmsh.utils.list_cluster_nodes_except_me')
-    @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.network_utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_fix_failure(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me):
         mock_service_manager_inst = Mock()
@@ -390,7 +390,7 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.sbd.SBDConfigChecker._check_deprecated_property')
     @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
     @patch('crmsh.utils.list_cluster_nodes_except_me')
-    @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.network_utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_fix_success(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_check_deprecated_property):
         mock_service_manager_inst = Mock()

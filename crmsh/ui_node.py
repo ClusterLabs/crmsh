@@ -12,7 +12,7 @@ from . import command
 from . import completers as compl
 from . import constants
 from . import ui_utils
-from . import utils
+from . import utils, network_utils
 from . import xmlutil
 from . import idmgmt
 from .cliformat import cli_nvpairs, nvpairs2list

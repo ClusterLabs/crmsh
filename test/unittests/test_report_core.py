@@ -466,7 +466,7 @@ class TestRun(unittest.TestCase):
             core.process_node_list(mock_ctx_inst)
             self.assertEqual("Could not figure out a list of nodes; is this a cluster node?", str(err.exception))
 
-    @mock.patch('crmsh.utils.get_reachable_node_list')
+    @mock.patch('crmsh.network_utils.get_reachable_node_list')
     @mock.patch('crmsh.report.core.local_mode')
     @mock.patch('crmsh.utils.list_cluster_nodes')
     def test_process_node_list_single(self, mock_list_nodes, mock_local_mode, mock_reachable):
@@ -474,7 +474,7 @@ class TestRun(unittest.TestCase):
         mock_ctx_inst = mock.Mock(node_list=["node1", "node2"], single=True, me="node1")
         core.process_node_list(mock_ctx_inst)
 
-    @mock.patch('crmsh.utils.get_reachable_node_list')
+    @mock.patch('crmsh.network_utils.get_reachable_node_list')
     @mock.patch('crmsh.report.core.local_mode')
     @mock.patch('logging.Logger.error')
     @mock.patch('crmsh.utils.list_cluster_nodes')

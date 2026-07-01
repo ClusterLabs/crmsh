@@ -34,7 +34,7 @@ from lxml import etree
 import crmsh.options
 
 from . import config, constants, ssh_key, sh, cibquery, user_of_host
-from . import utils
+from . import utils, network_utils
 from . import xmlutil
 from . import cibconfig
 from . import corosync
@@ -267,7 +267,7 @@ class Context(object):
         with_sbd_option = self.sbd_devices or self.diskless_sbd
 
         if self.stage == "sbd":
-            utils.check_all_nodes_reachable("setup SBD")
+            network_utils.check_all_nodes_reachable("setup SBD")
             if not utils.calculate_quorate_status():
                 utils.fatal("Cluster is not quorate, can't run 'sbd' stage")
 
@@ -307,7 +307,7 @@ class Context(object):
             utils.fatal(f"Overriding current user '{self.current_user}' by '{user}'. Ouch, don't do it.")
         self.user_at_node_list = [value for (user, node), value in zip(li, self.user_at_node_list) if node != me]
         for user, node in (utils.parse_user_at_host(x) for x in self.user_at_node_list):
-            utils.ssh_port_reachable_check(node)
+            network_utils.ssh_port_reachable_check(node)
 
     def _validate_cluster_node(self):
         """
@@ -318,7 +318,7 @@ class Context(object):
             try:
                 # self.cluster_node might be hostname or IP address
                 ip_addr = socket.gethostbyname(node)
-                if utils.InterfacesInfo.ip_in_local(ip_addr):
+                if network_utils.InterfacesInfo.ip_in_local(ip_addr):
                     utils.fatal(f"\"{node}\" is the local node. Please specify peer node's hostname or IP address")
             except socket.gaierror as err:
                 utils.fatal(f"\"{node}\": {err}")
@@ -704,9 +704,9 @@ def log_start():
 
 def init_network():
     """
-    Get all needed network information through utils.InterfacesInfo
+    Get all needed network information through network_utils.InterfacesInfo
     """
-    _context.interfaces_inst = utils.InterfacesInfo(_context.ipv6, _context.nic_addr_list)
+    _context.interfaces_inst = network_utils.InterfacesInfo(_context.ipv6, _context.nic_addr_list)
     _context.interfaces_inst.get_interfaces_info()
     _context.interfaces_inst.flatten_custom_nic_addr_list()
 
@@ -1024,7 +1024,7 @@ class SshCopyIdResult:
 def ssh_copy_id_no_raise(local_user, remote_user, remote_node, shell: sh.LocalShell = None) -> SshCopyIdResult:
     if shell is None:
         shell = sh.LocalShell()
-    if utils.check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
+    if network_utils.check_ssh_passwd_need(local_user, remote_user, remote_node, shell):
         configure_ssh_key(local_user)
         public_keys = ssh_key.fetch_public_key_file_list(None, local_user)
         sleep(5)    # bsc#1243141: sshd PerSourcePenalties
@@ -1324,7 +1324,7 @@ class Validation(object):
         """
         Check whether the address is multicast address
         """
-        if not utils.IP.is_mcast(self.value):
+        if not network_utils.IP.is_mcast(self.value):
             raise ValueError("{} is not multicast address".format(self.value))
 
     def _is_local_addr(self, local_addr_list):
@@ -1380,7 +1380,7 @@ class Validation(object):
         """
         Validate admin IP address
         """
-        ipv6 = utils.IP.is_ipv6(addr)
+        ipv6 = network_utils.IP.is_ipv6(addr)
 
         # Check whether this IP already configured in cluster
         ping_cmd = "ping6" if ipv6 else "ping"
@@ -1851,7 +1851,7 @@ def swap_public_ssh_key(
     if local_shell is None:
         local_shell = sh.LocalShell()
     # Detect whether need password to login to remote_node
-    if utils.check_ssh_passwd_need(local_user_to_swap, remote_user_to_swap, remote_node, local_shell):
+    if network_utils.check_ssh_passwd_need(local_user_to_swap, remote_user_to_swap, remote_node, local_shell):
         export_ssh_key_non_interactive(
             local_shell,
             local_user_to_swap, remote_user_to_swap,
@@ -2435,7 +2435,7 @@ def bootstrap_join(context):
             _context.initialize_user()
 
         remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
-        utils.ssh_port_reachable_check(cluster_node)
+        network_utils.ssh_port_reachable_check(cluster_node)
         join_ssh(cluster_node, remote_user)
         remote_user = utils.user_of(cluster_node)
 
@@ -2443,7 +2443,7 @@ def bootstrap_join(context):
         try:
             with lock_inst.lock():
                 service_manager = ServiceManager()
-                utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node, check_passwd=False)
+                network_utils.check_all_nodes_reachable("joining a node to the cluster", cluster_node, check_passwd=False)
                 setup_passwordless_with_other_nodes(cluster_node)
                 join_firewalld()
                 join_ssh_merge(cluster_node, remote_user)
@@ -2477,7 +2477,7 @@ def remove_qdevice() -> None:
     if not confirm("Removing QDevice service and configuration from cluster: Are you sure?"):
         return
 
-    utils.check_all_nodes_reachable("removing QDevice from the cluster")
+    network_utils.check_all_nodes_reachable("removing QDevice from the cluster")
     qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER:
         with utils.leverage_maintenance_mode() as enabled:
@@ -2549,8 +2549,8 @@ def bootstrap_remove(context):
     remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
 
     try:
-        utils.check_all_nodes_reachable("removing a node from the cluster")
-    except utils.DeadNodeError as e:
+        network_utils.check_all_nodes_reachable("removing a node from the cluster")
+    except network_utils.DeadNodeError as e:
         if force_flag and cluster_node in e.summary.dead_nodes:
             remove_node_from_cluster(cluster_node, dead_node=True)
             bootstrap_finished()

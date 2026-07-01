@@ -7,7 +7,7 @@ from . import command
 from . import completers as compl
 from . import constants
 from . import config
-from . import utils
+from . import utils, network_utils
 from . import xmlutil
 from . import ui_utils
 from . import options
