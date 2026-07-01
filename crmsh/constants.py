@@ -436,7 +436,6 @@ Use multiple -i for more links. Note: Only one link is allowed for the non knet 
 """
 FORCE_HELP = "Make `crm` proceed with applying changes where it would normally ask the user to confirm before proceeding, or the operation risks interfering HA protection. This option is intended primarily for scripts and must be used with care."
 
-COROSYNC_STATUS_TYPES = ("ring", "quorum", "qdevice", "qnetd", "cpg")
 
 NO_SSH_ERROR_MSG = "ssh-related operations are disabled. crmsh works in local mode."
 

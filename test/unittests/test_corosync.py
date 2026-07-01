@@ -16,16 +16,6 @@ def test_query_status_exception():
     assert str(err.value) == "Wrong type \"test\" to query status"
 
 
-@mock.patch('crmsh.sh.cluster_shell')
-@mock.patch('crmsh.corosync.query_ring_status')
-def test_query_status(mock_ring_status, mock_cluster_shell):
-    mock_cluster_shell_inst = mock.Mock()
-    mock_cluster_shell.return_value = mock_cluster_shell_inst
-    mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
-    corosync.query_status("ring")
-    mock_ring_status.assert_called_once_with()
-
-
 @mock.patch('crmsh.corosync.is_qdevice_configured')
 def test_query_qdevice_status_exception(mock_configured):
     mock_configured.return_value = False
@@ -43,34 +33,99 @@ def test_query_qdevice_status(mock_configured, mock_run):
     mock_run.assert_called_once_with("corosync-qdevice-tool -sv")
 
 
-@mock.patch('crmsh.sh.cluster_shell')
+@mock.patch('subprocess.run')
+@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
 @mock.patch("crmsh.corosync.query_ring_status")
-def test_query_status_ring(mock_ring_status, mock_cluster_shell):
-    mock_cluster_shell_inst = mock.Mock()
-    mock_cluster_shell.return_value = mock_cluster_shell_inst
-    mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
-    corosync.query_status("ring")
+def test_query_status_ring(mock_ring_status, mock_check_vote, mock_run):
+    mock_run.return_value = mock.Mock(returncode=0)
+    with mock.patch.dict(corosync.STATUS_FUNC_DICT, {'ring': mock_ring_status}):
+        corosync.query_status("ring")
     mock_ring_status.assert_called_once_with()
+    mock_check_vote.assert_called_once()
 
 
-@mock.patch('crmsh.sh.cluster_shell')
+@mock.patch('subprocess.run')
+@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
 @mock.patch("crmsh.corosync.query_quorum_status")
-def test_query_status_quorum(mock_quorum_status, mock_cluster_shell):
-    mock_cluster_shell_inst = mock.Mock()
-    mock_cluster_shell.return_value = mock_cluster_shell_inst
-    mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
-    corosync.query_status("quorum")
+def test_query_status_quorum(mock_quorum_status, mock_check_vote, mock_run):
+    mock_run.return_value = mock.Mock(returncode=0)
+    with mock.patch.dict(corosync.STATUS_FUNC_DICT, {'quorum': mock_quorum_status}):
+        corosync.query_status("quorum")
     mock_quorum_status.assert_called_once_with()
+    mock_check_vote.assert_called_once()
 
 
-@mock.patch('crmsh.sh.cluster_shell')
+@mock.patch('subprocess.run')
+@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
 @mock.patch("crmsh.corosync.query_qnetd_status")
-def test_query_status_qnetd(mock_qnetd_status, mock_cluster_shell):
-    mock_cluster_shell_inst = mock.Mock()
-    mock_cluster_shell.return_value = mock_cluster_shell_inst
-    mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
-    corosync.query_status("qnetd")
+def test_query_status_qnetd(mock_qnetd_status, mock_check_vote, mock_run):
+    mock_run.return_value = mock.Mock(returncode=0)
+    with mock.patch.dict(corosync.STATUS_FUNC_DICT, {'qnetd': mock_qnetd_status}):
+        corosync.query_status("qnetd")
     mock_qnetd_status.assert_called_once_with()
+    mock_check_vote.assert_called_once()
+
+
+@mock.patch('subprocess.run')
+@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
+@mock.patch('crmsh.utils.term_render')
+def test_query_status_all(mock_render, mock_check_vote, mock_run):
+    mock_run.return_value = mock.Mock(returncode=0)
+    mock_render.side_effect = lambda x: x
+
+    # Mock all status functions
+    mock_funcs = {st: mock.Mock(return_value=f"{st} data") for st in corosync.COROSYNC_STATUS_TYPES}
+
+    with mock.patch.dict(corosync.STATUS_FUNC_DICT, mock_funcs):
+        corosync.query_status()
+
+    for st, m in mock_funcs.items():
+        m.assert_called_once()
+    mock_check_vote.assert_called_once()
+    mock_run.assert_called_once_with(["crm_node", "-l"])
+
+
+@mock.patch('subprocess.run')
+def test_query_status_crm_node_fail(mock_run):
+    mock_run.return_value = mock.Mock(returncode=1)
+    with pytest.raises(ValueError) as err:
+        corosync.query_status()
+    assert str(err.value) == "Failed to query nodes status"
+
+
+@mock.patch('subprocess.run')
+@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
+def test_query_status_value_error_continue(mock_check_vote, mock_run):
+    mock_run.return_value = mock.Mock(returncode=0)
+
+    # Mock status functions: 'ring' fails with ValueError, 'quorum' succeeds
+    mock_ring = mock.Mock(side_effect=ValueError("ring error"))
+    mock_quorum = mock.Mock(return_value="quorum data")
+
+    mock_funcs = {
+        'ring': mock_ring,
+        'quorum': mock_quorum
+    }
+
+    # Need to make sure COROSYNC_STATUS_TYPES includes 'ring' and 'quorum'
+    with mock.patch.dict(corosync.STATUS_FUNC_DICT, mock_funcs):
+        with mock.patch('crmsh.corosync.COROSYNC_STATUS_TYPES', ('ring', 'quorum')):
+            corosync.query_status()
+
+    mock_ring.assert_called_once()
+    mock_quorum.assert_called_once()
+    mock_check_vote.assert_called_once()
+
+
+@mock.patch('subprocess.run')
+def test_query_status_single_fail_fast(mock_run):
+    mock_run.return_value = mock.Mock(returncode=0)
+    mock_ring = mock.Mock(side_effect=ValueError("ring error"))
+
+    with mock.patch.dict(corosync.STATUS_FUNC_DICT, {'ring': mock_ring}):
+        with pytest.raises(ValueError) as err:
+            corosync.query_status("ring")
+        assert str(err.value) == "ring error"
 
 
 def test_query_status_except():
