@@ -6,7 +6,7 @@ import time
 import shlex
 import logging
 from enum import Enum, IntEnum, auto
-from . import utils, sh, storage_utils
+from . import utils, network_utils, sh, storage_utils
 from . import bootstrap
 from . import log
 from . import constants
@@ -698,8 +698,8 @@ class SBDConfigChecker(SBDTimeout):
         self.peer_node_list = utils.list_cluster_nodes_except_me()
         error_msg = ""
         try:
-            utils.check_all_nodes_reachable("check and fix SBD timeout configurations")
-        except (utils.DeadNodeError, utils.UnreachableNodeError) as e:
+            network_utils.check_all_nodes_reachable("check and fix SBD timeout configurations")
+        except (network_utils.DeadNodeError, network_utils.UnreachableNodeError) as e:
             self.peer_node_list = e.summary.reachable_nodes
             all_nodes_reachable = False
             error_msg = str(e)

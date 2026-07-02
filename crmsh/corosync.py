@@ -11,7 +11,7 @@ import re
 import typing
 from io import StringIO
 
-from . import utils, sh, cibquery
+from . import utils, network_utils, sh, cibquery
 from . import tmpfiles
 from . import parallax
 from . import log
@@ -275,8 +275,8 @@ def find_configured_ip(ip_list):
     # all_possible_ip is a ip set to check whether one of them already configured
     all_possible_ip = set(ip_list)
     # get local ip list
-    is_ipv6 = utils.IP.is_ipv6(ip_list[0])
-    local_ip_list = utils.InterfacesInfo.get_local_ip_list(is_ipv6)
+    is_ipv6 = network_utils.IP.is_ipv6(ip_list[0])
+    local_ip_list = network_utils.InterfacesInfo.get_local_ip_list(is_ipv6)
     # extend all_possible_ip if ip_list contain local ip
     # to avoid this scenarios in join node:
     #   eth0's ip already configured in corosync.conf
@@ -800,7 +800,7 @@ class LinkManager:
             a reference to in/out arg `config`
         """
         existing_addr_node_map = {
-            utils.IP(node.addr).ip_address: node.nodeid
+            network_utils.IP(node.addr).ip_address: node.nodeid
             for link in links if link is not None
                 for node in link.nodes
             if node.addr != ''
@@ -809,10 +809,10 @@ class LinkManager:
             found = next((node for node in links[linknumber].nodes if node.nodeid == nodeid), None)
             if found is None:
                 raise ValueError(f'Unknown nodeid {nodeid}.')
-            canonical_addr = utils.IP(addr).ip_address
+            canonical_addr = network_utils.IP(addr).ip_address
             if (
                     found.addr == ''    # adding a new addr
-                    or utils.IP(found.addr).ip_address != canonical_addr    # updating a addr and the new value is not the same as the old value
+                    or network_utils.IP(found.addr).ip_address != canonical_addr    # updating a addr and the new value is not the same as the old value
             ):
                 # need to change uniqueness
                 existing = existing_addr_node_map.get(canonical_addr, None)

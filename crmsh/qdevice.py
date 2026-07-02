@@ -10,7 +10,7 @@ from enum import Enum
 
 import crmsh.parallax
 from . import sh, iproute2
-from . import utils
+from . import utils, network_utils
 from . import parallax
 from . import corosync
 from . import xmlutil
@@ -190,7 +190,7 @@ class QDevice(object):
 
     @staticmethod
     def check_qnetd_addr(qnetd_addr):
-        utils.ssh_port_reachable_check(qnetd_addr)
+        network_utils.ssh_port_reachable_check(qnetd_addr)
         try:
             qnetd_ip_addresses = [
                 ipaddress.ip_address(sockaddr[0])
@@ -212,7 +212,7 @@ class QDevice(object):
 
     @staticmethod
     def check_qnetd_port(qnetd_port):
-        if qnetd_port and not utils.valid_port(qnetd_port):
+        if qnetd_port and not network_utils.valid_port(qnetd_port):
             raise ValueError("invalid qnetd port range(1024 - 65535)")
 
     @staticmethod
@@ -258,7 +258,7 @@ class QDevice(object):
         Validate qdevice related options
         """
         if self.is_stage:
-            utils.check_all_nodes_reachable("setup Qdevice")
+            network_utils.check_all_nodes_reachable("setup Qdevice")
         self.check_corosync_qdevice_available()
         self.check_qnetd_addr(self.qnetd_addr)
         self.check_qnetd_port(self.port)
@@ -593,7 +593,7 @@ class QDevice(object):
 
         if not ServiceManager().service_is_active("firewalld.service", self.qnetd_addr):
             return
-        if utils.check_port_open(self.qnetd_addr, self.port):
+        if network_utils.check_port_open(self.qnetd_addr, self.port):
             return
         shell = sh.cluster_shell()
         cmd = f"firewall-cmd --add-port={self.port}/tcp --permanent"

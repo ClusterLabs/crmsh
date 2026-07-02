@@ -6,7 +6,7 @@ import os
 from crmsh import sbd
 from crmsh import watchdog
 from crmsh import command
-from crmsh import utils
+from crmsh import utils, network_utils
 from crmsh import bootstrap
 from crmsh import completers
 from crmsh import sh
@@ -156,7 +156,7 @@ class SBD(command.UI):
         self.service_manager = ServiceManager()
         self.cluster_shell = sh.cluster_shell()
         self.cluster_nodes = utils.list_cluster_nodes() or [utils.this_node()]
-        self.cluster_nodes = utils.get_reachable_node_list(self.cluster_nodes)
+        self.cluster_nodes = network_utils.get_reachable_node_list(self.cluster_nodes)
 
     def requires(self) -> bool:
         '''
@@ -527,7 +527,7 @@ class SBD(command.UI):
             if len(args) < 2:
                 raise self.SyntaxError("No device specified")
 
-            utils.check_all_nodes_reachable("configuring SBD device")
+            network_utils.check_all_nodes_reachable("configuring SBD device")
 
             logger.info("Configured sbd devices: %s", ';'.join(self.device_list_from_config))
             if len(args) == 2 and ";" in args[1]:
@@ -562,7 +562,7 @@ class SBD(command.UI):
                 if not self._service_is_active(service):
                     return False
 
-            utils.check_all_nodes_reachable("configuring SBD")
+            network_utils.check_all_nodes_reachable("configuring SBD")
 
             parameter_dict = self._parse_args(args)
             if sbd.SBDUtils.is_using_disk_based_sbd():
@@ -632,7 +632,7 @@ class SBD(command.UI):
                 return False
 
         msg = "purging SBD crashdump" if purge_crashdump else "purging SBD"
-        utils.check_all_nodes_reachable(msg)
+        network_utils.check_all_nodes_reachable(msg)
         if purge_crashdump:
             self._purge_crashdump()
         else:

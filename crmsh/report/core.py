@@ -19,7 +19,7 @@ from typing import List
 import crmsh.sh
 import crmsh.report.sh
 import crmsh.user_of_host
-from crmsh import utils as crmutils, userdir
+from crmsh import utils as crmutils, network_utils, userdir
 from crmsh import constants as crmconstants
 from crmsh import config, log, tmpfiles, ui_cluster
 from crmsh.sh import ShellUtils
@@ -352,7 +352,7 @@ def process_node_list(context: Context) -> None:
         if not context.node_list:
             raise utils.ReportGenericError("Could not figure out a list of nodes; is this a cluster node?")
 
-    context.node_list = crmutils.get_reachable_node_list(context.node_list)
+    context.node_list = network_utils.get_reachable_node_list(context.node_list)
 
 
 def process_arguments(context: Context) -> None:
