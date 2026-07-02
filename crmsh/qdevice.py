@@ -258,7 +258,7 @@ class QDevice(object):
         Validate qdevice related options
         """
         if self.is_stage:
-            network_utils.check_all_nodes_reachable("setup Qdevice")
+            utils.check_all_nodes_reachable("setup Qdevice")
         self.check_corosync_qdevice_available()
         self.check_qnetd_addr(self.qnetd_addr)
         self.check_qnetd_port(self.port)

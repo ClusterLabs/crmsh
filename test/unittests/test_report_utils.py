@@ -782,7 +782,7 @@ pacemaker-schedulerd[5677]:  error: Resource"""
         self.assertEqual('\n'.join(res), expected_data)
 
     def test_findln_by_timestamp_1(self):
-        pacemaker_file_path = "pacemaker.log.2"
+        pacemaker_file_path = os.path.join(os.path.dirname(__file__), "pacemaker.log.2")
         with open(pacemaker_file_path) as f:
             data = f.read()
         data_list = data.split('\n')

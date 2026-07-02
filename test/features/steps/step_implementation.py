@@ -10,7 +10,6 @@ from behave import given, when, then
 import behave_agent
 from crmsh import corosync, userdir, bootstrap
 from crmsh import utils as crmutils
-from crmsh import network_utils as crmnetutils
 from crmsh import xmlutil
 from crmsh import sbd
 from crmsh import ui_configure

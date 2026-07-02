@@ -2164,6 +2164,103 @@ def get_quorum_votes_dict(remote=None):
     return dict(re.findall(r"(Expected|Total) votes:\s+(\d+)", out))
 
 
+@dataclass
+class ReachabilitySummary:
+    dead_nodes: list[str] # offline and unreachable nodes
+    nodes_unreachable: list[str]
+    nodes_need_password: list[str]
+    reachable_nodes: list[str]
+
+
+class DeadNodeError(ValueError):
+    def __init__(self, msg: str, summary: ReachabilitySummary = None):
+        super().__init__(msg)
+        self.summary = summary
+
+
+class UnreachableNodeError(ValueError):
+    def __init__(self, msg: str, summary: ReachabilitySummary = None):
+        super().__init__(msg)
+        self.summary = summary
+
+
+def check_all_nodes_reachable(
+    action_to_do: str,
+    peer_node: str = None,
+    check_passwd: bool = True
+) -> ReachabilitySummary:
+    crm_mon_inst = xmlutil.CrmMonXmlParser(peer_node)
+    if crm_mon_inst.not_connected():
+        try:
+            nodes_to_check = list_cluster_nodes_except_me()
+            offline_nodes = list_cluster_nodes_except_me()
+        except ValueError:
+            nodes_to_check = []
+            offline_nodes = []
+    else:
+        nodes_to_check = crm_mon_inst.get_node_list(online=True, node_type="member")
+        offline_nodes = crm_mon_inst.get_node_list(online=False)
+
+    dead_nodes = []
+    for node in offline_nodes:
+        try:
+            network_utils.ssh_port_reachable_check(node)
+        except ValueError:
+            dead_nodes.append(node)
+
+    nodes_unreachable = []
+    nodes_need_password = []
+    reachable_nodes = []
+    me = this_node()
+
+    for node in nodes_to_check:
+        if node == me:
+            continue
+
+        try:
+            network_utils.ssh_port_reachable_check(node)
+        except ValueError:
+            nodes_unreachable.append(node)
+            continue
+
+        if check_passwd:
+            local_user, remote_user = crmsh.user_of_host.UserOfHost.instance().user_pair_for_ssh(node)
+            if network_utils.check_ssh_passwd_need(local_user, remote_user, node):
+                nodes_need_password.append(node)
+                continue
+
+        reachable_nodes.append(node)
+
+    summary = ReachabilitySummary(
+        dead_nodes=dead_nodes,
+        nodes_unreachable=nodes_unreachable,
+        nodes_need_password=nodes_need_password,
+        reachable_nodes=reachable_nodes
+    )
+
+    if dead_nodes:
+        msg = (
+            f"There are offline nodes also unreachable: {', '.join(dead_nodes)}.\n"
+            f"Please bring them online before {action_to_do}.\n"
+            f"Or use `crm cluster remove <offline_node> --force` to remove the offline node."
+        )
+        raise DeadNodeError(msg, summary)
+    if nodes_unreachable:
+        msg = (
+            f"There are nodes whose SSH ports are unreachable: {', '.join(nodes_unreachable)}.\n"
+            f"Please check the network connectivity before {action_to_do}."
+        )
+        raise UnreachableNodeError(msg, summary)
+    if nodes_need_password:
+        msg = (
+            f"There are nodes which requires a password for SSH access: {', '.join(nodes_need_password)}.\n"
+            f"Please setup passwordless SSH access before {action_to_do}."
+        )
+        raise UnreachableNodeError(msg, summary)
+
+    return summary
+
+
 def re_split_string(reg, string):
     """
     Split a string by a regrex, filter out empty items

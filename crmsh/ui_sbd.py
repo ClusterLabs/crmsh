@@ -527,7 +527,7 @@ class SBD(command.UI):
             if len(args) < 2:
                 raise self.SyntaxError("No device specified")
 
-            network_utils.check_all_nodes_reachable("configuring SBD device")
+            utils.check_all_nodes_reachable("configuring SBD device")
 
             logger.info("Configured sbd devices: %s", ';'.join(self.device_list_from_config))
             if len(args) == 2 and ";" in args[1]:
@@ -562,7 +562,7 @@ class SBD(command.UI):
                 if not self._service_is_active(service):
                     return False
 
-            network_utils.check_all_nodes_reachable("configuring SBD")
+            utils.check_all_nodes_reachable("configuring SBD")
 
             parameter_dict = self._parse_args(args)
             if sbd.SBDUtils.is_using_disk_based_sbd():
@@ -632,7 +632,7 @@ class SBD(command.UI):
                 return False
 
         msg = "purging SBD crashdump" if purge_crashdump else "purging SBD"
-        network_utils.check_all_nodes_reachable(msg)
+        utils.check_all_nodes_reachable(msg)
         if purge_crashdump:
             self._purge_crashdump()
         else:
