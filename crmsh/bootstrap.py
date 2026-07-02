@@ -12,7 +12,6 @@
 import codecs
 import dataclasses
 import io
-import json
 import logging
 import os
 import subprocess
@@ -41,7 +40,6 @@ from . import corosync
 from . import tmpfiles
 from . import lock
 from . import userdir
-from . import iproute2
 from .constants import QDEVICE_HELP_INFO, FENCING_TIMEOUT_DEFAULT,\
         REJOIN_COUNT, REJOIN_INTERVAL, PCMK_DELAY_MAX, CSYNC2_SERVICE, WAIT_TIMEOUT_MS_DEFAULT
 from . import cluster_fs
@@ -1229,69 +1227,7 @@ def generate_pacemaker_remote_auth():
     utils.chmod(PCMK_REMOTE_AUTH, 0o640)
 
 
-class FirewallManager:
-
-    SERVICE_NAME = "high-availability"
-
-    def __init__(self, peer=None):
-        self.shell = None
-        self.peer = peer
-        self.firewalld_running = False
-        self.firewall_cmd = None
-        self.firewall_cmd_permanent_option = ""
-        self.peer_msg = ""
-        self.firewalld_installed = utils.package_is_installed("firewalld", self.peer)
-
-        if self.firewalld_installed:
-            self.shell = sh.cluster_shell()
-            rc, _, _ = self.shell.get_rc_stdout_stderr_without_input(self.peer, "firewall-cmd --state")
-            self.firewalld_running = rc == 0
-            self.firewall_cmd = "firewall-cmd" if self.firewalld_running else "firewall-offline-cmd"
-            self.firewall_cmd_permanent_option = " --permanent" if self.firewalld_running else ""
-            self.peer_msg = f"on {self.peer}" if self.peer else f"on {utils.this_node()}"
-
-    def _service_is_available(self) -> bool:
-        cmd = f"{self.firewall_cmd} --info-service={self.SERVICE_NAME}"
-        rc, _, _ = self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
-        if rc != 0:
-            logger.warning("Firewalld service %s is not available %s", self.SERVICE_NAME, self.peer_msg)
-            return False
-        return True
-
-    def add_service(self):
-        if not self.firewalld_installed or not self._service_is_available():
-            return
-        cmd = f"{self.firewall_cmd}{self.firewall_cmd_permanent_option} --add-service={self.SERVICE_NAME}"
-        rc, _, err = self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
-        if rc != 0:
-            logger.error("Failed to add firewalld service %s %s: %s", self.SERVICE_NAME, self.peer_msg, err)
-            return
-        if self.firewalld_running:
-            cmd = f"{self.firewall_cmd} --add-service={self.SERVICE_NAME}"
-            self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
-        logger.info("Added firewalld service %s %s", self.SERVICE_NAME, self.peer_msg)
-
-    def remove_service(self):
-        if not self.firewalld_installed or not self._service_is_available():
-            return
-        cmd = f"{self.firewall_cmd}{self.firewall_cmd_permanent_option} --remove-service={self.SERVICE_NAME}"
-        rc, _, err = self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
-        if rc != 0:
-            logger.error("Failed to remove firewalld service %s %s: %s", self.SERVICE_NAME, self.peer_msg, err)
-            return
-        if self.firewalld_running:
-            cmd = f"{self.firewall_cmd} --remove-service={self.SERVICE_NAME}"
-            self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
-        logger.info("Removed firewalld service %s %s", self.SERVICE_NAME, self.peer_msg)
-
-    @classmethod
-    def firewalld_stage_finished(cls) -> bool:
-        inst = cls()
-        if not inst.firewalld_installed or not inst._service_is_available():
-            return True
-        cmd = f"{inst.firewall_cmd} --list-services"
-        _, outp, _ = inst.shell.get_rc_stdout_stderr_without_input(None, cmd)
-        return inst.SERVICE_NAME in outp.split()
+FirewallManager = network_utils.FirewallManager
 
 
 def init_firewalld():
@@ -1306,86 +1242,22 @@ def join_firewalld(*_):
     FirewallManager().add_service()
 
 
-class Validation(object):
+class Validation(network_utils.BootstrapValidation):
     """
-    Class to validate values from interactive inputs
+    Bootstrap-specific adapters for network value validation.
     """
-
-    def __init__(self, value, prev_value_list=[]):
-        """
-        Init function
-        """
-        self.value = value
-        self.prev_value_list = prev_value_list
-        if self.value in self.prev_value_list:
-            raise ValueError("Already in use: {}".format(self.value))
-
-    def _is_mcast_addr(self):
-        """
-        Check whether the address is multicast address
-        """
-        if not network_utils.IP.is_mcast(self.value):
-            raise ValueError("{} is not multicast address".format(self.value))
-
-    def _is_local_addr(self, local_addr_list):
-        """
-        Check whether the address is in local
-        """
-        if self.value not in local_addr_list:
-            raise ValueError("Address must be a local address (one of {})".format(local_addr_list))
-
-    def _is_valid_port(self):
-        """
-        Check whether the port is valid
-        """
-        if self.prev_value_list and abs(int(self.value) - int(self.prev_value_list[0])) <= 1:
-            raise ValueError("Port {} is already in use by corosync. Leave a gap between multiple rings.".format(self.value))
-        if int(self.value) <= 1024 or int(self.value) > 65535:
-            raise ValueError("Valid port range should be 1025-65535")
-
-    @classmethod
-    def valid_mcast_address(cls, addr, prev_value_list=[]):
-        """
-        Check whether the address is already in use and whether the address is for multicast
-        """
-        cls_inst = cls(addr, prev_value_list)
-        cls_inst._is_mcast_addr()
 
     @classmethod
     def valid_ucast_ip(cls, addr, prev_value_list=[]):
-        """
-        Check whether the address is already in use and whether the address exists on local
-        """
-        cls_inst = cls(addr, prev_value_list)
-        cls_inst._is_local_addr(_context.interfaces_inst.ip_list)
+        super().valid_ucast_ip(addr, _context.interfaces_inst.ip_list, prev_value_list)
 
     @classmethod
     def valid_mcast_ip(cls, addr, prev_value_list=[]):
-        """
-        Check whether the address is already in use and whether the address exists on local address and network
-        """
-        cls_inst = cls(addr, prev_value_list)
-        cls_inst._is_local_addr(_context.interfaces_inst.ip_list + _context.interfaces_inst.network_list)
-
-    @classmethod
-    def valid_port(cls, port, prev_value_list=[]):
-        """
-        Check whether the port is valid
-        """
-        cls_inst = cls(port, prev_value_list)
-        cls_inst._is_valid_port()
+        super().valid_mcast_ip(addr, _context.interfaces_inst.ip_list, _context.interfaces_inst.network_list, prev_value_list)
 
     @staticmethod
     def valid_admin_ip(addr, prev_value_list=[]):
-        """
-        Validate admin IP address
-        """
-        ipv6 = network_utils.IP.is_ipv6(addr)
-
-        # Check whether this IP already configured in cluster
-        ping_cmd = "ping6" if ipv6 else "ping"
-        if invokerc("{} -c 1 {}".format(ping_cmd, addr)):
-            raise ValueError("Address already in use: {}".format(addr))
+        network_utils.BootstrapValidation.valid_admin_ip(addr, invokerc, prev_value_list)
 
 
 def adjust_corosync_parameters_according_to_profiles():
@@ -2160,26 +2032,6 @@ def adjust_priority_fencing_delay(is_2node_wo_qdevice):
         utils.set_property("priority-fencing-delay", 0)
 
 
-def get_cluster_node_ips(node: str) -> list[str]:
-    """
-    Get all IP addresses of the target node remotely.
-    If it fails, fall back to utils.get_iplist_from_name(node).
-    """
-    rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(node, "ip -j addr show")
-    if rc == 0:
-        try:
-            addr_info = iproute2.IPAddr(json.loads(out))
-            ips = []
-            for iface in addr_info.interfaces():
-                for addr in iface.addr_info:
-                    ips.append(str(addr.ip))
-            return ips
-        except Exception as e:
-            logger.warning("Failed to parse ip output from node {}: {}".format(node, e))
-
-    return utils.get_iplist_from_name(node)
-
-
 def stop_and_disable_services(remote_addr=None):
     """
     Stop and disable cluster related service
@@ -2245,7 +2097,7 @@ def remove_node_from_cluster(node, dead_node=False):
         elif nodeid and corosync.del_node_by_nodeid(nodeid):
             pass
         else:
-            node_ips = get_cluster_node_ips(node)
+            node_ips = network_utils.get_cluster_node_ips(node)
             node_ips.append(node)
             if not corosync.del_node(node_ips):
                 utils.fatal("Failed to remove node {} from corosync configuration".format(node))

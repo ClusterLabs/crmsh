@@ -1,4 +1,5 @@
 import ipaddress
+import json
 import logging
 import os
 import re
@@ -9,11 +10,21 @@ import typing
 from dataclasses import dataclass
 
 import crmsh.user_of_host
-from . import config, constants, sh, xmlutil
+from . import config, constants, sh
+from . import iproute2
 from .sh import ShellUtils
 
 
 logger = logging.getLogger(__name__)
+
+
+class _XmlUtilProxy:
+    def __getattr__(self, name):
+        from . import xmlutil
+        return getattr(xmlutil, name)
+
+
+xmlutil = _XmlUtilProxy()
 
 
 class NoSSHError(Exception):
@@ -347,6 +358,147 @@ class InterfacesInfo(object):
         return res.group(1) if res else self.nic_list[0]
 
 
+class BootstrapValidation(object):
+    """
+    Validate network values used by bootstrap interactive inputs.
+    """
+
+    def __init__(self, value, prev_value_list=[]):
+        self.value = value
+        self.prev_value_list = prev_value_list
+        if self.value in self.prev_value_list:
+            raise ValueError("Already in use: {}".format(self.value))
+
+    def _is_mcast_addr(self):
+        if not IP.is_mcast(self.value):
+            raise ValueError("{} is not multicast address".format(self.value))
+
+    def _is_local_addr(self, local_addr_list):
+        if self.value not in local_addr_list:
+            raise ValueError("Address must be a local address (one of {})".format(local_addr_list))
+
+    def _is_valid_port(self):
+        if self.prev_value_list and abs(int(self.value) - int(self.prev_value_list[0])) <= 1:
+            raise ValueError("Port {} is already in use by corosync. Leave a gap between multiple rings.".format(self.value))
+        if int(self.value) <= 1024 or int(self.value) > 65535:
+            raise ValueError("Valid port range should be 1025-65535")
+
+    @classmethod
+    def valid_mcast_address(cls, addr, prev_value_list=[]):
+        cls_inst = cls(addr, prev_value_list)
+        cls_inst._is_mcast_addr()
+
+    @classmethod
+    def valid_ucast_ip(cls, addr, local_addr_list, prev_value_list=[]):
+        cls_inst = cls(addr, prev_value_list)
+        cls_inst._is_local_addr(local_addr_list)
+
+    @classmethod
+    def valid_mcast_ip(cls, addr, local_addr_list, network_list, prev_value_list=[]):
+        cls_inst = cls(addr, prev_value_list)
+        cls_inst._is_local_addr(local_addr_list + network_list)
+
+    @classmethod
+    def valid_port(cls, port, prev_value_list=[]):
+        cls_inst = cls(port, prev_value_list)
+        cls_inst._is_valid_port()
+
+    @staticmethod
+    def valid_admin_ip(addr, invoker, prev_value_list=[]):
+        ipv6 = IP.is_ipv6(addr)
+        ping_cmd = "ping6" if ipv6 else "ping"
+        if invoker("{} -c 1 {}".format(ping_cmd, addr)):
+            raise ValueError("Address already in use: {}".format(addr))
+
+
+def get_cluster_node_ips(node: str) -> list[str]:
+    """
+    Get all IP addresses of the target node remotely.
+    If it fails, fall back to utils.get_iplist_from_name(node).
+    """
+    rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(node, "ip -j addr show")
+    if rc == 0:
+        try:
+            addr_info = iproute2.IPAddr(json.loads(out))
+            ips = []
+            for iface in addr_info.interfaces():
+                for addr in iface.addr_info:
+                    ips.append(str(addr.ip))
+            return ips
+        except Exception as e:
+            logger.warning("Failed to parse ip output from node {}: {}".format(node, e))
+
+    from . import utils
+    return utils.get_iplist_from_name(node)
+
+
+class FirewallManager:
+
+    SERVICE_NAME = "high-availability"
+
+    def __init__(self, peer=None):
+        from . import utils
+
+        self.shell = None
+        self.peer = peer
+        self.firewalld_running = False
+        self.firewall_cmd = None
+        self.firewall_cmd_permanent_option = ""
+        self.peer_msg = ""
+        self.firewalld_installed = utils.package_is_installed("firewalld", self.peer)
+
+        if self.firewalld_installed:
+            self.shell = sh.cluster_shell()
+            rc, _, _ = self.shell.get_rc_stdout_stderr_without_input(self.peer, "firewall-cmd --state")
+            self.firewalld_running = rc == 0
+            self.firewall_cmd = "firewall-cmd" if self.firewalld_running else "firewall-offline-cmd"
+            self.firewall_cmd_permanent_option = " --permanent" if self.firewalld_running else ""
+            self.peer_msg = f"on {self.peer}" if self.peer else f"on {utils.this_node()}"
+
+    def _service_is_available(self) -> bool:
+        cmd = f"{self.firewall_cmd} --info-service={self.SERVICE_NAME}"
+        rc, _, _ = self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        if rc != 0:
+            logger.warning("Firewalld service %s is not available %s", self.SERVICE_NAME, self.peer_msg)
+            return False
+        return True
+
+    def add_service(self):
+        if not self.firewalld_installed or not self._service_is_available():
+            return
+        cmd = f"{self.firewall_cmd}{self.firewall_cmd_permanent_option} --add-service={self.SERVICE_NAME}"
+        rc, _, err = self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        if rc != 0:
+            logger.error("Failed to add firewalld service %s %s: %s", self.SERVICE_NAME, self.peer_msg, err)
+            return
+        if self.firewalld_running:
+            cmd = f"{self.firewall_cmd} --add-service={self.SERVICE_NAME}"
+            self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        logger.info("Added firewalld service %s %s", self.SERVICE_NAME, self.peer_msg)
+
+    def remove_service(self):
+        if not self.firewalld_installed or not self._service_is_available():
+            return
+        cmd = f"{self.firewall_cmd}{self.firewall_cmd_permanent_option} --remove-service={self.SERVICE_NAME}"
+        rc, _, err = self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        if rc != 0:
+            logger.error("Failed to remove firewalld service %s %s: %s", self.SERVICE_NAME, self.peer_msg, err)
+            return
+        if self.firewalld_running:
+            cmd = f"{self.firewall_cmd} --remove-service={self.SERVICE_NAME}"
+            self.shell.get_rc_stdout_stderr_without_input(self.peer, cmd)
+        logger.info("Removed firewalld service %s %s", self.SERVICE_NAME, self.peer_msg)
+
+    @classmethod
+    def firewalld_stage_finished(cls) -> bool:
+        inst = cls()
+        if not inst.firewalld_installed or not inst._service_is_available():
+            return True
+        cmd = f"{inst.firewall_cmd} --list-services"
+        _, outp, _ = inst.shell.get_rc_stdout_stderr_without_input(None, cmd)
+        return inst.SERVICE_NAME in outp.split()
+
+
 def ssh_command():
     """
     Wrapper function for ssh command
@@ -481,4 +633,3 @@ def check_all_nodes_reachable(
         raise UnreachableNodeError(msg, summary)
 
     return summary
-
