@@ -113,7 +113,7 @@ def ra_meta(ra_class, ra_type, ra_provider):
 
 @functools.cache
 def get_fenced_meta():
-    return RAInfo(utils.pacemaker_fenced(), "metadata")
+    return RAInfo("pacemaker-fenced", "metadata")
 
 
 @functools.cache
@@ -169,12 +169,10 @@ def prog_meta(prog):
     '''
     Do external program metadata.
     '''
-    prog = utils.pacemaker_daemon(prog)
-    if prog:
-        rc, l = utils.stdout2list("%s metadata" % prog)
-        if rc == 0:
-            return l
-        logger.debug("%s metadata exited with code %d", prog, rc)
+    rc, l = utils.stdout2list(f"{prog} metadata")
+    if rc == 0:
+        return l
+    logger.debug("%s metadata exited with code %d", prog, rc)
     return []
 
 
