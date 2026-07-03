@@ -6,7 +6,7 @@ import os
 from crmsh import sbd
 from crmsh import watchdog
 from crmsh import command
-from crmsh import utils
+from crmsh import utils, network_utils
 from crmsh import bootstrap
 from crmsh import completers
 from crmsh import sh
@@ -156,7 +156,7 @@ class SBD(command.UI):
         self.service_manager = ServiceManager()
         self.cluster_shell = sh.cluster_shell()
         self.cluster_nodes = utils.list_cluster_nodes() or [utils.this_node()]
-        self.cluster_nodes = utils.get_reachable_node_list(self.cluster_nodes)
+        self.cluster_nodes = network_utils.get_reachable_node_list(self.cluster_nodes)
 
     def requires(self) -> bool:
         '''

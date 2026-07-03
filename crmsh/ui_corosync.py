@@ -14,7 +14,7 @@ import shutil
 
 from . import command, sh, parallax, iproute2
 from . import completers
-from . import utils
+from . import utils, network_utils
 from . import corosync
 from . import log
 from . import constants
@@ -106,7 +106,7 @@ class LinkArgumentParser:
         match args[i].split('=', 2):
             case [name, addr]:
                 try:
-                    utils.IP(addr).ip_address
+                    network_utils.IP(addr).ip_address
                     return name, addr
                 except ValueError:
                     raise LinkArgumentParser.SyntaxException(f'invalid node address: {addr}')

@@ -186,7 +186,7 @@ class TestQDevice(unittest.TestCase):
         self.assertEqual(res, "/etc/corosync/qdevice/net/nssdb/qdevice-net-node.p12")
 
     @mock.patch('crmsh.sh.LocalShell')
-    @mock.patch('crmsh.utils.ssh_port_reachable_check')
+    @mock.patch('crmsh.network_utils.ssh_port_reachable_check')
     @mock.patch('socket.getaddrinfo')
     def test_check_qnetd_addr_local(self, mock_getaddrinfo, mock_reachable, mock_shell):
         mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, '', ("10.10.10.123", 0)),]
@@ -202,7 +202,7 @@ class TestQDevice(unittest.TestCase):
         excepted_err_string = "host for qnetd must be a remote one"
         self.assertEqual(excepted_err_string, str(err.exception))
 
-    @mock.patch('crmsh.utils.ssh_port_reachable_check')
+    @mock.patch('crmsh.network_utils.ssh_port_reachable_check')
     @mock.patch('socket.getaddrinfo')
     def test_check_qnetd_addr(self, mock_getaddrinfo, mock_reachable):
         mock_getaddrinfo.side_effect = socket.error("getaddrinfo failed")
@@ -212,7 +212,7 @@ class TestQDevice(unittest.TestCase):
         self.assertEqual(excepted_err_string, str(err.exception))
 
     @mock.patch('crmsh.sh.LocalShell')
-    @mock.patch('crmsh.utils.ssh_port_reachable_check')
+    @mock.patch('crmsh.network_utils.ssh_port_reachable_check')
     @mock.patch('socket.getaddrinfo')
     def test_check_qnetd_addr_success(self, mock_getaddrinfo, mock_reachable, mock_shell):
         mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, '', ("10.10.10.124", 0)),]
@@ -225,7 +225,7 @@ class TestQDevice(unittest.TestCase):
         ])
         qdevice.QDevice.check_qnetd_addr("qnetd-node")
 
-    @mock.patch('crmsh.utils.valid_port')
+    @mock.patch('crmsh.network_utils.valid_port')
     def test_check_qnetd_port(self, mock_port):
         mock_port.return_value = False
         with self.assertRaises(ValueError) as err:
@@ -681,7 +681,7 @@ Membership information
         self.qdevice_with_stage_cluster_name.certificate_process_on_init.assert_called_once_with()
         mock_sync_path.assert_called_once_with("/etc/corosync/corosync.conf")
     
-    @mock.patch('crmsh.utils.check_port_open')
+    @mock.patch('crmsh.network_utils.check_port_open')
     @mock.patch('crmsh.qdevice.ServiceManager')
     def test_config_qnetd_port_no_firewall(self, mock_service, mock_check_port):
         mock_service_instance = mock.Mock()
@@ -696,7 +696,7 @@ Membership information
 
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sh.cluster_shell')
-    @mock.patch('crmsh.utils.check_port_open')
+    @mock.patch('crmsh.network_utils.check_port_open')
     @mock.patch('crmsh.qdevice.ServiceManager')
     def test_config_qnetd_port(self, mock_service, mock_check_port, mock_cluster_shell, mock_info):
         mock_service_instance = mock.Mock()

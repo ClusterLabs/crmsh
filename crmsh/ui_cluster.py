@@ -17,6 +17,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import crmsh.parallax
 from . import command, sh, healthcheck, migration, storage_utils
 from . import utils
+from . import network_utils
 from . import scripts
 from . import completers as compl
 from . import bootstrap
@@ -170,7 +171,7 @@ class Cluster(command.UI):
         '''
         try:
             node_list, _ = ui_utils.parse_and_validate_node_args("start", *args)
-        except utils.NoSSHError as msg:
+        except network_utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster start' on each node")
             return False
@@ -258,7 +259,7 @@ class Cluster(command.UI):
         '''
         try:
             node_list, _ = ui_utils.parse_and_validate_node_args("stop", *args)
-        except utils.NoSSHError as msg:
+        except network_utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster stop' on each node")
             return False

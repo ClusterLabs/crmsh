@@ -12,6 +12,7 @@ from . import constants
 from . import clidisplay
 from . import term
 from . import utils
+from . import network_utils
 from . import userdir
 
 from . import ui_root
@@ -382,7 +383,7 @@ def run():
             return profile_run(context, user_args)
         else:
             return main_input_loop(context, user_args)
-    except utils.NoSSHError as msg:
+    except network_utils.NoSSHError as msg:
         logger.error('%s', msg)
         sys.exit(1)
     except KeyboardInterrupt:
