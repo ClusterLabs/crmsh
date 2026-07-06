@@ -2376,6 +2376,8 @@ property from them.
 
 The node parameter defaults to the node where the command is run.
 
+To restore the node from maintenance mode, use the `ready` command.
+
 Usage:
 ...............
 maintenance [<node>]

@@ -182,7 +182,9 @@ If --all is specified, {action} on all nodes."""
 \n\nAdditionally, you may specify a lifetime for the standby---if set to
 "reboot", the node will be back online once it reboots. "forever" will
 keep the node in standby after reboot. The life time defaults to
-"forever"."""
+"forever".
+
+To restore the node from standby mode, use the `online` command."""
         addtion_usage = " [lifetime]"
 
     parser = ArgumentParser(

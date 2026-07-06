@@ -365,8 +365,8 @@ class NodeMgmt(command.UI):
                     xmlutil.rmnodes(item_to_del)
                 # If the standby nvpair already exists, set and continue
                 item = cib.xpath(xml_query_path.format(node_id=node_id))
-                if item and item[0].get("value") != "on":
-                    item[0].set("value", "on")
+                if item and item[0].get("value") not in ("true", "on"):
+                    item[0].set("value", "true")
                     continue
                 # Create standby nvpair
                 interface_item = xml_item
@@ -374,13 +374,14 @@ class NodeMgmt(command.UI):
                     res_item = xmlutil.get_set_nodes(xml_item, "transient_attributes", create=True)
                     interface_item = res_item[0]
                 res_item = xmlutil.get_set_nodes(interface_item, "instance_attributes", create=True)
-                xmlutil.set_attr(res_item[0], "standby", "on")
+                xmlutil.set_attr(res_item[0], "standby", "true")
 
         rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
         if not rc:
             return False
         for node in node_list:
             logger.info("standby node %s", node)
+        logger.info("To restore the node from standby mode, use the `online` command")
 
     @command.wait
     @command.completers(compl.standby_nodes)
@@ -405,8 +406,8 @@ class NodeMgmt(command.UI):
             node_id = utils.get_nodeid_from_name(node)
             for query_path in [constants.XML_NODE_QUERY_STANDBY_PATH, constants.XML_STATUS_QUERY_STANDBY_PATH]:
                 item = cib.xpath(query_path.format(node_id=node_id))
-                if item and item[0].get("value") != "off":
-                    item[0].set("value", "off")
+                if item and item[0].get("value") not in ("false", "off"):
+                    item[0].set("value", "false")
 
         rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
         if not rc:
@@ -422,7 +423,11 @@ class NodeMgmt(command.UI):
             node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
-        return self._commit_node_attr(context, node, "maintenance", "true")
+        rc = self._commit_node_attr(context, node, "maintenance", "true")
+        if rc:
+            logger.info("Node %s is now in maintenance mode", node)
+            logger.info("To restore the node from maintenance mode, use the `ready` command")
+        return rc
 
 
     @command.wait
@@ -433,7 +438,10 @@ class NodeMgmt(command.UI):
             node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
-        return utils.ext_cmd(self.node_maint % (node, "off")) == 0
+        rc = self._commit_node_attr(context, node, "maintenance", "false")
+        if rc:
+            logger.info("Node %s is now ready", node)
+        return rc
 
     @command.wait
     @command.completers(compl.nodes)
