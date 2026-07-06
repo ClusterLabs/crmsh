@@ -1,11 +1,13 @@
 import logging
 import unittest
+from io import StringIO
 try:
     from unittest import mock
 except ImportError:
     import mock
 
 from crmsh import ui_cluster
+from crmsh import corosync_healthcheck
 
 
 class TestCluster(unittest.TestCase):
@@ -179,3 +181,137 @@ class TestCluster(unittest.TestCase):
             mock.call("pacemaker.service", remote_addr="node1"),
             ])
         mock_info.assert_not_called()
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_links_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
+    def test_do_health_corosync_success(self, mock_mapping, mock_links, mock_quorum, mock_consistency, mock_validate, mock_nodes, mock_this_node):
+        mock_this_node.return_value = "node1"
+        mock_nodes.return_value = ["node1", "node2"]
+        mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", ["node1"], 0, None, None)
+        mock_consistency.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File Consistency", ["node1", "node2"], 0, None, None)
+        mock_quorum.return_value = corosync_healthcheck.CheckResult("Check Quorum Status", ["node1"], 0, None, None)
+        mock_links.return_value = corosync_healthcheck.CheckResult("Check Corosync Links Status", ["node1"], 0, None, None)
+        mock_mapping.return_value = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", ["node1"], 0, None, None)
+
+        res = self.ui_cluster_inst.do_health(None, "corosync")
+        self.assertTrue(res)
+
+        mock_this_node.assert_called_once()
+        mock_validate.assert_called_once_with("node1")
+        mock_consistency.assert_called_once_with(["node1", "node2"])
+        mock_quorum.assert_called_once_with("node1")
+        mock_links.assert_called_once_with("node1")
+        mock_mapping.assert_called_once_with("node1")
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_links_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
+    def test_do_health_corosync_local_fail(self, mock_mapping, mock_links, mock_quorum, mock_consistency, mock_validate, mock_nodes, mock_this_node):
+        mock_this_node.return_value = "node1"
+        mock_nodes.return_value = ["node1", "node2"]
+        mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", ["node1"], 1, "config file is invalid", "Fix it")
+
+        res = self.ui_cluster_inst.do_health(None, "corosync")
+        self.assertFalse(res)
+
+        mock_this_node.assert_called_once()
+        mock_validate.assert_called_once_with("node1")
+        mock_consistency.assert_not_called()
+        mock_quorum.assert_not_called()
+        mock_links.assert_not_called()
+        mock_mapping.assert_not_called()
+
+    @mock.patch('sys.stdout', new_callable=StringIO)
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_links_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
+    def test_do_health_corosync_json(self, mock_mapping, mock_links, mock_quorum, mock_consistency, mock_validate, mock_nodes, mock_this_node, mock_stdout):
+        mock_this_node.return_value = "node1"
+        mock_nodes.return_value = ["node1", "node2"]
+        mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", ["node1"], 0, None, None)
+        mock_consistency.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File Consistency", ["node1", "node2"], 1, "checksum error", None)
+        mock_quorum.return_value = corosync_healthcheck.CheckResult("Check Quorum Status", ["node1"], 0, None, None)
+        mock_links.return_value = corosync_healthcheck.CheckResult("Check Corosync Links Status", ["node1"], 0, None, None)
+        mock_mapping.return_value = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", ["node1"], 0, None, None)
+
+        res = self.ui_cluster_inst.do_health(None, "corosync", "--json")
+        self.assertFalse(res)
+
+        output = mock_stdout.getvalue()
+        import json
+        parsed = json.loads(output)
+        self.assertEqual(parsed["returncode"], 1)
+        self.assertEqual(len(parsed["results"]), 5)
+        self.assertEqual(parsed["results"][0]["check_name"], "Validate Corosync Configuration File")
+        self.assertEqual(parsed["results"][1]["returncode"], 1)
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_links_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
+    def test_do_health_corosync_local(self, mock_mapping, mock_links, mock_quorum, mock_consistency, mock_validate, mock_nodes, mock_this_node):
+        mock_this_node.return_value = "node1"
+        mock_nodes.return_value = ["node1", "node2"]
+        mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", ["node1"], 0, None, None)
+        mock_quorum.return_value = corosync_healthcheck.CheckResult("Check Quorum Status", ["node1"], 0, None, None)
+        mock_links.return_value = corosync_healthcheck.CheckResult("Check Corosync Links Status", ["node1"], 0, None, None)
+        mock_mapping.return_value = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", ["node1"], 0, None, None)
+
+        res = self.ui_cluster_inst.do_health(None, "corosync", "--local")
+        self.assertTrue(res)
+
+        mock_this_node.assert_called_once()
+        mock_validate.assert_called_once_with("node1")
+        mock_consistency.assert_not_called()
+        mock_quorum.assert_called_once_with("node1")
+        mock_links.assert_called_once_with("node1")
+        mock_mapping.assert_called_once_with("node1")
+
+    @mock.patch('sys.stdout', new_callable=StringIO)
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_links_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
+    def test_do_health_corosync_local_json(self, mock_mapping, mock_links, mock_quorum, mock_consistency, mock_validate, mock_nodes, mock_this_node, mock_stdout):
+        mock_this_node.return_value = "node1"
+        mock_nodes.return_value = ["node1", "node2"]
+        mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", ["node1"], 0, None, None)
+        mock_quorum.return_value = corosync_healthcheck.CheckResult("Check Quorum Status", ["node1"], 0, None, None)
+        mock_links.return_value = corosync_healthcheck.CheckResult("Check Corosync Links Status", ["node1"], 0, None, None)
+        mock_mapping.return_value = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", ["node1"], 0, None, None)
+
+        res = self.ui_cluster_inst.do_health(None, "corosync", "--local", "--json")
+        self.assertTrue(res)
+
+        mock_this_node.assert_called_once()
+        mock_validate.assert_called_once_with("node1")
+        mock_consistency.assert_not_called()
+        mock_quorum.assert_called_once_with("node1")
+        mock_links.assert_called_once_with("node1")
+        mock_mapping.assert_called_once_with("node1")
+
+        output = mock_stdout.getvalue()
+        import json
+        parsed = json.loads(output)
+        self.assertEqual(parsed["returncode"], 0)
+        self.assertEqual(len(parsed["results"]), 4)
+        self.assertEqual(parsed["results"][0]["check_name"], "Validate Corosync Configuration File")
