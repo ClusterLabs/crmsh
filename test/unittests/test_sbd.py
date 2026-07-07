@@ -359,6 +359,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check._check_fencing_enabled = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_check._check_sbd_delay_start_unset_dropin = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_check._check_sbd_service_is_enabled = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_sbd_pacemaker_in_sysconfig = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_check._get_current_terms = Mock(side_effect=self.fake_get_current_terms(self.instance_check))
 
         res = self.instance_check.check_and_fix()
@@ -410,6 +411,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix._check_fencing_enabled = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_delay_start_unset_dropin = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._check_sbd_service_is_enabled = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_fix._check_sbd_pacemaker_in_sysconfig = Mock(return_value=sbd.CheckResult.SUCCESS)
         self.instance_fix._get_current_terms = Mock(side_effect=self.fake_get_current_terms(self.instance_fix))
 
         res = self.instance_fix.check_and_fix()
@@ -675,6 +677,70 @@ class TestSBDConfigChecker(unittest.TestCase):
     def test_fix_sbd_delay_start_unset_dropin(self, mock_logger_info, mock_unset_sbd_delay_start):
         self.instance_check._fix_sbd_delay_start_unset_dropin()
         mock_logger_info.assert_called_once_with("Createing runtime drop-in file %s to unset SBD_DELAY_START", sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE)
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_check_sbd_pacemaker_in_sysconfig(self, mock_get_sbd_value_from_config):
+        for value in ("yes", "true"):
+            with self.subTest(value=value):
+                mock_get_sbd_value_from_config.side_effect = [None, value]
+                self.assertEqual(self.instance_check._check_sbd_pacemaker_in_sysconfig(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_check_sbd_pacemaker_in_sysconfig_warning(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.side_effect = [None, "no"]
+        self.instance_check._log_when_not_quiet = Mock()
+
+        self.assertEqual(self.instance_check._check_sbd_pacemaker_in_sysconfig(), sbd.CheckResult.WARNING)
+        self.instance_check._log_when_not_quiet.assert_any_call(
+            logging.WARNING,
+            "In %s, SBD_PACEMAKER is set to %s, please set it to yes or true",
+            sbd.SBDManager.SYSCONFIG_SBD, "no"
+        )
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_check_sbd_pacemaker_in_sysconfig_not_set(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.side_effect = [None, None]
+        self.assertEqual(self.instance_check._check_sbd_pacemaker_in_sysconfig(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_check_sbd_pacemaker_in_sysconfig_uppercase_warning(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.side_effect = [None, "YES"]
+        self.instance_check._log_when_not_quiet = Mock()
+        self.assertEqual(self.instance_check._check_sbd_pacemaker_in_sysconfig(), sbd.CheckResult.WARNING)
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_check_sbd_pacemaker_in_sysconfig_sbd_opts_p(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-S 1 -P"
+        self.assertEqual(self.instance_check._check_sbd_pacemaker_in_sysconfig(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_check_sbd_pacemaker_in_sysconfig_sbd_opts_pp(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-S 1 -PP"
+        self.instance_check._log_when_not_quiet = Mock()
+        self.assertEqual(self.instance_check._check_sbd_pacemaker_in_sysconfig(), sbd.CheckResult.WARNING)
+        self.instance_check._log_when_not_quiet.assert_any_call(
+            logging.WARNING,
+            "In %s, SBD_OPTS contains -PP, which disables SBD_PACEMAKER, please use -P to enable it",
+            sbd.SBDManager.SYSCONFIG_SBD
+        )
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    @patch('logging.Logger.info')
+    @patch('crmsh.sbd.SBDManager.update_sbd_configuration')
+    def test_fix_sbd_pacemaker_in_sysconfig(self, mock_update_sbd_configuration, mock_logger_info, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = None
+        self.instance_fix._fix_sbd_pacemaker_in_sysconfig()
+        mock_logger_info.assert_called_once_with("Setting SBD_PACEMAKER in %s to yes", sbd.SBDManager.SYSCONFIG_SBD)
+        mock_update_sbd_configuration.assert_called_once_with({"SBD_PACEMAKER": "yes"})
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    @patch('logging.Logger.info')
+    @patch('crmsh.sbd.SBDManager.update_sbd_configuration')
+    def test_fix_sbd_pacemaker_in_sysconfig_replace_pp(self, mock_update_sbd_configuration, mock_logger_info, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-S 1 -PP"
+        self.instance_fix._fix_sbd_pacemaker_in_sysconfig()
+        mock_logger_info.assert_called_once_with("Replacing -PP with -P in SBD_OPTS in %s", sbd.SBDManager.SYSCONFIG_SBD)
+        mock_update_sbd_configuration.assert_called_once_with({"SBD_OPTS": "-S 1 -P"})
 
     def test_check_fence_sbd_diskless(self):
         self.instance_check.disk_based = False
