@@ -184,66 +184,6 @@ def get_resource_metadata(show_xml=True) -> str:
     return None
 
 
-def pacemaker_20_daemon(new, old):
-    "helper to discover renamed pacemaker daemons"
-    if is_program(new):
-        return new
-    return old
-
-
-@cache
-def pacemaker_attrd():
-    return pacemaker_20_daemon("pacemaker-attrd", "attrd")
-
-
-@cache
-def pacemaker_based():
-    return pacemaker_20_daemon("pacemaker-based", "cib")
-
-
-@cache
-def pacemaker_controld():
-    return pacemaker_20_daemon("pacemaker-controld", "crmd")
-
-
-@cache
-def pacemaker_execd():
-    return pacemaker_20_daemon("pacemaker-execd", "lrmd")
-
-
-@cache
-def pacemaker_fenced():
-    return pacemaker_20_daemon("pacemaker-fenced", "stonithd")
-
-
-@cache
-def pacemaker_remoted():
-    return pacemaker_20_daemon("pacemaker-remoted", "pacemaker_remoted")
-
-
-@cache
-def pacemaker_schedulerd():
-    return pacemaker_20_daemon("pacemaker-schedulerd", "pengine")
-
-
-def pacemaker_daemon(name):
-    if name == "attrd" or name == "pacemaker-attrd":
-        return pacemaker_attrd()
-    if name == "cib" or name == "pacemaker-based":
-        return pacemaker_based()
-    if name == "crmd" or name == "pacemaker-controld":
-        return pacemaker_controld()
-    if name == "lrmd" or name == "pacemaker-execd":
-        return pacemaker_execd()
-    if name == "stonithd" or name == "pacemaker-fenced":
-        return pacemaker_fenced()
-    if name == "pacemaker_remoted" or name == "pacemeaker-remoted":
-        return pacemaker_remoted()
-    if name == "pengine" or name == "pacemaker-schedulerd":
-        return pacemaker_schedulerd()
-    raise ValueError("Not a Pacemaker daemon name: {}".format(name))
-
-
 def can_ask(background_wait=True):
     """
     Is user-interactivity possible?
