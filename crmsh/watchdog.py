@@ -1,7 +1,6 @@
 import re
 from . import utils
 from .sh import ShellUtils
-from . import sh
 from . import sbd
 
 
@@ -13,13 +12,12 @@ class Watchdog(object):
     QUERY_CMD = "sudo sbd query-watchdog"
     DEVICE_FIND_REGREX = "\\[[0-9]+\\] (/dev/.*)\n.*\nDriver: (.*)"
 
-    def __init__(self, _input=None, remote_user=None, peer_host=None):
+    def __init__(self, _input=None, cluster_is_running=True):
         """
         Init function
         """
         self._input = _input
-        self._remote_user = remote_user
-        self._peer_host = peer_host
+        self._cluster_is_running = cluster_is_running
         self._watchdog_info_dict = {}
         self._watchdog_device_name = None
 
@@ -41,12 +39,23 @@ class Watchdog(object):
         return True
 
     @staticmethod
-    def _load_watchdog_driver(driver):
+    def _configure_and_load_driver(driver, node_list=None):
         """
-        Load specific watchdog driver
+        Write the driver name to WATCHDOG_CFG and (re)load the kernel module,
+        on node_list (or cluster-wide, discovered from the running CIB, when
+        node_list is None).
         """
-        ShellUtils().get_stdout_stderr(f"echo {driver} > {Watchdog.WATCHDOG_CFG}")
-        ShellUtils().get_stdout_stderr("systemctl restart systemd-modules-load")
+        cmd = f"echo {driver} > {Watchdog.WATCHDOG_CFG} && systemctl restart systemd-modules-load"
+        utils.cluster_run_cmd(cmd, node_list)
+
+    @staticmethod
+    def _reload_driver(node_list):
+        """
+        Reload the already-configured watchdog kernel module on node_list,
+        without touching WATCHDOG_CFG (e.g. when joining a cluster: the config
+        file has already been synced from the cluster).
+        """
+        utils.cluster_run_cmd("systemctl restart systemd-modules-load", node_list)
 
     @staticmethod
     def get_watchdog_device_from_sbd_config():
@@ -57,12 +66,16 @@ class Watchdog(object):
         return conf.get("SBD_WATCHDOG_DEV")
 
     @staticmethod
-    def _driver_is_loaded(driver):
+    def _driver_is_loaded(driver, node_list=None):
         """
-        Check if driver was already loaded
+        Check if the driver is already loaded on all the given nodes. When
+        node_list is None, the node list is discovered from the running CIB.
         """
-        _, out, _ = ShellUtils().get_stdout_stderr("lsmod")
-        return re.search("\n{}\\s+".format(driver), out)
+        results = utils.cluster_run_cmd("lsmod", node_list)
+        for _, (_, out, _) in results:
+            if not re.search("\n{}\\s+".format(driver), utils.to_ascii(out)):
+                return False
+        return True
 
     def _set_watchdog_info(self):
         """
@@ -85,22 +98,6 @@ class Watchdog(object):
             if driver == driver_name and self.verify_watchdog_device(device):
                 return device
         return None
-
-    def _get_driver_through_device_remotely(self, dev_name):
-        """
-        Given watchdog device name, get driver name on remote node
-        """
-        rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(self._peer_host, self.QUERY_CMD)
-        if rc == 0 and out:
-            # output format might like:
-            #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
-            device_driver_dict = dict(re.findall(self.DEVICE_FIND_REGREX, out))
-            if device_driver_dict and dev_name in device_driver_dict:
-                return device_driver_dict[dev_name]
-            else:
-                return None
-        else:
-            utils.fatal("Failed to run {} remotely: {}".format(self.QUERY_CMD, err))
 
     def _get_first_unused_device(self):
         """
@@ -135,10 +132,6 @@ class Watchdog(object):
         return False
 
     def join_watchdog(self):
-        """
-        In join proces, get watchdog device from config
-        If that device not exist, get driver name from init node, and load that driver
-        """
         self._set_watchdog_info()
 
         res = self.get_watchdog_device_from_sbd_config()
@@ -147,8 +140,7 @@ class Watchdog(object):
         self._input = res
 
         if not self._valid_device(self._input):
-            driver = self._get_driver_through_device_remotely(self._input)
-            self._load_watchdog_driver(driver)
+            self._reload_driver([utils.this_node()])
 
     def init_watchdog(self):
         """
@@ -168,8 +160,9 @@ class Watchdog(object):
             utils.fatal("Should provide valid watchdog device or driver name")
 
         # self._input is a driver name, load it if it was unloaded
-        if not self._driver_is_loaded(self._input):
-            self._load_watchdog_driver(self._input)
+        node_list = None if self._cluster_is_running else [utils.this_node()]
+        if not self._driver_is_loaded(self._input, node_list=node_list):
+            self._configure_and_load_driver(self._input, node_list=node_list)
             self._set_watchdog_info()
 
         # self._input is a loaded driver name, find corresponding device name
@@ -179,7 +172,7 @@ class Watchdog(object):
             return
 
     @classmethod
-    def get_watchdog_device(cls, dev_or_driver=None):
-        w = cls(_input=dev_or_driver)
+    def get_watchdog_device(cls, dev_or_driver=None, cluster_is_running=True):
+        w = cls(_input=dev_or_driver, cluster_is_running=cluster_is_running)
         w.init_watchdog()
         return w.watchdog_device_name
