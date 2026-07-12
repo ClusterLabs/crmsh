@@ -1199,7 +1199,7 @@ class TestSBDManager(unittest.TestCase):
         mock_exists.return_value = False
         mock_ServiceManager.return_value.disable_service = Mock()
         sbdmanager_instance = SBDManager()
-        sbdmanager_instance.join_sbd("remote_user", "peer_host")
+        sbdmanager_instance.join_sbd("peer_host")
         mock_exists.assert_called_once_with(sbd.SBDManager.SYSCONFIG_SBD)
         mock_ServiceManager.return_value.disable_service.assert_called_once_with(constants.SBD_SERVICE)
 
@@ -1219,7 +1219,7 @@ class TestSBDManager(unittest.TestCase):
 
         sbdmanager_instance = SBDManager()
         sbdmanager_instance.enable_sbd_service = Mock()
-        sbdmanager_instance.join_sbd("remote_user", "peer_host")
+        sbdmanager_instance.join_sbd("peer_host")
 
         mock_logger_info.assert_called_once_with("Got SBD configuration")
 
@@ -1239,7 +1239,7 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance = SBDManager()
         sbdmanager_instance._warn_diskless_sbd = Mock()
         sbdmanager_instance.enable_sbd_service = Mock()
-        sbdmanager_instance.join_sbd("remote_user", "peer_host")
+        sbdmanager_instance.join_sbd("peer_host")
 
         mock_logger_info.assert_called_once_with("Got diskless SBD configuration")
 
