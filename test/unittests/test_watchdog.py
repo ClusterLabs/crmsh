@@ -67,13 +67,11 @@ class TestWatchdog(unittest.TestCase):
         res = self.watchdog_inst.verify_watchdog_device("/dev/watchdog")
         self.assertEqual(res, True)
 
-    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.cluster_run_cmd')
     def test_load_watchdog_driver(self, mock_run):
         self.watchdog_inst._load_watchdog_driver("softdog")
-        mock_run.assert_has_calls([
-            mock.call(f"echo softdog > {watchdog.Watchdog.WATCHDOG_CFG}"),
-            mock.call("systemctl restart systemd-modules-load")
-            ])
+        mock_run.assert_called_once_with(
+            f"echo softdog > {watchdog.Watchdog.WATCHDOG_CFG} && systemctl restart systemd-modules-load", None)
 
     @mock.patch('crmsh.utils.parse_sysconfig')
     def test_get_watchdog_device_from_sbd_config(self, mock_parse):
@@ -243,13 +241,15 @@ Driver: iTCO_wdt
 
     @mock.patch('crmsh.watchdog.Watchdog._load_watchdog_driver')
     @mock.patch('crmsh.watchdog.Watchdog._get_driver_through_device_remotely')
+    @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')
     @mock.patch('crmsh.watchdog.Watchdog.get_watchdog_device_from_sbd_config')
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
-    def test_join_watchdog(self, mock_set_info, mock_from_config, mock_valid, mock_get_driver_remotely, mock_load):
+    def test_join_watchdog(self, mock_set_info, mock_from_config, mock_valid, mock_this_node, mock_get_driver_remotely, mock_load):
         mock_from_config.return_value = "/dev/watchdog"
         mock_valid.return_value = False
         mock_get_driver_remotely.return_value = "softdog"
+        mock_this_node.return_value = "node1"
 
         self.watchdog_join_inst.join_watchdog()
 
@@ -257,7 +257,8 @@ Driver: iTCO_wdt
         mock_from_config.assert_called_once_with()
         mock_valid.assert_called_once_with("/dev/watchdog")
         mock_get_driver_remotely.assert_called_once_with("/dev/watchdog")
-        mock_load.assert_called_once_with("softdog")
+        mock_this_node.assert_called_once_with()
+        mock_load.assert_called_once_with("softdog", node_list="node1")
 
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')
