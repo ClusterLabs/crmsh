@@ -41,12 +41,13 @@ class Watchdog(object):
         return True
 
     @staticmethod
-    def _load_watchdog_driver(driver):
+    def _load_watchdog_driver(driver, join=False):
         """
         Load specific watchdog driver
         """
-        ShellUtils().get_stdout_stderr(f"echo {driver} > {Watchdog.WATCHDOG_CFG}")
-        ShellUtils().get_stdout_stderr("systemctl restart systemd-modules-load")
+        cmd = f"echo {driver} > {Watchdog.WATCHDOG_CFG} && systemctl restart systemd-modules-load"
+        node_list = utils.this_node() if join else None
+        utils.cluster_run_cmd(cmd, node_list)
 
     @staticmethod
     def get_watchdog_device_from_sbd_config():
@@ -136,7 +137,7 @@ class Watchdog(object):
 
     def join_watchdog(self):
         """
-        In join proces, get watchdog device from config
+        In join process, get watchdog device from config
         If that device not exist, get driver name from init node, and load that driver
         """
         self._set_watchdog_info()
@@ -148,7 +149,7 @@ class Watchdog(object):
 
         if not self._valid_device(self._input):
             driver = self._get_driver_through_device_remotely(self._input)
-            self._load_watchdog_driver(driver)
+            self._load_watchdog_driver(driver, join=True)
 
     def init_watchdog(self):
         """

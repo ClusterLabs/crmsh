@@ -67,13 +67,11 @@ class TestWatchdog(unittest.TestCase):
         res = self.watchdog_inst.verify_watchdog_device("/dev/watchdog")
         self.assertEqual(res, True)
 
-    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
+    @mock.patch('crmsh.utils.cluster_run_cmd')
     def test_load_watchdog_driver(self, mock_run):
         self.watchdog_inst._load_watchdog_driver("softdog")
-        mock_run.assert_has_calls([
-            mock.call(f"echo softdog > {watchdog.Watchdog.WATCHDOG_CFG}"),
-            mock.call("systemctl restart systemd-modules-load")
-            ])
+        mock_run.assert_called_once_with(
+            f"echo softdog > {watchdog.Watchdog.WATCHDOG_CFG} && systemctl restart systemd-modules-load", None)
 
     @mock.patch('crmsh.utils.parse_sysconfig')
     def test_get_watchdog_device_from_sbd_config(self, mock_parse):
@@ -257,7 +255,7 @@ Driver: iTCO_wdt
         mock_from_config.assert_called_once_with()
         mock_valid.assert_called_once_with("/dev/watchdog")
         mock_get_driver_remotely.assert_called_once_with("/dev/watchdog")
-        mock_load.assert_called_once_with("softdog")
+        mock_load.assert_called_once_with("softdog", join=True)
 
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')

@@ -1662,7 +1662,7 @@ def list_cluster_nodes(no_reg=False) -> list[str]:
     return [x.uname for x in cibquery.get_cluster_nodes(cib)]
 
 
-def cluster_run_cmd(cmd, node_list=[]):
+def cluster_run_cmd(cmd, node_list=None):
     """
     Run cmd in cluster nodes
     """
