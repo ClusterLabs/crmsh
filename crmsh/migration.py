@@ -352,8 +352,8 @@ def check_unsupported_corosync_features(handler: CheckResultHandler):
         corosync.ConfParser.transform_dom_with_list_schema(config)
     if config['totem'].get('rrp_mode', None) in {'active', 'passive'}:
         handler.handle_problem(
-            True, False, handler.LEVEL_WARN,
-            'Corosync RRP is deprecated in corosync 3.', [
+            True, False, handler.LEVEL_ERROR,
+            'Corosync RRP is removed in corosync 3.', [
                 'Run "crm health sles16 --fix" to migrate it to knet multilink.',
             ],
         )
