@@ -672,14 +672,14 @@ class SBD(command.UI):
     def _print_watchdog_info(self):
         padding = 2
         max_node_len = max(len(node) for node in self.cluster_nodes) + padding
-        watchdog_sbd_re = r"\[[0-9]+\] (/dev/.*)\nIdentity: Busy: .*sbd.*\nDriver: (.*)"
         device_list, driver_list, kernel_timeout_list = [], [], []
 
         for node in self.cluster_nodes:
-            out = self.cluster_shell.get_stdout_or_raise_error("sbd query-watchdog", node)
-            res = re.search(watchdog_sbd_re, out)
-            if res:
-                device, driver = res.groups()
+            out = self.cluster_shell.get_stdout_or_raise_error(watchdog.Watchdog.QUERY_CMD, node)
+            watchdog_info = watchdog.Watchdog.get_watchdog_info(out, sbd_only=True)
+            if watchdog_info:
+                device = next(iter(watchdog_info))
+                driver = watchdog_info[device]
                 kernel_timeout = self.cluster_shell.get_stdout_or_raise_error("cat /proc/sys/kernel/watchdog_thresh", node)
             else:
                 device, driver, kernel_timeout = "N/A", "N/A", "N/A"

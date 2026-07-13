@@ -11,7 +11,9 @@ class Watchdog(object):
     """
     WATCHDOG_CFG = "/etc/modules-load.d/watchdog.conf"
     QUERY_CMD = "sudo sbd query-watchdog"
-    DEVICE_FIND_REGREX = "\\[[0-9]+\\] (/dev/.*)\n.*\nDriver: (.*)"
+    # output format might like:
+    #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
+    DEVICE_FIND_REGREX = r"[ \t]*\[[0-9]+\] (/dev/[^\n]+)\n[ \t]*Identity: ([^\n]+)\n[ \t]*Driver: ([^\n]+)"
 
     def __init__(self, _input=None, remote_user=None, peer_host=None):
         """
@@ -65,6 +67,36 @@ class Watchdog(object):
         _, out, _ = ShellUtils().get_stdout_stderr("lsmod")
         return re.search("\n{}\\s+".format(driver), out)
 
+    @staticmethod
+    def _get_configured_watchdog_driver():
+        """
+        Get watchdog driver name from modules-load config.
+        """
+        try:
+            with open(Watchdog.WATCHDOG_CFG) as f:
+                return f.readline().strip()
+        except OSError:
+            return None
+
+    @classmethod
+    def get_watchdog_info(cls, out, sbd_only=False):
+        """
+        Parse sbd query-watchdog output into {device_name: driver_name}.
+        """
+        if not out:
+            return {}
+
+        watchdog_info = {}
+        for device, identity, driver in re.findall(cls.DEVICE_FIND_REGREX, out):
+            if sbd_only and not re.search(r"Busy: .*sbd", identity):
+                continue
+            if driver == "<unknown>":
+                configured_driver = cls._get_configured_watchdog_driver()
+                if configured_driver and cls._driver_is_loaded(configured_driver):
+                    driver = configured_driver
+            watchdog_info[device] = driver
+        return watchdog_info
+
     def _set_watchdog_info(self):
         """
         Set watchdog info through sbd query-watchdog command
@@ -72,9 +104,7 @@ class Watchdog(object):
         """
         rc, out, err = ShellUtils().get_stdout_stderr(self.QUERY_CMD)
         if rc == 0 and out:
-            # output format might like:
-            #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
-            self._watchdog_info_dict = dict(re.findall(self.DEVICE_FIND_REGREX, out))
+            self._watchdog_info_dict = self.get_watchdog_info(out)
         else:
             utils.fatal("Failed to run {}: {}".format(self.QUERY_CMD, err))
 
@@ -93,10 +123,8 @@ class Watchdog(object):
         """
         rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(self._peer_host, self.QUERY_CMD)
         if rc == 0 and out:
-            # output format might like:
-            #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
-            device_driver_dict = dict(re.findall(self.DEVICE_FIND_REGREX, out))
-            if device_driver_dict and dev_name in device_driver_dict:
+            device_driver_dict = self.get_watchdog_info(out)
+            if dev_name in device_driver_dict:
                 return device_driver_dict[dev_name]
             else:
                 return None
