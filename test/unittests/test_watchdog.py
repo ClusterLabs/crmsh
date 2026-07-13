@@ -111,6 +111,37 @@ class TestWatchdog(unittest.TestCase):
         mock_run.return_value = [("node1", (0, loaded.encode(), b"")), ("node2", (0, b"\nbutton 24576 0", b""))]
         assert self.watchdog_inst._driver_is_loaded("softdog", node_list=["node1", "node2"]) is False
 
+    @mock.patch("crmsh.watchdog.Watchdog._driver_is_loaded")
+    def test_get_watchdog_info(self, mock_driver_is_loaded):
+        output = """
+Discovered 2 watchdog devices:
+
+[1] /dev/watchdog
+Identity: Busy: PID 3120 (sbd)
+Driver: softdog
+CAUTION: Not recommended for use with sbd.
+
+[2] /dev/watchdog1
+Identity: iTCO_wdt
+Driver: iTCO_wdt
+        """
+        res = watchdog.Watchdog.get_watchdog_info(output)
+        self.assertEqual(res, {"/dev/watchdog": "softdog", "/dev/watchdog1": "iTCO_wdt"})
+        mock_driver_is_loaded.assert_not_called()
+
+    def test_get_watchdog_info_sbd_only(self):
+        output = """
+[1] /dev/watchdog
+Identity: Busy: PID 3120 (sbd)
+Driver: softdog
+
+[2] /dev/watchdog1
+Identity: iTCO_wdt
+Driver: iTCO_wdt
+        """
+        res = watchdog.Watchdog.get_watchdog_info(output, sbd_only=True)
+        self.assertEqual(res, {"/dev/watchdog": "softdog"})
+
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     def test_set_watchdog_info_error(self, mock_run, mock_error):
