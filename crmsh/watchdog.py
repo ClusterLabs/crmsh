@@ -1,8 +1,13 @@
+import logging
 import re
+
 from . import utils
 from .sh import ShellUtils
 from . import sh
 from . import sbd
+
+
+logger = logging.getLogger(__name__)
 
 
 class Watchdog(object):
@@ -96,6 +101,19 @@ class Watchdog(object):
                     driver = configured_driver
             watchdog_info[device] = driver
         return watchdog_info
+
+    @staticmethod
+    def warn_if_using_softdog():
+        """
+        Warn if SBD is using softdog as watchdog driver.
+        """
+        rc, out, err = ShellUtils().get_stdout_stderr(Watchdog.QUERY_CMD)
+        if rc != 0 or not out:
+            logger.debug("Failed to run %s: %s", Watchdog.QUERY_CMD, err)
+            return
+
+        if "softdog" in Watchdog.get_watchdog_info(out, sbd_only=True).values():
+            logger.warning("It's not recommended to use softdog as watchdog driver in production environment")
 
     def _set_watchdog_info(self):
         """
