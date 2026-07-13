@@ -301,7 +301,7 @@ def check_unsupported_corosync_features(handler: CheckResultHandler):
     handler.handle_tip(f'Corosync transport "{transport}" will be deprecated in favor of "knet" in corosync 3.', [
     ])
     if corosync.get_value("totem.rrp_mode") in {'active', 'passive'}:
-        handler.handle_tip(f'Corosync RRP will be deprecated in corosync 3.', [
+        handler.handle_tip(f'Corosync RRP will be removed in corosync 3.', [
             'After migrating to SLES 16, run "crm cluster health sles16 --fix" to migrate it to knet multilink.',
         ])
 
