@@ -1424,11 +1424,11 @@ class TestBootstrap(unittest.TestCase):
         mock_adj_priority.assert_called_once_with(True)
         mock_adj_fence.assert_called_once_with(True)
 
-    @mock.patch('crmsh.utils.cluster_copy_file')
+    @mock.patch('crmsh.utils.cluster_copy_path')
     def test_sync_file_skip_csync2(self, mock_copy):
         bootstrap._context = mock.Mock(skip_csync2=True, node_list_in_cluster=["node1", "node2"])
         bootstrap.sync_file("/file1")
-        mock_copy.assert_called_once_with("/file1", nodes=["node1", "node2"], output=False)
+        mock_copy.assert_called_once_with("/file1", nodes=["node1", "node2"])
 
     @mock.patch('crmsh.bootstrap.csync2_update')
     def test_sync_file(self, mock_csync2_update):
