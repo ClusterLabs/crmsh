@@ -1,4 +1,3 @@
-import logging
 import unittest
 from unittest.mock import patch, MagicMock, call, Mock
 from crmsh.sbd import SBDUtils, SBDManager
@@ -274,6 +273,12 @@ class TestSBDConfigChecker(unittest.TestCase):
     def setUp(self):
         self.instance_check = sbd.SBDConfigChecker(fix=False)
         self.instance_fix = sbd.SBDConfigChecker(fix=True)
+        self.quiet_logger_error_patcher = patch('crmsh.sbd.log.QuietLoggerAdapter.error')
+        self.mock_quiet_logger_error = self.quiet_logger_error_patcher.start()
+        self.addCleanup(self.quiet_logger_error_patcher.stop)
+        self.quiet_logger_warning_patcher = patch('crmsh.sbd.log.QuietLoggerAdapter.warning')
+        self.mock_quiet_logger_warning = self.quiet_logger_warning_patcher.start()
+        self.addCleanup(self.quiet_logger_warning_patcher.stop)
 
     @staticmethod
     def fake_get_current_terms(inst):
@@ -304,7 +309,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=False)
-        with self.assertRaises(sbd.FixAborted) as context: 
+        with self.assertRaises(sbd.FixAborted) as context:
             self.instance_check.check_and_fix()
         self.assertTrue("sbd.service is not active" in str(context.exception))
         mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
@@ -455,21 +460,19 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
     def test_check_sbd_disk_metadata_failure(self, mock_get_sbd_metadata_expected):
         self.instance_check.disk_based = True
-        self.instance_check._log_when_not_quiet = Mock()
         mock_get_sbd_metadata_expected.return_value = (15, 30)
         self.instance_check.sbd_watchdog_timeout = 10
         self.assertEqual(self.instance_check._check_sbd_disk_metadata(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that SBD watchdog timeout(now %d) >= %d", 10, 15)    
+        self.mock_quiet_logger_error.assert_called_once_with("It's required that SBD watchdog timeout(now %d) >= %d", 10, 15)
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
     def test_check_sbd_disk_metadata_failure_msgwait(self, mock_get_sbd_metadata_expected):
         self.instance_check.disk_based = True
-        self.instance_check._log_when_not_quiet = Mock()
         mock_get_sbd_metadata_expected.return_value = (10, 25)
         self.instance_check.sbd_watchdog_timeout = 10
         self.instance_check.sbd_msgwait = 20
         self.assertEqual(self.instance_check._check_sbd_disk_metadata(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that SBD msgwait(now %d) >= %d", 20, 25)
+        self.mock_quiet_logger_error.assert_called_once_with("It's required that SBD msgwait(now %d) >= %d", 20, 25)
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
     def test_check_sbd_disk_metadata_success(self, mock_get_sbd_metadata_expected):
@@ -493,11 +496,10 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_expected')
     def test_check_sbd_watchdog_timeout_failure(self, mock_get_sbd_watchdog_timeout_expected):
         self.instance_check.disk_based = False
-        self.instance_check._log_when_not_quiet = Mock()
         mock_get_sbd_watchdog_timeout_expected.return_value = 10
         self.instance_check.sbd_watchdog_timeout = 3
         self.assertEqual(self.instance_check._check_sbd_watchdog_timeout(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", 3, 10)
+        self.mock_quiet_logger_error.assert_called_once_with("It's required that SBD_WATCHDOG_TIMEOUT(now %d) >= %d", 3, 10)
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_expected')
     def test_check_sbd_watchdog_timeout_success(self, mock_get_sbd_watchdog_timeout_expected):
@@ -515,9 +517,8 @@ class TestSBDConfigChecker(unittest.TestCase):
     def test_check_sbd_delay_start_failure(self):
         self.instance_check.sbd_delay_start_value_expected = "100"
         self.instance_check.sbd_delay_start_value_from_config = "30"
-        self.instance_check._log_when_not_quiet = Mock()
         self.assertEqual(self.instance_check._check_sbd_delay_start(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that SBD_DELAY_START is set to %s, now is %s", "100", "30")
+        self.mock_quiet_logger_error.assert_called_once_with("It's required that SBD_DELAY_START is set to %s, now is %s", "100", "30")
 
     def test_check_sbd_delay_start_success(self):
         self.instance_check.sbd_delay_start_value_expected = "50"
@@ -527,9 +528,8 @@ class TestSBDConfigChecker(unittest.TestCase):
     def test_check_sbd_delay_start_warning(self):
         self.instance_check.sbd_delay_start_value_expected = "70"
         self.instance_check.sbd_delay_start_value_from_config = "80"
-        self.instance_check._log_when_not_quiet = Mock()
         self.assertEqual(self.instance_check._check_sbd_delay_start(), sbd.CheckResult.WARNING)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.WARNING, "It's recommended that SBD_DELAY_START is set to %s, now is %s", "70", "80")
+        self.mock_quiet_logger_warning.assert_called_once_with("It's recommended that SBD_DELAY_START is set to %s, now is %s", "70", "80")
 
     @patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     def test_fix_sbd_delay_start(self, mock_update_sbd_configuration):
@@ -545,16 +545,17 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check.sbd_systemd_start_timeout_expected = 60
         self.instance_check.peer_node_list = ['node2', 'node3']
         self.instance_check.quiet = False
-        self.instance_check._log_when_not_quiet = Mock()
         mock_get_sbd_systemd_start_timeout.side_effect = [60, 50, 70]
         mock_return_helper.return_value = sbd.CheckResult.ERROR
 
         self.assertEqual(self.instance_check._check_sbd_systemd_start_timeout(), sbd.CheckResult.ERROR)
 
-        self.instance_check._log_when_not_quiet.assert_has_calls([
-            call(logging.ERROR, "It's required that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s", 60, 50, 'node2'),
-            call(logging.WARNING, "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s", 60, 70, 'node3')
-        ])
+        self.mock_quiet_logger_error.assert_called_once_with(
+            "It's required that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s", 60, 50, 'node2'
+        )
+        self.mock_quiet_logger_warning.assert_called_once_with(
+            "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s", 60, 70, 'node3'
+        )
 
     @patch('crmsh.utils.cluster_run_cmd')
     @patch('crmsh.bootstrap.sync_path')
@@ -573,9 +574,8 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check.current_watchdog_timeout_term = "fencing-watchdog-timeout"
         self.instance_check.disk_based = True
         mock_get_property.return_value = 5
-        self.instance_check._log_when_not_quiet = Mock()
         self.assertEqual(self.instance_check._check_fencing_watchdog_timeout(), sbd.CheckResult.WARNING)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.WARNING, "It's recommended that %s is not set when using disk-based SBD", "fencing-watchdog-timeout")
+        self.mock_quiet_logger_warning.assert_called_once_with("It's recommended that %s is not set when using disk-based SBD", "fencing-watchdog-timeout")
 
     @patch('crmsh.utils.get_property')
     def test_check_fencing_watchdog_timeout_disk_less_failure(self, mock_get_property):
@@ -583,9 +583,8 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check.disk_based = False
         self.instance_check.fencing_watchdog_timeout = 15
         mock_get_property.return_value = ""
-        self.instance_check._log_when_not_quiet = Mock()
         self.assertEqual(self.instance_check._check_fencing_watchdog_timeout(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that %s is set to %d, now is not set", "fencing-watchdog-timeout", 15)
+        self.mock_quiet_logger_error.assert_called_once_with("It's required that %s is set to %d, now is not set", "fencing-watchdog-timeout", 15)
 
     @patch('crmsh.utils.get_property')
     def test_check_fencing_watchdog_timeout_success(self, mock_get_property):
@@ -619,18 +618,16 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check.current_timeout_term = "fencing-timeout"
         self.instance_check.get_fencing_timeout_expected = Mock(return_value=60)
         mock_get_property.return_value = 30
-        self.instance_check._log_when_not_quiet = Mock()
         self.assertEqual(self.instance_check._check_fencing_timeout(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that %s is set to %d, now is %d", "fencing-timeout", 60, 30)
+        self.mock_quiet_logger_error.assert_called_once_with("It's required that %s is set to %d, now is %d", "fencing-timeout", 60, 30)
 
     @patch('crmsh.utils.get_property')
     def test_check_fencing_timeout_warning(self, mock_get_property):
         self.instance_check.current_timeout_term = "fencing-timeout"
         self.instance_check.get_fencing_timeout_expected = Mock(return_value=80)
         mock_get_property.return_value = 90
-        self.instance_check._log_when_not_quiet = Mock()
         self.assertEqual(self.instance_check._check_fencing_timeout(), sbd.CheckResult.WARNING)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.WARNING, "It's recommended that %s is set to %d, now is %d", "fencing-timeout", 80, 90)
+        self.mock_quiet_logger_warning.assert_called_once_with("It's recommended that %s is set to %d, now is %d", "fencing-timeout", 80, 90)
 
     @patch('crmsh.utils.get_property')
     def test_check_fencing_timeout_success(self, mock_get_property):
@@ -664,13 +661,12 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_cluster_shell.return_value = mock_cluster_shell_inst
         self.instance_check.peer_node_list = ['node2']
         self.instance_check.quiet = False
-        self.instance_check._log_when_not_quiet = Mock()
         mock_cluster_shell_inst.get_rc_and_error.side_effect = [(0, None), (1, None)]
         mock_return_helper.return_value = sbd.CheckResult.WARNING
 
         self.assertEqual(self.instance_check._check_sbd_delay_start_unset_dropin(), sbd.CheckResult.WARNING)
 
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.WARNING, "Runtime drop-in file %s to unset SBD_DELAY_START is missing on node %s", sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE, 'node2')
+        self.mock_quiet_logger_warning.assert_called_once_with("Runtime drop-in file %s to unset SBD_DELAY_START is missing on node %s", sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE, 'node2')
 
     @patch('crmsh.sbd.SBDManager.unset_sbd_delay_start')
     @patch('logging.Logger.info')
@@ -688,11 +684,8 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
     def test_check_sbd_pacemaker_in_sysconfig_warning(self, mock_get_sbd_value_from_config):
         mock_get_sbd_value_from_config.side_effect = [None, "no"]
-        self.instance_check._log_when_not_quiet = Mock()
-
         self.assertEqual(self.instance_check._check_sbd_pacemaker_in_sysconfig(), sbd.CheckResult.WARNING)
-        self.instance_check._log_when_not_quiet.assert_any_call(
-            logging.WARNING,
+        self.mock_quiet_logger_warning.assert_any_call(
             "In %s, SBD_PACEMAKER is set to %s, please set it to yes or true",
             sbd.SBDManager.SYSCONFIG_SBD, "no"
         )
@@ -705,7 +698,6 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
     def test_check_sbd_pacemaker_in_sysconfig_uppercase_warning(self, mock_get_sbd_value_from_config):
         mock_get_sbd_value_from_config.side_effect = [None, "YES"]
-        self.instance_check._log_when_not_quiet = Mock()
         self.assertEqual(self.instance_check._check_sbd_pacemaker_in_sysconfig(), sbd.CheckResult.WARNING)
 
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
@@ -716,10 +708,8 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
     def test_check_sbd_pacemaker_in_sysconfig_sbd_opts_pp(self, mock_get_sbd_value_from_config):
         mock_get_sbd_value_from_config.return_value = "-S 1 -PP"
-        self.instance_check._log_when_not_quiet = Mock()
         self.assertEqual(self.instance_check._check_sbd_pacemaker_in_sysconfig(), sbd.CheckResult.WARNING)
-        self.instance_check._log_when_not_quiet.assert_any_call(
-            logging.WARNING,
+        self.mock_quiet_logger_warning.assert_any_call(
             "In %s, SBD_OPTS contains -PP, which disables SBD_PACEMAKER, please use -P to enable it",
             sbd.SBDManager.SYSCONFIG_SBD
         )
@@ -755,11 +745,10 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_ServiceManager.return_value = mock_service_manager_inst
         self.instance_check.peer_node_list = ['node2']
         self.instance_check.quiet = False
-        self.instance_check._log_when_not_quiet = Mock()
         mock_service_manager_inst.service_is_enabled.side_effect = [True, False]
         mock_return_helper.return_value = sbd.CheckResult.ERROR
         self.assertEqual(self.instance_check._check_sbd_service_is_enabled(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "%s is not enabled on node %s", constants.SBD_SERVICE, 'node2')
+        self.mock_quiet_logger_error.assert_called_once_with("%s is not enabled on node %s", constants.SBD_SERVICE, 'node2')
 
     @patch('logging.Logger.info')
     @patch('crmsh.sbd.ServiceManager')
@@ -775,13 +764,12 @@ class TestSBDConfigChecker(unittest.TestCase):
     def test_check_fence_sbd_not_configured(self, mock_CrmMonXmlParser):
         self.instance_check.disk_based = True
         self.instance_check.quiet = False
-        self.instance_check._log_when_not_quiet = Mock()
         mock_parser_instance = Mock()
         mock_CrmMonXmlParser.return_value = mock_parser_instance
         mock_parser_instance.not_connected.return_value = False
         mock_parser_instance.is_resource_configured.return_value = False
         self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "Fence agent %s is not configured", sbd.SBDManager.SBD_RA)
+        self.mock_quiet_logger_error.assert_called_once_with("Fence agent %s is not configured", sbd.SBDManager.SBD_RA)
 
     @patch('crmsh.cibquery.get_primitives_with_ra')
     @patch('crmsh.cibquery.ResourceAgent')
@@ -791,7 +779,6 @@ class TestSBDConfigChecker(unittest.TestCase):
     def test_check_fence_sbd_not_configured_cluster_offline(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra):
         self.instance_check.disk_based = True
         self.instance_check.quiet = False
-        self.instance_check._log_when_not_quiet = Mock()
         mock_parser_instance = Mock()
         mock_CrmMonXmlParser.return_value = mock_parser_instance
         mock_parser_instance.not_connected.return_value = True
@@ -803,7 +790,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_ResourceAgent.return_value = mock_resource_agent_instance
         mock_get_primitives_with_ra.return_value = []
         self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "Fence agent %s is not configured", sbd.SBDManager.SBD_RA)
+        self.mock_quiet_logger_error.assert_called_once_with("Fence agent %s is not configured", sbd.SBDManager.SBD_RA)
 
     @patch('crmsh.cibquery.get_primitives_with_ra')
     @patch('crmsh.cibquery.ResourceAgent')
@@ -830,14 +817,13 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check.disk_based = True
         self.instance_check.quiet = False
         mock_is_cluster_in_maintenance_mode.return_value = False
-        self.instance_check._log_when_not_quiet = Mock()
         mock_parser_instance = Mock()
         mock_CrmMonXmlParser.return_value = mock_parser_instance
         mock_parser_instance.not_connected.return_value = False
         mock_parser_instance.is_resource_configured.return_value = True
         mock_parser_instance.is_resource_started.return_value = False
         self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "Fence agent %s is not started", sbd.SBDManager.SBD_RA)
+        self.mock_quiet_logger_error.assert_called_once_with("Fence agent %s is not started", sbd.SBDManager.SBD_RA)
 
     @patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_check_fence_sbd_success(self, mock_CrmMonXmlParser):
@@ -894,9 +880,8 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_get_property.return_value = "false"
         mock_is_boolean_false.return_value = True
         self.instance_check.current_enabled_term = "fencing-enabled"
-        self.instance_check._log_when_not_quiet = Mock()
         self.assertEqual(self.instance_check._check_fencing_enabled(), sbd.CheckResult.ERROR)
-        self.instance_check._log_when_not_quiet.assert_called_once_with(logging.ERROR, "It's required that %s is set to true, now is false", "fencing-enabled")
+        self.mock_quiet_logger_error.assert_called_once_with("It's required that %s is set to true, now is false", "fencing-enabled")
 
     @patch('logging.Logger.info')
     @patch('crmsh.utils.set_property')
@@ -905,7 +890,6 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix._fix_fencing_enabled()
         mock_logger_info.assert_called_once_with("Setting %s to true", "fencing-enabled")
         mock_set_property.assert_called_once_with('fencing-enabled', 'true')
-
 
 class TestSBDManager(unittest.TestCase):
 
@@ -1260,7 +1244,6 @@ class TestSBDManager(unittest.TestCase):
                 f"echo -e '[Service]\\nUnsetEnvironment=SBD_DELAY_START' > {sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE} && " \
                 "systemctl daemon-reload"
         mock_cluster_run_cmd.assert_called_once_with(cmd, ['node1', 'node2'])
-
 
 class TestOutterFunctions(unittest.TestCase):
     """

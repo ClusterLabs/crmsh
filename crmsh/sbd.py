@@ -255,11 +255,9 @@ class SBDTimeout(object):
         self.quiet = False
         if self.context:
             self.quiet = self.context.quiet
+        self.logger = log.QuietLoggerAdapter(logger, quiet=lambda: self.quiet)
+        if self.context:
             self._initialize_timeout_from_bootstrap()
-
-    def _log_when_not_quiet(self, level, message, *args, **kwargs):
-        if not self.quiet:
-            logger.log(level, message, *args, **kwargs)
 
     def _initialize_timeout_from_bootstrap(self):
         self._set_sbd_watchdog_timeout()
@@ -276,8 +274,7 @@ class SBDTimeout(object):
         if "sbd.watchdog_timeout" in self.context.profiles_dict:
             self.sbd_watchdog_timeout = int(self.context.profiles_dict["sbd.watchdog_timeout"])
         if self.context.is_s390 and self.sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390:
-            self._log_when_not_quiet(
-                logging.WARNING,
+            self.logger.warning(
                 "sbd watchdog_timeout is set to %d for s390, it was %d",
                 self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self.sbd_watchdog_timeout
             )
@@ -293,8 +290,7 @@ class SBDTimeout(object):
         if "sbd.msgwait" in self.context.profiles_dict:
             sbd_msgwait = int(self.context.profiles_dict["sbd.msgwait"])
             if sbd_msgwait < sbd_msgwait_default:
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "sbd msgwait is set to %d, it was %d",
                     sbd_msgwait_default, sbd_msgwait
                 )
@@ -310,8 +306,7 @@ class SBDTimeout(object):
             qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
             if self.sbd_watchdog_timeout <= qdevice_sync_timeout:
                 watchdog_timeout_with_qdevice = qdevice_sync_timeout + self.QDEVICE_SYNC_TIMEOUT_MARGIN
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
                     watchdog_timeout_with_qdevice, self.sbd_watchdog_timeout
                 )
@@ -319,8 +314,7 @@ class SBDTimeout(object):
         # add sbd and qdevice together from beginning
         elif self.context.qdevice_inst:
             if self.sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE:
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "SBD_WATCHDOG_TIMEOUT should not less than %d for qdevice, it was %d",
                     self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE, self.sbd_watchdog_timeout
                 )
@@ -801,15 +795,13 @@ class SBDConfigChecker(SBDTimeout):
         if self.disk_based:
             self.sbd_watchdog_timeout_expected, self.sbd_msgwait_expected = SBDTimeout.get_sbd_metadata_expected()
             if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "It's required that SBD watchdog timeout(now %d) >= %d",
                     self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected
                 )
                 return CheckResult.ERROR
             if self.sbd_msgwait < self.sbd_msgwait_expected:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "It's required that SBD msgwait(now %d) >= %d",
                     self.sbd_msgwait, self.sbd_msgwait_expected
                 )
@@ -832,8 +824,7 @@ class SBDConfigChecker(SBDTimeout):
         if not self.disk_based:
             self.sbd_watchdog_timeout_expected = SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=True)
             if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "It's required that SBD_WATCHDOG_TIMEOUT(now %d) >= %d",
                     self.sbd_watchdog_timeout, self.sbd_watchdog_timeout_expected
                 )
@@ -850,22 +841,19 @@ class SBDConfigChecker(SBDTimeout):
             return CheckResult.SUCCESS
         elif config_value.isdigit() and expected_value.isdigit():
             if int(config_value) < int(expected_value):
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "It's required that SBD_DELAY_START is set to %s, now is %s",
                     expected_value, config_value
                 )
                 return CheckResult.ERROR
             else:
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "It's recommended that SBD_DELAY_START is set to %s, now is %s",
                     expected_value, config_value
                 )
                 return CheckResult.WARNING
         else:
-            self._log_when_not_quiet(
-                logging.ERROR,
+            self.logger.error(
                 "It's required that SBD_DELAY_START is set to %s, now is %s",
                 expected_value, config_value
             )
@@ -887,12 +875,8 @@ class SBDConfigChecker(SBDTimeout):
             except ValueError:
                 opts_list = value_from_opts.split()
             if "-PP" in opts_list:
-                self._log_when_not_quiet(
-                    logging.WARNING,
-                    common_warning_msg
-                )
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(common_warning_msg)
+                self.logger.warning(
                     "In %s, SBD_OPTS contains -PP, which disables SBD_PACEMAKER, please use -P to enable it",
                     SBDManager.SYSCONFIG_SBD
                 )
@@ -905,12 +889,8 @@ class SBDConfigChecker(SBDTimeout):
         if not value or value in ("yes", "true"):
             return CheckResult.SUCCESS
 
-        self._log_when_not_quiet(
-            logging.WARNING,
-            common_warning_msg
-        )
-        self._log_when_not_quiet(
-            logging.WARNING,
+        self.logger.warning(common_warning_msg)
+        self.logger.warning(
             "In %s, SBD_PACEMAKER is set to %s, please set it to yes or true",
             SBDManager.SYSCONFIG_SBD, value
         )
@@ -941,15 +921,13 @@ class SBDConfigChecker(SBDTimeout):
             if actual_start_timeout == expected_start_timeout:
                 check_res_list.append(CheckResult.SUCCESS)
             elif actual_start_timeout < expected_start_timeout:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "It's required that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
                     expected_start_timeout, actual_start_timeout, node
                 )
                 check_res_list.append(CheckResult.ERROR)
             else:
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "It's recommended that systemd start timeout for sbd.service is set to %ds, now is %ds on node %s",
                     expected_start_timeout, actual_start_timeout, node
                 )
@@ -969,8 +947,7 @@ class SBDConfigChecker(SBDTimeout):
         current_term = self.current_watchdog_timeout_term
         value = utils.get_property(current_term)
         if value and int(value) == -1:
-            self._log_when_not_quiet(
-                logging.WARNING,
+            self.logger.warning(
                 "It's recommended that %s is set to %d, now is -1",
                 current_term, self.fencing_watchdog_timeout
             )
@@ -978,30 +955,26 @@ class SBDConfigChecker(SBDTimeout):
         value = int(utils.crm_msec(value)/1000)
         if self.disk_based:
             if value > 0:
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "It's recommended that %s is not set when using disk-based SBD",
                     current_term
                 )
                 return CheckResult.WARNING
         else:
             if value == 0:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "It's required that %s is set to %d, now is not set",
                     current_term, self.fencing_watchdog_timeout
                 )
                 return CheckResult.ERROR
             if value < self.fencing_watchdog_timeout:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "It's required that %s is set to %d, now is %d",
                     current_term, self.fencing_watchdog_timeout, value
                 )
                 return CheckResult.ERROR
             elif value > self.fencing_watchdog_timeout:
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "It's recommended that %s is set to %d, now is %d",
                     current_term, self.fencing_watchdog_timeout, value
                 )
@@ -1027,15 +1000,13 @@ class SBDConfigChecker(SBDTimeout):
         # will get default value from pacemaker metadata if not set
         value = int(utils.crm_msec(value)/1000)
         if value < expected_value:
-            self._log_when_not_quiet(
-                logging.ERROR,
+            self.logger.error(
                 "It's required that %s is set to %d, now is %d",
                 current_term, expected_value, value
             )
             return CheckResult.ERROR
         elif value > expected_value:
-            self._log_when_not_quiet(
-                logging.WARNING,
+            self.logger.warning(
                 "It's recommended that %s is set to %d, now is %d",
                 current_term, expected_value, value
             )
@@ -1052,8 +1023,7 @@ class SBDConfigChecker(SBDTimeout):
         current_term = self.current_enabled_term
         value = utils.get_property(current_term, get_default=False)
         if value == "false": # have to check if the value is explicitly set to false
-            self._log_when_not_quiet(
-                logging.ERROR,
+            self.logger.error(
                 "It's required that %s is set to true, now is false",
                 current_term
             )
@@ -1077,8 +1047,7 @@ class SBDConfigChecker(SBDTimeout):
             if rc == 0:
                 check_res_list.append(CheckResult.SUCCESS)
             else:
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "Runtime drop-in file %s to unset SBD_DELAY_START is missing on node %s",
                     SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE, node
                 )
@@ -1098,8 +1067,7 @@ class SBDConfigChecker(SBDTimeout):
             if service_manager.service_is_enabled(constants.SBD_SERVICE, node):
                 check_res_list.append(CheckResult.SUCCESS)
             else:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "%s is not enabled on node %s",
                     constants.SBD_SERVICE, node
                 )
@@ -1125,22 +1093,19 @@ class SBDConfigChecker(SBDTimeout):
             if configured:
                 return CheckResult.SUCCESS
             else:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "Fence agent %s is not configured",
                     SBDManager.SBD_RA
                 )
                 return CheckResult.ERROR
         if not xml_inst.is_resource_configured(SBDManager.SBD_RA):
-            self._log_when_not_quiet(
-                logging.ERROR,
+            self.logger.error(
                 "Fence agent %s is not configured",
                 SBDManager.SBD_RA
             )
             return CheckResult.ERROR
         elif not xml_inst.is_resource_started(SBDManager.SBD_RA) and not utils.is_cluster_in_maintenance_mode():
-            self._log_when_not_quiet(
-                logging.ERROR,
+            self.logger.error(
                 "Fence agent %s is not started",
                 SBDManager.SBD_RA
             )
@@ -1179,8 +1144,7 @@ class SBDConfigChecker(SBDTimeout):
         if not self.disk_based:
             return CheckResult.SUCCESS
         if not self.fence_sbd_parameters:
-            self._log_when_not_quiet(
-                logging.ERROR,
+            self.logger.error(
                 "Fence agent %s is not configured",
                 SBDManager.SBD_RA
             )
@@ -1190,30 +1154,26 @@ class SBDConfigChecker(SBDTimeout):
         for fence_sbd_param in self.fence_sbd_parameters:
             res_id, crashdump, pcmk_delay_max = fence_sbd_param.values()
             if utils.is_boolean_false(crashdump) and self.crashdump_watchdog_timeout:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "It's required that crashdump parameter is set to '1' in resource %s when sbd crashdump is configured, now is not set",
                     res_id
                 )
                 result_list.append(CheckResult.ERROR)
             elif utils.is_boolean_true(crashdump) and not self.crashdump_watchdog_timeout:
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "It's recommended that crashdump parameter should not be set in resource %s when sbd crashdump is not configured",
                     res_id
                 )
                 result_list.append(CheckResult.WARNING)
 
             if self.two_node_without_qdevice and not pcmk_delay_max:
-                self._log_when_not_quiet(
-                    logging.ERROR,
+                self.logger.error(
                     "It's required that pcmk_delay_max parameter is set to %ds in resource %s for 2-node cluster without qdevice, now is not set",
                     constants.PCMK_DELAY_MAX, res_id
                 )
                 result_list.append(CheckResult.ERROR)
             elif pcmk_delay_max and not self.two_node_without_qdevice:
-                self._log_when_not_quiet(
-                    logging.WARNING,
+                self.logger.warning(
                     "It's recommended that pcmk_delay_max parameter should not be set in resource %s for clusters other than 2-node cluster without qdevice",
                     res_id
                 )

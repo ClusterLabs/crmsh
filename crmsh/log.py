@@ -26,6 +26,20 @@ class DEBUG2Logger(logging.Logger):
             self._log(DEBUG2, msg, args, **kwargs)
 
 
+class QuietLoggerAdapter(logging.LoggerAdapter):
+    def __init__(self, logger, quiet):
+        super().__init__(logger, {})
+        self.quiet = quiet
+
+    def log(self, level, msg, *args, **kwargs):
+        quiet = self.quiet
+        if callable(quiet):
+            quiet = quiet()
+        if quiet:
+            return
+        self.logger.log(level, msg, *args, **kwargs)
+
+
 class NumberedLoggerInterface(DEBUG2Logger):
     """
     Interface to prepend a number to the message, used for regression test. When this class is used directly, no numbers are prepend.
