@@ -533,9 +533,16 @@ class SBDCheckItem(IntEnum):
     STONITH_ENABLED_PROPERTY = auto()
     UNSET_SBD_DELAY_START_IN_DROPIN = auto()
     ENABLE_SBD_SERVICE = auto()
+    DEPRECATED_PROPERTY = auto()
 
 
 class SBDConfigChecker(SBDTimeout):
+
+    DEPRECATED_PROPERTY_LIST = [
+        "stonith-watchdog-timeout",
+        "stonith-timeout",
+        "stonith-enabled"
+    ]
 
     def __init__(self, quiet=False, fix=False):
         super().__init__()
@@ -556,17 +563,17 @@ class SBDConfigChecker(SBDTimeout):
     @staticmethod
     def log_and_return(check_res: CheckResult, fix_flag: bool = False) -> bool:
         if check_res == CheckResult.SUCCESS:
-            logger.info('SBD: Check sbd timeout configuration: OK.')
+            logger.info('SBD: Check SBD-related configurations: OK.')
             return True
         cmd = "crm cluster health sbd --fix"
         issue_type = "error" if check_res == CheckResult.ERROR else "warning"
         if not fix_flag:
             logger.info(f'Please run "{cmd}" to fix the above {issue_type} on the running cluster')
         if check_res == CheckResult.ERROR:
-            logger.error("SBD: Check sbd timeout configuration: FAIL.")
+            logger.error("SBD: Check SBD-related configurations: FAIL.")
             return False
         elif check_res == CheckResult.WARNING:
-            logger.info('SBD: Check sbd timeout configuration: OK.')
+            logger.info('SBD: Check SBD-related configurations: OK.')
             return True
 
     def _check_and_fix_items(self) -> list[tuple]:
@@ -682,6 +689,14 @@ class SBDConfigChecker(SBDTimeout):
                 True,
                 []
             ),
+
+            (
+                "deprecated property",
+                self._check_deprecated_property,
+                self._fix_deprecated_property,
+                False,
+                []
+            )
         ]
 
 
@@ -693,7 +708,7 @@ class SBDConfigChecker(SBDTimeout):
     def check_and_fix(self) -> CheckResult:
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
             if self.fix:
-                raise FixAborted("%s is not active, skip fixing SBD timeout issues" % constants.SBD_SERVICE)
+                raise FixAborted("%s is not active, skip fixing SBD-related configuration issues" % constants.SBD_SERVICE)
             elif not SBDUtils.diskbased_sbd_configured() and not SBDUtils.diskless_sbd_configured():
                 raise FixAborted("Neither disk-based nor disk-less SBD is configured, skip checking SBD timeout issues")
 
@@ -744,7 +759,6 @@ class SBDConfigChecker(SBDTimeout):
                 else:
                     raise FixFailure(f"Failed to fix {name} issue")
 
-        SBDConfigChecker._check_deprecated_property()
         SBDManager.warn_diskless_sbd()
 
         return SBDConfigChecker._return_helper(check_res_list)
@@ -1131,14 +1145,18 @@ class SBDConfigChecker(SBDTimeout):
                 shell.get_stdout_or_raise_error(cmd)
         time.sleep(2)
 
-    @staticmethod
-    def _check_deprecated_property() -> None:
-        for prop in (
-            "stonith-watchdog-timeout",
-            "stonith-timeout",
-            "stonith-enabled"
-        ):
-            utils.DeprecatedTermTranslator(prop).check()
+    def _check_deprecated_property(self) -> CheckResult:
+        check_res_list = []
+        for prop in self.DEPRECATED_PROPERTY_LIST:
+            translator_inst = utils.DeprecatedTermTranslator(prop, quiet=self.quiet)
+            check_res = CheckResult.SUCCESS if translator_inst.check() else CheckResult.WARNING
+            check_res_list.append(check_res)
+        return SBDConfigChecker._return_helper(check_res_list)
+
+    def _fix_deprecated_property(self):
+        for prop in self.DEPRECATED_PROPERTY_LIST:
+            translator_inst = utils.DeprecatedTermTranslator(prop, quiet=self.quiet)
+            translator_inst.fix()
 
     def _check_fence_sbd_parameters(self) -> CheckResult:
         if not self.disk_based:

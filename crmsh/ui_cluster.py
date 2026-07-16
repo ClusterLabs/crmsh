@@ -859,7 +859,7 @@ to get the geo cluster configuration.""",
                     return False
                 except sbd.FixAborted as e:
                     logger.error('%s', e)
-                    logger.error('SBD: Check sbd timeout configuration: FAIL.')
+                    logger.error('SBD: Check SBD-related configurations: FAIL.')
                     return False
                 return sbd.SBDConfigChecker.log_and_return(result, fix)
 

@@ -303,6 +303,41 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.WARNING, fix_flag=True))
         mock_logger_info.assert_called_once_with("SBD: Check sbd timeout configuration: OK.")
 
+    @patch('crmsh.sbd.utils.DeprecatedTermTranslator')
+    def test_check_deprecated_property_warning(self, mock_translator):
+        translator_insts = [Mock(), Mock(), Mock()]
+        translator_insts[0].check.return_value = True
+        translator_insts[1].check.return_value = False
+        translator_insts[2].check.return_value = True
+        mock_translator.side_effect = translator_insts
+
+        res = self.instance_check._check_deprecated_property()
+
+        self.assertEqual(res, sbd.CheckResult.WARNING)
+        self.assertEqual(mock_translator.call_args_list, [
+            call('stonith-watchdog-timeout', quiet=False),
+            call('stonith-timeout', quiet=False),
+            call('stonith-enabled', quiet=False),
+        ])
+        for translator_inst in translator_insts:
+            translator_inst.check.assert_called_once_with()
+
+    @patch('crmsh.sbd.utils.DeprecatedTermTranslator')
+    def test_fix_deprecated_property(self, mock_translator):
+        translator_insts = [Mock(), Mock(), Mock()]
+        mock_translator.side_effect = translator_insts
+
+        self.instance_fix._fix_deprecated_property()
+
+        self.assertEqual(mock_translator.call_args_list, [
+            call('stonith-watchdog-timeout', quiet=False),
+            call('stonith-timeout', quiet=False),
+            call('stonith-enabled', quiet=False),
+        ])
+        for translator_inst in translator_insts:
+            translator_inst.fix.assert_called_once_with()
+
+
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_sbd_not_active(self, mock_service_manager):
         self.instance_check.fix = True
@@ -402,6 +437,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
+        mock_check_deprecated_property.return_value = sbd.CheckResult.SUCCESS
         self.instance_fix._check_config_consistency = Mock(return_value=True)
         self.instance_fix._load_configurations_from_runtime = Mock()
 
