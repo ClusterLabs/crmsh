@@ -37,8 +37,6 @@ Feature: Test deployment of high-availability firewalld service
     And     The "high-availability" firewalld service is not added on "hanode1"
     And     The "high-availability" firewalld service is not added on "hanode2"
     # open behave agent port
-    When    Run "firewall-offline-cmd --add-port=1122/tcp" on "hanode1"
-    When    Run "firewall-offline-cmd --add-port=1122/tcp" on "hanode2"
     When    Run "systemctl start firewalld" on "hanode2"
     When    Run "systemctl start firewalld" on "hanode1"
     Then    Service "firewalld" is "started" on "hanode2"
@@ -62,7 +60,6 @@ Feature: Test deployment of high-availability firewalld service
     Given   Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
     And     Service "firewalld" is "stopped" on "qnetd-node"
-    When    Run "firewall-offline-cmd --add-port=1122/tcp" on "qnetd-node"
     When    Run "systemctl start firewalld" on "qnetd-node"
     Then    Service "firewalld" is "started" on "qnetd-node"
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
