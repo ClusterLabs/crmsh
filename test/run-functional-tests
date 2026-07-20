@@ -213,6 +213,7 @@ deploy_ha_node() {
 	podman_exec $node_name "echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config"
 	podman_exec $node_name "systemctl start sshd.service"
 	podman_exec $node_name "systemctl stop firewalld.service"
+    podman_exec $node_name "firewall-offline-cmd --add-port=1122/tcp"
 
 	if [[ "$node_name" != "qnetd-node" && ! "$node_name" =~ ^pcmk-remote-node[0-9]$ ]];then
 	  podman cp $PROJECT_PATH $node_name:/opt/crmsh
