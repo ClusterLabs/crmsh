@@ -2900,7 +2900,7 @@ class DeprecatedTermTranslator:
         new_to_dep = cls._cached_new_to_deprecated
 
         if dep_to_new is None or new_to_dep is None:
-            dep_to_new = ra.get_properties_meta().get_deprecated_params_dict()
+            dep_to_new = ra.get_properties_meta().get_deprecated_mapping()
             new_to_dep = {
                 v: k for k, v in dep_to_new.items()
                 if v is not None
