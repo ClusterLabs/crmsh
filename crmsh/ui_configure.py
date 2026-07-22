@@ -254,7 +254,7 @@ def _prim_params_completer(agent, args):
     elif '=' in completing:
         return []
     command.enable_custom_sort_order()
-    return utils.filter_keys(agent.get_all_params_dict(), args)
+    return utils.filter_keys(agent.get_active_params(), args)
 
 
 def _prim_meta_completer(agent, args):

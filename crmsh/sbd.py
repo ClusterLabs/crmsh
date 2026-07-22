@@ -538,12 +538,6 @@ class SBDCheckItem(IntEnum):
 
 class SBDConfigChecker(SBDTimeout):
 
-    DEPRECATED_PROPERTY_LIST = [
-        "stonith-watchdog-timeout",
-        "stonith-timeout",
-        "stonith-enabled"
-    ]
-
     def __init__(self, quiet=False, fix=False):
         super().__init__()
         self.quiet = quiet
@@ -1145,16 +1139,26 @@ class SBDConfigChecker(SBDTimeout):
                 shell.get_stdout_or_raise_error(cmd)
         time.sleep(2)
 
+    @staticmethod
+    def get_sbd_related_deprecated_properties() -> list[str]:
+        return [
+            p
+            for p in utils.get_all_configured_deprecated_properties()
+            if p.startswith("fence-") or p.startswith("stonith-") or p in [
+                "concurrent-fencing",
+            ]
+        ]
+
     def _check_deprecated_property(self) -> CheckResult:
         check_res_list = []
-        for prop in self.DEPRECATED_PROPERTY_LIST:
+        for prop in SBDConfigChecker.get_sbd_related_deprecated_properties():
             translator_inst = utils.DeprecatedTermTranslator(prop, quiet=self.quiet)
             check_res = CheckResult.SUCCESS if translator_inst.check() else CheckResult.WARNING
             check_res_list.append(check_res)
         return SBDConfigChecker._return_helper(check_res_list)
 
     def _fix_deprecated_property(self):
-        for prop in self.DEPRECATED_PROPERTY_LIST:
+        for prop in SBDConfigChecker.get_sbd_related_deprecated_properties():
             translator_inst = utils.DeprecatedTermTranslator(prop, quiet=self.quiet)
             translator_inst.fix()
 

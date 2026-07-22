@@ -2320,22 +2320,7 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
         return 0
 
 
-def get_property(name, property_type="crm_config", peer=None, get_default=True, direct=False):
-    """
-    Get cluster properties
-
-    "property_type" can be crm_config|rsc_defaults|op_defaults
-    "get_default" is used to get the default value from cluster metadata,
-    when it is False, the property value will be got from cib
-    When "direct" is True, get exactly the given property without deprecated-term translation
-    """
-    if not direct:
-        translate_inst = DeprecatedTermTranslator(name)
-        if translate_inst.using_new_term and \
-                translate_inst.deprecated_configured and \
-                not translate_inst.new_configured:
-            name = translate_inst.deprecated_term
-
+def _get_raw_property(name, property_type="crm_config", peer=None, get_default=True):
     if property_type == "crm_config" and get_default:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
         cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
@@ -2345,8 +2330,26 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True, 
     return stdout if rc == 0 else None
 
 
+def get_property(name, property_type="crm_config", peer=None, get_default=True):
+    """
+    Get cluster properties
+
+    "property_type" can be crm_config|rsc_defaults|op_defaults
+    "get_default" is used to get the default value from cluster metadata,
+    when it is False, the property value will be got from cib
+    """
+    translate_inst = DeprecatedTermTranslator(name)
+    if translate_inst.using_new_term and \
+            translate_inst.deprecated_configured and \
+            not translate_inst.new_configured:
+        name = translate_inst.deprecated_term
+
+    return _get_raw_property(name, property_type, peer, get_default)
+
+
 def property_configured(name, property_type="crm_config", peer=None):
-    cmd = f"crm_attribute -t {property_type} -n {name} -Gq"
+    cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
+    cmd = f"CIB_file={cib_path} crm_attribute -t {property_type} -n {name} -Gq"
     rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return rc == 0
 
@@ -2412,22 +2415,8 @@ def leverage_maintenance_mode() -> typing.Generator[bool, None, None]:
         yield False
 
 
-def set_property(property_name, property_value, property_type="crm_config", conditional=False, direct=False):
-    """
-    Set property for cluster, resource and operator
-
-    "property_type" can be crm_config|rsc_defaults|op_defaults
-    When "conditional" is True, set the property if given "property_value" is larger then value from cib
-    When "direct" is True, set exactly the given property without deprecated-term translation
-    """
-    if not direct:
-        translate_inst = DeprecatedTermTranslator(property_name)
-        if translate_inst.using_new_term and \
-                translate_inst.deprecated_configured and \
-                not translate_inst.new_configured:
-            property_name = translate_inst.deprecated_term
-
-    origin_value = get_property(property_name, property_type, direct=True)
+def _set_raw_property(property_name, property_value, property_type="crm_config", conditional=False):
+    origin_value = _get_raw_property(property_name, property_type, get_default=False)
     if origin_value and str(origin_value) == str(property_value):
         return
     if conditional and crm_msec(origin_value) >= crm_msec(property_value):
@@ -2440,10 +2429,25 @@ def set_property(property_name, property_value, property_type="crm_config", cond
     cmd = "crm configure {} {}={}".format(property_sub_cmd, property_name, property_value)
     sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
-    if not direct:
-        deprecated_inst = DeprecatedTermTranslator(property_name)
-        if deprecated_inst.both_configured:
-            delete_property(deprecated_inst.deprecated_term)
+
+def set_property(property_name, property_value, property_type="crm_config", conditional=False):
+    """
+    Set property for cluster, resource and operator
+
+    "property_type" can be crm_config|rsc_defaults|op_defaults
+    When "conditional" is True, set the property if given "property_value" is larger then value from cib
+    """
+    translate_inst = DeprecatedTermTranslator(property_name)
+    if translate_inst.using_new_term and \
+            translate_inst.deprecated_configured and \
+            not translate_inst.new_configured:
+        property_name = translate_inst.deprecated_term
+
+    _set_raw_property(property_name, property_value, property_type, conditional)
+
+    deprecated_inst = DeprecatedTermTranslator(property_name)
+    if deprecated_inst.both_configured:
+        delete_property(deprecated_inst.deprecated_term)
 
 
 def get_systemd_timeout_start_in_sec(time_res):
@@ -2961,6 +2965,7 @@ class DeprecatedTermTranslator:
                     res.deprecated_term, res.new_term
                 )
             else:
+                passed = True
                 self.logger.warning(
                     "\"%s\" is deprecated, please consider removing it",
                     res.deprecated_term
@@ -2998,11 +3003,10 @@ class DeprecatedTermTranslator:
             if res.new_configured:
                 delete_property(res.deprecated_term)
             elif res.new_term:
-                value = get_property(res.deprecated_term, get_default=False, direct=True)
-                set_property(res.new_term, value, direct=True)
-                delete_property(res.deprecated_term)
-            else:
-                delete_property(res.deprecated_term)
+                value = _get_raw_property(res.deprecated_term, get_default=False)
+                if value is not None:
+                    _set_raw_property(res.new_term, value)
+                    delete_property(res.deprecated_term)
 
     @classmethod
     def get_working_term(cls, term: str) -> str:
@@ -3054,4 +3058,10 @@ class DeprecatedTermTranslator:
         return not self._resolve_res.using_deprecated
 
 
+def get_all_configured_deprecated_properties() -> list[str]:
+    return [
+        p
+        for p in ra.get_properties_meta().get_deprecated_params()
+        if property_configured(p)
+    ]
 # vim:ts=4:sw=4:et:

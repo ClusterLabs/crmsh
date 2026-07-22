@@ -332,9 +332,6 @@ class RAInfo(object):
             if params[name]["deprecated"] == "1"
         }
 
-    def get_all_params_dict(self):
-        """Return non-deprecated parameters with full metadata."""
-        return self.get_active_params()
 
 
     def params(self):
