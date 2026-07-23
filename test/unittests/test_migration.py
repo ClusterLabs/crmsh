@@ -114,3 +114,30 @@ class TestCheckRemovedResourceAgents(unittest.TestCase):
                 'Please run "crm configure upgrade force" to upgrade to the latest version.',
             ]
         )
+
+
+class TestMigrate(unittest.TestCase):
+    @mock.patch('crmsh.migration.migrate_corosync_conf')
+    @mock.patch('crmsh.migration._check_impl')
+    def test_migrate_force_breaks_pacemaker(self, mock_check_impl, mock_migrate_corosync_conf):
+        res = migration.migrate(['sles16', '--force-breaks-pacemaker'])
+        self.assertEqual(res, 0)
+        mock_check_impl.assert_not_called()
+        mock_migrate_corosync_conf.assert_called_once_with(local=False)
+
+    @mock.patch('crmsh.migration.migrate_corosync_conf')
+    @mock.patch('crmsh.migration._check_impl')
+    def test_migrate_force_breaks_pacemaker_local(self, mock_check_impl, mock_migrate_corosync_conf):
+        res = migration.migrate(['sles16', '--force-breaks-pacemaker', '--local'])
+        self.assertEqual(res, 0)
+        mock_check_impl.assert_not_called()
+        mock_migrate_corosync_conf.assert_called_once_with(local=True)
+
+    @mock.patch('crmsh.migration.migrate_corosync_conf')
+    @mock.patch('crmsh.migration._check_impl')
+    def test_migrate_no_force_success(self, mock_check_impl, mock_migrate_corosync_conf):
+        mock_check_impl.return_value = migration.CheckReturnCode.PASS_NEED_AUTO_FIX
+        res = migration.migrate(['sles16'])
+        self.assertEqual(res, 0)
+        mock_check_impl.assert_called_once_with(local=False, json='', summary=False)
+        mock_migrate_corosync_conf.assert_called_once_with(local=False)

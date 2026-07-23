@@ -159,8 +159,15 @@ class CheckResultInteractiveHandler(CheckResultHandler):
 def migrate(args: typing.Sequence[str]):
     parser = argparse.ArgumentParser(args[0])
     parser.add_argument('--local', action='store_true')
+    parser.add_argument('--force-breaks-pacemaker', action='store_true')
     parsed_args = parser.parse_args(args[1:])
     try:
+        if parsed_args.force_breaks_pacemaker:
+            logger.info('Starting forced migration...')
+            migrate_corosync_conf(local=parsed_args.local)
+            logger.info('Finished forced migration.')
+            return 0
+
         match _check_impl(local=parsed_args.local, json='', summary=False):
             case CheckReturnCode.ALREADY_MIGRATED:
                 logger.info("This cluster works on SLES 16. No migration is needed.")
