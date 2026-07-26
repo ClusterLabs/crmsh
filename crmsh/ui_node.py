@@ -411,14 +411,17 @@ class NodeMgmt(command.UI):
             logger.info("online node %s", node)
 
     @command.wait
-    @command.completers(compl.nodes)
-    def do_maintenance(self, context, node=None):
-        'usage: maintenance [<node>]'
+    @command.completers(compl.nodes, compl.choice(['on', 'off']))
+    def do_maintenance(self, context, node=None, on_off='on'):
+        'usage: maintenance [<node>] [on|off]'
         if not node:
             node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
-        return self._commit_node_attr(context, node, "maintenance", "true")
+        if on_off not in ['on', 'off']:
+            context.fatal_error("Expected <node> [on|off]")
+        _value = "true" if on_off == 'on' else "false"
+        return self._commit_node_attr(context, node, "maintenance", _value)
 
 
     @command.wait
