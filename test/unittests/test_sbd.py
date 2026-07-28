@@ -289,19 +289,19 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('logging.Logger.info')
     def test_log_and_return_success(self, mock_logger_info):
         self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.SUCCESS))
-        mock_logger_info.assert_called_once_with("SBD: Check sbd timeout configuration: OK.")
+        mock_logger_info.assert_called_once_with("SBD: Check SBD-related configurations: OK.")
 
     @patch('logging.Logger.info')
     @patch('logging.Logger.error')
     def test_log_and_return_error(self, mock_logger_error, mock_logger_info):
         self.assertFalse(self.instance_check.log_and_return(sbd.CheckResult.ERROR))
         mock_logger_info.assert_called_once_with("Please run \"crm cluster health sbd --fix\" to fix the above error on the running cluster")
-        mock_logger_error.assert_called_once_with("SBD: Check sbd timeout configuration: FAIL.")
+        mock_logger_error.assert_called_once_with("SBD: Check SBD-related configurations: FAIL.")
 
     @patch('logging.Logger.info')
     def test_log_and_return_warning(self, mock_logger_info):
         self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.WARNING, fix_flag=True))
-        mock_logger_info.assert_called_once_with("SBD: Check sbd timeout configuration: OK.")
+        mock_logger_info.assert_called_once_with("SBD: Check SBD-related configurations: OK.")
 
     @patch('crmsh.sbd.utils.get_all_configured_deprecated_properties')
     @patch('crmsh.sbd.utils.DeprecatedTermTranslator')
@@ -473,7 +473,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         res = self.instance_fix.check_and_fix()
         self.assertEqual(res, sbd.CheckResult.SUCCESS)
 
-        mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
+        mock_service_manager_inst.service_is_active.assert_has_calls([call(constants.SBD_SERVICE), call(constants.PCMK_SERVICE)])
         self.instance_fix._check_config_consistency.assert_called_once()
         self.instance_fix._load_configurations_from_runtime.assert_called_once()
         self.instance_fix._check_sbd_disk_metadata.assert_called_once()

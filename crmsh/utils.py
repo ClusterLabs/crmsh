@@ -2946,6 +2946,13 @@ class DeprecatedTermTranslator:
             new_configured=new_configured
         )
 
+    def _deprecated_value_is_default(self, term: str) -> bool:
+        default_value = ra.get_properties_meta().param_default(term)
+        if default_value is None:
+            return False
+        configured_value = _get_raw_property(term, get_default=False)
+        return str(configured_value) == str(default_value)
+
     def check(self, internal: bool = True) -> bool:
         passed = True
         res = self._resolve_res
@@ -2970,6 +2977,8 @@ class DeprecatedTermTranslator:
                     "\"%s\" is deprecated, please consider removing it",
                     res.deprecated_term
                 )
+                if self._deprecated_value_is_default(res.deprecated_term):
+                    passed = False
 
         if internal:
             return passed
@@ -3006,6 +3015,9 @@ class DeprecatedTermTranslator:
                 value = _get_raw_property(res.deprecated_term, get_default=False)
                 if value is not None:
                     _set_raw_property(res.new_term, value)
+                    delete_property(res.deprecated_term)
+            else:
+                if self._deprecated_value_is_default(res.deprecated_term):
                     delete_property(res.deprecated_term)
 
     @classmethod

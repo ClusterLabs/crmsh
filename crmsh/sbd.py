@@ -700,10 +700,13 @@ class SBDConfigChecker(SBDTimeout):
         self.current_enabled_term = utils.DeprecatedTermTranslator.get_working_term("fencing-enabled")
 
     def check_and_fix(self) -> CheckResult:
-        if not ServiceManager().service_is_active(constants.SBD_SERVICE):
-            if self.fix:
-                raise FixAborted("%s is not active, skip fixing SBD-related configuration issues" % constants.SBD_SERVICE)
-            elif not SBDUtils.diskbased_sbd_configured() and not SBDUtils.diskless_sbd_configured():
+        service_manager = ServiceManager()
+        if self.fix:
+            for service in (constants.SBD_SERVICE, constants.PCMK_SERVICE):
+                if not service_manager.service_is_active(service):
+                    raise FixAborted(f"{service} is not active, skip fixing SBD-related configuration issues")
+        elif not service_manager.service_is_active(constants.SBD_SERVICE):
+            if not SBDUtils.diskbased_sbd_configured() and not SBDUtils.diskless_sbd_configured():
                 raise FixAborted("Neither disk-based nor disk-less SBD is configured, skip checking SBD timeout issues")
 
         all_nodes_reachable = True

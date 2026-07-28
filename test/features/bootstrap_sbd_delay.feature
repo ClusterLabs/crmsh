@@ -116,7 +116,7 @@ Feature: configure sbd delay start correctly
     When    Try "crm configure property fencing-watchdog-timeout=1" on "hanode1"
     Then    Except "It's required to set fencing-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
     # Expect successfully set stonith-watchdog-timeout=5 since already set fencing-watchdog-timeout
-    When    Run "crm configur proerty stonith-watchdog-timeout=5" on "hanode1"
+    When    Run "crm configure property stonith-watchdog-timeout=5" on "hanode1"
     Then    Cluster property "fencing-watchdog-timeout" is "30"
     When    Try "crm -F configure filter "sed 's/fencing-watchdog-timeout=30/#fencing-watchdog-timeout=30/g'"" on "hanode1"
     Then    Expected "It's required to set stonith-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
@@ -343,15 +343,15 @@ Feature: configure sbd delay start correctly
     Then    Expected "/etc/sysconfig/sbd is not consistent across cluster nodes" in stderr
     When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=71/' /etc/sysconfig/sbd" on "hanode2"
     When    Run "crm cluster health sbd" on "hanode1"
-    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
     # check sbd disk metadata
     When    Run "sbd -1 15 -4 16 -d /dev/sda1 create" on "hanode1"
-    When    Try "crm sbd configur show disk_metadata" on "hanode1"
+    When    Try "crm sbd configure show disk_metadata" on "hanode1"
     Then    Expected "ERROR: It's required that SBD msgwait(now 16) >= 30" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
     Then    Expected "ERROR: It's required that SBD msgwait(now 16) >= 30" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
-    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
     # check SBD_DELAY_START
     When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=40/' /etc/sysconfig/sbd" on "hanode1"
     When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=40/' /etc/sysconfig/sbd" on "hanode2"
@@ -360,7 +360,7 @@ Feature: configure sbd delay start correctly
     When    Try "crm cluster health sbd" on "hanode1"
     Then    Expected "It's required that SBD_DELAY_START is set to 71, now is 40" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
-    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
     # check fencing-timeout
     When    Run "crm configure property fencing-timeout=50" on "hanode1"
     When    Try "crm sbd configure show" on "hanode1"
@@ -368,7 +368,7 @@ Feature: configure sbd delay start correctly
     When    Try "crm cluster health sbd" on "hanode1"
     Then    Expected "It's required that fencing-timeout is set to 71, now is 50" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
-    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
     # check crashdump and pcmk_delay_max
     When    Run "crm resource param fencing-sbd set crashdump 1" on "hanode1"
     When    Run "crm resource param fencing-sbd delete pcmk_delay_max" on "hanode1"
@@ -379,7 +379,7 @@ Feature: configure sbd delay start correctly
       It's required that pcmk_delay_max parameter is set to 30s in resource fencing-sbd for 2-node cluster without qdevice, now is not set
       """
     When    Run "crm cluster health sbd --fix" on "hanode1"
-    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
     # Adjust token timeout in corosync.conf
     When    Run "sed -i 's/token: .*/token: 10000/' /etc/corosync/corosync.conf" on "hanode1"
     When    Run "sed -i 's/token: .*/token: 10000/' /etc/corosync/corosync.conf" on "hanode2"
@@ -389,7 +389,7 @@ Feature: configure sbd delay start correctly
     When    Try "crm cluster health sbd" on "hanode1"
     Then    Expected "It's required that SBD_DELAY_START is set to 82, now is 71" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
-    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
 
   @clean
   Scenario: Check and fix sbd-related timeout values for diskless sbd
@@ -409,4 +409,4 @@ Feature: configure sbd delay start correctly
     When    Try "crm cluster health sbd" on "hanode1"
     Then    Expected "It's required that fencing-watchdog-timeout is set to 30, now is not set" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
-    Then    Expected "SBD: Check sbd timeout configuration: OK" in stdout
+    Then    Expected "SBD: Check SBD-related configurations: OK." in stdout

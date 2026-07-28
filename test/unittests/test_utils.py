@@ -724,15 +724,65 @@ def test_deprecated_term_fix_deletes_old_when_both_configured(mock_resolve, mock
 @mock.patch('crmsh.utils.delete_property')
 @mock.patch('crmsh.utils._set_raw_property')
 @mock.patch('crmsh.utils._get_raw_property')
+@mock.patch('crmsh.utils.ra.get_properties_meta')
 @mock.patch('crmsh.utils.DeprecatedTermTranslator._resolve')
-def test_deprecated_term_fix_keeps_old_without_replacement(mock_resolve, mock_get, mock_set, mock_delete):
+def test_deprecated_term_fix_deletes_default_without_replacement(mock_resolve, mock_get_meta, mock_get, mock_set, mock_delete):
     mock_resolve.return_value = _deprecated_resolution(deprecated_configured=True, new_configured=False, new_term=None)
+    mock_get_meta.return_value.param_default.return_value = 'true'
+    mock_get.return_value = 'true'
 
     utils.DeprecatedTermTranslator('stonith-timeout').fix()
 
+    mock_get_meta.return_value.param_default.assert_called_once_with('stonith-timeout')
+    mock_get.assert_called_once_with('stonith-timeout', get_default=False)
+    mock_set.assert_not_called()
+    mock_delete.assert_called_once_with('stonith-timeout')
+
+
+@mock.patch('crmsh.utils.delete_property')
+@mock.patch('crmsh.utils._set_raw_property')
+@mock.patch('crmsh.utils._get_raw_property')
+@mock.patch('crmsh.utils.ra.get_properties_meta')
+@mock.patch('crmsh.utils.DeprecatedTermTranslator._resolve')
+def test_deprecated_term_fix_keeps_non_default_without_replacement(mock_resolve, mock_get_meta, mock_get, mock_set, mock_delete):
+    mock_resolve.return_value = _deprecated_resolution(deprecated_configured=True, new_configured=False, new_term=None)
+    mock_get_meta.return_value.param_default.return_value = 'true'
+    mock_get.return_value = 'false'
+
+    utils.DeprecatedTermTranslator('stonith-timeout').fix()
+
+    mock_get_meta.return_value.param_default.assert_called_once_with('stonith-timeout')
+    mock_get.assert_called_once_with('stonith-timeout', get_default=False)
+    mock_set.assert_not_called()
+    mock_delete.assert_not_called()
+
+
+@mock.patch('crmsh.utils.delete_property')
+@mock.patch('crmsh.utils._set_raw_property')
+@mock.patch('crmsh.utils._get_raw_property')
+@mock.patch('crmsh.utils.ra.get_properties_meta')
+@mock.patch('crmsh.utils.DeprecatedTermTranslator._resolve')
+def test_deprecated_term_fix_keeps_without_replacement_and_default(mock_resolve, mock_get_meta, mock_get, mock_set, mock_delete):
+    mock_resolve.return_value = _deprecated_resolution(deprecated_configured=True, new_configured=False, new_term=None)
+    mock_get_meta.return_value.param_default.return_value = None
+
+    utils.DeprecatedTermTranslator('stonith-timeout').fix()
+
+    mock_get_meta.return_value.param_default.assert_called_once_with('stonith-timeout')
     mock_get.assert_not_called()
     mock_set.assert_not_called()
     mock_delete.assert_not_called()
+
+
+@mock.patch('crmsh.utils._get_raw_property')
+@mock.patch('crmsh.utils.ra.get_properties_meta')
+@mock.patch('crmsh.utils.DeprecatedTermTranslator._resolve')
+def test_deprecated_term_check_fails_default_without_replacement(mock_resolve, mock_get_meta, mock_get):
+    mock_resolve.return_value = _deprecated_resolution(deprecated_configured=True, new_configured=False, new_term=None)
+    mock_get_meta.return_value.param_default.return_value = 'true'
+    mock_get.return_value = 'true'
+
+    assert utils.DeprecatedTermTranslator('stonith-timeout', quiet=True).check() is False
 
 
 @mock.patch('crmsh.utils.delete_property')
