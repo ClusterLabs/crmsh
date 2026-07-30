@@ -2320,6 +2320,16 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
         return 0
 
 
+def _get_raw_property(name, property_type="crm_config", peer=None, get_default=True):
+    if property_type == "crm_config" and get_default:
+        cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
+        cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
+    else:
+        cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
+    rc, stdout, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
+    return stdout if rc == 0 else None
+
+
 def get_property(name, property_type="crm_config", peer=None, get_default=True):
     """
     Get cluster properties
@@ -2334,17 +2344,12 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True):
             not translate_inst.new_configured:
         name = translate_inst.deprecated_term
 
-    if property_type == "crm_config" and get_default:
-        cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
-        cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
-    else:
-        cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
-    rc, stdout, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
-    return stdout if rc == 0 else None
+    return _get_raw_property(name, property_type, peer, get_default)
 
 
 def property_configured(name, property_type="crm_config", peer=None):
-    cmd = f"crm_attribute -t {property_type} -n {name} -Gq"
+    cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
+    cmd = f"CIB_file={cib_path} crm_attribute -t {property_type} -n {name} -Gq"
     rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return rc == 0
 
@@ -2410,6 +2415,21 @@ def leverage_maintenance_mode() -> typing.Generator[bool, None, None]:
         yield False
 
 
+def _set_raw_property(property_name, property_value, property_type="crm_config", conditional=False):
+    origin_value = _get_raw_property(property_name, property_type, get_default=False)
+    if origin_value and str(origin_value) == str(property_value):
+        return
+    if conditional and crm_msec(origin_value) >= crm_msec(property_value):
+        return
+    if not origin_value and property_value:
+        logger.info("Set property \"%s\" in %s to %s", property_name, property_type, property_value)
+    if origin_value and str(origin_value) != str(property_value):
+        logger.warning("\"%s\" in %s is set to %s, it was %s", property_name, property_type, property_value, origin_value)
+    property_sub_cmd = "property" if property_type == "crm_config" else property_type
+    cmd = "crm configure {} {}={}".format(property_sub_cmd, property_name, property_value)
+    sh.cluster_shell().get_stdout_or_raise_error(cmd)
+
+
 def set_property(property_name, property_value, property_type="crm_config", conditional=False):
     """
     Set property for cluster, resource and operator
@@ -2423,22 +2443,12 @@ def set_property(property_name, property_value, property_type="crm_config", cond
             not translate_inst.new_configured:
         property_name = translate_inst.deprecated_term
 
-    origin_value = get_property(property_name, property_type)
-    if origin_value and str(origin_value) == str(property_value):
-        return
-    if conditional and crm_msec(origin_value) >= crm_msec(property_value):
-        return
-    if not origin_value and property_value:
-        logger.info("Set property \"%s\" in %s to %s", property_name, property_type, property_value)
-    if origin_value and str(origin_value) != str(property_value):
-        logger.warning("\"%s\" in %s is set to %s, it was %s", property_name, property_type, property_value, origin_value)
-    property_sub_cmd = "property" if property_type == "crm_config" else property_type
-    cmd = "crm configure {} {}={}".format(property_sub_cmd, property_name, property_value)
-    sh.cluster_shell().get_stdout_or_raise_error(cmd)
+    _set_raw_property(property_name, property_value, property_type, conditional)
 
     deprecated_inst = DeprecatedTermTranslator(property_name)
     if deprecated_inst.both_configured:
         delete_property(deprecated_inst.deprecated_term)
+
 
 def get_systemd_timeout_start_in_sec(time_res):
     """
@@ -2880,11 +2890,13 @@ class DeprecatedTermTranslator:
     def __init__(
         self,
         term: str,
-        existing_xml_node: typing.Optional[etree.Element] = None
+        existing_xml_node: typing.Optional[etree.Element] = None,
+        quiet: bool = False
     ):
         self.original_term = term
         self.existing_xml_node = existing_xml_node
         self._resolve_res: TermResolution|None = self._resolve()
+        self.logger = log.QuietLoggerAdapter(logger, quiet=quiet)
 
     @classmethod
     def _get_maps(cls) -> tuple[dict, dict]:
@@ -2892,7 +2904,7 @@ class DeprecatedTermTranslator:
         new_to_dep = cls._cached_new_to_deprecated
 
         if dep_to_new is None or new_to_dep is None:
-            dep_to_new = ra.get_properties_meta().get_deprecated_params_dict()
+            dep_to_new = ra.get_properties_meta().get_deprecated_mapping()
             new_to_dep = {
                 v: k for k, v in dep_to_new.items()
                 if v is not None
@@ -2934,44 +2946,79 @@ class DeprecatedTermTranslator:
             new_configured=new_configured
         )
 
-    def check(self, internal: bool = True) -> None:
+    def _deprecated_value_is_default(self, term: str) -> bool:
+        default_value = ra.get_properties_meta().param_default(term)
+        if default_value is None:
+            return False
+        configured_value = _get_raw_property(term, get_default=False)
+        return str(configured_value) == str(default_value)
+
+    def check(self, internal: bool = True) -> bool:
+        passed = True
+        res = self._resolve_res
+        if not res:
+            return passed
+
+        if res.using_deprecated and res.deprecated_configured:
+            passed = False
+            if res.new_configured:
+                self.logger.warning(
+                    "\"%s\" is configured; \"%s\" is deprecated and ignored.",
+                    res.new_term, res.deprecated_term
+                )
+            elif res.new_term:
+                self.logger.warning(
+                    "\"%s\" is deprecated, please consider using \"%s\"",
+                    res.deprecated_term, res.new_term
+                )
+            else:
+                passed = True
+                self.logger.warning(
+                    "\"%s\" is deprecated, please consider removing it",
+                    res.deprecated_term
+                )
+                if self._deprecated_value_is_default(res.deprecated_term):
+                    passed = False
+
+        if internal:
+            return passed
+
+        if not res.using_deprecated and res.deprecated_configured:
+            if not res.new_configured:
+                passed = False
+                self.logger.warning(
+                    "\"%s\" is not configured but deprecated \"%s\" is; Cluster now is using the deprecated property, instead of the default value of \"%s\".",
+                    res.new_term, res.deprecated_term, res.new_term
+                )
+            return passed
+
+        if res.using_deprecated and res.new_configured:
+            if not res.deprecated_configured:
+                passed = True
+                self.logger.warning(
+                    "\"%s\" is deprecated and not configured but \"%s\" is; Cluster now is using the new property, instead of the default value of \"%s\".",
+                    res.deprecated_term, res.new_term, res.deprecated_term
+                )
+            return passed
+
+        return passed
+
+    def fix(self) -> None:
         res = self._resolve_res
         if not res:
             return
 
         if res.using_deprecated and res.deprecated_configured:
             if res.new_configured:
-                logger.warning(
-                    "\"%s\" is configured; \"%s\" is deprecated and ignored.",
-                    res.new_term, res.deprecated_term
-                )
+                delete_property(res.deprecated_term)
             elif res.new_term:
-                logger.warning(
-                    "\"%s\" is deprecated, please consider using \"%s\"",
-                    res.deprecated_term, res.new_term
-                )
+                value = _get_raw_property(res.deprecated_term, get_default=False)
+                if value is not None:
+                    _set_raw_property(res.new_term, value)
+                    delete_property(res.deprecated_term)
             else:
-                logger.warning(
-                    "\"%s\" is deprecated, please consider removing it",
-                    res.deprecated_term
-                )
-
-        if internal:
-            return
-
-        if not res.using_deprecated and res.deprecated_configured:
-            if not res.new_configured:
-                logger.warning(
-                    "\"%s\" is not configured but deprecated \"%s\" is; Cluster now is using the deprecated property, instead of the default value of \"%s\".",
-                    res.new_term, res.deprecated_term, res.new_term
-                )
-
-        if res.using_deprecated and res.new_configured:
-            if not res.deprecated_configured:
-                logger.warning(
-                    "\"%s\" is deprecated and not configured but \"%s\" is; Cluster now is using the new property, instead of the default value of \"%s\".",
-                    res.deprecated_term, res.new_term, res.deprecated_term
-                )
+                if self._deprecated_value_is_default(res.deprecated_term):
+                    delete_property(res.deprecated_term)
 
     @classmethod
     def get_working_term(cls, term: str) -> str:
@@ -3023,4 +3070,10 @@ class DeprecatedTermTranslator:
         return not self._resolve_res.using_deprecated
 
 
+def get_all_configured_deprecated_properties() -> list[str]:
+    return [
+        p
+        for p in ra.get_properties_meta().get_deprecated_params()
+        if property_configured(p)
+    ]
 # vim:ts=4:sw=4:et:

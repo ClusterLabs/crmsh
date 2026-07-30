@@ -143,7 +143,7 @@ def get_properties_list():
 @functools.cache
 def get_properties_without_deprecated():
     try:
-        return get_properties_meta().get_param_list_without_deprecated()
+        return list(get_properties_meta().get_active_params())
     except:
         return []
 
@@ -299,7 +299,30 @@ class RAInfo(object):
             replaced_with = replaced_with_elem.get("name")
         return deprecated, replaced_with
 
-    def get_deprecated_params_dict(self):
+    def get_active_params(self):
+        """Return non-deprecated parameters with full metadata."""
+        params = self.params()
+        if not params:
+            return {}
+        return {
+            name: params[name]
+            for name in params
+            if params[name]["deprecated"] != "1"
+        }
+
+    def get_deprecated_params(self):
+        """Return deprecated parameters with full metadata."""
+        params = self.params()
+        if not params:
+            return {}
+        return {
+            name: params[name]
+            for name in params
+            if params[name]["deprecated"] == "1"
+        }
+
+    def get_deprecated_mapping(self):
+        """Return deprecated parameter names mapped to replacement names."""
         params = self.params()
         if not params:
             return {}
@@ -309,14 +332,7 @@ class RAInfo(object):
             if params[name]["deprecated"] == "1"
         }
 
-    def get_param_list_without_deprecated(self):
-        params = self.params()
-        if not params:
-            return []
-        return [
-            name for name in params
-            if params[name]["deprecated"] != "1"
-        ]
+
 
     def params(self):
         '''

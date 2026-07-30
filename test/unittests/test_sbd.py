@@ -289,19 +289,69 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('logging.Logger.info')
     def test_log_and_return_success(self, mock_logger_info):
         self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.SUCCESS))
-        mock_logger_info.assert_called_once_with("SBD: Check sbd timeout configuration: OK.")
+        mock_logger_info.assert_called_once_with("SBD: Check SBD-related configurations: OK.")
 
     @patch('logging.Logger.info')
     @patch('logging.Logger.error')
     def test_log_and_return_error(self, mock_logger_error, mock_logger_info):
         self.assertFalse(self.instance_check.log_and_return(sbd.CheckResult.ERROR))
         mock_logger_info.assert_called_once_with("Please run \"crm cluster health sbd --fix\" to fix the above error on the running cluster")
-        mock_logger_error.assert_called_once_with("SBD: Check sbd timeout configuration: FAIL.")
+        mock_logger_error.assert_called_once_with("SBD: Check SBD-related configurations: FAIL.")
 
     @patch('logging.Logger.info')
     def test_log_and_return_warning(self, mock_logger_info):
         self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.WARNING, fix_flag=True))
-        mock_logger_info.assert_called_once_with("SBD: Check sbd timeout configuration: OK.")
+        mock_logger_info.assert_called_once_with("SBD: Check SBD-related configurations: OK.")
+
+    @patch('crmsh.sbd.utils.get_all_configured_deprecated_properties')
+    @patch('crmsh.sbd.utils.DeprecatedTermTranslator')
+    def test_check_deprecated_property_warning(self, mock_translator, mock_get_deprecated):
+        deprecated_props = [
+            'stonith-watchdog-timeout',
+            'stonith-timeout',
+            'stonith-enabled',
+        ]
+        mock_get_deprecated.return_value = deprecated_props
+        translator_insts = [Mock(), Mock(), Mock()]
+        translator_insts[0].check.return_value = True
+        translator_insts[1].check.return_value = False
+        translator_insts[2].check.return_value = True
+        mock_translator.side_effect = translator_insts
+
+        res = self.instance_check._check_deprecated_property()
+
+        self.assertEqual(res, sbd.CheckResult.WARNING)
+        mock_get_deprecated.assert_called_once_with()
+        self.assertEqual(mock_translator.call_args_list, [
+            call('stonith-watchdog-timeout', quiet=False),
+            call('stonith-timeout', quiet=False),
+            call('stonith-enabled', quiet=False),
+        ])
+        for translator_inst in translator_insts:
+            translator_inst.check.assert_called_once_with()
+
+    @patch('crmsh.sbd.utils.get_all_configured_deprecated_properties')
+    @patch('crmsh.sbd.utils.DeprecatedTermTranslator')
+    def test_fix_deprecated_property(self, mock_translator, mock_get_deprecated):
+        deprecated_props = [
+            'stonith-watchdog-timeout',
+            'stonith-timeout',
+            'stonith-enabled',
+        ]
+        mock_get_deprecated.return_value = deprecated_props
+        translator_insts = [Mock(), Mock(), Mock()]
+        mock_translator.side_effect = translator_insts
+
+        self.instance_fix._fix_deprecated_property()
+
+        mock_get_deprecated.assert_called_once_with()
+        self.assertEqual(mock_translator.call_args_list, [
+            call('stonith-watchdog-timeout', quiet=False),
+            call('stonith-timeout', quiet=False),
+            call('stonith-enabled', quiet=False),
+        ])
+        for translator_inst in translator_insts:
+            translator_inst.fix.assert_called_once_with()
 
     @patch('crmsh.sbd.ServiceManager')
     def test_check_and_fix_sbd_not_active(self, mock_service_manager):
@@ -402,6 +452,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
+        mock_check_deprecated_property.return_value = sbd.CheckResult.SUCCESS
         self.instance_fix._check_config_consistency = Mock(return_value=True)
         self.instance_fix._load_configurations_from_runtime = Mock()
 
@@ -422,7 +473,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         res = self.instance_fix.check_and_fix()
         self.assertEqual(res, sbd.CheckResult.SUCCESS)
 
-        mock_service_manager_inst.service_is_active.assert_called_once_with(constants.SBD_SERVICE)
+        mock_service_manager_inst.service_is_active.assert_has_calls([call(constants.SBD_SERVICE), call(constants.PCMK_SERVICE)])
         self.instance_fix._check_config_consistency.assert_called_once()
         self.instance_fix._load_configurations_from_runtime.assert_called_once()
         self.instance_fix._check_sbd_disk_metadata.assert_called_once()

@@ -39,7 +39,6 @@ Feature: Deprecated terms check and translate
     # set deprecated property which don't have replacement
     When    Run "crm configure property enable-startup-probes=true" on "hanode1"
     Then    Expected ""enable-startup-probes" is deprecated, please consider removing it" in stderr
-    When    Delete property "enable-startup-probes" from cluster
 
   Scenario: Deprecated property during `crm cluster health sbd --fix`
     Then    Cluster property "stonith-timeout" is "80"
@@ -52,22 +51,20 @@ Feature: Deprecated terms check and translate
       It's recommended that stonith-timeout is set to 71, now is 80
       "stonith-timeout" is deprecated, please consider using "fencing-timeout"
       """
-    # --fix still keep stonith-timeout name after fixed
+    # --fix migrates stonith-timeout to fencing-timeout after fixing its value
     When    Run "crm cluster health sbd --fix" on "hanode1"
-    Then    Expected multiple lines in stderr
-      """
-      "stonith-timeout" in crm_config is set to 71, it was 80
-      "stonith-timeout" is deprecated, please consider using "fencing-timeout"
-      """
-    Then    Cluster property "stonith-timeout" is "71"
-    And     Cluster property "fencing-timeout" is not configured
+    Then    Expected ""stonith-timeout" in crm_config is set to 71, it was 80" in stderr
+    Then    Cluster property "stonith-timeout" is not configured
+    And     Cluster property "fencing-timeout" is "71"
+    And     Cluster property "enable-startup-probes" is "true"
 
     When    Run "crm configure show" on "hanode1"
-    Then    Expected ""stonith-timeout" is deprecated, please consider using "fencing-timeout" in stderr
+    Then    Expected ""enable-startup-probes" is deprecated, please consider removing it" in stderr
+    When    Delete property "enable-startup-probes" from cluster
 
   Scenario: SBD purge
-    When    Run "crm configure property fencing-timeout=80" on "hanode1"
-    Then    Cluster property "fencing-timeout" is "80"
+    When    Run "crm configure property stonith-timeout=80" on "hanode1"
+    Then    Cluster property "stonith-timeout" is "80"
     When    Run "crm sbd purge" on "hanode1"
     Then    Expected multiple lines in output
       """
