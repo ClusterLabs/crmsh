@@ -484,6 +484,81 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix._check_fencing_timeout.assert_called_once()
         self.instance_fix._check_sbd_delay_start_unset_dropin.assert_called_once()
 
+    @patch('crmsh.sbd.SBDConfigChecker._check_deprecated_property')
+    @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
+    @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_check_and_fix_selective(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_check_deprecated_property):
+        mock_service_manager_inst = Mock()
+        mock_service_manager.return_value = mock_service_manager_inst
+        mock_check_deprecated_property.return_value = sbd.CheckResult.SUCCESS
+        self.instance_check._check_config_consistency = Mock()
+        self.instance_check._load_configurations_from_runtime = Mock()
+        self.instance_check._get_current_terms = Mock(side_effect=self.fake_get_current_terms(self.instance_check))
+
+        # Only check deprecated property
+        res = self.instance_check.check_and_fix([sbd.DEPRECATED_PROPERTY])
+        self.assertEqual(res, sbd.CheckResult.SUCCESS)
+
+        # Pre-requisite/Service check assertions:
+        # SBD service check is bypassed entirely
+        mock_service_manager_inst.service_is_active.assert_not_called()
+        # Node reachability check is bypassed entirely since DEPRECATED_PROPERTY has requires_ssh=False
+        mock_check_all_nodes_reachable.assert_not_called()
+        # Config consistency is bypassed entirely since SBD is not checked
+        self.instance_check._check_config_consistency.assert_not_called()
+
+        # DEPRECATED_PROPERTY check was executed
+        mock_check_deprecated_property.assert_called_once()
+        # Other SBD check/warn is bypassed
+        mock_warn_diskless_sbd.assert_not_called()
+
+    @patch('crmsh.sbd.SBDConfigChecker._check_deprecated_property')
+    @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
+    @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_check_and_fix_selective_with_prerequisites(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_check_deprecated_property):
+        mock_service_manager_inst = Mock()
+        mock_service_manager.return_value = mock_service_manager_inst
+        mock_service_manager_inst.service_is_active = Mock(return_value=True)
+
+        self.instance_check._check_config_consistency = Mock(return_value=True)
+        self.instance_check._load_configurations_from_runtime = Mock()
+        self.instance_check._get_current_terms = Mock(side_effect=self.fake_get_current_terms(self.instance_check))
+
+        self.instance_check._check_sbd_disk_metadata = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_sbd_watchdog_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_fence_sbd = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_fence_sbd_parameters = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_sbd_delay_start = Mock(return_value=sbd.CheckResult.SUCCESS)
+        self.instance_check._check_sbd_systemd_start_timeout = Mock(return_value=sbd.CheckResult.SUCCESS)
+
+        # Call with SBD_DELAY_START which has prerequisites recursively
+        res = self.instance_check.check_and_fix([sbd.SBD_DELAY_START])
+        self.assertEqual(res, sbd.CheckResult.SUCCESS)
+
+        # Verify prerequisites are resolved and run in order:
+        # 1. SBD_DISK_METADATA
+        # 2. SBD_WATCHDOG_TIMEOUT
+        # 3. FENCE_SBD_AGENT
+        # 4. FENCE_SBD_AGENT_PARAMETERS
+        # 5. SBD_DELAY_START
+        self.instance_check._check_sbd_disk_metadata.assert_called_once()
+        self.instance_check._check_sbd_watchdog_timeout.assert_called_once()
+        self.instance_check._check_fence_sbd.assert_called_once()
+        self.instance_check._check_fence_sbd_parameters.assert_called_once()
+        self.instance_check._check_sbd_delay_start.assert_called_once()
+
+        # Unrelated check is NOT run
+        self.instance_check._check_sbd_systemd_start_timeout.assert_not_called()
+        mock_check_deprecated_property.assert_not_called()
+
+        # Reject unknown items
+        with self.assertRaises(ValueError):
+            self.instance_check.check_and_fix(["unknown_check_item"])
+
     @patch('logging.Logger.error')
     @patch('logging.Logger.warning')
     @patch('crmsh.utils.remote_diff_this')

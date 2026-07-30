@@ -6,6 +6,7 @@ import time
 import shlex
 import logging
 from enum import Enum, IntEnum, auto
+from dataclasses import dataclass
 from . import utils, sh, storage_utils
 from . import bootstrap
 from . import log
@@ -362,8 +363,7 @@ class SBDTimeout(object):
         self.sbd_delay_start_value_expected = self.get_sbd_delay_start_expected() if utils.detect_virt() else "no"
         self.sbd_delay_start_value_from_config = SBDUtils.get_sbd_value_from_config("SBD_DELAY_START")
         if not self.sbd_delay_start_value_from_config:
-            logger.error("No SBD_DELAY_START entry found in %s", SBDManager.SYSCONFIG_SBD)
-            raise utils.TerminateSubCommand
+            raise SBDConfigError(f"No SBD_DELAY_START entry found in {SBDManager.SYSCONFIG_SBD}")
         self.sbd_systemd_start_timeout_expected = self.get_sbd_systemd_start_timeout_expected()
 
         logger.debug("Inspect SBDTimeout: %s", vars(self))
@@ -513,6 +513,10 @@ class FixAborted(ValueError):
     pass
 
 
+class SBDConfigError(ValueError):
+    pass
+
+
 class CheckResult(Enum):
     SUCCESS = 0
     WARNING = 1
@@ -520,21 +524,172 @@ class CheckResult(Enum):
     __str__ = lambda self: self.name
 
 
-class SBDCheckItem(IntEnum):
-    SBD_DISK_METADATA = 0
-    SBD_DEVICE_METADATA_CONSISTENCY = auto()
-    SBD_WATCHDOG_TIMEOUT = auto()
-    FENCE_SBD_AGENT = auto()
-    FENCE_SBD_AGENT_PARAMETERS = auto()
-    SBD_DELAY_START = auto()
-    SBD_PACEMAKER = auto()
-    SBD_SYSTEMD_START_TIMEOUT = auto()
-    FENCING_WATCHDOG_TIMEOUT_PROPERTY = auto()
-    FENCING_TIMEOUT_PROPERTY = auto()
-    STONITH_ENABLED_PROPERTY = auto()
-    UNSET_SBD_DELAY_START_IN_DROPIN = auto()
-    ENABLE_SBD_SERVICE = auto()
-    DEPRECATED_PROPERTY = auto()
+@dataclass(frozen=True)
+class SBDCheckItem:
+    name: str
+    check_method_name: str
+    fix_method_name: str
+    prereq_items: tuple['SBDCheckItem', ...]
+    requires_ssh: bool
+    requires_sbd: bool
+    requires_pcmk: bool
+
+SBD_DISK_METADATA = SBDCheckItem(
+    name="SBD disk metadata",
+    check_method_name="_check_sbd_disk_metadata",
+    fix_method_name="_fix_sbd_disk_metadata",
+    prereq_items=(),
+    requires_ssh=True,
+    requires_sbd=True,
+    requires_pcmk=False
+)
+
+SBD_DEVICE_METADATA_CONSISTENCY = SBDCheckItem(
+    name="SBD devices metadata consistency",
+    check_method_name="_check_sbd_device_metadata_consistency",
+    fix_method_name="_fix_sbd_device_metadata_consistency",
+    prereq_items=(SBD_DISK_METADATA,),
+    requires_ssh=True,
+    requires_sbd=True,
+    requires_pcmk=False
+)
+
+SBD_WATCHDOG_TIMEOUT = SBDCheckItem(
+    name="SBD_WATCHDOG_TIMEOUT",
+    check_method_name="_check_sbd_watchdog_timeout",
+    fix_method_name="_fix_sbd_watchdog_timeout",
+    prereq_items=(),
+    requires_ssh=True,
+    requires_sbd=True,
+    requires_pcmk=False
+)
+
+FENCE_SBD_AGENT = SBDCheckItem(
+    name="fence_sbd agent",
+    check_method_name="_check_fence_sbd",
+    fix_method_name="_fix_fence_sbd",
+    prereq_items=(),
+    requires_ssh=False,
+    requires_sbd=True,
+    requires_pcmk=True
+)
+
+FENCE_SBD_AGENT_PARAMETERS = SBDCheckItem(
+    name="fence_sbd agent parameters",
+    check_method_name="_check_fence_sbd_parameters",
+    fix_method_name="_fix_fence_sbd_parameters",
+    prereq_items=(FENCE_SBD_AGENT,),
+    requires_ssh=False,
+    requires_sbd=True,
+    requires_pcmk=True
+)
+
+SBD_DELAY_START = SBDCheckItem(
+    name="SBD_DELAY_START",
+    check_method_name="_check_sbd_delay_start",
+    fix_method_name="_fix_sbd_delay_start",
+    prereq_items=(SBD_DISK_METADATA, SBD_WATCHDOG_TIMEOUT, FENCE_SBD_AGENT_PARAMETERS),
+    requires_ssh=True,
+    requires_sbd=True,
+    requires_pcmk=False
+)
+
+SBD_PACEMAKER = SBDCheckItem(
+    name="SBD_PACEMAKER",
+    check_method_name="_check_sbd_pacemaker_in_sysconfig",
+    fix_method_name="_fix_sbd_pacemaker_in_sysconfig",
+    prereq_items=(),
+    requires_ssh=False,
+    requires_sbd=True,
+    requires_pcmk=False
+)
+
+SBD_SYSTEMD_START_TIMEOUT = SBDCheckItem(
+    name="systemd start timeout for sbd.service",
+    check_method_name="_check_sbd_systemd_start_timeout",
+    fix_method_name="_fix_sbd_systemd_start_timeout",
+    prereq_items=(SBD_DELAY_START,),
+    requires_ssh=True,
+    requires_sbd=True,
+    requires_pcmk=False
+)
+
+FENCING_WATCHDOG_TIMEOUT_PROPERTY = SBDCheckItem(
+    name="fencing-watchdog-timeout property",
+    check_method_name="_check_fencing_watchdog_timeout",
+    fix_method_name="_fix_fencing_watchdog_timeout",
+    prereq_items=(SBD_WATCHDOG_TIMEOUT,),
+    requires_ssh=False,
+    requires_sbd=True,
+    requires_pcmk=True
+)
+
+FENCING_TIMEOUT_PROPERTY = SBDCheckItem(
+    name="fencing-timeout property",
+    check_method_name="_check_fencing_timeout",
+    fix_method_name="_fix_fencing_timeout",
+    prereq_items=(SBD_DISK_METADATA, SBD_WATCHDOG_TIMEOUT),
+    requires_ssh=False,
+    requires_sbd=True,
+    requires_pcmk=True
+)
+
+STONITH_ENABLED_PROPERTY = SBDCheckItem(
+    name="fencing-enabled property",
+    check_method_name="_check_fencing_enabled",
+    fix_method_name="_fix_fencing_enabled",
+    prereq_items=(),
+    requires_ssh=False,
+    requires_sbd=True,
+    requires_pcmk=True
+)
+
+UNSET_SBD_DELAY_START_IN_DROPIN = SBDCheckItem(
+    name="unset SBD_DELAY_START in drop-in file",
+    check_method_name="_check_sbd_delay_start_unset_dropin",
+    fix_method_name="_fix_sbd_delay_start_unset_dropin",
+    prereq_items=(),
+    requires_ssh=True,
+    requires_sbd=True,
+    requires_pcmk=False
+)
+
+ENABLE_SBD_SERVICE = SBDCheckItem(
+    name="sbd.service should be enabled",
+    check_method_name="_check_sbd_service_is_enabled",
+    fix_method_name="_fix_sbd_service_is_enabled",
+    prereq_items=(),
+    requires_ssh=True,
+    requires_sbd=True,
+    requires_pcmk=False
+)
+
+DEPRECATED_PROPERTY = SBDCheckItem(
+    name="deprecated property",
+    check_method_name="_check_deprecated_property",
+    fix_method_name="_fix_deprecated_property",
+    prereq_items=(),
+    requires_ssh=False,
+    requires_sbd=False,
+    requires_pcmk=True
+)
+
+ALL_SBD_CHECK_ITEMS = [
+    SBD_DISK_METADATA,
+    SBD_DEVICE_METADATA_CONSISTENCY,
+    SBD_WATCHDOG_TIMEOUT,
+    FENCE_SBD_AGENT,
+    FENCE_SBD_AGENT_PARAMETERS,
+    SBD_DELAY_START,
+    SBD_PACEMAKER,
+    SBD_SYSTEMD_START_TIMEOUT,
+    FENCING_WATCHDOG_TIMEOUT_PROPERTY,
+    FENCING_TIMEOUT_PROPERTY,
+    STONITH_ENABLED_PROPERTY,
+    UNSET_SBD_DELAY_START_IN_DROPIN,
+    ENABLE_SBD_SERVICE,
+    DEPRECATED_PROPERTY
+]
 
 
 class SBDConfigChecker(SBDTimeout):
@@ -571,195 +726,120 @@ class SBDConfigChecker(SBDTimeout):
             logger.info('SBD: Check SBD-related configurations: OK.')
             return True
 
-    def _check_and_fix_items(self) -> list[tuple]:
-        return  [
-            # issue name, check method, fix method, SSH required, prerequisites checks
-            (
-                "SBD disk metadata",
-                self._check_sbd_disk_metadata,
-                self._fix_sbd_disk_metadata,
-                True,
-                []
-            ),
-
-            (
-                "SBD devices metadata consistency",
-                self._check_sbd_device_metadata_consistency,
-                self._fix_sbd_device_metadata_consistency,
-                True,
-                [SBDCheckItem.SBD_DISK_METADATA]
-            ),
-
-            (
-                "SBD_WATCHDOG_TIMEOUT",
-                self._check_sbd_watchdog_timeout,
-                self._fix_sbd_watchdog_timeout,
-                True,
-                []
-            ),
-
-            (
-                "fence_sbd agent",
-                self._check_fence_sbd,
-                self._fix_fence_sbd,
-                False,
-                []
-            ),
-
-            (
-                "fence_sbd agent parameters",
-                self._check_fence_sbd_parameters,
-                self._fix_fence_sbd_parameters,
-                False,
-                [SBDCheckItem.FENCE_SBD_AGENT]
-            ),
-
-            (
-                "SBD_DELAY_START",
-                self._check_sbd_delay_start,
-                self._fix_sbd_delay_start,
-                True,
-                [
-                    SBDCheckItem.SBD_DISK_METADATA,
-                    SBDCheckItem.SBD_WATCHDOG_TIMEOUT,
-                    SBDCheckItem.FENCE_SBD_AGENT_PARAMETERS
-                ]
-            ),
-
-            (
-                "SBD_PACEMAKER",
-                self._check_sbd_pacemaker_in_sysconfig,
-                self._fix_sbd_pacemaker_in_sysconfig,
-                False,
-                []
-            ),
-
-            (
-                "systemd start timeout for sbd.service",
-                self._check_sbd_systemd_start_timeout,
-                self._fix_sbd_systemd_start_timeout,
-                True,
-                [SBDCheckItem.SBD_DELAY_START]
-            ),
-
-            (
-                f"{self.current_watchdog_timeout_term} property",
-                self._check_fencing_watchdog_timeout,
-                self._fix_fencing_watchdog_timeout,
-                False,
-                [SBDCheckItem.SBD_WATCHDOG_TIMEOUT]
-            ),
-
-            (
-                f"{self.current_timeout_term} property",
-                self._check_fencing_timeout,
-                self._fix_fencing_timeout,
-                False,
-                [
-                    SBDCheckItem.SBD_DISK_METADATA,
-                    SBDCheckItem.SBD_WATCHDOG_TIMEOUT
-                ]
-            ),
-
-            (
-                f"{self.current_enabled_term} property",
-                self._check_fencing_enabled,
-                self._fix_fencing_enabled,
-                False,
-                []
-            ),
-
-            (
-                "unset SBD_DELAY_START in drop-in file",
-                self._check_sbd_delay_start_unset_dropin,
-                self._fix_sbd_delay_start_unset_dropin,
-                True,
-                []
-            ),
-
-            (
-                "sbd.service should be enabled",
-                self._check_sbd_service_is_enabled,
-                self._fix_sbd_service_is_enabled,
-                True,
-                []
-            ),
-
-            (
-                "deprecated property",
-                self._check_deprecated_property,
-                self._fix_deprecated_property,
-                False,
-                []
-            )
-        ]
-
-
     def _get_current_terms(self):
         self.current_watchdog_timeout_term = utils.DeprecatedTermTranslator.get_working_term("fencing-watchdog-timeout")
         self.current_timeout_term = utils.DeprecatedTermTranslator.get_working_term("fencing-timeout")
         self.current_enabled_term = utils.DeprecatedTermTranslator.get_working_term("fencing-enabled")
 
-    def check_and_fix(self) -> CheckResult:
+    def check_and_fix(self, check_items: list[SBDCheckItem] | None = None) -> CheckResult:
+        if check_items is None:
+            check_items = ALL_SBD_CHECK_ITEMS
+        else:
+            all_items_set = set(ALL_SBD_CHECK_ITEMS)
+            for item in check_items:
+                if item not in all_items_set:
+                    raise ValueError(f"Unknown SBD check item: {item}")
+
+            expanded_items = set()
+
+            def collect_prereqs(item):
+                if item not in expanded_items:
+                    expanded_items.add(item)
+                    for prereq in item.prereq_items:
+                        collect_prereqs(prereq)
+
+            for item in check_items:
+                collect_prereqs(item)
+
+            check_items = [item for item in ALL_SBD_CHECK_ITEMS if item in expanded_items]
+
+        needs_sbd = any(item.requires_sbd for item in check_items)
+        needs_pcmk = any(item.requires_pcmk for item in check_items)
+        needs_ssh = any(item.requires_ssh for item in check_items)
+
         service_manager = ServiceManager()
         if self.fix:
-            for service in (constants.SBD_SERVICE, constants.PCMK_SERVICE):
+            services_to_check = []
+            if needs_sbd:
+                services_to_check.append(constants.SBD_SERVICE)
+            if needs_pcmk:
+                services_to_check.append(constants.PCMK_SERVICE)
+            for service in services_to_check:
                 if not service_manager.service_is_active(service):
                     raise FixAborted(f"{service} is not active, skip fixing SBD-related configuration issues")
-        elif not service_manager.service_is_active(constants.SBD_SERVICE):
-            if not SBDUtils.diskbased_sbd_configured() and not SBDUtils.diskless_sbd_configured():
-                raise FixAborted("Neither disk-based nor disk-less SBD is configured, skip checking SBD timeout issues")
+        elif needs_sbd:
+            if not service_manager.service_is_active(constants.SBD_SERVICE):
+                if not SBDUtils.diskbased_sbd_configured() and not SBDUtils.diskless_sbd_configured():
+                    raise FixAborted("Neither disk-based nor disk-less SBD is configured, skip checking SBD-related configuration issues")
 
         all_nodes_reachable = True
         self.peer_node_list = utils.list_cluster_nodes_except_me()
         error_msg = ""
-        try:
-            utils.check_all_nodes_reachable("check and fix SBD timeout configurations")
-        except (utils.DeadNodeError, utils.UnreachableNodeError) as e:
-            self.peer_node_list = e.summary.reachable_nodes
-            all_nodes_reachable = False
-            error_msg = str(e)
-
-        if not self._check_config_consistency(error_msg):
-            raise FixAborted("All other checks aborted due to inconsistent configurations")
-
-        dev_list = SBDUtils.get_sbd_device_from_config()
-        if dev_list:
+        if needs_ssh or needs_sbd:
             try:
-                nodes_to_check = [utils.this_node()] + (self.peer_node_list or [])
-                SBDUtils.verify_sbd_device(dev_list, nodes_to_check, compare_uuid=True)
-            except ValueError as e:
-                raise FixAborted(f"SBD device verification failed: {e}")
+                utils.check_all_nodes_reachable("check and fix SBD timeout configurations")
+            except (utils.DeadNodeError, utils.UnreachableNodeError) as e:
+                self.peer_node_list = e.summary.reachable_nodes
+                all_nodes_reachable = False
+                error_msg = str(e)
 
-        self._load_configurations_from_runtime()
-        self._get_current_terms()
+        if needs_sbd:
+            if not self._check_config_consistency(error_msg):
+                raise FixAborted("All other checks aborted due to inconsistent configurations")
 
-        check_and_fix_items = self._check_and_fix_items()
-        check_res_list = [CheckResult.SUCCESS for _ in range(len(check_and_fix_items))]
-        for index, (name, check_method, fix_method, ssh_required, prereq_checks) in enumerate(check_and_fix_items):
-            if prereq_checks and any(check_res_list[p.value] != CheckResult.SUCCESS for p in prereq_checks):
-                check_res_list[index] = CheckResult.ERROR
+            dev_list = SBDUtils.get_sbd_device_from_config()
+            if dev_list:
+                try:
+                    nodes_to_check = [utils.this_node()] + (self.peer_node_list or [])
+                    SBDUtils.verify_sbd_device(dev_list, nodes_to_check, compare_uuid=True)
+                except ValueError as e:
+                    raise FixAborted(f"SBD device verification failed: {e}")
+
+        if needs_sbd:
+            try:
+                self._load_configurations_from_runtime()
+            except SBDConfigError as e:
+                raise FixAborted(str(e))
+        if needs_sbd or needs_pcmk:
+            self._get_current_terms()
+
+        check_res_dict = {item: CheckResult.SUCCESS for item in ALL_SBD_CHECK_ITEMS}
+        for item in ALL_SBD_CHECK_ITEMS:
+            if item not in check_items:
                 continue
+
+            if item.prereq_items and any(check_res_dict[p] != CheckResult.SUCCESS for p in item.prereq_items):
+                check_res_dict[item] = CheckResult.ERROR
+                continue
+
+            check_method = getattr(self, item.check_method_name)
             check_res = check_method()
-            logger.debug("SBD Checking: %s, result: %s", name, check_res)
-            check_res_list[index] = check_res
+            logger.debug("SBD Checking: %s, result: %s", item.name, check_res)
+            check_res_dict[item] = check_res
+
             if check_res == CheckResult.SUCCESS:
                 continue
-            elif ssh_required and not all_nodes_reachable:
-                raise FixAborted(f"Cannot fix {name} issue: {error_msg}")
+            elif item.requires_ssh and not all_nodes_reachable:
+                raise FixAborted(f"Cannot fix {item.name} issue: {error_msg}")
             elif self.fix:
+                fix_method = getattr(self, item.fix_method_name)
                 fix_method()
-                self._load_configurations_from_runtime()
+                if needs_sbd:
+                    try:
+                        self._load_configurations_from_runtime()
+                    except SBDConfigError as e:
+                        raise FixFailure(str(e))
                 check_res = check_method()
-                logger.debug("SBD Re-Checking after fixing: %s, result: %s", name, check_res)
+                logger.debug("SBD Re-Checking after fixing: %s, result: %s", item.name, check_res)
                 if check_res == CheckResult.SUCCESS:
-                    check_res_list[index] = check_res
+                    check_res_dict[item] = check_res
                 else:
-                    raise FixFailure(f"Failed to fix {name} issue")
+                    raise FixFailure(f"Failed to fix {item.name} issue")
 
-        SBDManager.warn_diskless_sbd()
+        if needs_sbd:
+            SBDManager.warn_diskless_sbd()
 
-        return SBDConfigChecker._return_helper(check_res_list)
+        return SBDConfigChecker._return_helper([check_res_dict[item] for item in check_items])
 
     def _check_config_consistency(self, error_msg: str = "") -> bool:
         consistent = True
