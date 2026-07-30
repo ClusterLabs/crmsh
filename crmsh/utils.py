@@ -2253,17 +2253,6 @@ def append_res_to_group(group_id, res_id):
     sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
-def get_qdevice_sync_timeout():
-    """
-    Get qdevice sync_timeout
-    """
-    out = sh.cluster_shell().get_stdout_or_raise_error("crm corosync status qdevice")
-    res = re.search(r"Sync HB interval:\s+(\d+)ms", out)
-    if not res:
-        raise ValueError("Cannot find qdevice sync timeout")
-    return int(int(res.group(1))/1000)
-
-
 def detect_virt():
     """
     Detect if running in virt environment
