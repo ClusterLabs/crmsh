@@ -75,6 +75,8 @@ node1: member(offline)
 .TRY -F node maintenance node1
 INFO: 'maintenance' attribute already exists in p5. Remove it? [YES]
 INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
+INFO: Setting maintenance=true on node node1
+WARNING: Maintenance on 'node1' is transient by default — restarting Pacemaker will clear it and may trigger fencing
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -95,7 +97,8 @@ INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
 </cib>
 
 .TRY node ready node1
-.EXT crm_attribute -t nodes -N 'node1' -n maintenance -v 'off'
+INFO: Setting maintenance=false on node node1
+WARNING: The 'ready' command is deprecated and will be removed in a future release. Use 'crm node maintenance node1 off' instead.
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1
@@ -106,7 +109,7 @@ INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
+          <nvpair id="nodes-node1-maintenance" name="maintenance" value="false"/>
         </instance_attributes>
       </node>
     </nodes>
@@ -127,7 +130,7 @@ INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
+          <nvpair id="nodes-node1-maintenance" name="maintenance" value="false"/>
           <nvpair id="nodes-node1-a1" name="a1" value="1 2 3"/>
         </instance_attributes>
       </node>
@@ -150,7 +153,7 @@ scope=nodes  name=a1 value=1 2 3
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
+          <nvpair id="nodes-node1-maintenance" name="maintenance" value="false"/>
           <nvpair id="nodes-node1-a1" name="a1" value="1 2 3"/>
         </instance_attributes>
       </node>
@@ -173,7 +176,7 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
+          <nvpair id="nodes-node1-maintenance" name="maintenance" value="false"/>
         </instance_attributes>
       </node>
     </nodes>
@@ -193,7 +196,7 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
     <nodes>
       <node uname="node1" id="node1">
         <instance_attributes id="nodes-node1">
-          <nvpair id="nodes-node1-maintenance" name="maintenance" value="off"/>
+          <nvpair id="nodes-node1-maintenance" name="maintenance" value="false"/>
         </instance_attributes>
       </node>
     </nodes>

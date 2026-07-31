@@ -421,7 +421,12 @@ class NodeMgmt(command.UI):
         if on_off not in ['on', 'off']:
             context.fatal_error("Expected <node> [on|off]")
         _value = "true" if on_off == 'on' else "false"
-        return self._commit_node_attr(context, node, "maintenance", _value)
+        rc = self._commit_node_attr(context, node, "maintenance", _value)
+        if rc:
+            logger.info("Setting maintenance=%s on node %s", _value, node)
+            if _value == "true":
+                logger.warning("Maintenance on '%s' is transient by default — restarting Pacemaker will clear it and may trigger fencing", node)
+        return rc
 
 
     @command.wait
