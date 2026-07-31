@@ -14,6 +14,7 @@ from . import corosync
 from . import xmlutil
 from . import watchdog
 from . import cibquery
+from . import qdevice
 from .service_manager import ServiceManager
 from .sh import ShellUtils
 
@@ -303,7 +304,7 @@ class SBDTimeout(object):
         '''
         # add sbd after qdevice started
         if corosync.is_qdevice_configured() and ServiceManager().service_is_active("corosync-qdevice.service"):
-            qdevice_sync_timeout = utils.get_qdevice_sync_timeout()
+            qdevice_sync_timeout = qdevice.QDevice.get_qdevice_sync_timeout()
             if self.sbd_watchdog_timeout <= qdevice_sync_timeout:
                 watchdog_timeout_with_qdevice = qdevice_sync_timeout + self.QDEVICE_SYNC_TIMEOUT_MARGIN
                 self.logger.warning(

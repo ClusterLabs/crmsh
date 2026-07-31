@@ -663,3 +663,14 @@ class QDevice(object):
         logger_utils.log_only_to_file(desc)
         if cmd:
             logger_utils.log_only_to_file(f"Run: {cmd}")
+
+    @staticmethod
+    def get_qdevice_sync_timeout() -> int:
+        """
+        Get qdevice sync_timeout
+        """
+        out = corosync.query_qdevice_status()
+        res = re.search(r"Sync HB interval:\s+(\d+)ms", out)
+        if not res:
+            raise ValueError("Cannot find qdevice sync timeout")
+        return int(int(res.group(1))/1000)
