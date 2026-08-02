@@ -2369,9 +2369,14 @@ property from them.
 
 The node parameter defaults to the node where the command is run.
 
+To disable maintenance mode on the node, use `crm node maintenance <node> off`.
+
+Note: maintenance on node is transient by default. Restarting Pacemaker
+will clear it and may trigger fencing.
+
 Usage:
 ...............
-maintenance [<node>]
+maintenance [<node>] [on|off]
 ...............
 
 [[cmdhelp.node.online,set node online,From Code]]
@@ -2386,6 +2391,9 @@ now again fully operational and capable of running resource
 operations.
 
 The node parameter defaults to the node where the command is run.
+
+Note: The `ready` command is deprecated and will be removed in a future release.
+Use `crm node maintenance <node> off` instead.
 
 Usage:
 ...............
