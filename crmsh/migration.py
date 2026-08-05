@@ -24,6 +24,7 @@ from crmsh import corosync
 from crmsh import corosync_config_format
 from crmsh import iproute2
 from crmsh import parallax
+from crmsh import sbd
 from crmsh import sh
 from crmsh import utils
 from crmsh import xmlutil
@@ -166,7 +167,7 @@ def migrate(args: typing.Sequence[str]):
                 logger.info("This cluster works on SLES 16. No migration is needed.")
                 return 0
             case CheckReturnCode.PASS_NO_AUTO_FIX:
-                logger.info("This cluster works on SLES 16 with some warnings. Please fix the remaining warnings manually.")
+                logger.info("This cluster works on SLES 16 with some warnings. Please fix the remaining warnings.")
                 return 0
             case CheckReturnCode.PASS_NEED_AUTO_FIX:
                 logger.info('Starting migration...')
@@ -299,6 +300,7 @@ def check_global(handler: CheckResultHandler):
     cib = xmlutil.text2elem(sh.LocalShell().get_stdout_or_raise_error(None, 'crm configure show xml'))
     check_cib_schema_version(handler, cib)
     check_unsupported_resource_agents(handler, cib)
+    check_deprecated_fencing_properties(handler)
 
 
 def check_dependency_version(handler: CheckResultHandler):
@@ -726,3 +728,24 @@ def _get_latest_cib_schema_version() -> tuple[int, int]:
         re.match(r'^pacemaker-(\d+)\.(\d+)\.rng$', filename)
         for filename in glob.iglob('pacemaker-*.rng', root_dir='/usr/share/pacemaker')
     ) if x is not None)
+
+
+def check_deprecated_fencing_properties(handler: CheckResultHandler):
+    level = -1
+    try:
+        match sbd.SBDConfigChecker(quiet=True).check_and_fix([sbd.DEPRECATED_PROPERTY]):
+            case sbd.CheckResult.SUCCESS:
+                return
+            case sbd.CheckResult.WARNING:
+                level = handler.LEVEL_WARN
+            case sbd.CheckResult.ERROR:
+                level = handler.LEVEL_ERROR
+    except sbd.FixAborted as e:
+        logger.debug('Deprecated fencing property check skipped: %s', e)
+        return
+    handler.handle_problem(
+        False, False, level,
+        "Deprecated fencing properties are used in CIB.", [
+            'Please run "crm cluster health sbd --fix".'
+        ]
+    )

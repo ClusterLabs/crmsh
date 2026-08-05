@@ -4,7 +4,7 @@ from unittest import mock
 
 import lxml.etree
 
-from crmsh import migration, cibquery
+from crmsh import migration, cibquery, sbd
 
 
 class TestCheckRemovedResourceAgents(unittest.TestCase):
@@ -114,3 +114,59 @@ class TestCheckRemovedResourceAgents(unittest.TestCase):
                 'Please run "crm configure upgrade force" to upgrade to the latest version.',
             ]
         )
+
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
+    def test_check_deprecated_fencing_properties_success(self, mock_sbd_config_checker):
+        mock_checker_inst = mock.Mock()
+        mock_checker_inst.check_and_fix.return_value = sbd.CheckResult.SUCCESS
+        mock_sbd_config_checker.return_value = mock_checker_inst
+
+        handler = mock.Mock(migration.CheckResultHandler)
+        migration.check_deprecated_fencing_properties(handler)
+        handler.handle_problem.assert_not_called()
+
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
+    def test_check_deprecated_fencing_properties_warning(self, mock_sbd_config_checker):
+        mock_checker_inst = mock.Mock()
+        mock_checker_inst.check_and_fix.return_value = sbd.CheckResult.WARNING
+        mock_sbd_config_checker.return_value = mock_checker_inst
+
+        handler = mock.Mock(migration.CheckResultHandler)
+        handler.LEVEL_WARN = 2
+        handler.LEVEL_ERROR = 1
+
+        migration.check_deprecated_fencing_properties(handler)
+        handler.handle_problem.assert_called_once_with(
+            False, False, handler.LEVEL_WARN,
+            "Deprecated fencing properties are used in CIB.", [
+                'Please run "crm cluster health sbd --fix".'
+            ]
+        )
+
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
+    def test_check_deprecated_fencing_properties_error(self, mock_sbd_config_checker):
+        mock_checker_inst = mock.Mock()
+        mock_checker_inst.check_and_fix.return_value = sbd.CheckResult.ERROR
+        mock_sbd_config_checker.return_value = mock_checker_inst
+
+        handler = mock.Mock(migration.CheckResultHandler)
+        handler.LEVEL_WARN = 2
+        handler.LEVEL_ERROR = 1
+
+        migration.check_deprecated_fencing_properties(handler)
+        handler.handle_problem.assert_called_once_with(
+            False, False, handler.LEVEL_ERROR,
+            "Deprecated fencing properties are used in CIB.", [
+                'Please run "crm cluster health sbd --fix".'
+            ]
+        )
+
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
+    def test_check_deprecated_fencing_properties_aborted(self, mock_sbd_config_checker):
+        mock_checker_inst = mock.Mock()
+        mock_checker_inst.check_and_fix.side_effect = sbd.FixAborted("aborted")
+        mock_sbd_config_checker.return_value = mock_checker_inst
+
+        handler = mock.Mock(migration.CheckResultHandler)
+        migration.check_deprecated_fencing_properties(handler)
+        handler.handle_problem.assert_not_called()
