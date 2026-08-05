@@ -271,17 +271,18 @@ class CibObjectSet(object):
         '''
         rc = False
         try:
-            s = self._pre_edit(s)
-            filehash = hash(s)
-            tmp = utils.str2tmp(s)
+            config_text = self._pre_edit(s)
+            original_config_text = config_text
+            tmp = utils.str2tmp(config_text)
             if not tmp:
                 return False
             while not rc:
                 if utils.edit_file(tmp) != 0:
                     break
-                s = open(tmp).read()
-                if hash(s) != filehash:
-                    ok = self.save(self._post_edit(s))
+                with open(tmp) as tmp_file:
+                    edited_config_text = tmp_file.read()
+                if edited_config_text != original_config_text:
+                    ok = self.save(self._post_edit(edited_config_text))
                     if not ok and options.force:
                         logger.error("Save failed and --force is set, aborting edit to avoid infinite loop")
                     elif not ok and utils.ask("Edit or discard changes (yes to edit, no to discard)?"):
@@ -311,12 +312,12 @@ class CibObjectSet(object):
         Pipe string s through a filter. Parse/save the output.
         If no changes are done, return silently.
         '''
-        rc, outp = utils.filter_string(fltr, s)
+        rc, filtered_config_text = utils.filter_string(fltr, s)
         if rc != 0:
             return False
-        if hash(outp) == hash(s):
+        if filtered_config_text == s:
             return True
-        return self.save(outp)
+        return self.save(filtered_config_text)
 
     def filter(self, fltr):
         with clidisplay.nopretty():
