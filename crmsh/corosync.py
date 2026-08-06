@@ -205,18 +205,17 @@ def pull_configuration(from_node):
            fname]
     rc = utils.ext_cmd_nosudo(cmd, shell=False)
     if rc == 0:
-        data = open(fname).read()
-        newhash = hash(data)
+        with open(fname) as remote_config_file:
+            remote_config_data = remote_config_file.read()
         if os.path.isfile(local_path):
-            oldata = open(local_path).read()
-            oldhash = hash(oldata)
-            if newhash == oldhash:
+            with open(local_path) as local_config_file:
+                local_config_data = local_config_file.read()
+            if remote_config_data == local_config_data:
                 print("No change.")
                 return
         print("Writing %s:%s..." % (utils.this_node(), local_path))
-        local_file = open(local_path, 'w')
-        local_file.write(data)
-        local_file.close()
+        with open(local_path, 'w') as local_config_file:
+            local_config_file.write(remote_config_data)
     else:
         raise ValueError("Failed to retrieve %s from %s" % (local_path, from_node))
 
