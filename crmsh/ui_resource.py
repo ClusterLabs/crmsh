@@ -390,7 +390,7 @@ class RscMgmt(command.UI):
     @command.alias('migrate')
     @command.skill_level('administrator')
     @command.wait
-    @command.completers_repeating(compl.resources, compl.nodes)
+    @command.completers(compl.resources, compl.nodes)
     def do_move(self, context, rsc, *args):
         """usage: move <rsc> [<node>] [<lifetime>] [force]"""
         if not utils.is_name_sane(rsc):
@@ -435,7 +435,7 @@ class RscMgmt(command.UI):
 
     @command.skill_level('administrator')
     @command.wait
-    @command.completers_repeating(compl.resources, compl.nodes)
+    @command.completers(compl.resources, compl.nodes)
     def do_ban(self, context, rsc, *args):
         """usage: ban <rsc> [<node>] [<lifetime>]"""
         if not utils.is_name_sane(rsc):
