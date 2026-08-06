@@ -568,7 +568,7 @@ Examples:
         return True
 
     @command.alias("delete")
-    @command.completers_repeating(compl.nodes)
+    @command.completers_repeating(compl.exclude_completed(compl.nodes))
     @command.skill_level('administrator')
     def do_remove(self, context, *args):
         '''

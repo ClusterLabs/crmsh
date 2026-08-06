@@ -602,7 +602,7 @@ class CibConfig(command.UI):
         utils.page_string('\n'.join(diff))
 
     @command.skill_level('administrator')
-    @command.completers_repeating(_id_show_list)
+    @command.completers_repeating(compl.exclude_completed(_id_show_list))
     def do_show(self, context, *args):
         "usage: show [xml] [<id>...]"
         utils.load_cib_file_env()
@@ -632,7 +632,11 @@ class CibConfig(command.UI):
     @command.name("get_property")
     @command.alias("get-property")
     @command.skill_level('administrator')
-    @command.completers_repeating(compl.call(ra.get_properties_without_deprecated))
+    @command.completers_repeating(
+        compl.exclude_completed(
+            compl.call(ra.get_properties_without_deprecated)
+        )
+    )
     def do_get_property(self, context, *args):
         "usage: get-property [-t|--true [<name>...]"
         utils.load_cib_file_env()
@@ -897,7 +901,7 @@ class CibConfig(command.UI):
         return len(to_stop)
 
     @command.skill_level('administrator')
-    @command.completers_repeating(_id_list)
+    @command.completers_repeating(compl.exclude_completed(_id_list))
     @command.alias('rm')
     def do_delete(self, context, *args):
         "usage: delete [-f|--force] <id> [<id>...]"
