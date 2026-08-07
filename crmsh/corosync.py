@@ -46,11 +46,6 @@ logging {
 KNET_LINK_NUM_LIMIT = 8
 
 
-def is_knet() -> bool:
-    res = get_value("totem.transport")
-    return res and res == "knet"
-
-
 def is_using_ipv6() -> bool:
     res = get_value("totem.ip_version")
     return res and res == "ipv6"
@@ -66,10 +61,6 @@ def get_link_number() -> int:
 
 def is_qdevice_configured() -> bool:
     return get_value("quorum.device.model") == "net"
-
-
-def is_qdevice_tls_on() -> bool:
-    return get_value("quorum.device.net.tls") == "on"
 
 
 def configure_two_node(removing: bool = False, qdevice_adding: bool = False) -> None:
