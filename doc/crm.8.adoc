@@ -1523,7 +1523,7 @@ See `corosync.conf(5)` for details about these options.
 [[cmdhelp.corosync.link.update,Update a knet link]]
 ===== `update`
 
-Modify an existing knet link in the configuration file, changing node adresses
+Modify an existing knet link in the configuration file, changing node addresses
 and/or link options.
 
 Usage:
@@ -2794,7 +2794,7 @@ This level enables all CIB object definition commands.
 
 The configuration may be logically divided into four parts:
 nodes, resources, constraints, and (cluster) properties and
-attributes.  Each of these commands support one or more basic CIB
+attributes.  Each of these commands supports one or more basic CIB
 objects.
 
 Nodes and attributes describing nodes are managed using the
@@ -2827,7 +2827,7 @@ priorities):
 - `fencing_topology`
 
 Finally, there are the cluster properties, resource meta-attributes
-defaults, and operations defaults. All are just a set of attributes. 
+defaults, and operations defaults. All are just a set of attributes.
 These attributes are managed by the following commands:
 
 - `property`
@@ -3718,7 +3718,7 @@ have the +maintenance+ property.
 If no property name is passed to the command, the list of known
 cluster properties is printed.
 
-To print one property's help, use the +--help+ option; Or use <Tab>
+To print one property's help, use the +--help+ option; or use <Tab>
 to complete the help text for the property on interactive mode.
 
 For more information on rule expressions, see
@@ -4024,7 +4024,7 @@ commit
 [[cmdhelp.configure.set,set an attribute value]]
 ==== `set`
 
-Set the value of a configured attribute. The attribute must
+Set the value of a configured attribute. The attribute must be
 configured previously, and can be an agent parameter, meta attribute,
 utilization value or operation value.
 
@@ -4066,7 +4066,7 @@ To show all objects of a certain type, use the +type:+ prefix.
 
 To show all objects in a tag, use the +tag:+ prefix.
 
-To show all constraints related to a primitive, or 
+To show all constraints related to a primitive, or
 to show all objects of a certain RA type, use the +related:+ prefix.
 
 To show all modified objects, pass the argument +changed+.
@@ -4253,7 +4253,7 @@ verify
 [[cmdhelp.configure.xml,raw xml]]
 ==== `xml`
 
-Even though we promissed no xml, it may happen, but hopefully
+Even though we promised no xml, it may happen, but hopefully
 very very seldom, that an element from the CIB cannot be rendered
 in the configuration language. In that case, the element will be
 shown as raw xml, prefixed by this command. That element can then
@@ -4394,7 +4394,7 @@ using the +cibadmin -Q+ command.
 
 It may sometimes be of interest to see how status changes would
 affect the Policy Engine. The set of `cibstatus` level commands
-allow the user to load status sections from various sources and
+allows the user to load status sections from various sources and
 then insert or modify resource operations or change nodes' state.
 
 The effect of those changes may then be observed by running the
@@ -4671,7 +4671,7 @@ either for the particular resource, or for the whole cluster.
 
 Invokes the given action for the resource. This is
 done directly via the resource agent, so the command must
-be issued while the cluster or the resource is in 
+be issued while the cluster or the resource is in
 maintenance mode.
 
 Unless the action is `start` or `monitor`, the action must be invoked
@@ -4696,7 +4696,7 @@ action webserver monitor ssh
 [[cmdhelp.maintenance.off,Disable maintenance mode]]
 ==== `off`
 
-Disables maintenances mode, either for the whole cluster
+Disables maintenance mode, either for the whole cluster
 or for the given resource.
 
 Usage:
@@ -4712,7 +4712,7 @@ off rsc1
 [[cmdhelp.maintenance.on,Enable maintenance mode]]
 ==== `on`
 
-Enables maintenances mode, either for the whole cluster
+Enables maintenance mode, either for the whole cluster
 or for the given resource.
 
 Usage:
@@ -4954,7 +4954,7 @@ limit "Sun 5 20:46" "Sun 5 22:00"
 
 Show messages logged on one or more nodes. Leaving out a node
 name produces combined logs of all nodes. Messages are sorted by
-time and, if the terminal emulations supports it, displayed in
+time and, if the terminal emulator supports it, displayed in
 different colours depending on the node to allow for easier
 reading.
 
@@ -5168,7 +5168,7 @@ of the path to the file.
 After the `ptest` output, logs about events that happened during
 the transition are printed.
 
-The `tags` subcommand scans the logs for the transition and return a
+The `tags` subcommand scans the logs for the transition and returns a
 list of key events during that transition. For example, the tag
 +error+ will be returned if there are any errors logged during the
 transition.
