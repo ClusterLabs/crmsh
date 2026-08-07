@@ -1413,9 +1413,6 @@ Pushes the corosync configuration file on this node to
 the list of nodes provided. If no target nodes are given,
 the configuration is pushed to all other nodes in the cluster.
 
-It is recommended to use `csync2` to distribute the cluster
-configuration files rather than relying on this command.
-
 Usage:
 .........
 push [node] ...
