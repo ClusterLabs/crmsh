@@ -941,14 +941,6 @@ def processing_sort_cli(nl):
     return sorted(nl, key=sort_elements if config.core.sort_elements else sort_type)
 
 
-def is_resource_cli(s):
-    return s in utils.olist(constants.resource_cli_names)
-
-
-def is_constraint_cli(s):
-    return s in utils.olist(constants.constraint_cli_names)
-
-
 def referenced_resources(node):
     if not is_constraint(node):
         return []
@@ -1128,16 +1120,6 @@ def silly_constraint(c_node, rsc_id):
         return rsc_cnt == 2 or cnt < 2
 
 
-def is_climove_location(node):
-    'Figure out if the location was created by crm resource move.'
-    rule_l = node.findall("rule")
-    expr_l = node.xpath(".//expression")
-    return len(rule_l) == 1 and len(expr_l) == 1 and \
-        node.get("id").startswith("cli-") and \
-        expr_l[0].get("attribute") == "#uname" and \
-        expr_l[0].get("operation") == "eq"
-
-
 def is_pref_location(node):
     'Figure out if the location is a node preference.'
     rule_l = node.findall("rule")
@@ -1180,10 +1162,6 @@ def get_rscop_defaults_meta_node(node):
 
 def get_rsc_meta_node(node):
     return get_child_nvset_node(node)
-
-
-def get_properties_node(node):
-    return get_child_nvset_node(node, attr_set="cluster_property_set")
 
 
 def new_cib():

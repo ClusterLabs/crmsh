@@ -146,10 +146,6 @@ def set_node_attr(cluster_node_name, attr_name, value, commit=True):
         return False
     return True
 
-def _oneline(s):
-    'join s into a single line of space-separated tokens'
-    return ' '.join(l.strip() for l in s.splitlines())
-
 
 def unpack_node_xmldata(node, is_offline):
     """

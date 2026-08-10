@@ -18,10 +18,6 @@ def get_validate_name(cib_elem):
         return None
 
 
-def get_validate_type(cib_elem):
-    return "rng"
-
-
 def get_schema_filename(validate_name):
     if not validate_name.endswith('.rng'):
         return "%s.rng" % (validate_name)

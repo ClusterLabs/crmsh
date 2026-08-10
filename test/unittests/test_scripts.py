@@ -5,7 +5,6 @@
 from builtins import str
 from builtins import object
 from os import path
-from pprint import pprint
 import pytest
 from lxml import etree
 from crmsh import scripts
@@ -463,9 +462,7 @@ def test_load_legacy():
     assert script is not None
     assert 'legacy' == script['name']
     assert len(script['shortdesc']) > 0
-    pprint(script)
     actions = scripts.verify(script, {}, external_check=False)
-    pprint(actions)
     assert [{'longdesc': '',
           'name': 'apply_local',
           'shortdesc': 'Configure SSH',
@@ -522,7 +519,6 @@ def test_v2():
          'apache': {'id': 'apache'},
          'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
          'install': False}, external_check=False)
-    pprint(actions)
     assert len(actions) == 1
     assert str(actions[0]['text']).find('group www') >= 0
 
@@ -532,7 +528,6 @@ def test_v2():
          'apache': {'id': 'apache'},
          'virtual-ip': {'id': 'www-vip', 'ip': '192.168.1.100'},
          'install': True}, external_check=False)
-    pprint(actions)
     assert len(actions) == 3
 
 
@@ -543,7 +538,6 @@ def test_agent_include():
         {'wiz': 'abc',
          'foo': 'cde',
          'included-script': {'foo': True, 'bar': 'bah bah'}}, external_check=False)
-    pprint(actions)
     assert len(actions) == 6
     assert '33\n\nabc' == actions[-1]['text'].strip()
 
@@ -555,7 +549,6 @@ def test_vipinc():
         script,
         {'vip': {'id': 'vop', 'ip': '10.0.0.4'}}, external_check=False)
     assert len(actions) == 1
-    pprint(actions)
     assert actions[0]['text'].find('primitive vop test:virtual-ip\n\tip="10.0.0.4"') >= 0
     assert actions[0]['text'].find("clone c-vop vop") >= 0
 
@@ -590,7 +583,6 @@ def test_value_replace_handles():
     actions = scripts.verify(script_b,
                              {'wiz': "SARUMAN"}, external_check=False)
     assert len(actions) == 1
-    pprint(actions)
     assert actions[0]['text'] == "SARUMAN+SARUMAN"
 
 
@@ -629,7 +621,6 @@ def test_optional_step_ref():
     actions = scripts.verify(script_a,
                              {"id": "apacho"}, external_check=False)
     assert len(actions) == 1
-    pprint(actions)
     assert actions[0]['text'] == "primitive apacho test:apache"
 
     #import ipdb
@@ -637,7 +628,6 @@ def test_optional_step_ref():
     actions = scripts.verify(script_b,
                              {'wiz': "SARUMAN", "apache": {"id": "apacho"}}, external_check=False)
     assert len(actions) == 1
-    pprint(actions)
     assert actions[0]['text'] == "primitive SARUMAN apacho"
 
 
@@ -663,13 +653,11 @@ def test_enums_basic():
     actions = scripts.verify(script_a,
                              {"foo": "one"}, external_check=False)
     assert len(actions) == 1
-    pprint(actions)
     assert actions[0]['text'] == "one"
 
     actions = scripts.verify(script_a,
                              {"foo": "three"}, external_check=False)
     assert len(actions) == 1
-    pprint(actions)
     assert actions[0]['text'] == "three"
 
 
@@ -758,7 +746,6 @@ def test_two_substeps():
     actions = scripts.verify(script_b,
                              {'wiz': "head", "apache-a": {"id": "one"}, "apache-b": {"id": "two"}}, external_check=False)
     assert len(actions) == 1
-    pprint(actions)
     assert actions[0]['text'] == "primitive one test:apache\n\nprimitive two test:apache\n\nprimitive head one two"
 
 
@@ -802,7 +789,6 @@ def test_required_subscript_params():
     def ver():
         actions = scripts.verify(script_b,
                                  {"foofoo": {"foo": "one"}}, external_check=False)
-        pprint(actions)
     with pytest.raises(ValueError):
         ver()
 
@@ -813,7 +799,6 @@ def test_unified():
         unified,
         {'id': 'foo',
          'vip': {'id': 'bar', 'ip': '192.168.0.15'}}, external_check=False)
-    pprint(actions)
     assert len(actions) == 1
     assert 'primitive bar IPaddr2 ip=192.168.0.15\ngroup g-foo foo bar' == actions[-1]['text'].strip()
 
@@ -854,7 +839,6 @@ def test_inline_script():
 
     actions = scripts.verify(script_a,
                              {"foo": "hello world"}, external_check=False)
-    pprint(actions)
     assert len(actions) == 1
     assert actions[0]['name'] == 'call'
     assert actions[0]['value'] == '#!/bin/sh\necho "hello world"'
@@ -863,7 +847,6 @@ def test_inline_script():
                 {"foo": "hello world"}, tp)
 
     for action, args in tp.actions:
-        print(action, args)
         if action == 'finish':
             assert args[0]['value'] == '#!/bin/sh\necho "hello world"'
 
@@ -890,7 +873,6 @@ actions:
         a1 = scripts.verify(scrpt,
                             {"stringtest": val},
                             external_check=False)
-        pprint(a1)
         return a1
 
     a1 = runtest('stringtest == "balloon"', "balloon")

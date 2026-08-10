@@ -7,7 +7,6 @@ except ImportError:
 
 from crmsh import ui_cluster
 
-logging.basicConfig(level=logging.INFO)
 
 class TestCluster(unittest.TestCase):
     """

@@ -14,7 +14,6 @@ from itertools import chain
 import crmsh.utils
 from crmsh import utils, config, tmpfiles, constants, options
 
-logging.basicConfig(level=logging.DEBUG)
 
 
 @mock.patch("crmsh.sh.ShellUtils.get_stdout")
