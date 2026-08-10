@@ -173,7 +173,6 @@ class TestCliParser(unittest.TestCase):
 
         out = self._parse('ms m0 resource params a=b')
         self.assertEqual(out.get('id'), 'm0')
-        print(xml_tostring(out))
         self.assertEqual(['resource'], out.xpath('./crmsh-ref/@id'))
         self.assertEqual(['b'], out.xpath('instance_attributes/nvpair[@name="a"]/@value'))
 
@@ -285,7 +284,6 @@ class TestCliParser(unittest.TestCase):
 
     def test_order(self):
         out = self._parse('order o1 Mandatory: [ A B sequential=true ] C')
-        print(xml_tostring(out))
         self.assertEqual(['Mandatory'], out.xpath('/rsc_order/@kind'))
         self.assertEqual(2, len(out.xpath('/rsc_order/resource_set')))
         self.assertEqual(['false'], out.xpath('/rsc_order/resource_set/@require-all'))
@@ -480,7 +478,6 @@ class TestCliParser(unittest.TestCase):
         devs = ['fencing-vbox3-1-off', 'fencing-vbox3-2-off',
                 'fencing-vbox3-1-on', 'fencing-vbox3-2-on']
         out = self._parse('fencing_topology vbox4: %s' % ','.join(devs))
-        print(xml_tostring(out))
         self.assertEqual(1, len(out))
 
     def test_fencing_1114(self):
