@@ -159,6 +159,20 @@ Feature: migration
     Then    Expected return code is "0"
     And     Run "grep -F 'ring0_addr: @hanode2.ip.0' /etc/corosync/corosync.conf" OK
 
+  Scenario: Run pre-migration checks with unsupported agents and bypass them with --force-breaks-pacemaker
+    Given   Run "crm cluster start --all" OK on "hanode1"
+    And     Run "crm --force configure primitive testVip IPaddr ip=192.0.2.100" OK on "hanode1"
+    And     Run "crm --force configure primitive testService service:testService" OK on "hanode1"
+    And     Run "crm cluster stop --all" OK on "hanode1"
+    When    Try "crm cluster health sles16 --fix" on "hanode1"
+    Then    Expected return code is "1"
+    When    Try "crm cluster health sles16 --fix --force-breaks-pacemaker" on "hanode1"
+    Then    Expected return code is "0"
+    And     Run "crm cluster start --all" OK on "hanode1"
+    And     Run "crm configure delete testVip" OK on "hanode1"
+    And     Run "crm configure delete testService" OK on "hanode1"
+    And     Run "crm cluster stop --all" OK on "hanode1"
+
   Scenario: Run pre-migration checks when some of the nodes are offline.
     When    Run "systemctl stop sshd" on "hanode2"
     And     Try "crm cluster health sles16" on "hanode1"
