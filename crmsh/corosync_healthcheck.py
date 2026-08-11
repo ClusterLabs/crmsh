@@ -221,7 +221,7 @@ def _parse_quorum_status(output: str) -> _QuorumInfo:
     )
 
 
-def check_nodeid_to_nodename_mapping(local_node: str) -> CheckResult:
+def check_nodeid_to_nodename_mapping(local_node: str, lm: corosync.LinkManager) -> CheckResult:
     """
     Check against the mismatch of nodeid to nodename mapping between corosync.conf and CIB.
     """
@@ -257,21 +257,11 @@ def check_nodeid_to_nodename_mapping(local_node: str) -> CheckResult:
         )
 
     try:
-        lm = corosync.LinkManager.load_config_file()
-        try:
-            config_nodelist = lm._config['nodelist']['node']
-        except KeyError:
-            config_nodelist = []
-        if not isinstance(config_nodelist, list):
-            config_nodelist = [config_nodelist]
-    except ValueError as e:
-        return CheckResult(
-            CHECK_NAME,
-            [local_node],
-            255,
-            f"Failed to load or parse corosync.conf: {e}",
-            None,
-        )
+        config_nodelist = lm._config['nodelist']['node']
+    except KeyError:
+        config_nodelist = []
+    if not isinstance(config_nodelist, list):
+        config_nodelist = [config_nodelist]
     corosync_id_to_name = {}
     for node in config_nodelist:
         nodeid_str = node.get('nodeid')
@@ -410,5 +400,31 @@ def _parse_links_status(output: str) -> dict[int, dict[int, str]]:
     if not links:
         raise ValueError("No corosync links found in output")
     return links
+
+
+def check_deprecated_transport(local_node: str, lm: corosync.LinkManager) -> CheckResult:
+    """
+    Check if corosync transport is knet. Give a warning if non-knet transport is used.
+    """
+    CHECK_NAME = "Check Deprecated Corosync Transport"
+    transport = lm.totem_transport()
+
+    if transport != 'knet':
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            2,
+            f'Corosync transport "{transport}" is deprecated. Please use knet.',
+            "Upgrade corosync transport to knet.",
+        )
+
+    return CheckResult(
+        CHECK_NAME,
+        [local_node],
+        0,
+        None,
+        None,
+    )
+
 
 

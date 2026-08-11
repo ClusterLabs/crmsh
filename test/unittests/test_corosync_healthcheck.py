@@ -268,8 +268,7 @@ class TestCheckNodeIDToNodeNameMapping(unittest.TestCase):
 </cib>"""
 
     @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-    @mock.patch("crmsh.corosync.LinkManager.load_config_file")
-    def test_success(self, mock_load, mock_get):
+    def test_success(self, mock_get):
         mock_get.return_value = (0, self.valid_cib_xml, "")
         mock_lm = mock.MagicMock()
         mock_lm._config = {
@@ -280,9 +279,8 @@ class TestCheckNodeIDToNodeNameMapping(unittest.TestCase):
                 ]
             }
         }
-        mock_load.return_value = mock_lm
 
-        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node)
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, mock_lm)
         self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
         self.assertEqual(result.returncode, 0)
         self.assertIsNone(result.result_description)
@@ -290,8 +288,9 @@ class TestCheckNodeIDToNodeNameMapping(unittest.TestCase):
     @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
     def test_cib_load_failure(self, mock_get):
         mock_get.return_value = (1, "", "cibadmin not found")
+        mock_lm = mock.MagicMock()
 
-        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node)
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, mock_lm)
         self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
         self.assertEqual(result.returncode, 255)
         self.assertIn("Failed to load CIB: cibadmin not found", result.result_description)
@@ -299,26 +298,15 @@ class TestCheckNodeIDToNodeNameMapping(unittest.TestCase):
     @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
     def test_cib_parse_failure(self, mock_get):
         mock_get.return_value = (0, "invalid xml", "")
+        mock_lm = mock.MagicMock()
 
-        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node)
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, mock_lm)
         self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
         self.assertEqual(result.returncode, 255)
         self.assertIn("Failed to parse CIB", result.result_description)
 
     @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-    @mock.patch("crmsh.corosync.LinkManager.load_config_file")
-    def test_corosync_load_failure(self, mock_load, mock_get):
-        mock_get.return_value = (0, self.valid_cib_xml, "")
-        mock_load.side_effect = ValueError("corosync.conf not readable")
-
-        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node)
-        self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
-        self.assertEqual(result.returncode, 255)
-        self.assertIn("Failed to load or parse corosync.conf: corosync.conf not readable", result.result_description)
-
-    @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-    @mock.patch("crmsh.corosync.LinkManager.load_config_file")
-    def test_mismatch_missing_in_cib(self, mock_load, mock_get):
+    def test_mismatch_missing_in_cib(self, mock_get):
         mock_get.return_value = (0, self.valid_cib_xml, "")
         mock_lm = mock.MagicMock()
         mock_lm._config = {
@@ -330,16 +318,14 @@ class TestCheckNodeIDToNodeNameMapping(unittest.TestCase):
                 ]
             }
         }
-        mock_load.return_value = mock_lm
 
-        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node)
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, mock_lm)
         self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
         self.assertEqual(result.returncode, 1)
         self.assertIn("Node ID 3 with name 'node3' in corosync.conf is not found in CIB.", result.result_description)
 
     @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-    @mock.patch("crmsh.corosync.LinkManager.load_config_file")
-    def test_mismatch_missing_in_corosync(self, mock_load, mock_get):
+    def test_mismatch_missing_in_corosync(self, mock_get):
         mock_get.return_value = (0, self.valid_cib_xml, "")
         mock_lm = mock.MagicMock()
         mock_lm._config = {
@@ -349,16 +335,14 @@ class TestCheckNodeIDToNodeNameMapping(unittest.TestCase):
                 ]
             }
         }
-        mock_load.return_value = mock_lm
 
-        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node)
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, mock_lm)
         self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
         self.assertEqual(result.returncode, 1)
         self.assertIn("Node ID 2 with name 'node2' in CIB is not found in corosync.conf.", result.result_description)
 
     @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
-    @mock.patch("crmsh.corosync.LinkManager.load_config_file")
-    def test_mismatch_different_name(self, mock_load, mock_get):
+    def test_mismatch_different_name(self, mock_get):
         mock_get.return_value = (0, self.valid_cib_xml, "")
         mock_lm = mock.MagicMock()
         mock_lm._config = {
@@ -369,9 +353,8 @@ class TestCheckNodeIDToNodeNameMapping(unittest.TestCase):
                 ]
             }
         }
-        mock_load.return_value = mock_lm
 
-        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node)
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, mock_lm)
         self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
         self.assertEqual(result.returncode, 1)
         self.assertIn("Node ID 2 is associated with name 'node2-alt' in corosync.conf but 'node2' in CIB.", result.result_description)
@@ -597,4 +580,26 @@ class TestValidateConfigFile(unittest.TestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT
         )
+
+
+class TestCheckDeprecatedTransport(unittest.TestCase):
+    def test_check_deprecated_transport_knet(self):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        result = corosync_healthcheck.check_deprecated_transport("node1", mock_lm)
+        self.assertEqual(result.check_name, "Check Deprecated Corosync Transport")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+        self.assertIsNone(result.recommended_action)
+
+    def test_check_deprecated_transport_non_knet(self):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "udp"
+
+        result = corosync_healthcheck.check_deprecated_transport("node1", mock_lm)
+        self.assertEqual(result.check_name, "Check Deprecated Corosync Transport")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('Corosync transport "udp" is deprecated. Please use knet.', result.result_description)
+        self.assertEqual(result.recommended_action, "Upgrade corosync transport to knet.")
 

@@ -912,11 +912,22 @@ to get the geo cluster configuration.""",
                 print_cb(res_local)
 
                 if res_local.returncode == 0:
+                    try:
+                        lm = corosync.LinkManager.load_config_file()
+                    except ValueError as e:
+                        # unlikely, as we just validated the config file in the previous check
+                        logger.error("Failed to load or parse corosync.conf: %s", e)
+                        return False
+
                     if not corosync_args.local:
                         nodes = utils.list_cluster_nodes() or [local_node]
                         res_consistency = corosync_healthcheck.validate_config_file_consistency(nodes)
                         results.append(res_consistency)
                         print_cb(res_consistency)
+
+                    res_transport = corosync_healthcheck.check_deprecated_transport(local_node, lm)
+                    results.append(res_transport)
+                    print_cb(res_transport)
 
                     res_quorum = corosync_healthcheck.check_quorum_status(local_node)
                     results.append(res_quorum)
@@ -926,7 +937,7 @@ to get the geo cluster configuration.""",
                     results.append(res_links)
                     print_cb(res_links)
 
-                    res_mapping = corosync_healthcheck.check_nodeid_to_nodename_mapping(local_node)
+                    res_mapping = corosync_healthcheck.check_nodeid_to_nodename_mapping(local_node, lm)
                     results.append(res_mapping)
                     print_cb(res_mapping)
 
