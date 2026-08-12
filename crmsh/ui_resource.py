@@ -744,7 +744,10 @@ class RscMgmt(command.UI):
             return False
 
         rsc_type = rsc.node.get("type")
-        logger.info("Trace for %s%s is written to %s", rsc_id, ":"+op if op else "", f"{trace_dir}/{rsc_type}")
+        running_nodes = xmlutil.CrmMonXMLParser().get_resource_running_nodes(rsc_id)
+        node_str = " on node %s" % (", ".join(running_nodes)) if running_nodes else ""
+        logger.info("Trace for %s%s is written to %s/%s%s",
+                    rsc_id, ":" + op if op else "", trace_dir, rsc_type, node_str)
         if op and op != "monitor":
             logger.info("Trace set, restart %s to trace the %s operation", rsc_id, op)
         else:
@@ -801,5 +804,7 @@ class RscMgmt(command.UI):
             self._untrace_op_interval(context, rsc_id, rsc, op, interval)
         if not cibconfig.cib_factory_instance().commit():
             return False
-        logger.info("Stop tracing %s%s", rsc_id, " for operation "+op if op else "")
+        running_nodes = xmlutil.CrmMonXMLParser().get_resource_running_nodes(rsc_id)
+        node_str = " on node %s" % (", ".join(running_nodes)) if running_nodes else ""
+        logger.info("Stop tracing %s%s%s", rsc_id, ":" + op if op else "", node_str)
         return True

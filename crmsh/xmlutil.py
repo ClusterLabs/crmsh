@@ -1633,6 +1633,13 @@ class CrmMonXMLParser(object):
             xpath += f"/node[@name='{node}']"
         return bool(self.xml_elem.xpath(xpath))
 
+    def get_resource_running_nodes(self, resource_id) -> list[str]:
+        """
+        Get nodes where the resource is currently running.
+        """
+        xpath = f'//resource[@id="{resource_id}" and @active="true"]/node'
+        return [elem.get('name') for elem in self.xml_elem.xpath(xpath)]
+
     def get_resource_top_parent_id_set_via_type(self, ra_type):
         """
         Given configured ra type, get the topmost parent ra id set
