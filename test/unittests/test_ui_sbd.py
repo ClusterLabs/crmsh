@@ -436,13 +436,13 @@ class TestSBD(unittest.TestCase):
 
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     def test_device_remove_dev_not_in_config(self, mock_verify_sbd_device):
-        with self.assertRaises(ui_sbd.SBD.SyntaxError) as e:
+        with self.assertRaises(ValueError) as e:
             self.sbd_instance_diskbased._device_remove(["/dev/sda2"])
-        self.assertEqual(str(e.exception), "Device /dev/sda2 is not in config")
+        self.assertEqual(str(e.exception), "Device /dev/sda2 is not configured")
 
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     def test_device_remove_last_dev(self, mock_verify_sbd_device):
-        with self.assertRaises(ui_sbd.SBD.SyntaxError) as e:
+        with self.assertRaises(ValueError) as e:
             self.sbd_instance_diskbased._device_remove(["/dev/sda1"])
         self.assertEqual(str(e.exception), "Not allowed to remove all devices")
 
@@ -464,6 +464,60 @@ class TestSBD(unittest.TestCase):
         mock_update_sbd_configuration.assert_called_once_with({"SBD_DEVICE": "/dev/sda2"})
         mock_restart_cluster.assert_called_once()
         mock_logger_info.assert_called_once_with("Remove devices: %s", "/dev/sda1")
+
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
+    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.leverage_maintenance_mode')
+    @mock.patch('crmsh.bootstrap.restart_cluster')
+    @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.ui_sbd.Path.resolve')
+    def test_device_remove_resolved_path_from_dm_to_mapper(self, mock_resolve, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster, mock_verify_sbd_device):
+        enable_value = True
+        cm = mock.Mock()
+        cm.__enter__ = mock.Mock(return_value=enable_value)
+        cm.__exit__ = mock.Mock(return_value=True)
+        mock_leverage_maintenance_mode.return_value = cm
+        mock_able_to_restart_cluster.return_value = True
+        mock_resolve.side_effect = [
+            "/dev/dm-7",
+            "/dev/dm-5",
+            "/dev/dm-7",
+        ]
+        self.sbd_instance_diskbased.device_list_from_config = ["/dev/mapper/shared_iscsi_lun1-part10", "/dev/mapper/shared_iscsi_lun1-part8"]
+
+        self.sbd_instance_diskbased._device_remove(["/dev/dm-7"])
+
+        mock_update_sbd_configuration.assert_called_once_with({"SBD_DEVICE": "/dev/mapper/shared_iscsi_lun1-part8"})
+        mock_restart_cluster.assert_called_once()
+        mock_logger_info.assert_called_once_with("Remove devices: %s", "/dev/mapper/shared_iscsi_lun1-part10")
+
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
+    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.leverage_maintenance_mode')
+    @mock.patch('crmsh.bootstrap.restart_cluster')
+    @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.ui_sbd.Path.resolve')
+    def test_device_remove_resolved_path_from_mapper_to_dm(self, mock_resolve, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster, mock_verify_sbd_device):
+        enable_value = True
+        cm = mock.Mock()
+        cm.__enter__ = mock.Mock(return_value=enable_value)
+        cm.__exit__ = mock.Mock(return_value=True)
+        mock_leverage_maintenance_mode.return_value = cm
+        mock_able_to_restart_cluster.return_value = True
+        mock_resolve.side_effect = [
+            "/dev/dm-7",
+            "/dev/dm-5",
+            "/dev/dm-7",
+        ]
+        self.sbd_instance_diskbased.device_list_from_config = ["/dev/dm-7", "/dev/dm-5"]
+
+        self.sbd_instance_diskbased._device_remove(["/dev/mapper/shared_iscsi_lun1-part10"])
+
+        mock_update_sbd_configuration.assert_called_once_with({"SBD_DEVICE": "/dev/dm-5"})
+        mock_restart_cluster.assert_called_once()
+        mock_logger_info.assert_called_once_with("Remove devices: %s", "/dev/dm-7")
 
     def test_do_device_no_service(self):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()

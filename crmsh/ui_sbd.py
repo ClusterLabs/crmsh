@@ -2,6 +2,7 @@ import logging
 import typing
 import re
 import os
+from pathlib import Path
 
 from crmsh import sbd
 from crmsh import watchdog
@@ -489,15 +490,19 @@ class SBD(command.UI):
         '''
         sbd.SBDUtils.verify_sbd_device(self.device_list_from_config, self.cluster_nodes)
 
+        config_device_by_path = {Path(dev).resolve(): dev for dev in self.device_list_from_config}
+        devices_to_remove_from_config = []
         for dev in devices_to_remove:
-            if dev not in self.device_list_from_config:
-                raise self.SyntaxError(f"Device {dev} is not in config")
+            config_dev = config_device_by_path.get(Path(dev).resolve())
+            if config_dev is None:
+                raise ValueError(f"Device {dev} is not configured")
+            devices_to_remove_from_config.append(config_dev)
         # To keep the order of devices during removal
-        left_device_list = [dev for dev in self.device_list_from_config if dev not in devices_to_remove]
+        left_device_list = [dev for dev in self.device_list_from_config if dev not in devices_to_remove_from_config]
         if len(left_device_list) == 0:
-            raise self.SyntaxError("Not allowed to remove all devices")
+            raise ValueError("Not allowed to remove all devices")
 
-        logger.info("Remove devices: %s", ';'.join(devices_to_remove))
+        logger.info("Remove devices: %s", ';'.join(devices_to_remove_from_config))
         update_dict = {"SBD_DEVICE": ";".join(left_device_list)}
         with utils.leverage_maintenance_mode() as enabled:
             if not utils.able_to_restart_cluster(enabled):
