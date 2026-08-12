@@ -112,3 +112,16 @@ class TestCibQuery(unittest.TestCase):
     def test_get_node_name_by_id(self):
         self.assertEqual(cibquery.get_node_name_by_id(self.cib, 1), "ha-1-1")
         self.assertIsNone(cibquery.get_node_name_by_id(self.cib, 2))
+
+    def test_get_crm_config_properties(self):
+        self.assertDictEqual(
+            {
+                'have-watchdog': 'false',
+                'dc-version': '2.1.5+20221208.a3f44794f-150500.4.9-2.1.5+20221208.a3f44794f',
+                'cluster-infrastructure': 'corosync',
+                'cluster-name': 'hacluster',
+                'fencing-enabled': 'true',
+                'fencing-timeout': '71',
+            },
+            cibquery.get_crm_config_properties(self.cib),
+        )

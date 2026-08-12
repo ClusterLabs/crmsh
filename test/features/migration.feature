@@ -159,6 +159,29 @@ Feature: migration
     Then    Expected return code is "0"
     And     Run "grep -F 'ring0_addr: @hanode2.ip.0' /etc/corosync/corosync.conf" OK
 
+  Scenario: Run pre-migration checks and fixes against deprecated CIB properties
+    When    Run "crm cluster start" on "hanode1"
+    And     Run "crm cluster start" on "hanode2"
+    Then    Cluster service is "started" on "hanode1"
+    And     Cluster service is "started" on "hanode2"
+    When    Run "crm_attribute -t crm_config -n stonith-timeout -v 120s" on "hanode1"
+    And     Try "crm cluster health sles16" on "hanode1"
+    Then    Expected return code is "1"
+    And     Expect stdout contains snippets ["[PASS] This cluster is good to migrate to SLES 16.", "[WARN] Deprecated CIB properties found", "stonith-timeout"].
+    When    Try "crm cluster health sles16 --fix" on "hanode1"
+    Then    Expected return code is "0"
+    And     Cluster property "fencing-timeout" is "120"
+    And     Cluster property "stonith-timeout" is not configured
+    When    Run "crm_attribute -t crm_config -n cluster-ipc-limit -v 800" on "hanode1"
+    And     Try "crm cluster health sles16" on "hanode1"
+    Then    Expected return code is "0"
+    When    Try "crm cluster health sles16 --fix" on "hanode1"
+    Then    Expected return code is "0"
+    And     Expected "Migrating deprecated CIB property: cluster-ipc-limit" not in stdout
+    And     Cluster property "cluster-ipc-limit" is "800"
+    When    Run "crm cluster stop" on "hanode1"
+    And     Run "crm cluster stop" on "hanode2"
+
   Scenario: Run pre-migration checks when some of the nodes are offline.
     When    Run "systemctl stop sshd" on "hanode2"
     And     Try "crm cluster health sles16" on "hanode1"

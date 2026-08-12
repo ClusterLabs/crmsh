@@ -72,3 +72,12 @@ def get_node_name_by_id(cib: lxml.etree.Element, node_id: int) -> typing.Optiona
     xpath = f"/cib/configuration/nodes/node[@id='{node_id}']/@uname"
     result = cib.xpath(xpath)
     return result[0] if result else None
+
+
+def get_crm_config_properties(cib: lxml.etree.Element) -> dict[str, str]:
+    """Return a dict of configured properties (name -> value) under crm_config"""
+    return {
+        e.get('name'): e.get('value', '')
+        for e in cib.xpath('.//crm_config//cluster_property_set/nvpair')
+        if e.get('name') is not None
+    }

@@ -24,6 +24,7 @@ from crmsh import corosync
 from crmsh import corosync_config_format
 from crmsh import iproute2
 from crmsh import parallax
+from crmsh import service_manager
 from crmsh import sh
 from crmsh import utils
 from crmsh import xmlutil
@@ -171,6 +172,8 @@ def migrate(args: typing.Sequence[str]):
             case CheckReturnCode.PASS_NEED_AUTO_FIX:
                 logger.info('Starting migration...')
                 migrate_corosync_conf(local=parsed_args.local)
+                if not parsed_args.local:
+                    migrate_deprecated_cib_properties()
                 logger.info('Finished migration.')
                 return 0
             case _:
@@ -299,6 +302,7 @@ def check_global(handler: CheckResultHandler):
     cib = xmlutil.text2elem(sh.LocalShell().get_stdout_or_raise_error(None, 'crm configure show xml'))
     check_cib_schema_version(handler, cib)
     check_unsupported_resource_agents(handler, cib)
+    check_deprecated_cib_properties(handler, cib)
 
 
 def check_dependency_version(handler: CheckResultHandler):
@@ -726,3 +730,38 @@ def _get_latest_cib_schema_version() -> tuple[int, int]:
         re.match(r'^pacemaker-(\d+)\.(\d+)\.rng$', filename)
         for filename in glob.iglob('pacemaker-*.rng', root_dir='/usr/share/pacemaker')
     ) if x is not None)
+
+
+def check_deprecated_cib_properties(handler: CheckResultHandler, cib: lxml.etree.Element):
+    deprecated_found = [
+        p for p in utils.get_all_configured_deprecated_properties(existing_xml_node=cib)
+        if not utils.DeprecatedTermTranslator(p, existing_xml_node=cib, quiet=True).check()
+    ]
+
+    if deprecated_found:
+        handler.handle_problem(
+            True, False, handler.LEVEL_WARN,
+            'Deprecated CIB properties found',
+            [f'The following properties are deprecated: {", ".join(deprecated_found)}. Please run "crm cluster health sles16 --fix" when cluster is running to migrate them.']
+        )
+
+
+def migrate_deprecated_cib_properties():
+    if service_manager.ServiceManager().service_is_active('pacemaker'):
+        logger.info("Pacemaker is running, starting online migration for CIB properties.")
+        try:
+            cib = xmlutil.text2elem(sh.LocalShell().get_stdout_or_raise_error(None, 'crm configure show xml'))
+            migrated = False
+            for prop in utils.get_all_configured_deprecated_properties(existing_xml_node=cib):
+                if not utils.DeprecatedTermTranslator(prop, existing_xml_node=cib, quiet=True).check():
+                    logger.info("Migrating deprecated CIB property: %s", prop)
+                    utils.DeprecatedTermTranslator(prop, existing_xml_node=cib, quiet=True).fix()
+                    migrated = True
+            if migrated:
+                logger.info("Finished online migration for CIB properties.")
+            else:
+                logger.info("No deprecated CIB properties found.")
+        except Exception as e:
+            logger.error("Failed to migrate CIB properties: %s", e)
+    else:
+        logger.info("Pacemaker is not running. Online migration for CIB properties is skipped.")
