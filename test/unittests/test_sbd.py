@@ -811,12 +811,12 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix._fix_sbd_service_is_enabled()
         mock_logger_info.assert_called_once_with("Enabling %s on node %s", constants.SBD_SERVICE, 'node2')
 
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_check_fence_sbd_not_configured(self, mock_CrmMonXmlParser):
+    @patch('crmsh.xmlutil.CrmMonXMLParser')
+    def test_check_fence_sbd_not_configured(self, mock_CrmMonXMLParser):
         self.instance_check.disk_based = True
         self.instance_check.quiet = False
         mock_parser_instance = Mock()
-        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_CrmMonXMLParser.return_value = mock_parser_instance
         mock_parser_instance.not_connected.return_value = False
         mock_parser_instance.is_resource_configured.return_value = False
         self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.ERROR)
@@ -826,12 +826,12 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.cibquery.ResourceAgent')
     @patch('crmsh.xmlutil.text2elem')
     @patch('crmsh.sh.cluster_shell')
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_check_fence_sbd_not_configured_cluster_offline(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra):
+    @patch('crmsh.xmlutil.CrmMonXMLParser')
+    def test_check_fence_sbd_not_configured_cluster_offline(self, mock_CrmMonXMLParser, mock_cluster_shell, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra):
         self.instance_check.disk_based = True
         self.instance_check.quiet = False
         mock_parser_instance = Mock()
-        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_CrmMonXMLParser.return_value = mock_parser_instance
         mock_parser_instance.not_connected.return_value = True
         mock_cluster_shell_inst = Mock()
         mock_cluster_shell.return_value = mock_cluster_shell_inst
@@ -847,11 +847,11 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.cibquery.ResourceAgent')
     @patch('crmsh.xmlutil.text2elem')
     @patch('crmsh.sh.cluster_shell')
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_check_fence_sbd_success_cluster_offline(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra):
+    @patch('crmsh.xmlutil.CrmMonXMLParser')
+    def test_check_fence_sbd_success_cluster_offline(self, mock_CrmMonXMLParser, mock_cluster_shell, mock_text2elem, mock_ResourceAgent, mock_get_primitives_with_ra):
         self.instance_check.disk_based = True
         mock_parser_instance = Mock()
-        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_CrmMonXMLParser.return_value = mock_parser_instance
         mock_parser_instance.not_connected.return_value = True
         mock_cluster_shell_inst = Mock()
         mock_cluster_shell.return_value = mock_cluster_shell_inst
@@ -863,24 +863,24 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.SUCCESS)
 
     @patch('crmsh.utils.is_cluster_in_maintenance_mode')
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_check_fence_sbd_not_started(self, mock_CrmMonXmlParser, mock_is_cluster_in_maintenance_mode):
+    @patch('crmsh.xmlutil.CrmMonXMLParser')
+    def test_check_fence_sbd_not_started(self, mock_CrmMonXMLParser, mock_is_cluster_in_maintenance_mode):
         self.instance_check.disk_based = True
         self.instance_check.quiet = False
         mock_is_cluster_in_maintenance_mode.return_value = False
         mock_parser_instance = Mock()
-        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_CrmMonXMLParser.return_value = mock_parser_instance
         mock_parser_instance.not_connected.return_value = False
         mock_parser_instance.is_resource_configured.return_value = True
         mock_parser_instance.is_resource_started.return_value = False
         self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.ERROR)
         self.mock_quiet_logger_error.assert_called_once_with("Fence agent %s is not started", sbd.SBDManager.SBD_RA)
 
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_check_fence_sbd_success(self, mock_CrmMonXmlParser):
+    @patch('crmsh.xmlutil.CrmMonXMLParser')
+    def test_check_fence_sbd_success(self, mock_CrmMonXMLParser):
         self.instance_check.disk_based = True
         mock_parser_instance = Mock()
-        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_CrmMonXMLParser.return_value = mock_parser_instance
         mock_parser_instance.not_connected.return_value = False
         mock_parser_instance.is_resource_configured.return_value = True
         mock_parser_instance.is_resource_started.return_value = True
@@ -890,10 +890,10 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.utils.is_2node_cluster_without_qdevice')
     @patch('logging.Logger.info')
     @patch('crmsh.sh.cluster_shell')
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_fix_fence_sbd_not_configured(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_logger_info, mock_is_2node_cluster_without_qdevice, mock_adjust_pcmk_delay_max):
+    @patch('crmsh.xmlutil.CrmMonXMLParser')
+    def test_fix_fence_sbd_not_configured(self, mock_CrmMonXMLParser, mock_cluster_shell, mock_logger_info, mock_is_2node_cluster_without_qdevice, mock_adjust_pcmk_delay_max):
         mock_parser_instance = Mock()
-        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_CrmMonXMLParser.return_value = mock_parser_instance
         mock_parser_instance.is_resource_configured.return_value = False
         mock_cluster_shell_inst = Mock()
         mock_cluster_shell.return_value = mock_cluster_shell_inst
@@ -904,10 +904,10 @@ class TestSBDConfigChecker(unittest.TestCase):
 
     @patch('logging.Logger.info')
     @patch('crmsh.sh.cluster_shell')
-    @patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_fix_fence_sbd_not_started(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_logger_info):
+    @patch('crmsh.xmlutil.CrmMonXMLParser')
+    def test_fix_fence_sbd_not_started(self, mock_CrmMonXMLParser, mock_cluster_shell, mock_logger_info):
         mock_parser_instance = Mock()
-        mock_CrmMonXmlParser.return_value = mock_parser_instance
+        mock_CrmMonXMLParser.return_value = mock_parser_instance
         mock_parser_instance.is_resource_configured.return_value = True
         mock_parser_instance.is_resource_started.return_value = False
         mock_parser_instance.get_resource_id_list_via_type.return_value = ['fence_sbd_0']
@@ -1302,11 +1302,11 @@ class TestOutterFunctions(unittest.TestCase):
     """
     @patch('crmsh.utils.ext_cmd')
     @patch('logging.Logger.info')
-    @patch('crmsh.sbd.xmlutil.CrmMonXmlParser')
-    def test_cleanup_existing_sbd_resource(self, mock_CrmMonXmlParser, mock_logger_info, mock_ext_cmd):
-        mock_CrmMonXmlParser.return_value.is_resource_configured.return_value = True
-        mock_CrmMonXmlParser.return_value.get_resource_id_list_via_type.return_value = ['sbd_resource']
-        mock_CrmMonXmlParser.return_value.is_resource_started.return_value = True
+    @patch('crmsh.sbd.xmlutil.CrmMonXMLParser')
+    def test_cleanup_existing_sbd_resource(self, mock_CrmMonXMLParser, mock_logger_info, mock_ext_cmd):
+        mock_CrmMonXMLParser.return_value.is_resource_configured.return_value = True
+        mock_CrmMonXMLParser.return_value.get_resource_id_list_via_type.return_value = ['sbd_resource']
+        mock_CrmMonXMLParser.return_value.is_resource_started.return_value = True
         sbd.cleanup_existing_sbd_resource()
         mock_logger_info.assert_has_calls([
             call("Stop sbd resource '%s'(%s)", 'sbd_resource', sbd.SBDManager.SBD_RA),

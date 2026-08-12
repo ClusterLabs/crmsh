@@ -24,7 +24,7 @@ def test_package_is_installed_local(mock_run):
     mock_run.assert_called_once_with("rpm -q --quiet crmsh")
 
 
-@mock.patch("crmsh.utils.xmlutil.CrmMonXmlParser")
+@mock.patch("crmsh.utils.xmlutil.CrmMonXMLParser")
 def test_get_nodeid_from_name_remote(mock_parser):
     mock_parser_inst = mock.Mock()
     mock_parser.return_value = mock_parser_inst
@@ -34,7 +34,7 @@ def test_get_nodeid_from_name_remote(mock_parser):
     mock_parser_inst.is_node_remote.assert_called_once_with("node1")
 
 
-@mock.patch("crmsh.utils.xmlutil.CrmMonXmlParser")
+@mock.patch("crmsh.utils.xmlutil.CrmMonXMLParser")
 def test_get_nodeid_from_name(mock_parser):
     mock_parser_inst = mock.Mock()
     mock_parser.return_value = mock_parser_inst
@@ -523,7 +523,7 @@ def test_detect_virt(mock_run):
     mock_run.assert_called_once_with("systemd-detect-virt")
 
 
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+@mock.patch('crmsh.xmlutil.CrmMonXMLParser')
 def test_cluster_with_quorum(mock_crmmon):
     mock_crmmon_inst = mock.Mock()
     mock_crmmon.return_value = mock_crmmon_inst
@@ -1123,7 +1123,7 @@ def test_validate_and_get_reachable_nodes_no_cib(mock_list_nodes, mock_get_addre
 
 
 @mock.patch('logging.Logger.error')
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+@mock.patch('crmsh.xmlutil.CrmMonXMLParser')
 @mock.patch('crmsh.sh.cluster_shell')
 @mock.patch('crmsh.network_utils.get_reachable_node_list')
 @mock.patch('crmsh.utils.this_node')

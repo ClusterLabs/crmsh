@@ -83,7 +83,7 @@ def update_xml_node(cluster_node_name, attr, value):
     node_obj = cib_factory.find_node(cluster_node_name)
     if node_obj is None:
         # Append node section for remote node
-        if xmlutil.CrmMonXmlParser().is_node_remote(cluster_node_name):
+        if xmlutil.CrmMonXMLParser().is_node_remote(cluster_node_name):
             xml_item = etree.Element("node", id=cluster_node_name, uname=cluster_node_name, type="remote")
             cib_factory.create_from_node(xml_item)
             node_obj = cib_factory.find_node(cluster_node_name)
@@ -273,7 +273,7 @@ class NodeMgmt(command.UI):
         def do_print(uname):
             xml = find(uname, cfg_nodes)
             if xml is not None:
-                is_offline = not xmlutil.CrmMonXmlParser().is_node_online(uname)
+                is_offline = not xmlutil.CrmMonXMLParser().is_node_online(uname)
                 print_node(*unpack_node_xmldata(xml, is_offline))
 
         if node is not None:
@@ -335,7 +335,7 @@ class NodeMgmt(command.UI):
 
         xml_item_list = cib.xpath(xml_path)
         uname_list_in_xml = [xml_item.get("uname") for xml_item in xml_item_list]
-        crm_mon_parser_inst = xmlutil.CrmMonXmlParser()
+        crm_mon_parser_inst = xmlutil.CrmMonXMLParser()
         create_remote_node = False
         for node in node_list:
             if node not in uname_list_in_xml:

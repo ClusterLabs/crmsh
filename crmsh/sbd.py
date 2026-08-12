@@ -1097,7 +1097,7 @@ class SBDConfigChecker(SBDTimeout):
         if not self.disk_based:
             return CheckResult.SUCCESS
 
-        xml_inst = xmlutil.CrmMonXmlParser()
+        xml_inst = xmlutil.CrmMonXMLParser()
         if xml_inst.not_connected():
             cib = xmlutil.text2elem(sh.cluster_shell().get_stdout_or_raise_error("crm configure show xml"))
             ra = cibquery.ResourceAgent("stonith", "", "fence_sbd")
@@ -1126,7 +1126,7 @@ class SBDConfigChecker(SBDTimeout):
         return CheckResult.SUCCESS
 
     def _fix_fence_sbd(self):
-        xml_inst = xmlutil.CrmMonXmlParser()
+        xml_inst = xmlutil.CrmMonXMLParser()
         shell = sh.cluster_shell()
         if not xml_inst.is_resource_configured(SBDManager.SBD_RA):
             logger.info("Configuring fence agent %s", SBDManager.SBD_RA)
@@ -1583,9 +1583,9 @@ class SBDManager:
 
 
 def cleanup_existing_sbd_resource():
-    if xmlutil.CrmMonXmlParser().is_resource_configured(SBDManager.SBD_RA):
-        sbd_id_list = xmlutil.CrmMonXmlParser().get_resource_id_list_via_type(SBDManager.SBD_RA)
-        if xmlutil.CrmMonXmlParser().is_resource_started(SBDManager.SBD_RA):
+    if xmlutil.CrmMonXMLParser().is_resource_configured(SBDManager.SBD_RA):
+        sbd_id_list = xmlutil.CrmMonXMLParser().get_resource_id_list_via_type(SBDManager.SBD_RA)
+        if xmlutil.CrmMonXMLParser().is_resource_started(SBDManager.SBD_RA):
             for sbd_id in sbd_id_list:
                 logger.info("Stop sbd resource '%s'(%s)", sbd_id, SBDManager.SBD_RA)
                 utils.ext_cmd("crm resource stop {}".format(sbd_id))

@@ -394,7 +394,7 @@ e.g. crm cluster init {self.type.lower()} -o <device>
             return
         cluster_fs_type, device = target_dict["cluster_fs_type"], target_dict["device"]
         with logger_utils.status_long(f"Verify {cluster_fs_type.upper()} environment on {device}"):
-            use_cluster_lvm2 = xmlutil.CrmMonXmlParser(peer).is_resource_configured(constants.LVMLOCKD_RA)
+            use_cluster_lvm2 = xmlutil.CrmMonXMLParser(peer).is_resource_configured(constants.LVMLOCKD_RA)
             self._verify_packages(cluster_fs_type.upper(), use_cluster_lvm2)
             if storage_utils.is_dev_a_plain_raw_disk_or_partition(device, peer):
                 storage_utils.compare_uuid_with_peer_dev([device], peer)

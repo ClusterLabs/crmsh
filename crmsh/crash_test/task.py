@@ -133,7 +133,7 @@ TYPE Yes TO CONTINUE, OTHER INPUTS WILL CANCEL THIS CASE [Yes/No](No): """
         """
         # Try to find out which node fire the fence action
         while not self.thread_stop_event.is_set():
-            fence_event_dict = xmlutil.CrmMonXmlParser().get_last_fence_event_info()
+            fence_event_dict = xmlutil.CrmMonXMLParser().get_last_fence_event_info()
             if fence_event_dict:
                 target_node = fence_event_dict.get('target')
                 origin_node = fence_event_dict.get('origin')

@@ -298,7 +298,7 @@ class TestClusterFSManager(unittest.TestCase):
 
     @mock.patch("crmsh.cluster_fs.storage_utils.compare_uuid_with_peer_dev")
     @mock.patch("crmsh.cluster_fs.storage_utils.is_dev_a_plain_raw_disk_or_partition")
-    @mock.patch("crmsh.xmlutil.CrmMonXmlParser")
+    @mock.patch("crmsh.xmlutil.CrmMonXMLParser")
     @mock.patch("crmsh.log.LoggerUtils.status_long")
     def test_join(self, mock_status_long, mock_crmmonxmlparser, mock_is_dev_a_plain_raw_disk_or_partition, mock_compare_uuid_with_peer_dev):
         mock_crmmonxmlparser_inst = mock.Mock()

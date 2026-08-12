@@ -155,7 +155,7 @@ class RemoteLock(Lock):
 
             if self.for_join:
                 # Might lose claiming lock again, start to wait again
-                online_list = xmlutil.CrmMonXmlParser(self.remote_node).get_node_list(online=True, node_type="member")
+                online_list = xmlutil.CrmMonXMLParser(self.remote_node).get_node_list(online=True, node_type="member")
                 if pre_online_list and pre_online_list != online_list:
                     timeout = current_time + self.lock_timeout
                 pre_online_list = online_list

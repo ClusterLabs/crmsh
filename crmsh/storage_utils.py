@@ -173,14 +173,14 @@ def is_dlm_running(peer=None, on_node=None):
     """
     Check if dlm ra controld is running
     """
-    return xmlutil.CrmMonXmlParser(peer).is_resource_started(constants.DLM_CONTROLD_RA, node=on_node)
+    return xmlutil.CrmMonXMLParser(peer).is_resource_started(constants.DLM_CONTROLD_RA, node=on_node)
 
 
 def is_dlm_configured(peer=None):
     """
     Check if dlm configured
     """
-    return xmlutil.CrmMonXmlParser(peer).is_resource_configured(constants.DLM_CONTROLD_RA)
+    return xmlutil.CrmMonXMLParser(peer).is_resource_configured(constants.DLM_CONTROLD_RA)
 
 
 def check_no_quorum_policy_with_dlm():

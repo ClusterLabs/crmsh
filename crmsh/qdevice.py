@@ -53,7 +53,7 @@ def evaluate_qdevice_quorum_effect(mode):
     if utils.calculate_quorate_status(expected_votes, actual_votes) and not diskless_sbd:
         # safe to use reload
         return QdevicePolicy.QDEVICE_RELOAD
-    elif xmlutil.CrmMonXmlParser().is_non_stonith_resource_running() and not utils.is_cluster_in_maintenance_mode():
+    elif xmlutil.CrmMonXMLParser().is_non_stonith_resource_running() and not utils.is_cluster_in_maintenance_mode():
         # will lose quorum, with non-stonith resource running
         # no reload, no restart cluster service
         # just leave a warning

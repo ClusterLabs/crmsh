@@ -536,7 +536,7 @@ def wait_for_resource(message, resource, timeout_ms=WAIT_TIMEOUT_MS_DEFAULT, fat
     with logger_utils.status_long(message) as progress_bar:
         start_time = int(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000)
         while True:
-            if xmlutil.CrmMonXmlParser().is_resource_started(resource):
+            if xmlutil.CrmMonXMLParser().is_resource_started(resource):
                 break
             status_progress(progress_bar)
             if 0 < timeout_ms <= (int(time.clock_gettime(time.CLOCK_MONOTONIC) * 1000) - start_time):
@@ -576,7 +576,7 @@ def is_online():
     Check whether local node is online
     Besides that, in join process, check whether init node is online
     """
-    if not xmlutil.CrmMonXmlParser().is_node_online(utils.this_node()):
+    if not xmlutil.CrmMonXMLParser().is_node_online(utils.this_node()):
         return False
 
     # if peer_node is None, this is in the init process
@@ -587,7 +587,7 @@ def is_online():
     # The communication IP maybe mis-configured
     user, cluster_node = _parse_user_at_host(_context.cluster_node, None)
     cluster_node = get_node_canonical_hostname(cluster_node)
-    if not xmlutil.CrmMonXmlParser().is_node_online(cluster_node):
+    if not xmlutil.CrmMonXMLParser().is_node_online(cluster_node):
         shutil.copy(_context.get_corosync_conf_orig(), corosync.conf())
         sync_path(corosync.conf(), cluster_node)
         sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R", cluster_node)
@@ -1409,7 +1409,7 @@ def init_cluster():
 
     init_cluster_local()
 
-    node_list = xmlutil.CrmMonXmlParser().get_node_list(online=True, node_type="member")
+    node_list = xmlutil.CrmMonXMLParser().get_node_list(online=True, node_type="member")
     nnodes = len(node_list)
     if nnodes < 1:
         utils.fatal("No nodes found in cluster")
@@ -1759,7 +1759,7 @@ def join_ssh_merge(cluster_node, remote_user):
         stderr=subprocess.DEVNULL,
     )
 
-    node_list = xmlutil.CrmMonXmlParser(cluster_node).get_node_list(online=True, node_type="member")
+    node_list = xmlutil.CrmMonXMLParser(cluster_node).get_node_list(online=True, node_type="member")
     hosts = node_list + [utils.this_node()]
     known_hosts_new: set[str] = set()
     cat_cmd = "[ -e ~/.ssh/known_hosts ] && cat ~/.ssh/known_hosts || true"
@@ -2061,7 +2061,7 @@ def rm_configuration_files(remote=None):
 def remove_pacemaker_remote_node_from_cluster(node):
     logger.info("Removing pacemaker remote node %s from cluster", node)
     shell = sh.cluster_shell()
-    remote_node_res_id = xmlutil.CrmMonXmlParser().get_res_id_of_remote_node(node)
+    remote_node_res_id = xmlutil.CrmMonXMLParser().get_res_id_of_remote_node(node)
     if not remote_node_res_id:
         logger.error("Cannot find the resource ID of the pacemaker remote node %s", node)
         return
@@ -2076,7 +2076,7 @@ def remove_node_from_cluster(node, dead_node=False):
     """
     Remove node from running cluster and the corosync / pacemaker configuration.
     """
-    if xmlutil.CrmMonXmlParser().is_node_remote(node):
+    if xmlutil.CrmMonXMLParser().is_node_remote(node):
         remove_pacemaker_remote_node_from_cluster(node)
         return
 
@@ -2422,7 +2422,7 @@ def bootstrap_remove(context):
             utils.fatal("Removing self requires --force")
         remove_self(force_flag)
     else:
-        configured_nodes = xmlutil.CrmMonXmlParser().get_node_list()
+        configured_nodes = xmlutil.CrmMonXMLParser().get_node_list()
         if cluster_node in configured_nodes:
             remove_node_from_cluster(cluster_node)
         else:
@@ -2775,7 +2775,7 @@ def sync_path(path, peer_node=None):
     """
     node_list = []
     if peer_node:
-        node_list = xmlutil.CrmMonXmlParser(peer_node).get_node_list(online=True, node_type="member")
+        node_list = xmlutil.CrmMonXMLParser(peer_node).get_node_list(online=True, node_type="member")
     utils.cluster_copy_path(path, nodes=node_list)
 
 

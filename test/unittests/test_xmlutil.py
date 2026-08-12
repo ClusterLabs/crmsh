@@ -32,9 +32,9 @@ OFFLINE_XML = '''
 </data>
 '''
 
-class TestCrmMonXmlParser(unittest.TestCase):
+class TestCrmMonXMLParser(unittest.TestCase):
     """
-    Unitary tests for crmsh.xmlutil.CrmMonXmlParser
+    Unitary tests for crmsh.xmlutil.CrmMonXMLParser
     """
     @mock.patch('crmsh.sh.cluster_shell')
     def setUp(self, mock_cluster_shell):
@@ -42,9 +42,9 @@ class TestCrmMonXmlParser(unittest.TestCase):
         Test setUp.
         """
         mock_cluster_shell().get_rc_stdout_stderr_without_input.return_value = (0, FAKE_XML, '')
-        self.parser_inst = xmlutil.CrmMonXmlParser()
+        self.parser_inst = xmlutil.CrmMonXMLParser()
         mock_cluster_shell().get_rc_stdout_stderr_without_input.return_value = (0, OFFLINE_XML, '')
-        self.offline_parser_inst = xmlutil.CrmMonXmlParser()
+        self.offline_parser_inst = xmlutil.CrmMonXMLParser()
 
     def test_is_cluster_not_connected(self):
         assert self.offline_parser_inst.not_connected() is True

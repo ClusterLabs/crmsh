@@ -24,7 +24,7 @@ def test_evaluate_qdevice_quorum_effect_reload(mock_get_dict, mock_quorate):
 
 
 @mock.patch('crmsh.utils.is_cluster_in_maintenance_mode')
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+@mock.patch('crmsh.xmlutil.CrmMonXMLParser')
 @mock.patch('crmsh.utils.calculate_quorate_status')
 @mock.patch('crmsh.utils.get_quorum_votes_dict')
 def test_evaluate_qdevice_quorum_effect_later(mock_get_dict, mock_quorate, mock_parser, mock_maintenance):
@@ -38,7 +38,7 @@ def test_evaluate_qdevice_quorum_effect_later(mock_get_dict, mock_quorate, mock_
     mock_quorate.assert_called_once_with(2, 1)
 
 
-@mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+@mock.patch('crmsh.xmlutil.CrmMonXMLParser')
 @mock.patch('crmsh.utils.calculate_quorate_status')
 @mock.patch('crmsh.utils.get_quorum_votes_dict')
 def test_evaluate_qdevice_quorum_effect(mock_get_dict, mock_quorate, mock_parser):
