@@ -118,7 +118,7 @@ class CheckResultInteractiveHandler(CheckResultHandler):
         self.write_in_color(sys.stdout, constants.GREEN, '[INFO] ')
         print(fmt % args)
 
-    def handle_problem(self, need_auto_fix: bool, is_blocker: bool, level:int, title: str, details: typing.Iterable[str]):
+    def handle_problem(self, need_auto_fix: bool, is_blocker: bool, level:int, title: str, detail: typing.Iterable[str]):
         self.has_problems = True
         self.block_migration = self.block_migration or is_blocker
         self.need_auto_fix = self.need_auto_fix or need_auto_fix
@@ -128,7 +128,7 @@ class CheckResultInteractiveHandler(CheckResultHandler):
             case self.LEVEL_WARN:
                 self.write_in_color(sys.stdout, constants.YELLOW, '[WARN] ')
         print(title)
-        for line in details:
+        for line in detail:
             sys.stdout.write('       ')
             print(line)
 
