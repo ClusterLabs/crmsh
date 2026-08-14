@@ -3059,7 +3059,13 @@ class DeprecatedTermTranslator:
         return not self._resolve_res.using_deprecated
 
 
-def get_all_configured_deprecated_properties() -> list[str]:
+def get_all_configured_deprecated_properties(existing_xml_node: typing.Optional[etree.Element] = None) -> list[str]:
+    if existing_xml_node is not None:
+        return [
+            p
+            for p in ra.get_properties_meta().get_deprecated_params()
+            if existing_xml_node.find(f".//*[@name='{p}']") is not None
+        ]
     return [
         p
         for p in ra.get_properties_meta().get_deprecated_params()

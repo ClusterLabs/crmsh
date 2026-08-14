@@ -114,3 +114,105 @@ class TestCheckRemovedResourceAgents(unittest.TestCase):
                 'Please run "crm configure upgrade force" to upgrade to the latest version.',
             ]
         )
+
+
+class TestDeprecatedCibProperties(unittest.TestCase):
+    @mock.patch('crmsh.utils.get_all_configured_deprecated_properties')
+    @mock.patch('crmsh.utils.DeprecatedTermTranslator._get_maps')
+    def test_check_deprecated_cib_properties_found(self, mock_get_maps, mock_get_dep_properties):
+        mock_get_dep_properties.return_value = ['stonith-timeout']
+        mock_get_maps.return_value = ({'stonith-timeout': 'fencing-timeout'}, {})
+        cib = lxml.etree.fromstring('''
+            <cib>
+              <configuration>
+                <crm_config>
+                  <cluster_property_set id="cib-bootstrap-options">
+                    <nvpair name="stonith-timeout" value="120s"/>
+                  </cluster_property_set>
+                </crm_config>
+              </configuration>
+            </cib>
+        ''')
+        handler = mock.Mock(migration.CheckResultHandler)
+        migration.check_deprecated_cib_properties(handler, cib)
+        handler.handle_problem.assert_called_with(
+            True, False, handler.LEVEL_WARN,
+            'Deprecated CIB properties found',
+            ['The following properties are deprecated: stonith-timeout. Please run "crm cluster health sles16 --fix" when cluster is running to migrate them.']
+        )
+
+    @mock.patch('crmsh.utils.get_all_configured_deprecated_properties')
+    @mock.patch('crmsh.utils.DeprecatedTermTranslator._get_maps')
+    def test_check_deprecated_cib_properties_not_found(self, mock_get_maps, mock_get_dep_properties):
+        mock_get_dep_properties.return_value = []
+        mock_get_maps.return_value = ({'stonith-timeout': 'fencing-timeout'}, {})
+        cib = lxml.etree.fromstring('''
+            <cib>
+              <configuration>
+                <crm_config>
+                  <cluster_property_set id="cib-bootstrap-options">
+                    <nvpair name="fencing-timeout" value="120s"/>
+                  </cluster_property_set>
+                </crm_config>
+              </configuration>
+            </cib>
+        ''')
+        handler = mock.Mock(migration.CheckResultHandler)
+        migration.check_deprecated_cib_properties(handler, cib)
+        handler.handle_problem.assert_not_called()
+
+    @mock.patch('crmsh.utils.get_all_configured_deprecated_properties')
+    @mock.patch('crmsh.utils.DeprecatedTermTranslator._get_maps')
+    @mock.patch('crmsh.utils.ra.get_properties_meta')
+    def test_check_deprecated_cib_properties_without_replacement_not_found(self, mock_get_properties_meta, mock_get_maps, mock_get_dep_properties):
+        mock_get_dep_properties.return_value = ['stonith-timeout']
+        mock_get_maps.return_value = ({'stonith-timeout': None}, {})
+        mock_get_properties_meta.return_value.param_default.return_value = 'true'
+        cib = lxml.etree.fromstring('''
+            <cib>
+              <configuration>
+                <crm_config>
+                  <cluster_property_set id="cib-bootstrap-options">
+                    <nvpair name="stonith-timeout" value="false"/>
+                  </cluster_property_set>
+                </crm_config>
+              </configuration>
+            </cib>
+        ''')
+        handler = mock.Mock(migration.CheckResultHandler)
+        migration.check_deprecated_cib_properties(handler, cib)
+        handler.handle_problem.assert_not_called()
+
+    @mock.patch('crmsh.utils.get_all_configured_deprecated_properties')
+    @mock.patch('crmsh.utils.DeprecatedTermTranslator')
+    @mock.patch('crmsh.sh.LocalShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    def test_migrate_deprecated_cib_properties_active(self, mock_service_is_active, mock_get_stdout, mock_translator, mock_get_dep_properties):
+        mock_service_is_active.return_value = True
+        mock_get_dep_properties.return_value = ['stonith-timeout']
+        mock_get_stdout.return_value = '''
+            <cib>
+              <configuration>
+                <crm_config>
+                  <cluster_property_set id="cib-bootstrap-options">
+                    <nvpair name="stonith-timeout" value="120s"/>
+                  </cluster_property_set>
+                </crm_config>
+              </configuration>
+            </cib>
+        '''
+        mock_trans_inst = mock.Mock()
+        mock_trans_inst.check.return_value = False
+        mock_translator.return_value = mock_trans_inst
+
+        migration.migrate_deprecated_cib_properties()
+
+        mock_translator.assert_called_with('stonith-timeout', existing_xml_node=mock.ANY, quiet=True)
+        mock_trans_inst.fix.assert_called_once()
+
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    @mock.patch('crmsh.utils.DeprecatedTermTranslator')
+    def test_migrate_deprecated_cib_properties_inactive(self, mock_translator, mock_service_is_active):
+        mock_service_is_active.return_value = False
+        migration.migrate_deprecated_cib_properties()
+        mock_translator.assert_not_called()
