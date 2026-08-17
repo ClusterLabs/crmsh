@@ -96,7 +96,7 @@ class SBDUtils:
             if failed_nodes:
                 raise ValueError(f"{dev} is not a block device on {', '.join(failed_nodes)}")
 
-            storage_utils.MultipathInspector.check_device_under_multipath(dev)
+            storage_utils.MultipathInspector.check_device_under_multipath(dev, node_list)
 
             if compare_uuid:
                 SBDUtils.compare_device_uuid(dev, node_list)

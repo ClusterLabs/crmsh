@@ -76,9 +76,13 @@ class TestSBDUtils(unittest.TestCase):
 
     @patch('crmsh.sbd.storage_utils.get_non_block_device_nodes')
     @patch('crmsh.sbd.SBDUtils.compare_device_uuid')
-    def test_verify_sbd_device_valid(self, mock_compare_device_uuid, mock_get_non_block_device_nodes):
+    @patch('crmsh.sbd.storage_utils.MultipathInspector.check_device_under_multipath')
+    def test_verify_sbd_device_valid(self, mock_check_multipath, mock_compare_device_uuid, mock_get_non_block_device_nodes):
+        node_list = ["node1", "node2"]
         mock_get_non_block_device_nodes.return_value = []
-        SBDUtils.verify_sbd_device(["/dev/sbd_device"], ["node1", "node2"])
+        SBDUtils.verify_sbd_device(["/dev/sbd_device"], node_list)
+
+        mock_check_multipath.assert_called_once_with("/dev/sbd_device", node_list)
 
     @patch('crmsh.utils.parse_sysconfig')
     def test_get_sbd_value_from_config(self, mock_parse_sysconfig):
