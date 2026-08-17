@@ -1,6 +1,7 @@
 import logging
 import re
 from contextlib import contextmanager
+from pathlib import Path
 from . import utils, sh, storage_utils
 from . import bootstrap
 from . import ra
@@ -36,6 +37,8 @@ class ClusterFSManager(object):
         self.mount_point = context.mount_point
         self.use_stage = context.stage in ("ocfs2", "gfs2")
         self.yes_to_all = context.yes_to_all
+        sbd_devices = getattr(context, "sbd_devices", None)
+        self.sbd_devices = sbd_devices if isinstance(sbd_devices, list) else []
         self.exist_ra_id_list = []
         self.vg_id = None
         self.group_id = None
@@ -121,6 +124,7 @@ class ClusterFSManager(object):
         Verify OCFS2/GFS2 devices
         """
         node_list = utils.list_cluster_nodes() if self.use_stage else [utils.this_node()]
+        self._check_device_with_sbd_device()
         for dev in self.devices:
             failed_nodes = storage_utils.get_non_block_device_nodes(dev, node_list)
             if failed_nodes:
@@ -163,12 +167,14 @@ e.g. crm cluster init {self.type.lower()} -o <device>
         """
         Raise error when OCFS2/GFS2 device is the same with sbd device
         """
-        if ServiceManager().service_is_enabled(constants.SBD_SERVICE):
-            sbd_device_list = sbd.SBDUtils.get_sbd_device_from_config()
-            for dev in self.devices:
-                if dev in sbd_device_list:
-                    msg = f"{dev} cannot be the same with SBD device" + self.error_hints_for_stage
-                    raise Error(msg)
+        sbd_device_list = list(self.sbd_devices)
+        if not sbd_device_list and ServiceManager().service_is_enabled(constants.SBD_SERVICE):
+            sbd_device_list.extend(sbd.SBDUtils.get_sbd_device_from_config())
+
+        resolved_sbd_devices = [Path(dev).resolve() for dev in sbd_device_list]
+        for dev in self.devices:
+            if Path(dev).resolve() in resolved_sbd_devices:
+                raise Error(f"{dev} cannot be the same with SBD device")
 
     def _confirm_to_overwrite_device(self):
         """
@@ -197,7 +203,6 @@ e.g. crm cluster init {self.type.lower()} -o <device>
             msg = f"{self.type} requires fence device configured and running." + self.error_hints_for_stage
             raise Error(msg)
 
-        self._check_device_with_sbd_device()
         self._confirm_to_overwrite_device()
 
     def _gen_ra_scripts(self, ra_type: str, kv: dict) -> tuple[str, str]:

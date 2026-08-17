@@ -91,6 +91,7 @@ class TestClusterFSManager(unittest.TestCase):
     @mock.patch("crmsh.utils.list_cluster_nodes")
     @mock.patch("crmsh.cluster_fs.storage_utils.get_non_block_device_nodes")
     def test_verify_devices_not_block_device(self, mock_get_non_block_device_nodes, mock_list_cluster_nodes):
+        self.ocfs2_instance_one_device._check_device_with_sbd_device = mock.Mock()
         mock_list_cluster_nodes.return_value = ["node1", "node2"]
         mock_get_non_block_device_nodes.return_value = ["node1"]
         with self.assertRaises(cluster_fs.Error) as context:
@@ -100,6 +101,7 @@ class TestClusterFSManager(unittest.TestCase):
     @mock.patch("crmsh.cluster_fs.storage_utils.is_dev_used_for_lvm")
     @mock.patch("crmsh.cluster_fs.storage_utils.get_non_block_device_nodes")
     def test_verify_devices_clvm2_with_lv(self, mock_get_non_block_device_nodes, mock_is_dev_used_for_lvm):
+        self.gfs2_instance_one_device_clvm2._check_device_with_sbd_device = mock.Mock()
         mock_get_non_block_device_nodes.return_value = []
         mock_is_dev_used_for_lvm.return_value = True
         with self.assertRaises(cluster_fs.Error) as context:
@@ -110,6 +112,7 @@ class TestClusterFSManager(unittest.TestCase):
     @mock.patch("crmsh.cluster_fs.storage_utils.is_dev_used_for_lvm")
     @mock.patch("crmsh.cluster_fs.storage_utils.get_non_block_device_nodes")
     def test_verify_devices_already_mounted(self, mock_get_non_block_device_nodes, mock_is_dev_used_for_lvm, mock_has_disk_mounted):
+        self.ocfs2_instance_one_device._check_device_with_sbd_device = mock.Mock()
         mock_get_non_block_device_nodes.return_value = []
         mock_is_dev_used_for_lvm.return_value = False
         mock_has_disk_mounted.return_value = True
@@ -144,16 +147,35 @@ class TestClusterFSManager(unittest.TestCase):
         self.ocfs2_instance_one_device._check_if_already_configured.assert_called_once()
         self.ocfs2_instance_one_device._verify_devices.assert_called_once()
 
+    @mock.patch("pathlib.Path.resolve")
     @mock.patch("crmsh.sbd.SBDUtils.get_sbd_device_from_config")
     @mock.patch("crmsh.cluster_fs.ServiceManager")
-    def test_check_device_with_sbd_device(self, mock_service_manager, mock_get_sbd_device_from_config):
+    def test_check_device_with_sbd_device(self, mock_service_manager, mock_get_sbd_device_from_config, mock_resolve):
         mock_service_manager_inst = mock.Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_enabled.return_value = True
-        mock_get_sbd_device_from_config.return_value = "/dev/sda1"
+        mock_get_sbd_device_from_config.return_value = ["/dev/disk/by-id/sda1"]
+        mock_resolve.return_value = "/dev/sda1"
         with self.assertRaises(cluster_fs.Error) as context:
             self.instance_ocfs2_stage_with_device._check_device_with_sbd_device()
         self.assertEqual(str(context.exception), '/dev/sda1 cannot be the same with SBD device')
+
+    @mock.patch("pathlib.Path.resolve")
+    @mock.patch("crmsh.sbd.SBDUtils.get_sbd_device_from_config")
+    @mock.patch("crmsh.cluster_fs.ServiceManager")
+    def test_check_device_with_bootstrap_sbd_device(self, mock_service_manager, mock_get_sbd_device_from_config, mock_resolve):
+        mock_service_manager_inst = mock.Mock()
+        mock_service_manager.return_value = mock_service_manager_inst
+        mock_service_manager_inst.service_is_enabled.return_value = True
+        mock_resolve.return_value = "/dev/sda1"
+        self.instance_ocfs2_stage_with_device.sbd_devices = ["/dev/disk/by-id/sda1"]
+
+        with self.assertRaises(cluster_fs.Error) as context:
+            self.instance_ocfs2_stage_with_device._check_device_with_sbd_device()
+
+        self.assertEqual(str(context.exception), '/dev/sda1 cannot be the same with SBD device')
+        mock_service_manager_inst.service_is_enabled.assert_not_called()
+        mock_get_sbd_device_from_config.assert_not_called()
 
     @mock.patch("crmsh.bootstrap.confirm")
     @mock.patch("crmsh.cluster_fs.storage_utils.has_dev_partitioned")
