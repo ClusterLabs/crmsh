@@ -36,6 +36,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn crm cluster join -c hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
           send "root123\n"
       }
@@ -53,6 +57,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn crm cluster join -c hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
           send "root123\n"
@@ -83,6 +91,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn crm cluster init -N hanode2 -N hanode3 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
           send "root123\n"
@@ -102,6 +114,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn sudo crm cluster join -c alice@hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
           send "alice123\n"
       }
@@ -119,6 +135,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn sudo crm cluster join -c alice@hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
           send "alice123\n"
@@ -149,6 +169,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn sudo crm cluster init -N alice@hanode2 -N alice@hanode3 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
           send "alice123\n"
@@ -175,6 +199,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn crm cluster init --qnetd-hostname=qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -187,6 +215,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn crm cluster join -c hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -212,6 +244,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn crm cluster init -N hanode1 -N hanode2 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -222,6 +258,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn crm cluster init qdevice --qnetd-hostname=qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -246,6 +286,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn sudo crm cluster init --qnetd-hostname=alice@qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "alice123\n"
       }
@@ -258,6 +302,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn sudo crm cluster join -c alice@hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "alice123\n"
       }
@@ -283,6 +331,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn sudo crm cluster init -N alice@hanode2 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "alice123\n"
       }
@@ -293,6 +345,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn sudo crm cluster init qdevice --qnetd-hostname=alice@qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "alice123\n"
       }
@@ -324,6 +380,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -At root@hanode1 crm cluster init -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -333,6 +393,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 15
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -A root@hanode1 echo 'NO-NEED-FOR-PASSWORD'
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "NO-NEED-FOR-PASSWORD"
       expect eof
       """
@@ -342,6 +406,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -At root@hanode2 crm cluster join -c hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -351,6 +419,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 15
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -A root@hanode2 echo 'NO-NEED-FOR-PASSWORD'
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "NO-NEED-FOR-PASSWORD"
       expect eof
       """
@@ -364,6 +436,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 120
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -At root@hanode1 crm cluster init qdevice --qnetd-hostname qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -373,6 +449,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 15
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -A root@qnetd-node echo 'NO-NEED-FOR-PASSWORD'
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "NO-NEED-FOR-PASSWORD"
       expect eof
       """
@@ -396,6 +476,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 20
       spawn ssh-copy-id -i /root/.ssh/id_ed25519 hanode2
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -405,6 +489,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 20
       spawn ssh-copy-id -i /root/.ssh/id_ed25519 hanode1
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
