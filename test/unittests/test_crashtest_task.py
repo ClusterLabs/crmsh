@@ -347,11 +347,41 @@ Fence timeout:     60
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
     def test_pre_check_no_cmd(self, mock_pre_check, mock_run):
-        mock_run.return_value = (1, None, "error")
+        mock_run.side_effect = [(1, None, "nft error"), (1, None, "iptables error")]
         with self.assertRaises(task.TaskError) as err:
             self.task_sp_inst.pre_check()
-        self.assertEqual("error", str(err.exception))
-        mock_run.assert_called_once_with("which iptables")
+        self.assertEqual("Please provide the nft or iptables command", str(err.exception))
+        mock_run.assert_has_calls([
+            mock.call("which nft"),
+            mock.call("which iptables"),
+        ])
+        mock_pre_check.assert_called_once_with()
+
+    @mock.patch('crmsh.crash_test.utils.online_nodes')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
+    def test_pre_check_prefers_nft(self, mock_pre_check, mock_run, mock_online_nodes):
+        mock_run.return_value = (0, None, None)
+        mock_online_nodes.return_value = ["node1", "node2"]
+        self.task_sp_inst.pre_check()
+        self.assertTrue(self.task_sp_inst.use_nft)
+        mock_run.assert_called_once_with("which nft")
+        mock_online_nodes.assert_called_once_with()
+        mock_pre_check.assert_called_once_with()
+
+    @mock.patch('crmsh.crash_test.utils.online_nodes')
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.Task.task_pre_check')
+    def test_pre_check_fallback_to_iptables(self, mock_pre_check, mock_run, mock_online_nodes):
+        mock_run.side_effect = [(1, None, "nft error"), (0, None, None)]
+        mock_online_nodes.return_value = ["node1", "node2"]
+        self.task_sp_inst.pre_check()
+        self.assertFalse(self.task_sp_inst.use_nft)
+        mock_run.assert_has_calls([
+            mock.call("which nft"),
+            mock.call("which iptables"),
+        ])
+        mock_online_nodes.assert_called_once_with()
         mock_pre_check.assert_called_once_with()
 
     @mock.patch('crmsh.crash_test.utils.online_nodes')
@@ -363,7 +393,8 @@ Fence timeout:     60
         with self.assertRaises(task.TaskError) as err:
             self.task_sp_inst.pre_check()
         self.assertEqual("At least two nodes online!", str(err.exception))
-        mock_run.assert_called_once_with("which iptables")
+        mock_run.assert_called_once_with("which nft")
+        self.assertTrue(self.task_sp_inst.use_nft)
         mock_online_nodes.assert_called_once_with()
 
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
@@ -389,6 +420,29 @@ Fence timeout:     60
             mock.call(config.BLOCK_IP.format(action='I', peer_ip="10.10.10.2")),
             mock.call(config.BLOCK_IP.format(action='I', peer_ip="20.20.20.2"))
             ])
+
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
+    @mock.patch('crmsh.crash_test.task.crmshutils.get_iplist_from_name')
+    @mock.patch('crmsh.crash_test.task.Task.info')
+    @mock.patch('crmsh.crash_test.utils.peer_node_list')
+    def test_do_block_nft(self, mock_peer_list, mock_info, mock_get_iplist, mock_run):
+        self.task_sp_inst.use_nft = True
+        mock_peer_list.return_value = ["node1"]
+        mock_get_iplist.return_value = ["10.10.10.1"]
+        self.task_sp_inst.do_block_nft()
+        ruleset = config.NFT_RULESET.format(
+            table=config.NFT_TABLE,
+            input_rules="    ip saddr 10.10.10.1 drop",
+            output_rules="    ip daddr 10.10.10.1 drop",
+        )
+        mock_run.assert_called_once_with(config.NFT_APPLY_RULESET.format(ruleset=ruleset))
+
+    @mock.patch('crmsh.crash_test.task.TaskSplitBrain.do_block_nft')
+    def test_do_block_uses_nft(self, mock_do_block_nft):
+        self.task_sp_inst.use_nft = True
+        with self.task_sp_inst.do_block():
+            pass
+        mock_do_block_nft.assert_called_once_with()
 
     @mock.patch('crmsh.crash_test.task.TaskSplitBrain.un_block_iptables')
     def test_un_block(self, mock_unblock_iptables):
@@ -416,6 +470,17 @@ Fence timeout:     60
             mock.call(config.BLOCK_IP.format(action='D', peer_ip="10.10.10.2")),
             mock.call(config.BLOCK_IP.format(action='D', peer_ip="20.20.20.2"))
             ])
+
+    @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
+    def test_un_block_nft(self, mock_run):
+        self.task_sp_inst.un_block_nft()
+        mock_run.assert_called_once_with(config.NFT_DELETE_TABLE.format(table=config.NFT_TABLE))
+
+    @mock.patch('crmsh.crash_test.task.TaskSplitBrain.un_block_nft')
+    def test_un_block_uses_nft(self, mock_unblock_nft):
+        self.task_sp_inst.use_nft = True
+        self.task_sp_inst.un_block()
+        mock_unblock_nft.assert_called_once_with()
 
     @mock.patch('crmsh.crash_test.task.Task.fence_action_monitor')
     @mock.patch('threading.Thread')

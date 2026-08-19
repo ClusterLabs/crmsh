@@ -443,6 +443,8 @@ class TaskSplitBrain(Task):
         self.expected = "One of nodes get fenced"
         self.ports = []
         self.peer_nodelist = []
+        self.use_nft = False
+        self.shell = ShellUtils()
         super(self.__class__, self).__init__(self.description, flush=True)
         self.force = force
 
@@ -475,10 +477,14 @@ Fence timeout:     {}
         """
         self.task_pre_check()
 
-        for cmd in ["iptables"]:
-            rc, _, err = ShellUtils().get_stdout_stderr("which {}".format(cmd))
-            if rc != 0 and err:
-                raise TaskError(err)
+        rc, _, _ = self.shell.get_stdout_stderr("which nft")
+        if rc == 0:
+            self.use_nft = True
+        else:
+            rc, _, _ = self.shell.get_stdout_stderr("which iptables")
+            if rc != 0:
+                raise TaskError("Please provide the nft or iptables command")
+            self.use_nft = False
 
         if len(utils.online_nodes()) < 2:
             raise TaskError("At least two nodes online!")
@@ -488,36 +494,67 @@ Fence timeout:     {}
         """
         Context manager to block and unblock ip/ports
         """
-        self.do_block_iptables()
+        if self.use_nft:
+            self.do_block_nft()
+        else:
+            self.do_block_iptables()
         try:
             yield
         finally:
             self.un_block()
 
+    def do_block_nft(self):
+        """
+        Block corosync communication ip using nftables
+        """
+        self.peer_nodelist = utils.peer_node_list()
+        peer_ips = []
+        for node in self.peer_nodelist:
+            self.info("Trying to temporarily block {} communication ip".format(node))
+            peer_ips.extend(crmshutils.get_iplist_from_name(node))
+
+        input_rules = "\n".join("    ip saddr {} drop".format(ip) for ip in peer_ips)
+        output_rules = "\n".join("    ip daddr {} drop".format(ip) for ip in peer_ips)
+        ruleset = config.NFT_RULESET.format(
+            table=config.NFT_TABLE,
+            input_rules=input_rules,
+            output_rules=output_rules,
+        )
+        self.shell.get_stdout_stderr(config.NFT_APPLY_RULESET.format(ruleset=ruleset))
+
     def do_block_iptables(self):
         """
-        Block corosync communication ip
+        Block corosync communication ip using iptables
         """
         self.peer_nodelist = utils.peer_node_list()
         for node in self.peer_nodelist:
             self.info("Trying to temporarily block {} communication ip".format(node))
             for ip in crmshutils.get_iplist_from_name(node):
-                ShellUtils().get_stdout_stderr(config.BLOCK_IP.format(action='I', peer_ip=ip))
+                self.shell.get_stdout_stderr(config.BLOCK_IP.format(action="I", peer_ip=ip))
 
     def un_block(self):
         """
         Unblock corosync ip/ports
         """
-        self.un_block_iptables()
+        if self.use_nft:
+            self.un_block_nft()
+        else:
+            self.un_block_iptables()
+
+    def un_block_nft(self):
+        """
+        Unblock corosync communication ip using nftables
+        """
+        self.shell.get_stdout_stderr(config.NFT_DELETE_TABLE.format(table=config.NFT_TABLE))
 
     def un_block_iptables(self):
         """
-        Unblock corosync communication ip
+        Unblock corosync communication ip using iptables
         """
         for node in self.peer_nodelist:
             self.info("Trying to recover {} communication ip".format(node))
             for ip in crmshutils.get_iplist_from_name(node):
-                ShellUtils().get_stdout_stderr(config.BLOCK_IP.format(action='D', peer_ip=ip))
+                self.shell.get_stdout_stderr(config.BLOCK_IP.format(action='D', peer_ip=ip))
 
     def run(self):
         """
