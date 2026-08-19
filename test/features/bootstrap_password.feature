@@ -34,8 +34,12 @@ Feature: crmsh bootstrap process - with password authentication
     Then Cluster service is "started" on "hanode1"
     Then This expect program exits with 0 on "root"@"hanode2"
       """
-      set timeout 120
+      set timeout 200
       spawn crm cluster join -c hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
           send "root123\n"
       }
@@ -51,8 +55,12 @@ Feature: crmsh bootstrap process - with password authentication
   Scenario: Join on a 3rd node "hanode3"
     Then This expect program exits with 0 on "root"@"hanode3"
       """
-      set timeout 120
+      set timeout 200
       spawn crm cluster join -c hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
           send "root123\n"
@@ -81,8 +89,12 @@ Feature: crmsh bootstrap process - with password authentication
     Given Directory ~hacluster/.ssh is empty on "hanode3"
     Then This expect program exits with 0 on "root"@"hanode1"
       """
-      set timeout 120
+      set timeout 200
       spawn crm cluster init -N hanode2 -N hanode3 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
           send "root123\n"
@@ -100,8 +112,12 @@ Feature: crmsh bootstrap process - with password authentication
     Then Cluster service is "started" on "hanode1"
     Then This expect program exits with 0 on "alice"@"hanode2"
       """
-      set timeout 120
+      set timeout 200
       spawn sudo crm cluster join -c alice@hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
           send "alice123\n"
       }
@@ -117,8 +133,12 @@ Feature: crmsh bootstrap process - with password authentication
   Scenario: Join on a 3rd node "hanode3" (non-root)
     Then This expect program exits with 0 on "alice"@"hanode3"
       """
-      set timeout 120
+      set timeout 200
       spawn sudo crm cluster join -c alice@hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
           send "alice123\n"
@@ -147,8 +167,12 @@ Feature: crmsh bootstrap process - with password authentication
     Given Directory ~hacluster/.ssh is empty on "hanode3"
     Then This expect program exits with 0 on "alice"@"hanode1"
       """
-      set timeout 120
+      set timeout 200
       spawn sudo crm cluster init -N alice@hanode2 -N alice@hanode3 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
           send "alice123\n"
@@ -173,8 +197,12 @@ Feature: crmsh bootstrap process - with password authentication
     Given Directory ~hacluster/.ssh is empty on "qnetd-node"
     Then This expect program exits with 0 on "root"@"hanode1"
       """
-      set timeout 120
+      set timeout 200
       spawn crm cluster init --qnetd-hostname=qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -185,8 +213,12 @@ Feature: crmsh bootstrap process - with password authentication
     Then    Service "corosync-qnetd" is "started" on "qnetd-node"
     Then This expect program exits with 0 on "root"@"hanode2"
       """
-      set timeout 120
+      set timeout 200
       spawn crm cluster join -c hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -210,8 +242,12 @@ Feature: crmsh bootstrap process - with password authentication
     Given Directory ~hacluster/.ssh is empty on "qnetd-node"
     Then This expect program exits with 0 on "root"@"hanode1"
       """
-      set timeout 120
+      set timeout 200
       spawn crm cluster init -N hanode1 -N hanode2 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -220,8 +256,12 @@ Feature: crmsh bootstrap process - with password authentication
     Then    Online nodes are "hanode1 hanode2"
     Then This expect program exits with 0 on "root"@"hanode1"
       """
-      set timeout 120
+      set timeout 200
       spawn crm cluster init qdevice --qnetd-hostname=qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -244,8 +284,12 @@ Feature: crmsh bootstrap process - with password authentication
     Given Directory ~hacluster/.ssh is empty on "qnetd-node"
     Then This expect program exits with 0 on "alice"@"hanode1"
       """
-      set timeout 120
+      set timeout 200
       spawn sudo crm cluster init --qnetd-hostname=alice@qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "alice123\n"
       }
@@ -256,8 +300,12 @@ Feature: crmsh bootstrap process - with password authentication
     Then    Service "corosync-qnetd" is "started" on "qnetd-node"
     Then This expect program exits with 0 on "alice"@"hanode2"
       """
-      set timeout 120
+      set timeout 200
       spawn sudo crm cluster join -c alice@hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "alice123\n"
       }
@@ -281,8 +329,12 @@ Feature: crmsh bootstrap process - with password authentication
     Given Directory ~hacluster/.ssh is empty on "qnetd-node"
     Then This expect program exits with 0 on "alice"@"hanode1"
       """
-      set timeout 120
+      set timeout 200
       spawn sudo crm cluster init -N alice@hanode2 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "alice123\n"
       }
@@ -291,8 +343,12 @@ Feature: crmsh bootstrap process - with password authentication
     Then    Online nodes are "hanode1 hanode2"
     Then This expect program exits with 0 on "alice"@"hanode1"
       """
-      set timeout 120
+      set timeout 200
       spawn sudo crm cluster init qdevice --qnetd-hostname=alice@qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "alice123\n"
       }
@@ -322,8 +378,12 @@ Feature: crmsh bootstrap process - with password authentication
     Given Run "SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh-add ~/.ssh/id_ed25519" OK on "hanode3"
     Then This expect program exits with 0 on "root"@"hanode3"
       """
-      set timeout 120
+      set timeout 200
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -At root@hanode1 crm cluster init -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -331,8 +391,12 @@ Feature: crmsh bootstrap process - with password authentication
       """
     Then This expect program exits with 0 on "root"@"hanode3"
       """
-      set timeout 15
+      set timeout 60
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -A root@hanode1 echo 'NO-NEED-FOR-PASSWORD'
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "NO-NEED-FOR-PASSWORD"
       expect eof
       """
@@ -340,8 +404,12 @@ Feature: crmsh bootstrap process - with password authentication
     Then Run "test x1 == x$(awk 'END {print NR}' ~/.ssh/authorized_keys)" OK
     Then This expect program exits with 0 on "root"@"hanode3"
       """
-      set timeout 120
+      set timeout 200
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -At root@hanode2 crm cluster join -c hanode1 -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -349,8 +417,12 @@ Feature: crmsh bootstrap process - with password authentication
       """
     Then This expect program exits with 0 on "root"@"hanode3"
       """
-      set timeout 15
+      set timeout 60
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -A root@hanode2 echo 'NO-NEED-FOR-PASSWORD'
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "NO-NEED-FOR-PASSWORD"
       expect eof
       """
@@ -362,8 +434,12 @@ Feature: crmsh bootstrap process - with password authentication
     Then Directory "hanode2" in "/tmp/report1.tar.bz2"
     Then This expect program exits with 0 on "root"@"hanode3"
       """
-      set timeout 120
+      set timeout 200
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -At root@hanode1 crm cluster init qdevice --qnetd-hostname qnetd-node -y
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -371,7 +447,7 @@ Feature: crmsh bootstrap process - with password authentication
       """
     Then This expect program exits with 0 on "root"@"hanode3"
       """
-      set timeout 15
+      set timeout 60
       spawn env SSH_AUTH_SOCK=/tmp/ssh-auth-sock ssh -A root@qnetd-node echo 'NO-NEED-FOR-PASSWORD'
       expect "NO-NEED-FOR-PASSWORD"
       expect eof
@@ -396,6 +472,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 20
       spawn ssh-copy-id -i /root/.ssh/id_ed25519 hanode2
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
@@ -405,6 +485,10 @@ Feature: crmsh bootstrap process - with password authentication
       """
       set timeout 20
       spawn ssh-copy-id -i /root/.ssh/id_ed25519 hanode1
+      expect_before timeout {
+        puts stderr "ERROR: expect timed out after $timeout seconds"
+        exit 1
+      }
       expect "Password: " {
         send "root123\n"
       }
