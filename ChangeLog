@@ -1,3 +1,31 @@
+* Tue Aug 25 2026 Xin Liang <XLiang@suse.com>
+- Release 5.1.0
+- Fix: ui_sbd: Resolve SBD device aliases on removal (#2171)
+- Dev: crash_test: Prefer nft for split-brain blocking (#2172)
+- Dev: migration: Add check and online auto-fix for deprecated cluster properties (bsc#1271223)
+- Fix: migration: typo in the signature of method `handle_problem`
+- Dev: Document minor changes and clean the unused codes (#2086)
+- Dev: doc: Fix typos in crm.8.adoc
+- Dev: doc: Remove parallax-related expressions from crm.8.adoc
+- Dev: Remove unused functions
+- Dev: doc: Remove csync2 from crm.8.adoc
+- Dev: Avoid hash for content checks (#2167)
+- Dev: qdevice: Move utils.get_qdevice_sync_timeout into QDevice class (#2164)
+- Dev: sbd: Drop default deprecated properties
+- Dev: sbd: Discover deprecated properties dynamically
+- Dev: ra: Split deprecated parameter helpers
+- Dev: sbd: Check and fix deprecated properties (jsc#PED-14631)
+- Fix: bootstrap: Log pacemaker enable action conditionally (#2162)
+- Revert "Dev: bootstrap: Still set deprecated properties during bootstrap (#2077)"
+- Dev: log: Add quiet-aware logger adapter (#2158)
+- Fix: migration: RRP is reported deprecated incorrectly (bsc#1250586) (#2154)
+- Dev: utils: Drop utils.pacemaker_daemon function (#2148)
+- Dev: sbd: Check and fix SBD_PACEMAKER in sysconfig (#2133)
+- Dev: network_utils: Refactor network helpers out of utils.py (#2141)
+- Dev: network_utils: Refactor bootstrap network helpers
+- Fix: crm.conf.in: keep the section headers uncommented (#2143) (#2144)
+- fix: update cluster blocking ssh test properly via crm.conf
+
 * Mon Jun 29 2026 Xin Liang <XLiang@suse.com>
 - Release 5.1.0 rc2
 - Dev: Refactor storage helpers out of utils.py (#2132)
