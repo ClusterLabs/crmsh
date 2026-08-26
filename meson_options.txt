@@ -1,0 +1,6 @@
+option('package_version', type: 'string', value: '', description: 'Override package version')
+option('ocf_root', type: 'string', value: '/usr/lib/ocf', description: 'Directory for OCF scripts')
+option('daemon_user', type: 'string', value: 'hacluster', description: 'User to run privileged non-root things as')
+option('docdir', type: 'string', value: '', description: 'Directory for documentation')
+option('tmpfilesdir', type: 'string', value: '/usr/lib/tmpfiles.d', description: 'Systemd tmpfiles configuration path')
+option('fwdefdir', type: 'string', value: '/usr/lib/firewalld/services', description: 'Destination directory for Firewalld XML profiles')

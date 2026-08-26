@@ -112,7 +112,7 @@ usage_and_exit() {
 Usage: $prog [OPTIONS]|[TESTCASE INDEX]
 $prog is a tool for developers to setup the cluster in containers to run functional tests.
 The container image is based on Tumbleweed with preinstalled packages of the cluster stack include pacemaker/corosync/crmsh and many others.
-Users can make the code change under crmsh.git including test cases. This tool will pick up the code change and "make install" to all running containers.
+Users can make the code change under crmsh.git including test cases. This tool will pick up the code change and "meson install" to all running containers.
 
 OPTIONS:
   -h, --help		Show this help message and exit
@@ -198,7 +198,7 @@ deploy_ha_node() {
         else
             podman_security=""
         fi
-	make_cmd="cd $PROJECT_INSIDE;./autogen.sh && ./configure --prefix /usr && make install install-python && cp /usr/bin/crm /usr/sbin"
+	make_cmd="cd $PROJECT_INSIDE;rm -rf build && meson setup build --prefix=/usr && meson install -C build && cp /usr/bin/crm /usr/sbin"
 
 	info "Deploying \"$node_name\"..."
 	podman run --rm -d $podman_options $podman_capabilties $podman_security $CONTAINER_IMAGE

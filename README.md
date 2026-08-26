@@ -27,19 +27,17 @@ newer. Versions of crmsh older than the 4 series ran on Python 2, so
 if you don't have access to a Python 3 interpreter, you will need to
 use one of the older releases.
 
-The GNU Autotools suite is used to configure the OCF root directory,
-the Asciidoc tool which is used to generate documentation and the
+The Meson build system is used to configure the OCF root directory,
+the Asciidoc tool which is used to generate documentation, and the
 default daemon user (usually hacluster).
 
-It then calls the python setuptools setup.py to actually process the
-Python module sources and install into the Python system site-packages
-directory.
+It then compiles and installs both non-Python files and the Python
+module sources into the standard target system directories.
 
 ```shell
-./autogen.sh
-./configure
-make
-make install
+meson setup build
+meson compile -C build
+meson install -C build
 ```
 
 ## Test suites
