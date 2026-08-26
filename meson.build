@@ -128,10 +128,3 @@ profiles_html = custom_target('profiles_html',
   install: true,
   install_dir: docdir
 )
-crmsh_crm_report_html = custom_target('crmsh_crm_report_html',
-  input: ['doc/crmsh_crm_report.8.adoc'],
-  output: ['crmsh_crm_report.8.html'],
-  command: [asciidoc, '--unsafe', '--backend=xhtml11', '-o', '@OUTPUT@', '@INPUT@'],
-  install: true,
-  install_dir: docdir
-)
