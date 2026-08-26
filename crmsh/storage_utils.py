@@ -209,10 +209,21 @@ class MultipathInspector:
         self._device_info = self._inspect(dev)
 
     def _get_parent_device(self, dev) -> str:
-        resolved = Path(dev).resolve()
-        cmd = f"lsblk -dn -o PKNAME {shlex.quote(str(resolved))}"
-        _, out, _ = self._shell.get_rc_stdout_stderr_without_input(self._peer, cmd)
-        return out or resolved.name
+        cmd = f"lsblk -dnP -o PKNAME,KNAME {shlex.quote(dev)}"
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(self._peer, cmd)
+        node = self._peer or utils.this_node()
+        if rc != 0 or not out:
+            raise ValueError(f"Cannot determine kernel device name for {dev} on {node}")
+
+        values = dict(
+            item.split("=", 1)
+            for item in shlex.split(out.splitlines()[0])
+            if "=" in item
+        )
+        device_name = values.get("PKNAME") or values.get("KNAME")
+        if not device_name:
+            raise ValueError(f"Cannot determine kernel device name for {dev} on {node}")
+        return device_name
 
     def _get_multipath_mapping(self) -> dict[str, str]:
         cmd = "multipathd show paths format \"%d %m\""
