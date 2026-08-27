@@ -1,13 +1,14 @@
 name: 'Setup Functional Tests'
-description: 'Downloads and loads the functional test container image'
+description: 'Restores and loads the functional test container image'
 runs:
   using: 'composite'
   steps:
-    - name: Download container image artifact
-      uses: actions/download-artifact@v8
+    - name: Restore container image from cache
+      uses: actions/cache@v6
       with:
-        name: haleap-image
-        path: /tmp
+        path: /tmp/haleap.tar
+        key: test-container-${{ hashFiles('test_container/**') }}
+        fail-on-cache-miss: true
     - name: Load container image
       shell: bash
       run: |
