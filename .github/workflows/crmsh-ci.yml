@@ -5,9 +5,11 @@
 name: crmsh CI
 
 on:
-  - pull_request
-  - workflow_call
-  - workflow_dispatch
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '31 4 * * SUN'
 
 env:
   CONTAINER_SCRIPT: sudo CONTAINER_IMAGE=haleap:ci ./test/run-functional-tests
@@ -18,13 +20,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
+    - name: Get current week
+      id: get-week
+      run: echo "week=$(date -u +'%G-%V')" >> $GITHUB_OUTPUT
     - name: Cache container image
       id: cache-container
       uses: actions/cache@v6
       # actions/cache will update the cache in the "Post Run" stage
       with:
         path: /tmp/haleap.tar
-        key: test-container-${{ hashFiles('test_container/**') }}
+        key: test-container-${{ steps.get-week.outputs.week }}-${{ hashFiles('test_container/**') }}
     - name: Build container image
       if: steps.cache-container.outputs.cache-hit != 'true'
       run: |
