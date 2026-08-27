@@ -1,5 +1,6 @@
 #!/bin/bash
-CONTAINER_IMAGE=${CONTAINER_IMAGE:-"docker.io/nyang23/haleap:master"}
+# vim:noexpandtab:tabstop=4:shiftwidth=4
+CONTAINER_IMAGE=${CONTAINER_IMAGE:-"localhost/haleap:latest"}
 PYPI_MIRROR=${PYPI_MIRROR:-""}
 PROJECT_PATH=$(dirname $(dirname `realpath $0`))
 PROJECT_INSIDE="/opt/crmsh"
@@ -309,6 +310,14 @@ container_already_exists() {
 }
 
 
+prepare_container_image() {
+	if [ "$CONTAINER_IMAGE" = "localhost/haleap:latest" ] && ! podman image exists "$CONTAINER_IMAGE"; then
+		info "Building container image $CONTAINER_IMAGE..."
+		podman build -t "$CONTAINER_IMAGE" "${PROJECT_PATH}/test_container" || fatal "Failed to build container image $CONTAINER_IMAGE"
+	fi
+}
+
+
 setup_cluster() {
 	hanodes_arry=()
 	is_number $1
@@ -320,6 +329,7 @@ setup_cluster() {
 		hanodes_arry=($*)
 	fi
 
+	prepare_container_image
 	if [ $WITH_QNETD_NODE -eq 1 ];then
 	  create_node ${hanodes_arry[@]} "qnetd-node"
 	else
