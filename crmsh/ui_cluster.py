@@ -929,6 +929,10 @@ to get the geo cluster configuration.""",
                     results.append(res_transport)
                     print_cb(res_transport)
 
+                    res_knet_interface = corosync_healthcheck.check_knet_link_network_interface(local_node, lm)
+                    results.append(res_knet_interface)
+                    print_cb(res_knet_interface)
+
                     res_quorum = corosync_healthcheck.check_quorum_status(local_node)
                     results.append(res_quorum)
                     print_cb(res_quorum)

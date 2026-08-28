@@ -603,3 +603,306 @@ class TestCheckDeprecatedTransport(unittest.TestCase):
         self.assertIn('Corosync transport "udp" is deprecated. Please use knet.', result.result_description)
         self.assertEqual(result.recommended_action, "Upgrade corosync transport to knet.")
 
+
+class TestCheckKnetLinkNetworkInterface(unittest.TestCase):
+    def test_check_knet_link_network_interface_non_knet(self):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "udpu"
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.check_name, "Check Knet Link Network Interface")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    def test_check_knet_link_network_interface_one_link(self):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link = mock.MagicMock()
+        mock_link.linknumber = 0
+        mock_node = mock.MagicMock()
+        mock_node.name = "node1"
+        mock_node.addr = "192.168.0.3"
+        mock_link.nodes = [mock_node]
+
+        mock_lm.links.return_value = [mock_link]
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_success(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.1.3"
+        mock_link2.nodes = [mock_node2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    }
+                ]
+            },
+            {
+                "ifname": "eth1",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.1.3",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_conflict(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.0.4"
+        mock_link2.nodes = [mock_node2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    },
+                    {
+                        "local": "192.168.0.4",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Multiple knet links are configured on the same network interface:", result.result_description)
+        self.assertIn("eth0", result.result_description)
+        self.assertIn("0, 1", result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_conflict_different_subnets(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.10.3"
+        mock_link2.nodes = [mock_node2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    },
+                    {
+                        "local": "192.168.10.3",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Multiple knet links are configured on the same network interface:", result.result_description)
+        self.assertIn("eth0", result.result_description)
+        self.assertIn("0, 1", result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_conflict_mixed_interfaces(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.10.3"
+        mock_link2.nodes = [mock_node2]
+
+        mock_link3 = mock.MagicMock()
+        mock_link3.linknumber = 2
+        mock_node3 = mock.MagicMock()
+        mock_node3.name = "node1"
+        mock_node3.addr = "192.168.20.3"
+        mock_link3.nodes = [mock_node3]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2, mock_link3]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    },
+                    {
+                        "local": "192.168.10.3",
+                        "prefixlen": 24
+                    }
+                ]
+            },
+            {
+                "ifname": "eth1",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.20.3",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Multiple knet links are configured on the same network interface:", result.result_description)
+        self.assertIn("eth0", result.result_description)
+        self.assertIn("0, 1", result.result_description)
+        self.assertNotIn("eth1", result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_shell_error(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.1.3"
+        mock_link2.nodes = [mock_node2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.side_effect = ValueError("ip command not found")
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Failed to load local network interfaces", result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_other_node_ip(self, mock_get_stdout):
+        # Even if the link configuration doesn't specify node1's IP or node1 is missing from node.addr,
+        # we check the subnet using any node's IP configured on the link.
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node_other1 = mock.MagicMock()
+        mock_node_other1.name = "node2"
+        mock_node_other1.addr = "192.168.0.4"
+        mock_link1.nodes = [mock_node_other1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node_other2 = mock.MagicMock()
+        mock_node_other2.name = "node2"
+        mock_node_other2.addr = "192.168.1.4"
+        mock_link2.nodes = [mock_node_other2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    }
+                ]
+            },
+            {
+                "ifname": "eth1",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.1.3",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+

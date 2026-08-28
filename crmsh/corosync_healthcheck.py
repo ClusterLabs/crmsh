@@ -1,5 +1,7 @@
 import dataclasses
 import functools
+import ipaddress
+import json
 import logging
 import re
 import shlex
@@ -13,6 +15,7 @@ import lxml.etree
 from . import corosync
 from . import cibquery
 from . import constants
+from . import iproute2
 from .prun import prun
 from . import sh
 
@@ -416,6 +419,95 @@ def check_deprecated_transport(local_node: str, lm: corosync.LinkManager) -> Che
             2,
             f'Corosync transport "{transport}" is deprecated. Please use knet.',
             "Upgrade corosync transport to knet.",
+        )
+
+    return CheckResult(
+        CHECK_NAME,
+        [local_node],
+        0,
+        None,
+        None,
+    )
+
+
+def check_knet_link_network_interface(local_node: str, lm: corosync.LinkManager) -> CheckResult:
+    """
+    Check if multiple knet links are configured on different network interfaces.
+    """
+    CHECK_NAME = "Check Knet Link Network Interface"
+    if lm.totem_transport() != 'knet':
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            0,
+            None,
+            None,
+        )
+
+    link_addrs: dict[int, str] = {}  # Maps link number to any configured node address on that link
+    for link in lm.links():
+        if link is None:
+            continue
+        for node in link.nodes:
+            if node.addr:
+                link_addrs[link.linknumber] = node.addr
+                break
+
+    if len(link_addrs) <= 1:
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            0,
+            None,
+            None,
+        )
+
+    try:
+        ip_j_addr = sh.LocalShell().get_stdout_or_raise_error(None, 'ip -j addr')
+        local_interfaces = iproute2.IPAddr(json.loads(ip_j_addr)).interfaces()
+    except Exception as e:
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            1,
+            f"Failed to load local network interfaces: {e}",
+            None,
+        )
+
+    interface_to_links: dict[str, list[int]] = {}  # Maps local network interface name to configured link numbers
+    for linknumber, addr_str in link_addrs.items():
+        try:
+            link_ip = ipaddress.ip_address(addr_str)
+        except ValueError:
+            continue
+
+        found_iface = None
+        for iface in local_interfaces:
+            for addr_info in iface.addr_info:
+                if link_ip in addr_info.network:
+                    found_iface = iface.ifname
+                    break
+            if found_iface is not None:
+                break
+
+        if found_iface is not None:
+            interface_to_links.setdefault(found_iface, []).append(linknumber)
+
+    conflicts: dict[str, list[int]] = {
+        iface: links for iface, links in interface_to_links.items() if len(links) > 1
+    }  # Identifies interfaces hosting multiple knet links (non-redundant)
+
+    if conflicts:
+        result_description = StringIO()
+        result_description.write("Multiple knet links are configured on the same network interface:\n")
+        for iface, links in conflicts.items():
+            result_description.write(f"  Interface '{iface}' hosts knet links: {', '.join(map(str, links))}\n")
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            1,
+            result_description.getvalue().strip(),
+            "To ensure network redundancy, configure multiple knet links on different network interfaces.",
         )
 
     return CheckResult(
