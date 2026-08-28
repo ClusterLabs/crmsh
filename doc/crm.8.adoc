@@ -1093,7 +1093,7 @@ Usage 2: Topic-Specified Health Check
 Verifies the health of a specified topic.
 
 ...............
-health hawk2|sbd|sles16 [--local] [--fix]
+health hawk2|sbd|sles16|corosync [--local] [--fix] [--json]
 ...............
 
 * `hawk2`: check or fix key-based ssh authentication for user hacluster, which
@@ -1105,6 +1105,9 @@ health hawk2|sbd|sles16 [--local] [--fix]
 * `sles16`: check whether the cluster is good to migrate to SLES 16.
     ** `--local`: run checks in local mode
     ** `--fix`: attempts to automatically resolve any detected issues.
+* `corosync`: check corosync-related configurations and status.
+    ** `--local`: run checks in local mode.
+    ** `--json`: output the check results in JSON format.
 
 [[cmdhelp.cluster.init,Initializes a new HA cluster,From Code]]
 ==== `init`

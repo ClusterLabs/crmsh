@@ -12,6 +12,9 @@ import tarfile
 import subprocess
 import glob
 import time
+import json
+import dataclasses
+import functools
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
@@ -22,6 +25,8 @@ from . import scripts
 from . import completers as compl
 from . import bootstrap
 from . import corosync
+from . import corosync_healthcheck
+from . import term
 from . import qdevice
 from . import xmlutil
 from . import cibconfig
@@ -140,6 +145,18 @@ class ArgparseUserAtHostAppendAction(
 ):
     pass
 
+
+def _print_corosync_check_result(r):
+    if r.returncode == 0:
+        print(term.render(f"${{GREEN}}[PASS]${{NORMAL}} {r.check_name}"))
+    else:
+        print(term.render(f"${{RED}}[FAIL]${{NORMAL}} {r.check_name}"))
+        if r.result_description:
+            for line in r.result_description.splitlines():
+                print(f"       {line}")
+        if r.recommended_action:
+            for line in r.recommended_action.splitlines():
+                print(f"       Recommended Action: {line}")
 
 
 class Cluster(command.UI):
@@ -805,7 +822,7 @@ to get the geo cluster configuration.""",
         bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
-    HEALTH_COMPONENTS = ['hawk2', 'sles16', 'sbd']
+    HEALTH_COMPONENTS = ['hawk2', 'sles16', 'sbd', 'corosync']
     @command.completers(compl.choice(HEALTH_COMPONENTS))
     def do_health(self, context, *args):
         '''
@@ -872,6 +889,73 @@ to get the geo cluster configuration.""",
                 except migration.MigrationFailure as e:
                     logger.error('%s', e)
                     return False
+
+            case 'corosync':
+                corosync_parser = argparse.ArgumentParser('corosync')
+                corosync_parser.add_argument('--local', action='store_true')
+                corosync_parser.add_argument('--json', action='store_true')
+                try:
+                    corosync_args = corosync_parser.parse_args(remaining_args)
+                except SystemExit:
+                    return False
+
+                local_node = utils.this_node()
+                results = []
+
+                if corosync_args.json:
+                    print_cb = lambda r: None
+                else:
+                    print_cb = _print_corosync_check_result
+
+                res_local = corosync_healthcheck.validate_config_file(local_node)
+                results.append(res_local)
+                print_cb(res_local)
+
+                if res_local.returncode == 0:
+                    try:
+                        lm = corosync.LinkManager.load_config_file()
+                    except ValueError as e:
+                        # unlikely, as we just validated the config file in the previous check
+                        logger.error("Failed to load or parse corosync.conf: %s", e)
+                        return False
+
+                    if not corosync_args.local:
+                        nodes = utils.list_cluster_nodes() or [local_node]
+                        res_consistency = corosync_healthcheck.validate_config_file_consistency(nodes)
+                        results.append(res_consistency)
+                        print_cb(res_consistency)
+
+                    res_transport = corosync_healthcheck.check_deprecated_transport(local_node, lm)
+                    results.append(res_transport)
+                    print_cb(res_transport)
+
+                    res_knet_interface = corosync_healthcheck.check_knet_link_network_interface(local_node, lm)
+                    results.append(res_knet_interface)
+                    print_cb(res_knet_interface)
+
+                    res_quorum = corosync_healthcheck.check_quorum_status(local_node)
+                    results.append(res_quorum)
+                    print_cb(res_quorum)
+
+                    res_links = corosync_healthcheck.check_links_status(local_node)
+                    results.append(res_links)
+                    print_cb(res_links)
+
+                    res_mapping = corosync_healthcheck.check_nodeid_to_nodename_mapping(local_node, lm)
+                    results.append(res_mapping)
+                    print_cb(res_mapping)
+
+                returncode = functools.reduce(lambda a, b: a | b, (r.returncode for r in results))
+                if corosync_args.json:
+                    json_data = {
+                        "returncode": returncode,
+                        "results": [dataclasses.asdict(r) for r in results]
+                    }
+                    json.dump(json_data, sys.stdout, ensure_ascii=False)
+                    sys.stdout.write('\n')
+
+                return 0 == returncode
+
             case _:
                 logger.error('Unknown component: %s', parsed_args.component)
                 return False
