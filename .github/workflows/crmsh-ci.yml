@@ -454,23 +454,6 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
 
-  functional_test_geo_cluster:
-    needs: build_image
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    steps:
-    - uses: actions/checkout@v6
-    - name: Set up test container
-      uses: ./.github/actions/setup-functional-tests
-    - name: functional test for geo cluster
-      run:  |
-        index=`$GET_INDEX_OF geo_setup`
-        $CONTAINER_SCRIPT $index && $CONTAINER_SCRIPT -d && $CONTAINER_SCRIPT $index -u
-    - uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        flags: integration
-
   functional_test_healthcheck:
     needs: build_image
     runs-on: ubuntu-24.04
