@@ -108,3 +108,10 @@ class TestCibQuery(unittest.TestCase):
     def test_has_primitive_filesystem_with_fstype(self):
         self.assertTrue(cibquery.has_primitive_filesystem_with_fstype(self.cib, 'ocfs2'))
         self.assertFalse(cibquery.has_primitive_filesystem_with_fstype(self.cib, 'foo'))
+
+    def test_get_filesystem_devices(self):
+        self.assertEqual(
+            ['/dev/disk/by-partlabel/ocfs2-157'],
+            cibquery.get_filesystem_devices(self.cib, 'ocfs2'),
+        )
+        self.assertEqual([], cibquery.get_filesystem_devices(self.cib, 'gfs2'))
