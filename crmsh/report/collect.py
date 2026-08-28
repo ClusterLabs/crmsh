@@ -10,11 +10,14 @@ import re
 import stat
 import pwd
 import datetime
+import shlex
 from subprocess import TimeoutExpired
 from typing import List, Optional
 
+import lxml.etree
+
 import crmsh.user_of_host
-from crmsh import log, sh, corosync
+from crmsh import log, sh, corosync, cibquery
 from crmsh import utils as crmutils
 from crmsh.report import constants, utils, core
 from crmsh.sh import ShellUtils
@@ -139,6 +142,31 @@ def lsof_cluster_fs_device(fs_type: str) -> str:
     return out_string
 
 
+def ocfs2_devices_from_cib() -> list[str]:
+    """Return OCFS2 devices configured in the live CIB."""
+    rc, out, err = ShellUtils().get_stdout_stderr("cibadmin -Q")
+    if rc != 0:
+        logger.warning('Failed to run "cibadmin -Q" for OCFS2 device lookup: %s', err)
+        return []
+
+    try:
+        cib = lxml.etree.fromstring(out.encode())
+    except lxml.etree.XMLSyntaxError as err:
+        logger.warning("Failed to parse CIB for OCFS2 device lookup: %s", err)
+        return []
+
+    return cibquery.get_filesystem_devices(cib, "ocfs2")
+
+
+def cmd_binary_name(cmd: str) -> Optional[str]:
+    """Return the binary name from a command, ignoring leading env assignments."""
+    for part in shlex.split(cmd):
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", part):
+            continue
+        return part
+    return None
+
+
 def cluster_fs_commands_output(fs_type: str) -> str:
     """
     Run OCFS2/GFS2 related commands, return outputs
@@ -146,7 +174,6 @@ def cluster_fs_commands_output(fs_type: str) -> str:
     out_string = ""
 
     cmds = [
-        "dmesg",
         "ps -efL",
         "lsblk -o 'NAME,KNAME,MAJ:MIN,FSTYPE,LABEL,RO,RM,MODEL,SIZE,OWNER,GROUP,MODE,ALIGNMENT,MIN-IO,OPT-IO,PHY-SEC,LOG-SEC,ROTA,SCHED,MOUNTPOINT'",
         "findmnt",
@@ -158,9 +185,18 @@ def cluster_fs_commands_output(fs_type: str) -> str:
             "mounted.ocfs2 -f",
             "cat /sys/fs/ocfs2/cluster_stack"
         ])
+        for device in ocfs2_devices_from_cib():
+            cmds.extend([
+                f"o2info --volinfo {device}",
+                f"PAGER=cat debugfs.ocfs2 -n -R 'stats' {device}"
+            ])
+
+    # Append dmesg command at the end since its output might be huge
+    cmds.append("dmesg")
 
     for cmd in cmds:
-        cmd_name = cmd.split()[0]
+        cmd_name = cmd_binary_name(cmd)
+        assert cmd_name
         if not shutil.which(cmd_name):
             continue
         if cmd_name == "cat" and not os.path.exists(cmd.split()[1]):

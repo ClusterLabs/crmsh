@@ -34,6 +34,15 @@ def has_primitive_filesystem_with_fstype(cib: lxml.etree.Element, fstype: str) -
     ))
 
 
+def get_filesystem_devices(cib: lxml.etree.Element, fstype: str) -> list[str]:
+    """Return device values for Filesystem primitives matching fstype."""
+    return cib.xpath(
+        '/cib/configuration/resources//primitive[@class="ocf" and @provider="heartbeat" and @type="Filesystem"]'
+        f'[instance_attributes/nvpair[@name="fstype" and @value="{fstype}"]]'
+        '/instance_attributes/nvpair[@name="device"]/@value'
+    )
+
+
 def get_primitives_with_ra(cib: lxml.etree.Element, ra: ResourceAgent) -> list[str]:
     """
     Given cib and ResourceAgent instance, return id list of primitives that matched

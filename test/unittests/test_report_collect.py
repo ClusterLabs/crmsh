@@ -665,11 +665,37 @@ tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=169544k,nr_inodes
         ])
 
     @mock.patch('crmsh.report.utils.get_cmd_output')
+    @mock.patch('crmsh.report.collect.ocfs2_devices_from_cib')
     @mock.patch('os.path.exists')
     @mock.patch('shutil.which')
-    def test_cluster_fs_commands_output(self, mock_which, mock_exists, mock_run):
-        mock_which.side_effect = [False for i in range(5)] + [True, True]
+    def test_cluster_fs_commands_output(self, mock_which, mock_exists, mock_devices, mock_run):
+        mock_which.side_effect = lambda cmd: cmd in {"mounted.ocfs2", "o2info", "debugfs.ocfs2"}
         mock_exists.return_value = False
+        mock_devices.return_value = ["/dev/sda6"]
         mock_run.return_value = "data"
         res = collect.cluster_fs_commands_output("OCFS2")
-        self.assertEqual(res, f"\n\n{collect.DIVIDER}\n# mounted.ocfs2 -f\ndata")
+        self.assertEqual(
+            res,
+            f"\n\n{collect.DIVIDER}\n# mounted.ocfs2 -f\ndata"
+            f"\n\n{collect.DIVIDER}\n# o2info --volinfo /dev/sda6\ndata"
+            f"\n\n{collect.DIVIDER}\n# PAGER=cat debugfs.ocfs2 -n -R 'stats' /dev/sda6\ndata"
+        )
+
+    @mock.patch('crmsh.cibquery.get_filesystem_devices')
+    @mock.patch('lxml.etree.fromstring')
+    @mock.patch('crmsh.report.collect.ShellUtils')
+    def test_ocfs2_devices_from_cib(self, mock_shell, mock_fromstring, mock_get_devices):
+        mock_shell_inst = mock.Mock()
+        mock_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_stdout_stderr.return_value = (0, "<cib/>", None)
+        mock_fromstring.return_value = "cib"
+        mock_get_devices.return_value = ["/dev/sda6"]
+
+        self.assertEqual(["/dev/sda6"], collect.ocfs2_devices_from_cib())
+        mock_shell_inst.get_stdout_stderr.assert_called_once_with("cibadmin -Q")
+        mock_fromstring.assert_called_once_with(b"<cib/>")
+        mock_get_devices.assert_called_once_with("cib", "ocfs2")
+
+    def test_cmd_binary_name(self):
+        self.assertEqual("debugfs.ocfs2", collect.cmd_binary_name("PAGER=cat debugfs.ocfs2 -n"))
+        self.assertEqual("o2info", collect.cmd_binary_name("o2info --volinfo /dev/sda6"))
