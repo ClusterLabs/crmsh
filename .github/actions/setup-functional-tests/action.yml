@@ -1,0 +1,19 @@
+name: 'Setup Functional Tests'
+description: 'Restores and loads the functional test container image'
+runs:
+  using: 'composite'
+  steps:
+    - name: Get current week
+      id: get-week
+      shell: bash
+      run: echo "week=$(date -u +'%G-%V')" >> $GITHUB_OUTPUT
+    - name: Restore container image from cache
+      uses: actions/cache@v6
+      with:
+        path: /tmp/haleap.tar
+        key: test-container-${{ steps.get-week.outputs.week }}-${{ hashFiles('test_container/**') }}
+        fail-on-cache-miss: true
+    - name: Load container image
+      shell: bash
+      run: |
+        sudo podman load -i /tmp/haleap.tar

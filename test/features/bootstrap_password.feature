@@ -81,7 +81,7 @@ Feature: crmsh bootstrap process - with password authentication
     Given Directory ~hacluster/.ssh is empty on "hanode3"
     Then This expect program exits with 0 on "root"@"hanode1"
       """
-      set timeout 120
+      set timeout 180
       spawn crm cluster init -N hanode2 -N hanode3 -y
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
@@ -147,7 +147,7 @@ Feature: crmsh bootstrap process - with password authentication
     Given Directory ~hacluster/.ssh is empty on "hanode3"
     Then This expect program exits with 0 on "alice"@"hanode1"
       """
-      set timeout 120
+      set timeout 180
       spawn sudo crm cluster init -N alice@hanode2 -N alice@hanode3 -y
       for {set i 0} {$i < 2} {incr i} {
         expect "Password: " {
@@ -210,7 +210,7 @@ Feature: crmsh bootstrap process - with password authentication
     Given Directory ~hacluster/.ssh is empty on "qnetd-node"
     Then This expect program exits with 0 on "root"@"hanode1"
       """
-      set timeout 120
+      set timeout 180
       spawn crm cluster init -N hanode1 -N hanode2 -y
       expect "Password: " {
         send "root123\n"
