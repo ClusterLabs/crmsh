@@ -82,6 +82,11 @@ INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
 JOIN_STAGES_EXTERNAL = ("ssh", "firewalld", "ssh_merge", "cluster")
 
 
+class BootstrapQDeviceValidationCallback(qdevice.QDeviceValidationCallback):
+    def ask_override(self, msg: str) -> bool:
+        return confirm(msg)
+
+
 class Context(object):
     """
     Context object used to avoid having to pass these variables
@@ -355,7 +360,7 @@ class Context(object):
                 utils.fatal(f"Package '{package}' is not installed")
         self._initialize_qdevice()
         if self.qdevice_inst:
-            self.qdevice_inst.valid_qdevice_options()
+            self.qdevice_inst.valid_qdevice_options(callback=BootstrapQDeviceValidationCallback())
         if self.ocfs2_devices or self.gfs2_devices or self.stage in ("ocfs2", "gfs2"):
             cluster_fs.ClusterFSManager.pre_verify(self)
         if self.skip_csync2:
