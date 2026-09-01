@@ -284,8 +284,8 @@ class TestQDevice(unittest.TestCase):
     def test_valid_qdevice_options(self, mock_installed, mock_check_qnetd, mock_check_port,
             mock_check_algo, mock_check_tie, mock_check_tls, mock_check_h, mock_check_hm):
         self.qdevice_with_ip.valid_qdevice_options()
-        mock_installed.assert_called_once_with()
-        mock_check_qnetd.assert_called_once_with("10.10.10.123")
+        mock_installed.assert_called_once_with(mock.ANY)
+        mock_check_qnetd.assert_called_once_with("10.10.10.123", mock.ANY)
 
     @mock.patch("crmsh.utils.package_is_installed")
     @mock.patch("crmsh.sh.cluster_shell")
@@ -815,3 +815,32 @@ Membership information
         self.qdevice_with_invalid_cmds_relative_path.remove_qdevice_config()
         mock_parser_inst.remove.assert_called_once_with("quorum.device")
         mock_parser_inst.save.assert_called_once()
+
+    def test_valid_qdevice_options_with_custom_callback(self):
+        class DummyCallback(qdevice.QDeviceValidationCallback):
+            def __init__(self):
+                self.messages = []
+                self.overrides = []
+
+            def issue(self, level, msg):
+                self.messages.append((level, msg))
+
+            def ask_override(self, msg):
+                self.overrides.append(msg)
+                return True
+
+        cb = DummyCallback()
+        qdev = qdevice.QDevice("10.10.10.123", port="999", is_stage=False)
+
+        with mock.patch.object(qdev, 'check_corosync_qdevice_available'), \
+             mock.patch.object(qdev, 'check_qnetd_addr'), \
+             mock.patch.object(qdev, 'check_qdevice_algo'), \
+             mock.patch.object(qdev, 'check_qdevice_tie_breaker'), \
+             mock.patch.object(qdev, 'check_qdevice_tls'), \
+             mock.patch.object(qdev, 'check_qdevice_heuristics'), \
+             mock.patch.object(qdev, 'check_qdevice_heuristics_mode'):
+            qdev.valid_qdevice_options(callback=cb)
+
+        self.assertEqual(len(cb.messages), 1)
+        self.assertEqual(cb.messages[0][0], qdevice.QDeviceValidationCallback.LEVEL_ERROR)
+        self.assertIn("invalid qnetd port range", cb.messages[0][1])

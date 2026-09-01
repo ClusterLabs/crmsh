@@ -282,7 +282,7 @@ class TestContext(unittest.TestCase):
         ctx._validate_nodes_option = mock.Mock()
         ctx.validate()
         mock_admin_ip.assert_called_once_with("10.10.10.123")
-        ctx.qdevice_inst.valid_qdevice_options.assert_called_once_with()
+        ctx.qdevice_inst.valid_qdevice_options.assert_called_once_with(callback=mock.ANY)
         ctx._validate_sbd_option.assert_called_once_with()
 
     @mock.patch('logging.Logger.info')
