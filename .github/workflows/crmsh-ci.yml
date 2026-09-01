@@ -22,7 +22,7 @@ jobs:
     - uses: actions/checkout@v6
     - name: Get current week
       id: get-week
-      run: echo "week=$(date -u +'%G-%V')" >> $GITHUB_OUTPUT
+      run: echo "week=$(date -u +'%Y-%U')" >> $GITHUB_OUTPUT
     - name: Cache container image
       id: cache-container
       uses: actions/cache@v6
