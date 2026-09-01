@@ -6,7 +6,7 @@ runs:
     - name: Get current week
       id: get-week
       shell: bash
-      run: echo "week=$(date -u +'%G-%V')" >> $GITHUB_OUTPUT
+      run: echo "week=$(date -u +'%Y-%U')" >> $GITHUB_OUTPUT
     - name: Restore container image from cache
       uses: actions/cache@v6
       with:
