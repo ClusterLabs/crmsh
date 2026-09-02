@@ -48,6 +48,12 @@ class TestGlobalVariables(unittest.TestCase):
         Test setUp.
         """
         self.args_inst = bootstrap.Arguments()
+        self.patcher_getuser = mock.patch('crmsh.userdir.getuser', return_value='root')
+        self.patcher_get_sudoer = mock.patch('crmsh.userdir.get_sudoer', return_value=None)
+        self.patcher_getuser.start()
+        self.patcher_get_sudoer.start()
+        self.addCleanup(self.patcher_getuser.stop)
+        self.addCleanup(self.patcher_get_sudoer.stop)
         self.ctx_inst = bootstrap.GlobalVariables(self.args_inst)
 
     def tearDown(self):
@@ -116,28 +122,28 @@ class TestGlobalVariables(unittest.TestCase):
         self.assertEqual(args_inst.ipv6, False)
 
     @mock.patch('crmsh.qdevice.QDevice')
-    def test_initialize_qdevice_return(self, mock_qdevice):
-        self.ctx_inst._initialize_qdevice()
+    def test_populate_qdevice_return(self, mock_qdevice):
+        self.ctx_inst._populate_qdevice()
         mock_qdevice.assert_not_called()
 
     @mock.patch('crmsh.qdevice.QDevice')
-    def test_initialize_qdevice(self, mock_qdevice):
+    def test_populate_qdevice(self, mock_qdevice):
         args = crmsh.bootstrap.Arguments()
         ctx = crmsh.bootstrap.GlobalVariables(args)
         ctx.args.qnetd_addr_input = "node3"
         ctx.args.qnetd_port = 123
         ctx.args.stage = ""
-        ctx._initialize_qdevice()
+        ctx._populate_qdevice()
         mock_qdevice.assert_called_once_with(qnetd_addr='node3', port=123, ssh_user=None, algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
 
     @mock.patch('crmsh.qdevice.QDevice')
-    def test_initialize_qdevice_with_user(self, mock_qdevice):
+    def test_populate_qdevice_with_user(self, mock_qdevice):
         args = crmsh.bootstrap.Arguments()
         ctx = crmsh.bootstrap.GlobalVariables(args)
         ctx.args.qnetd_addr_input = "alice@node3"
         ctx.args.qnetd_port = 123
         ctx.args.stage = ""
-        ctx._initialize_qdevice()
+        ctx._populate_qdevice()
         mock_qdevice.assert_called_once_with(qnetd_addr='node3', port=123, ssh_user='alice', algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
 
     @mock.patch('crmsh.utils.package_is_installed')
@@ -400,43 +406,43 @@ class TestGlobalVariables(unittest.TestCase):
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_without_args_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_without_args_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
         args = bootstrap.Arguments()
         context = bootstrap.GlobalVariables(args)
         context.args.cluster_node = None
         context.args.user_at_node_list = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_without_args_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_without_args_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'alice'
         args = bootstrap.Arguments()
         context = bootstrap.GlobalVariables(args)
         context.args.cluster_node = None
         context.args.user_at_node_list = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_cluster_node_without_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_cluster_node_without_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
         args = bootstrap.Arguments()
         context = bootstrap.GlobalVariables(args)
         context.args.cluster_node = 'node1'
         context.args.user_at_node_list = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_cluster_node_with_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_cluster_node_with_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
         args = bootstrap.Arguments()
@@ -444,55 +450,55 @@ class TestGlobalVariables(unittest.TestCase):
         context.args.cluster_node = 'alice@node1'
         context.args.user_at_node_list = None
         with self.assertRaises(ValueError):
-            context.initialize_user()
+            context.populate_user()
         context.args.cluster_node = 'root@node1'
         context.args.user_at_node_list = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_cluster_node_without_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_cluster_node_without_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'bob'
         args = bootstrap.Arguments()
         context = bootstrap.GlobalVariables(args)
         context.args.cluster_node = 'node1'
         context.args.user_at_node_list = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_cluster_node_with_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_cluster_node_with_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'bob'
         args = bootstrap.Arguments()
         context = bootstrap.GlobalVariables(args)
         context.args.cluster_node = 'alice@node1'
         context.args.user_at_node_list = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('bob', context.current_user)
         context.args.cluster_node = 'root@node1'
         context.args.user_at_node_list = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_node_list_without_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_node_list_without_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
         args = bootstrap.Arguments()
         context = bootstrap.GlobalVariables(args)
         context.args.user_at_node_list = ['node1', 'node2']
         context.args.cluster_node = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_node_list_with_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_node_list_with_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
         args = bootstrap.Arguments()
@@ -500,27 +506,27 @@ class TestGlobalVariables(unittest.TestCase):
         context.args.user_at_node_list = ['alice@node1', 'alice@node2']
         context.args.cluster_node = None
         with self.assertRaises(ValueError):
-            context.initialize_user()
+            context.populate_user()
         context.args.user_at_node_list = ['root@node1', 'root@node2']
         context.args.cluster_node = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_node_list_without_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_node_list_without_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'bob'
         args = bootstrap.Arguments()
         context = bootstrap.GlobalVariables(args)
         context.args.user_at_node_list = ['node1', 'node2']
         context.args.cluster_node = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
     @mock.patch('crmsh.userdir.get_sudoer')
     @mock.patch('crmsh.userdir.getuser')
-    def test_initialize_user_node_list_with_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
+    def test_populate_user_node_list_with_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'bob'
         args = bootstrap.Arguments()
@@ -528,14 +534,14 @@ class TestGlobalVariables(unittest.TestCase):
         context.args.user_at_node_list = ['alice@node1', 'root@node2']
         context.args.cluster_node = None
         with self.assertRaises(ValueError):
-            context.initialize_user()
+            context.populate_user()
         context.args.user_at_node_list = ['alice@node1', 'alice@node2']
         context.args.cluster_node = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('bob', context.current_user)
         context.args.user_at_node_list = ['root@node1', 'root@node2']
         context.args.cluster_node = None
-        context.initialize_user()
+        context.populate_user()
         self.assertEqual('root', context.current_user)
 
 
