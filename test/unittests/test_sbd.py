@@ -944,6 +944,20 @@ class TestSBDConfigChecker(unittest.TestCase):
 
 class TestSBDManager(unittest.TestCase):
 
+    def _make_bootstrap_ctx(self, sbd_devices=None, diskless_sbd=False, yes_to_all=False, cluster_is_running=False, type="join", watchdog=""):
+        mock_bootstrap_ctx = Mock(
+            cluster_is_running=cluster_is_running,
+            diskless_sbd=diskless_sbd
+        )
+        mock_bootstrap_ctx.args = Mock(
+            sbd_devices=sbd_devices or [],
+            diskless_sbd=diskless_sbd,
+            yes_to_all=yes_to_all,
+            type=type,
+            watchdog=watchdog
+        )
+        return mock_bootstrap_ctx
+
     def test_convert_timeout_dict_to_opt_str(self):
         timeout_dict = {'watchdog': 5, 'msgwait': 10}
         result = SBDManager.convert_timeout_dict_to_opt_str(timeout_dict)
@@ -953,7 +967,7 @@ class TestSBDManager(unittest.TestCase):
     @patch('crmsh.sbd.ServiceManager')
     @patch('crmsh.utils.list_cluster_nodes')
     def test_enable_sbd_service(self, mock_list_cluster_nodes, mock_ServiceManager, mock_logger_info):
-        mock_bootstrap_ctx = Mock(cluster_is_running=True)
+        mock_bootstrap_ctx = self._make_bootstrap_ctx(cluster_is_running=True)
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
         mock_list_cluster_nodes.return_value = ['node1', 'node2']
         mock_ServiceManager.return_value.service_is_enabled.side_effect = [False, False]
@@ -989,7 +1003,7 @@ class TestSBDManager(unittest.TestCase):
 
     @patch('crmsh.sbd.ServiceManager')
     def test_get_sbd_device_interactive_yes_to_all(self, mock_ServiceManager):
-        mock_bootstrap_ctx = Mock(yes_to_all=True)
+        mock_bootstrap_ctx = self._make_bootstrap_ctx(yes_to_all=True)
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
         sbdmanager_instance._warn_and_raise_no_sbd = Mock()
         sbdmanager_instance._warn_and_raise_no_sbd.side_effect = SBDManager.NotConfigSBD
@@ -1001,7 +1015,7 @@ class TestSBDManager(unittest.TestCase):
     @patch('logging.Logger.info')
     @patch('crmsh.sbd.ServiceManager')
     def test_get_sbd_device_interactive_not_wish(self, mock_ServiceManager, mock_logger_info, mock_confirm):
-        mock_bootstrap_ctx = Mock(yes_to_all=False)
+        mock_bootstrap_ctx = self._make_bootstrap_ctx(yes_to_all=False)
         mock_confirm.return_value = False
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
         sbdmanager_instance._warn_and_raise_no_sbd = Mock()
@@ -1017,7 +1031,7 @@ class TestSBDManager(unittest.TestCase):
     @patch('logging.Logger.info')
     @patch('crmsh.sbd.ServiceManager')
     def test_get_sbd_device_interactive_not_installed(self, mock_ServiceManager, mock_logger_info, mock_confirm, mock_package_is_installed, mock_fatal):
-        mock_bootstrap_ctx = Mock(yes_to_all=False)
+        mock_bootstrap_ctx = self._make_bootstrap_ctx(yes_to_all=False)
         mock_confirm.return_value = True
         mock_package_is_installed.return_value = False
         mock_fatal.side_effect = ValueError("SBD is not installed")
@@ -1033,7 +1047,7 @@ class TestSBDManager(unittest.TestCase):
     @patch('logging.Logger.info')
     @patch('crmsh.sbd.ServiceManager')
     def test_get_sbd_device_interactive_not_overwrite(self, mock_ServiceManager, mock_logger_info, mock_confirm, mock_package_is_installed, mock_get_sbd_device_from_config):
-        mock_bootstrap_ctx = Mock(yes_to_all=False)
+        mock_bootstrap_ctx = self._make_bootstrap_ctx(yes_to_all=False)
         mock_confirm.return_value = True
         mock_package_is_installed.return_value = True
         mock_get_sbd_device_from_config.return_value = ['/dev/sbd_device']
@@ -1050,7 +1064,7 @@ class TestSBDManager(unittest.TestCase):
     @patch('logging.Logger.info')
     @patch('crmsh.sbd.ServiceManager')
     def test_get_sbd_device_interactive(self, mock_ServiceManager, mock_logger_info, mock_confirm, mock_package_is_installed, mock_get_sbd_device_from_config):
-        mock_bootstrap_ctx = Mock(yes_to_all=False)
+        mock_bootstrap_ctx = self._make_bootstrap_ctx(yes_to_all=False)
         mock_confirm.return_value = True
         mock_package_is_installed.return_value = True
         mock_get_sbd_device_from_config.return_value = []
@@ -1113,7 +1127,7 @@ class TestSBDManager(unittest.TestCase):
     @patch('crmsh.sbd.SBDUtils.handle_input_sbd_devices')
     @patch('crmsh.sbd.ServiceManager')
     def test_get_sbd_device_from_bootstrap_return(self, mock_ServiceManager, mock_handle_input_sbd_devices):
-        mock_bootstrap_ctx = Mock(sbd_devices=[], diskless_sbd=False)
+        mock_bootstrap_ctx = self._make_bootstrap_ctx(sbd_devices=[], diskless_sbd=False)
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
         sbdmanager_instance.get_sbd_device_interactive = Mock()
         sbdmanager_instance.get_sbd_device_interactive.return_value = []
@@ -1124,7 +1138,7 @@ class TestSBDManager(unittest.TestCase):
     @patch('crmsh.sbd.SBDUtils.handle_input_sbd_devices')
     @patch('crmsh.sbd.ServiceManager')
     def test_get_sbd_device_from_bootstrap(self, mock_ServiceManager, mock_handle_input_sbd_devices, mock_get_sbd_device_metadata):
-        mock_bootstrap_ctx = Mock(sbd_devices=['/dev/sda1', '/dev/sda2'], diskless_sbd=False)
+        mock_bootstrap_ctx = self._make_bootstrap_ctx(sbd_devices=['/dev/sda1', '/dev/sda2'], diskless_sbd=False)
         mock_handle_input_sbd_devices.return_value = (['/dev/sda1'], ['/dev/sda2'])
         mock_get_sbd_device_metadata.return_value = {'uuid': '1234-5678'}
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
@@ -1134,7 +1148,7 @@ class TestSBDManager(unittest.TestCase):
 
     @patch('crmsh.sbd.ServiceManager')
     def test_init_and_deploy_sbd_not_config_sbd(self, mock_ServiceManager):
-        mock_bootstrap_ctx = Mock()
+        mock_bootstrap_ctx = self._make_bootstrap_ctx()
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
         sbdmanager_instance.get_sbd_device_from_bootstrap = Mock(side_effect=SBDManager.NotConfigSBD)
         sbdmanager_instance._load_attributes_from_bootstrap = Mock()
@@ -1149,7 +1163,7 @@ class TestSBDManager(unittest.TestCase):
     @patch('crmsh.sbd.ServiceManager')
     def test_init_and_deploy_sbd(self, mock_ServiceManager, mock_restart_cluster, mock_adjust_properties, mock_leverage_maintenance_mode, mock_able_to_restart_cluster):
 
-        mock_bootstrap_ctx = Mock(cluster_is_running=True)
+        mock_bootstrap_ctx = self._make_bootstrap_ctx(cluster_is_running=True)
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
         sbdmanager_instance.get_sbd_device_from_bootstrap = Mock()
         sbdmanager_instance._load_attributes_from_bootstrap = Mock()
