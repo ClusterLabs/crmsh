@@ -720,7 +720,7 @@ class RscMgmt(command.UI):
                 if trace_dir is not None:
                     context.fatal_error(usage)
                 trace_dir = arg
-            elif arg.isnumeric():
+            elif utils.crm_msec(arg) != -1:
                 if interval is not None:
                     context.fatal_error(usage)
                 interval = arg
@@ -733,6 +733,8 @@ class RscMgmt(command.UI):
         if op == "probe":
             op = "monitor"
             interval = interval or "0"
+        if op is not None and op not in constants.op_cli_names:
+            context.fatal_error("Unknown operation: %s" % (op))
         if op is None:
             self._trace_resource(context, rsc_id, rsc, trace_dir)
         elif interval is None:

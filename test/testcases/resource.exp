@@ -508,7 +508,7 @@ INFO: Trace set, restart p0 to trace the stop operation
 </cib>
 
 .TRY resource untrace p0 probe
-INFO: Stop tracing p0 for operation monitor
+INFO: Stop tracing p0:monitor
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -543,7 +543,7 @@ INFO: Stop tracing p0 for operation monitor
 </cib>
 
 .TRY resource untrace p0 start
-INFO: Stop tracing p0 for operation start
+INFO: Stop tracing p0:start
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -573,7 +573,7 @@ INFO: Stop tracing p0 for operation start
 </cib>
 
 .TRY resource untrace p0 stop
-INFO: Stop tracing p0 for operation stop
+INFO: Stop tracing p0:stop
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
