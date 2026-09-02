@@ -22,15 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 class SBDUtils:
-    '''
+    """
     Consolidate sbd related utility methods
-    '''
+    """
     @staticmethod
     def get_sbd_device_metadata_raw(dev, remote=None) -> str:
-        '''
+        """
         Get raw metadata info from sbd device header
         Raise ValueError if the command fails or the output is empty
-        '''
+        """
         cmd = f"sbd -d {shlex.quote(dev)} dump"
         out = sh.cluster_shell().get_stdout_or_raise_error(cmd, remote)
         if not out: # might not possible, but just in case to avoid further parsing error
@@ -39,9 +39,9 @@ class SBDUtils:
 
     @staticmethod
     def get_sbd_device_metadata(dev, timeout_only=False, remote=None) -> dict:
-        '''
+        """
         Extract metadata from sbd device header
-        '''
+        """
         sbd_info = {}
         pattern = r"UUID\s+:\s+(\S+)|Timeout\s+\((\w+)\)\s+:\s+(\d+)"
         out = SBDUtils.get_sbd_device_metadata_raw(dev, remote)
@@ -61,17 +61,17 @@ class SBDUtils:
 
     @staticmethod
     def get_device_uuid(dev, node=None) -> str|None:
-        '''
+        """
         Get UUID for specific device and node
-        '''
+        """
         metadata_info = SBDUtils.get_sbd_device_metadata(dev, remote=node)
         return metadata_info.get("uuid")
 
     @staticmethod
     def compare_device_uuid(dev, node_list):
-        '''
+        """
         Compare local sbd device UUID with other node's sbd device UUID
-        '''
+        """
         if not node_list:
             return
         local_uuid = SBDUtils.get_device_uuid(dev)
@@ -105,9 +105,9 @@ class SBDUtils:
 
     @staticmethod
     def get_sbd_value_from_config(key):
-        '''
+        """
         Get value from /etc/sysconfig/sbd
-        '''
+        """
         return utils.parse_sysconfig(SBDManager.SYSCONFIG_SBD).get(key)
 
     @staticmethod
@@ -120,53 +120,53 @@ class SBDUtils:
 
     @staticmethod
     def get_sbd_device_from_config():
-        '''
+        """
         Get sbd device list from config
-        '''
+        """
         res = SBDUtils.get_sbd_value_from_config("SBD_DEVICE")
         return res.split(';') if res else []
 
     @staticmethod
     def is_using_diskless_sbd():
-        '''
+        """
         Check if using diskless SBD
-        '''
+        """
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
             return False
         return not bool(SBDUtils.get_sbd_device_from_config())
 
     @staticmethod
     def is_using_disk_based_sbd():
-        '''
+        """
         Check if using disk-based SBD
-        '''
+        """
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
             return False
         return bool(SBDUtils.get_sbd_device_from_config())
 
     @staticmethod
     def has_sbd_device_already_initialized(dev) -> bool:
-        '''
+        """
         Check if sbd device already initialized
-        '''
+        """
         cmd = "sbd -d {} dump".format(dev)
         rc, _, _ = ShellUtils().get_stdout_stderr(cmd)
         return rc == 0
 
     @staticmethod
     def no_overwrite_device_check(dev) -> bool:
-        '''
+        """
         Check if device already initialized and ask if need to overwrite
-        '''
+        """
         initialized = SBDUtils.has_sbd_device_already_initialized(dev)
         return initialized and \
                 not bootstrap.confirm(f"{dev} has already been initialized by SBD - overwrite?")
 
     @staticmethod
     def check_devices_metadata_consistent(dev_list, quiet=False) -> bool:
-        '''
+        """
         Check if all devices have the same metadata
-        '''
+        """
         consistent = True
         if len(dev_list) < 2:
             return consistent
@@ -181,13 +181,13 @@ class SBDUtils:
 
     @staticmethod
     def handle_input_sbd_devices(dev_list, dev_list_from_config=None):
-        '''
+        """
         Given a list of devices, split them into two lists:
         - overwrite_list: devices that need to be overwritten
         - no_overwrite_list: devices that don't need to be overwritten
 
         Raise TerminateSubCommand if the metadata of no_overwrite_list is not consistent
-        '''
+        """
         no_overwrite_list = dev_list_from_config or []
         overwrite_list = []
 
@@ -229,9 +229,9 @@ class SBDUtils:
 
 
 class SBDTimeout(object):
-    '''
+    """
     Consolidate sbd related timeout methods and constants
-    '''
+    """
     SBD_WATCHDOG_TIMEOUT_DEFAULT = 5
     SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
@@ -240,9 +240,9 @@ class SBDTimeout(object):
     SHOW_DEFAULT_START_TIMEOUT_CMD = "systemctl show -p DefaultTimeoutStartUSec --value"
 
     def __init__(self, context=None):
-        '''
+        """
         Init function
-        '''
+        """
         self.context = context
         self.disk_based = None
         self.sbd_msgwait = None
@@ -268,10 +268,10 @@ class SBDTimeout(object):
             self._set_sbd_msgwait()
 
     def _set_sbd_watchdog_timeout(self):
-        '''
+        """
         Set sbd_watchdog_timeout from profiles.yml if exists
         Then adjust it if in s390 environment
-        '''
+        """
         if "sbd.watchdog_timeout" in self.context.profiles_dict:
             self.sbd_watchdog_timeout = int(self.context.profiles_dict["sbd.watchdog_timeout"])
         if self.context.is_s390 and self.sbd_watchdog_timeout < self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390:
@@ -282,10 +282,10 @@ class SBDTimeout(object):
             self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390
 
     def _set_sbd_msgwait(self):
-        '''
+        """
         Set sbd msgwait from profiles.yml if exists
         Default is 2 * sbd_watchdog_timeout
-        '''
+        """
         sbd_msgwait_default = 2 * self.sbd_watchdog_timeout
         sbd_msgwait = sbd_msgwait_default
         if "sbd.msgwait" in self.context.profiles_dict:
@@ -299,9 +299,9 @@ class SBDTimeout(object):
         self.sbd_msgwait = sbd_msgwait
 
     def _adjust_sbd_watchdog_timeout_with_diskless_and_qdevice(self):
-        '''
+        """
         When using diskless SBD with Qdevice, adjust value of sbd_watchdog_timeout
-        '''
+        """
         # add sbd after qdevice started
         if corosync.is_qdevice_configured() and ServiceManager().service_is_active("corosync-qdevice.service"):
             qdevice_sync_timeout = qdevice.QDevice.get_qdevice_sync_timeout()
@@ -323,9 +323,9 @@ class SBDTimeout(object):
 
     @staticmethod
     def get_sbd_watchdog_timeout() -> int:
-        '''
+        """
         Get SBD_WATCHDOG_TIMEOUT from /etc/sysconfig/sbd
-        '''
+        """
         res = SBDUtils.get_sbd_value_from_config("SBD_WATCHDOG_TIMEOUT")
         if not res:
             raise ValueError("Cannot get the value of SBD_WATCHDOG_TIMEOUT")
@@ -341,9 +341,9 @@ class SBDTimeout(object):
         return max(swt+cwt, 2*swt) if cwt else 2 * swt
 
     def _load_configurations_from_runtime(self):
-        '''
+        """
         Load necessary configurations for both disk-based/disk-less sbd
-        '''
+        """
         self.two_node_without_qdevice = utils.is_2node_cluster_without_qdevice()
         self.crashdump_watchdog_timeout = SBDUtils.get_crashdump_watchdog_timeout()
         dev_list = SBDUtils.get_sbd_device_from_config()
@@ -370,10 +370,10 @@ class SBDTimeout(object):
 
     @classmethod
     def get_sbd_metadata_expected(cls) -> tuple[int, int]:
-        '''
+        """
         Get the expected sbd watchdog timeout and msgwait for disk-based sbd
         Make sure the expected msgwait >= 2 * expected watchdog timeout
-        '''
+        """
         instance = cls()
         instance._load_configurations_from_runtime()
         expected_watchdog_timeout = max(SBDTimeout.get_sbd_watchdog_timeout_expected(), instance.sbd_watchdog_timeout)
@@ -387,13 +387,13 @@ class SBDTimeout(object):
 
     @classmethod
     def get_sbd_watchdog_timeout_expected(cls, diskless: bool = False) -> int:
-        '''
+        """
         Get the expected:
         - watchdog timeout for disk-based sbd
         - SBD_WATCHDOG_TIMEOUT for disk-less sbd
 
         The value might be from profiles.yml, or the default values
-        '''
+        """
         context = bootstrap.Context()
         context.diskless_sbd = diskless
         context.quiet = True
@@ -401,14 +401,14 @@ class SBDTimeout(object):
         return cls(context).sbd_watchdog_timeout
 
     def get_fencing_timeout_expected(self) -> int:
-        '''
+        """
         Get fencing-timeout value for sbd cases, formulas are:
 
         value_from_sbd = 1.2 * msgwait # for disk-based sbd
         value_from_sbd = 1.2 * max (fencing_watchdog_timeout, 2*SBD_WATCHDOG_TIMEOUT) # for disk-less sbd
 
         fencing_timeout = max(value_from_sbd, constants.FENCING_TIMEOUT_DEFAULT) + token + consensus
-        '''
+        """
         if self.disk_based:
             value_from_sbd = int(1.2*self.sbd_msgwait)
         else:
@@ -425,12 +425,12 @@ class SBDTimeout(object):
         return cls_inst.get_fencing_timeout_expected()
 
     def get_sbd_delay_start_expected(self) -> int:
-        '''
+        """
         Get the value for SBD_DELAY_START, formulas are:
 
         SBD_DELAY_START = (token + consensus + pcmk_delay_max + msgwait)  # for disk-based sbd
         SBD_DELAY_START = (token + consensus + 2*SBD_WATCHDOG_TIMEOUT) # for disk-less sbd
-        '''
+        """
         token_and_consensus_timeout = corosync.token_and_consensus_timeout()
         if self.disk_based:
             value = token_and_consensus_timeout + self.pcmk_delay_max + self.sbd_msgwait
@@ -448,9 +448,9 @@ class SBDTimeout(object):
 
     @staticmethod
     def is_sbd_delay_start() -> bool:
-        '''
+        """
         Check if SBD_DELAY_START is not no or not set
-        '''
+        """
         res = SBDUtils.get_sbd_value_from_config("SBD_DELAY_START")
         return res and res != "no"
 
@@ -466,9 +466,9 @@ class SBDTimeout(object):
 
     @staticmethod
     def able_to_set_fencing_watchdog_timeout(name: str, value: int) -> bool:
-        '''
+        """
         Check if able to set fencing-watchdog-timeout or stonith-watchdog-timeout property
-        '''
+        """
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
             logger.error("Can't set %s because sbd.service is not active", name)
             return False
@@ -801,9 +801,9 @@ class SBDConfigChecker(SBDTimeout):
         self._fix_sbd_disk_metadata()
 
     def _check_sbd_disk_metadata(self) -> CheckResult:
-        '''
+        """
         For disk-based SBD, check if the sbd msgwait and watchdog timeout are below expected values
-        '''
+        """
         if self.disk_based:
             self.sbd_watchdog_timeout_expected, self.sbd_msgwait_expected = SBDTimeout.get_sbd_metadata_expected()
             if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
@@ -830,9 +830,9 @@ class SBDConfigChecker(SBDTimeout):
             print(output)
 
     def _check_sbd_watchdog_timeout(self) -> CheckResult:
-        '''
+        """
         For diskless SBD, check if SBD_WATCHDOG_TIMEOUT is below expected value
-        '''
+        """
         if not self.disk_based:
             self.sbd_watchdog_timeout_expected = SBDTimeout.get_sbd_watchdog_timeout_expected(diskless=True)
             if self.sbd_watchdog_timeout < self.sbd_watchdog_timeout_expected:
@@ -1269,9 +1269,9 @@ class SBDManager:
         bootstrap_context: 'bootstrap.Context | None' = None,
         crashdump_mode: str | None = None
     ):
-        '''
+        """
         Init function which can be called from crm sbd subcommand or bootstrap
-        '''
+        """
         self.device_list_to_init = device_list_to_init or []
         self.timeout_dict = timeout_dict or {}
         self.update_dict = update_dict or {}
@@ -1311,9 +1311,9 @@ class SBDManager:
                          if k in timeout_option_map])
 
     def update_configuration(self) -> None:
-        '''
+        """
         Update and sync sbd configuration
-        '''
+        """
         if not self.update_dict:
             return
         if self.overwrite_sysconfig:
@@ -1370,9 +1370,9 @@ class SBDManager:
 
     @staticmethod
     def warn_diskless_sbd():
-        '''
+        """
         Give warning when configuring diskless sbd
-        '''
+        """
         if SBDUtils.is_using_diskless_sbd():
             vote_dict = utils.get_quorum_votes_dict()
             expected_vote = int(vote_dict.get('Expected', 0))
@@ -1394,9 +1394,9 @@ class SBDManager:
         return True
 
     def _prompt_for_sbd_device(self) -> list[str]:
-        '''
+        """
         Prompt for sbd device and verify
-        '''
+        """
         dev_list = []
         dev_looks_sane = False
         while not dev_looks_sane:
@@ -1425,9 +1425,9 @@ class SBDManager:
         return dev_list
 
     def get_sbd_device_interactive(self) -> list[str]:
-        '''
+        """
         Get sbd device on interactive mode
-        '''
+        """
         if self.bootstrap_context.yes_to_all:
             self._warn_and_raise_no_sbd()
         logger.info(self.SBD_STATUS_DESCRIPTION)
@@ -1449,11 +1449,11 @@ class SBDManager:
         return return_devices
 
     def get_sbd_device_from_bootstrap(self):
-        '''
+        """
         Handle sbd device input from 'crm cluster init' with -s or -S option
         -s is for disk-based sbd
         -S is for diskless sbd
-        '''
+        """
         # if specified sbd device with -s option
         device_list = self.bootstrap_context.sbd_devices
         # else if not use -S option, get sbd device interactively
@@ -1472,14 +1472,14 @@ class SBDManager:
         self.update_dict["SBD_DEVICE"] = ';'.join(device_list)
 
     def init_and_deploy_sbd(self, restart_first=False):
-        '''
+        """
         The process of deploying sbd includes:
         1. Initialize sbd device
         2. Write config file /etc/sysconfig/sbd
         3. Enable sbd.service
         4. Restart cluster service if possible
         5. Configure fencing-sbd resource and related properties
-        '''
+        """
         if self.bootstrap_context:
             try:
                 self.get_sbd_device_from_bootstrap()
@@ -1520,11 +1520,11 @@ class SBDManager:
                     bootstrap.restart_cluster()
 
     def join_sbd(self, remote_user, peer_host):
-        '''
+        """
         Function join_sbd running on join process only
         On joining process, check whether peer node has enabled sbd.service
         If so, check prerequisites of SBD and verify sbd device on join node
-        '''
+        """
         service_manager = ServiceManager()
         if not os.path.exists(self.SYSCONFIG_SBD) or not service_manager.service_is_enabled(constants.SBD_SERVICE, peer_host):
             service_manager.disable_service(constants.SBD_SERVICE)
@@ -1554,9 +1554,9 @@ class SBDManager:
             utils.cluster_run_cmd(cmd, node_list)
 
     def set_crashdump_action(self):
-        '''
+        """
         Set crashdump timeout action in /etc/sysconfig/sbd
-        '''
+        """
         if not self.crashdump_mode or self.crashdump_mode not in ("set", "restore"):
             return
 
@@ -1607,14 +1607,14 @@ def cleanup_sbd_configurations(remote=None):
 
 
 def purge_sbd_from_cluster():
-    '''
+    """
     Purge SBD from cluster, the process includes:
     - stop and remove sbd agent
     - disable sbd.service
     - move /etc/sysconfig/sbd to /etc/sysconfig/sbd.bak
     - adjust cluster attributes
     - adjust related timeout values
-    '''
+    """
     cleanup_existing_sbd_resource()
 
     cluster_nodes = utils.list_cluster_nodes()
