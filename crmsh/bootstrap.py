@@ -149,6 +149,7 @@ class GlobalVariables(object):
 
     def __init__(self, args: Arguments):
         self.args = args
+        self.ipv6 = args.ipv6
         self.current_user = None
         self.qdevice_inst = None
         self.sbd_manager = None
@@ -715,7 +716,7 @@ def init_network():
     """
     Get all needed network information through network_utils.InterfacesInfo
     """
-    _global_variables.interfaces_inst = network_utils.InterfacesInfo(_global_variables.args.ipv6, _global_variables.args.nic_addr_list)
+    _global_variables.interfaces_inst = network_utils.InterfacesInfo(_global_variables.ipv6, _global_variables.args.nic_addr_list)
     _global_variables.interfaces_inst.get_interfaces_info()
     _global_variables.interfaces_inst.flatten_custom_nic_addr_list()
 
@@ -1323,7 +1324,7 @@ def config_corosync_conf() -> None:
         logger.info(f"Configuring corosync({_global_variables.args.transport})")
     inst = corosync.ConfParser(config_data=corosync.COROSYNC_CONF_TEMPLATE)
 
-    if _global_variables.args.ipv6:
+    if _global_variables.ipv6:
         inst.set("totem.ip_version", "ipv6")
     inst.set("totem.cluster_name", _global_variables.args.cluster_name)
     inst.set("totem.transport", _global_variables.args.transport)
@@ -1940,7 +1941,7 @@ def join_cluster(seed_host, remote_user):
     shutil.copy(corosync.conf(), _global_variables.get_corosync_conf_orig())
 
     # check if use IPv6
-    _global_variables.args.ipv6 = corosync.is_using_ipv6()
+    _global_variables.ipv6 = corosync.is_using_ipv6()
 
     init_network()
 
