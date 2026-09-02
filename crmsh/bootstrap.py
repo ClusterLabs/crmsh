@@ -165,7 +165,7 @@ class GlobalVariables(object):
         self.corosync_conf_orig = None
         self.rm_list = [corosync.conf(), COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH, "~/.config/crm/*"]
-        self.initialize_user()
+        self.populate_user()
 
     def _any_qdevice_options_set(self):
         return any([
@@ -178,9 +178,9 @@ class GlobalVariables(object):
             self.args.qdevice_heuristics_mode,
         ])
 
-    def _initialize_qdevice(self):
+    def _populate_qdevice(self):
         """
-        Initialize qdevice instance
+        Populate qdevice instance
         """
         if not self.args.qnetd_addr_input:
             if self._any_qdevice_options_set() or self.args.stage == "qdevice":
@@ -207,7 +207,7 @@ class GlobalVariables(object):
                 mode=self.args.qdevice_heuristics_mode,
                 is_stage=self.args.stage == "qdevice")
 
-    def initialize_user(self):
+    def populate_user(self):
         """
         users_of_specified_hosts: 'not_specified', 'specified', 'no_hosts'
         """
@@ -365,7 +365,7 @@ class GlobalVariables(object):
         for package in self.CORE_PACKAGES:
             if not utils.package_is_installed(package):
                 utils.fatal(f"Package '{package}' is not installed")
-        self._initialize_qdevice()
+        self._populate_qdevice()
         if self.qdevice_inst:
             self.qdevice_inst.valid_qdevice_options(callback=BootstrapQDeviceValidationCallback())
         if self.args.ocfs2_devices or self.args.gfs2_devices or self.args.stage in ("ocfs2", "gfs2"):
@@ -378,8 +378,8 @@ class GlobalVariables(object):
         self._validate_nodes_option()
         self._validate_sbd_option()
 
-    def init_sbd_manager(self):
-        self.sbd_manager = sbd.SBDManager(bootstrap_global_variables=self)
+    def populate_sbd_manager(self):
+        self.sbd_manager = sbd.SBDManager(bootstrap_context=self)
 
     def detect_platform(self):
         """
@@ -2186,7 +2186,7 @@ def bootstrap_init(context):
 
     if not stage or stage in ('corosync', 'sbd'):
         _global_variables.load_profiles()
-    _global_variables.init_sbd_manager()
+    _global_variables.populate_sbd_manager()
 
     if stage in ('qnetd_remote', ):
         args = _global_variables.args.args
@@ -2275,7 +2275,7 @@ def bootstrap_join(context):
     _global_variables.validate()
 
     init()
-    _global_variables.init_sbd_manager()
+    _global_variables.populate_sbd_manager()
 
     check_tty()
 
@@ -2297,7 +2297,7 @@ def bootstrap_join(context):
             # TODO: prompt for user@host
             cluster_user_at_node = prompt_for_string("IP address or hostname of existing node (e.g.: 192.168.1.1)", ".+")
             _global_variables.args.cluster_node = cluster_user_at_node
-            _global_variables.initialize_user()
+            _global_variables.populate_user()
 
         remote_user, cluster_node = _parse_user_at_host(_global_variables.args.cluster_node, _global_variables.current_user)
         network_utils.ssh_port_reachable_check(cluster_node)
@@ -2406,7 +2406,7 @@ def bootstrap_remove(context):
   executed from a different node in the cluster.
 """)
         _global_variables.args.cluster_node = prompt_for_string("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
-        _global_variables.initialize_user()
+        _global_variables.populate_user()
 
     if not _global_variables.args.cluster_node:
         utils.fatal("No existing IP/hostname specified (use -c option)")

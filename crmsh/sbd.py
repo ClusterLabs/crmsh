@@ -1267,7 +1267,7 @@ class SBDManager:
         timeout_dict: typing.Dict[str, int] | None = None,
         update_dict: typing.Dict[str, str] | None = None,
         diskless_sbd: bool = False,
-        bootstrap_context: 'bootstrap.GlobalVariables | None' = None,
+        bootstrap_context: typing.Optional[bootstrap.GlobalVariables] = None,
         crashdump_mode: str | None = None
     ):
         """
