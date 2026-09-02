@@ -394,9 +394,10 @@ class SBDTimeout(object):
 
         The value might be from profiles.yml, or the default values
         """
-        context = bootstrap.Context()
-        context.diskless_sbd = diskless
-        context.quiet = True
+        args = bootstrap.Arguments()
+        args.diskless_sbd = diskless
+        args.quiet = True
+        context = bootstrap.GlobalVariables(args)
         context.load_profiles()
         return cls(context).sbd_watchdog_timeout
 
@@ -1266,7 +1267,7 @@ class SBDManager:
         timeout_dict: typing.Dict[str, int] | None = None,
         update_dict: typing.Dict[str, str] | None = None,
         diskless_sbd: bool = False,
-        bootstrap_context: 'bootstrap.Context | None' = None,
+        bootstrap_context: 'bootstrap.GlobalVariables | None' = None,
         crashdump_mode: str | None = None
     ):
         """
@@ -1283,8 +1284,8 @@ class SBDManager:
 
         # From bootstrap init or join process, override the values
         if self.bootstrap_context:
-            self.overwrite_sysconfig = self.bootstrap_context.type == "init"
-            self.diskless_sbd = self.bootstrap_context.diskless_sbd
+            self.overwrite_sysconfig = self.bootstrap_context.args.type == "init"
+            self.diskless_sbd = self.bootstrap_context.args.diskless_sbd
             self.cluster_is_running = self.bootstrap_context.cluster_is_running
 
     def _load_attributes_from_bootstrap(self):
@@ -1297,7 +1298,7 @@ class SBDManager:
                 self.update_dict["SBD_WATCHDOG_TIMEOUT"] = str(timeout_inst.sbd_watchdog_timeout)
             else:
                 self.timeout_dict["msgwait"] = timeout_inst.sbd_msgwait
-        self.update_dict["SBD_WATCHDOG_DEV"] = watchdog.Watchdog.get_watchdog_device(self.bootstrap_context.watchdog)
+        self.update_dict["SBD_WATCHDOG_DEV"] = watchdog.Watchdog.get_watchdog_device(self.bootstrap_context.args.watchdog)
 
     @staticmethod
     def convert_timeout_dict_to_opt_str(timeout_dict: typing.Dict[str, int]) -> str:
@@ -1428,7 +1429,7 @@ class SBDManager:
         """
         Get sbd device on interactive mode
         """
-        if self.bootstrap_context.yes_to_all:
+        if self.bootstrap_context.args.yes_to_all:
             self._warn_and_raise_no_sbd()
         logger.info(self.SBD_STATUS_DESCRIPTION)
         if not bootstrap.confirm("Do you wish to use SBD?"):
@@ -1455,9 +1456,9 @@ class SBDManager:
         -S is for diskless sbd
         """
         # if specified sbd device with -s option
-        device_list = self.bootstrap_context.sbd_devices
+        device_list = self.bootstrap_context.args.sbd_devices
         # else if not use -S option, get sbd device interactively
-        if not device_list and not self.bootstrap_context.diskless_sbd:
+        if not device_list and not self.bootstrap_context.args.diskless_sbd:
             device_list = self.get_sbd_device_interactive()
             self.bootstrap_context.diskless_sbd = self.diskless_sbd
         if not device_list:
