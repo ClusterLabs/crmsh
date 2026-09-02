@@ -103,6 +103,18 @@ class TestGlobalVariables(unittest.TestCase):
         self.assertEqual(args_inst.yes_to_all, True)
         self.assertEqual(args_inst.ipv6, False)
 
+    def test_ipv6_initialization_and_override(self):
+        args_inst = bootstrap.Arguments()
+        args_inst.ipv6 = False
+        ctx = bootstrap.GlobalVariables(args_inst)
+        self.assertEqual(ctx.ipv6, False)
+        self.assertEqual(args_inst.ipv6, False)
+
+        # Override on ctx should not modify args
+        ctx.ipv6 = True
+        self.assertEqual(ctx.ipv6, True)
+        self.assertEqual(args_inst.ipv6, False)
+
     @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice_return(self, mock_qdevice):
         self.ctx_inst._initialize_qdevice()
