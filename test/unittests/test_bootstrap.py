@@ -32,9 +32,9 @@ from crmsh import qdevice
 from crmsh import sbd
 
 
-class TestContext(unittest.TestCase):
+class TestGlobalVariables(unittest.TestCase):
     """
-    Unitary tests for crmsh.bootstrap.Context
+    Unitary tests for crmsh.bootstrap.GlobalVariables
     """
 
     @classmethod
@@ -47,7 +47,8 @@ class TestContext(unittest.TestCase):
         """
         Test setUp.
         """
-        self.ctx_inst = bootstrap.Context()
+        self.args_inst = bootstrap.Arguments()
+        self.ctx_inst = bootstrap.GlobalVariables(self.args_inst)
 
     def tearDown(self):
         """
@@ -63,10 +64,10 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.Validation.valid_admin_ip')
     @mock.patch('crmsh.utils.fatal')
     def test_validate_network_options_one_link(self, mock_error, valid_ip):
-        self.ctx_inst.admin_ip = "10.10.10.123"
-        self.ctx_inst.type = "init"
-        self.ctx_inst.transport = "udpu"
-        self.ctx_inst.nic_addr_list = ["eth1", "eth2"]
+        self.ctx_inst.args.admin_ip = "10.10.10.123"
+        self.ctx_inst.args.type = "init"
+        self.ctx_inst.args.transport = "udpu"
+        self.ctx_inst.args.nic_addr_list = ["eth1", "eth2"]
         mock_error.side_effect = SystemExit
         with self.assertRaises(SystemExit):
             self.ctx_inst._validate_network_options()
@@ -74,10 +75,10 @@ class TestContext(unittest.TestCase):
 
     @mock.patch('crmsh.utils.fatal')
     def test_validate_network_options_max_link(self, mock_error):
-        self.ctx_inst.admin_ip = None
-        self.ctx_inst.type = "init"
-        self.ctx_inst.transport = "knet"
-        self.ctx_inst.nic_addr_list = [f"eth{x}" for x in range(10)]
+        self.ctx_inst.args.admin_ip = None
+        self.ctx_inst.args.type = "init"
+        self.ctx_inst.args.transport = "knet"
+        self.ctx_inst.args.nic_addr_list = [f"eth{x}" for x in range(10)]
         mock_error.side_effect = SystemExit
         with self.assertRaises(SystemExit):
             self.ctx_inst._validate_network_options()
@@ -87,22 +88,20 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     def test_validate_network_options_udp_cloud(self, mock_error, mock_cloud):
         mock_cloud.return_value = "aws"
-        self.ctx_inst.admin_ip = None
-        self.ctx_inst.type = "init"
-        self.ctx_inst.transport = "udp"
-        self.ctx_inst.nic_addr_list = ["eth1"]
+        self.ctx_inst.args.admin_ip = None
+        self.ctx_inst.args.type = "init"
+        self.ctx_inst.args.transport = "udp"
+        self.ctx_inst.args.nic_addr_list = ["eth1"]
         mock_error.side_effect = SystemExit
         with self.assertRaises(SystemExit):
             self.ctx_inst._validate_network_options()
         mock_error.assert_called_once_with("Transport udp(multicast) cannot be used in aws platform")
 
-    @mock.patch('crmsh.bootstrap.Context.initialize_user')
-    def test_set_context(self, mock_initialize_user: mock.MagicMock):
+    def test_set_args(self):
         options = mock.Mock(yes_to_all=True, ipv6=False)
-        ctx = self.ctx_inst.set_context(options)
-        self.assertEqual(ctx.yes_to_all, True)
-        self.assertEqual(ctx.ipv6, False)
-        mock_initialize_user.assert_called_once()
+        args_inst = bootstrap.Arguments.set_args(options)
+        self.assertEqual(args_inst.yes_to_all, True)
+        self.assertEqual(args_inst.ipv6, False)
 
     @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice_return(self, mock_qdevice):
@@ -111,19 +110,21 @@ class TestContext(unittest.TestCase):
 
     @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice(self, mock_qdevice):
-        ctx = crmsh.bootstrap.Context()
-        ctx.qnetd_addr_input = "node3"
-        ctx.qnetd_port = 123
-        ctx.stage = ""
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.qnetd_addr_input = "node3"
+        ctx.args.qnetd_port = 123
+        ctx.args.stage = ""
         ctx._initialize_qdevice()
         mock_qdevice.assert_called_once_with(qnetd_addr='node3', port=123, ssh_user=None, algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
 
     @mock.patch('crmsh.qdevice.QDevice')
     def test_initialize_qdevice_with_user(self, mock_qdevice):
-        ctx = crmsh.bootstrap.Context()
-        ctx.qnetd_addr_input = "alice@node3"
-        ctx.qnetd_port = 123
-        ctx.stage = ""
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.qnetd_addr_input = "alice@node3"
+        ctx.args.qnetd_port = 123
+        ctx.args.stage = ""
         ctx._initialize_qdevice()
         mock_qdevice.assert_called_once_with(qnetd_addr='node3', port=123, ssh_user='alice', algo=None, tie_breaker=None, tls=None, cmds=None, mode=None, is_stage=False)
 
@@ -132,9 +133,10 @@ class TestContext(unittest.TestCase):
     def test_validate_sbd_option_error_together(self, mock_error, mock_installed):
         mock_installed.return_value = True
         mock_error.side_effect = SystemExit
-        ctx = crmsh.bootstrap.Context()
-        ctx.sbd_devices = ["/dev/sda1"]
-        ctx.diskless_sbd = True
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.sbd_devices = ["/dev/sda1"]
+        ctx.args.diskless_sbd = True
         with self.assertRaises(SystemExit):
             ctx._validate_sbd_option()
         mock_error.assert_called_once_with("Can't use -s and -S options together")
@@ -150,9 +152,10 @@ class TestContext(unittest.TestCase):
         mock_installed.return_value = True
         mock_error.side_effect = SystemExit
         crmsh.options.force = False
-        ctx = crmsh.bootstrap.Context()
-        ctx.stage = "sbd"
-        ctx.yes_to_all = True
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.stage = "sbd"
+        ctx.args.yes_to_all = True
         with self.assertRaises(SystemExit):
             ctx._validate_sbd_option()
         mock_error.assert_called_once_with("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
@@ -168,9 +171,10 @@ class TestContext(unittest.TestCase):
         mock_quorate.return_value = True
         mock_installed.return_value = True
         mock_error.side_effect = SystemExit
-        ctx = crmsh.bootstrap.Context()
-        ctx.stage = "sbd"
-        ctx.diskless_sbd = True
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.stage = "sbd"
+        ctx.args.diskless_sbd = True
         mock_active.return_value = True
         with self.assertRaises(SystemExit):
             ctx._validate_sbd_option()
@@ -187,9 +191,10 @@ class TestContext(unittest.TestCase):
         mock_fatal.side_effect = ValueError
         mock_list.return_value = ["node1", "node2"]
         mock_installed.side_effect = [True, False]
-        ctx = crmsh.bootstrap.Context()
-        ctx.stage = "sbd"
-        ctx.diskless_sbd = True
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.stage = "sbd"
+        ctx.args.diskless_sbd = True
         with self.assertRaises(ValueError):
             ctx._validate_sbd_option()
         mock_check_all.assert_called_once_with("setup SBD")
@@ -208,9 +213,10 @@ class TestContext(unittest.TestCase):
         mock_fatal.side_effect = ValueError
         mock_list.return_value = ["node1", "node2"]
         mock_installed.return_value = False
-        ctx = crmsh.bootstrap.Context()
-        ctx.stage = "sbd"
-        ctx.diskless_sbd = True
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.stage = "sbd"
+        ctx.args.diskless_sbd = True
 
         with self.assertRaises(ValueError):
             ctx._validate_sbd_option()
@@ -230,9 +236,10 @@ class TestContext(unittest.TestCase):
         mock_list.return_value = ["node1"]
         mock_fatal.side_effect = ValueError
         mock_installed.side_effect = [True, False]
-        ctx = crmsh.bootstrap.Context()
-        ctx.sbd_devices = ["/dev/sda1"]
-        ctx.stage = "sbd"
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.sbd_devices = ["/dev/sda1"]
+        ctx.args.stage = "sbd"
 
         with self.assertRaises(ValueError):
             ctx._validate_sbd_option()
@@ -247,10 +254,10 @@ class TestContext(unittest.TestCase):
     @mock.patch('socket.gethostbyname')
     @mock.patch('crmsh.network_utils.InterfacesInfo.ip_in_local')
     def test_validate_cluster_node_same_name(self, mock_ip_in_local, mock_gethost, mock_fatal):
-        options = mock.Mock(cluster_node="me", type="join")
-        ctx = crmsh.bootstrap.Context()
-        ctx.cluster_node = "me"
-        ctx.type = "join"
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.cluster_node = "me"
+        ctx.args.type = "join"
         mock_fatal.side_effect = SystemExit
         mock_gethost.return_value = ("10.10.10.41", None)
         mock_ip_in_local.return_value = True
@@ -261,9 +268,10 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('socket.gethostbyname')
     def test_validate_cluster_node_unknown_name(self, mock_gethost, mock_fatal):
-        ctx = crmsh.bootstrap.Context()
-        ctx.cluster_node = "xxxx"
-        ctx.type = "join"
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.cluster_node = "xxxx"
+        ctx.args.type = "join"
         mock_fatal.side_effect = SystemExit
         mock_gethost.side_effect = socket.gaierror("gethostbyname error")
         with self.assertRaises(SystemExit):
@@ -275,8 +283,9 @@ class TestContext(unittest.TestCase):
     @mock.patch('crmsh.utils.package_is_installed')
     def test_validate(self, mock_installed, mock_admin_ip, mock_warning):
         mock_installed.side_effect = [True, True]
-        ctx = crmsh.bootstrap.Context()
-        ctx.admin_ip = "10.10.10.123"
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.admin_ip = "10.10.10.123"
         ctx.qdevice_inst = mock.Mock()
         ctx._validate_sbd_option = mock.Mock()
         ctx._validate_nodes_option = mock.Mock()
@@ -311,7 +320,7 @@ class TestContext(unittest.TestCase):
     def test_detect_platform_s390(self, mock_uname, mock_cloud, mock_status):
         mock_uname.return_value = mock.Mock(machine="s390")
         res = self.ctx_inst.detect_platform()
-        self.assertEqual(res, bootstrap.Context.S390_PROFILE_NAME)
+        self.assertEqual(res, bootstrap.GlobalVariables.S390_PROFILE_NAME)
         mock_uname.assert_called_once_with()
         mock_cloud.assert_not_called()
         mock_status.assert_called_once_with("Detected \"{}\" platform".format(res))
@@ -329,7 +338,7 @@ class TestContext(unittest.TestCase):
         mock_status.assert_called_once_with("Detected \"{}\" platform".format(res))
 
     @mock.patch('os.path.exists')
-    @mock.patch('crmsh.bootstrap.Context.detect_platform')
+    @mock.patch('crmsh.bootstrap.GlobalVariables.detect_platform')
     def test_load_profiles_file_not_exist(self, mock_platform, mock_exists):
         mock_platform.return_value = "s390"
         mock_exists.return_value = False
@@ -340,7 +349,7 @@ class TestContext(unittest.TestCase):
     @mock.patch('yaml.load')
     @mock.patch('builtins.open', new_callable=mock.mock_open, read_data="")
     @mock.patch('os.path.exists')
-    @mock.patch('crmsh.bootstrap.Context.detect_platform')
+    @mock.patch('crmsh.bootstrap.GlobalVariables.detect_platform')
     def test_load_profiles_file_empty(self, mock_platform, mock_exists, mock_open_file, mock_load):
         mock_platform.return_value = "s390"
         mock_exists.return_value = True
@@ -351,11 +360,11 @@ class TestContext(unittest.TestCase):
         mock_open_file.assert_called_once_with(bootstrap.PROFILES_FILE)
         mock_load.assert_called_once_with(mock_open_file.return_value, Loader=yaml.SafeLoader)
 
-    @mock.patch('crmsh.bootstrap.Context.load_specific_profile')
+    @mock.patch('crmsh.bootstrap.GlobalVariables.load_specific_profile')
     @mock.patch('yaml.load')
     @mock.patch('builtins.open', new_callable=mock.mock_open, read_data="")
     @mock.patch('os.path.exists')
-    @mock.patch('crmsh.bootstrap.Context.detect_platform')
+    @mock.patch('crmsh.bootstrap.GlobalVariables.detect_platform')
     def test_load_profiles_file(self, mock_platform, mock_exists, mock_open_file, mock_load, mock_load_specific):
         mock_platform.return_value = "s390"
         mock_exists.return_value = True
@@ -373,7 +382,7 @@ class TestContext(unittest.TestCase):
         mock_open_file.assert_called_once_with(bootstrap.PROFILES_FILE)
         mock_load.assert_called_once_with(mock_open_file.return_value, Loader=yaml.SafeLoader)
         mock_load_specific.assert_has_calls([
-            mock.call(bootstrap.Context.DEFAULT_PROFILE_NAME),
+            mock.call(bootstrap.GlobalVariables.DEFAULT_PROFILE_NAME),
             mock.call("s390")
             ])
 
@@ -382,9 +391,10 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_without_args_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
-        context = bootstrap.Context()
-        context.cluster_node = None
-        context.user_at_node_list = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.cluster_node = None
+        context.args.user_at_node_list = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -393,9 +403,10 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_without_args_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'alice'
-        context = bootstrap.Context()
-        context.cluster_node = None
-        context.user_at_node_list = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.cluster_node = None
+        context.args.user_at_node_list = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -404,9 +415,10 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_cluster_node_without_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
-        context = bootstrap.Context()
-        context.cluster_node = 'node1'
-        context.user_at_node_list = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.cluster_node = 'node1'
+        context.args.user_at_node_list = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -415,13 +427,14 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_cluster_node_with_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
-        context = bootstrap.Context()
-        context.cluster_node = 'alice@node1'
-        context.user_at_node_list = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.cluster_node = 'alice@node1'
+        context.args.user_at_node_list = None
         with self.assertRaises(ValueError):
             context.initialize_user()
-        context.cluster_node = 'root@node1'
-        context.user_at_node_list = None
+        context.args.cluster_node = 'root@node1'
+        context.args.user_at_node_list = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -430,9 +443,10 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_cluster_node_without_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'bob'
-        context = bootstrap.Context()
-        context.cluster_node = 'node1'
-        context.user_at_node_list = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.cluster_node = 'node1'
+        context.args.user_at_node_list = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -441,13 +455,14 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_cluster_node_with_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'bob'
-        context = bootstrap.Context()
-        context.cluster_node = 'alice@node1'
-        context.user_at_node_list = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.cluster_node = 'alice@node1'
+        context.args.user_at_node_list = None
         context.initialize_user()
         self.assertEqual('bob', context.current_user)
-        context.cluster_node = 'root@node1'
-        context.user_at_node_list = None
+        context.args.cluster_node = 'root@node1'
+        context.args.user_at_node_list = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -456,9 +471,10 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_node_list_without_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
-        context = bootstrap.Context()
-        context.user_at_node_list = ['node1', 'node2']
-        context.cluster_node = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.user_at_node_list = ['node1', 'node2']
+        context.args.cluster_node = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -467,13 +483,14 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_node_list_with_user_without_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = None
-        context = bootstrap.Context()
-        context.user_at_node_list = ['alice@node1', 'alice@node2']
-        context.cluster_node = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.user_at_node_list = ['alice@node1', 'alice@node2']
+        context.args.cluster_node = None
         with self.assertRaises(ValueError):
             context.initialize_user()
-        context.user_at_node_list = ['root@node1', 'root@node2']
-        context.cluster_node = None
+        context.args.user_at_node_list = ['root@node1', 'root@node2']
+        context.args.cluster_node = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -482,9 +499,10 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_node_list_without_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'bob'
-        context = bootstrap.Context()
-        context.user_at_node_list = ['node1', 'node2']
-        context.cluster_node = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.user_at_node_list = ['node1', 'node2']
+        context.args.cluster_node = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -493,17 +511,18 @@ class TestContext(unittest.TestCase):
     def test_initialize_user_node_list_with_user_with_sudoer(self, mock_getuser: mock.MagicMock, mock_get_sudoer: mock.MagicMock):
         mock_getuser.return_value = 'root'
         mock_get_sudoer.return_value = 'bob'
-        context = bootstrap.Context()
-        context.user_at_node_list = ['alice@node1', 'root@node2']
-        context.cluster_node = None
+        args = bootstrap.Arguments()
+        context = bootstrap.GlobalVariables(args)
+        context.args.user_at_node_list = ['alice@node1', 'root@node2']
+        context.args.cluster_node = None
         with self.assertRaises(ValueError):
             context.initialize_user()
-        context.user_at_node_list = ['alice@node1', 'alice@node2']
-        context.cluster_node = None
+        context.args.user_at_node_list = ['alice@node1', 'alice@node2']
+        context.args.cluster_node = None
         context.initialize_user()
         self.assertEqual('bob', context.current_user)
-        context.user_at_node_list = ['root@node1', 'root@node2']
-        context.cluster_node = None
+        context.args.user_at_node_list = ['root@node1', 'root@node2']
+        context.args.cluster_node = None
         context.initialize_user()
         self.assertEqual('root', context.current_user)
 
@@ -539,7 +558,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
     @mock.patch('crmsh.sbd.SBDManager.unset_sbd_delay_start')
     def test_start_pacemaker(self, mock_unset_delay_start,  mock_start):
-        bootstrap._context = None
+        bootstrap._global_variables = None
         node_list = ["node1", "node2", "node3", "node4", "node5", "node6"]
         bootstrap.start_pacemaker(node_list)
         mock_start.assert_has_calls([
@@ -556,7 +575,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.configure_ssh_key')
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
     def test_init_ssh(self, mock_start_service, mock_config_ssh, mock_change_user_shell):
-        bootstrap._context = mock.Mock(current_user="alice", user_at_node_list=[], use_ssh_agent=False)
+        bootstrap._global_variables = mock.Mock(current_user='alice', args=mock.Mock(user_at_node_list=[], use_ssh_agent=False))
         bootstrap.init_ssh()
         mock_start_service.assert_called_once_with("sshd.service", enable=True)
         mock_config_ssh.assert_has_calls([
@@ -569,7 +588,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.is_nologin')
     def test_change_user_shell_return(self, mock_nologin, mock_status, mock_confirm):
-        bootstrap._context = mock.Mock(yes_to_all=False)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False))
         mock_nologin.return_value = True
         mock_confirm.return_value = False
 
@@ -581,7 +600,7 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     @mock.patch('crmsh.bootstrap.is_nologin')
     def test_change_user_shell(self, mock_nologin, mock_invoke):
-        bootstrap._context = mock.Mock(yes_to_all=True)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=True))
         mock_nologin.return_value = True
 
         bootstrap.change_user_shell("hacluster")
@@ -708,7 +727,7 @@ done
             mock_swap_public_ssh_key_for_secondary_user,
             mock_setup_passwordless_with_other_nodes,
     ):
-        bootstrap._context = mock.Mock(stage=None)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(stage=None))
         ssh_key = mock.Mock(crmsh.ssh_key.InMemoryPublicKey)
         ssh_key.fingerprint.return_value = 'foo'
         mock_environ.get.return_value = '/nonexist'
@@ -750,7 +769,7 @@ done
             mock_local_shell,
             mock_ssh_copy_id_no_raise,
     ):
-        bootstrap._context = mock.Mock(stage=None)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(stage=None))
         mock_ssh_copy_id_no_raise.return_value = mock.Mock(returncode=1)
 
         with self.assertRaisesRegex(ValueError, "Failed to login to bob@node1"):
@@ -790,7 +809,7 @@ done
             mock_setup_passwordless_with_other_nodes,
             mock_generate_ssh_key_pair_on_remote,
     ):
-        bootstrap._context = mock.Mock(stage=None)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(stage=None))
         in_memory_key = mock.Mock(spec=crmsh.ssh_key.InMemoryPublicKey)
         mock_ssh_copy_id_no_raise.return_value = mock.Mock(returncode=0, public_keys=[in_memory_key])
         mock_ssh_shell.return_value.subprocess_run_without_input.return_value = mock.Mock(returncode=0)
@@ -835,7 +854,8 @@ done
 
     @mock.patch('crmsh.utils.this_node')
     def test_bootstrap_add_return(self, mock_this_node):
-        ctx = mock.Mock(user_at_node_list=[], use_ssh_agent=False)
+        ctx = mock.Mock()
+        ctx.args = mock.Mock(user_at_node_list=[], use_ssh_agent=False)
         bootstrap.bootstrap_add(ctx)
         mock_this_node.assert_not_called()
 
@@ -845,8 +865,12 @@ done
     def test_bootstrap_add(self, mock_this_node, mock_info, mock_run):
         mock_interfaces_inst = mock.Mock(input_nic_list=["eth1", "eth2"])
         ctx = mock.Mock(
-            current_user="alice", user_at_node_list=["bob@node2", "carol@node3"], nic_list=["eth1"],
-            use_ssh_agent=True, interfaces_inst=mock_interfaces_inst,
+            current_user="alice", nic_list=["eth1"],
+            interfaces_inst=mock_interfaces_inst,
+        )
+        ctx.args = mock.Mock(
+            user_at_node_list=["bob@node2", "carol@node3"],
+            use_ssh_agent=True,
         )
         mock_this_node.return_value = "node1"
         bootstrap.bootstrap_add(ctx)
@@ -863,8 +887,12 @@ done
     def test_bootstrap_add_no_ssh_agent(self, mock_this_node, mock_info, mock_run):
         mock_interfaces_inst = mock.Mock(input_nic_list=["eth1", "eth2"])
         ctx = mock.Mock(
-            current_user="alice", user_at_node_list=["bob@node2", "carol@node3"], nic_list=["eth1"],
-            use_ssh_agent=False, interfaces_inst=mock_interfaces_inst,
+            current_user="alice", nic_list=["eth1"],
+            interfaces_inst=mock_interfaces_inst,
+        )
+        ctx.args = mock.Mock(
+            user_at_node_list=["bob@node2", "carol@node3"],
+            use_ssh_agent=False,
         )
         mock_this_node.return_value = "node1"
         bootstrap.bootstrap_add(ctx)
@@ -890,7 +918,7 @@ done
     @mock.patch('crmsh.sh.ClusterShell')
     @mock.patch('crmsh.sh.LocalShell')
     @mock.patch('os.environ')
-    @mock.patch('crmsh.bootstrap._context', current_user='carol', use_ssh_agent=True)
+    @mock.patch('crmsh.bootstrap._global_variables', current_user='carol', use_ssh_agent=True)
     def test_setup_passwordless_with_other_nodes_failed_fetch_node_list(
             self,
             mock_context,
@@ -910,6 +938,7 @@ done
             mock_swap_public_ssh_key,
             mock_swap_key_for_hacluster,
     ):
+        mock_context.args = mock.Mock(use_ssh_agent=True)
         mock_env.get.return_value = ''
         mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (255, '', 'foo')
         with self.assertRaises(ValueError) as e:
@@ -934,7 +963,7 @@ done
     @mock.patch('crmsh.sh.ClusterShell')
     @mock.patch('crmsh.sh.LocalShell')
     @mock.patch('os.environ')
-    @mock.patch('crmsh.bootstrap._context', current_user='carol', use_ssh_agent=True)
+    @mock.patch('crmsh.bootstrap._global_variables', current_user='carol', use_ssh_agent=True)
     def test_setup_passwordless_with_other_nodes_failed_fetch_hostname(
             self,
             mock_context,
@@ -955,6 +984,7 @@ done
             mock_swap_key_for_hacluster,
     ):
         # conditions
+        mock_context.args = mock.Mock(use_ssh_agent=True)
         mock_env.get.return_value = ''
         mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.side_effect = [
             (0, '', ''),
@@ -992,7 +1022,7 @@ done
     @mock.patch('crmsh.sh.ClusterShell')
     @mock.patch('crmsh.sh.LocalShell')
     @mock.patch('os.environ')
-    @mock.patch('crmsh.bootstrap._context', current_user='carol', use_ssh_agent=True)
+    @mock.patch('crmsh.bootstrap._global_variables', current_user='carol', use_ssh_agent=True)
     def test_setup_passwordless_with_other_nodes(
             self,
             mock_context,
@@ -1013,6 +1043,7 @@ done
             mock_swap_key_for_hacluster,
     ):
         # conditions
+        mock_context.args = mock.Mock(use_ssh_agent=True)
         mock_env.get.return_value = ''
         mock_cluster_shell.return_value.get_rc_stdout_stderr_without_input.return_value = (0, 'node1', '')
         mock_get_cluster_nodes.return_value = [cibquery.ClusterNode(1, 'node1'), cibquery.ClusterNode(2, 'node2')]
@@ -1061,7 +1092,7 @@ done
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
     def test_is_online_local_offline(self, mock_is_online, mock_get_hostname, mock_this_node):
-        bootstrap._context = mock.Mock(cluster_node='node2')
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(cluster_node='node2'))
         mock_this_node.return_value = "node1"
         mock_is_online.return_value = False
 
@@ -1075,7 +1106,7 @@ done
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
     def test_is_online_on_init_node(self, mock_is_online, mock_get_hostname, mock_this_node):
-        bootstrap._context = mock.Mock(cluster_node=None)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(cluster_node=None))
         mock_this_node.return_value = "node1"
         mock_is_online.return_value = True
 
@@ -1096,8 +1127,8 @@ done
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_is_online_peer_offline(self, mock_parser, mock_get_hostname, mock_this_node,
             mock_copy, mock_corosync_conf, mock_sync, mock_stop_service, mock_error, mock_cluster_shell):
-        bootstrap._context = mock.Mock(cluster_node='node1')
-        bootstrap._context.get_corosync_conf_orig.return_value = "/tmp/crmsh_tempfile"
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(cluster_node='node1'))
+        bootstrap._global_variables.get_corosync_conf_orig.return_value = "/tmp/crmsh_tempfile"
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
         mock_parser_inst.is_node_online.side_effect = [True, False]
@@ -1114,7 +1145,7 @@ done
             mock.call(),
             mock.call()
             ])
-        mock_copy.assert_called_once_with(bootstrap._context.get_corosync_conf_orig.return_value, "/etc/corosync/corosync.conf")
+        mock_copy.assert_called_once_with(bootstrap._global_variables.get_corosync_conf_orig.return_value, "/etc/corosync/corosync.conf")
         mock_sync.assert_called_once_with("/etc/corosync/corosync.conf", "node1")
         mock_stop_service.assert_called_once_with("corosync")
         mock_error.assert_called_once_with("Cannot see peer node \"node1\", please check the communication IP")
@@ -1129,7 +1160,7 @@ done
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
     def test_is_online_both_online(self, mock_is_online, mock_get_hostname, mock_this_node,
             mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
-        bootstrap._context = mock.Mock(cluster_node='node2')
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(cluster_node='node2'))
         mock_is_online.side_effect = [True, True]
         mock_this_node.return_value = "node2"
         mock_get_hostname.return_value = "node2"
@@ -1170,7 +1201,7 @@ done
 
     @mock.patch('crmsh.network_utils.InterfacesInfo')
     def test_init_network_input_nic_list(self, mock_interface_info):
-        bootstrap._context = mock.Mock(ipv6=None, nic_addr_list=["eth1", "eth2"])
+        bootstrap._global_variables = mock.Mock(ipv6=None, args=mock.Mock(ipv6=None, nic_addr_list=['eth1', 'eth2']))
         mock_interface_info_inst = mock.Mock()
         mock_interface_info.return_value = mock_interface_info_inst
         mock_interface_info_inst.input_nic_list = ["eth1", "eth2"]
@@ -1178,12 +1209,12 @@ done
 
         bootstrap.init_network()
 
-        self.assertEqual(bootstrap._context.default_nic, "eth1")
-        self.assertEqual(bootstrap._context.default_ip_list, mock_interface_info_inst.input_addr_list)
+        self.assertEqual(bootstrap._global_variables.default_nic, "eth1")
+        self.assertEqual(bootstrap._global_variables.default_ip_list, mock_interface_info_inst.input_addr_list)
 
     @mock.patch('crmsh.network_utils.InterfacesInfo')
     def test_init_network_input(self, mock_interface_info):
-        bootstrap._context = mock.Mock(ipv6=None, nic_addr_list=[])
+        bootstrap._global_variables = mock.Mock(ipv6=None, args=mock.Mock(ipv6=None, nic_addr_list=[]))
         bootstrap.init_network()
 
     @mock.patch('crmsh.utils.HostUserConfig')
@@ -1197,7 +1228,7 @@ done
     @mock.patch('crmsh.bootstrap.UserOfHost.instance')
     @mock.patch('crmsh.bootstrap._select_user_pair_for_ssh_for_secondary_components')
     def test_setup_passwordless_ssh_for_qnetd_add_keys(self, mock_select, mock_user_of_host, mock_check_passwd, mock_ssh_copy_id, mock_this_node, mock_remote_public_key_from, mock_in_memory_public_key, mock_cluster_shell, mock_authorized_key_manager, mock_host_user_config_class):
-        bootstrap._context = mock.Mock(qnetd_addr_input="user@qnetd-node")
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(qnetd_addr_input='user@qnetd-node'))
         mock_select.side_effect = [("bob", "bob", "qnetd-node"), ("bob", "bob", "node2")]
         mock_user_of_host_instance = mock.Mock()
         mock_user_of_host.return_value = mock_user_of_host_instance
@@ -1214,14 +1245,14 @@ done
         bootstrap._setup_passwordless_ssh_for_qnetd(["node1", "node2"])
 
         mock_select.assert_has_calls([
-            mock.call(bootstrap._context.qnetd_addr_input),
+            mock.call(bootstrap._global_variables.args.qnetd_addr_input),
             mock.call('node2')
             ])
 
     @mock.patch('crmsh.service_manager.ServiceManager.disable_service')
     @mock.patch('crmsh.bootstrap.configure_qdevice_interactive')
     def test_init_qdevice_no_config(self, mock_configure, mock_disable):
-        bootstrap._context = mock.Mock(qdevice_inst=None)
+        bootstrap._global_variables = mock.Mock(qdevice_inst=None, args=mock.Mock())
         bootstrap.init_qdevice()
         mock_configure.assert_called_once_with()
         mock_disable.assert_called_once_with("corosync-qdevice.service")
@@ -1233,7 +1264,7 @@ done
     @mock.patch('logging.Logger.info')
     def test_init_qdevice_unable_to_restart_cluster(self, mock_info, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode,
             mock_able_to_restart_cluster, mock_do_init_qdevice):
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
+        bootstrap._global_variables = mock.Mock(qdevice_inst=self.qdevice_with_ip, args=mock.Mock(stage='qdevice'))
         mock_evaluate_qdevice_quorum_effect.return_value = qdevice.QdevicePolicy.QDEVICE_RESTART_LATER
         enable_value = True
         cm = mock.Mock()
@@ -1255,7 +1286,7 @@ done
     @mock.patch('logging.Logger.info')
     def test_init_qdevice_able_to_restart_cluster(self, mock_info, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode,
             mock_able_to_restart_cluster, mock_do_init_qdevice):
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
+        bootstrap._global_variables = mock.Mock(qdevice_inst=self.qdevice_with_ip, args=mock.Mock(stage='qdevice'))
         mock_evaluate_qdevice_quorum_effect.return_value = qdevice.QdevicePolicy.QDEVICE_RESTART_LATER
         enable_value = True
         cm = mock.Mock()
@@ -1275,11 +1306,11 @@ done
     @mock.patch('crmsh.bootstrap._setup_passwordless_ssh_for_qnetd')
     @mock.patch('crmsh.qdevice.get_node_list')
     def test_do_init_qdevice_already_configured(self, mock_list_nodes, mock_setup_passwordless_ssh_for_qnetd, mock_is_qdevice_configured, mock_confirm):
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
+        bootstrap._global_variables = mock.Mock(qdevice_inst=self.qdevice_with_ip, args=mock.Mock(stage='qdevice'))
         mock_list_nodes.return_value = ["node1"]
         mock_is_qdevice_configured.return_value = True
         mock_confirm.return_value = False
-        bootstrap._context.qdevice_inst.start_qdevice_service = mock.Mock()
+        bootstrap._global_variables.qdevice_inst.start_qdevice_service = mock.Mock()
 
         bootstrap.do_init_qdevice(True)
 
@@ -1287,7 +1318,7 @@ done
         mock_is_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Qdevice is already configured - overwrite?")
         mock_setup_passwordless_ssh_for_qnetd.assert_called_once_with(["node1"])
-        bootstrap._context.qdevice_inst.start_qdevice_service.assert_called_once_with()
+        bootstrap._global_variables.qdevice_inst.start_qdevice_service.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.adjust_properties')
     @mock.patch('crmsh.corosync.is_qdevice_configured')
@@ -1295,13 +1326,13 @@ done
     @mock.patch('crmsh.qdevice.get_node_list')
     def test_do_init_qdevice(self, mock_list_nodes, mock_setup_passwordless_ssh_for_qnetd,
             mock_is_qdevice_configured, mock_adjust_properties):
-        bootstrap._context = mock.Mock(qdevice_inst=self.qdevice_with_ip, stage="qdevice")
+        bootstrap._global_variables = mock.Mock(qdevice_inst=self.qdevice_with_ip, args=mock.Mock(stage='qdevice'))
         mock_list_nodes.return_value = ["node1"]
         mock_is_qdevice_configured.return_value = False
         self.qdevice_with_ip.set_cluster_name = mock.Mock()
         self.qdevice_with_ip.validate_and_start_qnetd = mock.Mock()
         self.qdevice_with_ip.certificate_and_config_qdevice = mock.Mock()
-        bootstrap._context.qdevice_inst.start_qdevice_service = mock.Mock()
+        bootstrap._global_variables.qdevice_inst.start_qdevice_service = mock.Mock()
 
         bootstrap.do_init_qdevice(True)
 
@@ -1311,18 +1342,18 @@ done
         self.qdevice_with_ip.set_cluster_name.assert_called_once_with()
         self.qdevice_with_ip.validate_and_start_qnetd.assert_called_once_with()
         self.qdevice_with_ip.certificate_and_config_qdevice.assert_called_once_with()
-        bootstrap._context.qdevice_inst.start_qdevice_service.assert_called_once_with()
+        bootstrap._global_variables.qdevice_inst.start_qdevice_service.assert_called_once_with()
 
     @mock.patch('crmsh.bootstrap.prompt_for_string')
     def test_configure_qdevice_interactive_return(self, mock_prompt):
-        bootstrap._context = mock.Mock(yes_to_all=True)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=True))
         bootstrap.configure_qdevice_interactive()
         mock_prompt.assert_not_called()
 
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.confirm')
     def test_configure_qdevice_interactive_not_confirm(self, mock_confirm, mock_info):
-        bootstrap._context = mock.Mock(yes_to_all=False)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False))
         mock_confirm.return_value = False
         bootstrap.configure_qdevice_interactive()
         mock_confirm.assert_called_once_with("Do you want to configure QDevice?")
@@ -1332,7 +1363,7 @@ done
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.confirm')
     def test_configure_qdevice_interactive_not_installed(self, mock_confirm, mock_info, mock_installed, mock_error):
-        bootstrap._context = mock.Mock(yes_to_all=False)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False))
         mock_confirm.side_effect = [True, False]
         mock_installed.return_value = False
         bootstrap.configure_qdevice_interactive()
@@ -1347,7 +1378,7 @@ done
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.confirm')
     def test_configure_qdevice_interactive(self, mock_confirm, mock_info, mock_installed, mock_prompt, mock_qdevice):
-        bootstrap._context = mock.Mock(yes_to_all=False)
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False))
         mock_confirm.return_value = True
         mock_installed.return_value = True
         mock_prompt.side_effect = ["alice@qnetd-node", 5403, "ffsplit", "lowest", "on", None]
@@ -1587,7 +1618,7 @@ done
     @mock.patch('os.path.exists')
     def test_init_corosync_warning_non_knet(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
         mock_exists.return_value = False
-        bootstrap._context = mock.Mock(transport='udpu')
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(transport='udpu'))
         bootstrap.init_corosync()
         mock_warning.assert_called_once_with(
             'Transport %s is deprecated and does not support encryption and message authentication. '
@@ -1607,7 +1638,7 @@ done
             'corosync.totem.crypto_hash': 'sha256',
             'corosync.totem.secauth': None
         }
-        bootstrap._context = mock.Mock(transport='knet', profiles_dict=profiles)
+        bootstrap._global_variables = mock.Mock(profiles_dict=profiles, args=mock.Mock(transport='knet'))
         bootstrap.init_corosync()
         mock_warning.assert_not_called()
 
@@ -1623,7 +1654,7 @@ done
             'corosync.totem.crypto_hash': 'sha256',
             'corosync.totem.secauth': None
         }
-        bootstrap._context = mock.Mock(transport='knet', profiles_dict=profiles)
+        bootstrap._global_variables = mock.Mock(profiles_dict=profiles, args=mock.Mock(transport='knet'))
         bootstrap.init_corosync()
         mock_warning.assert_called_once_with(
             'It is deprecated to disable knet encryption/authentication. '
@@ -1642,7 +1673,7 @@ done
             'corosync.totem.crypto_hash': 'sha256',
             'corosync.totem.secauth': 'on'
         }
-        bootstrap._context = mock.Mock(transport='knet', profiles_dict=profiles)
+        bootstrap._global_variables = mock.Mock(profiles_dict=profiles, args=mock.Mock(transport='knet'))
         bootstrap.init_corosync()
         mock_warning.assert_called_once_with(
             'It is deprecated to disable knet encryption/authentication. '
@@ -1710,14 +1741,14 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.Validation._is_local_addr')
     def test_valid_ucast_ip(self, mock_local_addr):
         interfaces_inst = mock.Mock(ip_list=["10.10.10.2", "10.10.10.3"])
-        bootstrap._context = mock.Mock(interfaces_inst=interfaces_inst)
+        bootstrap._global_variables = mock.Mock(interfaces_inst=interfaces_inst, args=mock.Mock())
         bootstrap.Validation.valid_ucast_ip("10.10.10.1")
         mock_local_addr.assert_called_once_with(["10.10.10.2", "10.10.10.3"])
 
     @mock.patch('crmsh.bootstrap.Validation._is_local_addr')
     def test_valid_mcast_ip(self, mock_local_addr):
         interfaces_inst = mock.Mock(ip_list=["10.10.10.2", "10.10.10.3"], network_list=["10.10.10.0"])
-        bootstrap._context = mock.Mock(interfaces_inst=interfaces_inst)
+        bootstrap._global_variables = mock.Mock(interfaces_inst=interfaces_inst, args=mock.Mock())
         bootstrap.Validation.valid_mcast_ip("10.10.10.1")
         mock_local_addr.assert_called_once_with(["10.10.10.2", "10.10.10.3", "10.10.10.0"])
 
@@ -1742,10 +1773,10 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.init')
-    @mock.patch('crmsh.bootstrap.Context')
+    @mock.patch('crmsh.bootstrap.GlobalVariables')
     def test_bootstrap_remove_cluster_is_active(self, mock_context, mock_init, mock_active,
             mock_error):
-        mock_context_inst = mock.Mock(qdevice=False, cluster_node=None)
+        mock_context_inst = mock.Mock(qdevice=False, args=mock.Mock(cluster_node=None))
         mock_context.return_value = mock_context_inst
         mock_active.return_value = False
         mock_error.side_effect = SystemExit
@@ -1761,10 +1792,10 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.init')
-    @mock.patch('crmsh.bootstrap.Context')
+    @mock.patch('crmsh.bootstrap.GlobalVariables')
     def test_bootstrap_remove_qdevice(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice):
-        mock_context_inst = mock.Mock(qdevice=True, cluster_node=None)
+        mock_context_inst = mock.Mock(qdevice=True, args=mock.Mock(cluster_node=None))
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
 
@@ -1780,9 +1811,9 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.init')
-    @mock.patch('crmsh.bootstrap.Context')
+    @mock.patch('crmsh.bootstrap.GlobalVariables')
     def test_bootstrap_remove_qdevice_cluster_node(self, mock_context, mock_init, mock_active, mock_error):
-        mock_context_inst = mock.Mock(qdevice=True, cluster_node="node1")
+        mock_context_inst = mock.Mock(qdevice=True, args=mock.Mock(cluster_node='node1'))
         mock_context.return_value = mock_context_inst
         mock_error.side_effect = SystemExit
 
@@ -1799,10 +1830,10 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.init')
-    @mock.patch('crmsh.bootstrap.Context')
+    @mock.patch('crmsh.bootstrap.GlobalVariables')
     def test_bootstrap_remove_no_cluster_node(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_status, mock_prompt):
-        mock_context_inst = mock.Mock(yes_to_all=False, cluster_node=None, qdevice_rm_flag=None)
+        mock_context_inst = mock.Mock(args=mock.Mock(yes_to_all=False, cluster_node=None, qdevice_rm_flag=None))
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
         mock_prompt.return_value = None
@@ -1827,11 +1858,11 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.init')
-    @mock.patch('crmsh.bootstrap.Context')
+    @mock.patch('crmsh.bootstrap.GlobalVariables')
     def test_bootstrap_remove_no_confirm(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_check_all_nodes):
         crmsh.options.force = False
-        mock_context_inst = mock.Mock(cluster_node="node1", force=False, qdevice_rm_flag=None)
+        mock_context_inst = mock.Mock(args=mock.Mock(cluster_node='node1', force=False, qdevice_rm_flag=None))
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
         mock_hostname.return_value = "node1"
@@ -1857,10 +1888,10 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.init')
-    @mock.patch('crmsh.bootstrap.Context')
+    @mock.patch('crmsh.bootstrap.GlobalVariables')
     def test_bootstrap_remove_self_need_force(self, mock_context, mock_init, mock_active,
                                               mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_check_all_nodes):
-        mock_context_inst = mock.Mock(cluster_node="node1", force=False, qdevice_rm_flag=None)
+        mock_context_inst = mock.Mock(args=mock.Mock(cluster_node='node1', force=False, qdevice_rm_flag=None))
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
         mock_hostname.return_value = "node1"
@@ -1891,10 +1922,10 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.init')
-    @mock.patch('crmsh.bootstrap.Context')
+    @mock.patch('crmsh.bootstrap.GlobalVariables')
     def test_bootstrap_remove_self(self, mock_context, mock_init, mock_active,
                                    mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_self, mock_finished, mock_check_all_nodes):
-        mock_context_inst = mock.Mock(cluster_node="node1", force=True, qdevice_rm_flag=None)
+        mock_context_inst = mock.Mock(args=mock.Mock(cluster_node='node1', force=True, qdevice_rm_flag=None))
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
         mock_hostname.return_value = "node1"
@@ -1923,10 +1954,10 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.init')
-    @mock.patch('crmsh.bootstrap.Context')
+    @mock.patch('crmsh.bootstrap.GlobalVariables')
     def test_bootstrap_remove_not_in_cluster(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node, mock_crm_mon_parser, mock_check_all_nodes):
-        mock_context_inst = mock.Mock(cluster_node="node2", force=True, qdevice_rm_flag=None)
+        mock_context_inst = mock.Mock(args=mock.Mock(cluster_node='node2', force=True, qdevice_rm_flag=None))
         mock_context.return_value = mock_context_inst
         mock_active.return_value = [True, True]
         mock_hostname.return_value = "node2"
@@ -1960,11 +1991,11 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     @mock.patch('crmsh.bootstrap.init')
-    @mock.patch('crmsh.bootstrap.Context')
+    @mock.patch('crmsh.bootstrap.GlobalVariables')
     def test_bootstrap_remove(self, mock_context, mock_init, mock_active,
             mock_error, mock_qdevice, mock_hostname, mock_confirm, mock_this_node,
             mock_crm_mon_parser, mock_remove, mock_check_all_nodes):
-        mock_context_inst = mock.Mock(cluster_node="node2", qdevice_rm_flag=None, force=True)
+        mock_context_inst = mock.Mock(args=mock.Mock(cluster_node='node2', qdevice_rm_flag=None, force=True))
         mock_context.return_value = mock_context_inst
         mock_active.side_effect = [True, True]
         mock_hostname.return_value = "node2"
@@ -1998,7 +2029,7 @@ class TestValidation(unittest.TestCase):
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
-            bootstrap._context = mock.Mock(cluster_node="node1", yes_to_all=True)
+            bootstrap._global_variables = mock.Mock(args=mock.Mock(cluster_node='node1', yes_to_all=True))
             bootstrap.remove_self()
 
         mock_list.assert_called_once_with()
@@ -2009,7 +2040,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('os.path.exists')
     @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
     def test_rm_configuration_files(self, mock_run, mock_exists, mock_rm_sbd):
-        bootstrap._context = mock.Mock(rm_list=["file1", "file2"])
+        bootstrap._global_variables = mock.Mock(rm_list=['file1', 'file2'], args=mock.Mock())
         mock_exists.return_value = True
         bootstrap.rm_configuration_files()
         mock_run.assert_has_calls([
@@ -2087,7 +2118,7 @@ class TestValidation(unittest.TestCase):
         mock_error.side_effect = SystemExit
 
         with self.assertRaises(SystemExit):
-            bootstrap._context = mock.Mock(rm_list=["file1", "file2"])
+            bootstrap._global_variables = mock.Mock(rm_list=['file1', 'file2'], args=mock.Mock())
             bootstrap.remove_node_from_cluster('node1')
 
         mock_get_nodeid.assert_called_once_with('node1')
@@ -2137,7 +2168,7 @@ class TestValidation(unittest.TestCase):
         mock_cluster_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_cluster_shell_inst
 
-        bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
+        bootstrap._global_variables = mock.Mock(rm_list=['file1', 'file2'], args=mock.Mock(cluster_node='node1'))
         bootstrap.remove_node_from_cluster('node1')
 
         mock_get_nodeid.assert_called_once_with('node1')
@@ -2193,7 +2224,7 @@ class TestValidation(unittest.TestCase):
         mock_cluster_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_cluster_shell_inst
 
-        bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
+        bootstrap._global_variables = mock.Mock(rm_list=['file1', 'file2'], args=mock.Mock(cluster_node='node1'))
         bootstrap.remove_node_from_cluster('node1')
 
         mock_get_nodeid.assert_called_once_with('node1')
@@ -2242,7 +2273,7 @@ class TestValidation(unittest.TestCase):
         mock_cluster_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_cluster_shell_inst
 
-        bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
+        bootstrap._global_variables = mock.Mock(rm_list=['file1', 'file2'], args=mock.Mock(cluster_node='node1'))
         bootstrap.remove_node_from_cluster('node1')
 
         mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
@@ -2285,7 +2316,7 @@ class TestValidation(unittest.TestCase):
         mock_del_node.return_value = False
         mock_error.side_effect = SystemExit
 
-        bootstrap._context = mock.Mock(cluster_node="node1", rm_list=["file1", "file2"])
+        bootstrap._global_variables = mock.Mock(rm_list=['file1', 'file2'], args=mock.Mock(cluster_node='node1'))
         with self.assertRaises(SystemExit):
             bootstrap.remove_node_from_cluster('node1')
 
