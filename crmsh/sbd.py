@@ -757,6 +757,7 @@ class SBDConfigChecker(SBDTimeout):
                 else:
                     raise FixFailure(f"Failed to fix {name} issue")
 
+        watchdog.Watchdog.warn_if_using_softdog()
         SBDManager.warn_diskless_sbd()
 
         return SBDConfigChecker._return_helper(check_res_list)

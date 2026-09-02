@@ -1,8 +1,13 @@
+import logging
 import re
+
 from . import utils
 from .sh import ShellUtils
 from . import sh
 from . import sbd
+
+
+logger = logging.getLogger(__name__)
 
 
 class Watchdog(object):
@@ -11,7 +16,9 @@ class Watchdog(object):
     """
     WATCHDOG_CFG = "/etc/modules-load.d/watchdog.conf"
     QUERY_CMD = "sudo sbd query-watchdog"
-    DEVICE_FIND_REGREX = "\\[[0-9]+\\] (/dev/.*)\n.*\nDriver: (.*)"
+    # output format might like:
+    #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
+    DEVICE_FIND_REGREX = r"[ \t]*\[[0-9]+\] (/dev/[^\n]+)\n[ \t]*Identity: ([^\n]+)\n[ \t]*Driver: ([^\n]+)"
 
     def __init__(self, _input=None, remote_user=None, peer_host=None):
         """
@@ -28,25 +35,23 @@ class Watchdog(object):
         return self._watchdog_device_name
 
     @staticmethod
-    def verify_watchdog_device(dev, ignore_error=False):
+    def verify_watchdog_device(dev):
         """
         Use wdctl to verify watchdog device
         """
-        rc, _, err = ShellUtils().get_stdout_stderr("wdctl {}".format(dev))
+        rc, _, err = ShellUtils().get_stdout_stderr(f"wdctl {dev}")
         if rc != 0:
-            if ignore_error:
-                return False
-            else:
-                utils.fatal("Invalid watchdog device {}: {}".format(dev, err))
+            utils.fatal(f"Invalid watchdog device {dev}: {err}")
         return True
 
     @staticmethod
-    def _load_watchdog_driver(driver):
+    def _load_watchdog_driver(driver, join=False):
         """
         Load specific watchdog driver
         """
-        ShellUtils().get_stdout_stderr(f"echo {driver} > {Watchdog.WATCHDOG_CFG}")
-        ShellUtils().get_stdout_stderr("systemctl restart systemd-modules-load")
+        cmd = f"echo {driver} > {Watchdog.WATCHDOG_CFG} && systemctl restart systemd-modules-load"
+        node_list = utils.this_node() if join else None
+        utils.cluster_run_cmd(cmd, node_list)
 
     @staticmethod
     def get_watchdog_device_from_sbd_config():
@@ -64,6 +69,49 @@ class Watchdog(object):
         _, out, _ = ShellUtils().get_stdout_stderr("lsmod")
         return re.search("\n{}\\s+".format(driver), out)
 
+    @staticmethod
+    def _get_configured_watchdog_driver():
+        """
+        Get watchdog driver name from modules-load config.
+        """
+        try:
+            with open(Watchdog.WATCHDOG_CFG) as f:
+                return f.readline().strip()
+        except OSError:
+            return None
+
+    @classmethod
+    def get_watchdog_info(cls, out, sbd_only=False):
+        """
+        Parse sbd query-watchdog output into {device_name: driver_name}.
+        """
+        if not out:
+            return {}
+
+        watchdog_info = {}
+        for device, identity, driver in re.findall(cls.DEVICE_FIND_REGREX, out):
+            if sbd_only and not re.search(r"Busy: .*sbd", identity):
+                continue
+            if driver == "<unknown>":
+                configured_driver = cls._get_configured_watchdog_driver()
+                if configured_driver and cls._driver_is_loaded(configured_driver):
+                    driver = configured_driver
+            watchdog_info[device] = driver
+        return watchdog_info
+
+    @staticmethod
+    def warn_if_using_softdog():
+        """
+        Warn if SBD is using softdog as watchdog driver.
+        """
+        rc, out, err = ShellUtils().get_stdout_stderr(Watchdog.QUERY_CMD)
+        if rc != 0 or not out:
+            logger.debug("Failed to run %s: %s", Watchdog.QUERY_CMD, err)
+            return
+
+        if "softdog" in Watchdog.get_watchdog_info(out, sbd_only=True).values():
+            logger.warning("It's not recommended to use softdog as watchdog driver in production environment")
+
     def _set_watchdog_info(self):
         """
         Set watchdog info through sbd query-watchdog command
@@ -71,9 +119,7 @@ class Watchdog(object):
         """
         rc, out, err = ShellUtils().get_stdout_stderr(self.QUERY_CMD)
         if rc == 0 and out:
-            # output format might like:
-            #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
-            self._watchdog_info_dict = dict(re.findall(self.DEVICE_FIND_REGREX, out))
+            self._watchdog_info_dict = self.get_watchdog_info(out)
         else:
             utils.fatal("Failed to run {}: {}".format(self.QUERY_CMD, err))
 
@@ -92,39 +138,24 @@ class Watchdog(object):
         """
         rc, out, err = sh.cluster_shell().get_rc_stdout_stderr_without_input(self._peer_host, self.QUERY_CMD)
         if rc == 0 and out:
-            # output format might like:
-            #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
-            device_driver_dict = dict(re.findall(self.DEVICE_FIND_REGREX, out))
-            if device_driver_dict and dev_name in device_driver_dict:
+            device_driver_dict = self.get_watchdog_info(out)
+            if dev_name in device_driver_dict:
                 return device_driver_dict[dev_name]
             else:
                 return None
         else:
             utils.fatal("Failed to run {} remotely: {}".format(self.QUERY_CMD, err))
 
-    def _get_first_unused_device(self):
-        """
-        Get first unused watchdog device name
-        """
-        for dev in self._watchdog_info_dict:
-            if self.verify_watchdog_device(dev, ignore_error=True):
-                return dev
-        return None
-
     def _set_input(self):
-        """
-        If self._input was not provided by option:
-          1. Try to get it from sbd config file
-          2. Try to get the first valid device from result of sbd query-watchdog
-          3. Set the self._input as softdog
-        """
-        if not self._input:
-            dev = self.get_watchdog_device_from_sbd_config()
-            if dev and self.verify_watchdog_device(dev, ignore_error=True):
+        if self._input:
+            return
+
+        for dev, driver in self._watchdog_info_dict.items():
+            if driver != "softdog":
                 self._input = dev
                 return
-            first_unused = self._get_first_unused_device()
-            self._input = first_unused if first_unused else "softdog"
+
+        self._input = "softdog"
 
     def _valid_device(self, dev):
         """
@@ -136,7 +167,7 @@ class Watchdog(object):
 
     def join_watchdog(self):
         """
-        In join proces, get watchdog device from config
+        In join process, get watchdog device from config
         If that device not exist, get driver name from init node, and load that driver
         """
         self._set_watchdog_info()
@@ -148,7 +179,7 @@ class Watchdog(object):
 
         if not self._valid_device(self._input):
             driver = self._get_driver_through_device_remotely(self._input)
-            self._load_watchdog_driver(driver)
+            self._load_watchdog_driver(driver, join=True)
 
     def init_watchdog(self):
         """
