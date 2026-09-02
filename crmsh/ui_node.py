@@ -284,7 +284,7 @@ class NodeMgmt(command.UI):
         return True
 
     @command.wait
-    @command.completers(compl.online_nodes)
+    @command.completers_repeating(compl.exclude_completed(compl.online_nodes))
     def do_standby(self, context, *args):
         """
         usage: standby [<node>] [<lifetime>]
@@ -379,7 +379,7 @@ class NodeMgmt(command.UI):
             logger.info("standby node %s", node)
 
     @command.wait
-    @command.completers(compl.standby_nodes)
+    @command.completers_repeating(compl.exclude_completed(compl.standby_nodes))
     def do_online(self, context, *args):
         """
         usage: online [<node>]

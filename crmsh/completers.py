@@ -41,6 +41,17 @@ def join(*fns):
     return completer
 
 
+def exclude_completed(fn, start_index=1):
+    def completer(args):
+        completions = fn(args)
+        current = args[-1] if args else ""
+        completed = set(args[start_index:-1])
+        if current in completions:
+            return [current]
+        return [item for item in completions if item not in completed]
+    return completer
+
+
 booleans = choice(['yes', 'no', 'true', 'false', 'on', 'off'])
 
 
