@@ -1698,6 +1698,25 @@ done
             'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.'
         )
 
+    @mock.patch('crmsh.bootstrap.logger_utils.confirm')
+    def test_confirm_default_forward(self, mock_logger_confirm):
+        original_force = crmsh.options.force
+        try:
+            crmsh.options.force = False
+            bootstrap._context = mock.Mock(yes_to_all=False)
+            bootstrap.confirm("Proceed", default=True)
+            mock_logger_confirm.assert_called_once_with("Proceed", default=True)
+        finally:
+            crmsh.options.force = original_force
+
+    @mock.patch('crmsh.bootstrap.confirm')
+    def test_bootstrap_qdevice_validation_callback_ask_override(self, mock_confirm):
+        cb = bootstrap.BootstrapQDeviceValidationCallback()
+        mock_confirm.return_value = True
+        res = cb.ask_override("Override?", default=True)
+        self.assertTrue(res)
+        mock_confirm.assert_called_once_with("Override?", default=True)
+
 
 class TestValidation(unittest.TestCase):
     """
