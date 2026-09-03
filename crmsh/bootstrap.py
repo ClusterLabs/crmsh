@@ -83,8 +83,8 @@ JOIN_STAGES_EXTERNAL = ("ssh", "firewalld", "ssh_merge", "cluster")
 
 
 class BootstrapQDeviceValidationCallback(qdevice.QDeviceValidationCallback):
-    def ask_override(self, msg: str) -> bool:
-        return confirm(msg)
+    def ask_override(self, msg: str, default: typing.Optional[bool] = None) -> bool:
+        return confirm(msg, default=default)
 
 
 class Arguments(object):
@@ -486,11 +486,11 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[
         return val
 
 
-def confirm(msg):
+def confirm(msg, default=None):
     if crmsh.options.force or (_global_variables and _global_variables.args.yes_to_all):
         return True
     disable_completion()
-    rc = logger_utils.confirm(msg)
+    rc = logger_utils.confirm(msg, default=default)
     enable_completion()
     drop_last_history()
     return rc
