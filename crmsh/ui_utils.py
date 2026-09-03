@@ -176,18 +176,26 @@ def parse_and_validate_node_args(command_name, *args) -> tuple[list[str], bool]:
 Specify node(s) on which to {action}.
 If no nodes are specified, {action} on the local node.
 If --all is specified, {action} on all nodes."""
-    addtion_usage = ""
+    usage_line = f"{command_name} [--all | <node>... ]"
     if command_name == "standby":
         usage_template += """
-\n\nAdditionally, you may specify a lifetime for the standby---if set to
-"reboot", the node will be back online once it reboots. "forever" will
-keep the node in standby after reboot. The life time defaults to
-"forever"."""
-        addtion_usage = " [lifetime]"
+\n\nAdditionally, "on"/"off" puts the node into or out of standby
+("off" replaces the deprecated `online` command), and a lifetime
+("reboot" or "forever", default "forever") may be given. "on"/"off"
+may be combined with "--all" in any order; "<lifetime>", if given,
+must be the last argument.
+\n\nNote: "on", "off", "reboot" and "forever" are reserved words, but
+are still usable as node names where unambiguous (e.g. as the sole
+argument)."""
+        usage_line = f"{command_name} [<node>...] [on|off] [lifetime]\n   or: {command_name} --all [on|off] [lifetime]"
+    elif command_name == "online":
+        usage_template += """
+\n\nNote: The `online` command is deprecated and will be removed in a
+future release. Use `crm node standby [<node>] off` instead."""
 
     parser = ArgumentParser(
             description=usage_template.format(action=action),
-            usage=f"{command_name} [--all | <node>... ]{addtion_usage}",
+            usage=usage_line,
             add_help=False,
             formatter_class=RawDescriptionHelpFormatter
     )

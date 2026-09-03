@@ -221,7 +221,6 @@ class NodeMgmt(command.UI):
     '''
     name = "node"
 
-    node_standby = "crm_attribute -t nodes -N '%s' -n standby -v '%s' %s"
     node_delete = """cibadmin -D -o nodes -X '<node uname="%s"/>'"""
     node_delete_status = """cibadmin -D -o status -X '<node_state uname="%s"/>'"""
     node_cleanup_resources = "crm_resource --cleanup --node '%s'"
@@ -282,25 +281,92 @@ class NodeMgmt(command.UI):
                 do_print(uname)
         return True
 
+    @staticmethod
+    def _known_node_names():
+        """
+        Node names known to the cluster (members and remote/guest nodes),
+        used to disambiguate names colliding with standby's reserved words.
+        """
+        known = set()
+        try:
+            known.update(utils.list_cluster_nodes() or [])
+        except Exception:
+            pass
+        try:
+            known.update(xmlutil.CrmMonXMLParser().get_node_list(node_type="remote") or [])
+        except Exception:
+            pass
+        return known
+
     @command.wait
-    @command.completers(compl.online_nodes)
+    @command.completers(compl.nodes, compl.choice(['on', 'off']))
     def do_standby(self, context, *args):
         """
-        usage: standby [<node>] [<lifetime>]
+        usage: standby [<node>...] [on|off] [<lifetime>]
+               standby --all [on|off] [<lifetime>]
+        "--all" may appear anywhere. "<lifetime>", if given, must be the
+        last argument, i.e. right after the node(s), "on|off" or "--all".
+        "on"/"off"/"reboot"/"forever" node names are used as such only
+        when unambiguous (e.g. the sole argument).
         To avoid race condition for --all option, melt all standby values into one cib replace session
         """
-        # Parse lifetime option
+        args = list(args)
+        known_nodes = self._known_node_names()
+
+        # "--all" is a flag and may appear anywhere among the args; pull it
+        # out first so it doesn't interfere with parsing "on|off" and
+        # "<lifetime>" below. It's added back before node/--all validation.
+        has_all = "--all" in args
+        if has_all:
+            args = [a for a in args if a != "--all"]
+
+        # "<lifetime>", if given, must be the trailing argument (i.e. it
+        # comes right after "standby"/the node name(s)/"on|off"/"--all").
+        # A trailing token that matches a real node name is only left
+        # alone (i.e. kept as a node reference) when it's the *sole*
+        # remaining argument; otherwise there's at least one other token
+        # available to identify the node, so the trailing word is parsed
+        # as the lifetime as usual.
         lifetime_opt = "forever"
-        lifetime = utils.fetch_lifetime_opt(list(args), iso8601=False)
-        if lifetime:
-            lifetime_opt = lifetime
-            args = args[:-1]
+        if args and args[-1] in ("reboot", "forever") and (len(args) > 1 or args[-1] not in known_nodes):
+            lifetime_opt = args.pop()
+
+        # Parse on|off option. Prefer the right-most (trailing-most)
+        # matching token, mirroring the usual "<node> [on|off]" ordering.
+        # As with "<lifetime>" above, a token that also matches a real
+        # node name is only kept as a node reference when it's the sole
+        # remaining argument.
+        on_off = "on"
+        on_off_idx = None
+        for i in range(len(args) - 1, -1, -1):
+            tok = args[i]
+            if tok in ("on", "off") and (len(args) > 1 or tok not in known_nodes):
+                on_off_idx = i
+                break
+        if on_off_idx is not None:
+            on_off = args.pop(on_off_idx)
+
+        # Anything left over must be node names; reject a misplaced
+        # "<lifetime>" (e.g. one that precedes a node name or "on|off"),
+        # unless it's actually a real node name.
+        misplaced = [a for a in args if a in ("reboot", "forever") and a not in known_nodes]
+        if misplaced:
+            raise ValueError(
+                "'%s' is not accepted here; <lifetime> must be the last argument" % " ".join(misplaced))
+
+        if has_all:
+            args.append("--all")
 
         # Parse node option
         node_list, _ = ui_utils.parse_and_validate_node_args("standby", *args)
         if not node_list:
             return
 
+        if on_off == "off":
+            return self._standby_off(node_list)
+        return self._standby_on(node_list, lifetime_opt)
+
+    def _standby_on(self, node_list, lifetime_opt):
         # For default "forever" lifetime, under "nodes" section
         xml_path = constants.XML_NODE_PATH
         xml_query_path = constants.XML_NODE_QUERY_STANDBY_PATH
@@ -389,12 +455,15 @@ class NodeMgmt(command.UI):
         if not node_list:
             return
 
+        return self._standby_off(node_list)
+
+    def _standby_off(self, node_list):
         cib = xmlutil.cibdump2elem()
         if cib is None:
             return False
         # IMPORTANT: Do NOT call cibdump2elem twice, or you risk a race.
         # Really use the same xml as "original" and basis for the changes.
-        # Thus the "deepcopy" here; see also do_standby().
+        # Thus the "deepcopy" here; see also _standby_on().
         orig_cib = copy.deepcopy(cib)
         for node in node_list:
             node_id = utils.get_nodeid_from_name(node)
