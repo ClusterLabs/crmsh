@@ -361,8 +361,8 @@ class NodeMgmt(command.UI):
                     xmlutil.rmnodes(item_to_del)
                 # If the standby nvpair already exists, set and continue
                 item = cib.xpath(xml_query_path.format(node_id=node_id))
-                if item and item[0].get("value") != "on":
-                    item[0].set("value", "on")
+                if item and item[0].get("value") not in ("true", "on"):
+                    item[0].set("value", "true")
                     continue
                 # Create standby nvpair
                 interface_item = xml_item
@@ -370,7 +370,7 @@ class NodeMgmt(command.UI):
                     res_item = xmlutil.get_set_nodes(xml_item, "transient_attributes", create=True)
                     interface_item = res_item[0]
                 res_item = xmlutil.get_set_nodes(interface_item, "instance_attributes", create=True)
-                xmlutil.set_attr(res_item[0], "standby", "on")
+                xmlutil.set_attr(res_item[0], "standby", "true")
 
         rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
         if not rc:
@@ -401,8 +401,8 @@ class NodeMgmt(command.UI):
             node_id = utils.get_nodeid_from_name(node)
             for query_path in [constants.XML_NODE_QUERY_STANDBY_PATH, constants.XML_STATUS_QUERY_STANDBY_PATH]:
                 item = cib.xpath(query_path.format(node_id=node_id))
-                if item and item[0].get("value") != "off":
-                    item[0].set("value", "off")
+                if item and item[0].get("value") not in ("false", "off"):
+                    item[0].set("value", "false")
 
         rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
         if not rc:
