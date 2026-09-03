@@ -2420,6 +2420,11 @@ show [<node>]
 
 [[cmdhelp.node.standby,put node into standby,From Code]]
 ==== `standby`
+
+Note: `standby` now accepts an on|off argument, e.g.
+`crm node standby <node> off`, which is equivalent to the deprecated
+`crm node online <node>` command.
+
 See "crm node help standby" or "crm node standby --help"
 
 [[cmdhelp.node.status-attr,manage status attributes]]
