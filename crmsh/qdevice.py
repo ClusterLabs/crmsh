@@ -210,7 +210,7 @@ class QDevice(object):
         return "{}/nssdb/{}".format(self.qdevice_path, self.qdevice_p12_filename)
 
     @staticmethod
-    def check_qnetd_addr(qnetd_addr, callback: QDeviceValidationCallback = QDeviceValidationCallback()):
+    def check_qnetd_addr(qnetd_addr, callback: QDeviceValidationCallback):
         network_utils.ssh_port_reachable_check(qnetd_addr)
         try:
             qnetd_ip_addresses = [
@@ -233,34 +233,34 @@ class QDevice(object):
 
 
     @staticmethod
-    def check_qnetd_port(qnetd_port, callback: QDeviceValidationCallback = QDeviceValidationCallback()):
+    def check_qnetd_port(qnetd_port, callback: QDeviceValidationCallback):
         if qnetd_port and not network_utils.valid_port(qnetd_port):
             callback.issue(QDeviceValidationCallback.LEVEL_ERROR, "invalid qnetd port range(1024 - 65535)")
 
     @staticmethod
-    def check_qdevice_algo(qdevice_algo, callback: QDeviceValidationCallback = QDeviceValidationCallback()):
+    def check_qdevice_algo(qdevice_algo, callback: QDeviceValidationCallback):
         if qdevice_algo not in ("ffsplit", "lms"):
             callback.issue(QDeviceValidationCallback.LEVEL_ERROR, "invalid ALGORITHM choice: '{}' (choose from 'ffsplit', 'lms')".format(qdevice_algo))
 
     @staticmethod
-    def check_qdevice_tie_breaker(qdevice_tie_breaker, callback: QDeviceValidationCallback = QDeviceValidationCallback()):
+    def check_qdevice_tie_breaker(qdevice_tie_breaker, callback: QDeviceValidationCallback):
         if qdevice_tie_breaker not in ("lowest", "highest") and not utils.valid_nodeid(qdevice_tie_breaker):
             callback.issue(QDeviceValidationCallback.LEVEL_ERROR, "invalid qdevice tie_breaker(lowest/highest/valid_node_id)")
 
     @staticmethod
-    def check_qdevice_tls(qdevice_tls, callback: QDeviceValidationCallback = QDeviceValidationCallback()):
+    def check_qdevice_tls(qdevice_tls, callback: QDeviceValidationCallback):
         if qdevice_tls not in ("on", "off", "required"):
             callback.issue(QDeviceValidationCallback.LEVEL_ERROR, "invalid TLS choice: '{}' (choose from 'on', 'off', 'required')".format(qdevice_tls))
 
     @staticmethod
-    def check_qdevice_heuristics_mode(mode, callback: QDeviceValidationCallback = QDeviceValidationCallback()):
+    def check_qdevice_heuristics_mode(mode, callback: QDeviceValidationCallback):
         if not mode:
             return
         if mode not in ("on", "sync", "off"):
             callback.issue(QDeviceValidationCallback.LEVEL_ERROR, "invalid MODE choice: '{}' (choose from 'on', 'sync', 'off')".format(mode))
 
     @staticmethod
-    def check_qdevice_heuristics(cmds, callback: QDeviceValidationCallback = QDeviceValidationCallback()):
+    def check_qdevice_heuristics(cmds, callback: QDeviceValidationCallback):
         if not cmds:
             return
         for cmd in cmds.strip(';').split(';'):
@@ -270,27 +270,53 @@ class QDevice(object):
             if not os.path.exists(cmd.split()[0]):
                 callback.issue(QDeviceValidationCallback.LEVEL_ERROR, "command {} not exist".format(cmd.split()[0]))
 
-    def check_corosync_qdevice_available(self, callback: QDeviceValidationCallback = QDeviceValidationCallback()):
+    @staticmethod
+    def check_qnetd_corosync_interface(
+        qnetd_addr: str,
+        corosync_nics: typing.Sequence[str],
+        callback: QDeviceValidationCallback,
+    ) -> bool:
+        qnetd_nic = network_utils.get_nic_by_subnet_of_addr(qnetd_addr)
+        if qnetd_nic is not None and qnetd_nic in corosync_nics:
+            callback.issue(
+                QDeviceValidationCallback.LEVEL_WARN,
+                f"QNetd server '{qnetd_addr}' is on network interface '{qnetd_nic}', which is also used for Corosync links"
+            )
+            return callback.ask_override(
+                "Do you want to continue using the same network interface for QNetd and Corosync?",
+                default=True,
+            )
+        return True
+
+    def check_corosync_qdevice_available(self, callback: QDeviceValidationCallback):
         service_manager = ServiceManager()
         for node in get_node_list(self.is_stage):
             if not service_manager.service_is_available("corosync-qdevice.service", remote_addr=node):
                 callback.issue(QDeviceValidationCallback.LEVEL_ERROR, f"corosync-qdevice.service is not available on {node}")
 
-    def valid_qdevice_options(self, callback: typing.Optional[QDeviceValidationCallback] = None):
+    def valid_qdevice_options(
+        self,
+        callback: QDeviceValidationCallback,
+        corosync_nics: typing.Sequence[str],
+    ):
         """
         Validate qdevice related options
         """
-        cb = callback or QDeviceValidationCallback()
         if self.is_stage:
             utils.check_all_nodes_reachable("setup Qdevice")
-        self.check_corosync_qdevice_available(cb)
-        self.check_qnetd_addr(self.qnetd_addr, cb)
-        self.check_qnetd_port(self.port, cb)
-        self.check_qdevice_algo(self.algo, cb)
-        self.check_qdevice_tie_breaker(self.tie_breaker, cb)
-        self.check_qdevice_tls(self.tls, cb)
-        self.check_qdevice_heuristics(self.cmds, cb)
-        self.check_qdevice_heuristics_mode(self.mode, cb)
+        self.check_corosync_qdevice_available(callback)
+        self.check_qnetd_addr(self.qnetd_addr, callback)
+
+        if corosync_nics:
+            if not self.check_qnetd_corosync_interface(self.qnetd_addr, corosync_nics, callback=callback):
+                raise ValueError("Declined to use the same network interface for QNetd and Corosync")
+
+        self.check_qnetd_port(self.port, callback)
+        self.check_qdevice_algo(self.algo, callback)
+        self.check_qdevice_tie_breaker(self.tie_breaker, callback)
+        self.check_qdevice_tls(self.tls, callback)
+        self.check_qdevice_heuristics(self.cmds, callback)
+        self.check_qdevice_heuristics_mode(self.mode, callback)
 
     def validate_and_start_qnetd(self):
         exception_msg = ""

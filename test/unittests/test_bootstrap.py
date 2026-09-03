@@ -309,7 +309,7 @@ class TestGlobalVariables(unittest.TestCase):
         ctx._validate_nodes_option = mock.Mock()
         ctx.validate()
         mock_admin_ip.assert_called_once_with("10.10.10.123")
-        ctx.qdevice_inst.valid_qdevice_options.assert_called_once_with(callback=mock.ANY)
+        ctx.qdevice_inst.valid_qdevice_options.assert_called_once_with(callback=mock.ANY, corosync_nics=mock.ANY)
         ctx._validate_sbd_option.assert_called_once_with()
 
     @mock.patch('logging.Logger.info')
@@ -1408,18 +1408,62 @@ done
         mock_prompt.assert_has_calls([
             mock.call("HOST or IP of the QNetd server to be used"),
             mock.call("TCP PORT of QNetd server",
-                valid_func=qdevice.QDevice.check_qnetd_port),
+                valid_func=mock.ANY),
             mock.call("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
-                valid_func=qdevice.QDevice.check_qdevice_algo),
+                valid_func=mock.ANY),
             mock.call("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest",
-                valid_func=qdevice.QDevice.check_qdevice_tie_breaker),
+                valid_func=mock.ANY),
             mock.call("Whether using TLS on QDevice (on/off/required)", default="on",
-                valid_func=qdevice.QDevice.check_qdevice_tls),
+                valid_func=mock.ANY),
             mock.call("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate",
-                valid_func=qdevice.QDevice.check_qdevice_heuristics,
+                valid_func=mock.ANY,
                 allow_empty=True)
             ])
         mock_qdevice.assert_called_once_with('qnetd-node', port=5403, ssh_user='alice', algo='ffsplit', tie_breaker='lowest', tls='on', cmds=None, mode=None, is_stage=False)
+
+    @mock.patch('crmsh.qdevice.QDevice.check_qnetd_corosync_interface')
+    @mock.patch('crmsh.bootstrap.corosync.get_corosync_interfaces')
+    @mock.patch('crmsh.qdevice.QDevice.check_qnetd_addr')
+    @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.utils.package_is_installed')
+    @mock.patch('crmsh.bootstrap.confirm')
+    def test_configure_qdevice_interactive_reprompt_on_override_decline(
+        self, mock_confirm, mock_installed, mock_prompt, mock_check_addr, mock_get_corosync, mock_check_interface
+    ):
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False), default_nic="eth0")
+        mock_confirm.return_value = True
+        mock_installed.return_value = True
+        mock_prompt.side_effect = ["alice@qnetd-1", "alice@qnetd-2", 5403, "ffsplit", "lowest", "on", None]
+        mock_get_corosync.return_value = ["eth0"]
+        mock_check_interface.side_effect = [False, True]
+
+        bootstrap.configure_qdevice_interactive()
+
+        self.assertEqual(mock_check_interface.call_count, 2)
+        mock_check_interface.assert_has_calls([
+            mock.call("qnetd-1", ["eth0"], callback=mock.ANY),
+            mock.call("qnetd-2", ["eth0"], callback=mock.ANY),
+        ])
+
+    @mock.patch('crmsh.qdevice.QDevice.check_qnetd_corosync_interface')
+    @mock.patch('crmsh.bootstrap.corosync.get_corosync_interfaces')
+    @mock.patch('crmsh.qdevice.QDevice.check_qnetd_addr')
+    @mock.patch('crmsh.bootstrap.prompt_for_string')
+    @mock.patch('crmsh.utils.package_is_installed')
+    @mock.patch('crmsh.bootstrap.confirm')
+    def test_configure_qdevice_interactive_stage_qdevice_reprompt(
+        self, mock_confirm, mock_installed, mock_prompt, mock_check_addr, mock_get_corosync, mock_check_interface
+    ):
+        bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False, stage="qdevice"), default_nic="eth0")
+        mock_confirm.return_value = True
+        mock_installed.return_value = True
+        mock_prompt.side_effect = ["qnetd-1", "qnetd-2", 5403, "ffsplit", "lowest", "on", None]
+        mock_get_corosync.return_value = ["eth0"]
+        mock_check_interface.side_effect = [False, True]
+
+        bootstrap.configure_qdevice_interactive()
+
+        self.assertEqual(mock_check_interface.call_count, 2)
 
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('crmsh.corosync.is_qdevice_configured')
@@ -1700,14 +1744,17 @@ done
 
     @mock.patch('crmsh.bootstrap.logger_utils.confirm')
     def test_confirm_default_forward(self, mock_logger_confirm):
+        # FIXME: antipattern: variable cannot be mocked in unit tests
         original_force = crmsh.options.force
+        original_global_vars = bootstrap._global_variables
         try:
             crmsh.options.force = False
-            bootstrap._context = mock.Mock(yes_to_all=False)
+            bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False))
             bootstrap.confirm("Proceed", default=True)
             mock_logger_confirm.assert_called_once_with("Proceed", default=True)
         finally:
             crmsh.options.force = original_force
+            bootstrap._global_variables = original_global_vars
 
     @mock.patch('crmsh.bootstrap.confirm')
     def test_bootstrap_qdevice_validation_callback_ask_override(self, mock_confirm):

@@ -818,5 +818,40 @@ def test_del_node_qdevice_net(mock_parser):
     mock_inst.save.assert_called_once()
 
 
+@mock.patch("crmsh.utils.this_node")
+@mock.patch("crmsh.corosync.ConfParser.get_values")
+def test_get_local_node_ring_addresses(mock_get_values, mock_this_node):
+    mock_this_node.return_value = "node1"
+    mock_get_values.return_value = [
+        {"name": "node1", "ring0_addr": "192.168.1.10", "ring1_addr": "10.0.0.10"},
+        {"name": "node2", "ring0_addr": "192.168.1.20", "ring1_addr": "10.0.0.20"}
+    ]
+    res = corosync._get_local_node_ring_addresses()
+    assert res == ["192.168.1.10", "10.0.0.10"]
+
+
+@mock.patch("crmsh.network_utils.InterfacesInfo.ip_in_local")
+@mock.patch("crmsh.utils.this_node")
+@mock.patch("crmsh.corosync.ConfParser.get_values")
+def test_get_local_node_ring_addresses_fallback(mock_get_values, mock_this_node, mock_ip_in_local):
+    mock_this_node.return_value = "local_hostname"
+    mock_get_values.return_value = [
+        {"ring0_addr": "192.168.1.10"},
+        {"ring0_addr": "192.168.1.20"}
+    ]
+    mock_ip_in_local.side_effect = lambda ip: ip == "192.168.1.10"
+    res = corosync._get_local_node_ring_addresses()
+    assert res == ["192.168.1.10"]
+
+
+@mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+@mock.patch("crmsh.corosync._get_local_node_ring_addresses")
+def test_get_corosync_interfaces(mock_get_addrs, mock_get_nic):
+    mock_get_addrs.return_value = ["192.168.1.10", "10.0.0.10"]
+    mock_get_nic.side_effect = ["eth0", "eth1"]
+    res = corosync.get_corosync_interfaces()
+    assert res == ["eth0", "eth1"]
+
+
 if __name__ == '__main__':
     unittest.main()
