@@ -117,11 +117,13 @@ class QDeviceValidationCallback:
         else:
             logger.warning("%s", msg)
 
-    def ask_override(self, msg: str) -> bool:
+    def ask_override(self, msg: str, default: typing.Optional[bool] = None) -> bool:
         """
         Ask user for interactive override.
         Returns True if user overrides, False otherwise.
         """
+        if default is not None:
+            return default
         return False
 
 
