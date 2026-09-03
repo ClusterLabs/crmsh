@@ -2376,6 +2376,10 @@ maintenance [<node>]
 
 [[cmdhelp.node.online,set node online,From Code]]
 ==== `online`
+
+Note: The `online` command is deprecated and will be removed in a
+future release. Use `crm node standby [<node>] off` instead.
+
 See "crm node help online" or "crm node online --help"
 
 [[cmdhelp.node.ready,put node into ready mode]]

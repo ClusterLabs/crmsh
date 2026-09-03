@@ -414,7 +414,9 @@ class NodeMgmt(command.UI):
         if not node_list:
             return
 
-        return self._standby_off(node_list)
+        rc = self._standby_off(node_list)
+        logger.warning("The 'online' command is deprecated and will be removed in a future release. Use 'crm node standby [<node>] off' instead.")
+        return rc
 
     def _standby_off(self, node_list):
         cib = xmlutil.cibdump2elem()
