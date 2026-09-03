@@ -151,7 +151,7 @@ class GlobalVariables(object):
         self.args = args
         self.ipv6 = args.ipv6
         self.current_user = None
-        self.qdevice_inst = None
+        self.qdevice_inst: typing.Optional[qdevice.QDevice] = None
         self.sbd_manager = None
         self.ui_context = None
         self.interfaces_inst = None
@@ -183,7 +183,7 @@ class GlobalVariables(object):
         Populate qdevice instance
         """
         if not self.args.qnetd_addr_input:
-            if self._any_qdevice_options_set() or self.args.stage == "qdevice":
+            if self._any_qdevice_options_set() or (self.args.stage == "qdevice" and self.args.yes_to_all):
                 utils.fatal("Option --qnetd-hostname is required if want to configure qdevice")
             return
 
@@ -367,7 +367,28 @@ class GlobalVariables(object):
                 utils.fatal(f"Package '{package}' is not installed")
         self._populate_qdevice()
         if self.qdevice_inst:
-            self.qdevice_inst.valid_qdevice_options(callback=BootstrapQDeviceValidationCallback())
+            if self.interfaces_inst is None:
+                self.interfaces_inst = network_utils.InterfacesInfo(self.ipv6, self.args.nic_addr_list)
+                try:
+                    self.interfaces_inst.get_interfaces_info()
+                    self.interfaces_inst.flatten_custom_nic_addr_list()
+                except ValueError:
+                    pass
+            if self.args.stage == "qdevice":
+                self.qdevice_inst.valid_qdevice_options(BootstrapQDeviceValidationCallback(), corosync.get_corosync_interfaces())
+            else:
+                corosync_nics = self.interfaces_inst.input_nic_list or []
+                if not corosync_nics:
+                    try:
+                        default_nic = self.default_nic or self.interfaces_inst.get_default_nic_from_route()
+                        if default_nic:
+                            corosync_nics = [default_nic]
+                    except Exception:
+                        pass
+                self.qdevice_inst.valid_qdevice_options(
+                    callback=BootstrapQDeviceValidationCallback(),
+                    corosync_nics=corosync_nics
+                )
         if self.args.ocfs2_devices or self.args.gfs2_devices or self.args.stage in ("ocfs2", "gfs2"):
             cluster_fs.ClusterFSManager.pre_verify(self)
         if self.args.skip_csync2:
@@ -1486,23 +1507,41 @@ def configure_qdevice_interactive():
             else:
                 return
 
-    qnetd_addr_input = prompt_for_string("HOST or IP of the QNetd server to be used")
-    ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
-    qdevice.QDevice.check_qnetd_addr(qnetd_host)
+    cb = BootstrapQDeviceValidationCallback()
+    while True:
+        try:
+            qnetd_addr_input = prompt_for_string("HOST or IP of the QNetd server to be used")
+            ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
+            qdevice.QDevice.check_qnetd_addr(qnetd_host, cb)
+            assert _global_variables is not None
+            assert _global_variables.interfaces_inst is not None
+            corosync_nics = (
+                corosync.get_corosync_interfaces()
+                or _global_variables.interfaces_inst.input_nic_list
+                or [_global_variables.default_nic]
+            )
+            if not qdevice.QDevice.check_qnetd_corosync_interface(
+                qnetd_host, corosync_nics, callback=cb
+            ):
+                continue
+            break
+        except ValueError as err:
+            logger.error("%s", err)
+
     _global_variables.args.qnetd_addr_input = qnetd_addr_input
     qnetd_port = prompt_for_string("TCP PORT of QNetd server",
-            valid_func=qdevice.QDevice.check_qnetd_port)
+            valid_func=lambda port: qdevice.QDevice.check_qnetd_port(port, cb))
     qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
-            valid_func=qdevice.QDevice.check_qdevice_algo)
+            valid_func=lambda algo: qdevice.QDevice.check_qdevice_algo(algo, cb))
     qdevice_tie_breaker = prompt_for_string("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest",
-            valid_func=qdevice.QDevice.check_qdevice_tie_breaker)
+            valid_func=lambda tie_breaker: qdevice.QDevice.check_qdevice_tie_breaker(tie_breaker, cb))
     qdevice_tls = prompt_for_string("Whether using TLS on QDevice (on/off/required)", default="on",
-            valid_func=qdevice.QDevice.check_qdevice_tls)
+            valid_func=lambda tls: qdevice.QDevice.check_qdevice_tls(tls, cb))
     qdevice_heuristics = prompt_for_string("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate",
-            valid_func=qdevice.QDevice.check_qdevice_heuristics,
+            valid_func=lambda cmds: qdevice.QDevice.check_qdevice_heuristics(cmds, cb),
             allow_empty=True)
     qdevice_heuristics_mode = prompt_for_string("MODE of operation of heuristics (on/sync/off)", default="sync",
-            valid_func=qdevice.QDevice.check_qdevice_heuristics_mode) if qdevice_heuristics else None
+            valid_func=lambda mode: qdevice.QDevice.check_qdevice_heuristics_mode(mode, cb)) if qdevice_heuristics else None
 
     _global_variables.qdevice_inst = qdevice.QDevice(
             qnetd_host,
