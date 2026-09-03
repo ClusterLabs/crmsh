@@ -889,12 +889,13 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_parser_instance.is_resource_started.return_value = True
         self.assertEqual(self.instance_check._check_fence_sbd(), sbd.CheckResult.SUCCESS)
 
+    @patch('crmsh.sbd.time.sleep')
     @patch('crmsh.bootstrap.adjust_pcmk_delay_max')
     @patch('crmsh.utils.is_2node_cluster_without_qdevice')
     @patch('logging.Logger.info')
     @patch('crmsh.sh.cluster_shell')
     @patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_fix_fence_sbd_not_configured(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_logger_info, mock_is_2node_cluster_without_qdevice, mock_adjust_pcmk_delay_max):
+    def test_fix_fence_sbd_not_configured(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_logger_info, mock_is_2node_cluster_without_qdevice, mock_adjust_pcmk_delay_max, mock_sleep):
         mock_parser_instance = Mock()
         mock_CrmMonXmlParser.return_value = mock_parser_instance
         mock_parser_instance.is_resource_configured.return_value = False
@@ -905,10 +906,11 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix._fix_fence_sbd()
         mock_logger_info.assert_called_once_with("Configuring fence agent %s", sbd.SBDManager.SBD_RA)
 
+    @patch('crmsh.sbd.time.sleep')
     @patch('logging.Logger.info')
     @patch('crmsh.sh.cluster_shell')
     @patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_fix_fence_sbd_not_started(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_logger_info):
+    def test_fix_fence_sbd_not_started(self, mock_CrmMonXmlParser, mock_cluster_shell, mock_logger_info, mock_sleep):
         mock_parser_instance = Mock()
         mock_CrmMonXmlParser.return_value = mock_parser_instance
         mock_parser_instance.is_resource_configured.return_value = True
