@@ -1703,22 +1703,6 @@ def service_info(name):
     return None
 
 
-def running_on(resource):
-    "returns list of node names where the given resource is running"
-    rsc_locate = "crm_resource --resource '%s' --locate"
-    rc, out, err = ShellUtils().get_stdout_stderr(rsc_locate % (resource))
-    if rc != 0:
-        return []
-    nodes = []
-    head = "resource %s is running on: " % (resource)
-    for line in out.split('\n'):
-        if line.strip().startswith(head):
-            w = line[len(head):].split()
-            if w:
-                nodes.append(w[0])
-    logger.debug("%s running on: %s", resource, nodes)
-    return nodes
-
 
 # This RE matches nvpair values that can
 # be left unquoted
@@ -2055,7 +2039,7 @@ def valid_nodeid(nodeid):
 
 
 def get_nodeid_from_name(name):
-    crm_mon_xml_parser = xmlutil.CrmMonXmlParser()
+    crm_mon_xml_parser = xmlutil.CrmMonXMLParser()
     if crm_mon_xml_parser.is_node_remote(name):
         return name
     return crm_mon_xml_parser.get_node_id_from_name(name)
@@ -2129,7 +2113,7 @@ def check_all_nodes_reachable(
     peer_node: str = None,
     check_passwd: bool = True
 ) -> ReachabilitySummary:
-    crm_mon_inst = xmlutil.CrmMonXmlParser(peer_node)
+    crm_mon_inst = xmlutil.CrmMonXMLParser(peer_node)
     if crm_mon_inst.not_connected():
         try:
             nodes_to_check = list_cluster_nodes_except_me()
@@ -2273,7 +2257,7 @@ def cluster_with_quorum(peer=None):
     """
     Check if current cluster has quorum
     """
-    return xmlutil.CrmMonXmlParser(peer).with_quorum()
+    return xmlutil.CrmMonXMLParser(peer).with_quorum()
 
 
 def is_2node_cluster_without_qdevice():
@@ -2799,7 +2783,7 @@ def validate_and_get_reachable_nodes(
 
     pcmk_remote_list = []
     if include_remote:
-        pcmk_remote_list = xmlutil.CrmMonXmlParser().get_node_list(online=True, node_type="remote")
+        pcmk_remote_list = xmlutil.CrmMonXMLParser().get_node_list(online=True, node_type="remote")
 
     local_node = this_node()
 
@@ -2822,7 +2806,7 @@ def validate_and_get_reachable_nodes(
         return member_list
 
     shell = sh.cluster_shell()
-    crm_mon_inst = xmlutil.CrmMonXmlParser()
+    crm_mon_inst = xmlutil.CrmMonXMLParser()
     for node in member_list[:]:
         if node == local_node or crm_mon_inst.is_node_online(node):
             continue
@@ -2844,7 +2828,7 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
     """
     if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
         return True
-    crm_mon_parser = xmlutil.CrmMonXmlParser()
+    crm_mon_parser = xmlutil.CrmMonXMLParser()
     if not crm_mon_parser.is_non_stonith_resource_running():
         return True
     elif in_maintenance_mode:

@@ -319,7 +319,7 @@ class TestUtils(TestCase):
             mock.call(b'/usr/sbin/sbd\x00')
             ])
 
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_online_nodes(self, mock_crmmon_parser):
         mock_inst = mock.Mock()
         mock_crmmon_parser.return_value = mock_inst

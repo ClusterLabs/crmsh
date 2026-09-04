@@ -178,7 +178,7 @@ class TestRemoteLock(unittest.TestCase):
 
     @mock.patch('time.sleep')
     @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     @mock.patch('crmsh.lock.Lock._create_lock_dir')
     @mock.patch('crmsh.lock.RemoteLock.lock_timeout', new_callable=mock.PropertyMock)
     @mock.patch('time.time')
@@ -203,7 +203,7 @@ class TestRemoteLock(unittest.TestCase):
 
     @mock.patch('time.sleep')
     @mock.patch('logging.Logger.warning')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     @mock.patch('crmsh.lock.Lock._create_lock_dir')
     @mock.patch('crmsh.lock.RemoteLock.lock_timeout', new_callable=mock.PropertyMock)
     @mock.patch('time.time')

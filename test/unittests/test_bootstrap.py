@@ -1059,7 +1059,7 @@ done
 
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser.is_node_online')
     def test_is_online_local_offline(self, mock_is_online, mock_get_hostname, mock_this_node):
         bootstrap._context = mock.Mock(cluster_node='node2')
         mock_this_node.return_value = "node1"
@@ -1073,7 +1073,7 @@ done
 
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser.is_node_online')
     def test_is_online_on_init_node(self, mock_is_online, mock_get_hostname, mock_this_node):
         bootstrap._context = mock.Mock(cluster_node=None)
         mock_this_node.return_value = "node1"
@@ -1093,7 +1093,7 @@ done
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_is_online_peer_offline(self, mock_parser, mock_get_hostname, mock_this_node,
             mock_copy, mock_corosync_conf, mock_sync, mock_stop_service, mock_error, mock_cluster_shell):
         bootstrap._context = mock.Mock(cluster_node='node1')
@@ -1126,7 +1126,7 @@ done
     @mock.patch('shutil.copy')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser.is_node_online')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser.is_node_online')
     def test_is_online_both_online(self, mock_is_online, mock_get_hostname, mock_this_node,
             mock_copy, mock_corosync_conf, mock_csync2, mock_stop_service, mock_error):
         bootstrap._context = mock.Mock(cluster_node='node2')
@@ -1551,7 +1551,7 @@ done
         mock_adj_fence.assert_called_once_with(True)
 
     @mock.patch('crmsh.utils.cluster_copy_path')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_sync_path_peer(self, mock_parser, mock_cluster_copy):
         mock_parser_inst = mock.Mock()
         mock_parser.return_value = mock_parser_inst
@@ -1915,7 +1915,7 @@ class TestValidation(unittest.TestCase):
         mock_check_all_nodes.assert_called_once_with("removing a node from the cluster")
 
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
@@ -1952,7 +1952,7 @@ class TestValidation(unittest.TestCase):
 
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
     @mock.patch('crmsh.bootstrap.remove_node_from_cluster')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     @mock.patch('crmsh.utils.this_node')
     @mock.patch('crmsh.bootstrap.confirm')
     @mock.patch('crmsh.bootstrap.get_node_canonical_hostname')
@@ -2076,7 +2076,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.stop_and_disable_services')
     @mock.patch('crmsh.network_utils.get_cluster_node_ips')
     @mock.patch('crmsh.utils.get_nodeid_from_name')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_remove_node_from_cluster_rm_node_failed(self, mock_crm_mon_parser, mock_get_nodeid, mock_get_ips, mock_stop, mock_status, mock_invoke, mock_error, mock_rm_conf_files, mock_call_delnode):
         mock_crm_mon_parser_inst = mock.Mock()
         mock_crm_mon_parser.return_value = mock_crm_mon_parser_inst
@@ -2116,7 +2116,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.stop_and_disable_services')
     @mock.patch('crmsh.network_utils.get_cluster_node_ips')
     @mock.patch('crmsh.utils.get_nodeid_from_name')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_remove_node_from_cluster_hostname(self, mock_crm_mon_parser, mock_get_nodeid, mock_get_ips, mock_stop, mock_status,
             mock_invoke, mock_error, mock_get_values, mock_del_by_name, mock_del_by_id, mock_csync2,
             mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell, mock_host_user_config):
@@ -2172,7 +2172,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.stop_and_disable_services')
     @mock.patch('crmsh.network_utils.get_cluster_node_ips')
     @mock.patch('crmsh.utils.get_nodeid_from_name')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_remove_node_from_cluster_by_nodeid(self, mock_crm_mon_parser, mock_get_nodeid, mock_get_ips, mock_stop, mock_status,
             mock_invoke, mock_error, mock_get_values, mock_del_by_name, mock_del_by_id, mock_csync2,
             mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell, mock_host_user_config):
@@ -2222,7 +2222,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_and_disable_services')
     @mock.patch('crmsh.utils.get_nodeid_from_name')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_remove_node_from_cluster_fallback_success(self, mock_crm_mon_parser, mock_get_nodeid, mock_stop, mock_status,
             mock_invoke, mock_error, mock_get_values, mock_del_by_name, mock_del_by_id, mock_csync2,
             mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell, mock_host_user_config,
@@ -2271,7 +2271,7 @@ class TestValidation(unittest.TestCase):
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.stop_and_disable_services')
     @mock.patch('crmsh.utils.get_nodeid_from_name')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_remove_node_from_cluster_del_node_failed(self, mock_crm_mon_parser, mock_get_nodeid, mock_stop, mock_status,
             mock_invoke, mock_error, mock_get_values, mock_del_by_name, mock_del_by_id, mock_csync2,
             mock_adjust_priority, mock_adjust_fence_delay, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell, mock_host_user_config,

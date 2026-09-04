@@ -732,7 +732,7 @@ class TestTask(TestCase):
 
     @mock.patch('time.sleep')
     @mock.patch('crmsh.crash_test.task.Task.info')
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_fence_action_monitor(self, mock_parser, mock_info, mock_sleep):
         self.task_inst.thread_stop_event = mock.Mock()
         self.task_inst.thread_stop_event.is_set.side_effect = [False, False]

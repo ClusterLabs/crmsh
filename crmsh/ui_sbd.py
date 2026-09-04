@@ -702,7 +702,7 @@ class SBD(command.UI):
 
     def _print_sbd_agent_status(self):
         for node in self.cluster_nodes:
-            crm_mon_xml_parser = xmlutil.CrmMonXmlParser(node)
+            crm_mon_xml_parser = xmlutil.CrmMonXMLParser(node)
             if crm_mon_xml_parser.is_resource_configured(sbd.SBDManager.SBD_RA):
                 print("# Status of fence_sbd:")
                 sbd_id_list = crm_mon_xml_parser.get_resource_id_list_via_type(sbd.SBDManager.SBD_RA)

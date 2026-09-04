@@ -302,7 +302,7 @@ class TestInterfacesInfo(unittest.TestCase):
 
 
 @mock.patch('crmsh.network_utils.ssh_port_reachable_check')
-@mock.patch("crmsh.utils.xmlutil.CrmMonXmlParser")
+@mock.patch("crmsh.utils.xmlutil.CrmMonXMLParser")
 def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
     mock_xml_inst = mock.Mock()
     mock_xml.return_value = mock_xml_inst
@@ -318,7 +318,7 @@ def test_check_all_nodes_reachable_dead_nodes(mock_xml, mock_reachable):
 @mock.patch('crmsh.network_utils.check_ssh_passwd_need')
 @mock.patch("crmsh.utils.crmsh.user_of_host.UserOfHost.instance")
 @mock.patch('crmsh.network_utils.ssh_port_reachable_check')
-@mock.patch("crmsh.utils.xmlutil.CrmMonXmlParser")
+@mock.patch("crmsh.utils.xmlutil.CrmMonXMLParser")
 def test_check_all_nodes_reachable(mock_xml, mock_reachable, mock_user_of_host, mock_check_passwd):
     mock_xml_inst = mock.Mock()
     mock_xml.return_value = mock_xml_inst

@@ -22,6 +22,7 @@ FAKE_XML = '''
     <resource id="ocfs2-clusterfs" resource_agent="ocf:heartbeat:Filesystem" role="Started" active="true" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="1">
       <node name="tbw-2" id="1084783312" cached="true"/>
     </resource>
+    <resource id="d1" resource_agent="ocf:heartbeat:Dummy" role="Stopped" target_role="Stopped" active="false" orphaned="false" blocked="false" managed="true" failed="false" failure_ignored="false" nodes_running_on="0"/>
   </resources>
 </data>
 '''
@@ -32,9 +33,9 @@ OFFLINE_XML = '''
 </data>
 '''
 
-class TestCrmMonXmlParser(unittest.TestCase):
+class TestCrmMonXMLParser(unittest.TestCase):
     """
-    Unitary tests for crmsh.xmlutil.CrmMonXmlParser
+    Unitary tests for crmsh.xmlutil.CrmMonXMLParser
     """
     @mock.patch('crmsh.sh.cluster_shell')
     def setUp(self, mock_cluster_shell):
@@ -42,9 +43,9 @@ class TestCrmMonXmlParser(unittest.TestCase):
         Test setUp.
         """
         mock_cluster_shell().get_rc_stdout_stderr_without_input.return_value = (0, FAKE_XML, '')
-        self.parser_inst = xmlutil.CrmMonXmlParser()
+        self.parser_inst = xmlutil.CrmMonXMLParser()
         mock_cluster_shell().get_rc_stdout_stderr_without_input.return_value = (0, OFFLINE_XML, '')
-        self.offline_parser_inst = xmlutil.CrmMonXmlParser()
+        self.offline_parser_inst = xmlutil.CrmMonXMLParser()
 
     def test_is_cluster_not_connected(self):
         assert self.offline_parser_inst.not_connected() is True
@@ -72,6 +73,11 @@ class TestCrmMonXmlParser(unittest.TestCase):
         assert self.parser_inst.is_resource_started("test") is False
         assert self.parser_inst.is_resource_started("ocfs2-clusterfs") is True
         assert self.parser_inst.is_resource_started("ocf:pacemaker:controld") is True
+
+    def test_get_resource_running_nodes(self):
+        assert self.parser_inst.get_resource_running_nodes("test") == []
+        assert self.parser_inst.get_resource_running_nodes("d1") == []
+        assert self.parser_inst.get_resource_running_nodes("ocfs2-clusterfs") == ["tbw-2"]
 
     def test_get_resource_id_list_via_type(self):
         assert self.parser_inst.get_resource_id_list_via_type("test") == []

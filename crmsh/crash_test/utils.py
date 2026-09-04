@@ -140,7 +140,7 @@ def online_nodes():
     """
     Get online node list
     """
-    return xmlutil.CrmMonXmlParser().get_node_list(online=True, node_type='member')
+    return xmlutil.CrmMonXMLParser().get_node_list(online=True, node_type='member')
 
 
 def peer_node_list():

@@ -639,7 +639,7 @@ Finally run `crm cluster init qdevice` on any node in the cluster to re-deploy t
         logger.info("Setting cluster-name property to %s in CIB", new_name)
         utils.set_property("cluster-name", new_name)
 
-        if xmlutil.CrmMonXmlParser().is_non_stonith_resource_running():
+        if xmlutil.CrmMonXMLParser().is_non_stonith_resource_running():
             context.info("To apply the change, restart the cluster service at convenient time")
         else:
             bootstrap.restart_cluster()

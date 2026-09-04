@@ -624,10 +624,10 @@ class TestSBD(unittest.TestCase):
         self.sbd_instance_diskbased._service_is_active.assert_called_once_with(constants.SBD_SERVICE)
         mock_check_all_nodes_reachable.assert_called_once_with("purging SBD")
 
-    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
-    def test_print_sbd_agent_status(self, mock_CrmMonXmlParser):
-        mock_CrmMonXmlParser.return_value.is_resource_configured.return_value = True
-        mock_CrmMonXmlParser.return_value.get_resource_id_list_via_type.return_value = ["sbd"]
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
+    def test_print_sbd_agent_status(self, mock_CrmMonXMLParser):
+        mock_CrmMonXMLParser.return_value.is_resource_configured.return_value = True
+        mock_CrmMonXMLParser.return_value.get_resource_id_list_via_type.return_value = ["sbd"]
         self.sbd_instance_diskbased.cluster_shell.get_rc_output_without_input.return_value = (0, "active")
         with mock.patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
             self.sbd_instance_diskbased._print_sbd_agent_status()

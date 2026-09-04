@@ -60,7 +60,7 @@ class Maintenance(command.UI):
         return v and all(x == 'true' for x in v)
 
     def _runs_on_this_node(self, resource):
-        nodes = utils.running_on(resource)
+        nodes = xmlutil.CrmMonXMLParser().get_resource_running_nodes(resource)
         return set(nodes) == set([utils.this_node()])
 
     @command.skill_level('administrator')

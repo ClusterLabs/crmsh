@@ -106,6 +106,34 @@ class TestRATrace(unittest.TestCase):
         self.assertEqual(obj.node.xpath('.//*[@name="trace_ra"]'), [])
 
     @mock.patch('logging.Logger.error')
+    @mock.patch.object(RscMgmt, '_get_trace_rsc')
+    def test_ratrace_unknown_op(self, mock_get_rsc, mock_error):
+        """Check that do_trace rejects an unknown operation name."""
+        xml = '''<primitive class="ocf" id="r1" provider="pacemaker" type="Dummy"/>'''
+        obj = self.factory.create_from_node(etree.fromstring(xml))
+        mock_get_rsc.return_value = obj
+
+        with self.assertRaises(ValueError) as err:
+            RscMgmt().do_trace(self.context, obj.obj_id, 'xxx')
+        self.assertEqual(str(err.exception), "Unknown operation: xxx")
+
+    @mock.patch('logging.Logger.error')
+    @mock.patch.object(RscMgmt, '_get_trace_rsc')
+    def test_ratrace_interval_with_unit(self, mock_get_rsc, mock_error):
+        """Check that do_trace accepts an interval expressed with a time unit."""
+        xml = '''<primitive class="ocf" id="r1" provider="pacemaker" type="Dummy">
+            <operations>
+              <op id="r1-monitor-10s" interval="10s" name="monitor"/>
+            </operations>
+          </primitive>'''
+        obj = self.factory.create_from_node(etree.fromstring(xml))
+        mock_get_rsc.return_value = obj
+
+        RscMgmt().do_trace(self.context, obj.obj_id, 'monitor', '10s')
+        self.assertEqual(obj.node.xpath('operations/op/@id'), ['r1-monitor-10s'])
+        self.assertEqual(obj.node.xpath('operations/op[@id="r1-monitor-10s"]/instance_attributes/nvpair[@name="trace_ra"]/@value'), ['1'])
+
+    @mock.patch('logging.Logger.error')
     def test_ratrace_op_interval(self, mock_error):
         """Check setting RA tracing for an operation+interval."""
         xml = '''<primitive class="ocf" id="r1" provider="pacemaker" type="Dummy">

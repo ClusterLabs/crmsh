@@ -266,22 +266,22 @@ def step_impl(context):
 
 @then('Node "{node}" is standby')
 def step_impl(context, node):
-    assert xmlutil.CrmMonXmlParser().is_node_standby(node) is True
+    assert xmlutil.CrmMonXMLParser().is_node_standby(node) is True
 
 
 @then('Node "{node}" is online')
 def step_impl(context, node):
-    assert xmlutil.CrmMonXmlParser().is_node_standby(node) is False
+    assert xmlutil.CrmMonXMLParser().is_node_standby(node) is False
 
 
 @then('Node "{node}" is maintenance')
 def step_impl(context, node):
-    assert xmlutil.CrmMonXmlParser().is_node_maintenance(node) is True
+    assert xmlutil.CrmMonXMLParser().is_node_maintenance(node) is True
 
 
 @then('Node "{node}" is ready')
 def step_impl(context, node):
-    assert xmlutil.CrmMonXmlParser().is_node_maintenance(node) is False
+    assert xmlutil.CrmMonXMLParser().is_node_maintenance(node) is False
 
 
 @then('IP "{addr}" is used by corosync on "{node}"')

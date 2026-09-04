@@ -397,7 +397,7 @@ def is_our_node(s):
 
     Includes remote nodes as well
     '''
-    for n in CrmMonXmlParser().get_node_list():
+    for n in CrmMonXMLParser().get_node_list():
         if n.lower() == s.lower():
             return True
     return False
@@ -1502,7 +1502,7 @@ def attributes(typename, rules, values, xmlid=None, score=None):
     return e
 
 
-class CrmMonXmlParser(object):
+class CrmMonXMLParser(object):
     """
     Class to parse xml output of crm_mon
     """
@@ -1632,6 +1632,13 @@ class CrmMonXmlParser(object):
         if node:
             xpath += f"/node[@name='{node}']"
         return bool(self.xml_elem.xpath(xpath))
+
+    def get_resource_running_nodes(self, resource_id) -> list[str]:
+        """
+        Get nodes where the resource is currently running.
+        """
+        xpath = f'//resource[@id="{resource_id}" and @active="true"]/node'
+        return [elem.get('name') for elem in self.xml_elem.xpath(xpath)]
 
     def get_resource_top_parent_id_set_via_type(self, ra_type):
         """
