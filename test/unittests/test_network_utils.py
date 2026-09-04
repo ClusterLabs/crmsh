@@ -299,6 +299,56 @@ class TestInterfacesInfo(unittest.TestCase):
 
         mock_run_inst.get_stdout_or_raise_error.assert_called_once_with("ip -o route show")
 
+    @mock.patch("crmsh.network_utils.sh.LocalShell")
+    @mock.patch("crmsh.network_utils.socket.getaddrinfo")
+    def test_get_nic_by_subnet_of_addr_match(self, mock_getaddrinfo, mock_shell_cls):
+        ip_j_out = """[
+          {"ifname": "lo", "flags": ["LOOPBACK", "UP"], "addr_info": [{"local": "127.0.0.1", "prefixlen": 8}]},
+          {"ifname": "eth0", "flags": ["UP"], "addr_info": [{"local": "192.168.1.10", "prefixlen": 24}, {"local": "2001:db8::1", "prefixlen": 64}]},
+          {"ifname": "eth1", "flags": ["UP"], "addr_info": [{"local": "10.0.0.10", "prefixlen": 24}]}
+        ]"""
+        shell_inst = mock.Mock()
+        mock_shell_cls.return_value = shell_inst
+        shell_inst.get_stdout_or_raise_error.return_value = ip_j_out
+
+        # Match IPv4 on eth0
+        mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.168.1.50", 0))]
+        assert network_utils.get_nic_by_subnet_of_addr("qnetd.example.com") == "eth0"
+
+        # Match IPv6 on eth0
+        mock_getaddrinfo.return_value = [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2001:db8::50", 0, 0, 0))]
+        assert network_utils.get_nic_by_subnet_of_addr("2001:db8::50") == "eth0"
+
+        # Match IPv4 on eth1
+        mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.50", 0))]
+        assert network_utils.get_nic_by_subnet_of_addr("10.0.0.50") == "eth1"
+
+    @mock.patch("crmsh.network_utils.sh.LocalShell")
+    @mock.patch("crmsh.network_utils.socket.getaddrinfo")
+    def test_get_nic_by_subnet_of_addr_no_match(self, mock_getaddrinfo, mock_shell_cls):
+        ip_j_out = """[
+          {"ifname": "eth0", "flags": ["UP"], "addr_info": [{"local": "192.168.1.10", "prefixlen": 24}]}
+        ]"""
+        shell_inst = mock.Mock()
+        mock_shell_cls.return_value = shell_inst
+        shell_inst.get_stdout_or_raise_error.return_value = ip_j_out
+
+        mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("172.16.0.1", 0))]
+        assert network_utils.get_nic_by_subnet_of_addr("172.16.0.1") is None
+
+    @mock.patch("crmsh.network_utils.sh.LocalShell")
+    @mock.patch("crmsh.network_utils.socket.getaddrinfo")
+    def test_get_nic_by_subnet_of_addr_ignore_loopback(self, mock_getaddrinfo, mock_shell_cls):
+        ip_j_out = """[
+          {"ifname": "lo", "flags": ["LOOPBACK", "UP"], "addr_info": [{"local": "127.0.0.1", "prefixlen": 8}]}
+        ]"""
+        shell_inst = mock.Mock()
+        mock_shell_cls.return_value = shell_inst
+        shell_inst.get_stdout_or_raise_error.return_value = ip_j_out
+
+        mock_getaddrinfo.return_value = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.2", 0))]
+        assert network_utils.get_nic_by_subnet_of_addr("127.0.0.2") is None
+
 
 
 @mock.patch('crmsh.network_utils.ssh_port_reachable_check')

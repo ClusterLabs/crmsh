@@ -499,12 +499,13 @@ Examples:
 
         # if options.geo and options.name == "hacluster":
         #    parser.error("For a geo cluster, each cluster must have a unique name (use --name to set)")
-        boot_context = bootstrap.Context.set_context(options)
+        boot_args = bootstrap.Arguments.set_args(options)
+        boot_context = bootstrap.GlobalVariables(boot_args)
         boot_context.ui_context = context
-        boot_context.stage = stage
-        boot_context.args = args
+        boot_context.args.stage = stage
+        boot_context.args.args = args
         boot_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
-        boot_context.type = "init"
+        boot_context.args.type = "init"
 
         bootstrap.bootstrap_init(boot_context)
         bootstrap.bootstrap_add(boot_context)
@@ -557,11 +558,12 @@ Examples:
         if len(args) == 1:
             stage = args[0]
 
-        join_context = bootstrap.Context.set_context(options)
+        join_args = bootstrap.Arguments.set_args(options)
+        join_context = bootstrap.GlobalVariables(join_args)
         join_context.ui_context = context
-        join_context.stage = stage
+        join_context.args.stage = stage
         join_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
-        join_context.type = "join"
+        join_context.args.type = "join"
 
         bootstrap.bootstrap_join(join_context)
 
@@ -597,14 +599,15 @@ the last node, pass --force argument to crm.
         if options.cluster_node is not None and options.cluster_node not in args:
             args = list(args) + [options.cluster_node]
 
-        rm_context = bootstrap.Context.set_context(options)
+        rm_args = bootstrap.Arguments.set_args(options)
+        rm_context = bootstrap.GlobalVariables(rm_args)
         rm_context.ui_context = context
 
         if len(args) == 0:
             bootstrap.bootstrap_remove(rm_context)
         else:
             for node in args:
-                rm_context.cluster_node = node
+                rm_context.args.cluster_node = node
                 bootstrap.bootstrap_remove(rm_context)
                 print()
         return True
@@ -723,9 +726,10 @@ Cluster Description
             except ValueError:
                 parser.error("Invalid ticket list")
 
-        geo_context = bootstrap.Context.set_context(options)
-        geo_context.clusters = clustermap
-        geo_context.tickets = ticketlist
+        geo_args = bootstrap.Arguments.set_args(options)
+        geo_context = bootstrap.GlobalVariables(geo_args)
+        geo_context.args.clusters = clustermap
+        geo_context.args.tickets = ticketlist
         geo_context.ui_context = context
 
         bootstrap.bootstrap_init_geo(geo_context)
@@ -770,8 +774,9 @@ an existing cluster.""",
         if clustermap is None:
             parser.error("Invalid cluster description format")
 
-        geo_context = bootstrap.Context.set_context(options)
-        geo_context.clusters = clustermap
+        geo_args = bootstrap.Arguments.set_args(options)
+        geo_context = bootstrap.GlobalVariables(geo_args)
+        geo_context.args.clusters = clustermap
         geo_context.ui_context = context
 
         bootstrap.bootstrap_join_geo(geo_context)
@@ -799,7 +804,8 @@ to get the geo cluster configuration.""",
         if options is None or args is None:
             return
 
-        geo_context = bootstrap.Context.set_context(options)
+        geo_args = bootstrap.Arguments.set_args(options)
+        geo_context = bootstrap.GlobalVariables(geo_args)
         geo_context.ui_context = context
 
         bootstrap.bootstrap_arbitrator(geo_context)

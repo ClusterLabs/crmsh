@@ -95,6 +95,45 @@ def valid_port(port):
     return int(port) >= 1024 and int(port) <= 65535
 
 
+def get_nic_by_subnet_of_addr(addr: str) -> typing.Optional[str]:
+    """
+    Match resolved IP addresses of addr against local non-loopback interface subnets.
+    Returns interface name (e.g., 'eth0') if found, or None.
+    """
+    try:
+        addrinfos = socket.getaddrinfo(addr, None)
+    except (socket.gaierror, socket.error, ValueError):
+        return None
+
+    target_ips = []
+    for res in addrinfos:
+        ip_str = res[4][0]
+        try:
+            target_ips.append(ipaddress.ip_address(ip_str))
+        except ValueError:
+            pass
+
+    if not target_ips:
+        return None
+
+    try:
+        stdout = sh.LocalShell().get_stdout_or_raise_error(None, 'ip -j addr show')
+        ip_addr_obj = iproute2.IPAddr(json.loads(stdout))
+        interfaces = ip_addr_obj.interfaces()
+    except Exception:
+        return None
+
+    for iface in interfaces:
+        if 'LOOPBACK' in iface.flags:
+            continue
+        for addr_iface in iface.addr_info:
+            for target_ip in target_ips:
+                if target_ip.version == addr_iface.version and target_ip in addr_iface.network:
+                    return iface.ifname
+
+    return None
+
+
 class IP(object):
     """
     Class to get some properties of IP address

@@ -8,36 +8,48 @@ class TestClusterFSManager(unittest.TestCase):
 
     @mock.patch("crmsh.cluster_fs.ClusterFSManager._verify_options")
     def setUp(self, mock_verify_options):
-        ocfs2_context_one_device = mock.Mock(ocfs2_devices=["/dev/sda1"], gfs2_devices=[], use_cluster_lvm2=False, stage=None)
-        gfs2_context_one_device_clvm2 = mock.Mock(ocfs2_devices=[], gfs2_devices=["/dev/sda1"], use_cluster_lvm2=True)
+        def _make_context(ocfs2_devices=[], gfs2_devices=[], use_cluster_lvm2=False, stage=None, mount_point=None, yes_to_all=False):
+            ctx = mock.Mock()
+            ctx.args = mock.Mock(
+                ocfs2_devices=ocfs2_devices,
+                gfs2_devices=gfs2_devices,
+                use_cluster_lvm2=use_cluster_lvm2,
+                stage=stage,
+                mount_point=mount_point,
+                yes_to_all=yes_to_all
+            )
+            return ctx
+
+        ocfs2_context_one_device = _make_context(ocfs2_devices=["/dev/sda1"], gfs2_devices=[], use_cluster_lvm2=False, stage=None)
+        gfs2_context_one_device_clvm2 = _make_context(ocfs2_devices=[], gfs2_devices=["/dev/sda1"], use_cluster_lvm2=True)
         self.ocfs2_instance_one_device = cluster_fs.ClusterFSManager(ocfs2_context_one_device)
         self.gfs2_instance_one_device_clvm2 = cluster_fs.ClusterFSManager(gfs2_context_one_device_clvm2)
 
-        ocfs2_gfs2_both_context = mock.Mock(ocfs2_devices=["/dev/sda1"], gfs2_devices=["/dev/sda2"])
+        ocfs2_gfs2_both_context = _make_context(ocfs2_devices=["/dev/sda1"], gfs2_devices=["/dev/sda2"])
         self.instance_both = cluster_fs.ClusterFSManager(ocfs2_gfs2_both_context)
 
-        ocfs2_stage_without_device_context = mock.Mock(ocfs2_devices=[], gfs2_devices=[], stage="ocfs2")
+        ocfs2_stage_without_device_context = _make_context(ocfs2_devices=[], gfs2_devices=[], stage="ocfs2")
         self.instance_ocfs2_stage_without_device = cluster_fs.ClusterFSManager(ocfs2_stage_without_device_context)
 
-        gfs2_stage_without_device_context = mock.Mock(ocfs2_devices=[], gfs2_devices=[], stage="gfs2")
+        gfs2_stage_without_device_context = _make_context(ocfs2_devices=[], gfs2_devices=[], stage="gfs2")
         self.instance_gfs2_stage_without_device = cluster_fs.ClusterFSManager(gfs2_stage_without_device_context)
 
-        ocfs2_stage_with_device_context = mock.Mock(ocfs2_devices=["/dev/sda1"], gfs2_devices=[], stage="ocfs2", use_cluster_lvm2=False)
+        ocfs2_stage_with_device_context = _make_context(ocfs2_devices=["/dev/sda1"], gfs2_devices=[], stage="ocfs2", use_cluster_lvm2=False)
         self.instance_ocfs2_stage_with_device = cluster_fs.ClusterFSManager(ocfs2_stage_with_device_context)
 
-        ocfs2_stage_with_device_clvm2_context = mock.Mock(ocfs2_devices=["/dev/sda1"], gfs2_devices=[], stage="ocfs2", use_cluster_lvm2=True)
+        ocfs2_stage_with_device_clvm2_context = _make_context(ocfs2_devices=["/dev/sda1"], gfs2_devices=[], stage="ocfs2", use_cluster_lvm2=True)
         self.instance_ocfs2_stage_with_device_clvm2 = cluster_fs.ClusterFSManager(ocfs2_stage_with_device_clvm2_context)
 
-        clvm2_without_device_context = mock.Mock(ocfs2_devices=[], gfs2_devices=[], use_cluster_lvm2=True)
+        clvm2_without_device_context = _make_context(ocfs2_devices=[], gfs2_devices=[], use_cluster_lvm2=True)
         self.instance_clvm2_without_device = cluster_fs.ClusterFSManager(clvm2_without_device_context)
 
-        multi_ocfs2_devices_without_clvm2_context = mock.Mock(ocfs2_devices=["/dev/sda1", "/dev/sda2"], gfs2_devices=[], use_cluster_lvm2=False)
+        multi_ocfs2_devices_without_clvm2_context = _make_context(ocfs2_devices=["/dev/sda1", "/dev/sda2"], gfs2_devices=[], use_cluster_lvm2=False)
         self.multi_ocfs2_devices_without_clvm2 = cluster_fs.ClusterFSManager(multi_ocfs2_devices_without_clvm2_context)
 
-        multi_gfs2_devices_without_clvm2_context = mock.Mock(ocfs2_devices=[], gfs2_devices=["/dev/sda1", "/dev/sda2"], use_cluster_lvm2=False)
+        multi_gfs2_devices_without_clvm2_context = _make_context(ocfs2_devices=[], gfs2_devices=["/dev/sda1", "/dev/sda2"], use_cluster_lvm2=False)
         self.multi_gfs2_devices_without_clvm2 = cluster_fs.ClusterFSManager(multi_gfs2_devices_without_clvm2_context)
 
-        gfs2_context_one_device_with_mount_point = mock.Mock(ocfs2_devices=[], gfs2_devices=["/dev/sda1"], use_cluster_lvm2=False, mount_point="/mnt/gfs2")
+        gfs2_context_one_device_with_mount_point = _make_context(ocfs2_devices=[], gfs2_devices=["/dev/sda1"], use_cluster_lvm2=False, mount_point="/mnt/gfs2")
         self.gfs2_instance_one_device_with_mount_point = cluster_fs.ClusterFSManager(gfs2_context_one_device_with_mount_point)
 
     @mock.patch("crmsh.utils.package_is_installed")

@@ -451,15 +451,26 @@ class LoggerUtils(object):
             self.logger.info("input result: %s", value)
         return value
 
-    def confirm(self, msg):
+    def confirm(self, msg, default=None):
         """
         To ask question
         Return True when input y
         Record question and answer by wait_input
         """
+        if default is True:
+            prompt_suffix = " (Y/n)? "
+        elif default is False:
+            prompt_suffix = " (y/N)? "
+        else:
+            prompt_suffix = " (y/n)? "
+
         while True:
-            ans = self.wait_input("{} (y/n)? ".format(msg.strip("? ")))
-            if not ans or ans.lower() not in ('y', 'n'):
+            ans = self.wait_input("{}{}".format(msg.strip("? "), prompt_suffix))
+            if not ans:
+                if default is not None:
+                    return default
+                continue
+            if ans.lower() not in ('y', 'n'):
                 continue
             return ans.lower() == 'y'
 

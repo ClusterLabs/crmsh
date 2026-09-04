@@ -27,24 +27,24 @@ Feature: corosync qdevice/qnetd options validate
 
   @clean
   Scenario: Option "--qnetd-port" set wrong port
-    When    Try "crm cluster init --qnetd-hostname=qnetd-node --qnetd-port=1"
+    When    Try "crm cluster init -y --qnetd-hostname=qnetd-node --qnetd-port=1"
     Then    Except "ERROR: cluster.init: invalid qnetd port range(1024 - 65535)"
 
   @clean
   Scenario: Option "--qnetd-port" and "--qdevice-port" can't be used together
-    When    Try "crm cluster init --qnetd-hostname=qnetd-node --qnetd-port=1234 --qdevice-port=1234"
+    When    Try "crm cluster init -y --qnetd-hostname=qnetd-node --qnetd-port=1234 --qdevice-port=1234"
     Then    Expected "Options --qdevice-port and --qnetd-port can't be used together" in stderr
 
   @clean
   Scenario: Option "--qdevice-tie-breaker" set wrong value
-    When    Try "crm cluster init --qnetd-hostname=qnetd-node --qdevice-tie-breaker=wrongtiebreaker"
+    When    Try "crm cluster init -y --qnetd-hostname=qnetd-node --qdevice-tie-breaker=wrongtiebreaker"
     Then    Except "ERROR: cluster.init: invalid qdevice tie_breaker(lowest/highest/valid_node_id)"
 
   @clean
   Scenario: Option "--qdevice-heuristics" set wrong value
-    When    Try "crm cluster init --qnetd-hostname=qnetd-node --qdevice-heuristics='ls /opt'"
+    When    Try "crm cluster init -y --qnetd-hostname=qnetd-node --qdevice-heuristics='ls /opt'"
     Then    Except "ERROR: cluster.init: commands for heuristics should be absolute path"
-    When    Try "crm cluster init --qnetd-hostname=qnetd-node --qdevice-heuristics='/bin/not_exist_cmd /opt'"
+    When    Try "crm cluster init -y --qnetd-hostname=qnetd-node --qdevice-heuristics='/bin/not_exist_cmd /opt'"
     Then    Except "ERROR: cluster.init: command /bin/not_exist_cmd not exist"
 
   @clean

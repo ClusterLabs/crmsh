@@ -82,20 +82,17 @@ INIT_STAGES_ALL = INIT_STAGES_EXTERNAL + INIT_STAGES_INTERNAL
 JOIN_STAGES_EXTERNAL = ("ssh", "firewalld", "ssh_merge", "cluster")
 
 
-class Context(object):
-    """
-    Context object used to avoid having to pass these variables
-    to every bootstrap method.
-    """
-    DEFAULT_PROFILE_NAME = "default"
-    KNET_DEFAULT_PROFILE_NAME = "knet-default"
-    S390_PROFILE_NAME = "s390"
-    CORE_PACKAGES = ("corosync", "pacemaker")
+class BootstrapQDeviceValidationCallback(qdevice.QDeviceValidationCallback):
+    def ask_override(self, msg: str, default: typing.Optional[bool] = None) -> bool:
+        return confirm(msg, default=default)
 
+
+class Arguments(object):
+    """
+    Arguments object used to store command-line options
+    and interactive answers.
+    """
     def __init__(self):
-        '''
-        Initialize attributes
-        '''
         self.type = None # init or join
         self.quiet = None
         self.yes_to_all = None
@@ -105,10 +102,8 @@ class Context(object):
         self.transport = None
         self.nic_list = []
         self.user_at_node_list = []
-        self.current_user = None
         self.admin_ip = None
         self.ipv6 = None
-        self.qdevice_inst = None
         self.qnetd_addr_input = None
         self.qdevice_port = None
         self.qnetd_port = None
@@ -127,11 +122,37 @@ class Context(object):
         self.arbitrator = None
         self.clusters = None
         self.tickets = None
-        self.sbd_manager = None
         self.sbd_devices = []
         self.diskless_sbd = None
         self.stage = None
         self.args = None
+        self.use_ssh_agent = None
+        self.skip_csync2 = None
+
+    @classmethod
+    def set_args(cls, options):
+        args_inst = cls()
+        for opt in vars(options):
+            setattr(args_inst, opt, getattr(options, opt))
+        return args_inst
+
+
+class GlobalVariables(object):
+    """
+    Global variables and runtime state used to avoid having to pass these variables
+    to every bootstrap method.
+    """
+    DEFAULT_PROFILE_NAME = "default"
+    KNET_DEFAULT_PROFILE_NAME = "knet-default"
+    S390_PROFILE_NAME = "s390"
+    CORE_PACKAGES = ("corosync", "pacemaker")
+
+    def __init__(self, args: Arguments):
+        self.args = args
+        self.ipv6 = args.ipv6
+        self.current_user = None
+        self.qdevice_inst: typing.Optional[qdevice.QDevice] = None
+        self.sbd_manager = None
         self.ui_context = None
         self.interfaces_inst = None
         self.cluster_is_running = None
@@ -144,64 +165,55 @@ class Context(object):
         self.corosync_conf_orig = None
         self.rm_list = [corosync.conf(), COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH, "~/.config/crm/*"]
-        self.use_ssh_agent = None
-        self.skip_csync2 = None
-
-    @classmethod
-    def set_context(cls, options):
-        ctx = cls()
-        for opt in vars(options):
-            setattr(ctx, opt, getattr(options, opt))
-        ctx.initialize_user()
-        return ctx
+        self.populate_user()
 
     def _any_qdevice_options_set(self):
         return any([
-            self.qdevice_port,
-            self.qnetd_port,
-            self.qdevice_algo,
-            self.qdevice_tie_breaker,
-            self.qdevice_tls,
-            self.qdevice_heuristics,
-            self.qdevice_heuristics_mode,
+            self.args.qdevice_port,
+            self.args.qnetd_port,
+            self.args.qdevice_algo,
+            self.args.qdevice_tie_breaker,
+            self.args.qdevice_tls,
+            self.args.qdevice_heuristics,
+            self.args.qdevice_heuristics_mode,
         ])
 
-    def _initialize_qdevice(self):
+    def _populate_qdevice(self):
         """
-        Initialize qdevice instance
+        Populate qdevice instance
         """
-        if not self.qnetd_addr_input:
-            if self._any_qdevice_options_set() or self.stage == "qdevice":
+        if not self.args.qnetd_addr_input:
+            if self._any_qdevice_options_set() or (self.args.stage == "qdevice" and self.args.yes_to_all):
                 utils.fatal("Option --qnetd-hostname is required if want to configure qdevice")
             return
 
-        if self.qdevice_port is not None:
+        if self.args.qdevice_port is not None:
             logger.warning("Option --qdevice-port is deprecated and will be removed in future release, please use --qnetd-port instead")
-            if self.qnetd_port is not None:
+            if self.args.qnetd_port is not None:
                 utils.fatal("Options --qdevice-port and --qnetd-port can't be used together")
-        if self.qdevice_heuristics_mode and not self.qdevice_heuristics:
+        if self.args.qdevice_heuristics_mode and not self.args.qdevice_heuristics:
             utils.fatal("Option --qdevice-heuristics is required if want to configure heuristics mode")
 
-        qnetd_port = self.qnetd_port or self.qdevice_port
-        ssh_user, qnetd_host = utils.parse_user_at_host(self.qnetd_addr_input)
+        qnetd_port = self.args.qnetd_port or self.args.qdevice_port
+        ssh_user, qnetd_host = utils.parse_user_at_host(self.args.qnetd_addr_input)
         self.qdevice_inst = qdevice.QDevice(
                 qnetd_addr=qnetd_host,
                 port=qnetd_port,
-                algo=self.qdevice_algo,
-                tie_breaker=self.qdevice_tie_breaker,
-                tls=self.qdevice_tls,
+                algo=self.args.qdevice_algo,
+                tie_breaker=self.args.qdevice_tie_breaker,
+                tls=self.args.qdevice_tls,
                 ssh_user=ssh_user,
-                cmds=self.qdevice_heuristics,
-                mode=self.qdevice_heuristics_mode,
-                is_stage=self.stage == "qdevice")
+                cmds=self.args.qdevice_heuristics,
+                mode=self.args.qdevice_heuristics_mode,
+                is_stage=self.args.stage == "qdevice")
 
-    def initialize_user(self):
+    def populate_user(self):
         """
         users_of_specified_hosts: 'not_specified', 'specified', 'no_hosts'
         """
         sudoer = userdir.get_sudoer()
-        if self.cluster_node is not None:
-            match self.cluster_node.split('@', 1):
+        if self.args.cluster_node is not None:
+            match self.args.cluster_node.split('@', 1):
                 case [user, host]:
                     cluster_node_user = user
                 case [host]:
@@ -213,10 +225,10 @@ class Context(object):
                 utils.fatal("Unsupported config: local node is using root and remote nodes is using non-root users.")
             else:
                 self.current_user = sudoer
-        elif self.user_at_node_list:
+        elif self.args.user_at_node_list:
             has_root = False
             has_non_root = False
-            for item in self.user_at_node_list:
+            for item in self.args.user_at_node_list:
                 match item.split('@', 1):
                     case [user, host]:
                         has_root = has_root or user == 'root'
@@ -241,13 +253,13 @@ class Context(object):
         """
         Validate network related options -A/-i/-t
         """
-        if self.admin_ip:
-            Validation.valid_admin_ip(self.admin_ip)
-        if self.type == "init" and self.transport != "knet" and len(self.nic_addr_list) > 1:
-            utils.fatal(f"Only one link is allowed for the '{self.transport}' transport type")
-        if len(self.nic_addr_list) > corosync.KNET_LINK_NUM_LIMIT:
+        if self.args.admin_ip:
+            Validation.valid_admin_ip(self.args.admin_ip)
+        if self.args.type == "init" and self.args.transport != "knet" and len(self.args.nic_addr_list) > 1:
+            utils.fatal(f"Only one link is allowed for the '{self.args.transport}' transport type")
+        if len(self.args.nic_addr_list) > corosync.KNET_LINK_NUM_LIMIT:
             utils.fatal(f"Maximum number of interfaces is {corosync.KNET_LINK_NUM_LIMIT}")
-        if self.transport == "udp":
+        if self.args.transport == "udp":
             cloud_type = utils.detect_cloud()
             if cloud_type:
                 utils.fatal(f"Transport udp(multicast) cannot be used in {cloud_type} platform")
@@ -256,29 +268,29 @@ class Context(object):
         """
         Validate sbd options
         """
-        no_sbd_option = not self.sbd_devices and not self.diskless_sbd
-        if self.watchdog and no_sbd_option:
+        no_sbd_option = not self.args.sbd_devices and not self.args.diskless_sbd
+        if self.args.watchdog and no_sbd_option:
             utils.fatal("-w option should be used with -s or -S option")
-        if self.sbd_devices and self.diskless_sbd:
+        if self.args.sbd_devices and self.args.diskless_sbd:
             utils.fatal("Can't use -s and -S options together")
 
-        with_sbd_option = self.sbd_devices or self.diskless_sbd
+        with_sbd_option = self.args.sbd_devices or self.args.diskless_sbd
 
-        if self.stage == "sbd":
+        if self.args.stage == "sbd":
             utils.check_all_nodes_reachable("setup SBD")
             if not utils.calculate_quorate_status():
                 utils.fatal("Cluster is not quorate, can't run 'sbd' stage")
 
             node_list = utils.list_cluster_nodes()
-            if self.sbd_devices:
-                sbd.SBDUtils.verify_sbd_device(self.sbd_devices, node_list)
+            if self.args.sbd_devices:
+                sbd.SBDUtils.verify_sbd_device(self.args.sbd_devices, node_list)
             for node in node_list:
                 if not utils.package_is_installed("sbd", node):
                     utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
-                if self.sbd_devices and not utils.package_is_installed("fence-agents-sbd", node):
+                if self.args.sbd_devices and not utils.package_is_installed("fence-agents-sbd", node):
                     utils.fatal(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG + f" on {node}")
 
-            if not with_sbd_option and self.yes_to_all:
+            if not with_sbd_option and self.args.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
             if ServiceManager().service_is_active(constants.SBD_SERVICE) and not crmsh.options.force:
                 utils.fatal("Can't configure stage sbd: sbd.service already running! Please use crm option '-F' if need to redeploy")
@@ -286,35 +298,35 @@ class Context(object):
         elif with_sbd_option:
             if not utils.package_is_installed("sbd"):
                 utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG)
-            if self.sbd_devices:
+            if self.args.sbd_devices:
                 if not utils.package_is_installed("fence-agents-sbd"):
                     utils.fatal(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG)
-                sbd.SBDUtils.verify_sbd_device(self.sbd_devices)
+                sbd.SBDUtils.verify_sbd_device(self.args.sbd_devices)
 
     def _validate_nodes_option(self):
         """
         Validate -N/--nodes option
         """
-        if self.user_at_node_list and not self.yes_to_all:
+        if self.args.user_at_node_list and not self.args.yes_to_all:
             utils.fatal("Can't use -N/--nodes option without -y/--yes option")
-        if self.user_at_node_list and self.stage:
-            utils.fatal("Can't use -N/--nodes option and stage({}) together".format(self.stage))
+        if self.args.user_at_node_list and self.args.stage:
+            utils.fatal("Can't use -N/--nodes option and stage({}) together".format(self.args.stage))
         me = utils.this_node()
-        li = [utils.parse_user_at_host(x) for x in self.user_at_node_list]
+        li = [utils.parse_user_at_host(x) for x in self.args.user_at_node_list]
         for user in (user for user, node in li if node == me and user is not None and user != self.current_user):
             utils.fatal(f"Overriding current user '{self.current_user}' by '{user}'. Ouch, don't do it.")
-        self.user_at_node_list = [value for (user, node), value in zip(li, self.user_at_node_list) if node != me]
-        for user, node in (utils.parse_user_at_host(x) for x in self.user_at_node_list):
+        self.args.user_at_node_list = [value for (user, node), value in zip(li, self.args.user_at_node_list) if node != me]
+        for user, node in (utils.parse_user_at_host(x) for x in self.args.user_at_node_list):
             network_utils.ssh_port_reachable_check(node)
 
     def _validate_cluster_node(self):
         """
         Validate cluster_node on join side
         """
-        if self.type == "join" and self.cluster_node:
-            user, node = _parse_user_at_host(self.cluster_node, None)
+        if self.args.type == "join" and self.args.cluster_node:
+            user, node = _parse_user_at_host(self.args.cluster_node, None)
             try:
-                # self.cluster_node might be hostname or IP address
+                # self.args.cluster_node might be hostname or IP address
                 ip_addr = socket.gethostbyname(node)
                 if network_utils.InterfacesInfo.ip_in_local(ip_addr):
                     utils.fatal(f"\"{node}\" is the local node. Please specify peer node's hostname or IP address")
@@ -325,26 +337,26 @@ class Context(object):
         """
         Validate stage argument
         """
-        if not self.stage:
+        if not self.args.stage:
             if self.cluster_is_running:
                 utils.fatal("Cluster is already running!")
             return
 
-        if self.type == "init":
-            if self.stage not in INIT_STAGES_ALL:
-                utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(INIT_STAGES_EXTERNAL)})")
-            if self.stage in ("admin", "sbd", "qdevice", "ocfs2") and not self.cluster_is_running:
-                utils.fatal(f"Cluster is inactive, can't run '{self.stage}' stage")
-            if self.stage in ("corosync", "cluster") and self.cluster_is_running:
-                utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
+        if self.args.type == "init":
+            if self.args.stage not in INIT_STAGES_ALL:
+                utils.fatal(f"Invalid stage: {self.args.stage}(available stages: {', '.join(INIT_STAGES_EXTERNAL)})")
+            if self.args.stage in ("admin", "sbd", "qdevice", "ocfs2") and not self.cluster_is_running:
+                utils.fatal(f"Cluster is inactive, can't run '{self.args.stage}' stage")
+            if self.args.stage in ("corosync", "cluster") and self.cluster_is_running:
+                utils.fatal(f"Cluster is active, can't run '{self.args.stage}' stage")
 
-        elif self.type == "join":
-            if self.stage not in JOIN_STAGES_EXTERNAL:
-                utils.fatal(f"Invalid stage: {self.stage}(available stages: {', '.join(JOIN_STAGES_EXTERNAL)})")
-            if self.stage and self.cluster_node is None:
-                utils.fatal(f"Can't use stage({self.stage}) without specifying cluster node")
-            if self.stage in ("cluster", ) and self.cluster_is_running:
-                utils.fatal(f"Cluster is active, can't run '{self.stage}' stage")
+        elif self.args.type == "join":
+            if self.args.stage not in JOIN_STAGES_EXTERNAL:
+                utils.fatal(f"Invalid stage: {self.args.stage}(available stages: {', '.join(JOIN_STAGES_EXTERNAL)})")
+            if self.args.stage and self.args.cluster_node is None:
+                utils.fatal(f"Can't use stage({self.args.stage}) without specifying cluster node")
+            if self.args.stage in ("cluster", ) and self.cluster_is_running:
+                utils.fatal(f"Cluster is active, can't run '{self.args.stage}' stage")
 
     def validate(self):
         """
@@ -353,12 +365,33 @@ class Context(object):
         for package in self.CORE_PACKAGES:
             if not utils.package_is_installed(package):
                 utils.fatal(f"Package '{package}' is not installed")
-        self._initialize_qdevice()
+        self._populate_qdevice()
         if self.qdevice_inst:
-            self.qdevice_inst.valid_qdevice_options()
-        if self.ocfs2_devices or self.gfs2_devices or self.stage in ("ocfs2", "gfs2"):
+            if self.interfaces_inst is None:
+                self.interfaces_inst = network_utils.InterfacesInfo(self.ipv6, self.args.nic_addr_list)
+                try:
+                    self.interfaces_inst.get_interfaces_info()
+                    self.interfaces_inst.flatten_custom_nic_addr_list()
+                except ValueError:
+                    pass
+            if self.args.stage == "qdevice":
+                self.qdevice_inst.valid_qdevice_options(BootstrapQDeviceValidationCallback(), corosync.get_corosync_interfaces())
+            else:
+                corosync_nics = self.interfaces_inst.input_nic_list or []
+                if not corosync_nics:
+                    try:
+                        default_nic = self.default_nic or self.interfaces_inst.get_default_nic_from_route()
+                        if default_nic:
+                            corosync_nics = [default_nic]
+                    except Exception:
+                        pass
+                self.qdevice_inst.valid_qdevice_options(
+                    callback=BootstrapQDeviceValidationCallback(),
+                    corosync_nics=corosync_nics
+                )
+        if self.args.ocfs2_devices or self.args.gfs2_devices or self.args.stage in ("ocfs2", "gfs2"):
             cluster_fs.ClusterFSManager.pre_verify(self)
-        if self.skip_csync2:
+        if self.args.skip_csync2:
             logger.warning("-x option is deprecated and will be removed in future releases")
         self._validate_stage()
         self._validate_network_options()
@@ -366,7 +399,7 @@ class Context(object):
         self._validate_nodes_option()
         self._validate_sbd_option()
 
-    def init_sbd_manager(self):
+    def populate_sbd_manager(self):
         self.sbd_manager = sbd.SBDManager(bootstrap_context=self)
 
     def detect_platform(self):
@@ -397,7 +430,7 @@ class Context(object):
             return profile_dict
 
         if profile_type in self.profiles_data:
-            if not self.quiet:
+            if not self.args.quiet:
                 logger.info("Loading \"%s\" profile from %s", profile_type, PROFILES_FILE)
             profile_dict = self.profiles_data[profile_type]
         else:
@@ -419,7 +452,7 @@ class Context(object):
             return
 
         default_profile_dict = self.load_specific_profile(self.DEFAULT_PROFILE_NAME)
-        if self.transport == "knet":
+        if self.args.transport == "knet":
             knet_profile_dict = self.load_specific_profile(self.KNET_DEFAULT_PROFILE_NAME)
             # merge two dictionaries
             default_profile_dict = {**default_profile_dict, **knet_profile_dict}
@@ -433,7 +466,7 @@ class Context(object):
         return self.corosync_conf_orig
 
 
-_context: typing.Optional[Context] = None
+_global_variables: typing.Optional[GlobalVariables] = None
 
 
 def drop_last_history():
@@ -443,7 +476,7 @@ def drop_last_history():
 
 
 def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[], allow_empty=False):
-    if _context.yes_to_all:
+    if _global_variables.args.yes_to_all:
         return default
 
     while True:
@@ -474,24 +507,24 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[
         return val
 
 
-def confirm(msg):
-    if crmsh.options.force or (_context and _context.yes_to_all):
+def confirm(msg, default=None):
+    if crmsh.options.force or (_global_variables and _global_variables.args.yes_to_all):
         return True
     disable_completion()
-    rc = logger_utils.confirm(msg)
+    rc = logger_utils.confirm(msg, default=default)
     enable_completion()
     drop_last_history()
     return rc
 
 
 def disable_completion():
-    if _context and _context.ui_context:
-        _context.ui_context.disable_completion()
+    if _global_variables and _global_variables.ui_context:
+        _global_variables.ui_context.disable_completion()
 
 
 def enable_completion():
-    if _context and _context.ui_context:
-        _context.ui_context.setup_readline()
+    if _global_variables and _global_variables.ui_context:
+        _global_variables.ui_context.setup_readline()
 
 
 def invoke(*args):
@@ -580,15 +613,15 @@ def is_online():
         return False
 
     # if peer_node is None, this is in the init process
-    if not _context or _context.cluster_node is None:
+    if not _global_variables or _global_variables.args.cluster_node is None:
         return True
     # In join process
     # If the joining node is already online but can't find the init node
     # The communication IP maybe mis-configured
-    user, cluster_node = _parse_user_at_host(_context.cluster_node, None)
+    user, cluster_node = _parse_user_at_host(_global_variables.args.cluster_node, None)
     cluster_node = get_node_canonical_hostname(cluster_node)
     if not xmlutil.CrmMonXmlParser().is_node_online(cluster_node):
-        shutil.copy(_context.get_corosync_conf_orig(), corosync.conf())
+        shutil.copy(_global_variables.get_corosync_conf_orig(), corosync.conf())
         sync_path(corosync.conf(), cluster_node)
         sh.cluster_shell().get_stdout_or_raise_error("corosync-cfgtool -R", cluster_node)
         ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).stop_service("corosync")
@@ -613,7 +646,7 @@ def pick_default_value(default_list, prev_list):
 
 
 def status_progress(progress_bar):
-    if not _context or not _context.quiet:
+    if not _global_variables or not _global_variables.args.quiet:
         progress_bar.progress()
 
 
@@ -643,7 +676,7 @@ def check_tty():
     """
     Check for pseudo-tty: Cannot display read prompts without a TTY (bnc#892702)
     """
-    if _context.yes_to_all:
+    if _global_variables.args.yes_to_all:
         return
     if not sys.stdin.isatty():
         utils.fatal("No pseudo-tty detected! Use -t option to ssh if calling remotely.")
@@ -704,16 +737,16 @@ def init_network():
     """
     Get all needed network information through network_utils.InterfacesInfo
     """
-    _context.interfaces_inst = network_utils.InterfacesInfo(_context.ipv6, _context.nic_addr_list)
-    _context.interfaces_inst.get_interfaces_info()
-    _context.interfaces_inst.flatten_custom_nic_addr_list()
+    _global_variables.interfaces_inst = network_utils.InterfacesInfo(_global_variables.ipv6, _global_variables.args.nic_addr_list)
+    _global_variables.interfaces_inst.get_interfaces_info()
+    _global_variables.interfaces_inst.flatten_custom_nic_addr_list()
 
-    if _context.interfaces_inst.input_nic_list:
-        _context.default_nic = _context.interfaces_inst.input_nic_list[0]
-        _context.default_ip_list = _context.interfaces_inst.input_addr_list
+    if _global_variables.interfaces_inst.input_nic_list:
+        _global_variables.default_nic = _global_variables.interfaces_inst.input_nic_list[0]
+        _global_variables.default_ip_list = _global_variables.interfaces_inst.input_addr_list
     else:
-        _context.default_nic = _context.interfaces_inst.get_default_nic_from_route()
-        _context.default_ip_list = [_context.interfaces_inst.nic_first_ip(_context.default_nic)]
+        _global_variables.default_nic = _global_variables.interfaces_inst.get_default_nic_from_route()
+        _global_variables.default_ip_list = [_global_variables.interfaces_inst.nic_first_ip(_global_variables.default_nic)]
 
 
 def init_cluster_local():
@@ -742,7 +775,7 @@ def init_cluster_local():
     if service_manager.service_is_available("hawk.service"):
         service_manager.start_service("hawk.service", enable=True)
         logger.info("Hawk cluster interface is now running. To see cluster status, open:")
-        logger.info("  https://{}:7630/".format(_context.default_ip_list[0]))
+        logger.info("  https://{}:7630/".format(_global_variables.default_ip_list[0]))
         logger.info("Log in with username 'hacluster'{}".format(pass_msg))
     else:
         logger.warning("Hawk not installed - not configuring web management interface.")
@@ -755,7 +788,7 @@ def init_cluster_local():
         failed_services_str = f" Please check failed services: {', '.join(failed_services)}" if failed_services else ""
         utils.fatal(f"Failed to start cluster services.{failed_services_str}")
 
-    if _context and _context.type == "init":
+    if _global_variables and _global_variables.args.type == "init":
         if corosync.is_qdevice_configured():
             logger.info("Starting and enable %s on %s", constants.COROSYNC_QDEVICE_SERVICE, utils.this_node())
             if not service_manager.start_service(constants.COROSYNC_QDEVICE_SERVICE, enable=True):
@@ -773,8 +806,8 @@ def start_pacemaker(node_list=[], enable_flag=False):
 
     Return success node list
     """
-    # not _context means not in init or join process
-    if not _context:
+    # not _global_variables means not in init or join process
+    if not _global_variables:
         sbd.SBDManager.unset_sbd_delay_start(node_list)
 
     # To avoid possible JOIN flood in corosync
@@ -809,9 +842,9 @@ def _keys_from_ssh_agent() -> typing.List[ssh_key.Key]:
 
 
 def init_ssh():
-    user_host_list = [_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list]
-    keys = _keys_from_ssh_agent() if _context.use_ssh_agent else list()
-    init_ssh_impl(_context.current_user, keys, user_host_list)
+    user_host_list = [_parse_user_at_host(x, _global_variables.current_user) for x in _global_variables.args.user_at_node_list]
+    keys = _keys_from_ssh_agent() if _global_variables.args.use_ssh_agent else list()
+    init_ssh_impl(_global_variables.current_user, keys, user_host_list)
     if user_host_list:
         service_manager = ServiceManager()
         for user, node in user_host_list:
@@ -990,7 +1023,7 @@ def change_user_shell(user, remote=None):
     user_msg = f"'{user}' on {remote}" if remote else f"'{user}'"
     message = f"The user {user_msg} will have the login shell configuration changed to /bin/bash"
     if user != "root" and is_nologin(user, remote):
-        if _context is not None and not _context.yes_to_all:
+        if _global_variables is not None and not _global_variables.args.yes_to_all:
             logger.info(message)
             if not confirm("Continue?"):
                 return
@@ -1192,7 +1225,7 @@ def init_qnetd_remote():
     """
     Triggered by join_cluster, this function adds the joining node's key to the qnetd's authorized_keys
     """
-    local_user, remote_user, join_node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
+    local_user, remote_user, join_node = _select_user_pair_for_ssh_for_secondary_components(_global_variables.args.cluster_node)
     join_node_key_content = ssh_key.fetch_public_key_content_list(join_node, remote_user)[0]
     qnetd_host = corosync.get_value("quorum.device.net.host")
     _, qnetd_user, qnetd_host = _select_user_pair_for_ssh_for_secondary_components(qnetd_host)
@@ -1224,7 +1257,7 @@ def generate_pacemaker_remote_auth():
     utils.mkdirs_owned(pcmk_remote_dir, mode=0o750, gid="haclient")
     if not invokerc("dd if=/dev/urandom of={} bs=4096 count=1".format(PCMK_REMOTE_AUTH)):
         logger.warning("Failed to create pacemaker authkey: {}".format(PCMK_REMOTE_AUTH))
-    utils.chown(PCMK_REMOTE_AUTH, _context.current_user, "haclient")
+    utils.chown(PCMK_REMOTE_AUTH, _global_variables.current_user, "haclient")
     utils.chmod(PCMK_REMOTE_AUTH, 0o640)
 
 
@@ -1232,7 +1265,7 @@ FirewallManager = network_utils.FirewallManager
 
 
 def init_firewalld():
-    if _context.cluster_is_running:
+    if _global_variables.cluster_is_running:
         for node in utils.list_cluster_nodes():
             FirewallManager(node).add_service()
     else:
@@ -1250,11 +1283,11 @@ class Validation(network_utils.BootstrapValidation):
 
     @classmethod
     def valid_ucast_ip(cls, addr, prev_value_list=[]):
-        super().valid_ucast_ip(addr, _context.interfaces_inst.ip_list, prev_value_list)
+        super().valid_ucast_ip(addr, _global_variables.interfaces_inst.ip_list, prev_value_list)
 
     @classmethod
     def valid_mcast_ip(cls, addr, prev_value_list=[]):
-        super().valid_mcast_ip(addr, _context.interfaces_inst.ip_list, _context.interfaces_inst.network_list, prev_value_list)
+        super().valid_mcast_ip(addr, _global_variables.interfaces_inst.ip_list, _global_variables.interfaces_inst.network_list, prev_value_list)
 
     @staticmethod
     def valid_admin_ip(addr, prev_value_list=[]):
@@ -1265,9 +1298,9 @@ def adjust_corosync_parameters_according_to_profiles():
     """
     Adjust corosync's parameters according profiles
     """
-    if not _context.profiles_dict:
+    if not _global_variables.profiles_dict:
         return
-    for k, v in _context.profiles_dict.items():
+    for k, v in _global_variables.profiles_dict.items():
         # Format like: corosync.totem.token: 5000
         if k.startswith("corosync."):
             corosync.set_value('.'.join(k.split('.')[1:]), v)
@@ -1277,26 +1310,26 @@ def get_address_list() -> typing.List[str]:
     """
     Get address list, for both interactive and non-interactive ways
     """
-    if _context.transport == "udp":
+    if _global_variables.args.transport == "udp":
         valid_func = Validation.valid_mcast_ip
     else:
         valid_func = Validation.valid_ucast_ip
 
-    if _context.yes_to_all or _context.nic_addr_list:
-        loop_count = len(_context.default_ip_list)
+    if _global_variables.args.yes_to_all or _global_variables.args.nic_addr_list:
+        loop_count = len(_global_variables.default_ip_list)
     else:
         # interative mode and without -i option specified
-        loop_count = min(corosync.KNET_LINK_NUM_LIMIT, len(_context.interfaces_inst.nic_list))
+        loop_count = min(corosync.KNET_LINK_NUM_LIMIT, len(_global_variables.interfaces_inst.nic_list))
 
     ringXaddr_list = []
     for i in range(loop_count):
         addr = prompt_for_string("Address for ring{}".format(i),
-                default=pick_default_value(_context.default_ip_list, ringXaddr_list),
+                default=pick_default_value(_global_variables.default_ip_list, ringXaddr_list),
                 valid_func=valid_func,
                 prev_value=ringXaddr_list)
         ringXaddr_list.append(addr)
         # only confirm when not the last loop and without -i option specified
-        if not _context.nic_addr_list and \
+        if not _global_variables.args.nic_addr_list and \
                 i < (loop_count - 1) and \
                 not confirm("\nAdd another ring?"):
             break
@@ -1308,14 +1341,14 @@ def config_corosync_conf() -> None:
     """
     Configure corosync.conf
     """
-    if _context.yes_to_all:
-        logger.info(f"Configuring corosync({_context.transport})")
+    if _global_variables.args.yes_to_all:
+        logger.info(f"Configuring corosync({_global_variables.args.transport})")
     inst = corosync.ConfParser(config_data=corosync.COROSYNC_CONF_TEMPLATE)
 
-    if _context.ipv6:
+    if _global_variables.ipv6:
         inst.set("totem.ip_version", "ipv6")
-    inst.set("totem.cluster_name", _context.cluster_name)
-    inst.set("totem.transport", _context.transport)
+    inst.set("totem.cluster_name", _global_variables.args.cluster_name)
+    inst.set("totem.transport", _global_variables.args.transport)
     ringXaddr_list = get_address_list()
     for i, ip in enumerate(ringXaddr_list):
         inst.set("nodelist.node.ring{}_addr".format(i), ip)
@@ -1335,16 +1368,16 @@ def init_corosync() -> None:
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    if _context.transport != 'knet':
+    if _global_variables.args.transport != 'knet':
         logger.warning(
             'Transport %s is deprecated and does not support encryption and message authentication. '
             'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.',
-            _context.transport,
+            _global_variables.args.transport,
         )
     else:
-        cipher = _context.profiles_dict.get('corosync.totem.crypto_cipher')
-        hash_algo = _context.profiles_dict.get('corosync.totem.crypto_hash')
-        secauth = _context.profiles_dict.get('corosync.totem.secauth')
+        cipher = _global_variables.profiles_dict.get('corosync.totem.crypto_cipher')
+        hash_algo = _global_variables.profiles_dict.get('corosync.totem.crypto_hash')
+        secauth = _global_variables.profiles_dict.get('corosync.totem.secauth')
 
         is_encrypted = True
         if secauth == 'on':
@@ -1371,18 +1404,18 @@ def init_sbd():
     is configured.
     """
     import crmsh.sbd
-    if _context.stage == "sbd":
+    if _global_variables.args.stage == "sbd":
         crmsh.sbd.cleanup_existing_sbd_resource()
-    _context.sbd_manager.init_and_deploy_sbd()
+    _global_variables.sbd_manager.init_and_deploy_sbd()
 
 
 def init_ocfs2():
     """
     OCFS2 configure process
     """
-    if not _context.ocfs2_devices:
+    if not _global_variables.args.ocfs2_devices:
         return
-    ocfs2_manager = cluster_fs.ClusterFSManager(_context)
+    ocfs2_manager = cluster_fs.ClusterFSManager(_global_variables)
     ocfs2_manager.init()
 
 
@@ -1390,9 +1423,9 @@ def init_gfs2():
     """
     GFS2 configure process
     """
-    if not _context.gfs2_devices:
+    if not _global_variables.args.gfs2_devices:
         return
-    gfs2_manager = cluster_fs.ClusterFSManager(_context)
+    gfs2_manager = cluster_fs.ClusterFSManager(_global_variables)
     gfs2_manager.init()
 
 
@@ -1401,7 +1434,7 @@ def init_cluster():
     Initial cluster configuration.
     """
     service_manager = ServiceManager()
-    if _context.stage == "cluster":
+    if _global_variables.args.stage == "cluster":
         if service_manager.service_is_enabled(constants.SBD_SERVICE):
             service_manager.disable_service(constants.SBD_SERVICE)
 
@@ -1429,8 +1462,8 @@ rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
 def init_admin():
     # Skip this section when -y is passed
     # unless $ADMIN_IP is set
-    adminaddr = _context.admin_ip
-    if _context.yes_to_all and not adminaddr:
+    adminaddr = _global_variables.args.admin_ip
+    if _global_variables.args.yes_to_all and not adminaddr:
         return
 
     if not adminaddr:
@@ -1459,7 +1492,7 @@ def configure_qdevice_interactive():
     """
     Configure qdevice on interactive mode
     """
-    if _context.yes_to_all:
+    if _global_variables.args.yes_to_all:
         return
     logger.info("Configure Qdevice/Qnetd:\n" + QDEVICE_HELP_INFO + "\n")
     if not confirm("Do you want to configure QDevice?"):
@@ -1474,25 +1507,43 @@ def configure_qdevice_interactive():
             else:
                 return
 
-    qnetd_addr_input = prompt_for_string("HOST or IP of the QNetd server to be used")
-    ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
-    qdevice.QDevice.check_qnetd_addr(qnetd_host)
-    _context.qnetd_addr_input = qnetd_addr_input
+    cb = BootstrapQDeviceValidationCallback()
+    while True:
+        try:
+            qnetd_addr_input = prompt_for_string("HOST or IP of the QNetd server to be used")
+            ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
+            qdevice.QDevice.check_qnetd_addr(qnetd_host, cb)
+            assert _global_variables is not None
+            assert _global_variables.interfaces_inst is not None
+            corosync_nics = (
+                corosync.get_corosync_interfaces()
+                or _global_variables.interfaces_inst.input_nic_list
+                or [_global_variables.default_nic]
+            )
+            if not qdevice.QDevice.check_qnetd_corosync_interface(
+                qnetd_host, corosync_nics, callback=cb
+            ):
+                continue
+            break
+        except ValueError as err:
+            logger.error("%s", err)
+
+    _global_variables.args.qnetd_addr_input = qnetd_addr_input
     qnetd_port = prompt_for_string("TCP PORT of QNetd server",
-            valid_func=qdevice.QDevice.check_qnetd_port)
+            valid_func=lambda port: qdevice.QDevice.check_qnetd_port(port, cb))
     qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
-            valid_func=qdevice.QDevice.check_qdevice_algo)
+            valid_func=lambda algo: qdevice.QDevice.check_qdevice_algo(algo, cb))
     qdevice_tie_breaker = prompt_for_string("QNetd TIE_BREAKER (lowest/highest/valid node id)", default="lowest",
-            valid_func=qdevice.QDevice.check_qdevice_tie_breaker)
+            valid_func=lambda tie_breaker: qdevice.QDevice.check_qdevice_tie_breaker(tie_breaker, cb))
     qdevice_tls = prompt_for_string("Whether using TLS on QDevice (on/off/required)", default="on",
-            valid_func=qdevice.QDevice.check_qdevice_tls)
+            valid_func=lambda tls: qdevice.QDevice.check_qdevice_tls(tls, cb))
     qdevice_heuristics = prompt_for_string("Heuristics COMMAND to run with absolute path; For multiple commands, use \";\" to separate",
-            valid_func=qdevice.QDevice.check_qdevice_heuristics,
+            valid_func=lambda cmds: qdevice.QDevice.check_qdevice_heuristics(cmds, cb),
             allow_empty=True)
     qdevice_heuristics_mode = prompt_for_string("MODE of operation of heuristics (on/sync/off)", default="sync",
-            valid_func=qdevice.QDevice.check_qdevice_heuristics_mode) if qdevice_heuristics else None
+            valid_func=lambda mode: qdevice.QDevice.check_qdevice_heuristics_mode(mode, cb)) if qdevice_heuristics else None
 
-    _context.qdevice_inst = qdevice.QDevice(
+    _global_variables.qdevice_inst = qdevice.QDevice(
             qnetd_host,
             port=qnetd_port,
             algo=qdevice_algo,
@@ -1501,11 +1552,11 @@ def configure_qdevice_interactive():
             ssh_user=ssh_user,
             cmds=qdevice_heuristics,
             mode=qdevice_heuristics_mode,
-            is_stage=_context.stage == "qdevice")
+            is_stage=_global_variables.args.stage == "qdevice")
 
 
 def _setup_passwordless_ssh_for_qnetd(cluster_node_list: typing.List[str]):
-    local_user, qnetd_user, qnetd_addr = _select_user_pair_for_ssh_for_secondary_components(_context.qnetd_addr_input)
+    local_user, qnetd_user, qnetd_addr = _select_user_pair_for_ssh_for_secondary_components(_global_variables.args.qnetd_addr_input)
     # Configure ssh passwordless to qnetd if detect password is needed
     if 0 != ssh_copy_id_no_raise(
             local_user, qnetd_user, qnetd_addr,
@@ -1550,15 +1601,15 @@ def init_qdevice():
     """
     Setup qdevice and qnetd service
     """
-    if not _context.qdevice_inst:
+    if not _global_variables.qdevice_inst:
         configure_qdevice_interactive()
-    if not _context.qdevice_inst:
+    if not _global_variables.qdevice_inst:
         ServiceManager().disable_service("corosync-qdevice.service")
         return
 
     logger.info("""Configure Qdevice/Qnetd:""")
 
-    is_qdevice_stage = _context.stage == "qdevice"
+    is_qdevice_stage = _global_variables.args.stage == "qdevice"
     if is_qdevice_stage:
         qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_ADD)
         if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER:
@@ -1575,7 +1626,7 @@ def do_init_qdevice(in_stage: bool = False):
     cluster_node_list = qdevice.get_node_list(in_stage)
     _setup_passwordless_ssh_for_qnetd(cluster_node_list)
 
-    qdevice_inst = _context.qdevice_inst
+    qdevice_inst = _global_variables.qdevice_inst
     if corosync.is_qdevice_configured() and not confirm("Qdevice is already configured - overwrite?"):
         if in_stage:
             qdevice_inst.start_qdevice_service()
@@ -1595,7 +1646,7 @@ def init():
     """
     Basic init
     """
-    if _context.quiet:
+    if _global_variables.args.quiet:
         logger_utils.disable_info_in_console()
     log_start()
     init_network()
@@ -1607,8 +1658,8 @@ def join_ssh(seed_host, seed_user):
     """
     if not seed_host:
         utils.fatal("No existing IP/hostname specified (use -c option)")
-    local_user = _context.current_user
-    keys = _keys_from_ssh_agent() if _context.use_ssh_agent else list()
+    local_user = _global_variables.current_user
+    keys = _keys_from_ssh_agent() if _global_variables.args.use_ssh_agent else list()
     return join_ssh_impl(local_user, seed_host, seed_user, keys)
 
 
@@ -1680,7 +1731,7 @@ def join_ssh_impl(local_user, seed_host, seed_user, ssh_public_keys: typing.List
     change_user_shell('hacluster')
     swap_public_ssh_key_for_secondary_user(sh.cluster_shell(), seed_host, 'hacluster')
 
-    if _context.stage:
+    if _global_variables.args.stage:
         setup_passwordless_with_other_nodes(seed_host)
 
 
@@ -1781,11 +1832,11 @@ def setup_passwordless_with_other_nodes(init_node):
     Should fetch the node list from init node, then swap the key
     """
     # Fetch cluster nodes list
-    local_user = _context.current_user
+    local_user = _global_variables.current_user
     local_shell = sh.LocalShell(
-        additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _context.use_ssh_agent else ''},
+        additional_environ={'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _global_variables.args.use_ssh_agent else ''},
     )
-    shell = sh.ClusterShell(local_shell, user_of_host.UserOfHost.instance(), _context.use_ssh_agent, True)
+    shell = sh.ClusterShell(local_shell, user_of_host.UserOfHost.instance(), _global_variables.args.use_ssh_agent, True)
     rc, out, err = shell.get_rc_stdout_stderr_without_input(init_node, constants.CIB_QUERY)
     if rc != 0:
         utils.fatal("Can't fetch cluster nodes list from {}: {}".format(init_node, err))
@@ -1926,18 +1977,18 @@ def join_cluster(seed_host, remote_user):
 
     shell = sh.cluster_shell()
 
-    shutil.copy(corosync.conf(), _context.get_corosync_conf_orig())
+    shutil.copy(corosync.conf(), _global_variables.get_corosync_conf_orig())
 
     # check if use IPv6
-    _context.ipv6 = corosync.is_using_ipv6()
+    _global_variables.ipv6 = corosync.is_using_ipv6()
 
     init_network()
 
     link_number = corosync.get_link_number()
-    join_link_number = len(_context.default_ip_list)
+    join_link_number = len(_global_variables.default_ip_list)
     # the join link number can't be greater than the peer's link number
     # or less than the peer's link number if -y is set
-    if join_link_number > link_number or (_context.yes_to_all and join_link_number < link_number):
+    if join_link_number > link_number or (_global_variables.args.yes_to_all and join_link_number < link_number):
         utils.fatal(f"Node {seed_host} has {link_number} links, but provided {join_link_number}")
 
     detect_mountpoint(seed_host)
@@ -1946,14 +1997,14 @@ def join_cluster(seed_host, remote_user):
     if not os.path.exists(corosync.conf()):
         utils.fatal("{} is not readable. Please ensure that hostnames are resolvable.".format(corosync.conf()))
 
-    _context.sbd_manager.join_sbd(remote_user, seed_host)
+    _global_variables.sbd_manager.join_sbd(remote_user, seed_host)
 
     ringXaddr_res = []
     for i in range(link_number):
         while True:
             ringXaddr = prompt_for_string(
                     'Address for ring{}'.format(i),
-                    default=pick_default_value(_context.default_ip_list, ringXaddr_res),
+                    default=pick_default_value(_global_variables.default_ip_list, ringXaddr_res),
                     valid_func=Validation.valid_ucast_ip,
                     prev_value=ringXaddr_res)
             if not ringXaddr:
@@ -1993,7 +2044,7 @@ def join_cluster(seed_host, remote_user):
 
     service_manager = ServiceManager()
     if is_qdevice_configured:
-        if not _context.use_ssh_agent or not _keys_from_ssh_agent():
+        if not _global_variables.args.use_ssh_agent or not _keys_from_ssh_agent():
             # trigger init_qnetd_remote on init node
             cmd = f"crm cluster init qnetd_remote {utils.this_node()} -y"
             shell.get_stdout_or_raise_error(cmd, seed_host)
@@ -2053,7 +2104,7 @@ def rm_configuration_files(remote=None):
     Delete configuration files from the node to be removed
     """
     shell = sh.cluster_shell()
-    shell.get_stdout_or_raise_error("rm -f {}".format(' '.join(_context.rm_list)), remote)
+    shell.get_stdout_or_raise_error("rm -f {}".format(' '.join(_global_variables.rm_list)), remote)
     if os.path.exists(sbd.SBDManager.SYSCONFIG_SBD):
         sbd.cleanup_sbd_configurations(remote)
 
@@ -2150,7 +2201,7 @@ JOIN_STAGE_CHECKER = {
 
 
 def check_stage_dependency(stage):
-    stage_checker = INIT_STAGE_CHECKER if _context.type == "init" else JOIN_STAGE_CHECKER
+    stage_checker = INIT_STAGE_CHECKER if _global_variables.args.type == "init" else JOIN_STAGE_CHECKER
     if stage not in stage_checker:
         return
     for stage_name, check_func in stage_checker.items():
@@ -2164,24 +2215,24 @@ def bootstrap_init(context):
     """
     Init cluster process
     """
-    global _context
-    _context = context
-    stage = _context.stage
+    global _global_variables
+    _global_variables = context
+    stage = _global_variables.args.stage
 
-    _context.validate()
+    _global_variables.validate()
 
     init()
 
     if not stage or stage in ('corosync', 'sbd'):
-        _context.load_profiles()
-    _context.init_sbd_manager()
+        _global_variables.load_profiles()
+    _global_variables.populate_sbd_manager()
 
     if stage in ('qnetd_remote', ):
-        args = _context.args
+        args = _global_variables.args.args
         logger_utils.log_only_to_file(f"args: {args}")
         if len(args) != 2:
             utils.fatal(f"Expected NODE argument for '{stage}' stage")
-        _context.cluster_node = args[1]
+        _global_variables.args.cluster_node = args[1]
     else:
         check_tty()
         if not check_prereqs():
@@ -2214,29 +2265,29 @@ def bootstrap_add(context):
     """
     Adds the given node to the cluster.
     """
-    if not context.user_at_node_list:
+    if not context.args.user_at_node_list:
         return
 
-    global _context
-    _context = context
+    global _global_variables
+    _global_variables = context
 
     options = ""
-    for nic in _context.interfaces_inst.input_nic_list:
+    for nic in _global_variables.interfaces_inst.input_nic_list:
         options += '-i {} '.format(nic)
     options = " {}".format(options.strip()) if options else ""
 
-    if not context.use_ssh_agent:
+    if not context.args.use_ssh_agent:
         options += ' --no-use-ssh-agent'
 
     shell = sh.ClusterShell(
-        sh.LocalShell({'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _context.use_ssh_agent else ''}),
+        sh.LocalShell({'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _global_variables.args.use_ssh_agent else ''}),
         UserOfHost.instance(),
-        _context.use_ssh_agent,
+        _global_variables.args.use_ssh_agent,
     )
-    for (user, node) in (_parse_user_at_host(x, _context.current_user) for x in _context.user_at_node_list):
+    for (user, node) in (_parse_user_at_host(x, _global_variables.current_user) for x in _global_variables.args.user_at_node_list):
         print()
         logger.info("Adding node {} to cluster".format(node))
-        cmd = 'crm cluster join -y {} -c {}@{}'.format(options, _context.current_user, utils.this_node())
+        cmd = 'crm cluster join -y {} -c {}@{}'.format(options, _global_variables.current_user, utils.this_node())
         logger.info("Running command on {}: {}".format(node, cmd))
         out = shell.get_stdout_or_raise_error(cmd, node)
         print(out)
@@ -2257,25 +2308,25 @@ def bootstrap_join(context):
     """
     Join cluster process
     """
-    global _context
-    _context = context
+    global _global_variables
+    _global_variables = context
 
-    _context.validate()
+    _global_variables.validate()
 
     init()
-    _context.init_sbd_manager()
+    _global_variables.populate_sbd_manager()
 
     check_tty()
 
     if not check_prereqs():
         return
 
-    if _context.stage != "":
-        remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
-        check_stage_dependency(_context.stage)
-        globals()["join_" + _context.stage](cluster_node, remote_user)
+    if _global_variables.args.stage != "":
+        remote_user, cluster_node = _parse_user_at_host(_global_variables.args.cluster_node, _global_variables.current_user)
+        check_stage_dependency(_global_variables.args.stage)
+        globals()["join_" + _global_variables.args.stage](cluster_node, remote_user)
     else:
-        if not _context.yes_to_all and _context.cluster_node is None:
+        if not _global_variables.args.yes_to_all and _global_variables.args.cluster_node is None:
             logger.info("""Join This Node to Cluster:
   You will be asked for the IP address of an existing node, from which
   configuration will be copied.  If you have not already configured
@@ -2284,10 +2335,10 @@ def bootstrap_join(context):
 """)
             # TODO: prompt for user@host
             cluster_user_at_node = prompt_for_string("IP address or hostname of existing node (e.g.: 192.168.1.1)", ".+")
-            _context.cluster_node = cluster_user_at_node
-            _context.initialize_user()
+            _global_variables.args.cluster_node = cluster_user_at_node
+            _global_variables.populate_user()
 
-        remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
+        remote_user, cluster_node = _parse_user_at_host(_global_variables.args.cluster_node, _global_variables.current_user)
         network_utils.ssh_port_reachable_check(cluster_node)
         join_ssh(cluster_node, remote_user)
         remote_user = utils.user_of(cluster_node)
@@ -2317,7 +2368,7 @@ def join_cluster_fs(peer_host, peer_user):
     """
     If init node configured OCFS2/GFS2 device, verify that device on join node
     """
-    inst = cluster_fs.ClusterFSManager(_context)
+    inst = cluster_fs.ClusterFSManager(_global_variables)
     inst.join(peer_host)
 
 
@@ -2368,38 +2419,38 @@ def bootstrap_remove(context):
     """
     Remove node from cluster, or remove qdevice configuration
     """
-    global _context
-    _context = context
-    force_flag = crmsh.options.force or _context.force
+    global _global_variables
+    _global_variables = context
+    force_flag = crmsh.options.force or _global_variables.args.force
 
     init()
 
-    if _context.qdevice_rm_flag and _context.cluster_node:
+    if _global_variables.args.qdevice_rm_flag and _global_variables.args.cluster_node:
         utils.fatal("Either remove node or qdevice")
-    if _context.cluster_node:
-        logger.info("Removing node %s from cluster", _context.cluster_node)
+    if _global_variables.args.cluster_node:
+        logger.info("Removing node %s from cluster", _global_variables.args.cluster_node)
 
     service_manager = ServiceManager()
     if not service_manager.service_is_active("corosync.service"):
         utils.fatal("Cluster is not active - can't execute removing action")
 
-    if _context.qdevice_rm_flag:
+    if _global_variables.args.qdevice_rm_flag:
         remove_qdevice()
         return
 
-    if not _context.yes_to_all and _context.cluster_node is None:
+    if not _global_variables.args.yes_to_all and _global_variables.args.cluster_node is None:
         logger.info("""Remove This Node from Cluster:
   You will be asked for the IP address or name of an existing node,
   which will be removed from the cluster. This command must be
   executed from a different node in the cluster.
 """)
-        _context.cluster_node = prompt_for_string("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
-        _context.initialize_user()
+        _global_variables.args.cluster_node = prompt_for_string("IP address or hostname of cluster node (e.g.: 192.168.1.1)", ".+")
+        _global_variables.populate_user()
 
-    if not _context.cluster_node:
+    if not _global_variables.args.cluster_node:
         utils.fatal("No existing IP/hostname specified (use -c option)")
 
-    remote_user, cluster_node = _parse_user_at_host(_context.cluster_node, _context.current_user)
+    remote_user, cluster_node = _parse_user_at_host(_global_variables.args.cluster_node, _global_variables.current_user)
 
     try:
         utils.check_all_nodes_reachable("removing a node from the cluster")
@@ -2433,7 +2484,7 @@ def bootstrap_remove(context):
 
 def remove_self(force_flag=False):
     me = utils.this_node()
-    yes_to_all = _context.yes_to_all
+    yes_to_all = _global_variables.args.yes_to_all
     nodes = utils.list_cluster_nodes()
     othernode = next((x for x in nodes if x != me), None)
     if othernode is not None:
@@ -2512,8 +2563,8 @@ def bootstrap_init_geo(context):
     """
     Configure as a geo cluster member.
     """
-    global _context
-    _context = context
+    global _global_variables
+    _global_variables = context
 
     if os.path.exists(BOOTH_CFG) and not confirm("This will overwrite {} - continue?".format(BOOTH_CFG)):
         return
@@ -2528,11 +2579,11 @@ def bootstrap_init_geo(context):
     # set common.startup.degr-wfc-timeout 120
 
     create_booth_authkey()
-    create_booth_config(_context.arbitrator, _context.clusters, _context.tickets)
+    create_booth_config(_global_variables.args.arbitrator, _global_variables.args.clusters, _global_variables.args.tickets)
     logger.info("Sync booth configuration across cluster")
     sync_path(BOOTH_DIR)
     init_csync2_geo()
-    geo_cib_config(_context.clusters)
+    geo_cib_config(_global_variables.args.clusters)
 
 
 def geo_fetch_config(node):
@@ -2610,15 +2661,15 @@ def bootstrap_join_geo(context):
     Run on second cluster to add to a geo configuration.
     It fetches its booth configuration from the other node (cluster node or arbitrator).
     """
-    global _context
-    _context = context
+    global _global_variables
+    _global_variables = context
     init_common_geo()
     check_tty()
-    user, node = utils.parse_user_at_host(_context.cluster_node)
+    user, node = utils.parse_user_at_host(_global_variables.args.cluster_node)
     if not sh.cluster_shell().can_run_as(node, 'root'):
-        local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
+        local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_global_variables.args.cluster_node)
         local_shell = sh.LocalShell(additional_environ={
-            'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _context.use_ssh_agent else '',
+            'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _global_variables.args.use_ssh_agent else '',
         })
         result = ssh_copy_id_no_raise(local_user, remote_user, node, local_shell)
         if 0 != result.returncode:
@@ -2630,7 +2681,7 @@ def bootstrap_join_geo(context):
     geo_fetch_config(node)
     logger.info("Sync booth configuration across cluster")
     sync_path(BOOTH_DIR)
-    geo_cib_config(_context.clusters)
+    geo_cib_config(_global_variables.args.clusters)
 
 
 def bootstrap_arbitrator(context):
@@ -2638,19 +2689,19 @@ def bootstrap_arbitrator(context):
     Configure this machine as an arbitrator.
     It fetches its booth configuration from a cluster node already in the cluster.
     """
-    global _context
-    _context = context
+    global _global_variables
+    _global_variables = context
 
     init_common_geo()
     check_tty()
-    user, node = utils.parse_user_at_host(_context.cluster_node)
+    user, node = utils.parse_user_at_host(_global_variables.args.cluster_node)
     user_by_host = utils.HostUserConfig()
     user_by_host.clear()
     user_by_host.save_local()
     if not sh.cluster_shell().can_run_as(node, 'root'):
-        local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_context.cluster_node)
+        local_user, remote_user, node = _select_user_pair_for_ssh_for_secondary_components(_global_variables.args.cluster_node)
         local_shell = sh.LocalShell(additional_environ={
-            'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _context.use_ssh_agent else '',
+            'SSH_AUTH_SOCK': os.environ.get('SSH_AUTH_SOCK', '') if _global_variables.args.use_ssh_agent else '',
         })
         result = ssh_copy_id_no_raise(local_user, remote_user, node, local_shell)
         if 0 != result.returncode:
@@ -2661,7 +2712,7 @@ def bootstrap_arbitrator(context):
     init_firewalld()
     geo_fetch_config(node)
     if not os.path.isfile(BOOTH_CFG):
-        utils.fatal("Failed to copy {} from {}".format(BOOTH_CFG, _context.cluster_node))
+        utils.fatal("Failed to copy {} from {}".format(BOOTH_CFG, _global_variables.args.cluster_node))
     # TODO: verify that the arbitrator IP in the configuration is us?
     logger.info("Enabling and starting the booth arbitrator service")
     ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).start_service("booth@booth", enable=True)

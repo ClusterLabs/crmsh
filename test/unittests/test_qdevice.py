@@ -137,6 +137,7 @@ class TestQDevice(unittest.TestCase):
         Test setUp.
         """
         # Use the setup to create a fresh instance for each test
+        self.callback = qdevice.QDeviceValidationCallback()
         self.qdevice_with_ip = qdevice.QDevice("10.10.10.123")
         self.qdevice_with_hostname = qdevice.QDevice("node.qnetd")
         self.qdevice_with_invalid_port = qdevice.QDevice("10.10.10.123", port=100)
@@ -198,7 +199,7 @@ class TestQDevice(unittest.TestCase):
             }
         ])
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qnetd_addr("qnetd-node")
+            qdevice.QDevice.check_qnetd_addr("qnetd-node", self.callback)
         excepted_err_string = "host for qnetd must be a remote one"
         self.assertEqual(excepted_err_string, str(err.exception))
 
@@ -207,7 +208,7 @@ class TestQDevice(unittest.TestCase):
     def test_check_qnetd_addr(self, mock_getaddrinfo, mock_reachable):
         mock_getaddrinfo.side_effect = socket.error("getaddrinfo failed")
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qnetd_addr("qnetd-node")
+            qdevice.QDevice.check_qnetd_addr("qnetd-node", self.callback)
         excepted_err_string = "getaddrinfo failed: qnetd-node"
         self.assertEqual(excepted_err_string, str(err.exception))
 
@@ -223,19 +224,19 @@ class TestQDevice(unittest.TestCase):
                 "addr_info": [{"local": "10.10.10.123", "prefixlen": 24}]
             }
         ])
-        qdevice.QDevice.check_qnetd_addr("qnetd-node")
+        qdevice.QDevice.check_qnetd_addr("qnetd-node", self.callback)
 
     @mock.patch('crmsh.network_utils.valid_port')
     def test_check_qnetd_port(self, mock_port):
         mock_port.return_value = False
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qnetd_port("1")
+            qdevice.QDevice.check_qnetd_port("1", self.callback)
         excepted_err_string = "invalid qnetd port range(1024 - 65535)"
         self.assertEqual(excepted_err_string, str(err.exception))
 
     def test_check_qdevice_algo(self):
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qdevice_algo("1")
+            qdevice.QDevice.check_qdevice_algo("1", self.callback)
         excepted_err_string = "invalid ALGORITHM choice: '1' (choose from 'ffsplit', 'lms')"
         self.assertEqual(excepted_err_string, str(err.exception))
 
@@ -243,25 +244,25 @@ class TestQDevice(unittest.TestCase):
     def test_check_qdevice_tie_breaker(self, mock_is_active):
         mock_is_active.return_value = False
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qdevice_tie_breaker("1")
+            qdevice.QDevice.check_qdevice_tie_breaker("1", self.callback)
         excepted_err_string = "invalid qdevice tie_breaker(lowest/highest/valid_node_id)"
         self.assertEqual(excepted_err_string, str(err.exception))
 
     def test_check_qdevice_tls(self):
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qdevice_tls("1")
+            qdevice.QDevice.check_qdevice_tls("1", self.callback)
         excepted_err_string = "invalid TLS choice: '1' (choose from 'on', 'off', 'required')"
         self.assertEqual(excepted_err_string, str(err.exception))
 
     def test_check_qdevice_hm(self):
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qdevice_heuristics_mode("1")
+            qdevice.QDevice.check_qdevice_heuristics_mode("1", self.callback)
         excepted_err_string = "invalid MODE choice: '1' (choose from 'on', 'sync', 'off')"
         self.assertEqual(excepted_err_string, str(err.exception))
 
     def test_check_qdevice_he_path_error(self):
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qdevice_heuristics("command1")
+            qdevice.QDevice.check_qdevice_heuristics("command1", self.callback)
         excepted_err_string = "commands for heuristics should be absolute path"
         self.assertEqual(excepted_err_string, str(err.exception))
 
@@ -269,10 +270,11 @@ class TestQDevice(unittest.TestCase):
     def test_check_qdevice_he_not_exist_erro(self, mock_exists):
         mock_exists.return_value = False
         with self.assertRaises(ValueError) as err:
-            qdevice.QDevice.check_qdevice_heuristics("/usr/bin/testst")
+            qdevice.QDevice.check_qdevice_heuristics("/usr/bin/testst", self.callback)
         excepted_err_string = "command /usr/bin/testst not exist"
         self.assertEqual(excepted_err_string, str(err.exception))
     
+    @mock.patch('crmsh.qdevice.QDevice.check_qnetd_corosync_interface')
     @mock.patch('crmsh.qdevice.QDevice.check_qdevice_heuristics_mode')
     @mock.patch('crmsh.qdevice.QDevice.check_qdevice_heuristics')
     @mock.patch('crmsh.qdevice.QDevice.check_qdevice_tls')
@@ -282,10 +284,11 @@ class TestQDevice(unittest.TestCase):
     @mock.patch('crmsh.qdevice.QDevice.check_qnetd_addr')
     @mock.patch('crmsh.qdevice.QDevice.check_corosync_qdevice_available')
     def test_valid_qdevice_options(self, mock_installed, mock_check_qnetd, mock_check_port,
-            mock_check_algo, mock_check_tie, mock_check_tls, mock_check_h, mock_check_hm):
-        self.qdevice_with_ip.valid_qdevice_options()
-        mock_installed.assert_called_once_with()
-        mock_check_qnetd.assert_called_once_with("10.10.10.123")
+            mock_check_algo, mock_check_tie, mock_check_tls, mock_check_h, mock_check_hm, mock_check_corosync):
+        self.qdevice_with_ip.valid_qdevice_options(self.callback, ["eth0"])
+        mock_installed.assert_called_once_with(self.callback)
+        mock_check_qnetd.assert_called_once_with("10.10.10.123", self.callback)
+        mock_check_corosync.assert_called_once_with("10.10.10.123", ["eth0"], callback=self.callback)
 
     @mock.patch("crmsh.utils.package_is_installed")
     @mock.patch("crmsh.sh.cluster_shell")
@@ -815,3 +818,73 @@ Membership information
         self.qdevice_with_invalid_cmds_relative_path.remove_qdevice_config()
         mock_parser_inst.remove.assert_called_once_with("quorum.device")
         mock_parser_inst.save.assert_called_once()
+
+    def test_valid_qdevice_options_with_custom_callback(self):
+        class DummyCallback(qdevice.QDeviceValidationCallback):
+            def __init__(self):
+                self.messages = []
+                self.overrides = []
+
+            def issue(self, level, msg):
+                self.messages.append((level, msg))
+
+            def ask_override(self, msg):
+                self.overrides.append(msg)
+                return True
+
+        cb = DummyCallback()
+        qdev = qdevice.QDevice("10.10.10.123", port="999", is_stage=False)
+
+        with mock.patch.object(qdev, 'check_corosync_qdevice_available'), \
+             mock.patch.object(qdev, 'check_qnetd_addr'), \
+             mock.patch.object(qdev, 'check_qdevice_algo'), \
+             mock.patch.object(qdev, 'check_qdevice_tie_breaker'), \
+             mock.patch.object(qdev, 'check_qdevice_tls'), \
+             mock.patch.object(qdev, 'check_qdevice_heuristics'), \
+             mock.patch.object(qdev, 'check_qdevice_heuristics_mode'):
+            qdev.valid_qdevice_options(callback=cb, corosync_nics=["eth0"])
+
+        self.assertEqual(len(cb.messages), 1)
+        self.assertEqual(cb.messages[0][0], qdevice.QDeviceValidationCallback.LEVEL_ERROR)
+        self.assertIn("invalid qnetd port range", cb.messages[0][1])
+
+
+@mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+def test_check_qnetd_corosync_interface_warn_and_override(mock_get_nic):
+    mock_get_nic.return_value = "eth0"
+    cb = mock.Mock()
+    cb.ask_override.return_value = True
+
+    res = qdevice.QDevice.check_qnetd_corosync_interface("192.168.1.50", ["eth0", "eth1"], callback=cb)
+
+    assert res is True
+    cb.issue.assert_called_once_with(
+        qdevice.QDeviceValidationCallback.LEVEL_WARN,
+        "QNetd server '192.168.1.50' is on network interface 'eth0', which is also used for Corosync links"
+    )
+    cb.ask_override.assert_called_once_with("Do you want to continue using the same network interface for QNetd and Corosync?", default=True)
+
+
+@mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+def test_check_qnetd_corosync_interface_decline(mock_get_nic):
+    mock_get_nic.return_value = "eth0"
+    cb = mock.Mock()
+    cb.ask_override.return_value = False
+
+    res = qdevice.QDevice.check_qnetd_corosync_interface("192.168.1.50", ["eth0"], callback=cb)
+
+    assert res is False
+    cb.issue.assert_called_once()
+    cb.ask_override.assert_called_once()
+
+
+@mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+def test_check_qnetd_corosync_interface_different_nic(mock_get_nic):
+    mock_get_nic.return_value = "eth2"
+    cb = mock.Mock()
+
+    res = qdevice.QDevice.check_qnetd_corosync_interface("192.168.1.50", ["eth0", "eth1"], callback=cb)
+
+    assert res is True
+    cb.issue.assert_not_called()
+    cb.ask_override.assert_not_called()
