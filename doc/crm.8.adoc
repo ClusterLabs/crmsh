@@ -340,6 +340,9 @@ settings based on the calculations with a set of formulas.
 
     # For diskless SBD
     SBD_DELAY_START = 2 * SBD_WATCHDOG_TIMEOUT + corosync.token + corosync.consensus
+
+    # For bare metal environment
+    SBD_DELAY_START = no
 ...............
 `TimeoutSec` of sbd.service systemd unit:
 ...............
