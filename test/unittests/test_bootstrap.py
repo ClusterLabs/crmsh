@@ -1742,8 +1742,8 @@ done
             'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.'
         )
 
-    @mock.patch('crmsh.bootstrap.logger_utils.confirm')
-    def test_confirm_default_forward(self, mock_logger_confirm):
+    @mock.patch('crmsh.bootstrap.utils.ask')
+    def test_confirm_default_forward(self, mock_ask):
         # FIXME: antipattern: variable cannot be mocked in unit tests
         original_force = crmsh.options.force
         original_global_vars = bootstrap._global_variables
@@ -1751,7 +1751,27 @@ done
             crmsh.options.force = False
             bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False))
             bootstrap.confirm("Proceed", default=True)
-            mock_logger_confirm.assert_called_once_with("Proceed", default=True)
+            mock_ask.assert_called_once_with("Proceed", default=True)
+        finally:
+            crmsh.options.force = original_force
+            bootstrap._global_variables = original_global_vars
+
+    @mock.patch('crmsh.bootstrap.drop_last_history')
+    @mock.patch('crmsh.bootstrap.enable_completion')
+    @mock.patch('crmsh.bootstrap.disable_completion')
+    @mock.patch('crmsh.bootstrap.utils.ask')
+    def test_confirm_cleanup_on_exception(self, mock_ask, mock_disable, mock_enable, mock_drop):
+        original_force = crmsh.options.force
+        original_global_vars = bootstrap._global_variables
+        try:
+            crmsh.options.force = False
+            bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False))
+            mock_ask.side_effect = crmsh.utils.TerminateSubCommand
+            with self.assertRaises(crmsh.utils.TerminateSubCommand):
+                bootstrap.confirm("Proceed")
+            mock_disable.assert_called_once()
+            mock_enable.assert_called_once()
+            mock_drop.assert_called_once()
         finally:
             crmsh.options.force = original_force
             bootstrap._global_variables = original_global_vars

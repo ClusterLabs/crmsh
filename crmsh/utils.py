@@ -199,39 +199,63 @@ def can_ask(background_wait=True):
     return can_ask
 
 
-def ask(msg, background_wait=True, cancel_option=False):
+def ask(
+    msg: str,
+    default: typing.Optional[bool] = None,
+    background_wait: bool = True,
+    cancel_option: bool = False
+) -> bool:
     """Ask for user confirmation.
 
     Parameters:
-    * background_wait: When set to False, return False without asking if current process is in background. Otherwise,
-    block until the process is brought to foreground.
+    * default: Default return value (True or False) if input is empty or EOF.
+      If None, re-prompt on empty input and cancel on EOF.
+    * background_wait: When set to False, return False (or default) without asking if current process
+      is in background. Otherwise, block until the process is brought to foreground.
+    * cancel_option: Include '/c' option in the prompt.
 
     Global Options:
-    * options.force: always return true without asking
-    * options.ask_no: do not ask and return false
+    * options.force: return default if specified, otherwise return True without asking
+    * options.ask_no: do not ask and return False
     """
     if options.force:
-        logger.info("%s [YES]", msg)
-        return True
-    if not can_ask(background_wait):
+        res = default if default is not None else True
+        logger.info("%s [%s]", msg, "YES" if res else "NO")
+        return res
+    if options.ask_no:
         return False
+    if not can_ask(background_wait):
+        return default if default is not None else False
 
-    option_str = "y/n" + ("/c" if cancel_option else "")
-    msg += ' '
-    if msg.endswith('? '):
-        msg = msg[:-2] + f'  ({option_str})? '
+    if default is True:
+        opt_str = "Y/n"
+    elif default is False:
+        opt_str = "y/N"
+    else:
+        opt_str = "y/n"
+
+    if cancel_option:
+        opt_str += "/c"
+
+    prompt = f"{msg.rstrip('? ')} ({opt_str})? "
 
     while True:
         try:
-            ans = input(msg)
+            ans = input(prompt)
         except EOFError:
-            ans = 'n'
-        if ans:
-            ans = ans[0].lower()
-            if ans == 'c':
-                raise TerminateSubCommand
-            if ans in 'yn':
-                return ans == 'y'
+            if default is not None:
+                return default
+            raise TerminateSubCommand
+        ans = ans.strip()
+        if not ans:
+            if default is not None:
+                return default
+            continue
+        first_char = ans[0].lower()
+        if first_char == 'c':
+            raise TerminateSubCommand
+        if first_char in 'yn':
+            return first_char == 'y'
 
 
 def ask_for_choice(question: str, choices: typing.List[str], default: int = None, background_wait=True, yes_to_all=False) -> int:

@@ -508,12 +508,14 @@ def prompt_for_string(msg, match=None, default='', valid_func=None, prev_value=[
 
 
 def confirm(msg, default=None):
-    if crmsh.options.force or (_global_variables and _global_variables.args.yes_to_all):
+    if _global_variables and _global_variables.args.yes_to_all:
         return True
     disable_completion()
-    rc = logger_utils.confirm(msg, default=default)
-    enable_completion()
-    drop_last_history()
+    try:
+        rc = utils.ask(msg, default=default)
+    finally:
+        enable_completion()
+        drop_last_history()
     return rc
 
 

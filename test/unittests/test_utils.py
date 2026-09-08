@@ -1146,3 +1146,232 @@ node1(1): member
 
     mock_error.assert_called_once_with("From the view of node '%s', node '%s' is not a member of the cluster", 'node1', 'node2')
 
+
+class TestAsk(unittest.TestCase):
+
+    def setUp(self):
+        self._orig_force = options.force
+        self._orig_ask_no = options.ask_no
+        options.force = False
+        options.ask_no = False
+
+    def tearDown(self):
+        options.force = self._orig_force
+        options.ask_no = self._orig_ask_no
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='y')
+    def test_ask_default_none_input_y(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed")
+        self.assertTrue(res)
+        mock_input.assert_called_once_with("Proceed (y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='yes')
+    def test_ask_default_none_input_yes(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed")
+        self.assertTrue(res)
+        mock_input.assert_called_once_with("Proceed (y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='YES')
+    def test_ask_default_none_input_yes_upper(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed")
+        self.assertTrue(res)
+        mock_input.assert_called_once_with("Proceed (y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='n')
+    def test_ask_default_none_input_n(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed")
+        self.assertFalse(res)
+        mock_input.assert_called_once_with("Proceed (y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='no')
+    def test_ask_default_none_input_no(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed")
+        self.assertFalse(res)
+        mock_input.assert_called_once_with("Proceed (y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='c')
+    def test_ask_default_none_input_c(self, mock_input, mock_can_ask):
+        with self.assertRaises(utils.TerminateSubCommand):
+            utils.ask("Proceed")
+        mock_input.assert_called_once_with("Proceed (y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='cancel')
+    def test_ask_default_none_input_cancel(self, mock_input, mock_can_ask):
+        with self.assertRaises(utils.TerminateSubCommand):
+            utils.ask("Proceed")
+        mock_input.assert_called_once_with("Proceed (y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', side_effect=['', 'y'])
+    def test_ask_default_none_empty_then_y(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed")
+        self.assertTrue(res)
+        mock_input.assert_has_calls([
+            mock.call("Proceed (y/n)? "),
+            mock.call("Proceed (y/n)? ")
+        ])
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', side_effect=['foo', 'n'])
+    def test_ask_garbage_input_then_n(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed")
+        self.assertFalse(res)
+        mock_input.assert_has_calls([
+            mock.call("Proceed (y/n)? "),
+            mock.call("Proceed (y/n)? ")
+        ])
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', side_effect=EOFError)
+    def test_ask_default_none_eof_raises_terminate(self, mock_input, mock_can_ask):
+        with self.assertRaises(utils.TerminateSubCommand):
+            utils.ask("Proceed")
+        mock_input.assert_called_once_with("Proceed (y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='')
+    def test_ask_default_true_input_empty(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed", default=True)
+        self.assertTrue(res)
+        mock_input.assert_called_once_with("Proceed (Y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='n')
+    def test_ask_default_true_input_n(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed", default=True)
+        self.assertFalse(res)
+        mock_input.assert_called_once_with("Proceed (Y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', side_effect=['foo', ''])
+    def test_ask_default_true_garbage_then_empty(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed", default=True)
+        self.assertTrue(res)
+        mock_input.assert_has_calls([
+            mock.call("Proceed (Y/n)? "),
+            mock.call("Proceed (Y/n)? ")
+        ])
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', side_effect=EOFError)
+    def test_ask_default_true_eof_returns_default(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed", default=True)
+        self.assertTrue(res)
+        mock_input.assert_called_once_with("Proceed (Y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='')
+    def test_ask_default_false_input_empty(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed", default=False)
+        self.assertFalse(res)
+        mock_input.assert_called_once_with("Proceed (y/N)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='y')
+    def test_ask_default_false_input_y(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed", default=False)
+        self.assertTrue(res)
+        mock_input.assert_called_once_with("Proceed (y/N)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', side_effect=EOFError)
+    def test_ask_default_false_eof_returns_default(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed", default=False)
+        self.assertFalse(res)
+        mock_input.assert_called_once_with("Proceed (y/N)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='c')
+    def test_ask_cancel_option_prompt_and_input(self, mock_input, mock_can_ask):
+        with self.assertRaises(utils.TerminateSubCommand):
+            utils.ask("Proceed", cancel_option=True)
+        mock_input.assert_called_once_with("Proceed (y/n/c)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='')
+    def test_ask_cancel_option_with_default_true(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed", default=True, cancel_option=True)
+        self.assertTrue(res)
+        mock_input.assert_called_once_with("Proceed (Y/n/c)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='')
+    def test_ask_cancel_option_with_default_false(self, mock_input, mock_can_ask):
+        res = utils.ask("Proceed", default=False, cancel_option=True)
+        self.assertFalse(res)
+        mock_input.assert_called_once_with("Proceed (y/N/c)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='y')
+    def test_ask_prompt_formatting_strips_trailing_question_mark(self, mock_input, mock_can_ask):
+        utils.ask("Are you sure? ")
+        mock_input.assert_called_once_with("Are you sure (y/n)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=True)
+    @mock.patch('builtins.input', return_value='y')
+    def test_ask_prompt_formatting_strips_trailing_question_mark_no_space(self, mock_input, mock_can_ask):
+        utils.ask("Are you sure?")
+        mock_input.assert_called_once_with("Are you sure (y/n)? ")
+
+    @mock.patch('crmsh.utils.logger.info')
+    @mock.patch('builtins.input')
+    def test_ask_options_force_no_default(self, mock_input, mock_logger_info):
+        options.force = True
+        res = utils.ask("Overwrite file")
+        self.assertTrue(res)
+        mock_input.assert_not_called()
+        mock_logger_info.assert_called_once_with("%s [%s]", "Overwrite file", "YES")
+
+    @mock.patch('crmsh.utils.logger.info')
+    @mock.patch('builtins.input')
+    def test_ask_options_force_default_true(self, mock_input, mock_logger_info):
+        options.force = True
+        res = utils.ask("Overwrite file", default=True)
+        self.assertTrue(res)
+        mock_input.assert_not_called()
+        mock_logger_info.assert_called_once_with("%s [%s]", "Overwrite file", "YES")
+
+    @mock.patch('crmsh.utils.logger.info')
+    @mock.patch('builtins.input')
+    def test_ask_options_force_default_false(self, mock_input, mock_logger_info):
+        options.force = True
+        res = utils.ask("Overwrite file", default=False)
+        self.assertFalse(res)
+        mock_input.assert_not_called()
+        mock_logger_info.assert_called_once_with("%s [%s]", "Overwrite file", "NO")
+
+    @mock.patch('builtins.input')
+    def test_ask_options_ask_no(self, mock_input):
+        options.ask_no = True
+        res = utils.ask("Overwrite file", default=True)
+        self.assertFalse(res)
+        mock_input.assert_not_called()
+
+    @mock.patch('crmsh.utils.can_ask', return_value=False)
+    @mock.patch('builtins.input')
+    def test_ask_non_interactive_no_default(self, mock_input, mock_can_ask):
+        res = utils.ask("Overwrite file")
+        self.assertFalse(res)
+        mock_input.assert_not_called()
+
+    @mock.patch('crmsh.utils.can_ask', return_value=False)
+    @mock.patch('builtins.input')
+    def test_ask_non_interactive_default_true(self, mock_input, mock_can_ask):
+        res = utils.ask("Overwrite file", default=True)
+        self.assertTrue(res)
+        mock_input.assert_not_called()
+
+    @mock.patch('crmsh.utils.can_ask', return_value=False)
+    @mock.patch('builtins.input')
+    def test_ask_non_interactive_default_false(self, mock_input, mock_can_ask):
+        res = utils.ask("Overwrite file", default=False)
+        self.assertFalse(res)
+        mock_input.assert_not_called()
+
