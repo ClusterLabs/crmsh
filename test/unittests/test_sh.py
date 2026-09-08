@@ -230,3 +230,33 @@ class TestCommandFailurePickling(unittest.TestCase):
         self.assertEqual(original.host, unpickled.host)
         self.assertEqual(original.user, unpickled.user)
         self.assertEqual(original.msg, unpickled.msg)
+
+
+class TestShellUtils(unittest.TestCase):
+    @mock.patch('subprocess.Popen')
+    def test_get_stdout_stderr_default_stdin_none(self, mock_popen):
+        proc = mock.Mock()
+        proc.returncode = 0
+        proc.communicate.return_value = (b"output\n", b"")
+        mock_popen.return_value = proc
+
+        rc, out, err = crmsh.sh.ShellUtils.get_stdout_stderr("echo test")
+        self.assertEqual(rc, 0)
+        self.assertEqual(out, "output")
+        self.assertEqual(err, "")
+        mock_popen.assert_called_once()
+        self.assertIsNone(mock_popen.call_args[1]['stdin'])
+        proc.communicate.assert_called_once_with(None, timeout=None)
+
+    @mock.patch('subprocess.Popen')
+    def test_get_stdout_stderr_with_empty_input(self, mock_popen):
+        proc = mock.Mock()
+        proc.returncode = 0
+        proc.communicate.return_value = (b"output\n", b"")
+        mock_popen.return_value = proc
+
+        crmsh.sh.ShellUtils.get_stdout_stderr("cat", input_s="")
+        mock_popen.assert_called_once()
+        self.assertEqual(mock_popen.call_args[1]['stdin'], subprocess.PIPE)
+        proc.communicate.assert_called_once_with("", timeout=None)
+
