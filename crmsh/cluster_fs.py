@@ -129,7 +129,7 @@ class ClusterFSManager(object):
                 raise Error(f"{dev} is a Logical Volume, cannot be used with the -C option")
             if storage_utils.has_disk_mounted(dev):
                 raise Error(f"{dev} is already mounted")
-            storage_utils.MultipathInspector.check_device_under_multipath(dev)
+            storage_utils.MultipathInspector.check_device_under_multipath(dev, node_list)
 
     def _check_if_already_configured(self):
         """
