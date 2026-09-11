@@ -125,7 +125,7 @@ class Arguments(object):
         self.sbd_devices = []
         self.diskless_sbd = None
         self.stage = None
-        self.args = None
+        self.remaining_args = None
         self.use_ssh_agent = None
         self.skip_csync2 = None
 
@@ -2189,7 +2189,7 @@ def bootstrap_init(context):
     _global_variables.populate_sbd_manager()
 
     if stage in ('qnetd_remote', ):
-        args = _global_variables.args.args
+        args = _global_variables.args.remaining_args
         logger_utils.log_only_to_file(f"args: {args}")
         if len(args) != 2:
             utils.fatal(f"Expected NODE argument for '{stage}' stage")

@@ -40,14 +40,14 @@ logger = logging.getLogger(__name__)
 
 def parse_options(parser, args):
     try:
-        options, args = parser.parse_known_args(list(args))
+        options, remaining_args = parser.parse_known_args(list(args))
     except Exception:
         return None, None
     if hasattr(options, 'help') and options.help:
         parser.print_help()
         raise TerminateSubCommand(success=True)
     utils.check_empty_option_value(options)
-    return options, args
+    return options, remaining_args
 
 
 def script_printer():
@@ -487,15 +487,15 @@ Examples:
         storage_group.add_argument("-m", "--mount-point", dest="mount_point", metavar="MOUNT", default="/srv/clusterfs",
                 help="Mount point for OCFS2 or GFS2 device (default is /srv/clusterfs, only valid together with -o or -g option) NOTE: this is a Technical Preview")
 
-        options, args = parse_options(parser, args)
-        if options is None or args is None:
+        options, remaining_args = parse_options(parser, args)
+        if options is None or remaining_args is None:
             return
 
         crmsh.options.force |= options.force
 
         stage = ""
-        if len(args):
-            stage = args[0]
+        if len(remaining_args):
+            stage = remaining_args[0]
 
         # if options.geo and options.name == "hacluster":
         #    parser.error("For a geo cluster, each cluster must have a unique name (use --name to set)")
@@ -503,7 +503,7 @@ Examples:
         boot_context = bootstrap.GlobalVariables(boot_args)
         boot_context.ui_context = context
         boot_context.args.stage = stage
-        boot_context.args.args = args
+        boot_context.args.remaining_args = remaining_args
         boot_context.cluster_is_running = ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("pacemaker.service")
         boot_context.args.type = "init"
 
