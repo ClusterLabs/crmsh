@@ -34,8 +34,22 @@ Feature: Functional test to cover SAP clusterAPI
     When    Run "crm node maintenance hanode2 off" on "hanode1"
     Then    Node "hanode2" is ready
 
-    When    Try "crm node maintenance hanode2 xxx"
-    Then    Except "ERROR: node.maintenance: Expected <node> [on|off]"
+    # no node specified: defaults to the local node
+    When    Run "crm node maintenance" on "hanode1"
+    Then    Node "hanode1" is maintenance
+    When    Run "crm node maintenance off" on "hanode1"
+    Then    Node "hanode1" is ready
+
+    # multiple nodes may be specified together with on|off
+    When    Run "crm node maintenance hanode1 hanode2 on" on "hanode1"
+    Then    Node "hanode1" is maintenance
+    And     Node "hanode2" is maintenance
+    When    Run "crm node maintenance hanode1 hanode2 off" on "hanode1"
+    Then    Node "hanode1" is ready
+    And     Node "hanode2" is ready
+
+    When    Try "crm node maintenance xxx"
+    Then    Expected "Node 'xxx' not found in CIB" in stderr
 
     # "crm node ready" is deprecated in favor of "crm node maintenance <node> off"
     When    Run "crm node maintenance hanode2 on" on "hanode1"

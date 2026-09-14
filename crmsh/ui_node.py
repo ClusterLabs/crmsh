@@ -411,18 +411,30 @@ class NodeMgmt(command.UI):
 
     @command.wait
     @command.completers(compl.nodes, compl.choice(['on', 'off']))
-    def do_maintenance(self, context, node=None, on_off='on'):
-        'usage: maintenance [<node>] [on|off]'
-        if not node:
-            node = utils.this_node()
-        if not utils.is_name_sane(node):
-            return False
-        if on_off not in ['on', 'off']:
-            context.fatal_error("Expected <node> [on|off]")
+    def do_maintenance(self, context, *args):
+        """
+        usage: maintenance [<node>...] [on|off]
+
+        "on|off", if given, must be the last argument.
+        If no nodes are given, the local node is used.
+        """
+        args = list(args)
+        on_off = "on"
+        if args and args[-1] in ("on", "off"):
+            on_off = args.pop()
+
+        node_list = args if args else [utils.this_node()]
+        for node in node_list:
+            if not utils.is_name_sane(node):
+                return False
+
         _value = "true" if on_off == 'on' else "false"
-        rc = self._commit_node_attr(context, node, "maintenance", _value)
-        if rc:
-            logger.info("Setting maintenance=%s on node %s", _value, node)
+        rc = True
+        for node in node_list:
+            node_rc = self._commit_node_attr(context, node, "maintenance", _value)
+            if node_rc:
+                logger.info("Setting maintenance=%s on node %s", _value, node)
+            rc = rc and node_rc
         return rc
 
 
