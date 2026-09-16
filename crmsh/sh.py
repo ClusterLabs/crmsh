@@ -457,7 +457,7 @@ class ShellUtils:
         proc = subprocess.Popen(
             cmd,
             shell=shell,
-            stdin=input_s and subprocess.PIPE or None,
+            stdin=subprocess.PIPE if input_s is not None else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT if mix_stderr else subprocess.PIPE,
             env=os.environ,  # bsc#1205925

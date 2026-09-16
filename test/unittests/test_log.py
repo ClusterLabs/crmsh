@@ -35,3 +35,4 @@ class TestQuietLogging(unittest.TestCase):
         logger.log.reset_mock()
         adapter.warning("hidden")
         logger.log.assert_not_called()
+

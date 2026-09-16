@@ -451,18 +451,6 @@ class LoggerUtils(object):
             self.logger.info("input result: %s", value)
         return value
 
-    def confirm(self, msg):
-        """
-        To ask question
-        Return True when input y
-        Record question and answer by wait_input
-        """
-        while True:
-            ans = self.wait_input("{} (y/n)? ".format(msg.strip("? ")))
-            if not ans or ans.lower() not in ('y', 'n'):
-                continue
-            return ans.lower() == 'y'
-
     def syntax_err(self, s, token='', context='', msg=''):
         err = "syntax"
         if context:

@@ -69,7 +69,7 @@ def _wrap_cmd_non_root(cmd):
 
 def run_command(context, cmd, exit_on_fail=True):
     cmd = _wrap_cmd_non_root(cmd)
-    rc, out, err = ShellUtils().get_stdout_stderr(cmd)
+    rc, out, err = ShellUtils().get_stdout_stderr(cmd, input_s="")
     context.return_code = rc
     if out:
         out = re.sub(COLOR_MODE, '', out)
