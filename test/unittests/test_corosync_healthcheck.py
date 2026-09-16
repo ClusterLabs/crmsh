@@ -930,3 +930,115 @@ class TestCheckKnetLinkNetworkInterface(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIsNone(result.result_description)
 
+
+class TestCheckQDeviceNetworkInterface(unittest.TestCase):
+    def test_qdevice_not_configured(self):
+        config = {}
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.check_name, "Check QDevice Network Interface")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    def test_qdevice_non_net_model(self):
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "heuristics"
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    def test_qdevice_missing_host(self):
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {}
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("quorum.device.net.host is missing", result.result_description)
+        self.assertEqual(result.recommended_action, "Configure a valid host for QNetd in corosync.conf.")
+
+    @mock.patch("crmsh.corosync.get_corosync_interfaces")
+    def test_qdevice_no_corosync_interfaces(self, mock_corosync_interfaces):
+        mock_corosync_interfaces.return_value = []
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {
+                        "host": "qnetd.example.com"
+                    }
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+    @mock.patch("crmsh.corosync.get_corosync_interfaces")
+    def test_qdevice_separate_interface(self, mock_corosync_interfaces, mock_get_nic):
+        mock_corosync_interfaces.return_value = ["eth0", "eth1"]
+        mock_get_nic.return_value = "eth2"
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {
+                        "host": "192.168.2.50"
+                    }
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+        mock_get_nic.assert_called_once_with("192.168.2.50")
+
+    @mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+    @mock.patch("crmsh.corosync.get_corosync_interfaces")
+    def test_qdevice_unresolved_or_routed_nic(self, mock_corosync_interfaces, mock_get_nic):
+        mock_corosync_interfaces.return_value = ["eth0"]
+        mock_get_nic.return_value = None
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {
+                        "host": "10.200.1.50"
+                    }
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+    @mock.patch("crmsh.corosync.get_corosync_interfaces")
+    def test_qdevice_conflict_interface(self, mock_corosync_interfaces, mock_get_nic):
+        mock_corosync_interfaces.return_value = ["eth0", "eth1"]
+        mock_get_nic.return_value = "eth0"
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {
+                        "host": "192.168.0.50"
+                    }
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("QNetd server '192.168.0.50' is on network interface 'eth0', which is also used for Corosync links (eth0, eth1).", result.result_description)
+        self.assertEqual(result.recommended_action, "To ensure network redundancy, configure QNetd to use a network interface separate from Corosync communication links.")
+
+
