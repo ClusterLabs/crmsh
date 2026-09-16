@@ -12,6 +12,7 @@ from . import xmlutil
 from . import ui_utils
 from . import options
 from . import cibconfig
+from . import ra
 from .sh import ShellUtils
 from . import log
 
@@ -746,6 +747,10 @@ class RscMgmt(command.UI):
             return False
 
         rsc_type = rsc.node.get("type")
+
+        if not ra.is_shell_agent(rsc):
+            logger.warning("trace supports shell-based resource agents for now; other languages may not work")
+
         running_nodes = xmlutil.CrmMonXMLParser().get_resource_running_nodes(rsc_id)
         node_str = " on node %s" % (", ".join(running_nodes)) if running_nodes else ""
         logger.info("Trace for %s%s is written to %s/%s%s",
@@ -802,6 +807,8 @@ class RscMgmt(command.UI):
             self._untrace_op_interval(context, rsc_id, rsc, op, interval)
         if not cibconfig.cib_factory_instance().commit():
             return False
+        if not ra.is_shell_agent(rsc):
+            logger.warning("untrace supports shell-based resource agents for now; other languages may not work")
         running_nodes = xmlutil.CrmMonXMLParser().get_resource_running_nodes(rsc_id)
         node_str = " on node %s" % (", ".join(running_nodes)) if running_nodes else ""
         logger.info("Stop tracing %s%s%s", rsc_id, ":" + op if op else "", node_str)
