@@ -940,6 +940,10 @@ to get the geo cluster configuration.""",
                     results.append(res_knet_interface)
                     print_cb(res_knet_interface)
 
+                    res_qdevice_interface = corosync_healthcheck.check_qdevice_network_interface(local_node, corosync_config)
+                    results.append(res_qdevice_interface)
+                    print_cb(res_qdevice_interface)
+
                     res_quorum = corosync_healthcheck.check_quorum_status(local_node)
                     results.append(res_quorum)
                     print_cb(res_quorum)

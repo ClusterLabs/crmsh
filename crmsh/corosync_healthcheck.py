@@ -16,6 +16,7 @@ from . import corosync
 from . import cibquery
 from . import constants
 from . import iproute2
+from . import network_utils
 from .prun import prun
 from . import sh
 
@@ -515,6 +516,62 @@ def check_knet_link_network_interface(local_node: str, lm: corosync.LinkManager)
         None,
         None,
     )
+
+
+def check_qdevice_network_interface(local_node: str, config: dict) -> CheckResult:
+    """
+    Check if QNetd is configured on a network interface distinct from Corosync links.
+    """
+    CHECK_NAME = "Check QDevice Network Interface"
+    device_config = config.get("quorum", {}).get("device", {})
+    if not isinstance(device_config, dict) or device_config.get("model") != "net":
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            0,
+            None,
+            None,
+        )
+
+    net_config = device_config.get("net", {})
+    if not isinstance(net_config, dict) or not net_config.get("host"):
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            1,
+            "QDevice model is 'net' but quorum.device.net.host is missing.",
+            "Configure a valid host for QNetd in corosync.conf.",
+        )
+
+    qnetd_host = net_config["host"]
+    corosync_nics = corosync.get_corosync_interfaces()
+    if not corosync_nics:
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            0,
+            None,
+            None,
+        )
+
+    qnetd_nic = network_utils.get_nic_by_subnet_of_addr(qnetd_host)
+    if qnetd_nic is not None and qnetd_nic in corosync_nics:
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            1,
+            f"QNetd server '{qnetd_host}' is on network interface '{qnetd_nic}', which is also used for Corosync links ({', '.join(corosync_nics)}).",
+            "To ensure network redundancy, configure QNetd to use a network interface separate from Corosync communication links.",
+        )
+
+    return CheckResult(
+        CHECK_NAME,
+        [local_node],
+        0,
+        None,
+        None,
+    )
+
 
 
 
