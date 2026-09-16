@@ -2139,6 +2139,14 @@ Note: RA tracing is only supported by OCF resource agents;
 The pacemaker-execd daemon does not log recurring monitor operations
 unless an error occurred.
 
+Note: crmsh's RA tracing relies on the tracing support built into
+`ocf-shellfuncs`, and therefore only works for resource agents
+implemented as shell scripts. Resource agents written in other
+languages, such as most `stonith:fence_*` agents which are written in
+Python, will not honor tracing, even though `crm` will still report
+that the trace was set. crmsh will emit a warning when it detects that
+the specified resource agent is not a shell script.
+
 Usage:
 ...............
 trace <rsc> [<op> [<interval>] [<log-dir>]]
