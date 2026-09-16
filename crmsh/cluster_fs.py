@@ -2,7 +2,7 @@ import logging
 import re
 from contextlib import contextmanager
 from . import utils, sh, storage_utils
-from . import bootstrap
+from . import bootstrap # circular import
 from . import ra
 from . import corosync
 from . import log
@@ -25,17 +25,17 @@ class ClusterFSManager(object):
     Class to manage cluster filesystem (OCFS2 or GFS2)
     and configure related resources
     """
-    def __init__(self, context):
+    def __init__(self, context: 'bootstrap.GlobalVariables'):
         """
         Init function
         """
-        self.ocfs2_devices = context.ocfs2_devices
-        self.gfs2_devices = context.gfs2_devices
-        self.stage = context.stage
-        self.use_cluster_lvm2 = context.use_cluster_lvm2
-        self.mount_point = context.mount_point
-        self.use_stage = context.stage in ("ocfs2", "gfs2")
-        self.yes_to_all = context.yes_to_all
+        self.ocfs2_devices = context.args.ocfs2_devices
+        self.gfs2_devices = context.args.gfs2_devices
+        self.stage = context.args.stage
+        self.use_cluster_lvm2 = context.args.use_cluster_lvm2
+        self.mount_point = context.args.mount_point
+        self.use_stage = context.args.stage in ("ocfs2", "gfs2")
+        self.yes_to_all = context.args.yes_to_all
         self.exist_ra_id_list = []
         self.vg_id = None
         self.group_id = None
