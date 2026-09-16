@@ -316,10 +316,11 @@ class Corosync(command.UI):
     def requires(self):
         return corosync.check_tools()
 
-    @command.completers(completers.choice(constants.COROSYNC_STATUS_TYPES))
-    def do_status(self, context, status_type="ring"):
+    @command.completers(completers.choice(corosync.COROSYNC_STATUS_TYPES))
+    def do_status(self, context, status_type=None):
         '''
-        Quick cluster health status. Corosync status or QNetd status
+        Quick cluster health status. Corosync status or QNetd status.
+        Defaults to all components.
         '''
         if not ServiceManager(sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active("corosync.service"):
             logger.error("corosync.service is not running!")
