@@ -179,3 +179,43 @@ Feature: Functional test to cover SAP clusterAPI
     And     Run "crm cluster stop" on "hanode1"
     Then    Expected return code is "0"
     Then    Expected "The cluster stack already stopped on hanode1" in stdout
+
+  @clean
+  Scenario: crm node standby supports on|off, multiple nodes and --all
+    # single node, explicit on|off
+    When    Run "crm node standby hanode2 on" on "hanode1"
+    Then    Node "hanode2" is standby
+    When    Run "crm node standby hanode2 off" on "hanode1"
+    Then    Node "hanode2" is online
+
+    # multiple nodes
+    When    Run "crm node standby hanode1 hanode2 on" on "hanode1"
+    Then    Node "hanode1" is standby
+    And     Node "hanode2" is standby
+    When    Run "crm node standby hanode1 hanode2 off" on "hanode1"
+    Then    Node "hanode1" is online
+    And     Node "hanode2" is online
+
+    # --all, with on|off before --all
+    When    Run "crm node standby on --all" on "hanode1"
+    Then    Node "hanode1" is standby
+    And     Node "hanode2" is standby
+    When    Run "crm node standby off --all" on "hanode1"
+    Then    Node "hanode1" is online
+    And     Node "hanode2" is online
+
+    # --all, with on|off after --all
+    When    Run "crm node standby --all on" on "hanode1"
+    Then    Node "hanode1" is standby
+    And     Node "hanode2" is standby
+    When    Run "crm node standby --all off" on "hanode1"
+    Then    Node "hanode1" is online
+    And     Node "hanode2" is online
+
+    # "crm node online" is deprecated in favor of "crm node standby off"
+    When    Run "crm node standby hanode2 on" on "hanode1"
+    Then    Node "hanode2" is standby
+    When    Try "crm node online hanode2"
+    Then    Expected "The 'online' command is deprecated" in stderr
+    Then    Node "hanode2" is online
+

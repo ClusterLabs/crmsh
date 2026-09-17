@@ -284,24 +284,48 @@ class NodeMgmt(command.UI):
         return True
 
     @command.wait
-    @command.completers(compl.online_nodes)
+    @command.completers(compl.nodes, compl.choice(['on', 'off']))
     def do_standby(self, context, *args):
         """
-        usage: standby [<node>] [<lifetime>]
+        usage: standby [<node>...] [on|off] [<lifetime>]
+               standby --all [on|off] [<lifetime>]
+        "on|off" and "--all" may be given in any order.
         To avoid race condition for --all option, melt all standby values into one cib replace session
         """
-        # Parse lifetime option
+        args = list(args)
+
+        # "--all" is a flag and may appear anywhere among the args; pull it
+        # out first so it doesn't interfere with parsing "on|off" and
+        # "<lifetime>" below. It's added back before node/--all validation.
+        has_all = "--all" in args
+        if has_all:
+            args = [a for a in args if a != "--all"]
+
+        # Parse lifetime option (the trailing token, if present)
         lifetime_opt = "forever"
-        lifetime = utils.fetch_lifetime_opt(list(args), iso8601=False)
+        lifetime = utils.fetch_lifetime_opt(args, iso8601=False)
         if lifetime:
             lifetime_opt = lifetime
-            args = args[:-1]
+
+        # Parse on|off option: it may appear anywhere among the remaining args
+        on_off = "on"
+        on_off_idx = next((i for i, tok in enumerate(args) if tok in ("on", "off")), None)
+        if on_off_idx is not None:
+            on_off = args.pop(on_off_idx)
+
+        if has_all:
+            args.append("--all")
 
         # Parse node option
         node_list, _ = ui_utils.parse_and_validate_node_args("standby", *args)
         if not node_list:
             return
 
+        if on_off == "off":
+            return self._standby_off(node_list)
+        return self._standby_on(node_list, lifetime_opt)
+
+    def _standby_on(self, node_list, lifetime_opt):
         # For default "forever" lifetime, under "nodes" section
         xml_path = constants.XML_NODE_PATH
         xml_query_path = constants.XML_NODE_QUERY_STANDBY_PATH
@@ -361,8 +385,8 @@ class NodeMgmt(command.UI):
                     xmlutil.rmnodes(item_to_del)
                 # If the standby nvpair already exists, set and continue
                 item = cib.xpath(xml_query_path.format(node_id=node_id))
-                if item and item[0].get("value") != "on":
-                    item[0].set("value", "on")
+                if item and item[0].get("value") not in ("true", "on"):
+                    item[0].set("value", "true")
                     continue
                 # Create standby nvpair
                 interface_item = xml_item
@@ -370,7 +394,7 @@ class NodeMgmt(command.UI):
                     res_item = xmlutil.get_set_nodes(xml_item, "transient_attributes", create=True)
                     interface_item = res_item[0]
                 res_item = xmlutil.get_set_nodes(interface_item, "instance_attributes", create=True)
-                xmlutil.set_attr(res_item[0], "standby", "on")
+                xmlutil.set_attr(res_item[0], "standby", "true")
 
         rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
         if not rc:
@@ -390,19 +414,24 @@ class NodeMgmt(command.UI):
         if not node_list:
             return
 
+        rc = self._standby_off(node_list)
+        logger.warning("The 'online' command is deprecated and will be removed in a future release. Use 'crm node standby [<node>] off' instead.")
+        return rc
+
+    def _standby_off(self, node_list):
         cib = xmlutil.cibdump2elem()
         if cib is None:
             return False
         # IMPORTANT: Do NOT call cibdump2elem twice, or you risk a race.
         # Really use the same xml as "original" and basis for the changes.
-        # Thus the "deepcopy" here; see also do_standby().
+        # Thus the "deepcopy" here; see also _standby_on().
         orig_cib = copy.deepcopy(cib)
         for node in node_list:
             node_id = utils.get_nodeid_from_name(node)
             for query_path in [constants.XML_NODE_QUERY_STANDBY_PATH, constants.XML_STATUS_QUERY_STANDBY_PATH]:
                 item = cib.xpath(query_path.format(node_id=node_id))
-                if item and item[0].get("value") != "off":
-                    item[0].set("value", "off")
+                if item and item[0].get("value") not in ("false", "off"):
+                    item[0].set("value", "false")
 
         rc = utils.diff_and_patch(xmlutil.xml_tostring(orig_cib), xmlutil.xml_tostring(cib))
         if not rc:
