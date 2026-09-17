@@ -160,6 +160,7 @@ op_defaults opsdef2: \
 	record-pending=true
 .INP: commit
 .TRY -F node maintenance node1
+INFO: Setting maintenance=true on node node1
 .TRY -F resource maintenance g1 off
 .TRY -F resource maintenance d1
 .TRY -F configure property maintenance-mode=true

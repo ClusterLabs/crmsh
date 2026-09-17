@@ -22,6 +22,43 @@ Feature: Functional test to cover SAP clusterAPI
     When    Run "echo 'export PATH=$PATH:/usr/sbin/' > ~hacluster/.bashrc" on "hanode2"
 
   @clean
+  Scenario: crm node maintenance supports on|off
+    When    Run "crm node maintenance hanode2 on" on "hanode1"
+    Then    Node "hanode2" is maintenance
+    When    Run "crm node maintenance hanode2 off" on "hanode1"
+    Then    Node "hanode2" is ready
+
+    # default value is "on"
+    When    Run "crm node maintenance hanode2" on "hanode1"
+    Then    Node "hanode2" is maintenance
+    When    Run "crm node maintenance hanode2 off" on "hanode1"
+    Then    Node "hanode2" is ready
+
+    # no node specified: defaults to the local node
+    When    Run "crm node maintenance" on "hanode1"
+    Then    Node "hanode1" is maintenance
+    When    Run "crm node maintenance off" on "hanode1"
+    Then    Node "hanode1" is ready
+
+    # multiple nodes may be specified together with on|off
+    When    Run "crm node maintenance hanode1 hanode2 on" on "hanode1"
+    Then    Node "hanode1" is maintenance
+    And     Node "hanode2" is maintenance
+    When    Run "crm node maintenance hanode1 hanode2 off" on "hanode1"
+    Then    Node "hanode1" is ready
+    And     Node "hanode2" is ready
+
+    When    Try "crm node maintenance xxx"
+    Then    Expected "Node 'xxx' not found in CIB" in stderr
+
+    # "crm node ready" is deprecated in favor of "crm node maintenance <node> off"
+    When    Run "crm node maintenance hanode2 on" on "hanode1"
+    Then    Node "hanode2" is maintenance
+    When    Run "crm node ready hanode2" on "hanode1"
+    Then    Node "hanode2" is ready
+    Then    Expected "The 'ready' command is deprecated and will be removed in a future release" in stderr
+
+  @clean
   Scenario: Test cluster copy
     When    Try "crm cluster copy /tmp/none"
     Then    Expected "/tmp/none does not exist" in stderr
@@ -179,3 +216,4 @@ Feature: Functional test to cover SAP clusterAPI
     And     Run "crm cluster stop" on "hanode1"
     Then    Expected return code is "0"
     Then    Expected "The cluster stack already stopped on hanode1" in stdout
+

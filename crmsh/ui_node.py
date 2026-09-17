@@ -222,7 +222,6 @@ class NodeMgmt(command.UI):
     name = "node"
 
     node_standby = "crm_attribute -t nodes -N '%s' -n standby -v '%s' %s"
-    node_maint = "crm_attribute -t nodes -N '%s' -n maintenance -v '%s'"
     node_delete = """cibadmin -D -o nodes -X '<node uname="%s"/>'"""
     node_delete_status = """cibadmin -D -o status -X '<node_state uname="%s"/>'"""
     node_cleanup_resources = "crm_resource --cleanup --node '%s'"
@@ -411,14 +410,32 @@ class NodeMgmt(command.UI):
             logger.info("online node %s", node)
 
     @command.wait
-    @command.completers(compl.nodes)
-    def do_maintenance(self, context, node=None):
-        'usage: maintenance [<node>]'
-        if not node:
-            node = utils.this_node()
-        if not utils.is_name_sane(node):
-            return False
-        return self._commit_node_attr(context, node, "maintenance", "true")
+    @command.completers(compl.nodes, compl.choice(['on', 'off']))
+    def do_maintenance(self, context, *args):
+        """
+        usage: maintenance [<node>...] [on|off]
+
+        "on|off", if given, must be the last argument.
+        If no nodes are given, the local node is used.
+        """
+        args = list(args)
+        on_off = "on"
+        if args and args[-1] in ("on", "off"):
+            on_off = args.pop()
+
+        node_list = args if args else [utils.this_node()]
+        for node in node_list:
+            if not utils.is_name_sane(node):
+                return False
+
+        _value = "true" if on_off == 'on' else "false"
+        rc = True
+        for node in node_list:
+            node_rc = self._commit_node_attr(context, node, "maintenance", _value)
+            if node_rc:
+                logger.info("Setting maintenance=%s on node %s", _value, node)
+            rc = rc and node_rc
+        return rc
 
 
     @command.wait
@@ -429,7 +446,12 @@ class NodeMgmt(command.UI):
             node = utils.this_node()
         if not utils.is_name_sane(node):
             return False
-        return utils.ext_cmd(self.node_maint % (node, "off")) == 0
+        rc = self._commit_node_attr(context, node, "maintenance", "false")
+        if rc:
+            logger.info("Setting maintenance=false on node %s", node)
+        suggestion = f"crm node maintenance {node} off"
+        logger.warning("The 'ready' command is deprecated and will be removed in a future release. Use '%s' instead.", suggestion)
+        return rc
 
     @command.wait
     @command.completers(compl.nodes)
