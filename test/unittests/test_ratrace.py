@@ -1,10 +1,11 @@
 import unittest
+from types import SimpleNamespace
 from lxml import etree
 try:
     from unittest import mock
 except ImportError:
     import mock
-from crmsh import cibconfig
+from crmsh import cibconfig, ra
 from crmsh.ui_context import Context
 from crmsh.ui_resource import RscMgmt
 from crmsh.ui_root import Root
@@ -157,3 +158,132 @@ class TestRATrace(unittest.TestCase):
         with self.assertRaises(ValueError) as err:
             RscMgmt()._untrace_op_interval(self.context, obj.obj_id, obj, 'invalid-op', '10')
         self.assertEqual(str(err.exception), "Operation invalid-op with interval 10 not found in r1")
+
+
+def _fake_rsc(ra_class, ra_type, ra_provider=None):
+    attrs = {"class": ra_class, "type": ra_type}
+    if ra_provider is not None:
+        attrs["provider"] = ra_provider
+    return SimpleNamespace(node=attrs)
+
+
+class TestIsShellAgent(unittest.TestCase):
+    """Unit tests for detecting non-shell resource agents."""
+
+    @mock.patch('os.path.isfile')
+    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data=b'#!/bin/sh\n')
+    def test_shell_agent(self, mock_open, mock_isfile):
+        mock_isfile.return_value = True
+        self.assertTrue(ra.is_shell_agent(_fake_rsc('ocf', 'Dummy', 'heartbeat')))
+
+    @mock.patch('os.path.isfile')
+    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data=b'#!/usr/bin/env bash\n')
+    def test_shell_agent_env(self, mock_open, mock_isfile):
+        mock_isfile.return_value = True
+        self.assertTrue(ra.is_shell_agent(_fake_rsc('ocf', 'Dummy', 'heartbeat')))
+
+    @mock.patch('os.path.isfile')
+    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data=b'#!/usr/bin/env -S bash\n')
+    def test_shell_agent_env_with_flag(self, mock_open, mock_isfile):
+        mock_isfile.return_value = True
+        self.assertTrue(ra.is_shell_agent(_fake_rsc('ocf', 'Dummy', 'heartbeat')))
+
+    @mock.patch('os.path.isfile')
+    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data=b'#!/usr/bin/python3\n')
+    def test_recognized_shebang_non_shell_interpreter_is_unknown(self, mock_open, mock_isfile):
+        """A script with a valid shebang whose interpreter is not in
+        SHELL_INTERPRETERS is reported as indeterminate: we cannot tell
+        shell-like interpreters we don't know about from genuinely
+        non-shell ones without an explicit deny-list."""
+        mock_isfile.return_value = True
+        self.assertIsNone(ra.is_shell_agent(_fake_rsc('stonith', 'fence_sbd')))
+
+    @mock.patch('os.path.isfile')
+    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data=b'\x7fELF\x02\x01\x01\x00binary-garbage')
+    def test_binary_agent(self, mock_open, mock_isfile):
+        """A file with no shebang is confidently not a shell script."""
+        mock_isfile.return_value = True
+        self.assertFalse(ra.is_shell_agent(_fake_rsc('stonith', 'fence_compiled')))
+
+    @mock.patch('os.path.isfile')
+    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data=b'#!/usr/bin/fish\n')
+    def test_unrecognized_interpreter_is_unknown(self, mock_open, mock_isfile):
+        """An interpreter that is neither a known shell nor a known
+        non-shell scripting language is reported as indeterminate,
+        rather than guessed at."""
+        mock_isfile.return_value = True
+        self.assertIsNone(ra.is_shell_agent(_fake_rsc('ocf', 'Dummy', 'heartbeat')))
+
+    @mock.patch('os.path.isfile')
+    def test_unknown_agent(self, mock_isfile):
+        mock_isfile.return_value = False
+        self.assertIsNone(ra.is_shell_agent(_fake_rsc('ocf', 'Dummy', 'heartbeat')))
+
+
+class TestTraceNonShellWarning(unittest.TestCase):
+    """Unit tests for the non-shell agent warning emitted by `trace`."""
+
+    context = Context(Root())
+    factory = cibconfig.cib_factory
+
+    def setUp(self):
+        self.factory._push_state()
+
+    def tearDown(self):
+        self.factory._pop_state()
+
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser.get_resource_running_nodes', return_value=[])
+    @mock.patch('crmsh.ra.is_shell_agent')
+    @mock.patch('logging.Logger.warning')
+    def test_trace_warns_for_non_shell_agent(self, mock_warning, mock_is_shell_agent, mock_running_nodes):
+        """do_trace should warn when the RA is known not to be a shell script."""
+        mock_is_shell_agent.return_value = False
+        xml = '''<primitive class="stonith" id="fencing-sbd" type="fence_sbd"/>'''
+        obj = self.factory.create_from_node(etree.fromstring(xml))
+
+        with mock.patch.object(RscMgmt, '_get_trace_rsc', return_value=obj), \
+                mock.patch.object(self.factory, 'commit', return_value=True):
+            RscMgmt().do_trace(self.context, obj.obj_id)
+
+        mock_is_shell_agent.assert_called_with(obj)
+        self.assertTrue(any(
+            "trace supports shell-based resource agents" in call.args[0]
+            for call in mock_warning.call_args_list
+        ))
+
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser.get_resource_running_nodes', return_value=[])
+    @mock.patch('crmsh.ra.is_shell_agent')
+    @mock.patch('logging.Logger.warning')
+    def test_trace_no_warning_for_shell_agent(self, mock_warning, mock_is_shell_agent, mock_running_nodes):
+        """do_trace should not warn when the RA is a shell script."""
+        mock_is_shell_agent.return_value = True
+        xml = '''<primitive class="ocf" id="r1" provider="heartbeat" type="Dummy"/>'''
+        obj = self.factory.create_from_node(etree.fromstring(xml))
+
+        with mock.patch.object(RscMgmt, '_get_trace_rsc', return_value=obj), \
+                mock.patch.object(self.factory, 'commit', return_value=True):
+            RscMgmt().do_trace(self.context, obj.obj_id)
+
+        self.assertFalse(any(
+            "trace supports shell-based resource agents" in call.args[0]
+            for call in mock_warning.call_args_list
+        ))
+
+    @mock.patch('crmsh.xmlutil.CrmMonXMLParser.get_resource_running_nodes', return_value=[])
+    @mock.patch('crmsh.ra.is_shell_agent')
+    @mock.patch('logging.Logger.warning')
+    def test_untrace_warns_for_non_shell_agent(self, mock_warning, mock_is_shell_agent, mock_running_nodes):
+        """do_untrace should warn when the RA is known not to be a shell script."""
+        mock_is_shell_agent.return_value = False
+        xml = '''<primitive class="stonith" id="fencing-sbd" type="fence_sbd"/>'''
+        obj = self.factory.create_from_node(etree.fromstring(xml))
+
+        with mock.patch.object(RscMgmt, '_get_trace_rsc', return_value=obj), \
+                mock.patch.object(self.factory, 'commit', return_value=True):
+            RscMgmt().do_untrace(self.context, obj.obj_id)
+
+        mock_is_shell_agent.assert_called_with(obj)
+        self.assertTrue(any(
+            "untrace supports shell-based resource agents" in call.args[0]
+            for call in mock_warning.call_args_list
+        ))

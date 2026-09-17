@@ -2,11 +2,13 @@
 # See COPYING for license information.
 import logging
 import os
+import shutil
 import subprocess
 import copy
 import re
 import glob
 import functools
+import typing
 from lxml import etree
 from . import cache
 from . import constants
@@ -16,6 +18,9 @@ from . import userdir
 from . import utils
 from .sh import ShellUtils
 from . import log
+
+if typing.TYPE_CHECKING:
+    from . import cibconfig
 
 
 logger = logging.getLogger(__name__)
@@ -869,6 +874,77 @@ def pick_provider(providers):
     elif 'pacemaker' in providers:
         return 'pacemaker'
     return providers[0]
+
+
+SHELL_INTERPRETERS = ("sh", "bash", "dash", "ksh", "ash")
+
+
+def get_ra_script_path(ra_class, ra_type, ra_provider=None):
+    """
+    Best-effort attempt to find the local filesystem path of a resource
+    agent's executable, so that its interpreter (shebang) can be
+    inspected. Returns None if the path cannot be determined.
+    """
+    if ra_class == "ocf":
+        return os.path.join(config.path.ocf_root, "resource.d", ra_provider or "heartbeat", ra_type)
+    if ra_class == "stonith":
+        return shutil.which(ra_type) or os.path.join("/usr/sbin", ra_type)
+    return None
+
+
+def is_shell_agent(rsc: "cibconfig.CibPrimitive") -> bool | None:
+    """
+    Determine whether the given resource agent is implemented as a shell
+    script. crm's `resource trace` feature relies on the tracing support
+    built into ocf-shellfuncs (bash 'set -x'-style tracing), and thus only
+    works for shell-based resource agents. Agents written in other
+    languages (e.g. Python, as most fence agents are) will not honor the
+    trace_ra/trace_dir attributes.
+
+    Args:
+        rsc: the primitive resource object.
+
+    Returns:
+        True  - the agent is a shell script
+        False - the agent is known to not be a shell script
+        None  - could not be determined (e.g. agent not found locally)
+    """
+    path = get_ra_script_path(
+        rsc.node.get("class"),
+        rsc.node.get("type"),
+        rsc.node.get("provider")
+    )
+    if not path or not os.path.isfile(path):
+        return None
+
+    try:
+        with open(path, 'rb') as f:
+            # Peek at the shebang magic before reading the whole line, so
+            # that a non-script (e.g. a compiled binary) does not force us
+            # to read a potentially huge first "line" into memory.
+            magic = f.read(2)
+            if magic != b'#!':
+                return False
+            rest_of_line = f.readline()
+    except OSError:
+        return None
+
+    interpreter = rest_of_line.decode('utf-8', errors='replace').strip()
+    if not interpreter:
+        return False
+
+    parts = interpreter.split()
+    if parts and os.path.basename(parts[0]) == 'env':
+        parts = parts[1:]
+        # skip env's own options and VAR=value assignments, e.g.
+        # "env -S bash" or "env FOO=bar bash"
+        while parts and (parts[0].startswith('-') or '=' in parts[0]):
+            parts = parts[1:]
+    if not parts:
+        return False
+
+    interpreter_name = os.path.basename(parts[0])
+    return True if interpreter_name in SHELL_INTERPRETERS else None
 
 
 def disambiguate_ra_type(s):
