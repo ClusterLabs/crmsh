@@ -546,6 +546,26 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
         self.instance_fix._fix_sbd_disk_metadata()
         mock_logger_info.assert_called_once_with("Adjusting sbd msgwait to %d, watchdog timeout to %d", 10, 5)
+        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with(
+            "crm sbd configure msgwait-timeout=10 watchdog-timeout=5"
+        )
+
+    @patch('crmsh.sh.cluster_shell')
+    @patch('crmsh.options.force', True)
+    @patch('logging.Logger.info')
+    def test_fix_sbd_disk_metadata_with_force(self, mock_logger_info, mock_cluster_shell):
+        # When crm was invoked with -F/--force, the nested crm sbd configure
+        # subprocess must inherit -F too, otherwise it aborts when resources
+        # are still running and not in maintenance mode.
+        self.instance_fix.sbd_msgwait_expected = 10
+        self.instance_fix.sbd_watchdog_timeout_expected = 5
+        mock_cluster_shell_inst = Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
+        self.instance_fix._fix_sbd_disk_metadata()
+        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with(
+            "crm -F sbd configure msgwait-timeout=10 watchdog-timeout=5"
+        )
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_expected')
     def test_check_sbd_watchdog_timeout_failure(self, mock_get_sbd_watchdog_timeout_expected):

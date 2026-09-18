@@ -11,6 +11,7 @@ from . import bootstrap
 from . import log
 from . import constants
 from . import corosync
+from . import options
 from . import xmlutil
 from . import watchdog
 from . import cibquery
@@ -833,7 +834,8 @@ class SBDConfigChecker:
         if self.sbd_msgwait_expected is None or self.sbd_watchdog_timeout_expected is None:
             self.sbd_watchdog_timeout_expected, self.sbd_msgwait_expected = SBDTimeout.get_sbd_metadata_expected()
         logger.info("Adjusting sbd msgwait to %d, watchdog timeout to %d", self.sbd_msgwait_expected, self.sbd_watchdog_timeout_expected)
-        cmd = f"crm sbd configure msgwait-timeout={self.sbd_msgwait_expected} watchdog-timeout={self.sbd_watchdog_timeout_expected}"
+        force_flag = "-F " if options.force else ""
+        cmd = f"crm {force_flag}sbd configure msgwait-timeout={self.sbd_msgwait_expected} watchdog-timeout={self.sbd_watchdog_timeout_expected}"
         output = sh.cluster_shell().get_stdout_or_raise_error(cmd)
         if output:
             print(output)
