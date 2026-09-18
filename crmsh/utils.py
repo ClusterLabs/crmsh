@@ -2842,6 +2842,24 @@ def validate_and_get_reachable_nodes(
     return member_list + remote_list
 
 
+def handle_trailing_force_option(args: typing.Sequence[str]) -> typing.Tuple[str, ...]:
+    """
+    Detect and strip a trailing -F/--force option from a subcommand's own
+    argument list, setting options.force accordingly.
+
+    crm's global option parser only recognizes -F/--force when given
+    before the subcommand (e.g. "crm -F sbd configure ..."), because the
+    subcommand and its arguments are captured as a single REMAINDER. This
+    helper lets individual subcommands also accept a trailing -F/--force,
+    e.g. "crm sbd configure ... -F" or "crm cluster health sbd --fix -F".
+    """
+    args = tuple(args)
+    if args and args[-1] in ("-F", "--force"):
+        options.force = True
+        args = args[:-1]
+    return args
+
+
 class ClusterRestartNotAllowed(ValueError):
     """
     Raised by check_cluster_restart_allowed() when the cluster cannot be safely
