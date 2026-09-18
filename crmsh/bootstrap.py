@@ -1616,8 +1616,7 @@ def init_qdevice():
         qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_ADD)
         if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER:
             with utils.leverage_maintenance_mode() as enabled:
-                if not utils.able_to_restart_cluster(enabled):
-                    return
+                utils.check_cluster_restart_allowed(enabled)
                 do_init_qdevice(is_qdevice_stage)
             return
 
@@ -2387,8 +2386,7 @@ def remove_qdevice() -> None:
     qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER:
         with utils.leverage_maintenance_mode() as enabled:
-            if not utils.able_to_restart_cluster(enabled):
-                return
+            utils.check_cluster_restart_allowed(enabled)
             do_remove_qdevice(qdevice.QdevicePolicy.QDEVICE_RESTART)
         return
 

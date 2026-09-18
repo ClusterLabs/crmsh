@@ -546,6 +546,26 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
         self.instance_fix._fix_sbd_disk_metadata()
         mock_logger_info.assert_called_once_with("Adjusting sbd msgwait to %d, watchdog timeout to %d", 10, 5)
+        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with(
+            "crm sbd configure msgwait-timeout=10 watchdog-timeout=5"
+        )
+
+    @patch('crmsh.sh.cluster_shell')
+    @patch('crmsh.options.force', True)
+    @patch('logging.Logger.info')
+    def test_fix_sbd_disk_metadata_with_force(self, mock_logger_info, mock_cluster_shell):
+        # When crm was invoked with -F/--force, the nested crm sbd configure
+        # subprocess must inherit -F too, otherwise it aborts when resources
+        # are still running and not in maintenance mode.
+        self.instance_fix.sbd_msgwait_expected = 10
+        self.instance_fix.sbd_watchdog_timeout_expected = 5
+        mock_cluster_shell_inst = Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
+        self.instance_fix._fix_sbd_disk_metadata()
+        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with(
+            "crm -F sbd configure msgwait-timeout=10 watchdog-timeout=5"
+        )
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_expected')
     def test_check_sbd_watchdog_timeout_failure(self, mock_get_sbd_watchdog_timeout_expected):
@@ -1161,12 +1181,12 @@ class TestSBDManager(unittest.TestCase):
         mock_ServiceManager.return_value.disable_service.assert_called_once_with(constants.SBD_SERVICE)
         sbdmanager_instance._load_attributes_from_bootstrap.assert_not_called()
 
-    @patch('crmsh.utils.able_to_restart_cluster')
+    @patch('crmsh.utils.check_cluster_restart_allowed')
     @patch('crmsh.utils.leverage_maintenance_mode')
     @patch('crmsh.bootstrap.adjust_properties')
     @patch('crmsh.bootstrap.restart_cluster')
     @patch('crmsh.sbd.ServiceManager')
-    def test_init_and_deploy_sbd(self, mock_ServiceManager, mock_restart_cluster, mock_adjust_properties, mock_leverage_maintenance_mode, mock_able_to_restart_cluster):
+    def test_init_and_deploy_sbd(self, mock_ServiceManager, mock_restart_cluster, mock_adjust_properties, mock_leverage_maintenance_mode, mock_check_cluster_restart_allowed):
 
         mock_bootstrap_ctx = self._make_bootstrap_ctx(cluster_is_running=True)
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
@@ -1181,7 +1201,7 @@ class TestSBDManager(unittest.TestCase):
         cm.__enter__ = Mock(return_value=enable_value)
         cm.__exit__ = Mock(return_value=True)
         mock_leverage_maintenance_mode.return_value = cm
-        mock_able_to_restart_cluster.return_value = True
+        mock_check_cluster_restart_allowed.return_value = True
 
         sbdmanager_instance.initialize_sbd = Mock()
         sbdmanager_instance.update_configuration = Mock()
@@ -1189,7 +1209,7 @@ class TestSBDManager(unittest.TestCase):
 
         sbdmanager_instance.init_and_deploy_sbd(restart_first=True)
 
-        mock_able_to_restart_cluster.assert_called_once_with(True)
+        mock_check_cluster_restart_allowed.assert_called_once_with(True)
         mock_restart_cluster.assert_called_once()
         mock_adjust_properties.assert_called_once()
 
