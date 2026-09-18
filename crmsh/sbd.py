@@ -1497,8 +1497,7 @@ class SBDManager:
             self._load_attributes_from_bootstrap()
 
         with utils.leverage_maintenance_mode() as enabled:
-            if not utils.able_to_restart_cluster(enabled):
-                return
+            utils.check_cluster_restart_allowed(enabled)
 
             self.initialize_sbd()
             self.set_crashdump_action()

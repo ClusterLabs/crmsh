@@ -1276,12 +1276,12 @@ done
         mock_disable.assert_called_once_with("corosync-qdevice.service")
 
     @mock.patch('crmsh.bootstrap.do_init_qdevice')
-    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.check_cluster_restart_allowed')
     @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice_unable_to_restart_cluster(self, mock_info, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode,
-            mock_able_to_restart_cluster, mock_do_init_qdevice):
+    def test_init_qdevice_cluster_restart_not_allowed(self, mock_info, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode,
+            mock_check_cluster_restart_allowed, mock_do_init_qdevice):
         bootstrap._global_variables = mock.Mock(qdevice_inst=self.qdevice_with_ip, args=mock.Mock(stage='qdevice'))
         mock_evaluate_qdevice_quorum_effect.return_value = qdevice.QdevicePolicy.QDEVICE_RESTART_LATER
         enable_value = True
@@ -1289,21 +1289,22 @@ done
         cm.__enter__ = mock.Mock(return_value=enable_value)
         cm.__exit__ = mock.Mock(return_value=False)
         mock_leverage_maintenance_mode.return_value = cm
-        mock_able_to_restart_cluster.return_value = False
+        mock_check_cluster_restart_allowed.side_effect = crmsh.utils.ClusterRestartNotAllowed("can't restart")
 
-        bootstrap.init_qdevice()
+        with self.assertRaises(crmsh.utils.ClusterRestartNotAllowed):
+            bootstrap.init_qdevice()
 
         mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
-        mock_able_to_restart_cluster.assert_called_once_with(True)
+        mock_check_cluster_restart_allowed.assert_called_once_with(True)
         mock_do_init_qdevice.assert_not_called()
 
     @mock.patch('crmsh.bootstrap.do_init_qdevice')
-    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.check_cluster_restart_allowed')
     @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
     @mock.patch('logging.Logger.info')
-    def test_init_qdevice_able_to_restart_cluster(self, mock_info, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode,
-            mock_able_to_restart_cluster, mock_do_init_qdevice):
+    def test_init_qdevice_check_cluster_restart_allowed(self, mock_info, mock_evaluate_qdevice_quorum_effect, mock_leverage_maintenance_mode,
+            mock_check_cluster_restart_allowed, mock_do_init_qdevice):
         bootstrap._global_variables = mock.Mock(qdevice_inst=self.qdevice_with_ip, args=mock.Mock(stage='qdevice'))
         mock_evaluate_qdevice_quorum_effect.return_value = qdevice.QdevicePolicy.QDEVICE_RESTART_LATER
         enable_value = True
@@ -1311,12 +1312,12 @@ done
         cm.__enter__ = mock.Mock(return_value=enable_value)
         cm.__exit__ = mock.Mock(return_value=False)
         mock_leverage_maintenance_mode.return_value = cm
-        mock_able_to_restart_cluster.return_value = True
+        mock_check_cluster_restart_allowed.return_value = True
 
         bootstrap.init_qdevice()
 
         mock_info.assert_called_once_with("Configure Qdevice/Qnetd:")
-        mock_able_to_restart_cluster.assert_called_once_with(True)
+        mock_check_cluster_restart_allowed.assert_called_once_with(True)
         mock_do_init_qdevice.assert_called_once_with(True)
 
     @mock.patch('crmsh.bootstrap.confirm')
