@@ -1375,3 +1375,25 @@ class TestAsk(unittest.TestCase):
         self.assertFalse(res)
         mock_input.assert_not_called()
 
+
+class TestHandleTrailingForceOption(unittest.TestCase):
+    def setUp(self):
+        patcher = mock.patch.object(options, "force", False)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_no_args(self):
+        self.assertEqual((), utils.handle_trailing_force_option(()))
+        self.assertFalse(options.force)
+
+    def test_trailing_short(self):
+        self.assertEqual(["a", "b"], utils.handle_trailing_force_option(["a", "b", "-F"]))
+        self.assertTrue(options.force)
+
+    def test_trailing_long(self):
+        self.assertEqual(("a",), utils.handle_trailing_force_option(("a", "--force")))
+        self.assertTrue(options.force)
+
+    def test_not_trailing(self):
+        self.assertEqual(["-F", "a"], utils.handle_trailing_force_option(["-F", "a"]))
+        self.assertFalse(options.force)

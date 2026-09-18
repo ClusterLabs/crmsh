@@ -844,7 +844,10 @@ to get the geo cluster configuration.""",
         parser = argparse.ArgumentParser('health')
         parser.add_argument('component', choices=Cluster.HEALTH_COMPONENTS)
         parser.add_argument('-f', '--fix', action='store_true')
+        # crm's global parser only sees -F/--force before the subcommand
+        parser.add_argument('-F', '--force', action='store_true')
         parsed_args, remaining_args = parser.parse_known_args(args)
+        crmsh.options.force |= parsed_args.force
         match parsed_args.component:
             case 'hawk2':
                 if remaining_args:
