@@ -8,6 +8,7 @@ except ImportError:
 
 from crmsh import ui_cluster
 from crmsh import corosync_healthcheck
+from crmsh import options
 
 
 class TestCluster(unittest.TestCase):
@@ -268,3 +269,46 @@ class TestCluster(unittest.TestCase):
         output = mock_stdout.getvalue()
         self.assertIn("[SKIP] Check QDevice Status", output)
         self.assertIn("QDevice is not configured in corosync.conf.", output)
+
+    def test_do_health_sbd_force_positions(self):
+        for args in (("sbd", "--fix", "-F"), ("sbd", "-F", "--fix"), ("sbd", "--fix", "--force"), ("sbd", "-F")):
+            with self.subTest(args=args), \
+                 mock.patch.object(options, 'force', False), \
+                 mock.patch('crmsh.sbd.SBDConfigChecker') as mock_checker:
+                self.ui_cluster_inst.do_health(None, *args)
+                self.assertTrue(options.force)
+                mock_checker.assert_called_once_with(quiet="--fix" in args, fix="--fix" in args)
+
+    def test_do_health_sbd_without_force(self):
+        with mock.patch.object(options, 'force', False), \
+             mock.patch('crmsh.sbd.SBDConfigChecker') as mock_checker:
+            self.ui_cluster_inst.do_health(None, "sbd", "--fix")
+            self.assertFalse(options.force)
+            mock_checker.assert_called_once_with(quiet=True, fix=True)
+
+    def test_do_health_force_rejected_elsewhere(self):
+        for args in (
+            ("-F", "sbd", "--fix"),
+            ("--force", "sbd", "--fix"),
+            ("-F", "--fix", "sbd"),
+            ("--fix", "-F", "sbd"),
+            ("--fix", "sbd", "-F"),
+            ("-F", "hawk2"),
+            ("hawk2", "-F"),
+            ("sbd", "garbage", "--fix"),
+        ):
+            with self.subTest(args=args), \
+                 mock.patch.object(options, 'force', False), \
+                 mock.patch('crmsh.ui_cluster.logger.error') as mock_error, \
+                 mock.patch('crmsh.sbd.SBDConfigChecker') as mock_checker:
+                self.assertFalse(self.ui_cluster_inst.do_health(None, *args))
+                self.assertFalse(options.force)
+                mock_checker.assert_not_called()
+                self.assertEqual('Unknown arguments: %s', mock_error.call_args.args[0])
+
+    @mock.patch('sys.stderr', new_callable=StringIO)
+    @mock.patch('crmsh.corosync_healthcheck.check_health')
+    def test_do_health_corosync_force_rejected(self, mock_check_health, mock_stderr):
+        self.assertFalse(self.ui_cluster_inst.do_health(None, "corosync", "-F"))
+        mock_check_health.assert_not_called()
+        self.assertIn("unrecognized arguments: -F", mock_stderr.getvalue())
