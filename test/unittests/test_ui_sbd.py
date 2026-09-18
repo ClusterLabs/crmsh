@@ -447,18 +447,18 @@ class TestSBD(unittest.TestCase):
         self.assertEqual(str(e.exception), "Not allowed to remove all devices")
 
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
-    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.check_cluster_restart_allowed')
     @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     @mock.patch('logging.Logger.info')
-    def test_device_remove(self, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster, mock_verify_sbd_device):
+    def test_device_remove(self, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_check_cluster_restart_allowed, mock_verify_sbd_device):
         enable_value = True
         cm = mock.Mock()
         cm.__enter__ = mock.Mock(return_value=enable_value)
         cm.__exit__ = mock.Mock(return_value=True)
         mock_leverage_maintenance_mode.return_value = cm
-        mock_able_to_restart_cluster.return_value = True
+        mock_check_cluster_restart_allowed.return_value = True
         self.sbd_instance_diskbased.device_list_from_config = ["/dev/sda1", "/dev/sda2"]
         self.sbd_instance_diskbased._device_remove(["/dev/sda1"])
         mock_update_sbd_configuration.assert_called_once_with({"SBD_DEVICE": "/dev/sda2"})
@@ -466,19 +466,19 @@ class TestSBD(unittest.TestCase):
         mock_logger_info.assert_called_once_with("Remove devices: %s", "/dev/sda1")
 
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
-    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.check_cluster_restart_allowed')
     @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.ui_sbd.Path.resolve')
-    def test_device_remove_resolved_path_from_dm_to_mapper(self, mock_resolve, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster, mock_verify_sbd_device):
+    def test_device_remove_resolved_path_from_dm_to_mapper(self, mock_resolve, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_check_cluster_restart_allowed, mock_verify_sbd_device):
         enable_value = True
         cm = mock.Mock()
         cm.__enter__ = mock.Mock(return_value=enable_value)
         cm.__exit__ = mock.Mock(return_value=True)
         mock_leverage_maintenance_mode.return_value = cm
-        mock_able_to_restart_cluster.return_value = True
+        mock_check_cluster_restart_allowed.return_value = True
         mock_resolve.side_effect = [
             "/dev/dm-7",
             "/dev/dm-5",
@@ -493,19 +493,19 @@ class TestSBD(unittest.TestCase):
         mock_logger_info.assert_called_once_with("Remove devices: %s", "/dev/mapper/shared_iscsi_lun1-part10")
 
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
-    @mock.patch('crmsh.utils.able_to_restart_cluster')
+    @mock.patch('crmsh.utils.check_cluster_restart_allowed')
     @mock.patch('crmsh.utils.leverage_maintenance_mode')
     @mock.patch('crmsh.bootstrap.restart_cluster')
     @mock.patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.ui_sbd.Path.resolve')
-    def test_device_remove_resolved_path_from_mapper_to_dm(self, mock_resolve, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_able_to_restart_cluster, mock_verify_sbd_device):
+    def test_device_remove_resolved_path_from_mapper_to_dm(self, mock_resolve, mock_logger_info, mock_update_sbd_configuration, mock_restart_cluster, mock_leverage_maintenance_mode, mock_check_cluster_restart_allowed, mock_verify_sbd_device):
         enable_value = True
         cm = mock.Mock()
         cm.__enter__ = mock.Mock(return_value=enable_value)
         cm.__exit__ = mock.Mock(return_value=True)
         mock_leverage_maintenance_mode.return_value = cm
-        mock_able_to_restart_cluster.return_value = True
+        mock_check_cluster_restart_allowed.return_value = True
         mock_resolve.side_effect = [
             "/dev/dm-7",
             "/dev/dm-5",
