@@ -1,4 +1,5 @@
 import dataclasses
+import enum
 import functools
 import ipaddress
 import json
@@ -562,6 +563,174 @@ def check_qdevice_network_interface(local_node: str, config: dict) -> CheckResul
             1,
             f"QNetd server '{qnetd_host}' is on network interface '{qnetd_nic}', which is also used for Corosync links ({', '.join(corosync_nics)}).",
             "To ensure network redundancy, configure QNetd to use a network interface separate from Corosync communication links.",
+        )
+
+    return CheckResult(
+        CHECK_NAME,
+        [local_node],
+        0,
+        None,
+        None,
+    )
+
+
+class _QDeviceNodeStatusFlag(enum.IntFlag):
+    NR = 1
+    NA = 2
+    NV = 4
+
+@dataclasses.dataclass
+class _QDeviceNodeStatus:
+    node_id: int
+    node_name: str
+    flags: _QDeviceNodeStatusFlag
+    raw_flags: str
+
+
+def _parse_qdevice_status(output: str) -> list[_QDeviceNodeStatus]:
+    """
+    Parses the output of 'corosync-quorumtool -s' to extract
+    qdevice status flags for each node in Membership information.
+    """
+    lines = output.splitlines()
+    in_membership = False
+    header_found = False
+    header_idx_name = None
+    node_statuses = []
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped == "Membership information":
+            in_membership = True
+            continue
+        if not in_membership:
+            continue
+        if stripped.startswith("---"):
+            continue
+        if in_membership and not line[0].isspace() and stripped.endswith("information"):
+            break
+
+        if not header_found:
+            if "Nodeid" in line and "Votes" in line and "Name" in line:
+                header_found = True
+                if "Qdevice" in line:
+                    header_idx_name = line.find("Name")
+                else:
+                    return []
+                continue
+            else:
+                continue
+
+        prefix = line[:header_idx_name]
+        name = line[header_idx_name:].strip()
+        if name.endswith(" (local)"):
+            name = name[:-8].strip()
+
+        parts = prefix.split()
+        if len(parts) < 2:
+            continue
+        try:
+            node_id = int(parts[0])
+        except ValueError:
+            continue
+
+        if node_id == 0:
+            continue
+
+        qdevice_str = " ".join(parts[2:]) if len(parts) > 2 else ""
+        flags = _QDeviceNodeStatusFlag(0)
+        for f in qdevice_str.split(","):
+            f = f.strip()
+            if not f:
+                continue
+            if f in _QDeviceNodeStatusFlag.__members__:
+                flags |= _QDeviceNodeStatusFlag[f]
+        node_statuses.append(_QDeviceNodeStatus(
+            node_id=node_id,
+            node_name=name,
+            flags=flags,
+            raw_flags=qdevice_str,
+        ))
+
+    if not in_membership:
+        raise ValueError("Missing 'Membership information' section in quorum status output")
+    if not header_found:
+        raise ValueError("Missing membership table header in quorum status output")
+
+    return node_statuses
+
+
+def check_qdevice_status(local_node: str) -> CheckResult:
+    """
+    Check if QDevice status is operational on each node in quorumtool output.
+    """
+    command_args = ['corosync-quorumtool', '-s']
+    result = subprocess.run(
+        command_args,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    CHECK_NAME = "Check QDevice Status"
+    if result.returncode not in (
+            0,
+            2,  # not quorate
+    ):
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            result.returncode,
+            result.stdout.decode('utf-8', 'replace').strip(),
+            "Check if the corosync service is running.",
+        )
+    try:
+        qdevice_nodes = _parse_qdevice_status(result.stdout.decode('utf-8', 'replace'))
+    except ValueError as e:
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            1,
+            f"Failed to parse '{' '.join(command_args)}' output: {e}",
+            None,
+        )
+
+    issues = []
+    combined_flags = _QDeviceNodeStatusFlag(0)
+    for node in sorted(qdevice_nodes, key=lambda n: n.node_id):
+        combined_flags |= node.flags
+        reasons = []
+        if _QDeviceNodeStatusFlag.NR in node.flags:
+            reasons.append("not registered (NR)")
+        if _QDeviceNodeStatusFlag.NA in node.flags:
+            reasons.append("daemon is not available (NA)")
+        if _QDeviceNodeStatusFlag.NV in node.flags:
+            reasons.append("not casting a vote (NV)")
+        if reasons:
+            issues.append(
+                f"Node '{node.node_name}' (nodeid: {node.node_id}) "
+                f"has QDevice status '{node.raw_flags}': {', '.join(reasons)}."
+            )
+
+    if issues:
+        result_description = StringIO()
+        result_description.write("QDevice issue(s) detected:\n")
+        for issue in issues:
+            result_description.write(f"  {issue}\n")
+
+        recommendations = []
+        if _QDeviceNodeStatusFlag.NR in combined_flags or _QDeviceNodeStatusFlag.NA in combined_flags:
+            recommendations.append("Check the status of corosync-qdevice.service.")
+        if _QDeviceNodeStatusFlag.NV in combined_flags:
+            recommendations.append("Check the status of corosync-qnetd.service on the qnetd node, and the connectivity between the affected nodes and the qnetd node.")
+
+        return CheckResult(
+            CHECK_NAME,
+            [local_node],
+            1,
+            result_description.getvalue().strip(),
+            " ".join(recommendations),
         )
 
     return CheckResult(

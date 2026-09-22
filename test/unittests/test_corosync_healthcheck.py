@@ -1042,3 +1042,226 @@ class TestCheckQDeviceNetworkInterface(unittest.TestCase):
         self.assertEqual(result.recommended_action, "To ensure network redundancy, configure QNetd to use a network interface separate from Corosync communication links.")
 
 
+class TestParseQDeviceStatus(unittest.TestCase):
+    def test_parse_healthy(self):
+        output = """Quorum information
+------------------
+Date:             Fri Jun 26 13:44:28 2026
+Quorum provider:  corosync_votequorum
+Nodes:            2
+Node ID:          1
+Ring ID:          1.e
+Quorate:          Yes
+
+Votequorum information
+----------------------
+Expected votes:   3
+Highest expected: 3
+Total votes:      3
+Quorum:           2  
+Flags:            Quorate Qdevice 
+
+Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         2          1    A,V,NMW ha-3-2
+         0          1            Qdevice"""
+        nodes = corosync_healthcheck._parse_qdevice_status(output)
+        self.assertEqual(len(nodes), 2)
+        self.assertEqual(nodes[0].node_id, 1)
+        self.assertEqual(nodes[0].node_name, "ha-3-1")
+        self.assertEqual(nodes[0].flags, corosync_healthcheck._QDeviceNodeStatusFlag(0))
+        self.assertEqual(nodes[0].raw_flags, "A,V,NMW")
+        self.assertEqual(nodes[1].node_id, 2)
+        self.assertEqual(nodes[1].node_name, "ha-3-2")
+        self.assertEqual(nodes[1].flags, corosync_healthcheck._QDeviceNodeStatusFlag(0))
+
+    def test_parse_no_qdevice_column(self):
+        output = """Membership information
+----------------------
+    Nodeid      Votes Name
+         1          1 ha-3-1 (local)
+         2          1 ha-3-2"""
+        nodes = corosync_healthcheck._parse_qdevice_status(output)
+        self.assertEqual(nodes, [])
+
+    def test_parse_empty_qdevice_column(self):
+        output = """Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         2          1            ha-3-2
+         0          1            Qdevice"""
+        nodes = corosync_healthcheck._parse_qdevice_status(output)
+        self.assertEqual(len(nodes), 2)
+        self.assertEqual(nodes[1].node_id, 2)
+        self.assertEqual(nodes[1].flags, corosync_healthcheck._QDeviceNodeStatusFlag(0))
+        self.assertEqual(nodes[1].raw_flags, "")
+
+    def test_parse_with_active_flags(self):
+        output = """Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1   NR,NA,NV ha-3-1 (local)
+         2          1         NR ha-3-2
+         0          1            Qdevice"""
+        nodes = corosync_healthcheck._parse_qdevice_status(output)
+        self.assertEqual(len(nodes), 2)
+        self.assertEqual(nodes[0].node_id, 1)
+        expected_flags_0 = (
+            corosync_healthcheck._QDeviceNodeStatusFlag.NR
+            | corosync_healthcheck._QDeviceNodeStatusFlag.NA
+            | corosync_healthcheck._QDeviceNodeStatusFlag.NV
+        )
+        self.assertEqual(nodes[0].flags, expected_flags_0)
+        self.assertEqual(nodes[0].raw_flags, "NR,NA,NV")
+        self.assertEqual(nodes[1].node_id, 2)
+        self.assertEqual(nodes[1].flags, corosync_healthcheck._QDeviceNodeStatusFlag.NR)
+        self.assertEqual(nodes[1].raw_flags, "NR")
+
+    def test_parse_missing_membership_section(self):
+        output = """Quorum information
+------------------
+Nodes: 2"""
+        with self.assertRaises(ValueError) as ctx:
+            corosync_healthcheck._parse_qdevice_status(output)
+        self.assertIn("Missing 'Membership information' section", str(ctx.exception))
+
+    def test_parse_missing_header(self):
+        output = """Membership information
+----------------------
+         1          1    A,V,NMW ha-3-1 (local)"""
+        with self.assertRaises(ValueError) as ctx:
+            corosync_healthcheck._parse_qdevice_status(output)
+        self.assertIn("Missing membership table header", str(ctx.exception))
+
+
+class TestCheckQDeviceStatus(unittest.TestCase):
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_healthy(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         2          1    A,V,NMW ha-3-2
+         0          1            Qdevice"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check QDevice Status")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+        self.assertIsNone(result.recommended_action)
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_no_qdevice(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes Name
+         1          1 ha-3-1 (local)
+         2          1 ha-3-2"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_no_vote_nv(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Quorum information
+------------------
+Quorate:          Yes
+
+Votequorum information
+----------------------
+Flags:            Quorate Qdevice 
+
+Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1   A,NV,NMW ha-3-1 (local)
+         2          1    A,V,NMW ha-3-2
+         0          0            Qdevice (votes 1)"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node 'ha-3-1' (nodeid: 1) has QDevice status 'A,NV,NMW': not casting a vote (NV).", result.result_description)
+        self.assertEqual(result.recommended_action, "Check the status of corosync-qnetd.service on the qnetd node, and the connectivity between the affected nodes and the qnetd node.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_not_registered_nr(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         2          1         NR ha-3-2
+         0          1            Qdevice"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node 'ha-3-2' (nodeid: 2) has QDevice status 'NR': not registered (NR).", result.result_description)
+        self.assertEqual(result.recommended_action, "Check the status of corosync-qdevice.service.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_not_available_na(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1   NA,V,NMW ha-3-1 (local)
+         2          1    A,V,NMW ha-3-2
+         0          1            Qdevice"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node 'ha-3-1' (nodeid: 1) has QDevice status 'NA,V,NMW': daemon is not available (NA).", result.result_description)
+        self.assertEqual(result.recommended_action, "Check the status of corosync-qdevice.service.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_multiple_issues(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1  NA,NV,NMW ha-3-1 (local)
+         2          1         NR ha-3-2
+         0          1            Qdevice"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node 'ha-3-1' (nodeid: 1) has QDevice status 'NA,NV,NMW': daemon is not available (NA), not casting a vote (NV).", result.result_description)
+        self.assertIn("Node 'ha-3-2' (nodeid: 2) has QDevice status 'NR': not registered (NR).", result.result_description)
+        self.assertEqual(result.recommended_action, "Check the status of corosync-qdevice.service. Check the status of corosync-qnetd.service on the qnetd node, and the connectivity between the affected nodes and the qnetd node.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_command_error(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=1,
+            stdout=b"corosync-quorumtool: cannot connect to corosync"
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.result_description, "corosync-quorumtool: cannot connect to corosync")
+        self.assertEqual(result.recommended_action, "Check if the corosync service is running.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_parse_error(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"Invalid quorumtool output format"
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Failed to parse 'corosync-quorumtool -s' output", result.result_description)
+
+
+

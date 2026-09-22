@@ -948,6 +948,10 @@ to get the geo cluster configuration.""",
                     results.append(res_quorum)
                     print_cb(res_quorum)
 
+                    res_qdevice_status = corosync_healthcheck.check_qdevice_status(local_node)
+                    results.append(res_qdevice_status)
+                    print_cb(res_qdevice_status)
+
                     res_links = corosync_healthcheck.check_links_status(local_node)
                     results.append(res_links)
                     print_cb(res_links)

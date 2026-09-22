@@ -189,12 +189,13 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
     @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
     @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_status')
     @mock.patch('crmsh.corosync_healthcheck.check_links_status')
     @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
     @mock.patch('crmsh.corosync_healthcheck.check_deprecated_transport')
     @mock.patch('crmsh.corosync_healthcheck.check_knet_link_network_interface')
     @mock.patch('crmsh.corosync_healthcheck.check_qdevice_network_interface')
-    def test_do_health_corosync_success(self, mock_qdevice_interface, mock_knet_interface, mock_transport, mock_mapping, mock_links, mock_quorum, mock_consistency, mock_validate, mock_load_config, mock_lm_class, mock_nodes, mock_this_node):
+    def test_do_health_corosync_success(self, mock_qdevice_interface, mock_knet_interface, mock_transport, mock_mapping, mock_links, mock_qdevice_status, mock_quorum, mock_consistency, mock_validate, mock_load_config, mock_lm_class, mock_nodes, mock_this_node):
         mock_this_node.return_value = "node1"
         mock_nodes.return_value = ["node1", "node2"]
         mock_lm = mock.MagicMock()
@@ -203,6 +204,7 @@ class TestCluster(unittest.TestCase):
         mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", ["node1"], 0, None, None)
         mock_consistency.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File Consistency", ["node1", "node2"], 0, None, None)
         mock_quorum.return_value = corosync_healthcheck.CheckResult("Check Quorum Status", ["node1"], 0, None, None)
+        mock_qdevice_status.return_value = corosync_healthcheck.CheckResult("Check QDevice Status", ["node1"], 0, None, None)
         mock_links.return_value = corosync_healthcheck.CheckResult("Check Corosync Links Status", ["node1"], 0, None, None)
         mock_mapping.return_value = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", ["node1"], 0, None, None)
         mock_transport.return_value = corosync_healthcheck.CheckResult("Check Deprecated Corosync Transport", ["node1"], 0, None, None)
@@ -216,6 +218,7 @@ class TestCluster(unittest.TestCase):
         mock_validate.assert_called_once_with("node1")
         mock_consistency.assert_called_once_with(["node1", "node2"])
         mock_quorum.assert_called_once_with("node1")
+        mock_qdevice_status.assert_called_once_with("node1")
         mock_links.assert_called_once_with("node1")
         mock_mapping.assert_called_once_with("node1", mock_lm)
         mock_transport.assert_called_once_with("node1", mock_lm)
@@ -254,12 +257,13 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
     @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
     @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_status')
     @mock.patch('crmsh.corosync_healthcheck.check_links_status')
     @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
     @mock.patch('crmsh.corosync_healthcheck.check_deprecated_transport')
     @mock.patch('crmsh.corosync_healthcheck.check_knet_link_network_interface')
     @mock.patch('crmsh.corosync_healthcheck.check_qdevice_network_interface')
-    def test_do_health_corosync_json(self, mock_qdevice_interface, mock_knet_interface, mock_transport, mock_mapping, mock_links, mock_quorum, mock_consistency, mock_validate, mock_load_config, mock_lm_class, mock_nodes, mock_this_node, mock_stdout):
+    def test_do_health_corosync_json(self, mock_qdevice_interface, mock_knet_interface, mock_transport, mock_mapping, mock_links, mock_qdevice_status, mock_quorum, mock_consistency, mock_validate, mock_load_config, mock_lm_class, mock_nodes, mock_this_node, mock_stdout):
         mock_this_node.return_value = "node1"
         mock_nodes.return_value = ["node1", "node2"]
         mock_lm = mock.MagicMock()
@@ -268,6 +272,7 @@ class TestCluster(unittest.TestCase):
         mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", ["node1"], 0, None, None)
         mock_consistency.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File Consistency", ["node1", "node2"], 1, "checksum error", None)
         mock_quorum.return_value = corosync_healthcheck.CheckResult("Check Quorum Status", ["node1"], 0, None, None)
+        mock_qdevice_status.return_value = corosync_healthcheck.CheckResult("Check QDevice Status", ["node1"], 0, None, None)
         mock_links.return_value = corosync_healthcheck.CheckResult("Check Corosync Links Status", ["node1"], 0, None, None)
         mock_mapping.return_value = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", ["node1"], 0, None, None)
         mock_transport.return_value = corosync_healthcheck.CheckResult("Check Deprecated Corosync Transport", ["node1"], 0, None, None)
@@ -281,7 +286,7 @@ class TestCluster(unittest.TestCase):
         import json
         parsed = json.loads(output)
         self.assertEqual(parsed["returncode"], 1)
-        self.assertEqual(len(parsed["results"]), 8)
+        self.assertEqual(len(parsed["results"]), 9)
         self.assertEqual(parsed["results"][0]["check_name"], "Validate Corosync Configuration File")
         self.assertEqual(parsed["results"][1]["check_name"], "Validate Corosync Configuration File Consistency")
         self.assertEqual(parsed["results"][1]["returncode"], 1)
@@ -293,12 +298,13 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
     @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
     @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_status')
     @mock.patch('crmsh.corosync_healthcheck.check_links_status')
     @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
     @mock.patch('crmsh.corosync_healthcheck.check_deprecated_transport')
     @mock.patch('crmsh.corosync_healthcheck.check_knet_link_network_interface')
     @mock.patch('crmsh.corosync_healthcheck.check_qdevice_network_interface')
-    def test_do_health_corosync_local(self, mock_qdevice_interface, mock_knet_interface, mock_transport, mock_mapping, mock_links, mock_quorum, mock_consistency, mock_validate, mock_load_config, mock_lm_class, mock_nodes, mock_this_node):
+    def test_do_health_corosync_local(self, mock_qdevice_interface, mock_knet_interface, mock_transport, mock_mapping, mock_links, mock_qdevice_status, mock_quorum, mock_consistency, mock_validate, mock_load_config, mock_lm_class, mock_nodes, mock_this_node):
         mock_this_node.return_value = "node1"
         mock_nodes.return_value = ["node1", "node2"]
         mock_lm = mock.MagicMock()
@@ -306,6 +312,7 @@ class TestCluster(unittest.TestCase):
         mock_lm_class.return_value = mock_lm
         mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", ["node1"], 0, None, None)
         mock_quorum.return_value = corosync_healthcheck.CheckResult("Check Quorum Status", ["node1"], 0, None, None)
+        mock_qdevice_status.return_value = corosync_healthcheck.CheckResult("Check QDevice Status", ["node1"], 0, None, None)
         mock_links.return_value = corosync_healthcheck.CheckResult("Check Corosync Links Status", ["node1"], 0, None, None)
         mock_mapping.return_value = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", ["node1"], 0, None, None)
         mock_transport.return_value = corosync_healthcheck.CheckResult("Check Deprecated Corosync Transport", ["node1"], 0, None, None)
@@ -319,6 +326,7 @@ class TestCluster(unittest.TestCase):
         mock_validate.assert_called_once_with("node1")
         mock_consistency.assert_not_called()
         mock_quorum.assert_called_once_with("node1")
+        mock_qdevice_status.assert_called_once_with("node1")
         mock_links.assert_called_once_with("node1")
         mock_mapping.assert_called_once_with("node1", mock_lm)
         mock_transport.assert_called_once_with("node1", mock_lm)
@@ -333,12 +341,13 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
     @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
     @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_status')
     @mock.patch('crmsh.corosync_healthcheck.check_links_status')
     @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
     @mock.patch('crmsh.corosync_healthcheck.check_deprecated_transport')
     @mock.patch('crmsh.corosync_healthcheck.check_knet_link_network_interface')
     @mock.patch('crmsh.corosync_healthcheck.check_qdevice_network_interface')
-    def test_do_health_corosync_local_json(self, mock_qdevice_interface, mock_knet_interface, mock_transport, mock_mapping, mock_links, mock_quorum, mock_consistency, mock_validate, mock_load_config, mock_lm_class, mock_nodes, mock_this_node, mock_stdout):
+    def test_do_health_corosync_local_json(self, mock_qdevice_interface, mock_knet_interface, mock_transport, mock_mapping, mock_links, mock_qdevice_status, mock_quorum, mock_consistency, mock_validate, mock_load_config, mock_lm_class, mock_nodes, mock_this_node, mock_stdout):
         mock_this_node.return_value = "node1"
         mock_nodes.return_value = ["node1", "node2"]
         mock_lm = mock.MagicMock()
@@ -346,6 +355,7 @@ class TestCluster(unittest.TestCase):
         mock_lm_class.return_value = mock_lm
         mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", ["node1"], 0, None, None)
         mock_quorum.return_value = corosync_healthcheck.CheckResult("Check Quorum Status", ["node1"], 0, None, None)
+        mock_qdevice_status.return_value = corosync_healthcheck.CheckResult("Check QDevice Status", ["node1"], 0, None, None)
         mock_links.return_value = corosync_healthcheck.CheckResult("Check Corosync Links Status", ["node1"], 0, None, None)
         mock_mapping.return_value = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", ["node1"], 0, None, None)
         mock_transport.return_value = corosync_healthcheck.CheckResult("Check Deprecated Corosync Transport", ["node1"], 0, None, None)
@@ -359,6 +369,7 @@ class TestCluster(unittest.TestCase):
         mock_validate.assert_called_once_with("node1")
         mock_consistency.assert_not_called()
         mock_quorum.assert_called_once_with("node1")
+        mock_qdevice_status.assert_called_once_with("node1")
         mock_links.assert_called_once_with("node1")
         mock_mapping.assert_called_once_with("node1", mock_lm)
         mock_transport.assert_called_once_with("node1", mock_lm)
@@ -369,5 +380,5 @@ class TestCluster(unittest.TestCase):
         import json
         parsed = json.loads(output)
         self.assertEqual(parsed["returncode"], 0)
-        self.assertEqual(len(parsed["results"]), 7)
+        self.assertEqual(len(parsed["results"]), 8)
         self.assertEqual(parsed["results"][0]["check_name"], "Validate Corosync Configuration File")
