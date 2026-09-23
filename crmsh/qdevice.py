@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import socket
 import functools
 import typing
@@ -326,7 +327,7 @@ class QDevice(object):
             self.init_tls_certs_on_qnetd()
             self.config_qnetd_port()
             self.start_qnetd()
-            cmd = f"corosync-qnetd-tool -l -c {self.cluster_name}"
+            cmd = f"corosync-qnetd-tool -l -c {shlex.quote(self.cluster_name)}"
             if shell.get_stdout_or_raise_error(cmd, self.qnetd_addr):
                 exception_msg = f"This cluster's name \"{self.cluster_name}\" already exists on qnetd server!"
                 if self.is_stage:
@@ -357,7 +358,7 @@ class QDevice(object):
     @qnetd_lock_for_multi_cluster
     def init_tls_certs_on_qnetd(self):
         """Initialize NSS database and generates CA and server certs on QNetd server."""
-        cmd = "test -f {}".format(self.qnetd_cacert_on_qnetd)
+        cmd = "test -f {}".format(shlex.quote(self.qnetd_cacert_on_qnetd))
         try:
             parallax.parallax_call([self.qnetd_addr], cmd)
             return
@@ -411,7 +412,7 @@ class QDevice(object):
         /usr/sbin/corosync-qdevice-net-certutil -i -c qnetd-cacert.crt
         """
         node_list = get_node_list(self.is_stage)
-        cmd = f"corosync-qdevice-net-certutil -i -c {self.qnetd_cacert_on_local}"
+        cmd = f"corosync-qdevice-net-certutil -i -c {shlex.quote(self.qnetd_cacert_on_local)}"
         desc = f"Initialize database on {node_list}"
         log(desc, cmd)
         crmsh.parallax.parallax_call(node_list, cmd)
@@ -421,7 +422,7 @@ class QDevice(object):
         /usr/sbin/corosync-qdevice-net-certutil -r -n Cluster
         (Cluster name must match cluster_name key in the corosync.conf)
         """
-        cmd = "corosync-qdevice-net-certutil -r -n {}".format(self.cluster_name)
+        cmd = "corosync-qdevice-net-certutil -r -n {}".format(shlex.quote(self.cluster_name))
         log("Generate certificate request {}".format(self.qdevice_crq_filename), cmd)
         sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
@@ -437,7 +438,7 @@ class QDevice(object):
         """
         desc = "Sign and export cluster certificate on {}".format(self.qnetd_addr)
         cmd = "corosync-qnetd-certutil -s -c {} -n {}".\
-                format(self.qdevice_crq_on_qnetd, self.cluster_name)
+                format(shlex.quote(self.qdevice_crq_on_qnetd), shlex.quote(self.cluster_name))
         log(desc, cmd)
         parallax.parallax_call([self.qnetd_addr], cmd)
 
@@ -451,7 +452,7 @@ class QDevice(object):
         """Import certificate on node where certificate request was created by
         running /usr/sbin/corosync-qdevice-net-certutil -M -c cluster-Cluster.crt
         """
-        cmd = "corosync-qdevice-net-certutil -M -c {}".format(self.qnetd_cluster_crt_on_local)
+        cmd = "corosync-qdevice-net-certutil -M -c {}".format(shlex.quote(self.qnetd_cluster_crt_on_local))
         log("Import certificate file {} on local".format(os.path.basename(self.qnetd_cluster_crt_on_local)), cmd)
         sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
@@ -478,7 +479,7 @@ class QDevice(object):
             return
 
         desc = "Import {} on {}".format(self.qdevice_p12_filename, node_list)
-        cmd = "corosync-qdevice-net-certutil -m -c {}".format(self.qdevice_p12_on_local)
+        cmd = "corosync-qdevice-net-certutil -m -c {}".format(shlex.quote(self.qdevice_p12_on_local))
         log(desc, cmd)
         QDevice.log_only_to_file(desc, cmd)
         parallax.parallax_call(node_list, cmd)
@@ -546,7 +547,7 @@ class QDevice(object):
         if not os.path.exists(QDevice.qdevice_db_path):
             return
 
-        cmd = f"rm -rf {QDevice.qdevice_path}/*"
+        cmd = f"rm -rf {shlex.quote(QDevice.qdevice_path)}/*"
         QDevice.log_only_to_file("Remove qdevice database", cmd)
         node_list = addr_list or get_node_list(is_stage)
         parallax.parallax_call(node_list, cmd)
@@ -562,9 +563,9 @@ class QDevice(object):
         cluster_name = corosync.get_value('totem.cluster_name')
         cls_inst = cls(qnetd_host, cluster_name=cluster_name)
         shell = sh.cluster_shell()
-        cmd = "test -f {crt_file} && rm -f {crt_file}".format(crt_file=cls_inst.qnetd_cluster_crt_on_qnetd)
+        cmd = "test -f {crt_file} && rm -f {crt_file}".format(crt_file=shlex.quote(cls_inst.qnetd_cluster_crt_on_qnetd))
         shell.get_stdout_or_raise_error(cmd, qnetd_host)
-        cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=cls_inst.qdevice_crq_on_qnetd)
+        cmd = "test -f {crq_file} && rm -f {crq_file}".format(crq_file=shlex.quote(cls_inst.qdevice_crq_on_qnetd))
         shell.get_stdout_or_raise_error(cmd, qnetd_host)
 
     def _handle_port_when_qnetd_active(self):
