@@ -2,6 +2,7 @@ import logging
 import os
 import pwd
 import re
+import shlex
 import subprocess
 import tempfile
 import typing
@@ -168,17 +169,23 @@ class AuthorizedKeyManager:
 
     @staticmethod
     def _add_by_editing_file(user: str, key: Key):
-        public_key = key.public_key()
+        public_key = shlex.quote(key.public_key())
+        # ~user must stay unquoted for tilde expansion to work. The username is a
+        # system account name (e.g. root/hacluster) from crmsh's SSH configuration.
         dir = f'~{user}/.ssh'
         file = f'{dir}/authorized_keys'
-        cmd = f'''if ! grep -F '{public_key}' {file} > /dev/null; then
+        cmd = f'''if ! grep -F {public_key} {file} > /dev/null; then
     if [ -s {file} ]; then
-        sed -i '$a {public_key}' {file}
+        tmp=$(mktemp {dir}/.authorized_keys.XXXXXX)
+        cat {file} > "$tmp"
+        printf '%s\n' {public_key} >> "$tmp"
+        chmod 600 "$tmp"
+        mv "$tmp" {file}
     else
         mkdir -p {dir}
         chown {user}: {dir}
         chmod 0700 {dir}
-        echo '{public_key}' > {file}
+        printf '%s\n' {public_key} > {file}
         chmod 0600 {file}
     fi
     chown {user}: {file}
@@ -186,7 +193,8 @@ fi'''
         return cmd
 
     def _add_by_ssh_copy_id(self, user, host, key_path):
-        cmd = "ssh-copy-id -f -i '{}' '{}@{}' &> /dev/null".format(key_path, user, host)
+        cmd = "ssh-copy-id -f -i {} {} &> /dev/null".format(
+            shlex.quote(key_path), shlex.quote(f"{user}@{host}"))
         logger.info("Configuring SSH passwordless with %s@%s", user, host)
         result = self._shell.local_shell.su_subprocess_run(
             self._shell.local_user, cmd,

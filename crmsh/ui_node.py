@@ -4,7 +4,9 @@
 import logging
 import os
 import copy
+import shlex
 import subprocess
+from html import escape as html_escape
 from lxml import etree
 
 from . import config
@@ -223,7 +225,7 @@ class NodeMgmt(command.UI):
 
     node_delete = """cibadmin -D -o nodes -X '<node uname="%s"/>'"""
     node_delete_status = """cibadmin -D -o status -X '<node_state uname="%s"/>'"""
-    node_cleanup_resources = "crm_resource --cleanup --node '%s'"
+    node_cleanup_resources = "crm_resource --cleanup --node %s"
     node_clear_state = "stonith_admin --confirm %s"
     crm_node = "crm_node"
     node_fence = "crm_attribute -t status -N '%s' -n terminate -v true"
@@ -561,16 +563,18 @@ class NodeMgmt(command.UI):
             logger.error("Node '%s' not found in CIB", node)
             return False
         if crmd == ["online"] or (crmd[0].isdigit() and int(crmd[0]) != 0):
-            return utils.ext_cmd(self.node_cleanup_resources % node) == 0
+            return utils.ext_cmd(self.node_cleanup_resources % shlex.quote(node)) == 0
         in_ccm = cib_elem.xpath("//node_state[@uname=\"%s\"]/@in_ccm" % node)
         if in_ccm == ["true"] or (in_ccm[0].isdigit() and int(in_ccm[0]) != 0):
             logger.warning("Node is offline according to Pacemaker, but online according to corosync. First shut down node '%s'", node)
             return False
-        return utils.ext_cmd(self.node_clear_state % node) == 0
+        return utils.ext_cmd(self.node_clear_state % shlex.quote(node)) == 0
 
     @classmethod
     def call_delnode(cls, node):
         "Remove node (how depends on cluster stack)"
+        if not utils.is_name_sane(node):
+            return False
         rc = True
         ec, s = ShellUtils().get_stdout("%s -p" % cls.crm_node)
         if not s:
@@ -581,7 +585,7 @@ class NodeMgmt(command.UI):
             if node in partition_l:
                 logger.error("according to %s, node %s is still active", cls.crm_node, node)
                 rc = False
-        cmd = "%s --force -R %s" % (cls.crm_node, node)
+        cmd = "%s --force -R %s" % (cls.crm_node, shlex.quote(node))
         if not rc:
             if options.force:
                 logger.info('proceeding with node %s removal', node)
@@ -590,13 +594,14 @@ class NodeMgmt(command.UI):
         ec = utils.ext_cmd(cmd)
         if ec != 0:
             node_xpath = "//nodes/node[@uname='{}']".format(node)
-            cmd = 'cibadmin --delete-all --force --xpath "{}"'.format(node_xpath)
+            cmd = 'cibadmin --delete-all --force --xpath {}'.format(shlex.quote(node_xpath))
             rc, _, err = ShellUtils().get_stdout_stderr(cmd)
             if rc != 0:
                 logger.error('"%s" failed, rc=%d, %s', cmd, rc, err)
                 return False
-        if utils.ext_cmd(cls.node_delete % node) != 0 or \
-                utils.ext_cmd(cls.node_delete_status % node) != 0:
+        node_xml = html_escape(node, quote=True)
+        if utils.ext_cmd(cls.node_delete % node_xml) != 0 or \
+                utils.ext_cmd(cls.node_delete_status % node_xml) != 0:
             logger.error("%s removed from membership, but not from CIB!", node)
             return False
         return True

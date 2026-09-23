@@ -12,6 +12,7 @@ import sys
 import shutil
 import json
 import ast
+import shlex
 from inspect import getmembers, isfunction
 from io import StringIO
 from typing import List
@@ -150,7 +151,7 @@ def push_data(context: Context) -> None:
     Push data from this node
     """
     logger.debug2(f"Pushing data from {context.me}:{context.work_dir} to {context.main_node}")
-    cmd = f'cd {context.work_dir}/.. && tar -h -c {context.me}'
+    cmd = f'cd {shlex.quote(context.work_dir)}/.. && tar -h -c {shlex.quote(context.me)}'
     _, out, err = ShellUtils().get_stdout_stderr(cmd, raw=True)
     if out:
         print(f"{constants.COMPRESS_DATA_FLAG}{out}")
@@ -205,8 +206,8 @@ def process_results(context: Context) -> None:
     if context.no_compress:
         shutil.move(context.work_dir, context.dest_dir)
     else:
-        cmd_cd_tar = f"(cd {context.work_dir}/.. && tar cf - {context.dest})"
-        cmd_compress = f"{context.compress_prog} > {context.dest_dir}/{context.dest}.tar{context.compress_suffix}"
+        cmd_cd_tar = f"(cd {shlex.quote(context.work_dir)}/.. && tar cf - {shlex.quote(context.dest)})"
+        cmd_compress = f"{context.compress_prog} > {shlex.quote(f'{context.dest_dir}/{context.dest}.tar{context.compress_suffix}')}"
         cmd = f"{cmd_cd_tar}|{cmd_compress}"
         logger.debug2(f"Running: {cmd}")
         crmsh.sh.cluster_shell().get_stdout_or_raise_error(cmd)
