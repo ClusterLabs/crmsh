@@ -4,6 +4,7 @@
 import logging
 import os
 import copy
+import shlex
 import subprocess
 from lxml import etree
 
@@ -495,11 +496,13 @@ class NodeMgmt(command.UI):
         if in_ccm == ["true"] or (in_ccm[0].isdigit() and int(in_ccm[0]) != 0):
             logger.warning("Node is offline according to Pacemaker, but online according to corosync. First shut down node '%s'", node)
             return False
-        return utils.ext_cmd(self.node_clear_state % node) == 0
+        return utils.ext_cmd(self.node_clear_state % shlex.quote(node)) == 0
 
     @classmethod
     def call_delnode(cls, node):
         "Remove node (how depends on cluster stack)"
+        if not utils.is_name_sane(node):
+            return False
         rc = True
         ec, s = ShellUtils().get_stdout("%s -p" % cls.crm_node)
         if not s:
@@ -510,7 +513,7 @@ class NodeMgmt(command.UI):
             if node in partition_l:
                 logger.error("according to %s, node %s is still active", cls.crm_node, node)
                 rc = False
-        cmd = "%s --force -R %s" % (cls.crm_node, node)
+        cmd = "%s --force -R %s" % (cls.crm_node, shlex.quote(node))
         if not rc:
             if options.force:
                 logger.info('proceeding with node %s removal', node)
@@ -519,7 +522,7 @@ class NodeMgmt(command.UI):
         ec = utils.ext_cmd(cmd)
         if ec != 0:
             node_xpath = "//nodes/node[@uname='{}']".format(node)
-            cmd = 'cibadmin --delete-all --force --xpath "{}"'.format(node_xpath)
+            cmd = 'cibadmin --delete-all --force --xpath {}'.format(shlex.quote(node_xpath))
             rc, _, err = ShellUtils().get_stdout_stderr(cmd)
             if rc != 0:
                 logger.error('"%s" failed, rc=%d, %s', cmd, rc, err)

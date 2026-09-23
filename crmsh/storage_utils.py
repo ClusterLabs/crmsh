@@ -72,7 +72,7 @@ def get_pe_number(vg_id):
     """
     Get pe number
     """
-    output = sh.cluster_shell().get_stdout_or_raise_error("vgdisplay {}".format(vg_id))
+    output = sh.cluster_shell().get_stdout_or_raise_error("vgdisplay {}".format(shlex.quote(vg_id)))
     res = re.search(r"Total PE\s+(\d+)", output)
     if not res:
         raise ValueError("Cannot find PE on VG({})".format(vg_id))
@@ -98,7 +98,7 @@ def get_dev_uuid_by_blkid(dev, peer=None):
     """
     Get UUID of device using blkid
     """
-    out = sh.cluster_shell().get_stdout_or_raise_error("blkid {}".format(dev), peer)
+    out = sh.cluster_shell().get_stdout_or_raise_error("blkid {}".format(shlex.quote(dev)), peer)
     res = re.search("UUID=\"(.*?)\"", out)
     return res.group(1) if res else None
 
@@ -114,7 +114,7 @@ def get_dev_info(dev, *_type, peer=None):
     """
     Get device info using lsblk
     """
-    cmd = "lsblk -fno {} {}".format(','.join(_type), dev)
+    cmd = "lsblk -fno {} {}".format(','.join(_type), shlex.quote(dev))
     return sh.cluster_shell().get_stdout_or_raise_error(cmd, peer)
 
 

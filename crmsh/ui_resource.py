@@ -3,6 +3,7 @@
 # See COPYING for license information.
 import logging
 import re
+import shlex
 from . import command
 from . import completers as compl
 from . import constants
@@ -515,7 +516,8 @@ class RscMgmt(command.UI):
 
         if cmd == "set":
             # query the current failcount status
-            query_cmd = "cibadmin -Q --xpath '/cib/status/node_state[@id='{}']'".format(nodeid)
+            query_cmd = "cibadmin -Q --xpath {}".format(
+                shlex.quote(f"/cib/status/node_state[@id='{nodeid}']"))
             rc, out, err = ShellUtils().get_stdout_stderr(query_cmd)
             if rc != 0:
                 context.fatal_error(err)

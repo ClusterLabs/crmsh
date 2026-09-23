@@ -12,6 +12,7 @@ import sys
 import shutil
 import json
 import ast
+import shlex
 from inspect import getmembers, isfunction
 from io import StringIO
 from typing import List
@@ -150,7 +151,7 @@ def push_data(context: Context) -> None:
     Push data from this node
     """
     logger.debug2(f"Pushing data from {context.me}:{context.work_dir} to {context.main_node}")
-    cmd = f'cd {context.work_dir}/.. && tar -h -c {context.me}'
+    cmd = f'cd {shlex.quote(context.work_dir)}/.. && tar -h -c {shlex.quote(context.me)}'
     _, out, err = ShellUtils().get_stdout_stderr(cmd, raw=True)
     if out:
         print(f"{constants.COMPRESS_DATA_FLAG}{out}")
@@ -205,8 +206,8 @@ def process_results(context: Context) -> None:
     if context.no_compress:
         shutil.move(context.work_dir, context.dest_dir)
     else:
-        cmd_cd_tar = f"(cd {context.work_dir}/.. && tar cf - {context.dest})"
-        cmd_compress = f"{context.compress_prog} > {context.dest_dir}/{context.dest}.tar{context.compress_suffix}"
+        cmd_cd_tar = f"(cd {shlex.quote(context.work_dir)}/.. && tar cf - {shlex.quote(context.dest)})"
+        cmd_compress = f"{context.compress_prog} > {shlex.quote(context.dest_dir)}/{shlex.quote(context.dest)}.tar{context.compress_suffix}"
         cmd = f"{cmd_cd_tar}|{cmd_compress}"
         logger.debug2(f"Running: {cmd}")
         crmsh.sh.cluster_shell().get_stdout_or_raise_error(cmd)
@@ -261,14 +262,13 @@ def start_collector(node: str, context: Context) -> None:
     """
     Start collector at specific node
     """
-    cmd = f"{constants.BIN_COLLECTOR} '{context}'"
+    cmd = f"{constants.BIN_COLLECTOR} {shlex.quote(str(context))}"
 
     shell = context.passwordless_shell_for_nodes.get(node)
     if shell is not None:
         ret = shell.subprocess_run_without_input(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     else:
         # This is a last effort when passwordless ssh is not available
-        cmd = cmd.replace('"', '\\"')
         ret = _interactive_ssh_run_as_root(node, context.ssh_user, cmd)
     if ret.returncode != 0:
         logger.warning(
@@ -452,7 +452,6 @@ def load_context_trace_dir_list(context: Context) -> None:
             ret = shell.subprocess_run_without_input(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
             # This is a last effort when passwordless ssh is not available
-            cmd = cmd.replace('"', '\\"')
             ret = _interactive_ssh_run_as_root(node, context.ssh_user, cmd)
         if ret.returncode == 0:
             log_contents += ret.stdout.decode('utf-8')
@@ -460,17 +459,16 @@ def load_context_trace_dir_list(context: Context) -> None:
 
 
 def _interactive_ssh_run_as_root(host: str, ssh_user: str, cmd: str):
-    # cmd MUST be escaped to make sure it works as an arugment of ssh command
     target = f"{ssh_user}@{host}" if ssh_user else host
     logger.info('Creating ssh connection to %s...', target)
-    cmd = 'ssh {} {} "{}{}"'.format(
+    remote_cmd = cmd if (ssh_user is None or ssh_user == 'root') else f'sudo {cmd}'
+    full_cmd = 'ssh {} {} {}'.format(
         constants.SSH_OPTS,
-        target,
-        '' if ssh_user is None or ssh_user == 'root' else 'sudo ',
-        cmd,
+        shlex.quote(target),
+        shlex.quote(remote_cmd),
     )
     shell = crmsh.sh.LocalShell()
-    return shell.su_subprocess_run(None, cmd, tty=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return shell.su_subprocess_run(None, full_cmd, tty=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def adjust_verbosity(context: Context) -> None:

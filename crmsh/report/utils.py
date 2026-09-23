@@ -6,6 +6,7 @@ import glob
 import logging
 import os
 import re
+import shlex
 import shutil
 import sys
 import traceback
@@ -158,11 +159,11 @@ def extract_critical_log(context: core.Context) -> List[str]:
     Extract warnings and errors from collected log files
     """
     result_list = []
-    grep_e_option_str = f"-e {' -e '.join(constants.LOG_PATTERNS)}"
+    grep_e_option_str = ' '.join(f"-e {shlex.quote(patt)}" for patt in constants.LOG_PATTERNS)
     shell = sh.ShellUtils()
 
     for f in glob.glob(f"{context.work_dir}/*/*.log"):
-        grep_cmd = f"grep -F {grep_e_option_str} {f}"
+        grep_cmd = f"grep -F {grep_e_option_str} {shlex.quote(f)}"
         _, out, _ = shell.get_stdout_stderr(grep_cmd)
         if out:
             result_list.append(f"\nWARNINGS or ERRORS in {real_path(f)}:")
@@ -181,7 +182,7 @@ def cib_diff(file1: str, file2: str) -> Tuple[int, str]:
         os.path.isfile(os.path.join(node2_dir, "RUNNING"))) or \
         (os.path.isfile(os.path.join(node1_dir, "STOPPED")) and
          os.path.isfile(os.path.join(node2_dir, "STOPPED"))):
-        cmd = f"crm_diff -c -n {file1} -o {file2}"
+        cmd = f"crm_diff -c -n {shlex.quote(file1)} -o {shlex.quote(file2)}"
         code, out_string, _ = ShellUtils().get_stdout_stderr(cmd)
     else:
         code, out_string = 1, "Can't compare cibs from running and stopped systems\n"
@@ -507,7 +508,7 @@ def tail(n: int, indata: str) -> List[str]:
 
 
 def txt_diff(file1: str, file2: str) -> Tuple[int, str]:
-    cmd = f"diff -bBu {file1} {file2}"
+    cmd = f"diff -bBu {shlex.quote(file1)} {shlex.quote(file2)}"
     rc, out, _ = ShellUtils().get_stdout_stderr(cmd)
     return rc, out
 
