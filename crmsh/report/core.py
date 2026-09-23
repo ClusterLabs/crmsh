@@ -462,13 +462,12 @@ def _interactive_ssh_run_as_root(host: str, ssh_user: str, cmd: str):
     target = f"{ssh_user}@{host}" if ssh_user else host
     logger.info('Creating ssh connection to %s...', target)
     remote_cmd = cmd if (ssh_user is None or ssh_user == 'root') else f'sudo {cmd}'
-    full_cmd = 'ssh {} {} {}'.format(
-        constants.SSH_OPTS,
-        shlex.quote(target),
-        shlex.quote(remote_cmd),
-    )
-    shell = crmsh.sh.LocalShell()
-    return shell.su_subprocess_run(None, full_cmd, tty=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Build the argv list directly instead of a single shell string, so remote_cmd is
+    # passed to ssh verbatim via execve (no local shell involved, hence no need to
+    # escape/quote it). ssh forwards it unmodified to the remote shell, which then
+    # parses it normally (e.g. "sudo command arg1 arg2", pipes, etc. all work as-is).
+    args = ['ssh', *shlex.split(constants.SSH_OPTS), target, remote_cmd]
+    return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def adjust_verbosity(context: Context) -> None:
