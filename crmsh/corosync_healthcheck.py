@@ -20,6 +20,7 @@ from . import iproute2
 from . import network_utils
 from .prun import prun
 from . import sh
+from . import utils
 
 
 logger = logging.getLogger(__name__)
@@ -740,6 +741,56 @@ def check_qdevice_status(local_node: str) -> CheckResult:
         None,
         None,
     )
+
+
+def check_health(
+    local_only: bool = False,
+    local_node: typing.Optional[str] = None,
+    nodes: typing.Optional[list[str]] = None,
+) -> typing.Iterator[CheckResult]:
+    """
+    Run corosync health checks and yield results for each check.
+    """
+    if local_node is None:
+        local_node = utils.this_node()
+
+    res_local = validate_config_file(local_node)
+    yield res_local
+
+    if res_local.returncode != 0:
+        return
+
+    try:
+        corosync_config = corosync.load_config_file()
+    except ValueError as e:
+        logger.error("Failed to load or parse corosync.conf: %s", e)
+        yield CheckResult(
+            "Load Corosync Configuration File",
+            [local_node],
+            1,
+            f"Failed to load or parse corosync.conf: {e}",
+            None,
+        )
+        return
+
+    lm = corosync.LinkManager(corosync_config)
+
+    if not local_only:
+        if nodes is None:
+            nodes = utils.list_cluster_nodes() or [local_node]
+        yield validate_config_file_consistency(nodes)
+
+    yield check_deprecated_transport(local_node, lm)
+    yield check_knet_link_network_interface(local_node, lm)
+    yield check_qdevice_network_interface(local_node, corosync_config)
+    yield check_quorum_status(local_node)
+    yield check_qdevice_status(local_node)
+    yield check_links_status(local_node)
+    yield check_nodeid_to_nodename_mapping(local_node, corosync_config)
+
+
+check_corosync_health = check_health
+
 
 
 

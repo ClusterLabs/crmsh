@@ -905,62 +905,13 @@ to get the geo cluster configuration.""",
                 except SystemExit:
                     return False
 
-                local_node = utils.this_node()
                 results = []
+                for res in corosync_healthcheck.check_health(local_only=corosync_args.local):
+                    results.append(res)
+                    if not corosync_args.json:
+                        _print_corosync_check_result(res)
 
-                if corosync_args.json:
-                    print_cb = lambda r: None
-                else:
-                    print_cb = _print_corosync_check_result
-
-                res_local = corosync_healthcheck.validate_config_file(local_node)
-                results.append(res_local)
-                print_cb(res_local)
-
-                if res_local.returncode == 0:
-                    try:
-                        corosync_config = corosync.load_config_file()
-                    except ValueError as e:
-                        # unlikely, as we just validated the config file in the previous check
-                        logger.error("Failed to load or parse corosync.conf: %s", e)
-                        return False
-                    lm = corosync.LinkManager(corosync_config)
-
-                    if not corosync_args.local:
-                        nodes = utils.list_cluster_nodes() or [local_node]
-                        res_consistency = corosync_healthcheck.validate_config_file_consistency(nodes)
-                        results.append(res_consistency)
-                        print_cb(res_consistency)
-
-                    res_transport = corosync_healthcheck.check_deprecated_transport(local_node, lm)
-                    results.append(res_transport)
-                    print_cb(res_transport)
-
-                    res_knet_interface = corosync_healthcheck.check_knet_link_network_interface(local_node, lm)
-                    results.append(res_knet_interface)
-                    print_cb(res_knet_interface)
-
-                    res_qdevice_interface = corosync_healthcheck.check_qdevice_network_interface(local_node, corosync_config)
-                    results.append(res_qdevice_interface)
-                    print_cb(res_qdevice_interface)
-
-                    res_quorum = corosync_healthcheck.check_quorum_status(local_node)
-                    results.append(res_quorum)
-                    print_cb(res_quorum)
-
-                    res_qdevice_status = corosync_healthcheck.check_qdevice_status(local_node)
-                    results.append(res_qdevice_status)
-                    print_cb(res_qdevice_status)
-
-                    res_links = corosync_healthcheck.check_links_status(local_node)
-                    results.append(res_links)
-                    print_cb(res_links)
-
-                    res_mapping = corosync_healthcheck.check_nodeid_to_nodename_mapping(local_node, corosync_config)
-                    results.append(res_mapping)
-                    print_cb(res_mapping)
-
-                returncode = functools.reduce(lambda a, b: a | b, (r.returncode for r in results))
+                returncode = functools.reduce(lambda a, b: a | b, (r.returncode for r in results), 0)
                 if corosync_args.json:
                     json_data = {
                         "returncode": returncode,
