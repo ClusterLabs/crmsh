@@ -19,12 +19,17 @@ class Watchdog(object):
     #   [1] /dev/watchdog\nIdentity: Software Watchdog\nDriver: softdog\n
     DEVICE_FIND_REGREX = r"[ \t]*\[[0-9]+\] (/dev/[^\n]+)\n[ \t]*Identity: ([^\n]+)\n[ \t]*Driver: ([^\n]+)"
 
-    def __init__(self, _input=None, cluster_is_running=True):
+    def __init__(self, _input=None, node_list=None):
         """
         Init function
+
+        node_list: the nodes to act on when loading the driver. When None, the
+        node list is discovered from the running CIB (cluster-wide); otherwise
+        it is the list of node names to use directly. Watchdog itself stays
+        unaware of the cluster state and only trusts the nodes it is given.
         """
         self._input = _input
-        self._cluster_is_running = cluster_is_running
+        self._node_list = node_list
         self._watchdog_info_dict = {}
         self._watchdog_device_name = None
 
@@ -180,10 +185,9 @@ class Watchdog(object):
         # self._input is a driver name: always persist it to WATCHDOG_CFG so
         # it survives reboot and gets synced to joining nodes, and reload the
         # module now only if it wasn't already loaded in the kernel.
-        node_list = None if self._cluster_is_running else [utils.this_node()]
-        self._write_watchdog_config(self._input, node_list=node_list)
-        if not self._driver_is_loaded(self._input, node_list=node_list):
-            self._reload_driver(node_list)
+        self._write_watchdog_config(self._input, node_list=self._node_list)
+        if not self._driver_is_loaded(self._input, node_list=self._node_list):
+            self._reload_driver(self._node_list)
             self._set_watchdog_info()
 
         # self._input is a loaded driver name, find corresponding device name
@@ -193,7 +197,7 @@ class Watchdog(object):
             return
 
     @classmethod
-    def get_watchdog_device(cls, dev_or_driver=None, cluster_is_running=True):
-        w = cls(_input=dev_or_driver, cluster_is_running=cluster_is_running)
+    def get_watchdog_device(cls, dev_or_driver=None, node_list=None):
+        w = cls(_input=dev_or_driver, node_list=node_list)
         w.init_watchdog()
         return w.watchdog_device_name

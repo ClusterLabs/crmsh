@@ -1307,8 +1307,9 @@ class SBDManager:
                 self.update_dict["SBD_WATCHDOG_TIMEOUT"] = str(timeout_inst.sbd_watchdog_timeout)
             else:
                 self.timeout_dict["msgwait"] = timeout_inst.sbd_msgwait
+        node_list = None if self.cluster_is_running else [utils.this_node()]
         self.update_dict["SBD_WATCHDOG_DEV"] = watchdog.Watchdog.get_watchdog_device(
-            self.bootstrap_context.args.watchdog, cluster_is_running=self.cluster_is_running)
+            self.bootstrap_context.args.watchdog, node_list=node_list)
 
     @staticmethod
     def convert_timeout_dict_to_opt_str(timeout_dict: typing.Dict[str, int]) -> str:
