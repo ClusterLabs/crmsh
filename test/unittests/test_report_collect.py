@@ -588,6 +588,35 @@ id            0x19041a12
         ])
         mock_debug.assert_called_once_with(f"Dump corosync status info into {mock_real_path.return_value}")
 
+    @mock.patch("crmsh.report.utils.real_path")
+    @mock.patch("logging.Logger.debug")
+    @mock.patch("crmsh.report.utils.get_cmd_output")
+    @mock.patch("builtins.open", create=True)
+    def test_collect_cluster_health(self, mock_open_file, mock_get_cmd_output, mock_debug, mock_real_path):
+        mock_ctx_inst = mock.Mock(work_dir="/opt/workdir")
+        cluster_health_f = f"/opt/workdir/{constants.CLUSTER_HEALTH_F}"
+        mock_real_path.return_value = cluster_health_f
+        mock_open_write = mock.mock_open()
+        file_handle = mock_open_write.return_value.__enter__.return_value
+        mock_open_file.return_value = mock_open_write.return_value
+        mock_get_cmd_output.side_effect = ["data1", "data2", "data3"]
+
+        collect.collect_cluster_health(mock_ctx_inst)
+
+        mock_open_file.assert_called_once_with(cluster_health_f, "w")
+        file_handle.write.assert_has_calls([
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
+            mock.call("# crm cluster health hawk2\n"),
+            mock.call("data1"),
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
+            mock.call("# crm cluster health sbd\n"),
+            mock.call("data2"),
+            mock.call(f"\n\n{collect.DIVIDER}\n"),
+            mock.call("# crm cluster health sles16\n"),
+            mock.call("data3")
+        ])
+        mock_debug.assert_called_once_with(f"Dump cluster health info into {cluster_health_f}")
+
     @mock.patch("logging.Logger.error")
     @mock.patch('crmsh.utils.str2file')
     @mock.patch("crmsh.report.utils.real_path")
