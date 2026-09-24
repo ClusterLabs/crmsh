@@ -60,16 +60,16 @@ class TestWatchdog(unittest.TestCase):
         self.assertEqual(res, True)
 
     @mock.patch('crmsh.utils.cluster_run_cmd')
-    def test_configure_and_load_driver(self, mock_run):
-        self.watchdog_inst._configure_and_load_driver("softdog")
+    def test_write_watchdog_config(self, mock_run):
+        self.watchdog_inst._write_watchdog_config("softdog")
         mock_run.assert_called_once_with(
-            "echo softdog > /etc/modules-load.d/watchdog.conf && systemctl restart systemd-modules-load", None)
+            "echo softdog > /etc/modules-load.d/watchdog.conf", None)
 
     @mock.patch('crmsh.utils.cluster_run_cmd')
-    def test_configure_and_load_driver_with_node_list(self, mock_run):
-        self.watchdog_inst._configure_and_load_driver("softdog", node_list=["node1"])
+    def test_write_watchdog_config_with_node_list(self, mock_run):
+        self.watchdog_inst._write_watchdog_config("softdog", node_list=["node1"])
         mock_run.assert_called_once_with(
-            "echo softdog > /etc/modules-load.d/watchdog.conf && systemctl restart systemd-modules-load", ["node1"])
+            "echo softdog > /etc/modules-load.d/watchdog.conf", ["node1"])
 
     @mock.patch('crmsh.utils.cluster_run_cmd')
     def test_reload_driver(self, mock_run):
@@ -250,15 +250,16 @@ Driver: iTCO_wdt
         mock_error.assert_called_once_with("Should provide valid watchdog device or driver name by -w option")
 
     @mock.patch('crmsh.watchdog.Watchdog._get_device_through_driver')
-    @mock.patch('crmsh.watchdog.Watchdog._configure_and_load_driver')
+    @mock.patch('crmsh.watchdog.Watchdog._reload_driver')
+    @mock.patch('crmsh.watchdog.Watchdog._write_watchdog_config')
     @mock.patch('crmsh.watchdog.Watchdog._driver_is_loaded')
     @mock.patch('crmsh.watchdog.invokerc')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')
     @mock.patch('crmsh.watchdog.Watchdog._set_input')
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
-    def test_init_watchdog_cluster_running(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc, mock_is_loaded, mock_load, mock_get_device):
-        # cluster_is_running=True (default): cluster_run_cmd discovers the node
-        # list itself from the running CIB, so no explicit node_list is passed.
+    def test_init_watchdog_cluster_running(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc, mock_is_loaded, mock_write, mock_reload, mock_get_device):
+        # node_list=None lets cluster_run_cmd discover the node list itself
+        # from the running CIB, so no explicit node_list is passed.
         mock_valid.return_value = False
         self.watchdog_inst._input = "softdog"
         mock_invokerc.return_value = True
@@ -270,23 +271,23 @@ Driver: iTCO_wdt
         mock_valid.assert_called_once_with("softdog")
         mock_invokerc.assert_called_once_with("modinfo softdog")
         mock_is_loaded.assert_called_once_with("softdog")
-        mock_load.assert_called_once_with("softdog", node_list=None)
+        mock_write.assert_called_once_with("softdog", node_list=None)
+        mock_reload.assert_called_once_with(None)
         mock_set_info.assert_has_calls([mock.call(), mock.call()])
         mock_get_device.assert_called_once_with("softdog")
 
     @mock.patch('crmsh.watchdog.Watchdog._get_device_through_driver')
-    @mock.patch('crmsh.watchdog.Watchdog._configure_and_load_driver')
+    @mock.patch('crmsh.watchdog.Watchdog._reload_driver')
+    @mock.patch('crmsh.watchdog.Watchdog._write_watchdog_config')
     @mock.patch('crmsh.watchdog.Watchdog._driver_is_loaded')
     @mock.patch('crmsh.watchdog.invokerc')
     @mock.patch('crmsh.watchdog.Watchdog._valid_device')
     @mock.patch('crmsh.watchdog.Watchdog._set_input')
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
-    @mock.patch('crmsh.utils.this_node')
-    def test_init_watchdog_cluster_not_running(self, mock_this_node, mock_set_info, mock_set_input, mock_valid, mock_invokerc, mock_is_loaded, mock_load, mock_get_device):
-        # cluster_is_running=False (e.g. 'crm cluster init' before the cluster
-        # exists): the driver can only be loaded on the local node.
-        mock_this_node.return_value = "node1"
-        watchdog_inst = watchdog.Watchdog(cluster_is_running=False)
+    def test_init_watchdog_cluster_not_running(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc, mock_is_loaded, mock_write, mock_reload, mock_get_device):
+        # e.g. 'crm cluster init' before the cluster exists: the caller passes
+        # the local node only, so the driver is loaded on that node alone.
+        watchdog_inst = watchdog.Watchdog(node_list=["node1"])
         mock_valid.return_value = False
         watchdog_inst._input = "softdog"
         mock_invokerc.return_value = True
@@ -298,6 +299,35 @@ Driver: iTCO_wdt
         mock_valid.assert_called_once_with("softdog")
         mock_invokerc.assert_called_once_with("modinfo softdog")
         mock_is_loaded.assert_called_once_with("softdog")
-        mock_load.assert_called_once_with("softdog", node_list=["node1"])
+        mock_write.assert_called_once_with("softdog", node_list=["node1"])
+        mock_reload.assert_called_once_with(["node1"])
         mock_set_info.assert_has_calls([mock.call(), mock.call()])
+        mock_get_device.assert_called_once_with("softdog")
+
+    @mock.patch('crmsh.watchdog.Watchdog._get_device_through_driver')
+    @mock.patch('crmsh.watchdog.Watchdog._reload_driver')
+    @mock.patch('crmsh.watchdog.Watchdog._write_watchdog_config')
+    @mock.patch('crmsh.watchdog.Watchdog._driver_is_loaded')
+    @mock.patch('crmsh.watchdog.invokerc')
+    @mock.patch('crmsh.watchdog.Watchdog._valid_device')
+    @mock.patch('crmsh.watchdog.Watchdog._set_input')
+    @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
+    def test_init_watchdog_driver_already_loaded(self, mock_set_info, mock_set_input, mock_valid, mock_invokerc, mock_is_loaded, mock_write, mock_reload, mock_get_device):
+        # The critical fix: even when the driver is already loaded in the
+        # kernel, WATCHDOG_CFG must still be written so it survives reboot and
+        # is synced to joining nodes. Only the reload is skipped.
+        mock_valid.return_value = False
+        self.watchdog_inst._input = "softdog"
+        mock_invokerc.return_value = True
+        mock_is_loaded.return_value = True
+        mock_get_device.return_value = "/dev/watchdog"
+
+        self.watchdog_inst.init_watchdog()
+
+        mock_valid.assert_called_once_with("softdog")
+        mock_invokerc.assert_called_once_with("modinfo softdog")
+        mock_is_loaded.assert_called_once_with("softdog")
+        mock_write.assert_called_once_with("softdog", node_list=None)
+        mock_reload.assert_not_called()
+        mock_set_info.assert_called_once_with()
         mock_get_device.assert_called_once_with("softdog")
