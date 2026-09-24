@@ -149,7 +149,7 @@ class SBDUtils:
         """
         Check if sbd device already initialized
         """
-        cmd = "sbd -d {} dump".format(dev)
+        cmd = "sbd -d {} dump".format(shlex.quote(dev))
         rc, _, _ = ShellUtils().get_stdout_stderr(cmd)
         return rc == 0
 
@@ -1355,7 +1355,7 @@ class SBDManager:
         shell = sh.cluster_shell()
         for dev in self.device_list_to_init:
             logger.info("Initializing SBD device %s", dev)
-            cmd = f"sbd {opt_str} -d {dev} create"
+            cmd = f"sbd {opt_str} -d {shlex.quote(dev)} create"
             logger.debug("Running command: %s", cmd)
             shell.get_stdout_or_raise_error(cmd)
 

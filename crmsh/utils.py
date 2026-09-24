@@ -409,7 +409,7 @@ def chown(path, user, group):
     try:
         os.chown(path, uid, gid)
     except os.error as err:
-        cmd = "sudo chown {}:{} {}".format(user, group, path)
+        cmd = "sudo chown {}:{} {}".format(shlex.quote(str(user)), shlex.quote(str(group)), shlex.quote(path))
         rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             fatal("Failed to chown {}: {}".format(path, err))
@@ -419,7 +419,7 @@ def chmod(path, mod):
     try:
         os.chmod(path, mod)
     except os.error as err:
-        cmd = "sudo chmod {} {}".format(format(mod,'o'), path)
+        cmd = "sudo chmod {} {}".format(format(mod,'o'), shlex.quote(path))
         rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             fatal("Failed to chmod {}: {}".format(path, err))
@@ -431,10 +431,10 @@ def copy_local_file(src, dest):
     except os.error as err:
         if err.errno not in (errno.EPERM, errno.EACCES):
             raise
-        rc, out, err = ShellUtils().get_stdout_stderr("sudo cp {} {}".format(src, dest), no_reg=True)
+        rc, out, err = ShellUtils().get_stdout_stderr("sudo cp {} {}".format(shlex.quote(src), shlex.quote(dest)), no_reg=True)
         if rc != 0:
             fatal("Failed to copy file from {} to {}: {}".format(src, dest, err))
-        cmd = "sudo chown {}:{} {}".format(userdir.getuser(), "haclient", dest)
+        cmd = "sudo chown {}:{} {}".format(shlex.quote(userdir.getuser()), "haclient", shlex.quote(dest))
         rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             fatal("Failed to chown {}: {}".format(dest, err))
@@ -621,8 +621,8 @@ def str2file(s, fname, mod=0o644):
     except IOError as msg:
         # If we failed under current user, repeat under root
         escaped = s.translate(str.maketrans({'"':  r'\"'})) # other symbols are already escaped
-        cmd = 'printf "{}" | sudo tee {} >/dev/null'.format(escaped, fname)
-        cmd += ' && sudo chmod {} {}'.format(format(mod,'o'), fname)
+        cmd = 'printf "{}" | sudo tee {} >/dev/null'.format(escaped, shlex.quote(fname))
+        cmd += ' && sudo chmod {} {}'.format(format(mod,'o'), shlex.quote(fname))
         rc, out, err = ShellUtils().get_stdout_stderr(cmd, no_reg=True)
         if rc != 0:
             #raise ValueError("Failed to write to {}: {}".format(s, err)) # fatal?
@@ -850,8 +850,8 @@ def mkdirs_owned(dirs, mode=0o777, uid=-1, gid=-1):
                 os.makedirs(dirs, mode)
         except OSError as err:
             # If we failed under current user, repeat under root
-            cmd = "sudo mkdir {}".format(dirs)
-            cmd += " && sudo chmod {} {}".format(format(mode,'o'), dirs)
+            cmd = "sudo mkdir {}".format(shlex.quote(dirs))
+            cmd += " && sudo chmod {} {}".format(format(mode,'o'), shlex.quote(dirs))
             if gid == -1:
                 gid = "haclient"
             if uid == -1:
@@ -1804,13 +1804,13 @@ def remote_diff_slurp(nodes, filename):
 def remote_diff_this(local_path, nodes, this_node, ignore_pattern="", quiet=False):
     by_host = remote_diff_slurp(nodes, local_path)
     return_output = ""
-    ignore_arg = f" -I '{ignore_pattern}'" if ignore_pattern else ""
+    ignore_arg = f" -I {shlex.quote(ignore_pattern)}" if ignore_pattern else ""
     shell = sh.ShellUtils()
     for host, result in by_host:
         if isinstance(result, crmsh.parallax.Error):
             raise ValueError("Failed on %s: %s" % (host, str(result)))
         path = result
-        cmd = f"diff{ignore_arg} -U 0 -d -b --label {host} --label {this_node} {path} {local_path}"
+        cmd = f"diff{ignore_arg} -U 0 -d -b --label {shlex.quote(host)} --label {shlex.quote(this_node)} {shlex.quote(path)} {shlex.quote(local_path)}"
         _, output = shell.get_stdout(cmd)
         if output:
             if not quiet:
@@ -1869,7 +1869,7 @@ def cluster_copy_path(local_path, nodes=None):
         absolute_path = p.resolve()
         source_path = str(absolute_path)
         parent_path = absolute_path.parent
-    mkdir_cmd = f"test -d {parent_path} || mkdir -p {parent_path}"
+    mkdir_cmd = f"test -d {shlex.quote(str(parent_path))} || mkdir -p {shlex.quote(str(parent_path))}"
     crmsh.parallax.parallax_call(nodes, mkdir_cmd)
 
     recursive = False
@@ -2083,7 +2083,7 @@ def package_is_installed(pkg, remote_addr=None):
     """
     Check if package is installed
     """
-    cmd = "rpm -q --quiet {}".format(pkg)
+    cmd = "rpm -q --quiet {}".format(shlex.quote(pkg))
     if remote_addr:
         # check on remote
         rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(remote_addr, cmd)
@@ -2257,7 +2257,7 @@ def append_res_to_group(group_id, res_id):
     """
     Append resource to exist group
     """
-    cmd = "crm configure modgroup {} add {}".format(group_id, res_id)
+    cmd = "crm configure modgroup {} add {}".format(shlex.quote(group_id), shlex.quote(res_id))
     sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
@@ -2320,9 +2320,10 @@ def get_pcmk_delay_max(two_node_without_qdevice=False):
 def _get_raw_property(name, property_type="crm_config", peer=None, get_default=True):
     if property_type == "crm_config" and get_default:
         cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
-        cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(cib_path, name)
+        cmd = "CIB_file={} sudo --preserve-env=CIB_file crm configure get_property {}".format(
+            shlex.quote(cib_path), shlex.quote(name))
     else:
-        cmd = "sudo crm_attribute -t {} -n {} -Gq".format(property_type, name)
+        cmd = "sudo crm_attribute -t {} -n {} -Gq".format(shlex.quote(property_type), shlex.quote(name))
     rc, stdout, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return stdout if rc == 0 else None
 
@@ -2346,7 +2347,7 @@ def get_property(name, property_type="crm_config", peer=None, get_default=True):
 
 def property_configured(name, property_type="crm_config", peer=None):
     cib_path = os.getenv('CIB_file', constants.CIB_RAW_FILE)
-    cmd = f"CIB_file={cib_path} crm_attribute -t {property_type} -n {name} -Gq"
+    cmd = f"CIB_file={shlex.quote(cib_path)} crm_attribute -t {shlex.quote(property_type)} -n {shlex.quote(name)} -Gq"
     rc, _, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(peer, cmd)
     return rc == 0
 
@@ -2364,7 +2365,7 @@ def delete_property(name, property_type="crm_config") -> bool:
 
     shell_inst = ShellUtils()
     for property_name in delete_list:
-        cmd = f"crm_attribute -D -t {property_type} -n {property_name}"
+        cmd = f"crm_attribute -D -t {shlex.quote(str(property_type))} -n {shlex.quote(str(property_name))}"
         rc, _, stderr = shell_inst.get_stdout_stderr(cmd)
         if rc == 0:
             logger.info(
@@ -2423,7 +2424,7 @@ def _set_raw_property(property_name, property_value, property_type="crm_config",
     if origin_value and str(origin_value) != str(property_value):
         logger.warning("\"%s\" in %s is set to %s, it was %s", property_name, property_type, property_value, origin_value)
     property_sub_cmd = "property" if property_type == "crm_config" else property_type
-    cmd = "crm configure {} {}={}".format(property_sub_cmd, property_name, property_value)
+    cmd = "crm configure {} {}".format(property_sub_cmd, shlex.quote(f"{property_name}={property_value}"))
     sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
@@ -2515,7 +2516,7 @@ def diff_and_patch(orig_cib_str, current_cib_str):
     tmpfiles.add(orig_cib_file)
     tmpfiles.add(current_cib_file)
 
-    cmd = "crm_diff -u -o '{}' -n '{}'".format(orig_cib_file, current_cib_file)
+    cmd = "crm_diff -u -o {} -n {}".format(shlex.quote(orig_cib_file), shlex.quote(current_cib_file))
     rc, cib_diff, err = ShellUtils().get_stdout_stderr(cmd)
     if rc == 0: # no difference
         return True

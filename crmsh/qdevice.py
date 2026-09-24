@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import socket
 import functools
 import typing
@@ -326,7 +327,7 @@ class QDevice(object):
             self.init_tls_certs_on_qnetd()
             self.config_qnetd_port()
             self.start_qnetd()
-            cmd = f"corosync-qnetd-tool -l -c {self.cluster_name}"
+            cmd = f"corosync-qnetd-tool -l -c {shlex.quote(self.cluster_name)}"
             if shell.get_stdout_or_raise_error(cmd, self.qnetd_addr):
                 exception_msg = f"This cluster's name \"{self.cluster_name}\" already exists on qnetd server!"
                 if self.is_stage:
@@ -421,7 +422,7 @@ class QDevice(object):
         /usr/sbin/corosync-qdevice-net-certutil -r -n Cluster
         (Cluster name must match cluster_name key in the corosync.conf)
         """
-        cmd = "corosync-qdevice-net-certutil -r -n {}".format(self.cluster_name)
+        cmd = "corosync-qdevice-net-certutil -r -n {}".format(shlex.quote(self.cluster_name))
         log("Generate certificate request {}".format(self.qdevice_crq_filename), cmd)
         sh.cluster_shell().get_stdout_or_raise_error(cmd)
 

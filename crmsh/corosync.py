@@ -8,6 +8,7 @@ import dataclasses
 import logging
 import os
 import re
+import shlex
 import typing
 from io import StringIO
 
@@ -160,7 +161,7 @@ def query_qnetd_status():
     if not qnetd_addr:
         raise ValueError("host for qnetd not configured!")
 
-    cmd = "corosync-qnetd-tool -lv -c {}".format(cluster_name)
+    cmd = "corosync-qnetd-tool -lv -c {}".format(shlex.quote(cluster_name))
     result = parallax.parallax_call([qnetd_addr], cmd)
     _, qnetd_result_stdout, _ = result[0][1]
     if qnetd_result_stdout:

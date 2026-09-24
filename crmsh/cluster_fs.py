@@ -1,5 +1,6 @@
 import logging
 import re
+import shlex
 from contextlib import contextmanager
 from . import utils, sh, storage_utils
 from . import bootstrap # circular import
@@ -187,7 +188,7 @@ e.g. crm cluster init {self.type.lower()} -o <device>
 
         shell = sh.cluster_shell()
         for dev in self.devices:
-            shell.get_stdout_or_raise_error(f"wipefs -a {dev}")
+            shell.get_stdout_or_raise_error(f"wipefs -a {shlex.quote(dev)}")
 
     def init_verify(self):
         """
@@ -220,12 +221,12 @@ e.g. crm cluster init {self.type.lower()} -o <device>
         mkfs_cmd = ""
         if self.type == "OCFS2":
             # TODO now -N value is fixed to 8, need to be configurable in the future if needed
-            mkfs_cmd = f"mkfs.ocfs2 --cluster-stack pcmk --cluster-name {cluster_name} -N 8 -x {self.target_device}"
+            mkfs_cmd = f"mkfs.ocfs2 --cluster-stack pcmk --cluster-name {shlex.quote(cluster_name)} -N 8 -x {shlex.quote(self.target_device)}"
         elif self.type == "GFS2":
             # TODO make sure the lock table name is real unique in the future if needed
             lock_table_name = f"{cluster_name}:FS_{utils.randomword(12)}"
             # TODO now -j value is fixed to 8, need to be configurable in the future if needed
-            mkfs_cmd = f"mkfs.gfs2 -t {lock_table_name} -p lock_dlm -j 8 {self.target_device} -O"
+            mkfs_cmd = f"mkfs.gfs2 -t {shlex.quote(lock_table_name)} -p lock_dlm -j 8 {shlex.quote(self.target_device)} -O"
         logger.debug("mkfs command: %s", mkfs_cmd)
         with logger_utils.status_long(f"Creating {self.fstype} filesystem on {self.target_device}"):
             sh.cluster_shell().get_stdout_or_raise_error(mkfs_cmd)
@@ -246,7 +247,7 @@ e.g. crm cluster init {self.type.lower()} -o <device>
         """
         Create PV, VG, LV and return LV path
         """
-        disks_string = ' '.join(self.devices)
+        disks_string = ' '.join(shlex.quote(d) for d in self.devices)
         shell = sh.cluster_shell()
 
         # Create PV
