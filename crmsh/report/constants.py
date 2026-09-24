@@ -7,7 +7,6 @@ LOG_PATTERNS = ["CRIT:", "ERROR:", "WARNING:", "crit:", "error:", "warning:"]
 PTEST = "crm_simulate"
 SSH_OPTS = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
 CHECK_LOG_LINES = 10
-STAMP_TYPE = ""
 
 DECRIPTION_TMPLATE = """
 Please edit this template and describe the issue/problem you
