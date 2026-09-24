@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import datetime
 import tempfile
@@ -452,19 +453,19 @@ ANSI_COLOR="0;32"
     def test_find_first_timestamp_none(self, mock_get_timestamp):
         mock_get_timestamp.side_effect = [None, None]
         data = ["line1", "line2"]
-        self.assertIsNone(utils.find_first_timestamp(data, "file1"))
+        self.assertIsNone(utils.find_first_timestamp(data, "file1", "rfc5424"))
         mock_get_timestamp.assert_has_calls([
-            mock.call("line1", "file1"),
-            mock.call("line2", "file1")
+            mock.call("line1", "file1", "rfc5424"),
+            mock.call("line2", "file1", "rfc5424")
         ])
 
     @mock.patch('crmsh.report.utils.get_timestamp')
     def test_find_first_timestamp(self, mock_get_timestamp):
         mock_get_timestamp.return_value = 123456
         data = ["line1", "line2"]
-        res = utils.find_first_timestamp(data, "file1")
+        res = utils.find_first_timestamp(data, "file1", "syslog")
         self.assertEqual(res, 123456)
-        mock_get_timestamp.assert_called_once_with("line1", "file1")
+        mock_get_timestamp.assert_called_once_with("line1", "file1", "syslog")
 
     def test_filter_lines(self):
         data = """line1
@@ -517,29 +518,33 @@ Legacy 003-10-11T22:14:15.003Z log data log
         ])
 
     def test_get_timestamp_none(self):
-        self.assertIsNone(utils.get_timestamp("", "file1"))
+        self.assertIsNone(utils.get_timestamp("", "file1", "rfc5424"))
+
+    def test_get_timestamp_no_stamp_type(self):
+        self.assertIsNone(utils.get_timestamp("2003-10-11T22:14:15.003Z host su", "file1", None))
+
+    def test_get_timestamp_too_few_fields(self):
+        self.assertIsNone(utils.get_timestamp("Feb 12", "file1", "syslog"))
+        self.assertIsNone(utils.get_timestamp("legacy", "file1", "legacy"))
 
     @mock.patch('crmsh.report.utils.get_timestamp_from_time_line')
     def test_get_timespan_rfc5424(self, mock_get_timestamp):
-        constants.STAMP_TYPE = "rfc5424"
         mock_get_timestamp.return_value = 12345
-        res = utils.get_timestamp("2003-10-11T22:14:15.003Z mymachine.example.com su", "file1")
+        res = utils.get_timestamp("2003-10-11T22:14:15.003Z mymachine.example.com su", "file1", "rfc5424")
         self.assertEqual(res, mock_get_timestamp.return_value)
         mock_get_timestamp.assert_called_once_with("2003-10-11T22:14:15.003Z", "rfc5424", "file1")
 
     @mock.patch('crmsh.report.utils.get_timestamp_from_time_line')
     def test_get_timespan_syslog(self, mock_get_timestamp):
-        constants.STAMP_TYPE = "syslog"
         mock_get_timestamp.return_value = 12345
-        res = utils.get_timestamp("Feb 12 18:30:08 15sp1-1 kernel:", "file1")
+        res = utils.get_timestamp("Feb 12 18:30:08 15sp1-1 kernel:", "file1", "syslog")
         self.assertEqual(res, mock_get_timestamp.return_value)
         mock_get_timestamp.assert_called_once_with("Feb 12 18:30:08", "syslog", "file1")
 
     @mock.patch('crmsh.report.utils.get_timestamp_from_time_line')
     def test_get_timespan_legacy(self, mock_get_timestamp):
-        constants.STAMP_TYPE = "legacy"
         mock_get_timestamp.return_value = 12345
-        res = utils.get_timestamp("legacy 2003-10-11T22:14:15.003Z log data", "file1")
+        res = utils.get_timestamp("legacy 2003-10-11T22:14:15.003Z log data", "file1", "legacy")
         self.assertEqual(res, mock_get_timestamp.return_value)
         mock_get_timestamp.assert_called_once_with("2003-10-11T22:14:15.003Z", "legacy", "file1")
 
@@ -632,11 +637,20 @@ Legacy 003-10-11T22:14:15.003Z log data log
 
     @mock.patch('crmsh.report.utils.findln_by_timestamp')
     @mock.patch('crmsh.utils.read_from_file')
+    def test_print_logseg_unknown_format(self, mock_read, mock_findln):
+        mock_read.return_value = "line1\nline2"
+        res = utils.print_logseg("log1", 1234, 0)
+        self.assertEqual(res, "")
+        mock_findln.assert_not_called()
+
+    @mock.patch('crmsh.report.utils.findln_by_timestamp')
+    @mock.patch('crmsh.utils.read_from_file')
     def test_print_logseg_none(self, mock_read, mock_findln):
-        mock_read.return_value = "data"
+        mock_read.return_value = "2024-04-03T13:10:00Z host app msg"
         mock_findln.return_value = None
         res = utils.print_logseg("log1", 1234, 0)
         self.assertEqual(res, "")
+        mock_findln.assert_called_once_with(mock_read.return_value, 1234, "log1", "rfc5424")
 
     @mock.patch('crmsh.report.utils.filter_lines')
     @mock.patch('crmsh.report.utils.logger', spec=crmsh.log.DEBUG2Logger)
@@ -647,6 +661,7 @@ Legacy 003-10-11T22:14:15.003Z log data log
         mock_filter.return_value = "line1\nline2\nline3"
         res = utils.print_logseg("log1", 0, 0)
         self.assertEqual(res, mock_filter.return_value)
+        mock_findln.assert_not_called()
         mock_logger.debug2.assert_called_once_with("Including segment [%d-%d] from %s", 1, 3, "log1")
 
     def test_head(self):
@@ -786,21 +801,46 @@ pacemaker-schedulerd[5677]:  error: Resource"""
         with open(pacemaker_file_path) as f:
             data = f.read()
         data_list = data.split('\n')
-        constants.STAMP_TYPE = utils.determin_log_format(data)
-        first_timestamp = utils.get_timestamp(data_list[0], pacemaker_file_path)
-        middle_timestamp = utils.get_timestamp(data_list[1], pacemaker_file_path)
-        last_timestamp = utils.get_timestamp(data_list[2], pacemaker_file_path)
+        stamp_type = utils.determin_log_format(data)
+        first_timestamp = utils.get_timestamp(data_list[0], pacemaker_file_path, stamp_type)
+        middle_timestamp = utils.get_timestamp(data_list[1], pacemaker_file_path, stamp_type)
+        last_timestamp = utils.get_timestamp(data_list[2], pacemaker_file_path, stamp_type)
         assert first_timestamp < middle_timestamp < last_timestamp
 
-    def test_findln_by_timestamp_irregular(self):
-        data = """line1
-        line2
-        line3
-        line4"""
-        target_time = "Apr 03 13:10"
-        target_time_stamp = crmutils.parse_to_timestamp(target_time)
-        result_line = utils.findln_by_timestamp(data, target_time_stamp, "file1")
-        self.assertIsNone(result_line)
+    @mock.patch("crmsh.report.utils.logger", spec=crmsh.log.DEBUG2Logger)
+    def test_dump_logset_mixed_formats_in_archived_logs(self, mock_logger):
+        """
+        Archived log in syslog format, current log in rfc5424 format.
+        The format detected for one file must not be reused for another one,
+        otherwise the current log segment is silently dropped.
+        """
+        tmpdir = tempfile.mkdtemp()
+        try:
+            workdir = os.path.join(tmpdir, "work")
+            os.mkdir(workdir)
+            logf = os.path.join(tmpdir, "log3")
+            archived = logf + ".1"
+            with open(archived, "w") as f:
+                f.write("Sep 08 08:36:34 node1 syslog message line1\n"
+                        "Sep 08 08:37:01 node1 syslog message line2\n")
+            with open(logf, "w") as f:
+                f.write("2022-09-08T14:27:15.003Z node1 myapp - rfc5424 message line3\n"
+                        "2022-09-08T14:28:15.003Z node1 myapp - rfc5424 message line4\n")
+            old = crmutils.parse_to_timestamp("2022-01-01T00:00:00")
+            os.utime(archived, (old, old))
+            os.utime(logf, (old + 60, old + 60))
+            ctx = mock.Mock(
+                from_time=crmutils.parse_to_timestamp("2020-09-01T00:00:00"),
+                to_time=crmutils.parse_to_timestamp("2099-01-01T00:00:00"),
+                work_dir=workdir,
+            )
+            utils.dump_logset(ctx, logf)
+            with open(os.path.join(workdir, "log3")) as f:
+                out = f.read()
+            for n in range(1, 5):
+                self.assertIn(f"message line{n}", out)
+        finally:
+            shutil.rmtree(tmpdir)
 
     def test_findln_by_timestamp(self):
         data = """2024-04-03T11:01:00Z example-host app-name 1234 ID123 - - This is a log message before the target timestamp (11:01:19).
@@ -815,8 +855,7 @@ pacemaker-schedulerd[5677]:  error: Resource"""
         try:
             target_time = "2024-04-03T13:00:20Z"
             target_time_stamp = crmutils.parse_to_timestamp(target_time)
-            constants.STAMP_TYPE = utils.determin_log_format(data)
-            result_line = utils.findln_by_timestamp(data, target_time_stamp, temp_file_path)
+            result_line = utils.findln_by_timestamp(data, target_time_stamp, temp_file_path, "rfc5424")
             assert result_line == 4
 
             line_data = data.split('\n')[result_line-1].split()[0]
@@ -829,7 +868,7 @@ pacemaker-schedulerd[5677]:  error: Resource"""
 
             target_time = "2024-04-03T11:01:19Z"
             target_time_stamp = crmutils.parse_to_timestamp(target_time)
-            result_line = utils.findln_by_timestamp(data, target_time_stamp, temp_file_path)
+            result_line = utils.findln_by_timestamp(data, target_time_stamp, temp_file_path, "rfc5424")
             line_data = data.split('\n')[result_line-1].split()[0]
             self.assertEqual(line_data, target_time)
         finally:
