@@ -43,14 +43,15 @@ class Watchdog(object):
         return True
 
     @staticmethod
-    def _configure_and_load_driver(driver, node_list=None):
+    def _write_watchdog_config(driver, node_list=None):
         """
-        Write the driver name to WATCHDOG_CFG and (re)load the kernel module,
-        on node_list (or cluster-wide, discovered from the running CIB, when
-        node_list is None).
+        Write the driver name to WATCHDOG_CFG on node_list (or cluster-wide,
+        discovered from the running CIB, when node_list is None). This must
+        always be done when configuring a driver, so it is loaded on every
+        boot and synced to joining nodes, regardless of whether the module
+        happens to already be loaded in the running kernel.
         """
-        cmd = f"echo {driver} > {Watchdog.WATCHDOG_CFG} && systemctl restart systemd-modules-load"
-        utils.cluster_run_cmd(cmd, node_list)
+        utils.cluster_run_cmd(f"echo {driver} > {Watchdog.WATCHDOG_CFG}", node_list)
 
     @staticmethod
     def _reload_driver(node_list):
@@ -176,10 +177,13 @@ class Watchdog(object):
         if rc != 0:
             utils.fatal("Should provide valid watchdog device or driver name")
 
-        # self._input is a driver name, load it if it was unloaded
+        # self._input is a driver name: always persist it to WATCHDOG_CFG so
+        # it survives reboot and gets synced to joining nodes, and reload the
+        # module now only if it wasn't already loaded in the kernel.
         node_list = None if self._cluster_is_running else [utils.this_node()]
+        self._write_watchdog_config(self._input, node_list=node_list)
         if not self._driver_is_loaded(self._input, node_list=node_list):
-            self._configure_and_load_driver(self._input, node_list=node_list)
+            self._reload_driver(node_list)
             self._set_watchdog_info()
 
         # self._input is a loaded driver name, find corresponding device name
