@@ -295,16 +295,35 @@ class TestMultipathInspector(unittest.TestCase):
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),  # lsblk output for parent device
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),  # lsblk output for parent device
             (0, "dev multipath\nsda mpatha", "")  # multipathd show paths output
         ]
 
         inspector = storage_utils.MultipathInspector("/dev/sda1")
 
         assert inspector._shell == mock_shell_inst
+        assert inspector._peer is None
         assert inspector._device_info.device == "/dev/sda1"
         assert inspector._device_info.parent_device == "sda"
         assert inspector._device_info.under_multipath is True
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_init_with_peer(self, mock_cluster_shell):
+        """Test MultipathInspector initialization with peer"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),
+            (0, "dev multipath\nsda mpatha", "")
+        ]
+
+        inspector = storage_utils.MultipathInspector("/dev/sda1", "node1")
+
+        assert inspector._peer == "node1"
+        mock_shell_inst.get_rc_stdout_stderr_without_input.assert_has_calls([
+            mock.call("node1", "lsblk -dnP -o PKNAME,KNAME /dev/sda1"),
+            mock.call("node1", "multipathd show paths format \"%d %m\"")
+        ])
 
     @mock.patch('crmsh.sh.cluster_shell')
     def test_get_parent_device(self, mock_cluster_shell):
@@ -312,15 +331,88 @@ class TestMultipathInspector(unittest.TestCase):
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),  # lsblk output for __init__
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),  # lsblk output for __init__
             (0, "", ""),  # multipathd show paths output for __init__
-            (0, "sda", "")  # lsblk output for test call
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", "")  # lsblk output for test call
         ]
 
         inspector = storage_utils.MultipathInspector("/dev/sda1")
         parent = inspector._get_parent_device("/dev/sda1")
 
         assert parent == "sda"
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_get_parent_device_for_whole_disk(self, mock_cluster_shell):
+        """Test _get_parent_device falls back to KNAME for a whole disk"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "PKNAME=\"\" KNAME=\"sda\"", ""),
+            (0, "", ""),
+            (0, "PKNAME=\"\" KNAME=\"sda\"", "")
+        ]
+
+        inspector = storage_utils.MultipathInspector("/dev/sda")
+        parent = inspector._get_parent_device("/dev/sda")
+
+        assert parent == "sda"
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_get_parent_device_uses_original_path(self, mock_cluster_shell):
+        """Test _get_parent_device does not resolve symlinks locally"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),
+            (0, "", ""),
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", "")
+        ]
+
+        inspector = storage_utils.MultipathInspector("/dev/disk/by-id/scsi-test-part1")
+        parent = inspector._get_parent_device("/dev/disk/by-id/scsi-test-part1")
+
+        assert parent == "sda"
+        mock_shell_inst.get_rc_stdout_stderr_without_input.assert_has_calls([
+            mock.call(None, "lsblk -dnP -o PKNAME,KNAME /dev/disk/by-id/scsi-test-part1"),
+            mock.call(None, "multipathd show paths format \"%d %m\""),
+            mock.call(None, "lsblk -dnP -o PKNAME,KNAME /dev/disk/by-id/scsi-test-part1")
+        ])
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_get_parent_device_raises_when_lsblk_empty(self, mock_cluster_shell):
+        """Test _get_parent_device raises when lsblk cannot identify the device"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),
+            (0, "", ""),
+            (0, "", "")
+        ]
+
+        inspector = storage_utils.MultipathInspector("/dev/sda1")
+
+        with pytest.raises(ValueError) as exc_info:
+            inspector._get_parent_device("/dev/sdb1")
+
+        assert str(exc_info.value) == "Cannot determine kernel device name for /dev/sdb1 on {}".format(storage_utils.utils.this_node())
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_get_parent_device_raises_when_lsblk_has_no_names(self, mock_cluster_shell):
+        """Test _get_parent_device raises when lsblk output has no usable names"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),
+            (0, "", ""),
+            (0, "PKNAME=\"\" KNAME=\"\"", "")
+        ]
+
+        inspector = storage_utils.MultipathInspector("/dev/sda1")
+
+        with pytest.raises(ValueError) as exc_info:
+            inspector._get_parent_device("/dev/sdb1")
+
+        assert str(exc_info.value) == "Cannot determine kernel device name for /dev/sdb1 on {}".format(storage_utils.utils.this_node())
 
     @mock.patch('crmsh.sh.cluster_shell')
     def test_get_multipath_mapping(self, mock_cluster_shell):
@@ -332,7 +424,7 @@ sda mpatha
 sdb mpatha
 sdc mpathb"""
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),  # lsblk for __init__
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),  # lsblk for __init__
             (0, multipathd_output, ""),  # multipathd for __init__
             (0, multipathd_output, "")  # multipathd for test call
         ]
@@ -348,7 +440,7 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),
             (0, "dev multipath\nsda mpatha", "")
         ]
 
@@ -365,7 +457,7 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),
             (0, "dev multipath\nsda mpatha", "")
         ]
 
@@ -379,11 +471,40 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),
             (0, "dev multipath\nsda mpatha", "")
         ]
+        error_msg = "Device /dev/sda1 is under multipath on {}".format(storage_utils.utils.this_node())
 
         with pytest.raises(ValueError) as exc_info:
             storage_utils.MultipathInspector.check_device_under_multipath("/dev/sda1")
 
-        assert str(exc_info.value) == "Device /dev/sda1 is under multipath, please provide the multipath device instead"
+        assert str(exc_info.value) == error_msg
+        mock_shell_inst.get_rc_stdout_stderr_without_input.assert_has_calls([
+            mock.call(storage_utils.utils.this_node(), "lsblk -dnP -o PKNAME,KNAME /dev/sda1"),
+            mock.call(storage_utils.utils.this_node(), "multipathd show paths format \"%d %m\"")
+        ])
+
+    @mock.patch('crmsh.sh.cluster_shell')
+    def test_check_device_under_multipath_with_node_list(self, mock_cluster_shell):
+        """Test check_device_under_multipath checks nodes and reports the failed node"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),
+            (0, "dev multipath\nsdb mpatha", ""),
+            (0, "PKNAME=\"sda\" KNAME=\"sda1\"", ""),
+            (0, "dev multipath\nsda mpatha", "")
+        ]
+
+        with pytest.raises(ValueError) as exc_info:
+            storage_utils.MultipathInspector.check_device_under_multipath("/dev/sda1", ["node1", "node2"])
+
+        error_msg = "Device /dev/sda1 is under multipath on node2"
+        assert str(exc_info.value) == error_msg
+        mock_shell_inst.get_rc_stdout_stderr_without_input.assert_has_calls([
+            mock.call("node1", "lsblk -dnP -o PKNAME,KNAME /dev/sda1"),
+            mock.call("node1", "multipathd show paths format \"%d %m\""),
+            mock.call("node2", "lsblk -dnP -o PKNAME,KNAME /dev/sda1"),
+            mock.call("node2", "multipathd show paths format \"%d %m\"")
+        ])
