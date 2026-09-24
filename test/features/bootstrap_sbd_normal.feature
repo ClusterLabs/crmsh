@@ -175,6 +175,8 @@ Feature: crmsh bootstrap sbd management
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
     And     Resource "fencing-sbd" type "fence_sbd" is "Started"
+    When    Run "crm cluster health sbd" on "hanode1"
+    Then    Expected "It's not recommended to use softdog as watchdog driver in production environment" in stderr
 
   @clean
   Scenario: Setup sbd and test fence node

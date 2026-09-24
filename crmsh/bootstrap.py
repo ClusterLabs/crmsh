@@ -1999,7 +1999,7 @@ def join_cluster(seed_host, remote_user):
     if not os.path.exists(corosync.conf()):
         utils.fatal("{} is not readable. Please ensure that hostnames are resolvable.".format(corosync.conf()))
 
-    _global_variables.sbd_manager.join_sbd(remote_user, seed_host)
+    _global_variables.sbd_manager.join_sbd(seed_host)
 
     ringXaddr_res = []
     for i in range(link_number):

@@ -766,6 +766,7 @@ class SBDConfigChecker:
                 else:
                     raise FixFailure(f"Failed to fix {name} issue")
 
+        watchdog.Watchdog.warn_if_using_softdog()
         SBDManager.warn_diskless_sbd()
 
         return SBDConfigChecker._return_helper(check_res_list)
@@ -1306,7 +1307,9 @@ class SBDManager:
                 self.update_dict["SBD_WATCHDOG_TIMEOUT"] = str(timeout_inst.sbd_watchdog_timeout)
             else:
                 self.timeout_dict["msgwait"] = timeout_inst.sbd_msgwait
-        self.update_dict["SBD_WATCHDOG_DEV"] = watchdog.Watchdog.get_watchdog_device(self.bootstrap_context.args.watchdog)
+        node_list = None if self.cluster_is_running else [utils.this_node()]
+        self.update_dict["SBD_WATCHDOG_DEV"] = watchdog.Watchdog.get_watchdog_device(
+            self.bootstrap_context.args.watchdog, node_list=node_list)
 
     @staticmethod
     def convert_timeout_dict_to_opt_str(timeout_dict: typing.Dict[str, int]) -> str:
@@ -1527,7 +1530,7 @@ class SBDManager:
                 if not restart_cluster_first:
                     bootstrap.restart_cluster()
 
-    def join_sbd(self, remote_user, peer_host):
+    def join_sbd(self, peer_host):
         """
         Function join_sbd running on join process only
         On joining process, check whether peer node has enabled sbd.service
@@ -1544,7 +1547,7 @@ class SBDManager:
         if dev_list and not utils.package_is_installed("fence-agents-sbd"):
             utils.fatal(self.FENCE_SBD_NOT_INSTALLED_MSG)
 
-        self._watchdog_inst = watchdog.Watchdog(remote_user=remote_user, peer_host=peer_host)
+        self._watchdog_inst = watchdog.Watchdog()
         self._watchdog_inst.join_watchdog()
 
         if dev_list:
