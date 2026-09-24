@@ -332,10 +332,9 @@ Driver: iTCO_wdt
     @mock.patch('crmsh.watchdog.Watchdog._set_watchdog_info')
     @mock.patch('crmsh.utils.this_node')
     def test_init_watchdog_cluster_not_running(self, mock_this_node, mock_set_info, mock_set_input, mock_valid, mock_run, mock_is_loaded, mock_write, mock_reload, mock_get_device):
-        # cluster_is_running=False (e.g. 'crm cluster init' before the cluster
-        # exists): the driver can only be loaded on the local node.
-        mock_this_node.return_value = "node1"
-        watchdog_inst = watchdog.Watchdog(cluster_is_running=False)
+        # e.g. 'crm cluster init' before the cluster exists: the caller passes
+        # the local node only, so the driver is loaded on that node alone.
+        watchdog_inst = watchdog.Watchdog(node_list=["node1"])
         mock_valid.return_value = False
         watchdog_inst._input = "softdog"
         mock_run.return_value = (0, None, None)
@@ -388,8 +387,8 @@ Driver: iTCO_wdt
             return original_init(self, *args, **kwargs)
 
         with mock.patch('crmsh.watchdog.Watchdog.__init__', side_effect=_fake_init, autospec=True) as mock_wd_init:
-            watchdog.Watchdog.get_watchdog_device("softdog", cluster_is_running=False)
-            mock_wd_init.assert_called_once_with(mock.ANY, _input="softdog", cluster_is_running=False)
+            watchdog.Watchdog.get_watchdog_device("softdog", node_list=["node1"])
+            mock_wd_init.assert_called_once_with(mock.ANY, _input="softdog", node_list=["node1"])
 
     @mock.patch('crmsh.watchdog.Watchdog.init_watchdog')
     def test_get_watchdog_device_defaults(self, mock_init):
@@ -400,4 +399,4 @@ Driver: iTCO_wdt
 
         with mock.patch('crmsh.watchdog.Watchdog.__init__', side_effect=_fake_init, autospec=True) as mock_wd_init:
             watchdog.Watchdog.get_watchdog_device()
-            mock_wd_init.assert_called_once_with(mock.ANY, _input=None, cluster_is_running=True)
+            mock_wd_init.assert_called_once_with(mock.ANY, _input=None, node_list=None)
