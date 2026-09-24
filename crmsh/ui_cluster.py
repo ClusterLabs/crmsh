@@ -823,6 +823,12 @@ to get the geo cluster configuration.""",
         parser.add_argument('component', choices=Cluster.HEALTH_COMPONENTS)
         parser.add_argument('-f', '--fix', action='store_true')
         parsed_args, remaining_args = parser.parse_known_args(args)
+        # crm's global option parser only recognizes -F/--force when given
+        # before the subcommand (e.g. "crm -F cluster health sbd --fix"),
+        # since "cluster health sbd --fix" is captured as a single
+        # REMAINDER. Also accept a trailing -F/--force here, so
+        # "crm cluster health sbd --fix -F" behaves the same way.
+        remaining_args = list(utils.handle_trailing_force_option(remaining_args))
         match parsed_args.component:
             case 'hawk2':
                 if remaining_args:
