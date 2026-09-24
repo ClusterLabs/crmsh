@@ -291,12 +291,12 @@ def find_files_in_timespan(context: core.Context, target_dir_list: List[str]) ->
     return file_list
 
 
-def find_first_timestamp(data: List[str], log_file: str) -> float:
+def find_first_timestamp(data: List[str], log_file: str, stamp_type: Optional[str]) -> Optional[float]:
     """
     Find the first timestamp in the given list of log line
     """
     for line in data:
-        timestamp = get_timestamp(line, log_file)
+        timestamp = get_timestamp(line, log_file, stamp_type)
         if timestamp:
             return timestamp
     return None
@@ -336,10 +336,16 @@ def determin_log_format(data: str) -> str:
     return None
 
 
-def findln_by_timestamp(data: str, given_timestamp: float, log_file: str) -> int:
+def findln_by_timestamp(data: str, given_timestamp: float, log_file: str, stamp_type: Optional[str] = None) -> Optional[int]:
     """
     Get line number of the specific time stamp
+
+    The timestamp format is detected from the data itself when stamp_type is not given
     """
+    if stamp_type is None:
+        stamp_type = determin_log_format(data)
+    if not stamp_type:
+        return None
     data_list = data.split('\n')
     first, last = 1, len(data_list)
 
@@ -347,7 +353,7 @@ def findln_by_timestamp(data: str, given_timestamp: float, log_file: str) -> int
         middle = (last + first) // 2
         trycnt = 10
         while trycnt > 0:
-            middle_timestamp = get_timestamp(data_list[middle - 1], log_file)
+            middle_timestamp = get_timestamp(data_list[middle - 1], log_file, stamp_type)
             if middle_timestamp:
                 break
             # shift the whole first-last segment
@@ -416,20 +422,23 @@ def get_timestamp_from_time_line(time_line: str, stamp_type: str, log_file: str)
         return timestamp
 
 
-def get_timestamp(line: str, log_file: str) -> float:
+def get_timestamp(line: str, log_file: str, stamp_type: Optional[str]) -> Optional[float]:
     """
-    Get timestamp for the given line
+    Get timestamp for the given line, parsed according to stamp_type,
+    the format detected by determin_log_format for the file the line comes from
     """
-    if not line or not constants.STAMP_TYPE:
+    if not line or not stamp_type:
         return None
 
-    stamp_type = constants.STAMP_TYPE
-    if stamp_type == "rfc5424":
-        time_line = line.split()[0]
-    elif stamp_type == "syslog":
-        time_line = ' '.join(line.split()[0:3])
-    elif stamp_type == "legacy":
-        time_line = line.split()[1]
+    fields = line.split()
+    if stamp_type == "rfc5424" and len(fields) >= 1:
+        time_line = fields[0]
+    elif stamp_type == "syslog" and len(fields) >= 3:
+        time_line = ' '.join(fields[0:3])
+    elif stamp_type == "legacy" and len(fields) >= 2:
+        time_line = fields[1]
+    else:
+        return None
 
     return get_timestamp_from_time_line(time_line, stamp_type, log_file)
 
@@ -451,10 +460,9 @@ def is_our_log(context: core.Context, logf: str) -> int:
     stamp_type = determin_log_format(data)
     if not stamp_type:
         return LogType.IRREGULAR
-    constants.STAMP_TYPE = stamp_type
 
-    first_time = find_first_timestamp(head(constants.CHECK_LOG_LINES, data), logf)
-    last_time = find_first_timestamp(tail(constants.CHECK_LOG_LINES, data), logf)
+    first_time = find_first_timestamp(head(constants.CHECK_LOG_LINES, data), logf, stamp_type)
+    last_time = find_first_timestamp(tail(constants.CHECK_LOG_LINES, data), logf, stamp_type)
     from_time = context.from_time
     to_time = context.to_time
 
@@ -492,8 +500,9 @@ def print_logseg(log_file: str, from_time: float, to_time: float) -> str:
     if not data:
         return ""
 
-    from_line = 1 if from_time == 0 else findln_by_timestamp(data, from_time, log_file)
-    to_line = len(data.split('\n')) if to_time == 0 else findln_by_timestamp(data, to_time, log_file)
+    stamp_type = determin_log_format(data)
+    from_line = 1 if from_time == 0 else findln_by_timestamp(data, from_time, log_file, stamp_type)
+    to_line = len(data.split('\n')) if to_time == 0 else findln_by_timestamp(data, to_time, log_file, stamp_type)
 
     if from_line is None or to_line is None:
         return ""
