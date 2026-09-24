@@ -147,7 +147,12 @@ class ArgparseUserAtHostAppendAction(
 
 
 def _print_corosync_check_result(r):
-    if r.returncode == 0:
+    if r.is_skipped:
+        print(f"[SKIP] {r.check_name}")
+        if r.result_description:
+            for line in r.result_description.splitlines():
+                print(f"       {line}")
+    elif r.returncode == 0:
         print(term.render(f"${{GREEN}}[PASS]${{NORMAL}} {r.check_name}"))
     else:
         print(term.render(f"${{RED}}[FAIL]${{NORMAL}} {r.check_name}"))

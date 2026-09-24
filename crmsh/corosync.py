@@ -63,6 +63,17 @@ def is_qdevice_configured() -> bool:
     return get_value("quorum.device.model") == "net"
 
 
+def is_qdevice_configured_from_config(config: dict) -> bool:
+    """
+    Check if QDevice is configured from a corosync config dict.
+    """
+    quorum_config = config.get("quorum")
+    if isinstance(quorum_config, dict):
+        device_config = quorum_config.get("device")
+        return isinstance(device_config, dict) and device_config.get("model") == "net"
+    return False
+
+
 def configure_two_node(removing: bool = False, qdevice_adding: bool = False) -> None:
     """
     Enable or disable two_node in corosync.conf

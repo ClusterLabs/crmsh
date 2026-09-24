@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 @dataclasses.dataclass
 class CheckResult:
     check_name: str
+    is_skipped: bool
     checked_nodes: list[str]
     returncode: int
     result_description: typing.Optional[str]
@@ -46,6 +47,7 @@ def validate_config_file_consistency(nodes: list[str]) -> CheckResult:
             logger.error("%s", error)
         return CheckResult(
             CHECK_NAME,
+            False,
             list(ssh_errors.keys()),
             255,
             "ssh error",
@@ -57,6 +59,7 @@ def validate_config_file_consistency(nodes: list[str]) -> CheckResult:
             logger.error("%s: %s", node, process_result.stderr)
         return CheckResult(
             CHECK_NAME,
+            False,
             list(command_errors.keys()),
             functools.reduce(lambda a, b: a | b, (v.returncode for v in command_errors.values())),
             "sha256sum error",
@@ -80,6 +83,7 @@ def validate_config_file_consistency(nodes: list[str]) -> CheckResult:
             result_description.flush()
             return CheckResult(
                 CHECK_NAME,
+                False,
                 nodes,
                 1,
                 result_description.getvalue(),
@@ -87,6 +91,7 @@ def validate_config_file_consistency(nodes: list[str]) -> CheckResult:
             )
     return CheckResult(
         CHECK_NAME,
+        False,
         nodes,
         0,
         None,
@@ -106,6 +111,7 @@ def validate_config_file(node: str) -> CheckResult:
         case 0:
             return CheckResult(
                 CHECK_NAME,
+                False,
                 [node],
                 result.returncode,
                 None,
@@ -114,6 +120,7 @@ def validate_config_file(node: str) -> CheckResult:
         case _:
             return CheckResult(
                 CHECK_NAME,
+                False,
                 [node],
                 result.returncode,
                 result.stdout.decode('utf-8', 'replace').strip(),
@@ -136,6 +143,7 @@ def check_quorum_status(local_node: str) -> CheckResult:
     ):
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             result.returncode,
             result.stdout.decode('utf-8', 'replace').strip(),
@@ -146,6 +154,7 @@ def check_quorum_status(local_node: str) -> CheckResult:
     except ValueError as e:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             f"Failed to parse '{' '.join(command_args)}' output: {e}",
@@ -154,6 +163,7 @@ def check_quorum_status(local_node: str) -> CheckResult:
     if not quorum_info.quorate:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             f"The cluster is not quorate. Total votes: {quorum_info.total_votes}, Quorum: {quorum_info.quorum}",
@@ -162,6 +172,7 @@ def check_quorum_status(local_node: str) -> CheckResult:
     if quorum_info.total_votes < quorum_info.expected_votes:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             f"Total votes ({quorum_info.total_votes}) is less than expected votes ({quorum_info.expected_votes}).",
@@ -169,6 +180,7 @@ def check_quorum_status(local_node: str) -> CheckResult:
         )
     return CheckResult(
         CHECK_NAME,
+        False,
         [local_node],
         0,
         None,
@@ -236,6 +248,7 @@ def check_nodeid_to_nodename_mapping(local_node: str, config: dict) -> CheckResu
     if rc != 0:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             255,
             f"Failed to load CIB: {err}",
@@ -246,6 +259,7 @@ def check_nodeid_to_nodename_mapping(local_node: str, config: dict) -> CheckResu
     except lxml.etree.ParseError as e:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             255,
             f"Failed to parse CIB: {e}",
@@ -256,6 +270,7 @@ def check_nodeid_to_nodename_mapping(local_node: str, config: dict) -> CheckResu
     except AssertionError as e:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             255,
             f"Failed to extract cluster nodes from CIB: {e}",
@@ -284,6 +299,7 @@ def check_nodeid_to_nodename_mapping(local_node: str, config: dict) -> CheckResu
     if corosync_id_to_name == cib_id_to_name:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             0,
             None,
@@ -314,6 +330,7 @@ def check_nodeid_to_nodename_mapping(local_node: str, config: dict) -> CheckResu
         result_description.write(x)
     return CheckResult(
         CHECK_NAME,
+        False,
         [local_node],
         1,
         result_description.getvalue(),
@@ -336,6 +353,7 @@ def check_links_status(local_node: str) -> CheckResult:
     if result.returncode != 0:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             result.returncode,
             result.stdout.decode('utf-8', 'replace').strip(),
@@ -346,6 +364,7 @@ def check_links_status(local_node: str) -> CheckResult:
     except ValueError as e:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             f"Failed to parse '{' '.join(command_args)}' output: {e}",
@@ -364,6 +383,7 @@ def check_links_status(local_node: str) -> CheckResult:
         result_description = "Corosync link(s) are not operational:\n" + "\n".join(msg_parts)
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             result_description,
@@ -371,6 +391,7 @@ def check_links_status(local_node: str) -> CheckResult:
         )
     return CheckResult(
         CHECK_NAME,
+        False,
         [local_node],
         0,
         None,
@@ -416,6 +437,7 @@ def check_deprecated_transport(local_node: str, lm: corosync.LinkManager) -> Che
     if transport != 'knet':
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             2,
             f'Corosync transport "{transport}" is deprecated. Please use knet.',
@@ -424,6 +446,7 @@ def check_deprecated_transport(local_node: str, lm: corosync.LinkManager) -> Che
 
     return CheckResult(
         CHECK_NAME,
+        False,
         [local_node],
         0,
         None,
@@ -439,9 +462,10 @@ def check_knet_link_network_interface(local_node: str, lm: corosync.LinkManager)
     if lm.totem_transport() != 'knet':
         return CheckResult(
             CHECK_NAME,
+            True,
             [local_node],
             0,
-            None,
+            f"Corosync transport is '{lm.totem_transport()}'; KNet link check is not applicable.",
             None,
         )
 
@@ -457,6 +481,7 @@ def check_knet_link_network_interface(local_node: str, lm: corosync.LinkManager)
     if len(link_addrs) <= 1:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             0,
             None,
@@ -469,6 +494,7 @@ def check_knet_link_network_interface(local_node: str, lm: corosync.LinkManager)
     except Exception as e:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             f"Failed to load local network interfaces: {e}",
@@ -505,6 +531,7 @@ def check_knet_link_network_interface(local_node: str, lm: corosync.LinkManager)
             result_description.write(f"  Interface '{iface}' hosts knet links: {', '.join(map(str, links))}\n")
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             result_description.getvalue().strip(),
@@ -513,6 +540,7 @@ def check_knet_link_network_interface(local_node: str, lm: corosync.LinkManager)
 
     return CheckResult(
         CHECK_NAME,
+        False,
         [local_node],
         0,
         None,
@@ -525,20 +553,23 @@ def check_qdevice_network_interface(local_node: str, config: dict) -> CheckResul
     Check if QNetd is configured on a network interface distinct from Corosync links.
     """
     CHECK_NAME = "Check QDevice Network Interface"
-    device_config = config.get("quorum", {}).get("device", {})
-    if not isinstance(device_config, dict) or device_config.get("model") != "net":
+    if not corosync.is_qdevice_configured_from_config(config):
         return CheckResult(
             CHECK_NAME,
+            True,
             [local_node],
             0,
-            None,
+            "QDevice is not configured in corosync.conf.",
             None,
         )
+
+    device_config = config.get("quorum", {}).get("device", {})
 
     net_config = device_config.get("net", {})
     if not isinstance(net_config, dict) or not net_config.get("host"):
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             "QDevice model is 'net' but quorum.device.net.host is missing.",
@@ -550,6 +581,7 @@ def check_qdevice_network_interface(local_node: str, config: dict) -> CheckResul
     if not corosync_nics:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             0,
             None,
@@ -560,6 +592,7 @@ def check_qdevice_network_interface(local_node: str, config: dict) -> CheckResul
     if qnetd_nic is not None and qnetd_nic in corosync_nics:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             f"QNetd server '{qnetd_host}' is on network interface '{qnetd_nic}', which is also used for Corosync links ({', '.join(corosync_nics)}).",
@@ -568,6 +601,7 @@ def check_qdevice_network_interface(local_node: str, config: dict) -> CheckResul
 
     return CheckResult(
         CHECK_NAME,
+        False,
         [local_node],
         0,
         None,
@@ -663,10 +697,24 @@ def _parse_qdevice_status(output: str) -> list[_QDeviceNodeStatus]:
     return node_statuses
 
 
-def check_qdevice_status(local_node: str) -> CheckResult:
+def check_qdevice_status(
+    local_node: str,
+    config: dict,
+) -> CheckResult:
     """
     Check if QDevice status is operational on each node in quorumtool output.
     """
+    CHECK_NAME = "Check QDevice Status"
+    if not corosync.is_qdevice_configured_from_config(config):
+        return CheckResult(
+            CHECK_NAME,
+            True,
+            [local_node],
+            0,
+            "QDevice is not configured in corosync.conf.",
+            None,
+        )
+
     command_args = ['corosync-quorumtool', '-s']
     result = subprocess.run(
         command_args,
@@ -674,13 +722,13 @@ def check_qdevice_status(local_node: str) -> CheckResult:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
-    CHECK_NAME = "Check QDevice Status"
     if result.returncode not in (
             0,
             2,  # not quorate
     ):
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             result.returncode,
             result.stdout.decode('utf-8', 'replace').strip(),
@@ -691,10 +739,21 @@ def check_qdevice_status(local_node: str) -> CheckResult:
     except ValueError as e:
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             f"Failed to parse '{' '.join(command_args)}' output: {e}",
             None,
+        )
+
+    if not qdevice_nodes:
+        return CheckResult(
+            CHECK_NAME,
+            False,
+            [local_node],
+            1,
+            "QDevice is configured in corosync.conf, but not registered on any node in quorum status.",
+            "Check the status of corosync-qdevice.service.",
         )
 
     issues = []
@@ -728,6 +787,7 @@ def check_qdevice_status(local_node: str) -> CheckResult:
 
         return CheckResult(
             CHECK_NAME,
+            False,
             [local_node],
             1,
             result_description.getvalue().strip(),
@@ -736,6 +796,7 @@ def check_qdevice_status(local_node: str) -> CheckResult:
 
     return CheckResult(
         CHECK_NAME,
+        False,
         [local_node],
         0,
         None,
@@ -766,6 +827,7 @@ def check_health(
         logger.error("Failed to load or parse corosync.conf: %s", e)
         yield CheckResult(
             "Load Corosync Configuration File",
+            False,
             [local_node],
             1,
             f"Failed to load or parse corosync.conf: {e}",
@@ -784,14 +846,9 @@ def check_health(
     yield check_knet_link_network_interface(local_node, lm)
     yield check_qdevice_network_interface(local_node, corosync_config)
     yield check_quorum_status(local_node)
-    yield check_qdevice_status(local_node)
+    yield check_qdevice_status(local_node, corosync_config)
     yield check_links_status(local_node)
     yield check_nodeid_to_nodename_mapping(local_node, corosync_config)
 
 
 check_corosync_health = check_health
-
-
-
-
-
