@@ -135,12 +135,58 @@ Feature: crm sbd ui test cases
     Then    Cluster service is "started" on "hanode2"
     When    Run "crm configure primitive d Dummy" on "hanode1"
     When    Try "crm cluster init sbd -s /dev/sda5 -y"
-    Then    Expected "Or use 'crm -F/--force' option to leverage maintenance mode" in stderr
+    Then    Expected multiple lines in stderr
+      """
+      Please stop all running resources and try again
+      Or use 'crm -F/--force' option to leverage maintenance mode
+      Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting
+      ERROR: cluster.init: Cannot restart cluster: non-stonith resources are still running
+      """
+    Then    Expected return code is "1"
     When    Run "crm -F cluster init sbd -s /dev/sda5 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
+    # Directly configuring sbd timeouts while resources are running and not
+    # in maintenance mode must abort with a clear error, not silently succeed
+    When    Try "crm sbd configure watchdog-timeout=40"
+    Then    Expected multiple lines in stderr
+      """
+      Please stop all running resources and try again
+      Or use 'crm -F/--force' option to leverage maintenance mode
+      Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting
+      ERROR: sbd.configure: Cannot restart cluster: non-stonith resources are still running
+      """
+    Then    Expected return code is "1"
     When    Try "crm sbd purge"
-    Then    Expected "Or use 'crm -F/--force' option to leverage maintenance mode" in stderr
+    Then    Expected multiple lines in stderr
+      """
+      Please stop all running resources and try again
+      Or use 'crm -F/--force' option to leverage maintenance mode
+      Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting
+      ERROR: sbd.purge: Cannot restart cluster: non-stonith resources are still running
+      """
+    Then    Expected return code is "1"
     When    Run "crm -F sbd purge" on "hanode1"
     Then    Service "sbd.service" is "stopped" on "hanode1"
     Then    Service "sbd.service" is "stopped" on "hanode2"
+
+  @clean
+  Scenario: Leverage maintenance mode via crm cluster health sbd --fix
+    When    Run "crm cluster init -y" on "hanode1"
+    And     Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode1"
+    Then    Cluster service is "started" on "hanode2"
+    When    Run "crm cluster init sbd -s /dev/sda5 -y" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    When    Run "crm configure primitive d Dummy" on "hanode1"
+    When    Run "sbd -d /dev/sda5 create" on "hanode1"
+    When    Try "crm cluster health sbd --fix"
+    Then    Expected multiple lines in stderr
+      """
+      Please stop all running resources and try again
+      Or use 'crm -F/--force' option to leverage maintenance mode
+      """
+    Then    Expected return code is "1"
+    When    Run "crm -F cluster health sbd --fix" on "hanode1"
+    Then    Run "crm cluster health sbd" OK
+    Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
