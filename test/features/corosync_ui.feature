@@ -17,6 +17,8 @@ Feature: crm corosync ui test cases
     Then    Except "No such file or directory: '/etc/corosync/corosync.conf'" in stderr
     When    Try "crm corosync link remove 0" on "hanode1"
     Then    Except "No such file or directory: '/etc/corosync/corosync.conf'" in stderr
+    When    Try "crm cluster health corosync" on "hanode1"
+    Then    Expected "[FAIL] Validate Corosync Configuration File" in stdout
 
   Scenario: link show/add/update/remove
     # background
@@ -64,3 +66,19 @@ Feature: crm corosync ui test cases
     Then    Expected "2" in stdout
     When    Run "crm corosync set totem.token 6000" on "hanode1"
     Then    Expected "Use "crm corosync push" to sync" in stdout
+
+  Scenario: corosync health check
+    Given   Nodes ["hanode1", "hanode2"] are cleaned up
+    And     Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    When    Run "crm cluster health corosync" on "hanode1"
+    Then    Expected "[PASS] Check Node ID to Node Name Mapping" in stdout
+    When    Run "crm cluster health corosync --local" on "hanode1"
+    Then    Expected "Validate Corosync Configuration File Consistency" not in stdout
+    When    Run "crm cluster health corosync --json" on "hanode1"
+    Then    Expected "returncode" in stdout

@@ -63,6 +63,17 @@ def is_qdevice_configured() -> bool:
     return get_value("quorum.device.model") == "net"
 
 
+def is_qdevice_configured_from_config(config: dict) -> bool:
+    """
+    Check if QDevice is configured from a corosync config dict.
+    """
+    quorum_config = config.get("quorum")
+    if isinstance(quorum_config, dict):
+        device_config = quorum_config.get("device")
+        return isinstance(device_config, dict) and device_config.get("model") == "net"
+    return False
+
+
 def configure_two_node(removing: bool = False, qdevice_adding: bool = False) -> None:
     """
     Enable or disable two_node in corosync.conf
@@ -636,6 +647,19 @@ class ConfParser(object):
                 pass
 
 
+def load_config_file(path=None):
+    if not path:
+        path = conf()
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            dom = corosync_config_format.DomParser(f).dom()
+            ConfParser.transform_dom_with_list_schema(dom)
+            return dom
+    except (OSError, corosync_config_format.ParserException) as e:
+        raise ValueError(str(e)) from None
+
+
+
 @dataclasses.dataclass
 class LinkNode:
     nodeid: int
@@ -714,15 +738,7 @@ class LinkManager:
 
     @staticmethod
     def load_config_file(path=None):
-        if not path:
-            path = conf()
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                dom = corosync_config_format.DomParser(f).dom()
-                ConfParser.transform_dom_with_list_schema(dom)
-                return LinkManager(dom)
-        except (OSError, corosync_config_format.ParserException) as e:
-            raise ValueError(str(e)) from None
+        return LinkManager(load_config_file(path))
 
     @staticmethod
     def write_config_file(dom, path=None, file_mode=0o644):

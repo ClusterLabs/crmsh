@@ -1,0 +1,1590 @@
+# Copyright (C) 2026 Nicholas <nicholas@example.com>
+# See COPYING for license information.
+#
+# unit tests for corosync_healthcheck.py
+
+import subprocess
+import unittest
+from unittest import mock
+from crmsh import corosync_healthcheck
+
+
+class TestParseQuorumStatus(unittest.TestCase):
+    def setUp(self):
+        self.valid_output = """Quorum information
+------------------
+Date:             Fri Jun 26 13:44:28 2026
+Quorum provider:  corosync_votequorum
+Nodes:            2
+Node ID:          1
+Ring ID:          1.e
+Quorate:          Yes
+
+Votequorum information
+----------------------
+Expected votes:   3
+Highest expected: 3
+Total votes:      3
+Quorum:           2  
+Flags:            Quorate Qdevice 
+
+Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         2          1    A,V,NMW ha-3-2
+         0          1            Qdevice"""
+
+        self.not_quorate_output = """Quorum information
+------------------
+Date:             Fri Jun 26 13:44:28 2026
+Quorum provider:  corosync_votequorum
+Nodes:            2
+Node ID:          1
+Ring ID:          1.e
+Quorate:          No
+
+Votequorum information
+----------------------
+Expected votes:   3
+Highest expected: 3
+Total votes:      1
+Quorum:           2  
+Flags:            Qdevice 
+
+Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         0          0            Qdevice"""
+
+        self.blocked_output = """Quorum information
+------------------
+Date:             Fri Jun 26 13:44:28 2026
+Quorum provider:  corosync_votequorum
+Nodes:            2
+Node ID:          1
+Ring ID:          1.e
+Quorate:          No
+
+Votequorum information
+----------------------
+Expected votes:   3
+Highest expected: 3
+Total votes:      2
+Quorum:           2 Activity blocked
+Flags:            Qdevice 
+
+Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         0          1            Qdevice"""
+
+    def test_parse_quorum_status_success(self):
+        info = corosync_healthcheck._parse_quorum_status(self.valid_output)
+        self.assertEqual(info.expected_votes, 3)
+        self.assertEqual(info.total_votes, 3)
+        self.assertEqual(info.quorum, 2)
+        self.assertTrue(info.quorate)
+
+    def test_parse_quorum_status_not_quorate(self):
+        info = corosync_healthcheck._parse_quorum_status(self.not_quorate_output)
+        self.assertEqual(info.expected_votes, 3)
+        self.assertEqual(info.total_votes, 1)
+        self.assertEqual(info.quorum, 2)
+        self.assertFalse(info.quorate)
+
+    def test_parse_quorum_status_activity_blocked(self):
+        info = corosync_healthcheck._parse_quorum_status(self.blocked_output)
+        self.assertEqual(info.expected_votes, 3)
+        self.assertEqual(info.total_votes, 2)
+        self.assertEqual(info.quorum, 2)
+        self.assertFalse(info.quorate)
+
+    def test_parse_quorum_status_empty_flags(self):
+        output = """Quorum information
+------------------
+Date:             Wed Sep 23 12:29:16 2026
+Quorum provider:  corosync_votequorum
+Nodes:            1
+Node ID:          1
+Ring ID:          1.5
+Quorate:          No
+
+Votequorum information
+----------------------
+Expected votes:   2
+Highest expected: 2
+Total votes:      1
+Quorum:           2 Activity blocked
+Flags:
+
+Membership information
+----------------------
+    Nodeid      Votes Name
+         1          1 ha-3-1 (local)"""
+        info = corosync_healthcheck._parse_quorum_status(output)
+        self.assertEqual(info.expected_votes, 2)
+        self.assertEqual(info.total_votes, 1)
+        self.assertEqual(info.quorum, 2)
+        self.assertFalse(info.quorate)
+
+    def test_parse_quorum_status_missing_expected_votes(self):
+        output = """Votequorum information
+----------------------
+Highest expected: 3
+Total votes:      3
+Quorum:           2
+Flags:            Quorate"""
+        with self.assertRaises(ValueError) as excinfo:
+            corosync_healthcheck._parse_quorum_status(output)
+        self.assertIn("Missing 'Expected votes'", str(excinfo.exception))
+
+    def test_parse_quorum_status_missing_total_votes(self):
+        output = """Votequorum information
+----------------------
+Expected votes:   3
+Highest expected: 3
+Quorum:           2
+Flags:            Quorate"""
+        with self.assertRaises(ValueError) as excinfo:
+            corosync_healthcheck._parse_quorum_status(output)
+        self.assertIn("Missing 'Total votes'", str(excinfo.exception))
+
+    def test_parse_quorum_status_missing_quorum(self):
+        output = """Votequorum information
+----------------------
+Expected votes:   3
+Highest expected: 3
+Total votes:      3
+Flags:            Quorate"""
+        with self.assertRaises(ValueError) as excinfo:
+            corosync_healthcheck._parse_quorum_status(output)
+        self.assertIn("Missing 'Quorum'", str(excinfo.exception))
+
+    def test_parse_quorum_status_missing_flags(self):
+        output = """Votequorum information
+----------------------
+Expected votes:   3
+Highest expected: 3
+Total votes:      3
+Quorum:           2"""
+        with self.assertRaises(ValueError) as excinfo:
+            corosync_healthcheck._parse_quorum_status(output)
+        self.assertIn("Missing 'Flags'", str(excinfo.exception))
+
+    def test_parse_quorum_status_invalid_int(self):
+        output = """Votequorum information
+----------------------
+Expected votes:   three
+Highest expected: 3
+Total votes:      3
+Quorum:           2
+Flags:            Quorate"""
+        with self.assertRaises(ValueError):
+            corosync_healthcheck._parse_quorum_status(output)
+
+
+class TestCheckQuorumStatus(unittest.TestCase):
+    @mock.patch("subprocess.run")
+    @mock.patch("crmsh.corosync_healthcheck._parse_quorum_status")
+    def test_check_quorum_status_success(self, mock_parse, mock_run):
+        mock_proc = mock.MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = b"some raw stdout"
+        mock_run.return_value = mock_proc
+
+        mock_info = mock.MagicMock()
+        mock_info.expected_votes = 3
+        mock_info.total_votes = 3
+        mock_info.quorum = 2
+        mock_info.quorate = True
+        mock_parse.return_value = mock_info
+
+        result = corosync_healthcheck.check_quorum_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check Quorum Status")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+        self.assertIsNone(result.recommended_action)
+        mock_parse.assert_called_once_with("some raw stdout")
+
+    @mock.patch("subprocess.run")
+    @mock.patch("crmsh.corosync_healthcheck._parse_quorum_status")
+    def test_check_quorum_status_not_quorate(self, mock_parse, mock_run):
+        mock_proc = mock.MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = b"some raw stdout"
+        mock_run.return_value = mock_proc
+
+        mock_info = mock.MagicMock()
+        mock_info.expected_votes = 3
+        mock_info.total_votes = 1
+        mock_info.quorum = 2
+        mock_info.quorate = False
+        mock_parse.return_value = mock_info
+
+        result = corosync_healthcheck.check_quorum_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check Quorum Status")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("The cluster is not quorate", result.result_description)
+        self.assertEqual(result.recommended_action, "Ensure that enough nodes are online and connected to form a quorum.")
+        mock_parse.assert_called_once_with("some raw stdout")
+
+    @mock.patch("subprocess.run")
+    @mock.patch("crmsh.corosync_healthcheck._parse_quorum_status")
+    def test_check_quorum_status_votes_less_than_expected(self, mock_parse, mock_run):
+        mock_proc = mock.MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = b"some raw stdout"
+        mock_run.return_value = mock_proc
+
+        mock_info = mock.MagicMock()
+        mock_info.expected_votes = 3
+        mock_info.total_votes = 2
+        mock_info.quorum = 2
+        mock_info.quorate = True
+        mock_parse.return_value = mock_info
+
+        result = corosync_healthcheck.check_quorum_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check Quorum Status")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.result_description, "Total votes (2) is less than expected votes (3).")
+        self.assertEqual(result.recommended_action, "Check that all expected cluster nodes are online and connected.")
+        mock_parse.assert_called_once_with("some raw stdout")
+
+    @mock.patch("subprocess.run")
+    def test_check_quorum_status_command_failure(self, mock_run):
+        mock_proc = mock.MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stdout = b"corosync-quorumtool: cannot connect to corosync"
+        mock_run.return_value = mock_proc
+
+        result = corosync_healthcheck.check_quorum_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check Quorum Status")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.result_description, "corosync-quorumtool: cannot connect to corosync")
+        self.assertEqual(result.recommended_action, "Check if the corosync service is running.")
+
+    @mock.patch("subprocess.run")
+    @mock.patch("crmsh.corosync_healthcheck._parse_quorum_status")
+    def test_check_quorum_status_parse_failure(self, mock_parse, mock_run):
+        mock_proc = mock.MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = b"some raw stdout"
+        mock_run.return_value = mock_proc
+
+        mock_parse.side_effect = ValueError("Missing 'Expected votes' in quorum status output")
+
+        result = corosync_healthcheck.check_quorum_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check Quorum Status")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Failed to parse 'corosync-quorumtool -s' output", result.result_description)
+        mock_parse.assert_called_once_with("some raw stdout")
+
+
+class TestCheckNodeIDToNodeNameMapping(unittest.TestCase):
+    def setUp(self):
+        self.local_node = "node1"
+        self.valid_cib_xml = """<cib>
+  <configuration>
+    <nodes>
+      <node id="1" uname="node1"/>
+      <node id="2" uname="node2"/>
+    </nodes>
+  </configuration>
+</cib>"""
+
+    @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
+    def test_success(self, mock_get):
+        mock_get.return_value = (0, self.valid_cib_xml, "")
+        config = {
+            "nodelist": {
+                "node": [
+                    {"nodeid": "1", "name": "node1"},
+                    {"nodeid": "2", "name": "node2"}
+                ]
+            }
+        }
+
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, config)
+        self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
+    def test_cib_load_failure(self, mock_get):
+        mock_get.return_value = (1, "", "cibadmin not found")
+        config = {}
+
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, config)
+        self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
+        self.assertEqual(result.returncode, 255)
+        self.assertIn("Failed to load CIB: cibadmin not found", result.result_description)
+
+    @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
+    def test_cib_parse_failure(self, mock_get):
+        mock_get.return_value = (0, "invalid xml", "")
+        config = {}
+
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, config)
+        self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
+        self.assertEqual(result.returncode, 255)
+        self.assertIn("Failed to parse CIB", result.result_description)
+
+    @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
+    def test_mismatch_missing_in_cib(self, mock_get):
+        mock_get.return_value = (0, self.valid_cib_xml, "")
+        config = {
+            "nodelist": {
+                "node": [
+                    {"nodeid": "1", "name": "node1"},
+                    {"nodeid": "2", "name": "node2"},
+                    {"nodeid": "3", "name": "node3"}
+                ]
+            }
+        }
+
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, config)
+        self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node ID 3 with name 'node3' in corosync.conf is not found in CIB.", result.result_description)
+
+    @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
+    def test_mismatch_missing_in_corosync(self, mock_get):
+        mock_get.return_value = (0, self.valid_cib_xml, "")
+        config = {
+            "nodelist": {
+                "node": [
+                    {"nodeid": "1", "name": "node1"}
+                ]
+            }
+        }
+
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, config)
+        self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node ID 2 with name 'node2' in CIB is not found in corosync.conf.", result.result_description)
+
+    @mock.patch("crmsh.sh.ShellUtils.get_stdout_stderr")
+    def test_mismatch_different_name(self, mock_get):
+        mock_get.return_value = (0, self.valid_cib_xml, "")
+        config = {
+            "nodelist": {
+                "node": [
+                    {"nodeid": "1", "name": "node1"},
+                    {"nodeid": "2", "name": "node2-alt"}
+                ]
+            }
+        }
+
+        result = corosync_healthcheck.check_nodeid_to_nodename_mapping(self.local_node, config)
+        self.assertEqual(result.check_name, "Check Node ID to Node Name Mapping")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node ID 2 is associated with name 'node2-alt' in corosync.conf but 'node2' in CIB.", result.result_description)
+
+
+class TestParseLinksStatus(unittest.TestCase):
+    def test_parse_links_status_success_all_connected(self):
+        output = """Local node ID 1, transport knet
+LINK ID 0 udp
+	addr	= 192.168.122.73
+	status:
+		nodeid:          1:	localhost
+		nodeid:          2:	connected
+LINK ID 1 udp
+	addr	= 192.168.123.73
+	status:
+		nodeid:          1:	localhost
+		nodeid:          2:	connected"""
+        links = corosync_healthcheck._parse_links_status(output)
+        self.assertEqual(links, {
+            0: {1: "localhost", 2: "connected"},
+            1: {1: "localhost", 2: "connected"}
+        })
+
+    def test_parse_links_status_success_some_disconnected(self):
+        output = """Local node ID 1, transport knet
+LINK ID 0 udp
+	addr	= 192.168.122.73
+	status:
+		nodeid:          1:	localhost
+		nodeid:          2:	disconnected
+LINK ID 1 udp
+	addr	= 192.168.123.73
+	status:
+		nodeid:          1:	localhost
+		nodeid:          2:	disconnected"""
+        links = corosync_healthcheck._parse_links_status(output)
+        self.assertEqual(links, {
+            0: {1: "localhost", 2: "disconnected"},
+            1: {1: "localhost", 2: "disconnected"}
+        })
+
+    def test_parse_links_status_missing_link_id_before_nodeid(self):
+        output = """		nodeid:          1:	localhost"""
+        with self.assertRaises(ValueError) as excinfo:
+            corosync_healthcheck._parse_links_status(output)
+        self.assertIn("Found node ID status before any LINK ID section", str(excinfo.exception))
+
+    def test_parse_links_status_no_links(self):
+        output = """Local node ID 1, transport knet"""
+        with self.assertRaises(ValueError) as excinfo:
+            corosync_healthcheck._parse_links_status(output)
+        self.assertIn("No corosync links found in output", str(excinfo.exception))
+
+
+class TestCheckLinksStatus(unittest.TestCase):
+    @mock.patch("subprocess.run")
+    @mock.patch("crmsh.corosync_healthcheck._parse_links_status")
+    def test_check_links_status_success(self, mock_parse, mock_run):
+        mock_proc = mock.MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = b"some raw stdout"
+        mock_run.return_value = mock_proc
+
+        mock_parse.return_value = {
+            0: {1: "localhost", 2: "connected"},
+            1: {1: "localhost", 2: "connected"}
+        }
+
+        result = corosync_healthcheck.check_links_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check Corosync Links Status")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+        self.assertIsNone(result.recommended_action)
+        mock_parse.assert_called_once_with("some raw stdout")
+
+    @mock.patch("subprocess.run")
+    @mock.patch("crmsh.corosync_healthcheck._parse_links_status")
+    def test_check_links_status_some_disconnected(self, mock_parse, mock_run):
+        mock_proc = mock.MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = b"some raw stdout"
+        mock_run.return_value = mock_proc
+
+        mock_parse.return_value = {
+            0: {1: "localhost", 2: "disconnected"},
+            1: {1: "localhost", 2: "connected"}
+        }
+
+        result = corosync_healthcheck.check_links_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check Corosync Links Status")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Corosync link(s) are not operational", result.result_description)
+        self.assertIn("Link 0 to node 2 has status 'disconnected'", result.result_description)
+        self.assertEqual(result.recommended_action, "Check network connectivity and corosync configuration/service on the affected nodes.")
+        mock_parse.assert_called_once_with("some raw stdout")
+
+    @mock.patch("subprocess.run")
+    def test_check_links_status_command_failure(self, mock_run):
+        mock_proc = mock.MagicMock()
+        mock_proc.returncode = 1
+        mock_proc.stdout = b"corosync-cfgtool: cannot connect to corosync"
+        mock_run.return_value = mock_proc
+
+        result = corosync_healthcheck.check_links_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check Corosync Links Status")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.result_description, "corosync-cfgtool: cannot connect to corosync")
+        self.assertEqual(result.recommended_action, "Check if the corosync service is running.")
+
+    @mock.patch("subprocess.run")
+    @mock.patch("crmsh.corosync_healthcheck._parse_links_status")
+    def test_check_links_status_parse_failure(self, mock_parse, mock_run):
+        mock_proc = mock.MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.stdout = b"some raw stdout"
+        mock_run.return_value = mock_proc
+
+        mock_parse.side_effect = ValueError("No corosync links found in output")
+
+        result = corosync_healthcheck.check_links_status("ha-3-1")
+        self.assertEqual(result.check_name, "Check Corosync Links Status")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Failed to parse 'corosync-cfgtool -s' output", result.result_description)
+        mock_parse.assert_called_once_with("some raw stdout")
+
+
+class TestValidateConfigFileConsistency(unittest.TestCase):
+    @mock.patch("crmsh.corosync.conf")
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_validate_config_file_consistency_success(self, mock_prun, mock_conf):
+        mock_conf.return_value = "/etc/corosync/corosync.conf"
+        from crmsh.prun.prun import ProcessResult
+        mock_prun.return_value = {
+            "node1": ProcessResult(0, b"hash1  /etc/corosync/corosync.conf\n", b""),
+            "node2": ProcessResult(0, b"hash1  /etc/corosync/corosync.conf\n", b"")
+        }
+        res = corosync_healthcheck.validate_config_file_consistency(["node1", "node2"])
+        self.assertEqual(res.returncode, 0)
+        self.assertIsNone(res.result_description)
+
+    @mock.patch("crmsh.corosync.conf")
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_validate_config_file_consistency_inconsistent(self, mock_prun, mock_conf):
+        mock_conf.return_value = "/etc/corosync/corosync.conf"
+        from crmsh.prun.prun import ProcessResult
+        mock_prun.return_value = {
+            "node1": ProcessResult(0, b"hash1  /etc/corosync/corosync.conf\n", b""),
+            "node2": ProcessResult(0, b"hash2  /etc/corosync/corosync.conf\n", b"")
+        }
+        res = corosync_healthcheck.validate_config_file_consistency(["node1", "node2"])
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("Corosync configuration file /etc/corosync/corosync.conf is inconsistent across nodes:", res.result_description)
+        self.assertIn("  hash1  node1\n", res.result_description)
+        self.assertIn("  hash2  node2\n", res.result_description)
+        self.assertEqual(res.recommended_action, 'Run "crm corosync diff" to inspect the differences, and then "crm corosync push" to synchronize the configuration across cluster nodes.')
+
+    @mock.patch("crmsh.corosync.conf")
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_validate_config_file_consistency_ssh_error(self, mock_prun, mock_conf):
+        mock_conf.return_value = "/etc/corosync/corosync.conf"
+        from crmsh.prun.prun import SSHError
+        mock_prun.return_value = {
+            "node1": SSHError("root", "node1", "host unreachable")
+        }
+        res = corosync_healthcheck.validate_config_file_consistency(["node1"])
+        self.assertEqual(res.returncode, 255)
+        self.assertEqual(res.result_description, "ssh error")
+
+    @mock.patch("crmsh.corosync.conf")
+    @mock.patch("crmsh.prun.prun.prun")
+    def test_validate_config_file_consistency_command_error(self, mock_prun, mock_conf):
+        mock_conf.return_value = "/etc/corosync/corosync.conf"
+        from crmsh.prun.prun import ProcessResult
+        mock_prun.return_value = {
+            "node1": ProcessResult(1, b"", b"sha256sum: error")
+        }
+        res = corosync_healthcheck.validate_config_file_consistency(["node1"])
+        self.assertEqual(res.returncode, 1)
+        self.assertEqual(res.result_description, "sha256sum error")
+
+
+class TestValidateConfigFile(unittest.TestCase):
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_validate_config_file_success(self, mock_cluster_shell):
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_result = mock.Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = b"success"
+        mock_shell_inst.subprocess_run_without_input.return_value = mock_result
+
+        result = corosync_healthcheck.validate_config_file("node1")
+        self.assertEqual(result.check_name, "Validate Corosync Configuration File")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+        self.assertIsNone(result.recommended_action)
+        self.assertEqual(result.checked_nodes, ["node1"])
+        mock_shell_inst.subprocess_run_without_input.assert_called_once_with(
+            "node1", "root", "corosync -t",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_validate_config_file_failure(self, mock_cluster_shell):
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_result = mock.Mock()
+        mock_result.returncode = 1
+        # Include an invalid UTF-8 byte to test 'replace' decoder option
+        mock_result.stdout = b"error in config: \xff\n"
+        mock_shell_inst.subprocess_run_without_input.return_value = mock_result
+
+        result = corosync_healthcheck.validate_config_file("node1")
+        self.assertEqual(result.check_name, "Validate Corosync Configuration File")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.result_description, "error in config: \ufffd")
+        self.assertIsNone(result.recommended_action)
+        self.assertEqual(result.checked_nodes, ["node1"])
+        mock_shell_inst.subprocess_run_without_input.assert_called_once_with(
+            "node1", "root", "corosync -t",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+
+
+class TestCheckDeprecatedTransport(unittest.TestCase):
+    def test_check_deprecated_transport_knet(self):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        result = corosync_healthcheck.check_deprecated_transport("node1", mock_lm)
+        self.assertEqual(result.check_name, "Check Deprecated Corosync Transport")
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+        self.assertIsNone(result.recommended_action)
+
+    def test_check_deprecated_transport_non_knet(self):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "udp"
+
+        result = corosync_healthcheck.check_deprecated_transport("node1", mock_lm)
+        self.assertEqual(result.check_name, "Check Deprecated Corosync Transport")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('Corosync transport "udp" is deprecated. Please use knet.', result.result_description)
+        self.assertEqual(result.recommended_action, "Upgrade corosync transport to knet.")
+
+
+class TestCheckKnetLinkNetworkInterface(unittest.TestCase):
+    def test_check_knet_link_network_interface_non_knet(self):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "udpu"
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.check_name, "Check Knet Link Network Interface")
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(result.is_skipped)
+        self.assertIn("Corosync transport is 'udpu'", result.result_description)
+
+    def test_check_knet_link_network_interface_one_link(self):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link = mock.MagicMock()
+        mock_link.linknumber = 0
+        mock_node = mock.MagicMock()
+        mock_node.name = "node1"
+        mock_node.addr = "192.168.0.3"
+        mock_link.nodes = [mock_node]
+
+        mock_lm.links.return_value = [mock_link]
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_success(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.1.3"
+        mock_link2.nodes = [mock_node2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    }
+                ]
+            },
+            {
+                "ifname": "eth1",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.1.3",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_conflict(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.0.4"
+        mock_link2.nodes = [mock_node2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    },
+                    {
+                        "local": "192.168.0.4",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Multiple knet links are configured on the same network interface:", result.result_description)
+        self.assertIn("eth0", result.result_description)
+        self.assertIn("0, 1", result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_conflict_different_subnets(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.10.3"
+        mock_link2.nodes = [mock_node2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    },
+                    {
+                        "local": "192.168.10.3",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Multiple knet links are configured on the same network interface:", result.result_description)
+        self.assertIn("eth0", result.result_description)
+        self.assertIn("0, 1", result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_conflict_mixed_interfaces(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.10.3"
+        mock_link2.nodes = [mock_node2]
+
+        mock_link3 = mock.MagicMock()
+        mock_link3.linknumber = 2
+        mock_node3 = mock.MagicMock()
+        mock_node3.name = "node1"
+        mock_node3.addr = "192.168.20.3"
+        mock_link3.nodes = [mock_node3]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2, mock_link3]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    },
+                    {
+                        "local": "192.168.10.3",
+                        "prefixlen": 24
+                    }
+                ]
+            },
+            {
+                "ifname": "eth1",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.20.3",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Multiple knet links are configured on the same network interface:", result.result_description)
+        self.assertIn("eth0", result.result_description)
+        self.assertIn("0, 1", result.result_description)
+        self.assertNotIn("eth1", result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_shell_error(self, mock_get_stdout):
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node1 = mock.MagicMock()
+        mock_node1.name = "node1"
+        mock_node1.addr = "192.168.0.3"
+        mock_link1.nodes = [mock_node1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node2 = mock.MagicMock()
+        mock_node2.name = "node1"
+        mock_node2.addr = "192.168.1.3"
+        mock_link2.nodes = [mock_node2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.side_effect = ValueError("ip command not found")
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Failed to load local network interfaces", result.result_description)
+
+    @mock.patch("crmsh.sh.LocalShell.get_stdout_or_raise_error")
+    def test_check_knet_link_network_interface_other_node_ip(self, mock_get_stdout):
+        # Even if the link configuration doesn't specify node1's IP or node1 is missing from node.addr,
+        # we check the subnet using any node's IP configured on the link.
+        mock_lm = mock.MagicMock()
+        mock_lm.totem_transport.return_value = "knet"
+
+        mock_link1 = mock.MagicMock()
+        mock_link1.linknumber = 0
+        mock_node_other1 = mock.MagicMock()
+        mock_node_other1.name = "node2"
+        mock_node_other1.addr = "192.168.0.4"
+        mock_link1.nodes = [mock_node_other1]
+
+        mock_link2 = mock.MagicMock()
+        mock_link2.linknumber = 1
+        mock_node_other2 = mock.MagicMock()
+        mock_node_other2.name = "node2"
+        mock_node_other2.addr = "192.168.1.4"
+        mock_link2.nodes = [mock_node_other2]
+
+        mock_lm.links.return_value = [mock_link1, mock_link2]
+
+        mock_get_stdout.return_value = """[
+            {
+                "ifname": "eth0",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.0.3",
+                        "prefixlen": 24
+                    }
+                ]
+            },
+            {
+                "ifname": "eth1",
+                "flags": ["UP"],
+                "addr_info": [
+                    {
+                        "local": "192.168.1.3",
+                        "prefixlen": 24
+                    }
+                ]
+            }
+        ]"""
+
+        result = corosync_healthcheck.check_knet_link_network_interface("node1", mock_lm)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+
+class TestCheckQDeviceNetworkInterface(unittest.TestCase):
+    def test_qdevice_not_configured(self):
+        config = {}
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.check_name, "Check QDevice Network Interface")
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(result.is_skipped)
+        self.assertEqual(result.result_description, "QDevice is not configured in corosync.conf.")
+
+    def test_qdevice_non_net_model(self):
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "heuristics"
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(result.is_skipped)
+        self.assertEqual(result.result_description, "QDevice is not configured in corosync.conf.")
+
+    def test_qdevice_missing_host(self):
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {}
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("quorum.device.net.host is missing", result.result_description)
+        self.assertEqual(result.recommended_action, "Configure a valid host for QNetd in corosync.conf.")
+
+    @mock.patch("crmsh.corosync.get_corosync_interfaces")
+    def test_qdevice_no_corosync_interfaces(self, mock_corosync_interfaces):
+        mock_corosync_interfaces.return_value = []
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {
+                        "host": "qnetd.example.com"
+                    }
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+    @mock.patch("crmsh.corosync.get_corosync_interfaces")
+    def test_qdevice_separate_interface(self, mock_corosync_interfaces, mock_get_nic):
+        mock_corosync_interfaces.return_value = ["eth0", "eth1"]
+        mock_get_nic.return_value = "eth2"
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {
+                        "host": "192.168.2.50"
+                    }
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+        mock_get_nic.assert_called_once_with("192.168.2.50")
+
+    @mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+    @mock.patch("crmsh.corosync.get_corosync_interfaces")
+    def test_qdevice_unresolved_or_routed_nic(self, mock_corosync_interfaces, mock_get_nic):
+        mock_corosync_interfaces.return_value = ["eth0"]
+        mock_get_nic.return_value = None
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {
+                        "host": "10.200.1.50"
+                    }
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+
+    @mock.patch("crmsh.network_utils.get_nic_by_subnet_of_addr")
+    @mock.patch("crmsh.corosync.get_corosync_interfaces")
+    def test_qdevice_conflict_interface(self, mock_corosync_interfaces, mock_get_nic):
+        mock_corosync_interfaces.return_value = ["eth0", "eth1"]
+        mock_get_nic.return_value = "eth0"
+        config = {
+            "quorum": {
+                "device": {
+                    "model": "net",
+                    "net": {
+                        "host": "192.168.0.50"
+                    }
+                }
+            }
+        }
+        result = corosync_healthcheck.check_qdevice_network_interface("node1", config)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("QNetd server '192.168.0.50' is on network interface 'eth0', which is also used for Corosync links (eth0, eth1).", result.result_description)
+        self.assertEqual(result.recommended_action, "To ensure network redundancy, configure QNetd to use a network interface separate from Corosync communication links.")
+
+
+class TestParseQDeviceStatus(unittest.TestCase):
+    def test_parse_healthy(self):
+        output = """Quorum information
+------------------
+Date:             Fri Jun 26 13:44:28 2026
+Quorum provider:  corosync_votequorum
+Nodes:            2
+Node ID:          1
+Ring ID:          1.e
+Quorate:          Yes
+
+Votequorum information
+----------------------
+Expected votes:   3
+Highest expected: 3
+Total votes:      3
+Quorum:           2  
+Flags:            Quorate Qdevice 
+
+Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         2          1    A,V,NMW ha-3-2
+         0          1            Qdevice"""
+        nodes = corosync_healthcheck._parse_qdevice_status(output)
+        self.assertEqual(len(nodes), 2)
+        self.assertEqual(nodes[0].node_id, 1)
+        self.assertEqual(nodes[0].node_name, "ha-3-1")
+        self.assertEqual(nodes[0].flags, corosync_healthcheck._QDeviceNodeStatusFlag(0))
+        self.assertEqual(nodes[0].raw_flags, "A,V,NMW")
+        self.assertEqual(nodes[1].node_id, 2)
+        self.assertEqual(nodes[1].node_name, "ha-3-2")
+        self.assertEqual(nodes[1].flags, corosync_healthcheck._QDeviceNodeStatusFlag(0))
+
+    def test_parse_no_qdevice_column(self):
+        output = """Membership information
+----------------------
+    Nodeid      Votes Name
+         1          1 ha-3-1 (local)
+         2          1 ha-3-2"""
+        nodes = corosync_healthcheck._parse_qdevice_status(output)
+        self.assertEqual(nodes, [])
+
+    def test_parse_empty_qdevice_column(self):
+        output = """Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         2          1            ha-3-2
+         0          1            Qdevice"""
+        nodes = corosync_healthcheck._parse_qdevice_status(output)
+        self.assertEqual(len(nodes), 2)
+        self.assertEqual(nodes[1].node_id, 2)
+        self.assertEqual(nodes[1].flags, corosync_healthcheck._QDeviceNodeStatusFlag(0))
+        self.assertEqual(nodes[1].raw_flags, "")
+
+    def test_parse_with_active_flags(self):
+        output = """Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1   NR,NA,NV ha-3-1 (local)
+         2          1         NR ha-3-2
+         0          1            Qdevice"""
+        nodes = corosync_healthcheck._parse_qdevice_status(output)
+        self.assertEqual(len(nodes), 2)
+        self.assertEqual(nodes[0].node_id, 1)
+        expected_flags_0 = (
+            corosync_healthcheck._QDeviceNodeStatusFlag.NR
+            | corosync_healthcheck._QDeviceNodeStatusFlag.NA
+            | corosync_healthcheck._QDeviceNodeStatusFlag.NV
+        )
+        self.assertEqual(nodes[0].flags, expected_flags_0)
+        self.assertEqual(nodes[0].raw_flags, "NR,NA,NV")
+        self.assertEqual(nodes[1].node_id, 2)
+        self.assertEqual(nodes[1].flags, corosync_healthcheck._QDeviceNodeStatusFlag.NR)
+        self.assertEqual(nodes[1].raw_flags, "NR")
+
+    def test_parse_missing_membership_section(self):
+        output = """Quorum information
+------------------
+Nodes: 2"""
+        with self.assertRaises(ValueError) as ctx:
+            corosync_healthcheck._parse_qdevice_status(output)
+        self.assertIn("Missing 'Membership information' section", str(ctx.exception))
+
+    def test_parse_missing_header(self):
+        output = """Membership information
+----------------------
+         1          1    A,V,NMW ha-3-1 (local)"""
+        with self.assertRaises(ValueError) as ctx:
+            corosync_healthcheck._parse_qdevice_status(output)
+        self.assertIn("Missing membership table header", str(ctx.exception))
+
+
+class TestCheckQDeviceStatus(unittest.TestCase):
+    def setUp(self):
+        self.config = {
+            "quorum": {
+                "device": {
+                    "model": "net"
+                }
+            }
+        }
+
+    def test_check_qdevice_not_configured(self):
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1", config={})
+        self.assertEqual(result.check_name, "Check QDevice Status")
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(result.is_skipped)
+        self.assertEqual(result.result_description, "QDevice is not configured in corosync.conf.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_healthy(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         2          1    A,V,NMW ha-3-2
+         0          1            Qdevice"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1", self.config)
+        self.assertEqual(result.check_name, "Check QDevice Status")
+        self.assertFalse(result.is_skipped)
+        self.assertEqual(result.returncode, 0)
+        self.assertIsNone(result.result_description)
+        self.assertIsNone(result.recommended_action)
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_down_on_all_nodes(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes Name
+         1          1 ha-3-1 (local)
+         2          1 ha-3-2"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1", self.config)
+        self.assertFalse(result.is_skipped)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("QDevice is configured in corosync.conf, but not registered on any node in quorum status.", result.result_description)
+        self.assertEqual(result.recommended_action, "Check the status of corosync-qdevice.service.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_no_vote_nv(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Quorum information
+------------------
+Quorate:          Yes
+
+Votequorum information
+----------------------
+Flags:            Quorate Qdevice 
+
+Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1   A,NV,NMW ha-3-1 (local)
+         2          1    A,V,NMW ha-3-2
+         0          0            Qdevice (votes 1)"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1", self.config)
+        self.assertFalse(result.is_skipped)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node 'ha-3-1' (nodeid: 1) has QDevice status 'A,NV,NMW': not casting a vote (NV).", result.result_description)
+        self.assertEqual(result.recommended_action, "Check the status of corosync-qnetd.service on the qnetd node, and the connectivity between the affected nodes and the qnetd node.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_not_registered_nr(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1    A,V,NMW ha-3-1 (local)
+         2          1         NR ha-3-2
+         0          1            Qdevice"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1", self.config)
+        self.assertFalse(result.is_skipped)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node 'ha-3-2' (nodeid: 2) has QDevice status 'NR': not registered (NR).", result.result_description)
+        self.assertEqual(result.recommended_action, "Check the status of corosync-qdevice.service.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_not_available_na(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1   NA,V,NMW ha-3-1 (local)
+         2          1    A,V,NMW ha-3-2
+         0          1            Qdevice"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1", self.config)
+        self.assertFalse(result.is_skipped)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node 'ha-3-1' (nodeid: 1) has QDevice status 'NA,V,NMW': daemon is not available (NA).", result.result_description)
+        self.assertEqual(result.recommended_action, "Check the status of corosync-qdevice.service.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_multiple_issues(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"""Membership information
+----------------------
+    Nodeid      Votes    Qdevice Name
+         1          1  NA,NV,NMW ha-3-1 (local)
+         2          1         NR ha-3-2
+         0          1            Qdevice"""
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1", self.config)
+        self.assertFalse(result.is_skipped)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Node 'ha-3-1' (nodeid: 1) has QDevice status 'NA,NV,NMW': daemon is not available (NA), not casting a vote (NV).", result.result_description)
+        self.assertIn("Node 'ha-3-2' (nodeid: 2) has QDevice status 'NR': not registered (NR).", result.result_description)
+        self.assertEqual(result.recommended_action, "Check the status of corosync-qdevice.service. Check the status of corosync-qnetd.service on the qnetd node, and the connectivity between the affected nodes and the qnetd node.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_command_error(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=1,
+            stdout=b"corosync-quorumtool: cannot connect to corosync"
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1", self.config)
+        self.assertFalse(result.is_skipped)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.result_description, "corosync-quorumtool: cannot connect to corosync")
+        self.assertEqual(result.recommended_action, "Check if the corosync service is running.")
+
+    @mock.patch("subprocess.run")
+    def test_check_qdevice_parse_error(self, mock_run):
+        mock_run.return_value = mock.Mock(
+            returncode=0,
+            stdout=b"Invalid quorumtool output format"
+        )
+        result = corosync_healthcheck.check_qdevice_status("ha-3-1", self.config)
+        self.assertFalse(result.is_skipped)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Failed to parse 'corosync-quorumtool -s' output", result.result_description)
+
+
+class TestCheckHealth(unittest.TestCase):
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.corosync.LinkManager')
+    @mock.patch('crmsh.corosync.load_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    @mock.patch('crmsh.corosync_healthcheck.check_deprecated_transport')
+    @mock.patch('crmsh.corosync_healthcheck.check_knet_link_network_interface')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_network_interface')
+    @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_links_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
+    def test_check_health_success(
+        self,
+        mock_mapping,
+        mock_links,
+        mock_qdevice_status,
+        mock_quorum,
+        mock_qdevice_interface,
+        mock_knet_interface,
+        mock_transport,
+        mock_consistency,
+        mock_validate,
+        mock_load_config,
+        mock_lm_class,
+        mock_nodes,
+        mock_this_node,
+    ):
+        mock_this_node.return_value = "node1"
+        mock_nodes.return_value = ["node1", "node2"]
+        mock_lm = mock.MagicMock()
+        mock_config = {
+            "quorum": {
+                "device": {
+                    "model": "net"
+                }
+            }
+        }
+        mock_load_config.return_value = mock_config
+        mock_lm_class.return_value = mock_lm
+
+        res_validate = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 0, None, None)
+        res_consistency = corosync_healthcheck.CheckResult("Validate Corosync Configuration File Consistency", False, ["node1", "node2"], 0, None, None)
+        res_transport = corosync_healthcheck.CheckResult("Check Deprecated Corosync Transport", False, ["node1"], 0, None, None)
+        res_knet = corosync_healthcheck.CheckResult("Check Knet Link Network Interface", False, ["node1"], 0, None, None)
+        res_qdev_if = corosync_healthcheck.CheckResult("Check QDevice Network Interface", False, ["node1"], 0, None, None)
+        res_quorum = corosync_healthcheck.CheckResult("Check Quorum Status", False, ["node1"], 0, None, None)
+        res_qdevice_status = corosync_healthcheck.CheckResult("Check QDevice Status", False, ["node1"], 0, None, None)
+        res_links = corosync_healthcheck.CheckResult("Check Corosync Links Status", False, ["node1"], 0, None, None)
+        res_mapping = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", False, ["node1"], 0, None, None)
+
+        mock_validate.return_value = res_validate
+        mock_consistency.return_value = res_consistency
+        mock_transport.return_value = res_transport
+        mock_knet_interface.return_value = res_knet
+        mock_qdevice_interface.return_value = res_qdev_if
+        mock_quorum.return_value = res_quorum
+        mock_qdevice_status.return_value = res_qdevice_status
+        mock_links.return_value = res_links
+        mock_mapping.return_value = res_mapping
+
+        results = list(corosync_healthcheck.check_health(local_only=False))
+
+        self.assertEqual(len(results), 9)
+        self.assertEqual(results, [
+            res_validate,
+            res_consistency,
+            res_transport,
+            res_knet,
+            res_qdev_if,
+            res_quorum,
+            res_qdevice_status,
+            res_links,
+            res_mapping,
+        ])
+
+        mock_this_node.assert_called_once()
+        mock_nodes.assert_called_once()
+        mock_validate.assert_called_once_with("node1")
+        mock_load_config.assert_called_once()
+        mock_lm_class.assert_called_once_with(mock_config)
+        mock_consistency.assert_called_once_with(["node1", "node2"])
+        mock_transport.assert_called_once_with("node1", mock_lm)
+        mock_knet_interface.assert_called_once_with("node1", mock_lm)
+        mock_qdevice_interface.assert_called_once_with("node1", mock_config)
+        mock_quorum.assert_called_once_with("node1")
+        mock_qdevice_status.assert_called_once_with("node1", mock_config)
+        mock_links.assert_called_once_with("node1")
+        mock_mapping.assert_called_once_with("node1", mock_config)
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.corosync.LinkManager')
+    @mock.patch('crmsh.corosync.load_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    @mock.patch('crmsh.corosync_healthcheck.check_deprecated_transport')
+    @mock.patch('crmsh.corosync_healthcheck.check_knet_link_network_interface')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_network_interface')
+    @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_links_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
+    def test_check_health_without_qdevice(
+        self,
+        mock_mapping,
+        mock_links,
+        mock_qdevice_status,
+        mock_quorum,
+        mock_qdevice_interface,
+        mock_knet_interface,
+        mock_transport,
+        mock_consistency,
+        mock_validate,
+        mock_load_config,
+        mock_lm_class,
+        mock_nodes,
+        mock_this_node,
+    ):
+        mock_this_node.return_value = "node1"
+        mock_nodes.return_value = ["node1", "node2"]
+        mock_lm = mock.MagicMock()
+        mock_config = {}
+        mock_load_config.return_value = mock_config
+        mock_lm_class.return_value = mock_lm
+
+        res_validate = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 0, None, None)
+        res_consistency = corosync_healthcheck.CheckResult("Validate Corosync Configuration File Consistency", False, ["node1", "node2"], 0, None, None)
+        res_transport = corosync_healthcheck.CheckResult("Check Deprecated Corosync Transport", False, ["node1"], 0, None, None)
+        res_knet = corosync_healthcheck.CheckResult("Check Knet Link Network Interface", False, ["node1"], 0, None, None)
+        res_qdev_if = corosync_healthcheck.CheckResult("Check QDevice Network Interface", True, ["node1"], 0, "QDevice is not configured in corosync.conf.", None)
+        res_quorum = corosync_healthcheck.CheckResult("Check Quorum Status", False, ["node1"], 0, None, None)
+        res_qdevice_status = corosync_healthcheck.CheckResult("Check QDevice Status", True, ["node1"], 0, "QDevice is not configured in corosync.conf.", None)
+        res_links = corosync_healthcheck.CheckResult("Check Corosync Links Status", False, ["node1"], 0, None, None)
+        res_mapping = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", False, ["node1"], 0, None, None)
+
+        mock_validate.return_value = res_validate
+        mock_consistency.return_value = res_consistency
+        mock_transport.return_value = res_transport
+        mock_knet_interface.return_value = res_knet
+        mock_qdevice_interface.return_value = res_qdev_if
+        mock_quorum.return_value = res_quorum
+        mock_qdevice_status.return_value = res_qdevice_status
+        mock_links.return_value = res_links
+        mock_mapping.return_value = res_mapping
+
+        results = list(corosync_healthcheck.check_health(local_only=False))
+
+        self.assertEqual(len(results), 9)
+        self.assertEqual(results, [
+            res_validate,
+            res_consistency,
+            res_transport,
+            res_knet,
+            res_qdev_if,
+            res_quorum,
+            res_qdevice_status,
+            res_links,
+            res_mapping,
+        ])
+        self.assertTrue(results[4].is_skipped)
+        self.assertTrue(results[6].is_skipped)
+        mock_qdevice_interface.assert_called_once_with("node1", mock_config)
+        mock_qdevice_status.assert_called_once_with("node1", mock_config)
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.corosync.LinkManager')
+    @mock.patch('crmsh.corosync.load_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    @mock.patch('crmsh.corosync_healthcheck.check_deprecated_transport')
+    @mock.patch('crmsh.corosync_healthcheck.check_knet_link_network_interface')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_network_interface')
+    @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_links_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
+    def test_check_health_local_only(
+        self,
+        mock_mapping,
+        mock_links,
+        mock_qdevice_status,
+        mock_quorum,
+        mock_qdevice_interface,
+        mock_knet_interface,
+        mock_transport,
+        mock_consistency,
+        mock_validate,
+        mock_load_config,
+        mock_lm_class,
+        mock_nodes,
+        mock_this_node,
+    ):
+        mock_this_node.return_value = "node1"
+        mock_config = {
+            "quorum": {
+                "device": {
+                    "model": "net"
+                }
+            }
+        }
+        mock_load_config.return_value = mock_config
+        mock_lm = mock.MagicMock()
+        mock_lm_class.return_value = mock_lm
+
+        mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 0, None, None)
+        mock_transport.return_value = corosync_healthcheck.CheckResult("Check Deprecated Corosync Transport", False, ["node1"], 0, None, None)
+        mock_knet_interface.return_value = corosync_healthcheck.CheckResult("Check Knet Link Network Interface", False, ["node1"], 0, None, None)
+        mock_qdevice_interface.return_value = corosync_healthcheck.CheckResult("Check QDevice Network Interface", False, ["node1"], 0, None, None)
+        mock_quorum.return_value = corosync_healthcheck.CheckResult("Check Quorum Status", False, ["node1"], 0, None, None)
+        mock_qdevice_status.return_value = corosync_healthcheck.CheckResult("Check QDevice Status", False, ["node1"], 0, None, None)
+        mock_links.return_value = corosync_healthcheck.CheckResult("Check Corosync Links Status", False, ["node1"], 0, None, None)
+        mock_mapping.return_value = corosync_healthcheck.CheckResult("Check Node ID to Node Name Mapping", False, ["node1"], 0, None, None)
+
+        results = list(corosync_healthcheck.check_health(local_only=True))
+
+        self.assertEqual(len(results), 8)
+        mock_consistency.assert_not_called()
+        mock_nodes.assert_not_called()
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    def test_check_health_validate_config_fail(self, mock_consistency, mock_validate, mock_this_node):
+        mock_this_node.return_value = "node1"
+        res_fail = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 1, "invalid syntax", None)
+        mock_validate.return_value = res_fail
+
+        results = list(corosync_healthcheck.check_health())
+
+        self.assertEqual(results, [res_fail])
+        mock_consistency.assert_not_called()
+
+    @mock.patch('crmsh.utils.this_node')
+    @mock.patch('crmsh.corosync.load_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    def test_check_health_load_config_error(self, mock_validate, mock_load_config, mock_this_node):
+        mock_this_node.return_value = "node1"
+        res_validate = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 0, None, None)
+        mock_validate.return_value = res_validate
+        mock_load_config.side_effect = ValueError("Corrupted file")
+
+        results = list(corosync_healthcheck.check_health())
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0], res_validate)
+        self.assertEqual(results[1].check_name, "Load Corosync Configuration File")
+        self.assertFalse(results[1].is_skipped)
+        self.assertEqual(results[1].returncode, 1)
+        self.assertIn("Corrupted file", results[1].result_description)
+
+    @mock.patch('crmsh.corosync.LinkManager')
+    @mock.patch('crmsh.corosync.load_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file')
+    @mock.patch('crmsh.corosync_healthcheck.validate_config_file_consistency')
+    @mock.patch('crmsh.corosync_healthcheck.check_deprecated_transport')
+    @mock.patch('crmsh.corosync_healthcheck.check_knet_link_network_interface')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_network_interface')
+    @mock.patch('crmsh.corosync_healthcheck.check_quorum_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_qdevice_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_links_status')
+    @mock.patch('crmsh.corosync_healthcheck.check_nodeid_to_nodename_mapping')
+    def test_check_health_custom_nodes_and_alias(
+        self,
+        mock_mapping,
+        mock_links,
+        mock_qdevice_status,
+        mock_quorum,
+        mock_qdevice_interface,
+        mock_knet_interface,
+        mock_transport,
+        mock_consistency,
+        mock_validate,
+        mock_load_config,
+        mock_lm_class,
+    ):
+        mock_config = {
+            "quorum": {
+                "device": {
+                    "model": "net"
+                }
+            }
+        }
+        mock_load_config.return_value = mock_config
+        mock_validate.return_value = corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["custom1"], 0, None, None)
+        results = list(corosync_healthcheck.check_corosync_health(local_node="custom1", nodes=["custom1", "custom2"]))
+
+        mock_validate.assert_called_once_with("custom1")
+        mock_consistency.assert_called_once_with(["custom1", "custom2"])
+
+
+
+
