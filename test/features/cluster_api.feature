@@ -22,6 +22,78 @@ Feature: Functional test to cover SAP clusterAPI
     When    Run "echo 'export PATH=$PATH:/usr/sbin/' > ~hacluster/.bashrc" on "hanode2"
 
   @clean
+  Scenario: crm node standby supports on|off, multiple nodes and --all
+    # single node, explicit on|off
+    When    Run "crm node standby hanode2 on" on "hanode1"
+    Then    Node "hanode2" is standby
+    When    Run "crm node standby hanode2 off" on "hanode1"
+    Then    Node "hanode2" is online
+
+    # multiple nodes
+    When    Run "crm node standby hanode1 hanode2 on" on "hanode1"
+    Then    Node "hanode1" is standby
+    And     Node "hanode2" is standby
+    When    Run "crm node standby hanode1 hanode2 off" on "hanode1"
+    Then    Node "hanode1" is online
+    And     Node "hanode2" is online
+
+    # <lifetime> must be the last argument: after the node name(s)...
+    When    Run "crm node standby hanode2 forever" on "hanode1"
+    Then    Node "hanode2" is standby
+    When    Run "crm node standby hanode2 off" on "hanode1"
+    Then    Node "hanode2" is online
+    # ... or after "on|off" ...
+    When    Run "crm node standby hanode2 on forever" on "hanode1"
+    Then    Node "hanode2" is standby
+    When    Run "crm node standby hanode2 off" on "hanode1"
+    Then    Node "hanode2" is online
+
+    # "--all" may be given in any order together with "on|off" and
+    # "[<lifetime>]", as long as "[<lifetime>]" stays last
+    When    Run "crm node standby --all on reboot" on "hanode1"
+    And     Wait "3" seconds
+    Then    Node "hanode1" is standby
+    And     Node "hanode2" is standby
+    When    Run "crm node standby off --all reboot" on "hanode1"
+    And     Wait "3" seconds
+    Then    Node "hanode1" is online
+    And     Node "hanode2" is online
+    When    Run "crm node standby off reboot --all" on "hanode1"
+    And     Wait "3" seconds
+    Then    Node "hanode1" is online
+    And     Node "hanode2" is online
+    When    Run "crm node standby --all" on "hanode1"
+    And     Wait "3" seconds
+    Then    Node "hanode1" is standby
+    And     Node "hanode2" is standby
+    When    Run "crm node standby --all off" on "hanode1"
+    And     Wait "3" seconds
+    Then    Node "hanode1" is online
+    And     Node "hanode2" is online
+    When    Run "crm node standby on --all" on "hanode1"
+    And     Wait "3" seconds
+    Then    Node "hanode1" is standby
+    And     Node "hanode2" is standby
+    When    Run "crm node standby off --all" on "hanode1"
+    And     Wait "3" seconds
+    Then    Node "hanode1" is online
+    And     Node "hanode2" is online
+
+    # a misplaced "<lifetime>" (not last) is rejected
+    When    Try "crm node standby forever hanode2" on "hanode1"
+    Then    Expected "must be the last argument" in stderr
+    When    Try "crm node standby hanode2 forever on" on "hanode1"
+    Then    Expected "must be the last argument" in stderr
+
+    # "crm node online" is deprecated in favor of "crm node standby off"
+    When    Run "crm node standby hanode2 on" on "hanode1"
+    Then    Node "hanode2" is standby
+    When    Try "crm node online hanode2"
+    Then    Expected "The 'online' command is deprecated" in stderr
+    Then    Node "hanode2" is online
+
+
+  @clean
   Scenario: crm node maintenance supports on|off
     When    Run "crm node maintenance hanode2 on" on "hanode1"
     Then    Node "hanode2" is maintenance
@@ -216,4 +288,3 @@ Feature: Functional test to cover SAP clusterAPI
     And     Run "crm cluster stop" on "hanode1"
     Then    Expected return code is "0"
     Then    Expected "The cluster stack already stopped on hanode1" in stdout
-
