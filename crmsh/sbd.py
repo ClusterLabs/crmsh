@@ -535,7 +535,8 @@ class SBDManager(object):
 
         if not utils.package_is_installed("sbd"):
             return
-        self._watchdog_inst = Watchdog(_input=self._context.watchdog)
+        node_list = None if self._context.cluster_is_running else [utils.this_node()]
+        self._watchdog_inst = Watchdog(_input=self._context.watchdog, node_list=node_list)
         self._watchdog_inst.init_watchdog()
         self._get_sbd_device()
         if not self._sbd_devices and not self.diskless_sbd:

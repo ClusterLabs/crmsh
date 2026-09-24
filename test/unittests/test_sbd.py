@@ -570,11 +570,13 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.sbd.SBDManager._get_sbd_device')
     @mock.patch('crmsh.watchdog.Watchdog')
     @mock.patch('crmsh.utils.package_is_installed')
-    def test_sbd_init_return(self, mock_package, mock_watchdog, mock_get_device, mock_initialize, mock_update, mock_invoke):
+    @mock.patch('crmsh.utils.this_node')
+    def test_sbd_init_return(self, mock_this_node, mock_package, mock_watchdog, mock_get_device, mock_initialize, mock_update, mock_invoke):
         mock_package.return_value = True
         self.sbd_inst._sbd_devices = None
         self.sbd_inst.diskless_sbd = False
-        self.sbd_inst._context = mock.Mock(watchdog=None)
+        self.sbd_inst._context = mock.Mock(watchdog=None, cluster_is_running=False)
+        mock_this_node.return_value = "node1"
         mock_watchdog_inst = mock.Mock()
         mock_watchdog.return_value = mock_watchdog_inst
         mock_watchdog_inst.init_watchdog = mock.Mock()
@@ -585,7 +587,7 @@ class TestSBDManager(unittest.TestCase):
         mock_get_device.assert_called_once_with()
         mock_initialize.assert_not_called()
         mock_update.assert_not_called()
-        mock_watchdog.assert_called_once_with(_input=None)
+        mock_watchdog.assert_called_once_with(_input=None, node_list=["node1"])
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
         mock_invoke.assert_called_once_with("systemctl disable sbd.service")
  
@@ -598,7 +600,7 @@ class TestSBDManager(unittest.TestCase):
     @mock.patch('crmsh.utils.package_is_installed')
     def test_sbd_init(self, mock_package, mock_watchdog, mock_get_device, mock_initialize, mock_update, mock_warn, mock_enable_sbd):
         mock_package.return_value = True
-        self.sbd_inst_diskless._context = mock.Mock(watchdog=None)
+        self.sbd_inst_diskless._context = mock.Mock(watchdog=None, cluster_is_running=True)
         mock_watchdog_inst = mock.Mock()
         mock_watchdog.return_value = mock_watchdog_inst
         mock_watchdog_inst.init_watchdog = mock.Mock()
@@ -608,7 +610,7 @@ class TestSBDManager(unittest.TestCase):
         mock_get_device.assert_called_once_with()
         mock_initialize.assert_called_once_with()
         mock_update.assert_called_once_with()
-        mock_watchdog.assert_called_once_with(_input=None)
+        mock_watchdog.assert_called_once_with(_input=None, node_list=None)
         mock_watchdog_inst.init_watchdog.assert_called_once_with()
         mock_warn.assert_called_once_with()
         mock_enable_sbd.assert_called_once_with()
