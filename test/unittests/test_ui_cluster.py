@@ -1,11 +1,13 @@
 import logging
 import unittest
+from io import StringIO
 try:
     from unittest import mock
 except ImportError:
     import mock
 
 from crmsh import ui_cluster
+from crmsh import corosync_healthcheck
 
 
 class TestCluster(unittest.TestCase):
@@ -179,3 +181,90 @@ class TestCluster(unittest.TestCase):
             mock.call("pacemaker.service", remote_addr="node1"),
             ])
         mock_info.assert_not_called()
+
+    @mock.patch('crmsh.corosync_healthcheck.check_health')
+    def test_do_health_corosync_success(self, mock_check_health):
+        mock_check_health.return_value = iter([
+            corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 0, None, None),
+            corosync_healthcheck.CheckResult("Validate Corosync Configuration File Consistency", False, ["node1", "node2"], 0, None, None),
+        ])
+
+        res = self.ui_cluster_inst.do_health(None, "corosync")
+        self.assertTrue(res)
+        mock_check_health.assert_called_once_with(local_only=False)
+
+    @mock.patch('crmsh.corosync_healthcheck.check_health')
+    def test_do_health_corosync_local_fail(self, mock_check_health):
+        mock_check_health.return_value = iter([
+            corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 1, "config file is invalid", "Fix it"),
+        ])
+
+        res = self.ui_cluster_inst.do_health(None, "corosync")
+        self.assertFalse(res)
+        mock_check_health.assert_called_once_with(local_only=False)
+
+    @mock.patch('sys.stdout', new_callable=StringIO)
+    @mock.patch('crmsh.corosync_healthcheck.check_health')
+    def test_do_health_corosync_json(self, mock_check_health, mock_stdout):
+        mock_check_health.return_value = iter([
+            corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 0, None, None),
+            corosync_healthcheck.CheckResult("Validate Corosync Configuration File Consistency", False, ["node1", "node2"], 1, "checksum error", None),
+        ])
+
+        res = self.ui_cluster_inst.do_health(None, "corosync", "--json")
+        self.assertFalse(res)
+        mock_check_health.assert_called_once_with(local_only=False)
+
+        output = mock_stdout.getvalue()
+        import json
+        parsed = json.loads(output)
+        self.assertEqual(parsed["returncode"], 1)
+        self.assertEqual(len(parsed["results"]), 2)
+        self.assertEqual(parsed["results"][0]["check_name"], "Validate Corosync Configuration File")
+        self.assertEqual(parsed["results"][0]["is_skipped"], False)
+        self.assertEqual(parsed["results"][1]["check_name"], "Validate Corosync Configuration File Consistency")
+        self.assertEqual(parsed["results"][1]["returncode"], 1)
+
+    @mock.patch('crmsh.corosync_healthcheck.check_health')
+    def test_do_health_corosync_local(self, mock_check_health):
+        mock_check_health.return_value = iter([
+            corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 0, None, None),
+        ])
+
+        res = self.ui_cluster_inst.do_health(None, "corosync", "--local")
+        self.assertTrue(res)
+        mock_check_health.assert_called_once_with(local_only=True)
+
+    @mock.patch('sys.stdout', new_callable=StringIO)
+    @mock.patch('crmsh.corosync_healthcheck.check_health')
+    def test_do_health_corosync_local_json(self, mock_check_health, mock_stdout):
+        mock_check_health.return_value = iter([
+            corosync_healthcheck.CheckResult("Validate Corosync Configuration File", False, ["node1"], 0, None, None),
+        ])
+
+        res = self.ui_cluster_inst.do_health(None, "corosync", "--local", "--json")
+        self.assertTrue(res)
+        mock_check_health.assert_called_once_with(local_only=True)
+
+        output = mock_stdout.getvalue()
+        import json
+        parsed = json.loads(output)
+        self.assertEqual(parsed["returncode"], 0)
+        self.assertEqual(len(parsed["results"]), 1)
+        self.assertEqual(parsed["results"][0]["check_name"], "Validate Corosync Configuration File")
+        self.assertEqual(parsed["results"][0]["is_skipped"], False)
+
+    @mock.patch('sys.stdout', new_callable=StringIO)
+    @mock.patch('crmsh.corosync_healthcheck.check_health')
+    def test_do_health_corosync_with_skipped(self, mock_check_health, mock_stdout):
+        mock_check_health.return_value = iter([
+            corosync_healthcheck.CheckResult("Check QDevice Status", True, ["node1"], 0, "QDevice is not configured in corosync.conf.", None),
+        ])
+
+        res = self.ui_cluster_inst.do_health(None, "corosync")
+        self.assertTrue(res)
+        mock_check_health.assert_called_once_with(local_only=False)
+
+        output = mock_stdout.getvalue()
+        self.assertIn("[SKIP] Check QDevice Status", output)
+        self.assertIn("QDevice is not configured in corosync.conf.", output)

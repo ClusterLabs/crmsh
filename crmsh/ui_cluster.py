@@ -12,6 +12,9 @@ import tarfile
 import subprocess
 import glob
 import time
+import json
+import dataclasses
+import functools
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import crmsh.parallax
@@ -22,6 +25,8 @@ from . import scripts
 from . import completers as compl
 from . import bootstrap
 from . import corosync
+from . import corosync_healthcheck
+from . import term
 from . import qdevice
 from . import xmlutil
 from . import cibconfig
@@ -140,6 +145,23 @@ class ArgparseUserAtHostAppendAction(
 ):
     pass
 
+
+def _print_corosync_check_result(r):
+    if r.is_skipped:
+        print(f"[SKIP] {r.check_name}")
+        if r.result_description:
+            for line in r.result_description.splitlines():
+                print(f"       {line}")
+    elif r.returncode == 0:
+        print(term.render(f"${{GREEN}}[PASS]${{NORMAL}} {r.check_name}"))
+    else:
+        print(term.render(f"${{RED}}[FAIL]${{NORMAL}} {r.check_name}"))
+        if r.result_description:
+            for line in r.result_description.splitlines():
+                print(f"       {line}")
+        if r.recommended_action:
+            for line in r.recommended_action.splitlines():
+                print(f"       Recommended Action: {line}")
 
 
 class Cluster(command.UI):
@@ -811,7 +833,7 @@ to get the geo cluster configuration.""",
         bootstrap.bootstrap_arbitrator(geo_context)
         return True
 
-    HEALTH_COMPONENTS = ['hawk2', 'sles16', 'sbd']
+    HEALTH_COMPONENTS = ['hawk2', 'sles16', 'sbd', 'corosync']
     @command.completers(compl.choice(HEALTH_COMPONENTS))
     def do_health(self, context, *args):
         '''
@@ -878,6 +900,33 @@ to get the geo cluster configuration.""",
                 except migration.MigrationFailure as e:
                     logger.error('%s', e)
                     return False
+
+            case 'corosync':
+                corosync_parser = argparse.ArgumentParser('corosync')
+                corosync_parser.add_argument('--local', action='store_true')
+                corosync_parser.add_argument('--json', action='store_true')
+                try:
+                    corosync_args = corosync_parser.parse_args(remaining_args)
+                except SystemExit:
+                    return False
+
+                results = []
+                for res in corosync_healthcheck.check_health(local_only=corosync_args.local):
+                    results.append(res)
+                    if not corosync_args.json:
+                        _print_corosync_check_result(res)
+
+                returncode = functools.reduce(lambda a, b: a | b, (r.returncode for r in results), 0)
+                if corosync_args.json:
+                    json_data = {
+                        "returncode": returncode,
+                        "results": [dataclasses.asdict(r) for r in results]
+                    }
+                    json.dump(json_data, sys.stdout, ensure_ascii=False)
+                    sys.stdout.write('\n')
+
+                return 0 == returncode
+
             case _:
                 logger.error('Unknown component: %s', parsed_args.component)
                 return False

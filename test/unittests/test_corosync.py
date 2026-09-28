@@ -35,6 +35,32 @@ def test_query_qdevice_status_exception(mock_configured):
     mock_configured.assert_called_once_with()
 
 
+def test_is_qdevice_configured_from_config():
+    assert corosync.is_qdevice_configured_from_config({
+        "quorum": {
+            "device": {
+                "model": "net"
+            }
+        }
+    }) is True
+
+    assert corosync.is_qdevice_configured_from_config({}) is False
+    assert corosync.is_qdevice_configured_from_config({"quorum": {}}) is False
+    assert corosync.is_qdevice_configured_from_config({"quorum": None}) is False
+    assert corosync.is_qdevice_configured_from_config({
+        "quorum": {
+            "device": {
+                "model": "other"
+            }
+        }
+    }) is False
+    assert corosync.is_qdevice_configured_from_config({
+        "quorum": {
+            "device": None
+        }
+    }) is False
+
+
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.corosync.is_qdevice_configured')
 def test_query_qdevice_status(mock_configured, mock_run):
