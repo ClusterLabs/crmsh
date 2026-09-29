@@ -1396,6 +1396,7 @@ done
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.bootstrap.confirm')
     def test_configure_qdevice_interactive(self, mock_confirm, mock_info, mock_installed, mock_prompt, mock_qdevice):
+        mock_qdevice.QNETD_DEFAULT_PORT = 5403
         bootstrap._global_variables = mock.Mock(args=mock.Mock(yes_to_all=False))
         mock_confirm.return_value = True
         mock_installed.return_value = True
@@ -1407,7 +1408,7 @@ done
         mock_confirm.assert_called_once_with("Do you want to configure QDevice?")
         mock_prompt.assert_has_calls([
             mock.call("HOST or IP of the QNetd server to be used"),
-            mock.call("TCP PORT of QNetd server",
+            mock.call("TCP port of QNetd server", default="5403",
                 valid_func=mock.ANY),
             mock.call("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
                 valid_func=mock.ANY),
