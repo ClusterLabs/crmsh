@@ -505,8 +505,7 @@ class SBD(command.UI):
         logger.info("Remove devices: %s", ';'.join(devices_to_remove_from_config))
         update_dict = {"SBD_DEVICE": ";".join(left_device_list)}
         with utils.leverage_maintenance_mode() as enabled:
-            if not utils.able_to_restart_cluster(enabled):
-                return
+            utils.check_cluster_restart_allowed(enabled)
             sbd.SBDManager.update_sbd_configuration(update_dict)
             bootstrap.restart_cluster()
 
@@ -607,8 +606,7 @@ class SBD(command.UI):
         Purge SBD from cluster by leveraging maintenance mode
         '''
         with utils.leverage_maintenance_mode() as enabled:
-            if not utils.able_to_restart_cluster(enabled):
-                return False
+            utils.check_cluster_restart_allowed(enabled)
             sbd.purge_sbd_from_cluster()
             bootstrap.restart_cluster()
 

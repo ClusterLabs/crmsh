@@ -2842,13 +2842,22 @@ def validate_and_get_reachable_nodes(
     return member_list + remote_list
 
 
-def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
+class ClusterRestartNotAllowed(ValueError):
+    """
+    Raised by check_cluster_restart_allowed() when the cluster cannot be safely
+    restarted right now, e.g. because non-stonith resources (or DLM-related
+    resources while in maintenance mode) are still running.
+    """
+    pass
+
+
+def check_cluster_restart_allowed(in_maintenance_mode: bool = False) -> bool:
     """
     Check whether it is able to restart cluster now
     1. If pacemaker is not running, return True
     2. If no non-stonith resource is running, return True
     3. If in maintenance mode and DLM is not running, return True
-    4. Otherwise, return False with warning messages to guide user
+    4. Otherwise, raise ClusterRestartNotAllowed with warning messages to guide user
     """
     if not ServiceManager().service_is_active(constants.PCMK_SERVICE):
         return True
@@ -2859,7 +2868,10 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
         if storage_utils.is_dlm_running():
             dlm_related_ids = crm_mon_parser.get_resource_top_parent_id_set_via_type(constants.DLM_CONTROLD_RA)
             logger.warning("Please stop DLM related resources (%s) and try again", ', '.join(dlm_related_ids))
-            return False
+            logger.info("Aborting the configuration change attempt")
+            raise ClusterRestartNotAllowed(
+                f"Cannot restart cluster: DLM related resources ({', '.join(dlm_related_ids)}) are still running"
+            )
         else:
             return True
     else:
@@ -2867,7 +2879,7 @@ def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
         logger.warning("Or use 'crm -F/--force' option to leverage maintenance mode")
         logger.warning("Understand risks that running RA has no cluster protection while the cluster is in maintenance mode and restarting")
         logger.info("Aborting the configuration change attempt")
-        return False
+        raise ClusterRestartNotAllowed("Cannot restart cluster: non-stonith resources are still running")
 
 
 @dataclass(frozen=True, slots=True)
