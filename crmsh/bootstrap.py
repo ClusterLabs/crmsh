@@ -1531,7 +1531,7 @@ def configure_qdevice_interactive():
             logger.error("%s", err)
 
     _global_variables.args.qnetd_addr_input = qnetd_addr_input
-    qnetd_port = prompt_for_string("TCP PORT of QNetd server",
+    qnetd_port = prompt_for_string("TCP port of QNetd server", default=str(qdevice.QDevice.QNETD_DEFAULT_PORT),
             valid_func=lambda port: qdevice.QDevice.check_qnetd_port(port, cb))
     qdevice_algo = prompt_for_string("QNetd decision ALGORITHM (ffsplit/lms)", default="ffsplit",
             valid_func=lambda algo: qdevice.QDevice.check_qdevice_algo(algo, cb))
