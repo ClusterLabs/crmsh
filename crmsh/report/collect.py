@@ -609,3 +609,15 @@ def collect_corosync_status(context: core.Context) -> None:
             f.write(f"# {cmd}\n")
             f.write(utils.get_cmd_output(cmd))
     logger.debug(f"Dump corosync status info into {utils.real_path(corosync_f)}")
+
+
+def collect_cluster_health(context: core.Context) -> None:
+    cluster_health_f = os.path.join(context.work_dir, constants.CLUSTER_HEALTH_F)
+    sub_cmds = ["corosync", "hawk2", "sbd", "sles16"]
+    with open(cluster_health_f, "w") as f:
+        for sub_cmd in sub_cmds:
+            cmd = f"crm cluster health {sub_cmd}"
+            f.write(f"\n\n{DIVIDER}\n")
+            f.write(f"# {cmd}\n")
+            f.write(utils.get_cmd_output(cmd))
+    logger.debug(f"Dump cluster health info into {utils.real_path(cluster_health_f)}")
