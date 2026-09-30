@@ -392,11 +392,12 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check._check_config_consistency.assert_called_once()
 
     @patch('crmsh.sbd.SBDConfigChecker._check_deprecated_property')
+    @patch("crmsh.watchdog.Watchdog.warn_if_using_softdog")
     @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
     @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_not_fix(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_check_deprecated_property):
+    def test_check_and_fix_not_fix(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_warn_if_using_softdog, mock_check_deprecated_property):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
@@ -425,6 +426,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check._check_config_consistency.assert_called_once()
         self.instance_check.sbd_timeout._load_configurations_from_runtime.assert_called_once()
         self.instance_check._check_sbd_disk_metadata.assert_called_once()
+        mock_warn_if_using_softdog.assert_called_once_with()
 
     @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.utils.check_all_nodes_reachable')
@@ -445,11 +447,12 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.assertTrue("Failed to fix SBD disk metadata" in str(context.exception))
 
     @patch('crmsh.sbd.SBDConfigChecker._check_deprecated_property')
+    @patch("crmsh.watchdog.Watchdog.warn_if_using_softdog")
     @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
     @patch('crmsh.utils.list_cluster_nodes_except_me')
     @patch('crmsh.utils.check_all_nodes_reachable')
     @patch('crmsh.sbd.ServiceManager')
-    def test_check_and_fix_fix_success(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_check_deprecated_property):
+    def test_check_and_fix_fix_success(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_warn_if_using_softdog, mock_check_deprecated_property):
         mock_service_manager_inst = Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.service_is_active = Mock(return_value=True)
@@ -486,6 +489,8 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix._check_fencing_watchdog_timeout.assert_called_once()
         self.instance_fix._check_fencing_timeout.assert_called_once()
         self.instance_fix._check_sbd_delay_start_unset_dropin.assert_called_once()
+
+        mock_warn_if_using_softdog.assert_called_once_with()
 
     @patch('logging.Logger.error')
     @patch('logging.Logger.warning')
@@ -1199,7 +1204,7 @@ class TestSBDManager(unittest.TestCase):
         mock_exists.return_value = False
         mock_ServiceManager.return_value.disable_service = Mock()
         sbdmanager_instance = SBDManager()
-        sbdmanager_instance.join_sbd("remote_user", "peer_host")
+        sbdmanager_instance.join_sbd("peer_host")
         mock_exists.assert_called_once_with(sbd.SBDManager.SYSCONFIG_SBD)
         mock_ServiceManager.return_value.disable_service.assert_called_once_with(constants.SBD_SERVICE)
 
@@ -1219,7 +1224,7 @@ class TestSBDManager(unittest.TestCase):
 
         sbdmanager_instance = SBDManager()
         sbdmanager_instance.enable_sbd_service = Mock()
-        sbdmanager_instance.join_sbd("remote_user", "peer_host")
+        sbdmanager_instance.join_sbd("peer_host")
 
         mock_logger_info.assert_called_once_with("Got SBD configuration")
 
@@ -1239,7 +1244,7 @@ class TestSBDManager(unittest.TestCase):
         sbdmanager_instance = SBDManager()
         sbdmanager_instance._warn_diskless_sbd = Mock()
         sbdmanager_instance.enable_sbd_service = Mock()
-        sbdmanager_instance.join_sbd("remote_user", "peer_host")
+        sbdmanager_instance.join_sbd("peer_host")
 
         mock_logger_info.assert_called_once_with("Got diskless SBD configuration")
 
