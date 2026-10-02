@@ -13,7 +13,6 @@ from crmsh import completers
 from crmsh import sh
 from crmsh import xmlutil
 from crmsh import constants
-from crmsh import options
 from crmsh.service_manager import ServiceManager
 
 
@@ -77,15 +76,6 @@ def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str
         if not any(c.startswith(p) for c in completed_list)
     ]
     return parameters_pool
-
-
-def _handle_force_option(args):
-    _force = False
-    if args and args[-1] in ("-F", "--force"):
-        _force = True
-        args = args[:-1]
-    options.force |= _force
-    return args
 
 
 class SBD(command.UI):
@@ -505,8 +495,7 @@ class SBD(command.UI):
         logger.info("Remove devices: %s", ';'.join(devices_to_remove_from_config))
         update_dict = {"SBD_DEVICE": ";".join(left_device_list)}
         with utils.leverage_maintenance_mode() as enabled:
-            if not utils.able_to_restart_cluster(enabled):
-                return
+            utils.check_cluster_restart_allowed(enabled)
             sbd.SBDManager.update_sbd_configuration(update_dict)
             bootstrap.restart_cluster()
 
@@ -523,7 +512,7 @@ class SBD(command.UI):
             logger.info("Please use 'crm cluster init sbd -s <dev1> [-s <dev2> [-s <dev3>]]' to configure the disk-based SBD first")
             return False
 
-        args = _handle_force_option(args)
+        args = utils.handle_trailing_force_option(args)
         try:
             if not args:
                 raise self.SyntaxError("No argument")
@@ -556,7 +545,7 @@ class SBD(command.UI):
         '''
         Implement sbd configure command
         '''
-        args = _handle_force_option(args)
+        args = utils.handle_trailing_force_option(args)
         try:
             self._load_attributes()
             if not args:
@@ -607,8 +596,7 @@ class SBD(command.UI):
         Purge SBD from cluster by leveraging maintenance mode
         '''
         with utils.leverage_maintenance_mode() as enabled:
-            if not utils.able_to_restart_cluster(enabled):
-                return False
+            utils.check_cluster_restart_allowed(enabled)
             sbd.purge_sbd_from_cluster()
             bootstrap.restart_cluster()
 
@@ -623,7 +611,7 @@ class SBD(command.UI):
         if self.device_list_from_config:
             sbd.SBDUtils.verify_sbd_device(self.device_list_from_config, self.cluster_nodes)
 
-        args = _handle_force_option(args)
+        args = utils.handle_trailing_force_option(args)
         purge_crashdump = False
         if args:
             if args[0] == "crashdump":
