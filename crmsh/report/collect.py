@@ -599,8 +599,6 @@ def collect_corosync_status(context: core.Context) -> None:
     corosync_f = os.path.join(context.work_dir, constants.COROSYNC_STATUS_F)
     cmd_list = [
         "crm corosync status",
-        "crm corosync link show",
-        "crm corosync status cpg",
         "corosync-cmapctl"
     ]
     with open(corosync_f, "w") as f:

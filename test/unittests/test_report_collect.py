@@ -567,7 +567,7 @@ id            0x19041a12
         mock_open_write = mock.mock_open()
         file_handle = mock_open_write.return_value.__enter__.return_value
         mock_open_file.return_value = mock_open_write.return_value
-        mock_get_cmd_output.side_effect = ["data1", "data2", "data3", "data4"]
+        mock_get_cmd_output.side_effect = ["data1", "data2"]
 
         collect.collect_corosync_status(mock_ctx_inst)
 
@@ -577,14 +577,8 @@ id            0x19041a12
             mock.call("# crm corosync status\n"),
             mock.call("data1"),
             mock.call(f"\n\n{collect.DIVIDER}\n"),
-            mock.call("# crm corosync link show\n"),
-            mock.call("data2"),
-            mock.call(f"\n\n{collect.DIVIDER}\n"),
-            mock.call("# crm corosync status cpg\n"),
-            mock.call("data3"),
-            mock.call(f"\n\n{collect.DIVIDER}\n"),
             mock.call("# corosync-cmapctl\n"),
-            mock.call("data4")
+            mock.call("data2")
         ])
         mock_debug.assert_called_once_with(f"Dump corosync status info into {mock_real_path.return_value}")
 
