@@ -877,7 +877,7 @@ done
         bootstrap.bootstrap_add(ctx)
         mock_this_node.assert_not_called()
 
-    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.subprocess_run_without_input')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.this_node')
     def test_bootstrap_add(self, mock_this_node, mock_info, mock_run):
@@ -891,6 +891,7 @@ done
             use_ssh_agent=True,
         )
         mock_this_node.return_value = "node1"
+        mock_run.return_value = mock.Mock(returncode=0)
         bootstrap.bootstrap_add(ctx)
         mock_info.assert_has_calls([
             mock.call("Adding node node2 to cluster"),
@@ -899,7 +900,7 @@ done
             mock.call("Running command on node3: crm cluster join -y  -i eth1 -i eth2 -c alice@node1")
             ])
 
-    @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
+    @mock.patch('crmsh.sh.ClusterShell.subprocess_run_without_input')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.utils.this_node')
     def test_bootstrap_add_no_ssh_agent(self, mock_this_node, mock_info, mock_run):
@@ -913,6 +914,7 @@ done
             use_ssh_agent=False,
         )
         mock_this_node.return_value = "node1"
+        mock_run.return_value = mock.Mock(returncode=0)
         bootstrap.bootstrap_add(ctx)
         mock_info.assert_has_calls([
             mock.call("Adding node node2 to cluster"),
@@ -920,6 +922,19 @@ done
             mock.call("Adding node node3 to cluster"),
             mock.call("Running command on node3: crm cluster join -y  -i eth1 -i eth2 --no-use-ssh-agent -c alice@node1")
         ])
+
+    @mock.patch("crmsh.utils.fatal")
+    @mock.patch("crmsh.sh.ClusterShell.subprocess_run_without_input")
+    @mock.patch("logging.Logger.info")
+    @mock.patch("crmsh.utils.this_node")
+    def test_bootstrap_add_failed(self, mock_this_node, mock_info, mock_run, mock_fatal):
+        ctx = mock.Mock(current_user="alice", interfaces_inst=mock.Mock(input_nic_list=[]))
+        ctx.args = mock.Mock(user_at_node_list=["node2"], use_ssh_agent=True)
+        mock_this_node.return_value = "node1"
+        mock_run.return_value = mock.Mock(returncode=1)
+        bootstrap.bootstrap_add(ctx)
+        mock_fatal.assert_called_once()
+
 
     @mock.patch('crmsh.bootstrap.swap_key_for_hacluster')
     @mock.patch('crmsh.bootstrap.swap_public_ssh_key')
