@@ -179,3 +179,35 @@ Feature: crm report functional test for verifying bugs
     When    Try "crm report report" on "hanode1"
     # Should no exception here
     Then    Expected "TypeError:" not in stderr
+
+  @clean
+  Scenario: Archived and current logs in different timestamp formats
+    # Archived log in syslog format (older)
+    When    Write multi lines to file "/var/log/log3" on "hanode1"
+      """
+      Sep 08 08:36:34 node1 syslog message line1
+      Sep 08 08:37:01 node1 syslog message line2
+      """
+    And     Run "xz /var/log/log3" on "hanode1"
+    And     Run "touch -m -t 202201010000 /var/log/log3.xz" on "hanode1"
+    # Current log in rfc5424 format (newer), e.g. after changing the syslog template
+    When    Write multi lines to file "/var/log/log3" on "hanode1"
+      """
+      2022-09-08T14:27:15.003Z node1 myapp - rfc5424 message line3
+      2022-09-08T14:28:15.003Z node1 myapp - rfc5424 message line4
+      """
+    And     Run "touch -m -t 202201010001 /var/log/log3" on "hanode1"
+    And     Run "crm report -f 20200901 -E /var/log/log3 report1" on "hanode1"
+    Then    File "log3" in "report1.tar.bz2"
+    When    Run "tar jxf report1.tar.bz2" on "hanode1"
+    And     Run "cat report1/hanode1/log3" on "hanode1"
+    # The format detected for the last checked file (log3.xz, syslog) must not
+    # be reused to parse the current rfc5424 log, otherwise line3/line4 are lost
+    Then    Expected multiple lines in output
+      """
+      Sep 08 08:36:34 node1 syslog message line1
+      Sep 08 08:37:01 node1 syslog message line2
+      2022-09-08T14:27:15.003Z node1 myapp - rfc5424 message line3
+      2022-09-08T14:28:15.003Z node1 myapp - rfc5424 message line4
+      """
+    When    Run "rm -rf report1.tar.bz2 report1 /var/log/log3 /var/log/log3.xz" on "hanode1"
