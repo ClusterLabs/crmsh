@@ -17,7 +17,7 @@ env:
 
 jobs:
   build_image:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@v6
     - name: Get current week
@@ -38,7 +38,7 @@ jobs:
         podman save -o /tmp/haleap.tar haleap:ci
 
   general_check:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
     - uses: actions/checkout@v6
@@ -56,7 +56,7 @@ jobs:
         pylint --rcfile pylint.toml crmsh
 
   unit_test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         python-version: ['3.11', '3.12', '3.13', '3.14']
@@ -82,7 +82,7 @@ jobs:
 
   functional_test_crm_report_bugs:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -99,7 +99,7 @@ jobs:
 
   functional_test_crm_report_normal:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -116,7 +116,7 @@ jobs:
 
   functional_test_bootstrap_bugs:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -133,7 +133,7 @@ jobs:
 
   functional_test_bootstrap_bugs_non_root:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -150,7 +150,7 @@ jobs:
 
   functional_test_bootstrap_common:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -167,7 +167,7 @@ jobs:
 
   functional_test_bootstrap_common_non_root:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -184,7 +184,7 @@ jobs:
 
   functional_test_bootstrap_options:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -201,7 +201,7 @@ jobs:
 
   functional_test_bootstrap_firewalld:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -218,7 +218,7 @@ jobs:
 
   functional_test_bootstrap_password:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -236,7 +236,7 @@ jobs:
 
   functional_test_corosync_ui:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -253,7 +253,7 @@ jobs:
 
   functional_test_bootstrap_options_non_root:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -270,7 +270,7 @@ jobs:
 
   functional_test_qdevice_setup_remove:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -287,7 +287,7 @@ jobs:
 
   functional_test_qdevice_setup_remove_non_root:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -304,7 +304,7 @@ jobs:
 
   functional_test_qdevice_options:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -321,7 +321,7 @@ jobs:
 
   functional_test_qdevice_validate:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -338,7 +338,7 @@ jobs:
 
   functional_test_qdevice_validate_non_root:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -355,7 +355,7 @@ jobs:
 
   functional_test_qdevice_user_case:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -372,7 +372,7 @@ jobs:
 
   functional_test_resource_failcount:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -389,7 +389,7 @@ jobs:
 
   functional_test_resource_set:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -406,7 +406,7 @@ jobs:
 
   functional_test_resource_set_non_root:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -423,7 +423,7 @@ jobs:
 
   functional_test_configure_sublevel:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -440,7 +440,7 @@ jobs:
 
   functional_test_constraints_bugs:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -457,7 +457,7 @@ jobs:
 
   functional_test_geo_cluster:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -474,7 +474,7 @@ jobs:
 
   functional_test_healthcheck:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -491,7 +491,7 @@ jobs:
 
   functional_test_cluster_api:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -507,7 +507,7 @@ jobs:
 
   functional_test_user_access:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -523,7 +523,7 @@ jobs:
 
   functional_test_ssh_agent:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -539,7 +539,7 @@ jobs:
 
   functional_test_blocking_ssh:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -555,7 +555,7 @@ jobs:
 
   functional_test_migration:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -573,7 +573,7 @@ jobs:
 
   functional_test_pacemaker_remote:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
@@ -589,7 +589,7 @@ jobs:
 
   original_regression_test:
     needs: build_image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
