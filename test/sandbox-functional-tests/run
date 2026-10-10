@@ -1,0 +1,131 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+KERNEL_PATH="$SCRIPT_DIR/vmlinux"
+INITRD_PATH="$SCRIPT_DIR/initrd.img"
+ROOTFS_PATH="$SCRIPT_DIR/rootfs.squashfs"
+
+# 1. Pre-flight checks
+if [ ! -r /dev/kvm ] || [ ! -w /dev/kvm ]; then
+    echo "ERROR: /dev/kvm is not accessible with read/write permissions." >&2
+    exit 1
+fi
+
+if ! command -v firecracker >/dev/null 2>&1; then
+    echo "ERROR: firecracker executable not found in PATH." >&2
+    exit 1
+fi
+
+if ! command -v mkfs.ext4 >/dev/null 2>&1; then
+    echo "ERROR: mkfs.ext4 executable not found in PATH." >&2
+    exit 1
+fi
+
+if ! command -v debugfs >/dev/null 2>&1; then
+    echo "ERROR: debugfs executable not found in PATH." >&2
+    exit 1
+fi
+
+if [ ! -f "$KERNEL_PATH" ] || [ ! -f "$ROOTFS_PATH" ] || [ ! -f "$INITRD_PATH" ]; then
+    echo "ERROR: Sandbox kernel, initrd, or rootfs not found." >&2
+    echo "Please build the sandbox first by running:" >&2
+    echo "  $SCRIPT_DIR/build" >&2
+    exit 1
+fi
+
+TMP_DIR="$(mktemp -d -t crmsh-sandbox-run-XXXXXX)"
+WS_IMG="$TMP_DIR/workspace.ext4"
+CONFIG_JSON="$TMP_DIR/firecracker-config.json"
+SOCKET_PATH="$TMP_DIR/firecracker.socket"
+
+cleanup() {
+    rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
+
+# 2. Prepare workspace drive (rootfs is immutable squashfs and shared directly)
+# Create a sparse 512MB workspace image
+truncate -s 512M "$WS_IMG"
+
+# Staging workspace content
+WS_STAGING="$TMP_DIR/ws_staging"
+mkdir -p "$WS_STAGING"
+
+# Copy repository working tree excluding git repo, .tox, vmlinux/rootfs to keep it tiny (~20-30MB)
+tar --exclude='.git' \
+    --exclude='test/sandbox-functional-tests' \
+    --exclude='.tox' \
+    -C "$REPO_ROOT" -cf - . | tar -C "$WS_STAGING" -xf -
+
+# Write command line arguments to .sandbox_args in workspace
+# If no arguments provided, default to -h
+if [ "$#" -eq 0 ]; then
+    echo "-h" > "$WS_STAGING/.sandbox_args"
+else
+    # Preserve quotes/arguments formatted safely line-by-line
+    for arg in "$@"; do
+        printf "%s\n" "$arg"
+    done > "$WS_STAGING/.sandbox_args"
+fi
+
+# Format ext4 workspace drive with content
+/usr/sbin/mkfs.ext4 -d "$WS_STAGING" -F "$WS_IMG" >/dev/null 2>&1
+rm -rf "$WS_STAGING"
+
+# 3. Configure Firecracker
+BOOT_SOURCE_JSON=$(cat <<EOF
+  "boot-source": {
+    "kernel_image_path": "$KERNEL_PATH",
+    "initrd_path": "$INITRD_PATH",
+    "boot_args": "console=ttyS0 reboot=k panic=1 quiet loglevel=3"
+  },
+  "drives": [
+    {
+      "drive_id": "rootfs",
+      "path_on_host": "$ROOTFS_PATH",
+      "is_root_device": false,
+      "is_read_only": true
+    },
+    {
+      "drive_id": "workspace",
+      "path_on_host": "$WS_IMG",
+      "is_root_device": false,
+      "is_read_only": false
+    }
+  ],
+EOF
+)
+
+cat > "$CONFIG_JSON" <<EOF
+{
+$BOOT_SOURCE_JSON
+  "machine-config": {
+    "vcpu_count": 4,
+    "mem_size_mib": 4096
+  }
+}
+EOF
+
+# 4. Launch Firecracker
+# Run Firecracker attached to terminal
+firecracker --config-file "$CONFIG_JSON" --api-sock "$SOCKET_PATH" --enable-pci || true
+
+# 5. Extract exit code and copy reports
+EXIT_CODE=1
+STATUS_OUT="$(debugfs -R "cat .sandbox_exit_status" "$WS_IMG" 2>/dev/null || true)"
+if [ -n "$STATUS_OUT" ] && [[ "$STATUS_OUT" =~ ^[0-9]+$ ]]; then
+    EXIT_CODE="$STATUS_OUT"
+fi
+
+# Extract any generated coverage xml files if created
+# Check if coverage files exist in root of workspace
+COV_FILES=$(debugfs -R "ls -l" "$WS_IMG" 2>/dev/null | grep -E "coverage.*\.xml" | awk '{print $9}' || true)
+for cov_file in $COV_FILES; do
+    if [ -n "$cov_file" ]; then
+        debugfs -R "dump $cov_file $REPO_ROOT/$cov_file" "$WS_IMG" >/dev/null 2>&1 || true
+    fi
+done
+
+exit "$EXIT_CODE"

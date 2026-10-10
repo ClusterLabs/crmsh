@@ -21,7 +21,7 @@ target=data-manifest
 [ -f $target ] && (printf "Removing $target..."; rm $target)
 printf "Generating $target..."
 cat <<EOF | sort -df > $target
-$(git ls-files scripts templates utils test)
+$(git ls-files scripts templates utils test | grep -v '^test/sandbox-functional-tests/')
 EOF
 [ ! -f $target ] && printf "FAILED\n"
 [ -f $target ] && printf "OK\n"
