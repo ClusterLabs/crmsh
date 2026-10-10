@@ -1,5 +1,6 @@
 import logging
 import re
+import shlex
 
 from . import utils
 from .sh import ShellUtils
@@ -42,7 +43,7 @@ class Watchdog(object):
         """
         Use wdctl to verify watchdog device
         """
-        rc, _, err = ShellUtils().get_stdout_stderr(f"wdctl {dev}")
+        rc, _, err = ShellUtils().get_stdout_stderr(f"wdctl {shlex.quote(dev)}")
         if rc != 0:
             utils.fatal(f"Invalid watchdog device {dev}: {err}")
         return True
@@ -56,7 +57,7 @@ class Watchdog(object):
         boot and synced to joining nodes, regardless of whether the module
         happens to already be loaded in the running kernel.
         """
-        utils.cluster_run_cmd(f"echo {driver} > {Watchdog.WATCHDOG_CFG}", node_list)
+        utils.cluster_run_cmd(f"printf '%s\\n' {shlex.quote(driver)} > {shlex.quote(Watchdog.WATCHDOG_CFG)}", node_list)
 
     @staticmethod
     def _reload_driver(node_list):
@@ -178,7 +179,7 @@ class Watchdog(object):
             return
 
         # self._input is invalid, exit
-        rc, _, _ = ShellUtils().get_stdout_stderr(f"modinfo {self._input}")
+        rc, _, _ = ShellUtils().get_stdout_stderr(f"modinfo {shlex.quote(self._input)}")
         if rc != 0:
             utils.fatal("Should provide valid watchdog device or driver name")
 

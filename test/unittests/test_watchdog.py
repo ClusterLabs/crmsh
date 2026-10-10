@@ -65,13 +65,13 @@ class TestWatchdog(unittest.TestCase):
         # from the running CIB.
         watchdog.Watchdog._write_watchdog_config("softdog", node_list=None)
         mock_run.assert_called_once_with(
-            f"echo softdog > {watchdog.Watchdog.WATCHDOG_CFG}", None)
+            f"printf '%s\\n' softdog > {watchdog.Watchdog.WATCHDOG_CFG}", None)
 
     @mock.patch('crmsh.utils.cluster_run_cmd')
     def test_write_watchdog_config_specific_nodes(self, mock_run):
         watchdog.Watchdog._write_watchdog_config("softdog", node_list=["node1"])
         mock_run.assert_called_once_with(
-            f"echo softdog > {watchdog.Watchdog.WATCHDOG_CFG}", ["node1"])
+            f"printf '%s\\n' softdog > {watchdog.Watchdog.WATCHDOG_CFG}", ["node1"])
 
     @mock.patch('crmsh.utils.cluster_run_cmd')
     def test_reload_driver(self, mock_run):
