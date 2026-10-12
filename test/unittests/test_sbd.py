@@ -204,6 +204,24 @@ class TestSBDTimeout(unittest.TestCase):
         result = sbd.SBDTimeout.get_sbd_watchdog_timeout()
         self.assertEqual(result, 5)
 
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_servant_restart_interval_default(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = None
+        result = sbd.SBDTimeout.get_sbd_servant_restart_interval()
+        self.assertEqual(result, 5)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_servant_restart_interval(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-S 1 -t 10 -P"
+        result = sbd.SBDTimeout.get_sbd_servant_restart_interval()
+        self.assertEqual(result, 10)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_servant_restart_interval_zero(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-t 0"
+        result = sbd.SBDTimeout.get_sbd_servant_restart_interval()
+        self.assertEqual(result, 0)
+
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
     def test_is_sbd_delay_start(self, mock_get_sbd_value_from_config):
         mock_get_sbd_value_from_config.return_value = "yes"
