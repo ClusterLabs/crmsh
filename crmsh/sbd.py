@@ -235,6 +235,7 @@ class SBDTimeout(object):
     SBD_WATCHDOG_TIMEOUT_DEFAULT = 5
     SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
+    SBD_SERVANT_RESTART_INTERVAL_DEFAULT = 5
     QDEVICE_SYNC_TIMEOUT_MARGIN = 5
     SHOW_SBD_START_TIMEOUT_CMD = "systemctl daemon-reload; systemctl show -p TimeoutStartUSec sbd.service --value"
     SHOW_DEFAULT_START_TIMEOUT_CMD = "systemctl show -p DefaultTimeoutStartUSec --value"
@@ -335,6 +336,22 @@ class SBDTimeout(object):
         if not res:
             raise ValueError("Cannot get the value of SBD_WATCHDOG_TIMEOUT")
         return int(res)
+
+    @staticmethod
+    def get_sbd_servant_restart_interval() -> int:
+        """
+        Get sbd servant restart interval from SBD_OPTS -t option.
+        """
+        sbd_opts = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
+        if not sbd_opts:
+            return SBDTimeout.SBD_SERVANT_RESTART_INTERVAL_DEFAULT
+        opts_list = shlex.split(sbd_opts)
+        for index, opt in enumerate(opts_list):
+            if opt == "-t":
+                if index + 1 >= len(opts_list):
+                    raise ValueError("Cannot get the value of sbd servant restart interval")
+                return int(opts_list[index + 1])
+        return SBDTimeout.SBD_SERVANT_RESTART_INTERVAL_DEFAULT
 
     @staticmethod
     def get_fencing_watchdog_timeout_expected(
