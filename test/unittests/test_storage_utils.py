@@ -483,3 +483,38 @@ sdc mpathb"""
 
         assert timeout == 60
         mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with("cat /sys/block/sda/device/timeout")
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_get_multipath_runtime_timeouts(self, mock_cluster_shell):
+        """Test multipath runtime timeout values are parsed from effective config"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "mpatha", ""),
+            (0, "dev multipath\nsda mpatha", ""),
+            (0, "defaults {\n    max_polling_interval 20\n    checker_timeout 30\n}", ""),
+            (0, "defaults {\n    max_polling_interval 20\n    checker_timeout 30\n}", "")
+        ]
+
+        inspector = storage_utils.MultipathInspector("/dev/mapper/mpatha")
+
+        assert inspector.get_max_polling_interval() == 20
+        assert inspector.get_checker_timeout() == 30
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_get_checker_timeout_defaults_to_scsi_timeout(self, mock_cluster_shell):
+        """Test checker_timeout defaults to SCSI timeout when absent"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),
+            (0, "", ""),
+            (0, "defaults {\n    max_polling_interval 20\n}", ""),
+            (0, "", "")
+        ]
+        mock_shell_inst.get_stdout_or_raise_error.return_value = "30\n"
+
+        timeout = storage_utils.get_multipath_checker_timeout("/dev/sda1")
+
+        assert timeout == 30
+        mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with("cat /sys/block/sda/device/timeout")

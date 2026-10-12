@@ -264,6 +264,18 @@ class MultipathInspector:
     def _is_under_multipath(self) -> bool:
         return self._device_info.under_multipath
 
+    def _get_multipath_config_value(self, key: str) -> int|None:
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, "multipath -T")
+        if rc != 0:
+            return None
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            if parts[0] == key:
+                return int(parts[1])
+        return None
+
     def get_scsi_timeout(self) -> int:
         """
         Get SCSI timeout from /sys/block/<sdX>/device/timeout.
@@ -278,6 +290,19 @@ class MultipathInspector:
         out = self._shell.get_stdout_or_raise_error(f"cat {shlex.quote(timeout_path)}")
         return int(out.strip())
 
+    def get_max_polling_interval(self) -> int|None:
+        """
+        Get max_polling_interval from multipath effective config.
+        """
+        return self._get_multipath_config_value("max_polling_interval")
+
+    def get_checker_timeout(self) -> int:
+        """
+        Get checker_timeout from multipath effective config, defaulting to SCSI timeout.
+        """
+        value = self._get_multipath_config_value("checker_timeout")
+        return value if value is not None else self.get_scsi_timeout()
+
     @classmethod
     def get_device_scsi_timeout(cls, dev) -> int:
         return cls(dev).get_scsi_timeout()
@@ -288,6 +313,14 @@ class MultipathInspector:
         if inspector._is_under_multipath() and not inspector._is_multipath_device(dev):
             error_msg = f"Device {dev} is under multipath, please provide the multipath device instead"
             raise ValueError(error_msg)
+
+
+def get_multipath_max_polling_interval(dev) -> int|None:
+    return MultipathInspector(dev).get_max_polling_interval()
+
+
+def get_multipath_checker_timeout(dev) -> int:
+    return MultipathInspector(dev).get_checker_timeout()
 
 
 def get_scsi_timeout(dev) -> int:
