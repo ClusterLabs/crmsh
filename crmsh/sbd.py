@@ -112,12 +112,25 @@ class SBDUtils:
         return utils.parse_sysconfig(SBDManager.SYSCONFIG_SBD).get(key)
 
     @staticmethod
-    def get_crashdump_watchdog_timeout() -> typing.Optional[int]:
-        res = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
-        if not res:
+    def get_sbd_opts_int_value(option: str) -> typing.Optional[int]:
+        """
+        Get the integer value of an option, like "-t 5", from SBD_OPTS in /etc/sysconfig/sbd
+        Return None if SBD_OPTS is not set or doesn't contain the option
+        """
+        sbd_opts = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
+        if not sbd_opts:
             return None
-        matched = re.search(r"-C\s+(\d+)", res)
-        return int(matched.group(1)) if matched else None
+        opts_list = shlex.split(sbd_opts)
+        for index, opt in enumerate(opts_list):
+            if opt == option:
+                if index + 1 >= len(opts_list):
+                    raise ValueError(f"Cannot get the value of {option} in SBD_OPTS")
+                return int(opts_list[index + 1])
+        return None
+
+    @staticmethod
+    def get_crashdump_watchdog_timeout() -> typing.Optional[int]:
+        return SBDUtils.get_sbd_opts_int_value("-C")
 
     @staticmethod
     def get_sbd_device_from_config():
@@ -237,6 +250,8 @@ class SBDTimeout(object):
     SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
     SBD_SERVANT_RESTART_INTERVAL_DEFAULT = 5
+    SBD_LOOP_TIMEOUT_DEFAULT = 1
+    SBD_TIMEOUT_IO_LOOP_TIMEOUT_FACTOR = 3
     QDEVICE_SYNC_TIMEOUT_MARGIN = 5
     SHOW_SBD_START_TIMEOUT_CMD = "systemctl daemon-reload; systemctl show -p TimeoutStartUSec sbd.service --value"
     SHOW_DEFAULT_START_TIMEOUT_CMD = "systemctl show -p DefaultTimeoutStartUSec --value"
@@ -343,16 +358,29 @@ class SBDTimeout(object):
         """
         Get sbd servant restart interval from SBD_OPTS -t option.
         """
-        sbd_opts = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
-        if not sbd_opts:
-            return SBDTimeout.SBD_SERVANT_RESTART_INTERVAL_DEFAULT
-        opts_list = shlex.split(sbd_opts)
-        for index, opt in enumerate(opts_list):
-            if opt == "-t":
-                if index + 1 >= len(opts_list):
-                    raise ValueError("Cannot get the value of sbd servant restart interval")
-                return int(opts_list[index + 1])
-        return SBDTimeout.SBD_SERVANT_RESTART_INTERVAL_DEFAULT
+        value = SBDUtils.get_sbd_opts_int_value("-t")
+        return SBDTimeout.SBD_SERVANT_RESTART_INTERVAL_DEFAULT if value is None else value
+
+    @staticmethod
+    def get_sbd_loop_timeout() -> int:
+        """
+        Get loop timeout from the first configured SBD device metadata.
+        """
+        dev_list = SBDUtils.get_sbd_device_from_config()
+        if not dev_list:
+            return SBDTimeout.SBD_LOOP_TIMEOUT_DEFAULT
+        device_metadata = SBDUtils.get_sbd_device_metadata(dev_list[0], timeout_only=True)
+        return device_metadata.get("loop", SBDTimeout.SBD_LOOP_TIMEOUT_DEFAULT)
+
+    @staticmethod
+    def get_sbd_timeout_io() -> int:
+        """
+        Get sbd async IO read timeout from SBD_OPTS -I option.
+        """
+        value = SBDUtils.get_sbd_opts_int_value("-I")
+        if value is None:
+            return SBDTimeout.SBD_TIMEOUT_IO_LOOP_TIMEOUT_FACTOR * SBDTimeout.get_sbd_loop_timeout()
+        return value
 
     @staticmethod
     def get_fencing_watchdog_timeout_expected(
