@@ -205,6 +205,7 @@ class DeviceInfo:
 class MultipathInspector:
     def __init__(self, dev):
         self._shell = sh.cluster_shell()
+        self._multipath_mapping = None
         self._device_info = self._inspect(dev)
 
     def _get_parent_device(self, dev) -> str:
@@ -214,10 +215,13 @@ class MultipathInspector:
         return out or resolved.name
 
     def _get_multipath_mapping(self) -> dict[str, str]:
+        if self._multipath_mapping is not None:
+            return self._multipath_mapping
         cmd = "multipathd show paths format \"%d %m\""
         rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, cmd)
         mapping = dict()
         if rc != 0:
+            self._multipath_mapping = mapping
             return mapping
         for line in out.splitlines():
             parts = line.split()
@@ -226,24 +230,65 @@ class MultipathInspector:
             dev_name, map_name = parts[0], parts[1]
             if (dev_name, map_name) == ("dev", "multipath"):
                 continue
+            # Paths not belonging to any multipath map are reported as [orphan]
+            if map_name.startswith("["):
+                continue
             mapping[dev_name] = map_name
+        self._multipath_mapping = mapping
         return mapping
+
+    @staticmethod
+    def _get_multipath_name(dev: str) -> str:
+        return re.sub(r"-part\d+$", "", Path(dev).name)
+
+    def _is_multipath_device(self, dev: str) -> bool:
+        return self._get_multipath_name(dev) in self._get_multipath_mapping().values()
+
+    def _get_multipath_path(self, multipath_dev: str) -> str|None:
+        map_name = self._get_multipath_name(multipath_dev)
+        for dev_name, multipath_name in self._get_multipath_mapping().items():
+            if multipath_name == map_name:
+                return dev_name
+        return None
 
     def _inspect(self, dev: str) -> DeviceInfo:
         parent = self._get_parent_device(dev)
         mapping = self._get_multipath_mapping()
+        map_name = self._get_multipath_name(dev)
         return DeviceInfo(
             device=dev,
             parent_device=parent,
-            under_multipath=parent in mapping
+            under_multipath=parent in mapping or map_name in mapping.values()
         )
 
     def _is_under_multipath(self) -> bool:
         return self._device_info.under_multipath
 
+    def get_scsi_timeout(self) -> int:
+        """
+        Get SCSI timeout from /sys/block/<sdX>/device/timeout.
+        """
+        if self._is_multipath_device(self._device_info.device):
+            device = self._get_multipath_path(self._device_info.device)
+        else:
+            device = self._device_info.parent_device
+        if not device:
+            raise ValueError(f"Cannot find backing device for {self._device_info.device}")
+        timeout_path = f"/sys/block/{device}/device/timeout"
+        out = self._shell.get_stdout_or_raise_error(f"cat {shlex.quote(timeout_path)}")
+        return int(out.strip())
+
+    @classmethod
+    def get_device_scsi_timeout(cls, dev) -> int:
+        return cls(dev).get_scsi_timeout()
+
     @classmethod
     def check_device_under_multipath(cls, dev):
         inspector = cls(dev)
-        if inspector._is_under_multipath():
+        if inspector._is_under_multipath() and not inspector._is_multipath_device(dev):
             error_msg = f"Device {dev} is under multipath, please provide the multipath device instead"
             raise ValueError(error_msg)
+
+
+def get_scsi_timeout(dev) -> int:
+    return MultipathInspector.get_device_scsi_timeout(dev)
