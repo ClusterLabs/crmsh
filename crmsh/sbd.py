@@ -837,9 +837,9 @@ class SBDConfigChecker:
         logger.info("Adjusting sbd msgwait to %d, watchdog timeout to %d", self.sbd_msgwait_expected, self.sbd_watchdog_timeout_expected)
         force_flag = "-F " if options.force else ""
         cmd = f"crm {force_flag}sbd configure msgwait-timeout={self.sbd_msgwait_expected} watchdog-timeout={self.sbd_watchdog_timeout_expected}"
-        output = sh.cluster_shell().get_stdout_or_raise_error(cmd)
-        if output:
-            print(output)
+        result = sh.cluster_shell().subprocess_run_without_input(None, None, cmd)
+        if result.returncode != 0:
+            utils.fatal(f"Failed to fix SBD disk metadata: command \"{cmd}\" returned {result.returncode}")
 
     def _check_sbd_watchdog_timeout(self) -> CheckResult:
         """

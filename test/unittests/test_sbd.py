@@ -548,11 +548,27 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix.sbd_watchdog_timeout_expected = 5
         mock_cluster_shell_inst = Mock()
         mock_cluster_shell.return_value = mock_cluster_shell_inst
-        mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
+        mock_cluster_shell_inst.subprocess_run_without_input.return_value = Mock(returncode=0)
         self.instance_fix._fix_sbd_disk_metadata()
         mock_logger_info.assert_called_once_with("Adjusting sbd msgwait to %d, watchdog timeout to %d", 10, 5)
-        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with(
+        mock_cluster_shell_inst.subprocess_run_without_input.assert_called_once_with(
+            None,
+            None,
             "crm sbd configure msgwait-timeout=10 watchdog-timeout=5"
+        )
+
+    @patch('crmsh.utils.fatal')
+    @patch('crmsh.sh.cluster_shell')
+    @patch('logging.Logger.info')
+    def test_fix_sbd_disk_metadata_failure(self, mock_logger_info, mock_cluster_shell, mock_fatal):
+        self.instance_fix.sbd_msgwait_expected = 10
+        self.instance_fix.sbd_watchdog_timeout_expected = 5
+        mock_cluster_shell_inst = Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+        mock_cluster_shell_inst.subprocess_run_without_input.return_value = Mock(returncode=1)
+        self.instance_fix._fix_sbd_disk_metadata()
+        mock_fatal.assert_called_once_with(
+            'Failed to fix SBD disk metadata: command "crm sbd configure msgwait-timeout=10 watchdog-timeout=5" returned 1'
         )
 
     @patch('crmsh.sh.cluster_shell')
@@ -566,9 +582,11 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix.sbd_watchdog_timeout_expected = 5
         mock_cluster_shell_inst = Mock()
         mock_cluster_shell.return_value = mock_cluster_shell_inst
-        mock_cluster_shell_inst.get_stdout_or_raise_error.return_value = "data"
+        mock_cluster_shell_inst.subprocess_run_without_input.return_value = Mock(returncode=0)
         self.instance_fix._fix_sbd_disk_metadata()
-        mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with(
+        mock_cluster_shell_inst.subprocess_run_without_input.assert_called_once_with(
+            None,
+            None,
             "crm -F sbd configure msgwait-timeout=10 watchdog-timeout=5"
         )
 
