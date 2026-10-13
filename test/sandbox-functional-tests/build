@@ -1,0 +1,138 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+KERNEL_PATH="$SCRIPT_DIR/vmlinux"
+INITRD_PATH="$SCRIPT_DIR/initrd.img"
+ROOTFS_PATH="$SCRIPT_DIR/rootfs.squashfs"
+
+FORCE_BUILD=0
+if [ "${1:-}" = "-f" ] || [ "${1:-}" = "--force" ]; then
+    FORCE_BUILD=1
+fi
+
+show_kernel_build_guide() {
+    echo "========================================================================="
+    echo "ERROR: Microvm kernel (vmlinux) not found at:"
+    echo "  $KERNEL_PATH"
+    echo
+    echo "Follow these steps to build the compatible vmlinux kernel:"
+    echo
+    echo "1. Download and extract the Linux 6.18 LTS kernel tarball from kernel.org"
+    echo
+    echo "2. Copy the provided config file linux-6.18.microvm.config to .config in your kernel build tree."
+    echo
+    echo "3. Configure and compile the vmlinux binary:"
+    echo "   make olddefconfig"
+    echo "   make -j\$(nproc)"
+    echo
+    echo "4. Copy the compiled vmlinux back to the test directory:"
+    echo "   cp vmlinux \"$KERNEL_PATH\""
+    echo "========================================================================="
+    exit 1
+}
+
+echo "==> [1/4] Preparing microvm kernel..."
+if [ ! -f "$KERNEL_PATH" ]; then
+    show_kernel_build_guide
+else
+    echo "Kernel $KERNEL_PATH already exists."
+fi
+
+echo "==> [2/4] Ensuring localhost/haleap:latest container image is ready..."
+if ! podman image exists localhost/haleap:latest || [ "$FORCE_BUILD" -eq 1 ]; then
+    echo "Building localhost/haleap:latest from $REPO_ROOT/test_container..."
+    podman build -t localhost/haleap:latest -f "$REPO_ROOT/test_container/Dockerfile" "$REPO_ROOT/test_container"
+else
+    echo "localhost/haleap:latest already exists."
+fi
+
+CONTAINER_ID=""
+TMP_DIR="$(mktemp -d -t crmsh-sandbox-build-XXXXXX)"
+cleanup() {
+    rm -rf "$TMP_DIR"
+    if [ -n "$CONTAINER_ID" ]; then
+        podman rm "$CONTAINER_ID" >/dev/null 2>&1 || true
+    fi
+}
+trap cleanup EXIT
+
+echo "Saving localhost/haleap:latest to temporary tar archive..."
+podman save localhost/haleap:latest -o "$TMP_DIR/haleap.tar"
+
+echo "==> [3/4] Building sandbox base container image..."
+podman build -t crmsh-sandbox-base -f "$SCRIPT_DIR/Dockerfile" "$SCRIPT_DIR"
+
+echo "==> [4/4] Creating rootfs.squashfs and initrd.img..."
+
+CONTAINER_ID="$(podman create crmsh-sandbox-base)"
+
+# Copy the saved haleap.tar into the container's rootfs at /var/lib/haleap.tar
+podman cp "$TMP_DIR/haleap.tar" "$CONTAINER_ID:/var/lib/haleap.tar"
+
+# Extract busybox static binary directly from container
+BUSYBOX_BIN="$TMP_DIR/busybox"
+podman cp "$CONTAINER_ID:/usr/bin/busybox" "$BUSYBOX_BIN"
+
+# Create squashfs image directly from the container export tar stream,
+# which preserves correct file ownerships and permissions.
+rm -f "$ROOTFS_PATH"
+podman export "$CONTAINER_ID" | sqfstar -comp zstd "$ROOTFS_PATH"
+
+podman rm "$CONTAINER_ID" >/dev/null
+
+# Create initrd with busybox and overlayfs init script
+INITRD_DIR="$TMP_DIR/initrd_staging"
+mkdir -p "$INITRD_DIR/bin" "$INITRD_DIR/dev" "$INITRD_DIR/proc" "$INITRD_DIR/sys" "$INITRD_DIR/lower" "$INITRD_DIR/overlay" "$INITRD_DIR/sysroot"
+
+cp "$BUSYBOX_BIN" "$INITRD_DIR/bin/busybox"
+chmod 755 "$INITRD_DIR/bin/busybox"
+
+cat > "$INITRD_DIR/init" << 'EOF'
+#!/bin/busybox sh
+/bin/busybox --install -s /bin
+
+mount -t devtmpfs devtmpfs /dev
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+
+# Wait up to 5 seconds for virtio-blk root device /dev/vda
+for i in $(seq 1 50); do
+    if [ -b /dev/vda ]; then
+        break
+    fi
+    sleep 0.1
+done
+
+mkdir -p /lower /overlay /sysroot
+mount -t squashfs -o ro /dev/vda /lower
+
+# Mount tmpfs overlay upper & work directories
+mount -t tmpfs -o mode=0755 tmpfs /overlay
+mkdir -p /overlay/upper /overlay/work
+
+# Mount overlayfs on /sysroot
+mount -t overlay overlay -o lowerdir=/lower,upperdir=/overlay/upper,workdir=/overlay/work /sysroot
+
+# Unmount initramfs virtual filesystems before switch_root
+umount /sys
+umount /proc
+umount /dev
+
+# Switch root and execute systemd
+exec switch_root /sysroot /sbin/init
+EOF
+chmod +x "$INITRD_DIR/init"
+
+rm -f "$INITRD_PATH"
+(cd "$INITRD_DIR" && find . | cpio -o -H newc | gzip -9 > "$INITRD_PATH")
+
+echo "=========================================================="
+echo "Successfully built Firecracker functional test sandbox!"
+echo "Kernel:  $KERNEL_PATH"
+echo "Initrd:  $INITRD_PATH"
+echo "Rootfs:  $ROOTFS_PATH"
+echo "You can now run functional tests via:"
+echo "  $SCRIPT_DIR/run [args...]"
+echo "=========================================================="
