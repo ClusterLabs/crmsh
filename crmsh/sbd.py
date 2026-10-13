@@ -520,6 +520,13 @@ class FixAborted(ValueError):
     pass
 
 
+def _run_sbd_side_effect_command(cmd: str) -> None:
+    """Run a command for side effects and let its output reach the terminal."""
+    result = sh.cluster_shell().subprocess_run_without_input(None, None, cmd)
+    if result.returncode != 0:
+        utils.fatal(f'Command "{cmd}" failed with exit status {result.returncode}')
+
+
 class CheckResult(Enum):
     SUCCESS = 0
     WARNING = 1
@@ -837,9 +844,7 @@ class SBDConfigChecker:
         logger.info("Adjusting sbd msgwait to %d, watchdog timeout to %d", self.sbd_msgwait_expected, self.sbd_watchdog_timeout_expected)
         force_flag = "-F " if options.force else ""
         cmd = f"crm {force_flag}sbd configure msgwait-timeout={self.sbd_msgwait_expected} watchdog-timeout={self.sbd_watchdog_timeout_expected}"
-        result = sh.cluster_shell().subprocess_run_without_input(None, None, cmd)
-        if result.returncode != 0:
-            utils.fatal(f"Failed to fix SBD disk metadata: command \"{cmd}\" returned {result.returncode}")
+        _run_sbd_side_effect_command(cmd)
 
     def _check_sbd_watchdog_timeout(self) -> CheckResult:
         """
@@ -1139,20 +1144,19 @@ class SBDConfigChecker:
 
     def _fix_fence_sbd(self):
         xml_inst = xmlutil.CrmMonXMLParser()
-        shell = sh.cluster_shell()
         if not xml_inst.is_resource_configured(SBDManager.SBD_RA):
             logger.info("Configuring fence agent %s", SBDManager.SBD_RA)
             cmd = f"crm configure primitive {SBDManager.SBD_RA_ID} {SBDManager.SBD_RA}"
-            shell.get_stdout_or_raise_error(cmd)
+            _run_sbd_side_effect_command(cmd)
             if self.sbd_timeout.two_node_without_qdevice:
                 cmd = f"crm resource param {SBDManager.SBD_RA_ID} set pcmk_delay_max {constants.PCMK_DELAY_MAX}s"
-                shell.get_stdout_or_raise_error(cmd)
+                _run_sbd_side_effect_command(cmd)
         elif not xml_inst.is_resource_started(SBDManager.SBD_RA):
             res_id_list = xml_inst.get_resource_id_list_via_type(SBDManager.SBD_RA)
             for res_id in res_id_list:
                 logger.info("Starting fence agent %s", res_id)
                 cmd = f"crm resource start {res_id}"
-                shell.get_stdout_or_raise_error(cmd)
+                _run_sbd_side_effect_command(cmd)
         time.sleep(2)
 
     @staticmethod
@@ -1220,7 +1224,6 @@ class SBDConfigChecker:
         return SBDConfigChecker._return_helper(result_list)
 
     def _fix_fence_sbd_parameters(self):
-        shell = sh.cluster_shell()
         for fence_sbd_param in self.sbd_timeout.fence_sbd_parameters:
             cmd_for_crashdump, cmd_for_pcmk_delay_max = None, None
             res_id, crashdump, pcmk_delay_max = fence_sbd_param.values()
@@ -1232,7 +1235,7 @@ class SBDConfigChecker:
                 logger.info("Removing crashdump parameter in resource %s", res_id)
                 cmd_for_crashdump = f"crm resource param {res_id} delete crashdump"
             if cmd_for_crashdump:
-                shell.get_stdout_or_raise_error(cmd_for_crashdump)
+                _run_sbd_side_effect_command(cmd_for_crashdump)
 
             if self.sbd_timeout.two_node_without_qdevice and not pcmk_delay_max:
                 logger.info("Setting pcmk_delay_max parameter to %ds in resource %s", constants.PCMK_DELAY_MAX, res_id)
@@ -1241,7 +1244,7 @@ class SBDConfigChecker:
                 logger.info("Removing pcmk_delay_max parameter in resource %s", res_id)
                 cmd_for_pcmk_delay_max = f"crm resource param {res_id} delete pcmk_delay_max"
             if cmd_for_pcmk_delay_max:
-                shell.get_stdout_or_raise_error(cmd_for_pcmk_delay_max)
+                _run_sbd_side_effect_command(cmd_for_pcmk_delay_max)
 
 
 class SBDManager:

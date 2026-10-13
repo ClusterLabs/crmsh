@@ -568,7 +568,7 @@ class TestSBDConfigChecker(unittest.TestCase):
         mock_cluster_shell_inst.subprocess_run_without_input.return_value = Mock(returncode=1)
         self.instance_fix._fix_sbd_disk_metadata()
         mock_fatal.assert_called_once_with(
-            'Failed to fix SBD disk metadata: command "crm sbd configure msgwait-timeout=10 watchdog-timeout=5" returned 1'
+            'Command "crm sbd configure msgwait-timeout=10 watchdog-timeout=5" failed with exit status 1'
         )
 
     @patch('crmsh.sh.cluster_shell')
@@ -936,34 +936,33 @@ class TestSBDConfigChecker(unittest.TestCase):
     @patch('crmsh.bootstrap.adjust_pcmk_delay_max')
     @patch('crmsh.utils.is_2node_cluster_without_qdevice')
     @patch('logging.Logger.info')
-    @patch('crmsh.sh.cluster_shell')
+    @patch('crmsh.sbd._run_sbd_side_effect_command')
     @patch('crmsh.xmlutil.CrmMonXMLParser')
-    def test_fix_fence_sbd_not_configured(self, mock_CrmMonXMLParser, mock_cluster_shell, mock_logger_info, mock_is_2node_cluster_without_qdevice, mock_adjust_pcmk_delay_max, mock_sleep):
+    def test_fix_fence_sbd_not_configured(self, mock_CrmMonXMLParser, mock_run_sbd_side_effect_command, mock_logger_info, mock_is_2node_cluster_without_qdevice, mock_adjust_pcmk_delay_max, mock_sleep):
         mock_parser_instance = Mock()
         mock_CrmMonXMLParser.return_value = mock_parser_instance
         mock_parser_instance.is_resource_configured.return_value = False
-        mock_cluster_shell_inst = Mock()
-        mock_cluster_shell.return_value = mock_cluster_shell_inst
-        mock_cluster_shell_inst.get_stdout_or_raise_error = Mock()
-        mock_is_2node_cluster_without_qdevice.return_value = True
+        self.instance_fix.sbd_timeout.two_node_without_qdevice = True
         self.instance_fix._fix_fence_sbd()
         mock_logger_info.assert_called_once_with("Configuring fence agent %s", sbd.SBDManager.SBD_RA)
+        mock_run_sbd_side_effect_command.assert_has_calls([
+            call("crm configure primitive fencing-sbd stonith:fence_sbd"),
+            call(f"crm resource param fencing-sbd set pcmk_delay_max {constants.PCMK_DELAY_MAX}s"),
+        ])
 
     @patch('crmsh.sbd.time.sleep')
     @patch('logging.Logger.info')
-    @patch('crmsh.sh.cluster_shell')
+    @patch('crmsh.sbd._run_sbd_side_effect_command')
     @patch('crmsh.xmlutil.CrmMonXMLParser')
-    def test_fix_fence_sbd_not_started(self, mock_CrmMonXMLParser, mock_cluster_shell, mock_logger_info, mock_sleep):
+    def test_fix_fence_sbd_not_started(self, mock_CrmMonXMLParser, mock_run_sbd_side_effect_command, mock_logger_info, mock_sleep):
         mock_parser_instance = Mock()
         mock_CrmMonXMLParser.return_value = mock_parser_instance
         mock_parser_instance.is_resource_configured.return_value = True
         mock_parser_instance.is_resource_started.return_value = False
         mock_parser_instance.get_resource_id_list_via_type.return_value = ['fence_sbd_0']
-        mock_cluster_shell_inst = Mock()
-        mock_cluster_shell.return_value = mock_cluster_shell_inst
-        mock_cluster_shell_inst.get_stdout_or_raise_error = Mock()
         self.instance_fix._fix_fence_sbd()
         mock_logger_info.assert_called_once_with("Starting fence agent %s", 'fence_sbd_0')
+        mock_run_sbd_side_effect_command.assert_called_once_with("crm resource start fence_sbd_0")
 
     @patch('crmsh.utils.is_boolean_false')
     @patch('crmsh.utils.get_property')
@@ -989,6 +988,21 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_fix._fix_fencing_enabled()
         mock_logger_info.assert_called_once_with("Setting %s to true", "fencing-enabled")
         mock_set_property.assert_called_once_with('fencing-enabled', 'true')
+
+    @patch('crmsh.sbd._run_sbd_side_effect_command')
+    def test_fix_fence_sbd_parameters(self, mock_run_sbd_side_effect_command):
+        self.instance_fix.sbd_timeout.fence_sbd_parameters = [
+            {"id": "stonith-sbd", "crashdump": "false", "pcmk_delay_max": ""}
+        ]
+        self.instance_fix.sbd_timeout.crashdump_watchdog_timeout = 15
+        self.instance_fix.sbd_timeout.two_node_without_qdevice = True
+
+        self.instance_fix._fix_fence_sbd_parameters()
+
+        mock_run_sbd_side_effect_command.assert_has_calls([
+            call("crm resource param stonith-sbd set crashdump 1"),
+            call(f"crm resource param stonith-sbd set pcmk_delay_max {constants.PCMK_DELAY_MAX}s"),
+        ])
 
 class TestSBDManager(unittest.TestCase):
 
