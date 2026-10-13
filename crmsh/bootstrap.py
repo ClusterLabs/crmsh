@@ -2294,8 +2294,10 @@ def bootstrap_add(context):
         logger.info("Adding node {} to cluster".format(node))
         cmd = 'crm cluster join -y {} -c {}@{}'.format(options, _global_variables.current_user, utils.this_node())
         logger.info("Running command on {}: {}".format(node, cmd))
-        out = shell.get_stdout_or_raise_error(cmd, node)
-        print(out)
+        # Let the child process write to our stdout/stderr directly to keep the message order
+        result = shell.subprocess_run_without_input(node, None, cmd)
+        if result.returncode != 0:
+            utils.fatal(f"Failed to add node {node}: command \"{cmd}\" returned {result.returncode}")
 
 
 def detect_cluster_service_on_node(peer_node):

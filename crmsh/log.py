@@ -104,6 +104,8 @@ class ConsoleCustomHandler(logging.StreamHandler):
         msg = self.format(record)
         stream.write(msg)
         stream.write(self.terminator)
+        # stdout is block-buffered when it is not a tty (e.g. run via ssh), which reorders it against stderr
+        stream.flush()
 
 
 class LevelFilter(logging.Filter):
