@@ -203,19 +203,31 @@ class DeviceInfo:
 
 
 class MultipathInspector:
-    def __init__(self, dev):
+    def __init__(self, dev, peer=None):
         self._shell = sh.cluster_shell()
+        self._peer = peer
         self._device_info = self._inspect(dev)
 
     def _get_parent_device(self, dev) -> str:
-        resolved = Path(dev).resolve()
-        cmd = f"lsblk -dn -o PKNAME {shlex.quote(str(resolved))}"
-        _, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, cmd)
-        return out or resolved.name
+        cmd = f"lsblk -dnP -o PKNAME,KNAME {shlex.quote(dev)}"
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(self._peer, cmd)
+        node = self._peer or utils.this_node()
+        if rc != 0 or not out:
+            raise ValueError(f"Cannot determine kernel device name for {dev} on {node}")
+
+        values = dict(
+            item.split("=", 1)
+            for item in shlex.split(out.splitlines()[0])
+            if "=" in item
+        )
+        device_name = values.get("PKNAME") or values.get("KNAME")
+        if not device_name:
+            raise ValueError(f"Cannot determine kernel device name for {dev} on {node}")
+        return device_name
 
     def _get_multipath_mapping(self) -> dict[str, str]:
         cmd = "multipathd show paths format \"%d %m\""
-        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, cmd)
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(self._peer, cmd)
         mapping = dict()
         if rc != 0:
             return mapping
@@ -242,8 +254,8 @@ class MultipathInspector:
         return self._device_info.under_multipath
 
     @classmethod
-    def check_device_under_multipath(cls, dev):
-        inspector = cls(dev)
-        if inspector._is_under_multipath():
-            error_msg = f"Device {dev} is under multipath, please provide the multipath device instead"
-            raise ValueError(error_msg)
+    def check_device_under_multipath(cls, dev, node_list=None):
+        for node in node_list or [utils.this_node()]:
+            inspector = cls(dev, node)
+            if inspector._is_under_multipath():
+                raise ValueError(f"Device {dev} is under multipath on {node}")
