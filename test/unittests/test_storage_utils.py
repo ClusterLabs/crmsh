@@ -3,6 +3,7 @@
 #
 # unit tests for storage_utils.py
 
+import tempfile
 import unittest
 import pytest
 from pathlib import Path
@@ -289,13 +290,20 @@ def test_check_no_quorum_policy_with_dlm(mock_dlm, mock_get_property, mock_warn)
 
 class TestMultipathInspector(unittest.TestCase):
 
+    def setUp(self):
+        self._real_get_root = storage_utils.MultipathInspector._get_root_backing_device
+        patcher = mock.patch.object(
+            storage_utils.MultipathInspector, "_get_root_backing_device", return_value="sda"
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     @mock.patch('crmsh.sh.cluster_shell')
     def test_init(self, mock_cluster_shell):
         """Test MultipathInspector initialization"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),  # lsblk output for parent device
             (0, "dev multipath\nsda mpatha", "")  # multipathd show paths output
         ]
 
@@ -303,24 +311,26 @@ class TestMultipathInspector(unittest.TestCase):
 
         assert inspector._shell == mock_shell_inst
         assert inspector._device_info.device == "/dev/sda1"
-        assert inspector._device_info.parent_device == "sda"
+        assert inspector._device_info.root_backing_device == "sda"
         assert inspector._device_info.under_multipath is True
 
-    @mock.patch('crmsh.sh.cluster_shell')
-    def test_get_parent_device(self, mock_cluster_shell):
-        """Test _get_parent_device method"""
-        mock_shell_inst = mock.Mock()
-        mock_cluster_shell.return_value = mock_shell_inst
-        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),  # lsblk output for __init__
-            (0, "", ""),  # multipathd show paths output for __init__
-            (0, "sda", "")  # lsblk output for test call
-        ]
-
-        inspector = storage_utils.MultipathInspector("/dev/sda1")
-        parent = inspector._get_parent_device("/dev/sda1")
-
-        assert parent == "sda"
+    def test_get_root_backing_device(self):
+        """Test _get_root_backing_device walks partitions and nested slaves down to sdX"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "sda" / "sda1").mkdir(parents=True)
+            (root / "sda" / "sda1" / "partition").write_text("1")
+            (root / "sda1").symlink_to(root / "sda" / "sda1")
+            (root / "sdb").mkdir()
+            (root / "dm-3" / "slaves").mkdir(parents=True)
+            (root / "dm-3" / "slaves" / "sdb").mkdir()
+            (root / "dm-48" / "slaves").mkdir(parents=True)
+            (root / "dm-48" / "slaves" / "dm-3").mkdir()
+            with mock.patch.object(storage_utils.MultipathInspector, "SYSFS_BLOCK", root):
+                get = self._real_get_root
+                assert get("/dev/sda1") == "sda"
+                assert get("/dev/sdb") == "sdb"
+                assert get("/dev/dm-48") == "sdb"
 
     @mock.patch('crmsh.sh.cluster_shell')
     def test_get_multipath_mapping(self, mock_cluster_shell):
@@ -332,7 +342,6 @@ sda mpatha
 sdb mpatha
 sdc mpathb"""
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),  # lsblk for __init__
             (0, multipathd_output, ""),  # multipathd for __init__
             (0, multipathd_output, "")  # multipathd for test call
         ]
@@ -348,7 +357,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),
             (0, "dev multipath\nsda mpatha", "")
         ]
 
@@ -356,7 +364,7 @@ sdc mpathb"""
         device_info = inspector._device_info
 
         assert device_info.device == "/dev/sda1"
-        assert device_info.parent_device == "sda"
+        assert device_info.root_backing_device == "sda"
         assert device_info.under_multipath is True
 
     @mock.patch('crmsh.sh.cluster_shell')
@@ -365,7 +373,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),
             (0, "dev multipath\nsda mpatha", "")
         ]
 
@@ -379,7 +386,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),
             (0, "dev multipath\nsda mpatha", "")
         ]
 
@@ -394,7 +400,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "mpatha", ""),
             (0, "dev multipath\nsda mpatha", ""),
             (0, "dev multipath\nsda mpatha", "")
         ]
@@ -407,7 +412,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "dm-2", ""),
             (0, "dev multipath\nsda shared_iscsi_lun1", ""),
             (0, "dev multipath\nsda shared_iscsi_lun1", "")
         ]
@@ -420,7 +424,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),
             (0, "", ""),
             (0, "", "")
         ]
@@ -437,7 +440,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "mpatha", ""),
             (0, "dev multipath\nsda mpatha\nsdb mpatha", ""),
             (0, "dev multipath\nsda mpatha\nsdb mpatha", ""),
             (0, "dev multipath\nsda mpatha\nsdb mpatha", "")
@@ -455,7 +457,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "dm-2", ""),
             (0, "dev multipath\nsda shared_iscsi_lun1\nsdb shared_iscsi_lun1", ""),
             (0, "dev multipath\nsda shared_iscsi_lun1\nsdb shared_iscsi_lun1", ""),
             (0, "dev multipath\nsda shared_iscsi_lun1\nsdb shared_iscsi_lun1", "")
@@ -473,7 +474,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),
             (0, "dev multipath\nsda mpatha", ""),
             (0, "dev multipath\nsda mpatha", "")
         ]
@@ -490,7 +490,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "mpatha", ""),
             (0, "dev multipath\nsda mpatha", ""),
             (0, "defaults {\n    max_polling_interval 20\n    checker_timeout 30\n}", ""),
             (0, "defaults {\n    max_polling_interval 20\n    checker_timeout 30\n}", "")
@@ -507,7 +506,6 @@ sdc mpathb"""
         mock_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_shell_inst
         mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
-            (0, "sda", ""),
             (0, "", ""),
             (0, "defaults {\n    max_polling_interval 20\n}", ""),
             (0, "", "")

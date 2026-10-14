@@ -500,12 +500,21 @@ class SBD(command.UI):
             self.device_list_from_config
         )
 
+        # The new devices may require larger timeouts (e.g. a multipath device
+        # added to SCSI ones); initialize all devices once with the expected values
+        timeout_dict = self.device_meta_dict_runtime
+        expected_watchdog, expected_msgwait = sbd.SBDTimeout.get_sbd_metadata_expected(all_device_list)
+        if expected_watchdog > timeout_dict.get("watchdog", 0) or expected_msgwait > timeout_dict.get("msgwait", 0):
+            logger.info("Adjusting sbd msgwait to %d, watchdog timeout to %d", expected_msgwait, expected_watchdog)
+            timeout_dict = {"watchdog": expected_watchdog, "msgwait": expected_msgwait}
+            devices_to_init = all_device_list
+
         logger.info("Append devices: %s", ';'.join(devices_to_add))
         update_dict = {"SBD_DEVICE": ";".join(all_device_list)}
         sbd_manager = sbd.SBDManager(
             device_list_to_init=devices_to_init,
             update_dict=update_dict,
-            timeout_dict=self.device_meta_dict_runtime
+            timeout_dict=timeout_dict
         )
         sbd_manager.init_and_deploy_sbd()
 

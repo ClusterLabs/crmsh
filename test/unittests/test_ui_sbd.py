@@ -538,11 +538,13 @@ class TestSBD(unittest.TestCase):
         self.sbd_instance_diskless._configure_diskless(parameter_dict)
         mock_logger_info.assert_called_once_with("No change in SBD configuration")
 
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
     @mock.patch('crmsh.sbd.SBDManager')
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.sbd.SBDUtils.handle_input_sbd_devices')
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
-    def test_device_add(self, mock_verify_sbd_device, mock_handle_input_sbd_devices, mock_logger_info, mock_SBDManager):
+    def test_device_add(self, mock_verify_sbd_device, mock_handle_input_sbd_devices, mock_logger_info, mock_SBDManager, mock_expected):
+        mock_expected.return_value = (0, 0)
         mock_handle_input_sbd_devices.return_value = [["/dev/sda2"], ["/dev/sda1"]]
         mock_SBDManager.return_value.init_and_deploy_sbd = mock.Mock()
         self.sbd_instance_diskbased._device_add(["/dev/sda2"])
@@ -554,6 +556,22 @@ class TestSBD(unittest.TestCase):
             timeout_dict=self.sbd_instance_diskbased.device_meta_dict_runtime
         )
         mock_logger_info.assert_called_once_with("Append devices: %s", "/dev/sda2")
+
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_metadata_expected')
+    @mock.patch('crmsh.sbd.SBDManager')
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.sbd.SBDUtils.handle_input_sbd_devices')
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
+    def test_device_add_larger_timeout(self, mock_verify, mock_handle, mock_logger_info, mock_SBDManager, mock_expected):
+        mock_handle.return_value = [["/dev/sda2"], ["/dev/sda1"]]
+        mock_expected.return_value = (62, 124)
+        self.sbd_instance_diskbased._device_add(["/dev/sda2"])
+        mock_expected.assert_called_once_with(["/dev/sda1", "/dev/sda2"])
+        mock_SBDManager.assert_called_once_with(
+            device_list_to_init=["/dev/sda1", "/dev/sda2"],
+            update_dict={"SBD_DEVICE": "/dev/sda1;/dev/sda2"},
+            timeout_dict={"watchdog": 62, "msgwait": 124}
+        )
 
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     def test_device_remove_dev_not_in_config(self, mock_verify_sbd_device):

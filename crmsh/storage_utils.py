@@ -198,21 +198,35 @@ def check_no_quorum_policy_with_dlm():
 @dataclass(frozen=True)
 class DeviceInfo:
     device: str
-    parent_device: str|None
+    root_backing_device: str
     under_multipath: bool
 
 
 class MultipathInspector:
+    SYSFS_BLOCK = Path("/sys/class/block")
+
     def __init__(self, dev):
         self._shell = sh.cluster_shell()
         self._multipath_mapping = None
         self._device_info = self._inspect(dev)
 
-    def _get_parent_device(self, dev) -> str:
-        resolved = Path(dev).resolve()
-        cmd = f"lsblk -dn -o PKNAME {shlex.quote(str(resolved))}"
-        _, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, cmd)
-        return out or resolved.name
+    @classmethod
+    def _get_root_backing_device(cls, dev) -> str:
+        """
+        Walk down the block device stack (partition, dm, multipath map)
+        to the bottom-level device, e.g. sdX.
+        For a multipath map, the first path is used.
+        """
+        name = Path(dev).resolve().name
+        while True:
+            sysfs = cls.SYSFS_BLOCK / name
+            if (sysfs / "partition").exists():
+                name = sysfs.resolve().parent.name
+                continue
+            slaves = sorted(p.name for p in (sysfs / "slaves").glob("*"))
+            if not slaves:
+                return name
+            name = slaves[0]
 
     def _get_multipath_mapping(self) -> dict[str, str]:
         if self._multipath_mapping is not None:
@@ -244,21 +258,13 @@ class MultipathInspector:
     def _is_multipath_device(self, dev: str) -> bool:
         return self._get_multipath_name(dev) in self._get_multipath_mapping().values()
 
-    def _get_multipath_path(self, multipath_dev: str) -> str|None:
-        map_name = self._get_multipath_name(multipath_dev)
-        for dev_name, multipath_name in self._get_multipath_mapping().items():
-            if multipath_name == map_name:
-                return dev_name
-        return None
-
     def _inspect(self, dev: str) -> DeviceInfo:
-        parent = self._get_parent_device(dev)
+        root = self._get_root_backing_device(dev)
         mapping = self._get_multipath_mapping()
-        map_name = self._get_multipath_name(dev)
         return DeviceInfo(
             device=dev,
-            parent_device=parent,
-            under_multipath=parent in mapping or map_name in mapping.values()
+            root_backing_device=root,
+            under_multipath=root in mapping
         )
 
     def _is_under_multipath(self) -> bool:
@@ -277,9 +283,7 @@ class MultipathInspector:
         return None
 
     def _get_scsi_device_name(self) -> str|None:
-        if self._is_multipath_device(self._device_info.device):
-            return self._get_multipath_path(self._device_info.device)
-        return self._device_info.parent_device
+        return self._device_info.root_backing_device
 
     def get_scsi_timeout(self) -> int:
         """
