@@ -197,6 +197,115 @@ class TestSBD(unittest.TestCase):
         res = self.sbd_instance_diskbased.do_configure(mock.Mock(), "test")
         self.assertFalse(res)
 
+    @mock.patch("crmsh.storage_utils.get_multipath_checker_timeout")
+    @mock.patch("crmsh.storage_utils.get_multipath_max_polling_interval")
+    @mock.patch("crmsh.storage_utils.is_multipath_device")
+    @mock.patch("crmsh.storage_utils.is_scsi_device")
+    @mock.patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
+    @mock.patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
+    @mock.patch("crmsh.storage_utils.get_scsi_timeout")
+    @mock.patch("logging.Logger.info")
+    @mock.patch("builtins.print")
+    def test_show_disk_backstore(
+        self,
+        mock_print,
+        mock_logger_info,
+        mock_get_scsi_timeout,
+        mock_get_sbd_servant_restart_interval,
+        mock_get_sbd_timeout_io,
+        mock_is_scsi_device,
+        mock_is_multipath_device,
+        mock_get_multipath_max_polling_interval,
+        mock_get_multipath_checker_timeout,
+    ):
+        mock_get_scsi_timeout.return_value = 30
+        mock_is_scsi_device.return_value = True
+        mock_get_sbd_servant_restart_interval.return_value = 5
+        mock_get_sbd_timeout_io.return_value = 3
+        mock_is_multipath_device.return_value = True
+        mock_get_multipath_max_polling_interval.return_value = 20
+        mock_get_multipath_checker_timeout.return_value = 30
+
+        self.sbd_instance_diskbased._show_disk_backstore()
+
+        mock_logger_info.assert_called_once_with("crm sbd configure show disk_backstore")
+        mock_print.assert_has_calls([
+            mock.call("multipath max_polling_interval: 20"),
+            mock.call("multipath checker_timeout     : 30"),
+            mock.call("SCSI timeout                  : 30"),
+            mock.call("SBD timeout io                : 3"),
+            mock.call("SBD servant restart interval  : 5"),
+        ])
+
+    @mock.patch("crmsh.storage_utils.get_multipath_checker_timeout")
+    @mock.patch("crmsh.storage_utils.get_multipath_max_polling_interval")
+    @mock.patch("crmsh.storage_utils.is_multipath_device")
+    @mock.patch("crmsh.storage_utils.is_scsi_device")
+    @mock.patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
+    @mock.patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
+    @mock.patch("crmsh.storage_utils.get_scsi_timeout")
+    @mock.patch("logging.Logger.info")
+    @mock.patch("builtins.print")
+    def test_show_disk_backstore_non_multipath_device(
+        self,
+        mock_print,
+        mock_logger_info,
+        mock_get_scsi_timeout,
+        mock_get_sbd_servant_restart_interval,
+        mock_get_sbd_timeout_io,
+        mock_is_scsi_device,
+        mock_is_multipath_device,
+        mock_get_multipath_max_polling_interval,
+        mock_get_multipath_checker_timeout,
+    ):
+        mock_get_scsi_timeout.return_value = 30
+        mock_is_scsi_device.return_value = True
+        mock_get_sbd_servant_restart_interval.return_value = 5
+        mock_get_sbd_timeout_io.return_value = 3
+        mock_is_multipath_device.return_value = False
+
+        self.sbd_instance_diskbased._show_disk_backstore()
+
+        mock_logger_info.assert_called_once_with("crm sbd configure show disk_backstore")
+        mock_get_multipath_max_polling_interval.assert_not_called()
+        mock_get_multipath_checker_timeout.assert_not_called()
+        mock_print.assert_has_calls([
+            mock.call("SCSI timeout                  : 30"),
+            mock.call("SBD timeout io                : 3"),
+            mock.call("SBD servant restart interval  : 5"),
+        ])
+
+    @mock.patch("crmsh.storage_utils.is_multipath_device")
+    @mock.patch("crmsh.storage_utils.is_scsi_device")
+    @mock.patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
+    @mock.patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
+    @mock.patch("crmsh.storage_utils.get_scsi_timeout")
+    @mock.patch("logging.Logger.info")
+    @mock.patch("builtins.print")
+    def test_show_disk_backstore_non_scsi_device(
+        self,
+        mock_print,
+        mock_logger_info,
+        mock_get_scsi_timeout,
+        mock_get_sbd_servant_restart_interval,
+        mock_get_sbd_timeout_io,
+        mock_is_scsi_device,
+        mock_is_multipath_device,
+    ):
+        mock_get_sbd_servant_restart_interval.return_value = 5
+        mock_get_sbd_timeout_io.return_value = 3
+        mock_is_scsi_device.return_value = False
+        mock_is_multipath_device.return_value = False
+
+        self.sbd_instance_diskbased._show_disk_backstore()
+
+        mock_logger_info.assert_called_once_with("crm sbd configure show disk_backstore")
+        mock_get_scsi_timeout.assert_not_called()
+        mock_print.assert_has_calls([
+            mock.call("SBD timeout io                : 3"),
+            mock.call("SBD servant restart interval  : 5"),
+        ])
+
     @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout')
     @mock.patch('logging.Logger.info')
     @mock.patch('builtins.print')
@@ -262,6 +371,17 @@ class TestSBD(unittest.TestCase):
         mock_sbd_timeout_checker_instance.check_and_fix.assert_called_once()
 
     @mock.patch('crmsh.sbd.SBDConfigChecker')
+    def test_configure_show_disk_backstore(self, mock_sbd_timeout_checker):
+        mock_sbd_timeout_checker_instance = mock.Mock()
+        mock_sbd_timeout_checker.return_value = mock_sbd_timeout_checker_instance
+        mock_sbd_timeout_checker_instance.check_and_fix = mock.Mock()
+        self.sbd_instance_diskbased._show_disk_backstore = mock.Mock()
+        self.sbd_instance_diskbased._configure_show(["show", "disk_backstore"])
+        self.sbd_instance_diskbased._show_disk_backstore.assert_called_once()
+        mock_sbd_timeout_checker.assert_called_once_with()
+        mock_sbd_timeout_checker_instance.check_and_fix.assert_called_once()
+
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
     def test_configure_show_property(self, mock_sbd_timeout_checker):
         mock_sbd_timeout_checker_instance = mock.Mock()
         mock_sbd_timeout_checker.return_value = mock_sbd_timeout_checker_instance
@@ -293,9 +413,10 @@ class TestSBD(unittest.TestCase):
         mock_sbd_timeout_checker.return_value = mock_sbd_timeout_checker_instance
         mock_sbd_timeout_checker_instance.check_and_fix = mock.Mock()
         self.sbd_instance_diskbased._show_disk_metadata = mock.Mock()
+        self.sbd_instance_diskbased._show_disk_backstore = mock.Mock()
         self.sbd_instance_diskbased._show_property = mock.Mock()
         self.sbd_instance_diskbased._configure_show(["show"])
-        mock_print.assert_has_calls([mock.call(), mock.call()])
+        mock_print.assert_has_calls([mock.call(), mock.call(), mock.call()])
         mock_sbd_timeout_checker_instance.check_and_fix.assert_called_once()
 
     def test_parse_args_invalid_args(self):

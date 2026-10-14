@@ -518,3 +518,11 @@ sdc mpathb"""
 
         assert timeout == 30
         mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with("cat /sys/block/sda/device/timeout")
+
+
+@mock.patch("crmsh.storage_utils.is_multipath_device")
+def test_pick_backstore_device(mock_is_mp):
+    mock_is_mp.side_effect = lambda d: d.startswith("/dev/mapper")
+    assert storage_utils.pick_backstore_device(["/dev/sdc7", "/dev/mapper/m-part5"]) == "/dev/mapper/m-part5"
+    assert storage_utils.pick_backstore_device(["/dev/sdc7", "/dev/sdd1"]) == "/dev/sdc7"
+    assert storage_utils.pick_backstore_device([]) is None

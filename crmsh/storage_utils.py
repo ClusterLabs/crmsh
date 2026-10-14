@@ -276,19 +276,32 @@ class MultipathInspector:
                 return int(parts[1])
         return None
 
+    def _get_scsi_device_name(self) -> str|None:
+        if self._is_multipath_device(self._device_info.device):
+            return self._get_multipath_path(self._device_info.device)
+        return self._device_info.parent_device
+
     def get_scsi_timeout(self) -> int:
         """
         Get SCSI timeout from /sys/block/<sdX>/device/timeout.
         """
-        if self._is_multipath_device(self._device_info.device):
-            device = self._get_multipath_path(self._device_info.device)
-        else:
-            device = self._device_info.parent_device
+        device = self._get_scsi_device_name()
         if not device:
             raise ValueError(f"Cannot find backing device for {self._device_info.device}")
         timeout_path = f"/sys/block/{device}/device/timeout"
         out = self._shell.get_stdout_or_raise_error(f"cat {shlex.quote(timeout_path)}")
         return int(out.strip())
+
+    def is_scsi_device(self) -> bool:
+        """
+        Check if the backing device exposes a SCSI device timeout.
+        """
+        device = self._get_scsi_device_name()
+        if not device:
+            return False
+        timeout_path = f"/sys/block/{device}/device/timeout"
+        rc, _, _ = self._shell.get_rc_stdout_stderr_without_input(None, f"test -f {shlex.quote(timeout_path)}")
+        return rc == 0
 
     def get_max_polling_interval(self) -> int|None:
         """
@@ -313,6 +326,25 @@ class MultipathInspector:
         if inspector._is_under_multipath() and not inspector._is_multipath_device(dev):
             error_msg = f"Device {dev} is under multipath, please provide the multipath device instead"
             raise ValueError(error_msg)
+
+
+def is_scsi_device(dev) -> bool:
+    return MultipathInspector(dev).is_scsi_device()
+
+
+def is_multipath_device(dev) -> bool:
+    return MultipathInspector(dev)._is_multipath_device(dev)
+
+
+def pick_backstore_device(devs: list[str]) -> str|None:
+    """
+    Pick the device whose timeouts should drive the configuration:
+    the first multipath device if any, otherwise the first device.
+    """
+    for dev in devs:
+        if is_multipath_device(dev):
+            return dev
+    return devs[0] if devs else None
 
 
 def get_multipath_max_polling_interval(dev) -> int|None:

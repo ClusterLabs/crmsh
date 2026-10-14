@@ -2233,6 +2233,7 @@ Configure the SBD daemon for both disk-based and disk-less mode.
 
 Main functionailities include:
 - Show configured disk metadata
+- Show disk backstore timeout values
 - Show contents of /etc/sysconfig/sbd
 - Show SBD related cluster properties
 - Update the SBD related configuration parameters
@@ -2244,7 +2245,7 @@ For more details on SBD and related parameters, please see man sbd(8).
 Usage:
 ...............
 # For disk-based SBD
-crm sbd configure show [disk_metadata|sysconfig|property]
+crm sbd configure show [disk_metadata|disk_backstore|sysconfig|property]
 crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device|driver>] [-F|--force]
 
 # For disk-less SBD
@@ -2256,6 +2257,7 @@ example:
 ...............
 configure show
 configure show disk_metadata
+configure show disk_backstore
 configure show sysconfig
 configure show property
 configure watchdog-timeout=30
