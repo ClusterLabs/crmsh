@@ -480,6 +480,91 @@ class TestSBDConfigChecker(unittest.TestCase):
         inst.current_timeout_term = "fencing-timeout"
         inst.current_enabled_term = "fencing-enabled"
 
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
+    def test_check_multipath_config_no_device(self, mock_get_sbd_device_from_config):
+        mock_get_sbd_device_from_config.return_value = []
+        self.assertEqual(self.instance_check._check_multipath_config(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.storage_utils.get_scsi_timeout')
+    def test_check_multipath_config_for_device_violations(self, mock_get_scsi_timeout):
+        mock_get_scsi_timeout.return_value = 30
+        config = {
+            "no_path_retry": "queue",
+            "path_grouping_policy": "multibus",
+            "path_checker": "tur",
+            "detect_checker": "yes",
+            "checker_timeout": "10",
+        }
+        self.assertEqual(
+            self.instance_check._check_multipath_config_for_device("/dev/mapper/mpatha", config),
+            sbd.CheckResult.ERROR
+        )
+        self.mock_quiet_logger_error.assert_has_calls([
+            call("It's required that no_path_retry is set to \"fail\" or 0 for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "queue"),
+            call("It's required that path_grouping_policy is set to \"failover\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "multibus"),
+            call("It's required that path_checker is set to \"directio\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "tur"),
+            call("It's required that detect_checker is set to \"no\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "yes"),
+            call("It's required that checker_timeout is not smaller than SCSI timeout(%d) for SBD device %s, now is %d", 30, "/dev/mapper/mpatha", 10),
+        ])
+
+    @patch('crmsh.storage_utils.get_scsi_timeout')
+    def test_check_multipath_config_for_device_ok(self, mock_get_scsi_timeout):
+        mock_get_scsi_timeout.return_value = 30
+        config = {
+            "no_path_retry": "0",
+            "path_grouping_policy": "failover",
+            "path_checker": "directio",
+            "detect_checker": "no",
+            "checker_timeout": None,
+        }
+        self.assertEqual(
+            self.instance_check._check_multipath_config_for_device("/dev/mapper/mpatha", config),
+            sbd.CheckResult.SUCCESS
+        )
+        self.mock_quiet_logger_error.assert_not_called()
+
+    @patch('crmsh.storage_utils.get_scsi_timeout')
+    def test_check_multipath_config_for_device_defaults(self, mock_get_scsi_timeout):
+        mock_get_scsi_timeout.return_value = 30
+        config = {
+            "no_path_retry": None,
+            "path_grouping_policy": None,
+            "path_checker": None,
+            "detect_checker": None,
+            "checker_timeout": None,
+        }
+        self.assertEqual(
+            self.instance_check._check_multipath_config_for_device("/dev/mapper/mpatha", config),
+            sbd.CheckResult.ERROR
+        )
+        # defaults "tur" and "yes" violate the SBD suggestions
+        self.mock_quiet_logger_error.assert_has_calls([
+            call("It's required that path_checker is set to \"directio\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "tur"),
+            call("It's required that detect_checker is set to \"no\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "yes"),
+        ])
+
+    @patch('crmsh.storage_utils.get_multipath_config')
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
+    def test_check_multipath_config(self, mock_get_sbd_device_from_config, mock_get_multipath_config):
+        mock_get_sbd_device_from_config.return_value = ["/dev/mapper/mpatha"]
+        mock_get_multipath_config.return_value = {
+            "no_path_retry": "0",
+            "path_grouping_policy": "failover",
+            "path_checker": "directio",
+            "detect_checker": "no",
+            "checker_timeout": None,
+        }
+        with patch('crmsh.storage_utils.get_scsi_timeout', return_value=30):
+            self.assertEqual(self.instance_check._check_multipath_config(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.storage_utils.get_multipath_config')
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
+    def test_check_multipath_config_non_multipath_device(self, mock_get_sbd_device_from_config, mock_get_multipath_config):
+        mock_get_sbd_device_from_config.return_value = ["/dev/sda1"]
+        mock_get_multipath_config.return_value = None
+        self.assertEqual(self.instance_check._check_multipath_config(), sbd.CheckResult.SUCCESS)
+
+
     @patch('logging.Logger.info')
     def test_log_and_return_success(self, mock_logger_info):
         self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.SUCCESS))

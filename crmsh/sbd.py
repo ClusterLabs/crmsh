@@ -620,6 +620,7 @@ class CheckResult(Enum):
 class SBDCheckItem(IntEnum):
     SBD_DISK_METADATA = 0
     SBD_DEVICE_METADATA_CONSISTENCY = auto()
+    SBD_MULTIPATH_CONFIG = auto()
     SBD_WATCHDOG_TIMEOUT = auto()
     FENCE_SBD_AGENT = auto()
     FENCE_SBD_AGENT_PARAMETERS = auto()
@@ -688,6 +689,14 @@ class SBDConfigChecker:
                 self._fix_sbd_device_metadata_consistency,
                 True,
                 [SBDCheckItem.SBD_DISK_METADATA]
+            ),
+
+            (
+                "multipath configuration",
+                self._check_multipath_config,
+                self._fix_multipath_config,
+                False,
+                []
             ),
 
             (
@@ -900,6 +909,88 @@ class SBDConfigChecker:
         first_dev = SBDUtils.get_sbd_device_from_config()[0]
         logger.info("Syncing sbd metadata from %s to other devices", first_dev)
         self._fix_sbd_disk_metadata()
+
+    def _check_multipath_config(self) -> CheckResult:
+        """
+        Check that the multipath configuration of each configured SBD device
+        follows the SBD suggestions.
+        """
+        dev_list = SBDUtils.get_sbd_device_from_config()
+        if not dev_list:
+            return CheckResult.SUCCESS
+        check_result = CheckResult.SUCCESS
+        for dev in dev_list:
+            config = storage_utils.get_multipath_config(dev)
+            if config is None:
+                continue
+            if self._check_multipath_config_for_device(dev, config) == CheckResult.ERROR:
+                check_result = CheckResult.ERROR
+        return check_result
+
+    def _check_multipath_config_for_device(self, dev, config) -> CheckResult:
+        check_result = CheckResult.SUCCESS
+        defaults = storage_utils.MULTIPATH_CONFIG_DEFAULTS
+
+        no_path_retry = config.get("no_path_retry")
+        if no_path_retry is None:
+            no_path_retry = defaults["no_path_retry"]
+        if no_path_retry != "fail" and no_path_retry != "0":
+            self.sbd_timeout.logger.error(
+                "It's required that no_path_retry is set to \"fail\" or 0 for SBD device %s, now is \"%s\"",
+                dev, no_path_retry)
+            check_result = CheckResult.ERROR
+
+        path_grouping_policy = config.get("path_grouping_policy")
+        if path_grouping_policy is None:
+            path_grouping_policy = defaults["path_grouping_policy"]
+        if path_grouping_policy != "failover":
+            self.sbd_timeout.logger.error(
+                "It's required that path_grouping_policy is set to \"failover\" for SBD device %s, now is \"%s\"",
+                dev, path_grouping_policy)
+            check_result = CheckResult.ERROR
+
+        path_checker = config.get("path_checker")
+        if path_checker is None:
+            path_checker = defaults["path_checker"]
+        if path_checker != "directio":
+            self.sbd_timeout.logger.error(
+                "It's required that path_checker is set to \"directio\" for SBD device %s, now is \"%s\"",
+                dev, path_checker)
+            check_result = CheckResult.ERROR
+
+        detect_checker = config.get("detect_checker")
+        if detect_checker is None:
+            detect_checker = defaults["detect_checker"]
+        if detect_checker != "no":
+            self.sbd_timeout.logger.error(
+                "It's required that detect_checker is set to \"no\" for SBD device %s, now is \"%s\"",
+                dev, detect_checker)
+            check_result = CheckResult.ERROR
+
+        scsi_timeout = storage_utils.get_scsi_timeout(dev)
+        checker_timeout = config.get("checker_timeout")
+        if checker_timeout is None:
+            checker_timeout = scsi_timeout
+        else:
+            checker_timeout = int(checker_timeout)
+        if checker_timeout < scsi_timeout:
+            self.sbd_timeout.logger.error(
+                "It's required that checker_timeout is not smaller than SCSI timeout(%d) for SBD device %s, now is %d",
+                scsi_timeout, dev, checker_timeout)
+            check_result = CheckResult.ERROR
+
+        return check_result
+
+    def _fix_multipath_config(self) -> None:
+        """
+        Multipath configuration is scattered across files and sections, so
+        fixing it automatically is fragile. crmsh intentionally does not fix
+        multipath misconfigurations; the user must update multipath.conf
+        manually.
+        """
+        logger.error(
+            "Multipath configuration issues are not fixed automatically, "
+            "please update multipath.conf and run 'multipathd reconfigure' manually")
 
     def _check_sbd_disk_metadata(self) -> CheckResult:
         """

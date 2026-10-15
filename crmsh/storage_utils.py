@@ -195,6 +195,117 @@ def check_no_quorum_policy_with_dlm():
         logger.warning("The DLM cluster best practice suggests to set the cluster property \"no-quorum-policy=freeze\"")
 
 
+MULTIPATH_CONFIG_DEFAULTS = {
+    "no_path_retry": "fail",
+    "path_grouping_policy": "failover",
+    "path_checker": "tur",
+    "detect_checker": "yes",
+}
+
+
+def _split_multipath_key_value(line: str):
+    """Split a multipath config "key value" line into (key, value)."""
+    m = re.match(r"^(\S+)\s+(.*)$", line)
+    if not m:
+        return None
+    value = m.group(2).strip()
+    if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+        value = value[1:-1]
+    return m.group(1), value
+
+
+def _finalize_multipath_frame(result: dict, frame: dict) -> None:
+    kind = frame["kind"]
+    if kind == "defaults":
+        result["defaults"] = frame["attrs"]
+    elif kind == "overrides":
+        result["overrides"] = frame["attrs"]
+    elif kind == "device":
+        result["devices"].append(frame)
+    elif kind == "multipath":
+        result["multipaths"].append(frame)
+
+
+def _parse_multipath_config(out: str) -> dict:
+    """
+    Parse the effective multipath configuration (the output of "multipath -T")
+    into its sections. Returns a dict with:
+    - "defaults": attribute -> value
+    - "overrides": attribute -> value
+    - "devices": list of {"vendor", "product", "attrs"}
+    - "multipaths": list of {"wwid", "attrs"}
+    """
+    result = {
+        "defaults": {},
+        "overrides": {},
+        "devices": [],
+        "multipaths": [],
+    }
+    stack = []
+    for line in out.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        while s.startswith("}"):
+            s = s[1:].strip()
+            if stack:
+                _finalize_multipath_frame(result, stack.pop())
+        if not s:
+            continue
+        m = re.match(r"^(\w+)\s*\{\s*(.*)$", s)
+        if m:
+            name = m.group(1)
+            if name in ("defaults", "overrides", "devices", "multipaths",
+                        "blacklist", "blacklist_exceptions"):
+                stack.append({"kind": name, "attrs": {}})
+            elif name == "device":
+                stack.append({"kind": "device", "vendor": None, "product": None, "attrs": {}})
+            elif name == "multipath":
+                stack.append({"kind": "multipath", "wwid": None, "attrs": {}})
+            else:
+                stack.append({"kind": "ignore", "attrs": {}})
+            continue
+        kv = _split_multipath_key_value(s)
+        if kv is None or not stack:
+            continue
+        key, value = kv
+        top = stack[-1]
+        kind = top["kind"]
+        if kind == "defaults" or kind == "overrides":
+            top["attrs"][key] = value
+        elif kind == "device":
+            if key == "vendor":
+                top["vendor"] = value
+            elif key == "product":
+                top["product"] = value
+            else:
+                top["attrs"][key] = value
+        elif kind == "multipath":
+            if key == "wwid":
+                top["wwid"] = value
+            else:
+                top["attrs"][key] = value
+    while stack:
+        _finalize_multipath_frame(result, stack.pop())
+    return result
+
+
+def _resolve_multipath_value(result: dict, attribute: str, wwid, vendor, product):
+    """Resolve a multipath config attribute for a device, honoring section precedence."""
+    for mp in result["multipaths"]:
+        if mp.get("wwid") == wwid and attribute in mp["attrs"]:
+            return mp["attrs"][attribute]
+    if attribute in result["overrides"]:
+        return result["overrides"][attribute]
+    for dev in result["devices"]:
+        if dev.get("vendor") == vendor and dev.get("product") == product \
+                and attribute in dev["attrs"]:
+            return dev["attrs"][attribute]
+    if attribute in result["defaults"]:
+        return result["defaults"][attribute]
+    return None
+
+
 @dataclass(frozen=True)
 class DeviceInfo:
     device: str
@@ -273,6 +384,45 @@ class MultipathInspector:
                 return int(parts[1])
         return None
 
+    def _get_multipath_wwid(self) -> str|None:
+        map_name = self._get_multipath_name(self._device_info.device)
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, 'multipathd show maps format "%n %w"')
+        if rc != 0:
+            return None
+        for line in out.splitlines():
+            parts = line.split(None, 1)
+            if len(parts) == 2 and parts[0] == map_name:
+                return parts[1]
+        return None
+
+    def _get_device_sysfs_attr(self, attr: str) -> str|None:
+        device = self._get_scsi_device_name()
+        if not device:
+            return None
+        path = f"/sys/block/{device}/device/{attr}"
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, f"cat {shlex.quote(path)}")
+        if rc != 0:
+            return None
+        return out.strip()
+
+    def get_multipath_config_values(self) -> dict[str, str|None]:
+        """
+        Resolve the effective multipath configuration for this multipath device.
+        Returns attribute -> effective value (None when not configured).
+        """
+        if not self._is_multipath_device(self._device_info.device):
+            return {}
+        wwid = self._get_multipath_wwid()
+        vendor = self._get_device_sysfs_attr("vendor")
+        product = self._get_device_sysfs_attr("model")
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, "multipath -T")
+        if rc != 0:
+            return {}
+        parsed = _parse_multipath_config(out)
+        attrs = ("no_path_retry", "path_grouping_policy", "path_checker",
+                 "detect_checker", "checker_timeout")
+        return {attr: _resolve_multipath_value(parsed, attr, wwid, vendor, product) for attr in attrs}
+
     def _get_scsi_device_name(self) -> str|None:
         if self._is_multipath_device(self._device_info.device):
             return self._get_multipath_path(self._device_info.device)
@@ -331,6 +481,17 @@ def is_scsi_device(dev) -> bool:
 
 def is_multipath_device(dev) -> bool:
     return MultipathInspector(dev)._is_multipath_device(dev)
+
+
+def get_multipath_config(dev) -> dict[str, str|None]|None:
+    """
+    Return the effective multipath configuration values for the given device,
+    or None when the device is not a multipath device.
+    """
+    inspector = MultipathInspector(dev)
+    if not inspector._is_multipath_device(dev):
+        return None
+    return inspector.get_multipath_config_values()
 
 
 def get_multipath_max_polling_interval(dev) -> int|None:
