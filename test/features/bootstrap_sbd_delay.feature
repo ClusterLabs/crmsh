@@ -15,13 +15,13 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
     And     Resource "fencing-sbd" type "fence_sbd" is "Started"
-    And     SBD option "SBD_DELAY_START" value is "41"
+    And     SBD option "SBD_DELAY_START" value is "87"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
-    And     SBD option "msgwait" value for "/dev/sda1" is "30"
+    And     SBD option "msgwait" value for "/dev/sda1" is "76"
     # original value is 43, which is calculated by external/sbd RA
     # now fence_sbd doesn't calculate it, so this value is the default one
     # from pacemaker
-    And     Cluster property "fencing-timeout" is "71"
+    And     Cluster property "fencing-timeout" is "102"
     And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
 
     Given   Has disk "/dev/sda1" on "hanode2"
@@ -30,12 +30,12 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "started" on "hanode2"
     And     Service "sbd" is "started" on "hanode2"
     # SBD_DELAY_START >= (token + consensus + pcmk_delay_max + msgwait)  # for disk-based sbd
-    And     SBD option "SBD_DELAY_START" value is "71"
+    And     SBD option "SBD_DELAY_START" value is "117"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
-    And     SBD option "msgwait" value for "/dev/sda1" is "30"
+    And     SBD option "msgwait" value for "/dev/sda1" is "76"
     # value_from_sbd >= 1.2 * msgwait  # for disk-based sbd
     # fencing_timeout >= max(value_from_sbd, constants.FENCING_TIMEOUT_DEFAULT) + token + consensus
-    And     Cluster property "fencing-timeout" is "71"
+    And     Cluster property "fencing-timeout" is "102"
     And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
 
     Given   Has disk "/dev/sda1" on "hanode3"
@@ -44,14 +44,14 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "started" on "hanode3"
     And     Service "sbd" is "started" on "hanode3"
     # SBD_DELAY_START >= (token + consensus + pcmk_delay_max + msgwait)  # for disk-based sbd
-    # runtime value is "41", we keep the larger one here
-    And     SBD option "SBD_DELAY_START" value is "41"
+    # runtime value is "87", we keep the larger one here
+    And     SBD option "SBD_DELAY_START" value is "87"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
-    And     SBD option "msgwait" value for "/dev/sda1" is "30"
+    And     SBD option "msgwait" value for "/dev/sda1" is "76"
     # value_from_sbd >= 1.2 * msgwait  # for disk-based sbd
     # fencing_timeout >= max(value_from_sbd, constants.FENCING_TIMEOUT_DEFAULT) + token + consensus
-    # runtime value is "71", we keep ther larger one here
-    And     Cluster property "fencing-timeout" is "71"
+    # runtime value is "102", we keep ther larger one here
+    And     Cluster property "fencing-timeout" is "102"
     And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
 
     # Increase expected value
@@ -62,19 +62,19 @@ Feature: configure sbd delay start correctly
     And     Start timeout for sbd.service is "121" seconds
 
     # Decrease expected value
-    When    Run "crm sbd configure watchdog-timeout=15" on "hanode1"
-    Then    SBD option "SBD_DELAY_START" value is "41"
-    And     SBD option "msgwait" value for "/dev/sda1" is "30"
-    And     Cluster property "fencing-timeout" is "71"
-    And     Start timeout for sbd.service is "90" seconds
+    When    Run "crm sbd configure watchdog-timeout=38" on "hanode1"
+    Then    SBD option "SBD_DELAY_START" value is "87"
+    And     SBD option "msgwait" value for "/dev/sda1" is "76"
+    And     Cluster property "fencing-timeout" is "102"
+    And     Start timeout for sbd.service is "104" seconds
 
     When    Run "crm cluster remove hanode3 -y" on "hanode1"
     Then    Cluster service is "stopped" on "hanode3"
     And     Service "sbd" is "stopped" on "hanode3"
-    And     SBD option "SBD_DELAY_START" value is "71"
+    And     SBD option "SBD_DELAY_START" value is "117"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
-    And     SBD option "msgwait" value for "/dev/sda1" is "30"
-    And     Cluster property "fencing-timeout" is "71"
+    And     SBD option "msgwait" value for "/dev/sda1" is "76"
+    And     Cluster property "fencing-timeout" is "102"
     And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
 
   @clean
@@ -204,10 +204,10 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     Then    Service "sbd" is "started" on "hanode2"
-    And     SBD option "SBD_DELAY_START" value is "71"
+    And     SBD option "SBD_DELAY_START" value is "117"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
-    And     SBD option "msgwait" value for "/dev/sda1" is "30"
-    And     Cluster property "fencing-timeout" is "71"
+    And     SBD option "msgwait" value for "/dev/sda1" is "76"
+    And     Cluster property "fencing-timeout" is "102"
     And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
 
   @clean
@@ -229,10 +229,10 @@ Feature: configure sbd delay start correctly
     And     Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
 
-    And     SBD option "SBD_DELAY_START" value is "41"
+    And     SBD option "SBD_DELAY_START" value is "87"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
-    And     SBD option "msgwait" value for "/dev/sda1" is "30"
-    And     Cluster property "fencing-timeout" is "71"
+    And     SBD option "msgwait" value for "/dev/sda1" is "76"
+    And     Cluster property "fencing-timeout" is "102"
     And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
 
   @clean
@@ -316,7 +316,7 @@ Feature: configure sbd delay start correctly
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
     And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
-    And     Cluster property "fencing-timeout" is "71"
+    And     Cluster property "fencing-timeout" is "102"
     And     Cluster property "priority-fencing-delay" is "60"
     When    Run "crm cluster remove hanode2 -y" on "hanode1"
     Then    Cluster service is "stopped" on "hanode2"
@@ -341,32 +341,32 @@ Feature: configure sbd delay start correctly
     Then    Expected "/etc/sysconfig/sbd is not consistent across cluster nodes" in stderr
     When    Try "crm cluster health sbd"
     Then    Expected "/etc/sysconfig/sbd is not consistent across cluster nodes" in stderr
-    When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=71/' /etc/sysconfig/sbd" on "hanode2"
+    When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=117/' /etc/sysconfig/sbd" on "hanode2"
     When    Run "crm cluster health sbd" on "hanode1"
     Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
     # check sbd disk metadata
     When    Run "sbd -1 15 -4 16 -d /dev/sda1 create" on "hanode1"
     When    Try "crm sbd configure show disk_metadata" on "hanode1"
-    Then    Expected "ERROR: It's required that SBD msgwait(now 16) >= 30" in stderr
+    Then    Expected "ERROR: It's required that SBD watchdog timeout(now 15) >= 38" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "ERROR: It's required that SBD msgwait(now 16) >= 30" in stderr
+    Then    Expected "ERROR: It's required that SBD watchdog timeout(now 15) >= 38" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
     # check SBD_DELAY_START
     When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=40/' /etc/sysconfig/sbd" on "hanode1"
     When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START=40/' /etc/sysconfig/sbd" on "hanode2"
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's required that SBD_DELAY_START is set to 71, now is 40" in stderr
+    Then    Expected "It's required that SBD_DELAY_START is set to 117, now is 40" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's required that SBD_DELAY_START is set to 71, now is 40" in stderr
+    Then    Expected "It's required that SBD_DELAY_START is set to 117, now is 40" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
     # check fencing-timeout
     When    Run "crm configure property fencing-timeout=50" on "hanode1"
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's required that fencing-timeout is set to 71, now is 50" in stderr
+    Then    Expected "It's required that fencing-timeout is set to 102, now is 50" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's required that fencing-timeout is set to 71, now is 50" in stderr
+    Then    Expected "It's required that fencing-timeout is set to 102, now is 50" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
     # check crashdump and pcmk_delay_max
@@ -385,9 +385,9 @@ Feature: configure sbd delay start correctly
     When    Run "sed -i 's/token: .*/token: 10000/' /etc/corosync/corosync.conf" on "hanode2"
     When    Run "corosync-cfgtool -R" on "hanode1"
     When    Try "crm sbd configure show" on "hanode1"
-    Then    Expected "It's required that SBD_DELAY_START is set to 82, now is 71" in stderr
+    Then    Expected "It's required that SBD_DELAY_START is set to 128, now is 117" in stderr
     When    Try "crm cluster health sbd" on "hanode1"
-    Then    Expected "It's required that SBD_DELAY_START is set to 82, now is 71" in stderr
+    Then    Expected "It's required that SBD_DELAY_START is set to 128, now is 117" in stderr
     When    Run "crm cluster health sbd --fix" on "hanode1"
     Then    Expected "SBD: Check SBD-related configurations: OK." in stdout
 
