@@ -387,3 +387,230 @@ sdc mpathb"""
             storage_utils.MultipathInspector.check_device_under_multipath("/dev/sda1")
 
         assert str(exc_info.value) == "Device /dev/sda1 is under multipath, please provide the multipath device instead"
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_check_device_under_multipath_accepts_multipath_device(self, mock_cluster_shell):
+        """Test check_device_under_multipath accepts a multipath device alias"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "mpatha", ""),
+            (0, "dev multipath\nsda mpatha", ""),
+            (0, "dev multipath\nsda mpatha", "")
+        ]
+
+        storage_utils.MultipathInspector.check_device_under_multipath("/dev/mapper/mpatha")
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_check_device_under_multipath_accepts_multipath_partition(self, mock_cluster_shell):
+        """Test check_device_under_multipath accepts a multipath partition alias"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "dm-2", ""),
+            (0, "dev multipath\nsda shared_iscsi_lun1", ""),
+            (0, "dev multipath\nsda shared_iscsi_lun1", "")
+        ]
+
+        storage_utils.MultipathInspector.check_device_under_multipath("/dev/mapper/shared_iscsi_lun1-part5")
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_get_scsi_timeout_non_multipath(self, mock_cluster_shell):
+        """Test get_scsi_timeout for a non-multipath device"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),
+            (0, "", ""),
+            (0, "", "")
+        ]
+        mock_shell_inst.get_stdout_or_raise_error.return_value = "30\n"
+
+        timeout = storage_utils.get_scsi_timeout("/dev/sda1")
+
+        assert timeout == 30
+        mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with("cat /sys/block/sda/device/timeout")
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_get_scsi_timeout_multipath_device(self, mock_cluster_shell):
+        """Test get_scsi_timeout resolves multipath devices to a backing path"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "mpatha", ""),
+            (0, "dev multipath\nsda mpatha\nsdb mpatha", ""),
+            (0, "dev multipath\nsda mpatha\nsdb mpatha", ""),
+            (0, "dev multipath\nsda mpatha\nsdb mpatha", "")
+        ]
+        mock_shell_inst.get_stdout_or_raise_error.return_value = "60\n"
+
+        timeout = storage_utils.get_scsi_timeout("/dev/mapper/mpatha")
+
+        assert timeout == 60
+        mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with("cat /sys/block/sda/device/timeout")
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_get_scsi_timeout_multipath_partition_device(self, mock_cluster_shell):
+        """Test get_scsi_timeout resolves multipath partition aliases"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "dm-2", ""),
+            (0, "dev multipath\nsda shared_iscsi_lun1\nsdb shared_iscsi_lun1", ""),
+            (0, "dev multipath\nsda shared_iscsi_lun1\nsdb shared_iscsi_lun1", ""),
+            (0, "dev multipath\nsda shared_iscsi_lun1\nsdb shared_iscsi_lun1", "")
+        ]
+        mock_shell_inst.get_stdout_or_raise_error.return_value = "30\n"
+
+        timeout = storage_utils.get_scsi_timeout("/dev/mapper/shared_iscsi_lun1-part5")
+
+        assert timeout == 30
+        mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with("cat /sys/block/sda/device/timeout")
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_get_scsi_timeout_under_multipath_path(self, mock_cluster_shell):
+        """Test get_scsi_timeout accepts an underlying path directly"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),
+            (0, "dev multipath\nsda mpatha", ""),
+            (0, "dev multipath\nsda mpatha", "")
+        ]
+        mock_shell_inst.get_stdout_or_raise_error.return_value = "60\n"
+
+        timeout = storage_utils.get_scsi_timeout("/dev/sda1")
+
+        assert timeout == 60
+        mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with("cat /sys/block/sda/device/timeout")
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_get_multipath_runtime_timeouts(self, mock_cluster_shell):
+        """Test multipath runtime timeout values are parsed from effective config"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "mpatha", ""),
+            (0, "dev multipath\nsda mpatha", ""),
+            (0, "defaults {\n    max_polling_interval 20\n    checker_timeout 30\n}", ""),
+            (0, "defaults {\n    max_polling_interval 20\n    checker_timeout 30\n}", "")
+        ]
+
+        inspector = storage_utils.MultipathInspector("/dev/mapper/mpatha")
+
+        assert inspector.get_max_polling_interval() == 20
+        assert inspector.get_checker_timeout() == 30
+
+    @mock.patch("crmsh.sh.cluster_shell")
+    def test_get_checker_timeout_defaults_to_scsi_timeout(self, mock_cluster_shell):
+        """Test checker_timeout defaults to SCSI timeout when absent"""
+        mock_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_shell_inst
+        mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+            (0, "sda", ""),
+            (0, "", ""),
+            (0, "defaults {\n    max_polling_interval 20\n}", ""),
+            (0, "", "")
+        ]
+        mock_shell_inst.get_stdout_or_raise_error.return_value = "30\n"
+
+        timeout = storage_utils.get_multipath_checker_timeout("/dev/sda1")
+
+        assert timeout == 30
+        mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with("cat /sys/block/sda/device/timeout")
+
+
+def test_parse_multipath_config():
+    out = """
+defaults {
+    no_path_retry fail
+    path_grouping_policy failover
+    path_checker tur
+    detect_checker yes
+}
+blacklist {
+    devnode "^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*"
+}
+devices {
+    device {
+        vendor "IBM"
+        product "2145"
+        path_checker directio
+        detect_checker no
+    }
+}
+overrides {
+    checker_timeout 30
+}
+multipaths {
+    multipath {
+        wwid "360050768018081c9c00000000000c9b2"
+        alias mpatha
+        no_path_retry 0
+    }
+}
+"""
+    parsed = storage_utils._parse_multipath_config(out)
+    assert parsed["defaults"]["no_path_retry"] == "fail"
+    assert parsed["defaults"]["path_checker"] == "tur"
+    assert parsed["overrides"]["checker_timeout"] == "30"
+    assert parsed["devices"][0]["vendor"] == "IBM"
+    assert parsed["devices"][0]["product"] == "2145"
+    assert parsed["devices"][0]["attrs"]["path_checker"] == "directio"
+    assert parsed["multipaths"][0]["wwid"] == "360050768018081c9c00000000000c9b2"
+    assert parsed["multipaths"][0]["attrs"]["no_path_retry"] == "0"
+
+
+def test_resolve_multipath_value_precedence():
+    parsed = {
+        "defaults": {"no_path_retry": "fail", "path_grouping_policy": "failover"},
+        "overrides": {"path_checker": "directio"},
+        "devices": [{"vendor": "IBM", "product": "2145", "attrs": {"detect_checker": "no"}}],
+        "multipaths": [{"wwid": "3600", "attrs": {"no_path_retry": "0"}}],
+    }
+    # multipaths section takes precedence over defaults
+    assert storage_utils._resolve_multipath_value(parsed, "no_path_retry", "3600", "IBM", "2145") == "0"
+    # overrides section takes precedence over devices
+    assert storage_utils._resolve_multipath_value(parsed, "path_checker", "3600", "IBM", "2145") == "directio"
+    # devices section takes precedence over defaults
+    assert storage_utils._resolve_multipath_value(parsed, "detect_checker", "3600", "IBM", "2145") == "no"
+    # falls back to defaults
+    assert storage_utils._resolve_multipath_value(parsed, "path_grouping_policy", "3600", "IBM", "2145") == "failover"
+    # not configured anywhere
+    assert storage_utils._resolve_multipath_value(parsed, "checker_timeout", "3600", "IBM", "2145") is None
+    # device vendor/product not matching
+    assert storage_utils._resolve_multipath_value(parsed, "detect_checker", "3600", "VENDOR", "PRODUCT") is None
+
+
+@mock.patch('crmsh.sh.cluster_shell')
+def test_get_multipath_config_values(mock_cluster_shell):
+    mock_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+        (0, "dm-2", ""),  # lsblk parent
+        (0, "dev multipath\nsda mpatha", ""),  # multipathd show paths
+        (0, "mpatha 360050768018081c9c00000000000c9b2", ""),  # multipathd show maps
+        (0, "IBM    ", ""),  # cat vendor
+        (0, "2145   ", ""),  # cat model
+        (0, "defaults {\n no_path_retry fail\n path_checker tur\n}\n", ""),  # multipath -T
+    ]
+
+    inspector = storage_utils.MultipathInspector("/dev/mapper/mpatha")
+    config = inspector.get_multipath_config_values()
+
+    assert config["no_path_retry"] == "fail"
+    assert config["path_checker"] == "tur"
+    assert config["path_grouping_policy"] is None
+    assert config["checker_timeout"] is None
+
+
+@mock.patch('crmsh.sh.cluster_shell')
+def test_get_multipath_config_not_multipath(mock_cluster_shell):
+    mock_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+        (0, "sda", ""),  # lsblk parent
+        (0, "", ""),  # multipathd show paths (empty)
+    ]
+
+    assert storage_utils.get_multipath_config("/dev/sda1") is None

@@ -111,12 +111,25 @@ class SBDUtils:
         return utils.parse_sysconfig(SBDManager.SYSCONFIG_SBD).get(key)
 
     @staticmethod
-    def get_crashdump_watchdog_timeout() -> typing.Optional[int]:
-        res = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
-        if not res:
+    def get_sbd_opts_int_value(option: str) -> typing.Optional[int]:
+        """
+        Get the integer value of an option, like "-t 5", from SBD_OPTS in /etc/sysconfig/sbd
+        Return None if SBD_OPTS is not set or doesn't contain the option
+        """
+        sbd_opts = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
+        if not sbd_opts:
             return None
-        matched = re.search(r"-C\s+(\d+)", res)
-        return int(matched.group(1)) if matched else None
+        opts_list = shlex.split(sbd_opts)
+        for index, opt in enumerate(opts_list):
+            if opt == option:
+                if index + 1 >= len(opts_list):
+                    raise ValueError(f"Cannot get the value of {option} in SBD_OPTS")
+                return int(opts_list[index + 1])
+        return None
+
+    @staticmethod
+    def get_crashdump_watchdog_timeout() -> typing.Optional[int]:
+        return SBDUtils.get_sbd_opts_int_value("-C")
 
     @staticmethod
     def get_sbd_device_from_config():
@@ -235,6 +248,9 @@ class SBDTimeout(object):
     SBD_WATCHDOG_TIMEOUT_DEFAULT = 5
     SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
+    SBD_SERVANT_RESTART_INTERVAL_DEFAULT = 5
+    SBD_LOOP_TIMEOUT_DEFAULT = 1
+    SBD_TIMEOUT_IO_LOOP_TIMEOUT_FACTOR = 3
     QDEVICE_SYNC_TIMEOUT_MARGIN = 5
     SHOW_SBD_START_TIMEOUT_CMD = "systemctl daemon-reload; systemctl show -p TimeoutStartUSec sbd.service --value"
     SHOW_DEFAULT_START_TIMEOUT_CMD = "systemctl show -p DefaultTimeoutStartUSec --value"
@@ -244,12 +260,14 @@ class SBDTimeout(object):
             diskless_sbd: bool,
             quiet: bool,
             context: typing.Optional[bootstrap.GlobalVariables] = None,
+            sbd_devices: typing.Optional[typing.List[str]] = None,
     ):
         """
         Init function
         """
         self.context = context
         self.disk_based = not diskless_sbd
+        self.sbd_devices = sbd_devices or []
         self.sbd_msgwait = None
         self.fencing_timeout = None
         self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT
@@ -270,6 +288,7 @@ class SBDTimeout(object):
         if not self.disk_based:
             self._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
         else:
+            self._adjust_sbd_watchdog_timeout_with_disk_backstore()
             self._set_sbd_msgwait()
 
     def _set_sbd_watchdog_timeout(self):
@@ -285,6 +304,23 @@ class SBDTimeout(object):
                 self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390, self.sbd_watchdog_timeout
             )
             self.sbd_watchdog_timeout = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_S390
+
+    def _adjust_sbd_watchdog_timeout_with_disk_backstore(self):
+        """
+        When using disk-based SBD, the watchdog timeout must also cover the
+        disk backstore (multipath or SCSI) timeout.
+        """
+        if not self.sbd_devices:
+            return
+        watchdog_from_disk = self.get_sbd_watchdog_timeout_from_disk(self.sbd_devices[0])
+        if watchdog_from_disk is None:
+            return
+        if self.sbd_watchdog_timeout < watchdog_from_disk:
+            self.logger.warning(
+                "SBD watchdog_timeout is set to %d, it was %d",
+                watchdog_from_disk, self.sbd_watchdog_timeout
+            )
+            self.sbd_watchdog_timeout = watchdog_from_disk
 
     def _set_sbd_msgwait(self):
         """
@@ -337,6 +373,56 @@ class SBDTimeout(object):
         return int(res)
 
     @staticmethod
+    def get_sbd_servant_restart_interval() -> int:
+        """
+        Get sbd servant restart interval from SBD_OPTS -t option.
+        """
+        value = SBDUtils.get_sbd_opts_int_value("-t")
+        return SBDTimeout.SBD_SERVANT_RESTART_INTERVAL_DEFAULT if value is None else value
+
+    @staticmethod
+    def get_sbd_loop_timeout() -> int:
+        """
+        Get loop timeout from the first configured SBD device metadata.
+        """
+        dev_list = SBDUtils.get_sbd_device_from_config()
+        if not dev_list:
+            return SBDTimeout.SBD_LOOP_TIMEOUT_DEFAULT
+        device_metadata = SBDUtils.get_sbd_device_metadata(dev_list[0], timeout_only=True)
+        return device_metadata.get("loop", SBDTimeout.SBD_LOOP_TIMEOUT_DEFAULT)
+
+    @staticmethod
+    def get_sbd_timeout_io() -> int:
+        """
+        Get sbd async IO read timeout from SBD_OPTS -I option.
+        """
+        value = SBDUtils.get_sbd_opts_int_value("-I")
+        if value is None:
+            return SBDTimeout.SBD_TIMEOUT_IO_LOOP_TIMEOUT_FACTOR * SBDTimeout.get_sbd_loop_timeout()
+        return value
+
+    @staticmethod
+    def get_sbd_watchdog_timeout_from_disk(dev) -> int|None:
+        """
+        Get the watchdog timeout required by the SBD disk backstore.
+
+        multipath: 1.2 * (max_polling_interval + checker_timeout + servant_restart_interval - timeout_io)
+        SCSI:      1.2 * (scsi_timeout + servant_restart_interval - timeout_io)
+
+        Returns None when the device is neither multipath nor SCSI.
+        """
+        servant_restart_interval = SBDTimeout.get_sbd_servant_restart_interval()
+        timeout_io = SBDTimeout.get_sbd_timeout_io()
+        if storage_utils.is_multipath_device(dev):
+            timeout = (storage_utils.get_multipath_max_polling_interval(dev) or 0) \
+                + storage_utils.get_multipath_checker_timeout(dev)
+        elif storage_utils.is_scsi_device(dev):
+            timeout = storage_utils.get_scsi_timeout(dev)
+        else:
+            return None
+        return max(1, int(1.2 * (timeout + servant_restart_interval - timeout_io)))
+
+    @staticmethod
     def get_fencing_watchdog_timeout_expected(
             crashdump_watchdog_timeout: int|None = None,
             sbd_watchdog_timeout: int|None = None
@@ -352,6 +438,7 @@ class SBDTimeout(object):
         self.two_node_without_qdevice = utils.is_2node_cluster_without_qdevice()
         self.crashdump_watchdog_timeout = SBDUtils.get_crashdump_watchdog_timeout()
         dev_list = SBDUtils.get_sbd_device_from_config()
+        self.sbd_devices = dev_list
         if dev_list:  # disk-based
             self.disk_based = True
             first_dev = dev_list[0]
@@ -382,6 +469,10 @@ class SBDTimeout(object):
         instance = cls(False, True, None)
         instance._load_configurations_from_runtime()
         expected_watchdog_timeout = max(SBDTimeout.get_sbd_watchdog_timeout_expected(), instance.sbd_watchdog_timeout)
+        if instance.sbd_devices:
+            watchdog_from_disk = SBDTimeout.get_sbd_watchdog_timeout_from_disk(instance.sbd_devices[0])
+            if watchdog_from_disk is not None:
+                expected_watchdog_timeout = max(expected_watchdog_timeout, watchdog_from_disk)
         if instance.crashdump_watchdog_timeout:
             msgwait_from_formula = 2 * expected_watchdog_timeout + instance.crashdump_watchdog_timeout
         else:
@@ -529,6 +620,7 @@ class CheckResult(Enum):
 class SBDCheckItem(IntEnum):
     SBD_DISK_METADATA = 0
     SBD_DEVICE_METADATA_CONSISTENCY = auto()
+    SBD_MULTIPATH_CONFIG = auto()
     SBD_WATCHDOG_TIMEOUT = auto()
     FENCE_SBD_AGENT = auto()
     FENCE_SBD_AGENT_PARAMETERS = auto()
@@ -597,6 +689,14 @@ class SBDConfigChecker:
                 self._fix_sbd_device_metadata_consistency,
                 True,
                 [SBDCheckItem.SBD_DISK_METADATA]
+            ),
+
+            (
+                "multipath configuration",
+                self._check_multipath_config,
+                self._fix_multipath_config,
+                False,
+                []
             ),
 
             (
@@ -809,6 +909,88 @@ class SBDConfigChecker:
         first_dev = SBDUtils.get_sbd_device_from_config()[0]
         logger.info("Syncing sbd metadata from %s to other devices", first_dev)
         self._fix_sbd_disk_metadata()
+
+    def _check_multipath_config(self) -> CheckResult:
+        """
+        Check that the multipath configuration of each configured SBD device
+        follows the SBD suggestions.
+        """
+        dev_list = SBDUtils.get_sbd_device_from_config()
+        if not dev_list:
+            return CheckResult.SUCCESS
+        check_result = CheckResult.SUCCESS
+        for dev in dev_list:
+            config = storage_utils.get_multipath_config(dev)
+            if config is None:
+                continue
+            if self._check_multipath_config_for_device(dev, config) == CheckResult.ERROR:
+                check_result = CheckResult.ERROR
+        return check_result
+
+    def _check_multipath_config_for_device(self, dev, config) -> CheckResult:
+        check_result = CheckResult.SUCCESS
+        defaults = storage_utils.MULTIPATH_CONFIG_DEFAULTS
+
+        no_path_retry = config.get("no_path_retry")
+        if no_path_retry is None:
+            no_path_retry = defaults["no_path_retry"]
+        if no_path_retry != "fail" and no_path_retry != "0":
+            self.sbd_timeout.logger.error(
+                "It's required that no_path_retry is set to \"fail\" or 0 for SBD device %s, now is \"%s\"",
+                dev, no_path_retry)
+            check_result = CheckResult.ERROR
+
+        path_grouping_policy = config.get("path_grouping_policy")
+        if path_grouping_policy is None:
+            path_grouping_policy = defaults["path_grouping_policy"]
+        if path_grouping_policy != "failover":
+            self.sbd_timeout.logger.error(
+                "It's required that path_grouping_policy is set to \"failover\" for SBD device %s, now is \"%s\"",
+                dev, path_grouping_policy)
+            check_result = CheckResult.ERROR
+
+        path_checker = config.get("path_checker")
+        if path_checker is None:
+            path_checker = defaults["path_checker"]
+        if path_checker != "directio":
+            self.sbd_timeout.logger.error(
+                "It's required that path_checker is set to \"directio\" for SBD device %s, now is \"%s\"",
+                dev, path_checker)
+            check_result = CheckResult.ERROR
+
+        detect_checker = config.get("detect_checker")
+        if detect_checker is None:
+            detect_checker = defaults["detect_checker"]
+        if detect_checker != "no":
+            self.sbd_timeout.logger.error(
+                "It's required that detect_checker is set to \"no\" for SBD device %s, now is \"%s\"",
+                dev, detect_checker)
+            check_result = CheckResult.ERROR
+
+        scsi_timeout = storage_utils.get_scsi_timeout(dev)
+        checker_timeout = config.get("checker_timeout")
+        if checker_timeout is None:
+            checker_timeout = scsi_timeout
+        else:
+            checker_timeout = int(checker_timeout)
+        if checker_timeout < scsi_timeout:
+            self.sbd_timeout.logger.error(
+                "It's required that checker_timeout is not smaller than SCSI timeout(%d) for SBD device %s, now is %d",
+                scsi_timeout, dev, checker_timeout)
+            check_result = CheckResult.ERROR
+
+        return check_result
+
+    def _fix_multipath_config(self) -> None:
+        """
+        Multipath configuration is scattered across files and sections, so
+        fixing it automatically is fragile. crmsh intentionally does not fix
+        multipath misconfigurations; the user must update multipath.conf
+        manually.
+        """
+        logger.error(
+            "Multipath configuration issues are not fixed automatically, "
+            "please update multipath.conf and run 'multipathd reconfigure' manually")
 
     def _check_sbd_disk_metadata(self) -> CheckResult:
         """
@@ -1301,7 +1483,7 @@ class SBDManager:
         if not self.bootstrap_context or not self.overwrite_sysconfig:
             return
         if not self.timeout_dict:
-            timeout_inst = SBDTimeout(self.diskless_sbd, False, self.bootstrap_context)
+            timeout_inst = SBDTimeout(self.diskless_sbd, False, self.bootstrap_context, sbd_devices=self.device_list_to_init)
             self.timeout_dict["watchdog"] = timeout_inst.sbd_watchdog_timeout
             if self.diskless_sbd:
                 self.update_dict["SBD_WATCHDOG_TIMEOUT"] = str(timeout_inst.sbd_watchdog_timeout)
