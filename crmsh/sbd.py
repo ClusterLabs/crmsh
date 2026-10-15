@@ -644,6 +644,7 @@ class CheckResult(Enum):
 class SBDCheckItem(IntEnum):
     SBD_DISK_METADATA = 0
     SBD_DEVICE_METADATA_CONSISTENCY = auto()
+    SBD_MULTIPATH_CONFIG = auto()
     SBD_WATCHDOG_TIMEOUT = auto()
     FENCE_SBD_AGENT = auto()
     FENCE_SBD_AGENT_PARAMETERS = auto()
@@ -663,6 +664,8 @@ class SBDConfigChecker:
     def __init__(self, quiet=False, fix=False):
         self.quiet = quiet
         self.fix = fix
+        # set by check_and_fix when a failed check has a fix method
+        self.has_fixable_issue = False
         self.peer_node_list = []
         self.service_disabled_node_list = []
         self.sbd_timeout = SBDTimeout(
@@ -680,7 +683,7 @@ class SBDConfigChecker:
             return CheckResult.WARNING
 
     @staticmethod
-    def log_and_return(check_res: CheckResult, fix_flag: bool = False) -> bool:
+    def log_and_return(check_res: CheckResult, fix_flag: bool = False, fixable: bool = True) -> bool:
         if check_res == CheckResult.SKIPPED:
             return True
         if check_res == CheckResult.SUCCESS:
@@ -688,7 +691,7 @@ class SBDConfigChecker:
             return True
         cmd = "crm cluster health sbd --fix"
         issue_type = "error" if check_res == CheckResult.ERROR else "warning"
-        if not fix_flag:
+        if not fix_flag and fixable:
             logger.info(f'Please run "{cmd}" to fix the above {issue_type} on the running cluster')
         if check_res == CheckResult.ERROR:
             logger.error("SBD: Check SBD-related configurations: FAIL.")
@@ -714,6 +717,14 @@ class SBDConfigChecker:
                 self._fix_sbd_device_metadata_consistency,
                 True,
                 [SBDCheckItem.SBD_DISK_METADATA]
+            ),
+
+            (
+                "multipath configuration",
+                self._check_multipath_config,
+                None,
+                False,
+                []
             ),
 
             (
@@ -871,14 +882,24 @@ class SBDConfigChecker:
             if prereq_checks and any(check_res_list[p.value] != CheckResult.SUCCESS for p in prereq_checks):
                 check_res_list[index] = CheckResult.ERROR
                 continue
-            check_res = check_method()
+            # Issues of an item without a fix method can never be resolved by
+            # --fix, so always show them to tell the user what to fix manually
+            quiet = self.sbd_timeout.quiet
+            if not fix_method:
+                self.sbd_timeout.quiet = False
+            try:
+                check_res = check_method()
+            finally:
+                self.sbd_timeout.quiet = quiet
             logger.debug("SBD Checking: %s, result: %s", name, check_res)
             check_res_list[index] = check_res
             if check_res == CheckResult.SUCCESS:
                 continue
-            elif ssh_required and not all_nodes_reachable:
+            if fix_method:
+                self.has_fixable_issue = True
+            if ssh_required and not all_nodes_reachable:
                 raise FixAborted(f"Cannot fix {name} issue: {error_msg}")
-            elif self.fix:
+            elif self.fix and fix_method:
                 fix_method()
                 self.sbd_timeout._load_configurations_from_runtime()
                 check_res = check_method()
@@ -931,6 +952,83 @@ class SBDConfigChecker:
         first_dev = SBDUtils.get_sbd_device_from_config()[0]
         logger.info("Syncing sbd metadata from %s to other devices", first_dev)
         self._fix_sbd_disk_metadata()
+
+    def _check_multipath_config(self) -> CheckResult:
+        """
+        Check that the multipath configuration of each configured SBD device
+        follows the SBD suggestions.
+
+        There is no fix method: multipath configuration is scattered across
+        files and sections, so the user must update multipath.conf and run
+        multipathd reconfigure manually.
+        """
+        dev_list = SBDUtils.get_sbd_device_from_config()
+        if not dev_list:
+            return CheckResult.SUCCESS
+        check_result = CheckResult.SUCCESS
+        for dev in dev_list:
+            config = storage_utils.get_multipath_config(dev)
+            if config is None:
+                continue
+            if self._check_multipath_config_for_device(dev, config) == CheckResult.ERROR:
+                check_result = CheckResult.ERROR
+        if check_result == CheckResult.ERROR:
+            self.sbd_timeout.logger.info("Please update multipath.conf and run \"multipathd reconfigure\" manually")
+        return check_result
+
+    def _check_multipath_config_for_device(self, dev, config) -> CheckResult:
+        check_result = CheckResult.SUCCESS
+        defaults = storage_utils.MULTIPATH_CONFIG_DEFAULTS
+
+        no_path_retry = config.get("no_path_retry")
+        if no_path_retry is None:
+            no_path_retry = defaults["no_path_retry"]
+        if no_path_retry != "fail" and no_path_retry != "0":
+            self.sbd_timeout.logger.error(
+                "It's required that no_path_retry is set to \"fail\" or 0 for SBD device %s, now is \"%s\"",
+                dev, no_path_retry)
+            check_result = CheckResult.ERROR
+
+        path_grouping_policy = config.get("path_grouping_policy")
+        if path_grouping_policy is None:
+            path_grouping_policy = defaults["path_grouping_policy"]
+        if path_grouping_policy != "failover":
+            self.sbd_timeout.logger.error(
+                "It's required that path_grouping_policy is set to \"failover\" for SBD device %s, now is \"%s\"",
+                dev, path_grouping_policy)
+            check_result = CheckResult.ERROR
+
+        path_checker = config.get("path_checker")
+        if path_checker is None:
+            path_checker = defaults["path_checker"]
+        if path_checker != "directio":
+            self.sbd_timeout.logger.error(
+                "It's required that path_checker is set to \"directio\" for SBD device %s, now is \"%s\"",
+                dev, path_checker)
+            check_result = CheckResult.ERROR
+
+        detect_checker = config.get("detect_checker")
+        if detect_checker is None:
+            detect_checker = defaults["detect_checker"]
+        if detect_checker != "no":
+            self.sbd_timeout.logger.error(
+                "It's required that detect_checker is set to \"no\" for SBD device %s, now is \"%s\"",
+                dev, detect_checker)
+            check_result = CheckResult.ERROR
+
+        scsi_timeout = storage_utils.get_scsi_timeout(dev)
+        checker_timeout = config.get("checker_timeout")
+        if checker_timeout is None:
+            checker_timeout = scsi_timeout
+        else:
+            checker_timeout = int(checker_timeout)
+        if checker_timeout < scsi_timeout:
+            self.sbd_timeout.logger.error(
+                "It's required that checker_timeout is not smaller than SCSI timeout(%d) for SBD device %s, now is %d",
+                scsi_timeout, dev, checker_timeout)
+            check_result = CheckResult.ERROR
+
+        return check_result
 
     def _check_sbd_disk_metadata(self) -> CheckResult:
         """

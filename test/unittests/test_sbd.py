@@ -544,6 +544,91 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.SKIPPED))
         mock_logger_info.assert_not_called()
 
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
+    def test_check_multipath_config_no_device(self, mock_get_sbd_device_from_config):
+        mock_get_sbd_device_from_config.return_value = []
+        self.assertEqual(self.instance_check._check_multipath_config(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.storage_utils.get_scsi_timeout')
+    def test_check_multipath_config_for_device_violations(self, mock_get_scsi_timeout):
+        mock_get_scsi_timeout.return_value = 30
+        config = {
+            "no_path_retry": "queue",
+            "path_grouping_policy": "multibus",
+            "path_checker": "tur",
+            "detect_checker": "yes",
+            "checker_timeout": "10",
+        }
+        self.assertEqual(
+            self.instance_check._check_multipath_config_for_device("/dev/mapper/mpatha", config),
+            sbd.CheckResult.ERROR
+        )
+        self.mock_quiet_logger_error.assert_has_calls([
+            call("It's required that no_path_retry is set to \"fail\" or 0 for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "queue"),
+            call("It's required that path_grouping_policy is set to \"failover\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "multibus"),
+            call("It's required that path_checker is set to \"directio\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "tur"),
+            call("It's required that detect_checker is set to \"no\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "yes"),
+            call("It's required that checker_timeout is not smaller than SCSI timeout(%d) for SBD device %s, now is %d", 30, "/dev/mapper/mpatha", 10),
+        ])
+
+    @patch('crmsh.storage_utils.get_scsi_timeout')
+    def test_check_multipath_config_for_device_ok(self, mock_get_scsi_timeout):
+        mock_get_scsi_timeout.return_value = 30
+        config = {
+            "no_path_retry": "0",
+            "path_grouping_policy": "failover",
+            "path_checker": "directio",
+            "detect_checker": "no",
+            "checker_timeout": None,
+        }
+        self.assertEqual(
+            self.instance_check._check_multipath_config_for_device("/dev/mapper/mpatha", config),
+            sbd.CheckResult.SUCCESS
+        )
+        self.mock_quiet_logger_error.assert_not_called()
+
+    @patch('crmsh.storage_utils.get_scsi_timeout')
+    def test_check_multipath_config_for_device_defaults(self, mock_get_scsi_timeout):
+        mock_get_scsi_timeout.return_value = 30
+        config = {
+            "no_path_retry": None,
+            "path_grouping_policy": None,
+            "path_checker": None,
+            "detect_checker": None,
+            "checker_timeout": None,
+        }
+        self.assertEqual(
+            self.instance_check._check_multipath_config_for_device("/dev/mapper/mpatha", config),
+            sbd.CheckResult.ERROR
+        )
+        # defaults "tur" and "yes" violate the SBD suggestions
+        self.mock_quiet_logger_error.assert_has_calls([
+            call("It's required that path_checker is set to \"directio\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "tur"),
+            call("It's required that detect_checker is set to \"no\" for SBD device %s, now is \"%s\"", "/dev/mapper/mpatha", "yes"),
+        ])
+
+    @patch('crmsh.storage_utils.get_multipath_config')
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
+    def test_check_multipath_config(self, mock_get_sbd_device_from_config, mock_get_multipath_config):
+        mock_get_sbd_device_from_config.return_value = ["/dev/mapper/mpatha"]
+        mock_get_multipath_config.return_value = {
+            "no_path_retry": "0",
+            "path_grouping_policy": "failover",
+            "path_checker": "directio",
+            "detect_checker": "no",
+            "checker_timeout": None,
+        }
+        with patch('crmsh.storage_utils.get_scsi_timeout', return_value=30):
+            self.assertEqual(self.instance_check._check_multipath_config(), sbd.CheckResult.SUCCESS)
+
+    @patch('crmsh.storage_utils.get_multipath_config')
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
+    def test_check_multipath_config_non_multipath_device(self, mock_get_sbd_device_from_config, mock_get_multipath_config):
+        mock_get_sbd_device_from_config.return_value = ["/dev/sda1"]
+        mock_get_multipath_config.return_value = None
+        self.assertEqual(self.instance_check._check_multipath_config(), sbd.CheckResult.SUCCESS)
+
+
     @patch('logging.Logger.info')
     def test_log_and_return_success(self, mock_logger_info):
         self.assertTrue(self.instance_check.log_and_return(sbd.CheckResult.SUCCESS))
@@ -554,6 +639,13 @@ class TestSBDConfigChecker(unittest.TestCase):
     def test_log_and_return_error(self, mock_logger_error, mock_logger_info):
         self.assertFalse(self.instance_check.log_and_return(sbd.CheckResult.ERROR))
         mock_logger_info.assert_called_once_with("Please run \"crm cluster health sbd --fix\" to fix the above error on the running cluster")
+        mock_logger_error.assert_called_once_with("SBD: Check SBD-related configurations: FAIL.")
+
+    @patch('logging.Logger.info')
+    @patch('logging.Logger.error')
+    def test_log_and_return_error_not_fixable(self, mock_logger_error, mock_logger_info):
+        self.assertFalse(self.instance_check.log_and_return(sbd.CheckResult.ERROR, fixable=False))
+        mock_logger_info.assert_not_called()
         mock_logger_error.assert_called_once_with("SBD: Check SBD-related configurations: FAIL.")
 
     @patch('logging.Logger.info')
@@ -709,6 +801,49 @@ class TestSBDConfigChecker(unittest.TestCase):
         with self.assertRaises(sbd.FixFailure) as context:
             self.instance_fix.check_and_fix()
         self.assertTrue("Failed to fix SBD disk metadata" in str(context.exception))
+
+    @patch("crmsh.watchdog.Watchdog.warn_if_using_softdog")
+    @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
+    @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured', new=Mock(return_value=True))
+    @patch('crmsh.sbd.ServiceManager')
+    def test_check_and_fix_item_without_fix_method(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_warn_if_using_softdog):
+        mock_service_manager.return_value.service_is_active = Mock(return_value=True)
+        self.instance_fix._check_config_consistency = Mock(return_value=True)
+        self.instance_fix.sbd_timeout._load_configurations_from_runtime = Mock()
+        self.instance_fix._get_current_terms = Mock(side_effect=self.fake_get_current_terms(self.instance_fix))
+        check_method = Mock(return_value=sbd.CheckResult.ERROR)
+        self.instance_fix._check_and_fix_items = Mock(return_value=[("no fix item", check_method, None, False, [])])
+
+        res = self.instance_fix.check_and_fix()
+
+        self.assertEqual(res, sbd.CheckResult.ERROR)
+        check_method.assert_called_once_with()
+        self.assertFalse(self.instance_fix.has_fixable_issue)
+
+    @patch("crmsh.watchdog.Watchdog.warn_if_using_softdog")
+    @patch('crmsh.sbd.SBDManager.warn_diskless_sbd')
+    @patch('crmsh.utils.list_cluster_nodes_except_me')
+    @patch('crmsh.utils.check_all_nodes_reachable')
+    @patch('crmsh.sbd.SBDUtils.diskbased_sbd_configured', new=Mock(return_value=True))
+    @patch('crmsh.sbd.ServiceManager')
+    def test_check_and_fix_item_without_fix_method_not_quiet(self, mock_service_manager, mock_check_all_nodes_reachable, mock_list_cluster_nodes_except_me, mock_warn_diskless_sbd, mock_warn_if_using_softdog):
+        mock_service_manager.return_value.service_is_active = Mock(return_value=True)
+        self.instance_fix._check_config_consistency = Mock(return_value=True)
+        self.instance_fix.sbd_timeout._load_configurations_from_runtime = Mock()
+        self.instance_fix._get_current_terms = Mock(side_effect=self.fake_get_current_terms(self.instance_fix))
+        quiet_states = []
+        def check_method():
+            quiet_states.append(self.instance_fix.sbd_timeout.quiet)
+            return sbd.CheckResult.ERROR
+        self.instance_fix.sbd_timeout.quiet = True
+        self.instance_fix._check_and_fix_items = Mock(return_value=[("no fix item", check_method, None, False, [])])
+
+        self.instance_fix.check_and_fix()
+
+        self.assertEqual(quiet_states, [False])
+        self.assertTrue(self.instance_fix.sbd_timeout.quiet)
 
     @patch('crmsh.sbd.SBDConfigChecker._check_deprecated_property')
     @patch("crmsh.watchdog.Watchdog.warn_if_using_softdog")
