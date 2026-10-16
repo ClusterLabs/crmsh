@@ -2111,6 +2111,25 @@ def get_quorum_votes_dict(remote=None):
     return dict(re.findall(r"(Expected|Total) votes:\s+(\d+)", out))
 
 
+def cluster_will_lose_quorum_after_stopping_nodes(num_nodes: int) -> bool:
+    """
+    Predict whether stopping num_nodes online cluster nodes will make the
+    remaining cluster lose quorum.
+
+    Returns False when no online node remains after the stop (nothing left
+    to fence itself), otherwise returns True when the remaining votes can't
+    form a quorum.
+    """
+    quorum_votes_dict = get_quorum_votes_dict()
+    expected_votes = int(quorum_votes_dict["Expected"])
+    total_votes = int(quorum_votes_dict["Total"])
+    qdevice_votes = 1 if corosync.is_qdevice_configured() else 0
+    online_node_votes = total_votes - qdevice_votes
+    if online_node_votes - num_nodes <= 0:
+        return False
+    return not calculate_quorate_status(expected_votes, total_votes - num_nodes)
+
+
 @dataclass
 class ReachabilitySummary:
     dead_nodes: list[str] # offline and unreachable nodes

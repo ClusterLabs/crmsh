@@ -1504,6 +1504,7 @@ done
         mock_qdevice_configured.assert_called_once_with()
         mock_confirm.assert_called_once_with("Removing QDevice service and configuration from cluster: Are you sure?")
 
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
     @mock.patch('crmsh.sh.cluster_shell')
     @mock.patch('crmsh.bootstrap.adjust_properties')
     @mock.patch('crmsh.bootstrap.sync_path')
@@ -1520,10 +1521,12 @@ done
     @mock.patch('crmsh.corosync.is_qdevice_configured')
     def test_remove_qdevice_reload(self, mock_qdevice_configured, mock_confirm, mock_reachable, mock_evaluate,
             mock_status, mock_invoke, mock_status_long, mock_remove_config, mock_remove_db,
-            mock_remove_files, mock_config_two_node, mock_sync, mock_adjust_priority, mock_cluster_shell):
+            mock_remove_files, mock_config_two_node, mock_sync, mock_adjust_priority, mock_cluster_shell,
+            mock_is_diskless_sbd):
         mock_qdevice_configured.return_value = True
         mock_confirm.return_value = True
         mock_evaluate.return_value = qdevice.QdevicePolicy.QDEVICE_RELOAD
+        mock_is_diskless_sbd.return_value = False
         mock_cluster_shell_inst = mock.Mock()
         mock_cluster_shell.return_value = mock_cluster_shell_inst
 
@@ -1545,6 +1548,80 @@ done
         mock_remove_config.assert_called_once_with()
         mock_remove_db.assert_called_once_with()
         mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-cfgtool -R")
+
+    @mock.patch('crmsh.options.force', False)
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.utils.calculate_quorate_status')
+    @mock.patch('crmsh.utils.get_quorum_votes_dict')
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
+    @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.bootstrap.confirm')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
+    def test_remove_qdevice_diskless_lose_quorum(self, mock_qdevice_configured, mock_confirm, mock_reachable,
+            mock_evaluate, mock_is_diskless_sbd, mock_get_votes, mock_quorate, mock_error):
+        mock_qdevice_configured.return_value = True
+        mock_confirm.return_value = True
+        mock_is_diskless_sbd.return_value = True
+        mock_get_votes.return_value = {'Expected': '2', 'Total': '2'}
+        mock_quorate.return_value = False
+
+        bootstrap.remove_qdevice()
+
+        mock_reachable.assert_called_once_with("removing QDevice from the cluster")
+        mock_get_votes.assert_called_once_with()
+        mock_quorate.assert_called_once_with(2, 1)
+        mock_error.assert_called_once_with(
+            "Removing QDevice will cause the cluster to lose quorum and the remaining "
+            "diskless SBD node(s) will fence themselves. Pass -F/--force to proceed.")
+        mock_evaluate.assert_not_called()
+
+    @mock.patch('crmsh.bootstrap.do_remove_qdevice')
+    @mock.patch('crmsh.options.force', True)
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
+    @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.bootstrap.confirm')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
+    def test_remove_qdevice_diskless_with_force(self, mock_qdevice_configured, mock_confirm, mock_reachable,
+            mock_evaluate, mock_is_diskless_sbd, mock_error, mock_do_remove_qdevice):
+        mock_qdevice_configured.return_value = True
+        mock_confirm.return_value = True
+        mock_is_diskless_sbd.return_value = True
+        mock_evaluate.return_value = qdevice.QdevicePolicy.QDEVICE_RELOAD
+
+        bootstrap.remove_qdevice()
+
+        mock_evaluate.assert_called_once_with(qdevice.QDEVICE_REMOVE)
+        mock_error.assert_not_called()
+        mock_do_remove_qdevice.assert_called_once_with(qdevice.QdevicePolicy.QDEVICE_RELOAD)
+
+    @mock.patch('crmsh.bootstrap.do_remove_qdevice')
+    @mock.patch('crmsh.options.force', False)
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.utils.calculate_quorate_status')
+    @mock.patch('crmsh.utils.get_quorum_votes_dict')
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
+    @mock.patch('crmsh.qdevice.evaluate_qdevice_quorum_effect')
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.bootstrap.confirm')
+    @mock.patch('crmsh.corosync.is_qdevice_configured')
+    def test_remove_qdevice_diskless_keep_quorum(self, mock_qdevice_configured, mock_confirm, mock_reachable,
+            mock_evaluate, mock_is_diskless_sbd, mock_get_votes, mock_quorate, mock_error, mock_do_remove_qdevice):
+        mock_qdevice_configured.return_value = True
+        mock_confirm.return_value = True
+        mock_is_diskless_sbd.return_value = True
+        mock_get_votes.return_value = {'Expected': '4', 'Total': '4'}
+        mock_quorate.return_value = True
+        mock_evaluate.return_value = qdevice.QdevicePolicy.QDEVICE_RELOAD
+
+        bootstrap.remove_qdevice()
+
+        mock_quorate.assert_called_once_with(4, 3)
+        mock_evaluate.assert_called_once_with(qdevice.QDEVICE_REMOVE)
+        mock_error.assert_not_called()
+        mock_do_remove_qdevice.assert_called_once_with(qdevice.QdevicePolicy.QDEVICE_RELOAD)
 
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
     @mock.patch('crmsh.log.LoggerUtils.log_only_to_file')
