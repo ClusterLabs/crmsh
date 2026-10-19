@@ -3777,7 +3777,7 @@ If no property name is passed to the command, the list of known
 cluster properties is printed.
 
 To print one property's help, use the +--help+ option; or use <Tab>
-to complete the help text for the property on interactive mode.
+to complete the help text for the property.
 
 For more information on rule expressions, see
 <<topics.Syntax.RuleExpressions,Syntax: Rule expressions>>.
