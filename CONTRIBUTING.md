@@ -100,6 +100,8 @@ To run these tests:
 ./test/run-functional-tests [OPTIONS] | [TESTCASE INDEX]
 ```
 
+See [test/sandbox-functional-tests/README.md] for more info about running the functional tests safely in a micro vm.
+
 ## OpenSUSE Build Service Integration
 
 Our pull request workflow is tightly integrated with the [openSUSE Build Service](https://build.opensuse.org/):
