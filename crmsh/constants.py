@@ -246,6 +246,8 @@ graph = {
 
 need_reset = False
 prompt = ''
+# marks help lines in the output of "crm --compgen", see contrib/bash_completion.sh
+COMPGEN_HELP_PREFIX = "#help# "
 tmp_cib = False
 tmp_cib_prompt = "@tmp@"
 live_cib_prompt = "live"
