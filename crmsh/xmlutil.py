@@ -186,7 +186,7 @@ def sanity_check_fencing_watchdog_timeout(nvpair, node) -> utils.VerifyResult:
 
         try:
             intval = int(value)
-            if not sbd.SBDTimeout.able_to_set_fencing_watchdog_timeout(name, intval):
+            if not sbd.SBDTimeout.is_fencing_watchdog_timeout_valid(name, intval):
                 rc = utils.VerifyResult.FATAL_ERROR
         except ValueError:
             logger.error("%s must be an integer", name)

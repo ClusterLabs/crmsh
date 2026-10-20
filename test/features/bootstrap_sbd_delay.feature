@@ -113,6 +113,8 @@ Feature: configure sbd delay start correctly
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     Cluster property "fencing-timeout" is "71"
 
+    When    Try "crm configure property fencing-watchdog-timeout=0" on "hanode1"
+    Then    Except "It's required to set fencing-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
     When    Try "crm configure property fencing-watchdog-timeout=1" on "hanode1"
     Then    Except "It's required to set fencing-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
     # Expect successfully set stonith-watchdog-timeout=5 since already set fencing-watchdog-timeout
@@ -121,6 +123,9 @@ Feature: configure sbd delay start correctly
     When    Try "crm -F configure filter "sed 's/fencing-watchdog-timeout=30/#fencing-watchdog-timeout=30/g'"" on "hanode1"
     Then    Expected "It's required to set stonith-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
     Then    Cluster property "fencing-watchdog-timeout" is "30"
+    # Any negative value is treated the same as -1
+    When    Run "crm configure property fencing-watchdog-timeout=-2" on "hanode1"
+    Then    Cluster property "fencing-watchdog-timeout" is "-2"
 
   @clean
   Scenario: disk-based SBD with big sbd_watchdog_timeout
@@ -335,6 +340,11 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster init sbd -s /dev/sda1 -y" on "hanode1"
     Then    Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
+    # check fencing-watchdog-timeout with disk-based SBD
+    When    Try "crm configure property fencing-watchdog-timeout=30" on "hanode1"
+    Then    Expected "fencing-watchdog-timeout shouldn't be configured when disk-based SBD is used" in stderr
+    When    Run "crm configure property fencing-watchdog-timeout=0" on "hanode1"
+    Then    Cluster property "fencing-watchdog-timeout" is "0"
     # check /etc/sysconf/sbd consistency
     When    Run "sed -i 's/SBD_DELAY_START=.*/SBD_DELAY_START="no"/' /etc/sysconfig/sbd" on "hanode2"
     When    Try "crm sbd configure show"
