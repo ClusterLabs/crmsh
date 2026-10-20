@@ -239,6 +239,17 @@ def ask(
 
     prompt = f"{msg.rstrip('? ')} ({opt_str})? "
 
+    if not can_ask(background_wait):
+        if default is None:
+            logger.info("%sN (rejected non-interactively)", prompt)
+            return False
+        elif default:
+            logger.info("%sY (auto-answered non-interactively)", prompt)
+            return True
+        else:
+            logger.info("%sN (auto-answered non-interactively)", prompt)
+            return False
+
     while True:
         try:
             ans = input(prompt)
@@ -667,7 +678,7 @@ def safe_open_w(fname):
         f = sys.stdout
     else:
         if not options.batch and os.access(fname, os.F_OK):
-            if not ask("File %s exists. Do you want to overwrite it?" % fname):
+            if not ask("File %s exists. Do you want to overwrite it?" % fname, default=False):
                 return None
         try:
             f = open(fname, "w")

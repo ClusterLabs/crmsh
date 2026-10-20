@@ -185,6 +185,7 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
 </cib>
 
 .TRY node clearstate node1
+INFO: Do you really want to drop state for node node1 (y/N)? N (auto-answered non-interactively)
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1

@@ -103,7 +103,7 @@ class Template(command.UI):
             return False
         if name == self.curr_conf:
             if not force and not options.force and \
-                not utils.ask("Config %s is currently in use. Do you really want to delete it?" % name):
+                not utils.ask("Config %s is currently in use. Do you really want to delete it?" % name, default=False):
                 return False
             else:
                 self.curr_conf = ''
@@ -178,7 +178,7 @@ class Template(command.UI):
             return False
         if method == "replace":
             if options.interactive and cib_factory.has_cib_changed():
-                if not utils.ask("This operation will erase all changes. Do you want to proceed?"):
+                if not utils.ask("This operation will erase all changes. Do you want to proceed?", default=False):
                     return False
             cib_factory.erase()
         set_obj = mkset_obj()
