@@ -473,6 +473,9 @@ class SBDTimeout(object):
             logger.error("Can't set %s because sbd.service is not active", name)
             return False
 
+        if value == 0 and SBDUtils.is_using_disk_based_sbd():
+            return True
+
         expected_fencing_watchdog_timeout = 2 * SBDTimeout.get_sbd_watchdog_timeout()
         if value == -1:
             logger.warning(
