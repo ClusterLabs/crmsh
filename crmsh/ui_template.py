@@ -177,7 +177,7 @@ class Template(command.UI):
         if not tmp:
             return False
         if method == "replace":
-            if options.interactive and cib_factory.has_cib_changed():
+            if options.repl and cib_factory.has_cib_changed():
                 if not utils.ask("This operation will erase all changes. Do you want to proceed?"):
                     return False
             cib_factory.erase()

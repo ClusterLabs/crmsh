@@ -3354,7 +3354,7 @@ class CibFactory(object):
             return self.modified_elems() or self.remove_queue or self.new_schema
 
     def ensure_cib_updated(self):
-        if options.interactive and not self.has_cib_changed():
+        if options.repl and not self.has_cib_changed():
             self.refresh()
 
     def _verify_constraints(self, node):

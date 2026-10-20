@@ -67,7 +67,7 @@ def exit_handler():
     '''
     Write the history file. Remove tmp files.
     '''
-    if options.interactive and not options.batch:
+    if options.repl and not options.batch:
         try:
             from readline import write_history_file
             write_history_file(userdir.HISTORY_FILE)
@@ -165,7 +165,7 @@ def usage(rc):
 def set_interactive():
     '''Set the interactive option only if we're on a tty.'''
     if utils.can_ask():
-        options.interactive = True
+        options.repl = True
 
 
 def add_quotes(args):
@@ -208,7 +208,7 @@ def handle_noninteractive_use(context, user_args):
         # we're not sure yet whether it's an interactive session or not
         # (single-shot commands aren't)
         logger_utils.reset_lineno()
-        options.interactive = False
+        options.repl = False
 
         l = add_quotes(user_args)
         if context.run(' '.join(l)):
@@ -216,7 +216,7 @@ def handle_noninteractive_use(context, user_args):
             if not context.previous_level():
                 return 0
             set_interactive()
-            if options.interactive:
+            if options.repl:
                 logger_utils.reset_lineno(-1)
         else:
             return 1
@@ -225,7 +225,7 @@ def handle_noninteractive_use(context, user_args):
 
 def render_prompt(context):
     rendered_prompt = constants.prompt
-    if options.interactive and not options.batch:
+    if options.repl and not options.batch:
         # TODO: fix how color interacts with readline,
         # seems the color prompt messes it up
         promptstr = "crm(%s/%s)%s# " % (cib_prompt(), utils.this_node(), context.prompt())
@@ -245,7 +245,7 @@ def setup_context(context):
             logger.error(msg)
             usage(2)
 
-    if options.interactive and not options.batch:
+    if options.repl and not options.batch:
         context.setup_readline()
 
 
@@ -265,7 +265,7 @@ def main_input_loop(context, user_args):
         try:
             inp = utils.multi_input(render_prompt(context))
             if inp is None:
-                if options.interactive:
+                if options.repl:
                     rc = 0
                 context.quit(rc)
             try:
@@ -275,7 +275,7 @@ def main_input_loop(context, user_args):
                 rc = 1
                 logger.error(e, exc_info=e)
         except KeyboardInterrupt:
-            if options.interactive and not options.batch:
+            if options.repl and not options.batch:
                 print("Ctrl-C, leaving")
             context.quit(1)
         except Exception as e:
@@ -304,7 +304,7 @@ def compgen():
     if idx >= 0:
         line = line[idx+3:].lstrip()
 
-    options.interactive = False
+    options.repl = False
     ui = ui_root.Root()
     context = ui_context.Context(ui)
     last_word = line.rsplit(' ', 1)
@@ -327,7 +327,7 @@ def parse_options():
     options.force = opts.force
     if opts.filename:
         logger_utils.reset_lineno()
-        options.input_file, options.batch, options.interactive = opts.filename, True, False
+        options.input_file, options.batch, options.repl = opts.filename, True, False
     options.history = opts.history or options.history
     config.core.wait = opts.wait or config.core.wait
     options.shadow = opts.cib or options.shadow
@@ -372,8 +372,8 @@ def run():
 
         load_rc(context, userdir.RC_FILE)
         atexit.register(exit_handler)
-        options.interactive = utils.can_ask()
-        if not options.interactive:
+        options.repl = utils.can_ask()
+        if not options.repl:
             logger_utils.reset_lineno()
             options.batch = True
         user_args = parse_options()

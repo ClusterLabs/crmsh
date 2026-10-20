@@ -763,7 +763,7 @@ def is_check_always():
     Even though the frequency may be set to always, it doesn't
     make sense to do that with non-interactive sessions.
     '''
-    return options.interactive and config.core.check_frequency == "always"
+    return options.repl and config.core.check_frequency == "always"
 
 
 def get_check_rc():

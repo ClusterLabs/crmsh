@@ -248,7 +248,7 @@ class Context(object):
         '''
         # on entering new level we need to set the
         # interactive option _before_ creating the level
-        if not options.interactive and not self.command_args:
+        if not options.repl and not self.command_args:
             self._set_interactive()
 
         # not sure what this is all about
@@ -265,7 +265,7 @@ class Context(object):
     def _set_interactive(self):
         '''Set the interactive option only if we're on a tty.'''
         if utils.can_ask():
-            options.interactive = True
+            options.repl = True
 
     def execute_command(self):
         # build argument list
@@ -288,7 +288,7 @@ class Context(object):
             return True
 
         by_level = self.current_level().should_wait()
-        transit_or_noninteractive = self.is_in_transit() or not options.interactive
+        transit_or_noninteractive = self.is_in_transit() or not options.repl
         return by_level and transit_or_noninteractive
 
     def is_in_transit(self):
@@ -351,7 +351,7 @@ class Context(object):
             ok = self.current_level().end_game()
         except utils.TerminateSubCommand:
             return
-        if options.interactive and not options.batch:
+        if options.repl and not options.batch:
             if constants.need_reset:
                 utils.ext_cmd("reset")
             else:

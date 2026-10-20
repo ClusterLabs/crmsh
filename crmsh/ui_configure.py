@@ -247,7 +247,7 @@ def _prim_params_completer(agent, args):
     if completing == 'params':
         return ['params']
     if completing.endswith('='):
-        if len(completing) > 1 and options.interactive:
+        if len(completing) > 1 and options.repl:
             topic = completing[:-1]
             CompletionHelp.help(topic, agent.meta_parameter(topic), args)
         return []
@@ -262,7 +262,7 @@ def _prim_meta_completer(agent, args):
     if completing == 'meta':
         return ['meta']
     if completing.endswith('='):
-        if len(completing) > 1 and options.interactive:
+        if len(completing) > 1 and options.repl:
             topic = completing[:-1]
             CompletionHelp.help(topic, agent.meta_parameter(topic), args)
         return []
@@ -501,7 +501,7 @@ def container_complete_complex(args):
 
     # to show help messages
     if completing.endswith('='):
-        if len(completing) > 1 and options.interactive:
+        if len(completing) > 1 and options.repl:
             topic = completing[:-1]
             CompletionHelp.help(topic, container_helptxt(args, constants.container_helptxt, topic), args)
         return []
@@ -861,7 +861,7 @@ class CibConfig(command.UI):
             context.fatal_error("Unknown method %s" % method)
         cib_factory.ensure_cib_updated()
         if method == "replace":
-            if options.interactive and cib_factory.has_cib_changed():
+            if options.repl and cib_factory.has_cib_changed():
                 if not utils.ask("This operation will erase all changes. Do you want to proceed?"):
                     return False
             cib_factory.erase()
@@ -939,7 +939,7 @@ class CibConfig(command.UI):
     @command.skill_level('administrator')
     def do_refresh(self, context):
         "usage: refresh"
-        if options.interactive and cib_factory.has_cib_changed():
+        if options.repl and cib_factory.has_cib_changed():
             if not utils.ask("All changes will be dropped. Do you want to proceed?"):
                 return
         cib_factory.refresh()
@@ -1296,7 +1296,7 @@ class CibConfig(command.UI):
     def end_game(self, no_questions_asked=False):
         ok = True
         if cib_factory.has_cib_changed():
-            if no_questions_asked or not options.interactive:
+            if no_questions_asked or not options.repl:
                 ok = self._commit()
             else:
                 print("There are changes pending:")

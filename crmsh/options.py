@@ -5,7 +5,7 @@
 Session-only options (not saved).
 '''
 
-interactive = False
+repl = False
 batch = False
 ask_no = False
 regression_tests = False
