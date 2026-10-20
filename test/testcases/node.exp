@@ -73,8 +73,8 @@ node1: member(offline)
 </cib>
 
 .TRY -F node maintenance node1
-INFO: 'maintenance' attribute already exists in p5. Remove it? [YES]
-INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
+INFO: 'maintenance' attribute already exists in p5. Remove it (y/N)? Y (--force)
+INFO: 'maintenance' attribute already exists in g0. Remove it (y/N)? Y (--force)
 INFO: Setting maintenance=true on node node1
 .INP: configure
 .INP: _regtest on

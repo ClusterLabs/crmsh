@@ -1199,7 +1199,7 @@ Transition Summary:
 .TRY resource manage p5
 .SETENV showobj=p5
 .TRY -F resource maintenance p5 on
-INFO: 'maintenance' conflicts with 'is-managed' attribute. Remove 'is-managed' for resource p5? [YES]
+INFO: 'maintenance' conflicts with 'is-managed' attribute. Remove 'is-managed' for resource p5 (y/N)? Y (--force)
 .INP: configure
 .INP: _regtest on
 .INP: show xml p5
@@ -1228,7 +1228,7 @@ INFO: 'maintenance' conflicts with 'is-managed' attribute. Remove 'is-managed' f
 
 .SETENV showobj=p5
 .TRY -F resource unmanage p5
-INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' for resource p5? [YES]
+INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' for resource p5 (y/N)? Y (--force)
 .INP: configure
 .INP: _regtest on
 .INP: show xml p5
@@ -1315,7 +1315,7 @@ INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' 
 
 .SETENV showobj=g1
 .TRY -F resource manage g1
-INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' for resource g1? [YES]
+INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' for resource g1 (y/N)? Y (--force)
 .INP: configure
 .INP: _regtest on
 .INP: show xml g1
@@ -1409,7 +1409,7 @@ INFO: 'is-managed' conflicts with 'maintenance' attribute. Remove 'maintenance' 
 
 .SETENV showobj=g1
 .TRY -F resource maintenance g1
-INFO: 'maintenance' conflicts with 'is-managed' attribute. Remove 'is-managed' for resource g1? [YES]
+INFO: 'maintenance' conflicts with 'is-managed' attribute. Remove 'is-managed' for resource g1 (y/N)? Y (--force)
 .INP: configure
 .INP: _regtest on
 .INP: show xml g1
