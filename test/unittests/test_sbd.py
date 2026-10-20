@@ -220,6 +220,34 @@ class TestSBDTimeout(unittest.TestCase):
         mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with(sbd.SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD, None)
         mock_get_systemd_timeout_start_in_sec.assert_called_once_with("1min 30s")
 
+    @patch('logging.Logger.error')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_able_to_set_fencing_watchdog_timeout_sbd_inactive(self, mock_service_manager, mock_logger_error):
+        mock_service_manager.return_value.service_is_active.return_value = False
+        self.assertFalse(sbd.SBDTimeout.able_to_set_fencing_watchdog_timeout("fencing-watchdog-timeout", 0))
+        mock_logger_error.assert_called_once()
+
+    @patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_able_to_set_fencing_watchdog_timeout_zero_disk_based(self, mock_service_manager, mock_is_disk_based):
+        mock_service_manager.return_value.service_is_active.return_value = True
+        mock_is_disk_based.return_value = True
+        for name in ("fencing-watchdog-timeout", "stonith-watchdog-timeout"):
+            self.assertTrue(sbd.SBDTimeout.able_to_set_fencing_watchdog_timeout(name, 0))
+
+    @patch('logging.Logger.error')
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    @patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_able_to_set_fencing_watchdog_timeout_zero_diskless(
+            self, mock_service_manager, mock_is_disk_based, mock_get_watchdog_timeout, mock_logger_error
+    ):
+        mock_service_manager.return_value.service_is_active.return_value = True
+        mock_is_disk_based.return_value = False
+        mock_get_watchdog_timeout.return_value = 15
+        self.assertFalse(sbd.SBDTimeout.able_to_set_fencing_watchdog_timeout("fencing-watchdog-timeout", 0))
+        mock_logger_error.assert_called_once()
+
     @patch('crmsh.corosync.token_and_consensus_timeout')
     def test_get_sbd_delay_start_expected_diskbased(self, mock_token_and_consensus_timeout):
         inst = sbd.SBDTimeout()
