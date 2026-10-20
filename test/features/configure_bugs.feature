@@ -83,9 +83,13 @@ Feature: Functional test for configure sub level
     Then    Run "crm -F configure filter "sed 's/cpu=/#cpu='/g"" OK on "hanode1"
 
   @clean
-  Scenario: Set fencing-watchdog-timeout when sbd.service is disactive
+  Scenario: Set fencing-watchdog-timeout when sbd.service is inactive
     Given   Cluster service is "stopped" on "hanode1"
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Try "crm configure property fencing-watchdog-timeout=20" on "hanode1"
-    Then    Except "Can't set fencing-watchdog-timeout because sbd.service is not active" in stderr
+    Then    Except "fencing-watchdog-timeout shouldn't be configured when sbd.service is not active" in stderr
+    When    Try "crm configure property stonith-watchdog-timeout=20" on "hanode1"
+    Then    Except "stonith-watchdog-timeout shouldn't be configured when sbd.service is not active" in stderr
+    When    Run "crm configure property fencing-watchdog-timeout=0" on "hanode1"
+    Then    Cluster property "fencing-watchdog-timeout" is "0"
