@@ -173,7 +173,7 @@ def check_stonith_watchdog_timeout(nvpair):
         try:
             from . import sbd
             intval = int(value)
-            if not sbd.SBDTimeout.able_to_set_stonith_watchdog_timeout(intval):
+            if not sbd.SBDTimeout.is_stonith_watchdog_timeout_valid(intval):
                 rc = utils.VerifyResult.FATAL_ERROR
         except ValueError:
             logger.error("stonith-watchdog-timeout must be an integer")

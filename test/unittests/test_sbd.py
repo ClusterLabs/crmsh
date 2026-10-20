@@ -134,6 +134,57 @@ class TestSBDTimeout(unittest.TestCase):
         assert res == 60
         mock_active.assert_called_once_with("pacemaker.service")
 
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    def test_is_stonith_watchdog_timeout_valid_sbd_inactive_zero(self, mock_is_active, mock_error):
+        mock_is_active.return_value = False
+        self.assertTrue(sbd.SBDTimeout.is_stonith_watchdog_timeout_valid(0))
+        mock_is_active.assert_called_once_with("sbd.service")
+        mock_error.assert_not_called()
+
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    def test_is_stonith_watchdog_timeout_valid_sbd_inactive_nonzero(self, mock_is_active, mock_error):
+        mock_is_active.return_value = False
+        self.assertFalse(sbd.SBDTimeout.is_stonith_watchdog_timeout_valid(30))
+        mock_error.assert_called_once()
+
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    def test_is_stonith_watchdog_timeout_valid_zero_disk_based(self, mock_is_active, mock_get_dev, mock_error):
+        mock_is_active.return_value = True
+        mock_get_dev.return_value = ["/dev/sda1"]
+        self.assertTrue(sbd.SBDTimeout.is_stonith_watchdog_timeout_valid(0))
+        self.assertFalse(sbd.SBDTimeout.is_stonith_watchdog_timeout_valid(30))
+        mock_error.assert_called_once()
+
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    def test_is_stonith_watchdog_timeout_valid_zero_diskless(
+            self, mock_is_active, mock_get_dev, mock_get_watchdog_timeout, mock_error
+    ):
+        mock_is_active.return_value = True
+        mock_get_dev.return_value = []
+        mock_get_watchdog_timeout.return_value = 15
+        self.assertFalse(sbd.SBDTimeout.is_stonith_watchdog_timeout_valid(0))
+        mock_error.assert_called_once()
+
+    @mock.patch('logging.Logger.warning')
+    @mock.patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    @mock.patch('crmsh.sbd.SBDManager.get_sbd_device_from_config')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    def test_is_stonith_watchdog_timeout_valid_negative_diskless(
+            self, mock_is_active, mock_get_dev, mock_get_watchdog_timeout, mock_warning
+    ):
+        mock_is_active.return_value = True
+        mock_get_dev.return_value = []
+        mock_get_watchdog_timeout.return_value = 15
+        self.assertTrue(sbd.SBDTimeout.is_stonith_watchdog_timeout_valid(-2))
+        mock_warning.assert_called_once()
+
     @mock.patch('logging.Logger.debug')
     @mock.patch('crmsh.sbd.SBDManager.get_sbd_value_from_config')
     @mock.patch('crmsh.utils.detect_virt')

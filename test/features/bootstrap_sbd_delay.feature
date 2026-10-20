@@ -61,6 +61,12 @@ Feature: configure sbd delay start correctly
     And     Cluster property "stonith-timeout" is "71"
     And     Parameter "pcmk_delay_max" configured in "stonith-sbd"
 
+    # stonith-watchdog-timeout can only be 0 with disk-based SBD
+    When    Try "crm configure property stonith-watchdog-timeout=30" on "hanode1"
+    Then    Except "stonith-watchdog-timeout shouldn't be configured when disk-based SBD is used" in stderr
+    When    Run "crm configure property stonith-watchdog-timeout=0" on "hanode1"
+    Then    Cluster property "stonith-watchdog-timeout" is "0"
+
   @clean
   Scenario: disk-less SBD with small sbd_watchdog_timeout
     Given   Run "test -f /etc/crm/profiles.yml" OK
@@ -99,6 +105,11 @@ Feature: configure sbd delay start correctly
 
     When    Try "crm configure property stonith-watchdog-timeout=1" on "hanode1"
     Then    Except "Can't set stonith-watchdog-timeout to 1 because it is less than SBD_WATCHDOG_TIMEOUT(now: 15)" in stderr
+    When    Try "crm configure property stonith-watchdog-timeout=0" on "hanode1"
+    Then    Except "It's required to set stonith-watchdog-timeout to at least 2*SBD_WATCHDOG_TIMEOUT: 30" in stderr
+    # Any negative value is treated the same as -1
+    When    Run "crm configure property stonith-watchdog-timeout=-2" on "hanode1"
+    Then    Cluster property "stonith-watchdog-timeout" is "-2"
 
   @clean
   Scenario: disk-based SBD with big sbd_watchdog_timeout
