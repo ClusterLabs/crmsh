@@ -1327,7 +1327,7 @@ class TestAsk(unittest.TestCase):
         res = utils.ask("Overwrite file")
         self.assertTrue(res)
         mock_input.assert_not_called()
-        mock_logger_info.assert_called_once_with("%s [%s]", "Overwrite file", "YES")
+        mock_logger_info.assert_called_once_with("%sY (--force)", "Overwrite file (y/n)? ")
 
     @mock.patch('crmsh.utils.logger.info')
     @mock.patch('builtins.input')
@@ -1336,23 +1336,25 @@ class TestAsk(unittest.TestCase):
         res = utils.ask("Overwrite file", default=True)
         self.assertTrue(res)
         mock_input.assert_not_called()
-        mock_logger_info.assert_called_once_with("%s [%s]", "Overwrite file", "YES")
+        mock_logger_info.assert_called_once_with("%sY (--force)", "Overwrite file (Y/n)? ")
 
     @mock.patch('crmsh.utils.logger.info')
     @mock.patch('builtins.input')
     def test_ask_options_force_default_false(self, mock_input, mock_logger_info):
         options.force = True
         res = utils.ask("Overwrite file", default=False)
-        self.assertFalse(res)
+        self.assertTrue(res)
         mock_input.assert_not_called()
-        mock_logger_info.assert_called_once_with("%s [%s]", "Overwrite file", "NO")
+        mock_logger_info.assert_called_once_with("%sY (--force)", "Overwrite file (y/N)? ")
 
+    @mock.patch('crmsh.utils.logger.info')
     @mock.patch('builtins.input')
-    def test_ask_options_ask_no(self, mock_input):
+    def test_ask_options_ask_no(self, mock_input, mock_logger_info):
         options.ask_no = True
         res = utils.ask("Overwrite file", default=True)
         self.assertFalse(res)
         mock_input.assert_not_called()
+        mock_logger_info.assert_called_once_with("%sN (--no)", "Overwrite file (Y/n)? ")
 
     @mock.patch('crmsh.utils.can_ask', return_value=False)
     @mock.patch('crmsh.utils.logger.info')

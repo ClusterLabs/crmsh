@@ -164,7 +164,7 @@ INFO: Setting maintenance=true on node node1
 .TRY -F resource maintenance g1 off
 .TRY -F resource maintenance d1
 .TRY -F configure property maintenance-mode=true
-INFO: 'maintenance' attribute already exists in d1. Remove it? [YES]
-INFO: 'maintenance' attribute already exists in g1. Remove it? [YES]
-INFO: 'maintenance' attribute already exists in node1. Remove it? [YES]
+INFO: 'maintenance' attribute already exists in d1. Remove it (y/N)? Y (--force)
+INFO: 'maintenance' attribute already exists in g1. Remove it (y/N)? Y (--force)
+INFO: 'maintenance' attribute already exists in node1. Remove it (y/N)? Y (--force)
 .EXT crm_attribute --list-options=cluster --all --output-as=xml
