@@ -258,6 +258,8 @@ class SBDTimeout(object):
         if not ServiceManager().service_is_active("sbd.service"):
             logger.error("Can't set stonith-watchdog-timeout because sbd.service is not active")
             return False
+        if value == 0 and SBDManager.get_sbd_device_from_config():
+            return True
         expected_stonith_watchdog_timeout = 2 * SBDTimeout.get_sbd_watchdog_timeout()
         if value == -1:
             logger.warning("It's recommended to set stonith-watchdog-timeout to a positive value (at least 2*SBD_WATCHDOG_TIMEOUT: %d)", expected_stonith_watchdog_timeout)
