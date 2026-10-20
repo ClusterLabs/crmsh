@@ -1355,23 +1355,38 @@ class TestAsk(unittest.TestCase):
         mock_input.assert_not_called()
 
     @mock.patch('crmsh.utils.can_ask', return_value=False)
+    @mock.patch('crmsh.utils.logger.info')
     @mock.patch('builtins.input')
-    def test_ask_non_interactive_no_default(self, mock_input, mock_can_ask):
+    def test_ask_non_interactive_no_default(self, mock_input, mock_logger_info, mock_can_ask):
         res = utils.ask("Overwrite file")
         self.assertFalse(res)
         mock_input.assert_not_called()
+        mock_logger_info.assert_called_once_with("%sN (rejected non-interactively)", "Overwrite file (y/n)? ")
 
     @mock.patch('crmsh.utils.can_ask', return_value=False)
+    @mock.patch('crmsh.utils.logger.info')
     @mock.patch('builtins.input')
-    def test_ask_non_interactive_default_true(self, mock_input, mock_can_ask):
+    def test_ask_non_interactive_default_true(self, mock_input, mock_logger_info, mock_can_ask):
         res = utils.ask("Overwrite file", default=True)
         self.assertTrue(res)
         mock_input.assert_not_called()
+        mock_logger_info.assert_called_once_with("%sY (auto-answered non-interactively)", "Overwrite file (Y/n)? ")
 
     @mock.patch('crmsh.utils.can_ask', return_value=False)
+    @mock.patch('crmsh.utils.logger.info')
     @mock.patch('builtins.input')
-    def test_ask_non_interactive_default_false(self, mock_input, mock_can_ask):
-        res = utils.ask("Overwrite file", default=False)
+    def test_ask_non_interactive_default_false(self, mock_input, mock_logger_info, mock_can_ask):
+        res = utils.ask("Do you still want to commit?", default=False)
         self.assertFalse(res)
         mock_input.assert_not_called()
+        mock_logger_info.assert_called_once_with("%sN (auto-answered non-interactively)", "Do you still want to commit (y/N)? ")
+
+    @mock.patch('crmsh.utils.can_ask', return_value=False)
+    @mock.patch('crmsh.utils.logger.info')
+    @mock.patch('builtins.input')
+    def test_ask_non_interactive_cancel_option(self, mock_input, mock_logger_info, mock_can_ask):
+        res = utils.ask("Do you want to commit them, or cancel the operation?", default=False, cancel_option=True)
+        self.assertFalse(res)
+        mock_input.assert_not_called()
+        mock_logger_info.assert_called_once_with("%sN (auto-answered non-interactively)", "Do you want to commit them, or cancel the operation (y/N/c)? ")
 
