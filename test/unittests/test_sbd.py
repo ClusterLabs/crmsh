@@ -11,6 +11,7 @@ class TestSBDUtils(unittest.TestCase):
     TEST_DATA = """
     UUID : 1234-5678
     Timeout (watchdog) : 5
+    Timeout (loop) : 1
     Timeout (msgwait) : 10
     """
 
@@ -18,14 +19,14 @@ class TestSBDUtils(unittest.TestCase):
     def test_get_sbd_device_metadata_success(self, mock_get_sbd_device_metadata_raw):
         mock_get_sbd_device_metadata_raw.return_value = self.TEST_DATA
         result = SBDUtils.get_sbd_device_metadata("/dev/sbd_device")
-        expected = {'uuid': '1234-5678', 'watchdog': 5, 'msgwait': 10}
+        expected = {"uuid": "1234-5678", "watchdog": 5, "loop": 1, "msgwait": 10}
         self.assertEqual(result, expected)
 
     @patch('crmsh.sbd.SBDUtils.get_sbd_device_metadata_raw')
     def test_get_sbd_device_metadata_timeout_only(self, mock_get_sbd_device_metadata_raw):
         mock_get_sbd_device_metadata_raw.return_value = self.TEST_DATA
         result = SBDUtils.get_sbd_device_metadata("/dev/sbd_device", timeout_only=True)
-        expected = {'watchdog': 5, 'msgwait': 10}
+        expected = {"watchdog": 5, "loop": 1, "msgwait": 10}
         self.assertNotIn('uuid', result)
         self.assertEqual(result, expected)
 
@@ -91,6 +92,27 @@ class TestSBDUtils(unittest.TestCase):
         mock_get_sbd_value_from_config.return_value = '/dev/sbd_device;/dev/another_sbd_device'
         result = SBDUtils.get_sbd_device_from_config()
         self.assertEqual(result, ['/dev/sbd_device', '/dev/another_sbd_device'])
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_opts_int_value(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-S 1 -t 10 -I 7 -C 60 -Z"
+        self.assertEqual(SBDUtils.get_sbd_opts_int_value("-t"), 10)
+        self.assertEqual(SBDUtils.get_sbd_opts_int_value("-I"), 7)
+        self.assertEqual(SBDUtils.get_sbd_opts_int_value("-C"), 60)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_opts_int_value_not_found(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-S 1 -P"
+        self.assertIsNone(SBDUtils.get_sbd_opts_int_value("-t"))
+        mock_get_sbd_value_from_config.return_value = None
+        self.assertIsNone(SBDUtils.get_sbd_opts_int_value("-t"))
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_opts_int_value_no_value(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-S 1 -t"
+        with self.assertRaises(ValueError) as err:
+            SBDUtils.get_sbd_opts_int_value("-t")
+        self.assertEqual(str(err.exception), "Cannot get the value of -t in SBD_OPTS")
 
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
     def test_get_crashdump_watchdog_timeout_none(self, mock_get_sbd_value_from_config):
@@ -203,6 +225,182 @@ class TestSBDTimeout(unittest.TestCase):
         mock_get_sbd_value_from_config.return_value = 5
         result = sbd.SBDTimeout.get_sbd_watchdog_timeout()
         self.assertEqual(result, 5)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_servant_restart_interval_default(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = None
+        result = sbd.SBDTimeout.get_sbd_servant_restart_interval()
+        self.assertEqual(result, 5)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_servant_restart_interval(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-S 1 -t 10 -P"
+        result = sbd.SBDTimeout.get_sbd_servant_restart_interval()
+        self.assertEqual(result, 10)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_servant_restart_interval_zero(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-t 0"
+        result = sbd.SBDTimeout.get_sbd_servant_restart_interval()
+        self.assertEqual(result, 0)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_device_metadata")
+    @patch("crmsh.sbd.SBDUtils.get_sbd_device_from_config")
+    def test_get_sbd_loop_timeout(self, mock_get_sbd_device_from_config, mock_get_sbd_device_metadata):
+        mock_get_sbd_device_from_config.return_value = ["/dev/sbd_device"]
+        mock_get_sbd_device_metadata.return_value = {"loop": 2}
+        result = sbd.SBDTimeout.get_sbd_loop_timeout()
+        self.assertEqual(result, 2)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_device_from_config")
+    def test_get_sbd_loop_timeout_default(self, mock_get_sbd_device_from_config):
+        mock_get_sbd_device_from_config.return_value = []
+        result = sbd.SBDTimeout.get_sbd_loop_timeout()
+        self.assertEqual(result, 1)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_timeout_io(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-S 1 -I 9 -P"
+        result = sbd.SBDTimeout.get_sbd_timeout_io()
+        self.assertEqual(result, 9)
+
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_timeout_io_zero(self, mock_get_sbd_value_from_config):
+        mock_get_sbd_value_from_config.return_value = "-I 0"
+        result = sbd.SBDTimeout.get_sbd_timeout_io()
+        self.assertEqual(result, 0)
+
+    @patch("crmsh.sbd.SBDTimeout.get_sbd_loop_timeout")
+    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
+    def test_get_sbd_timeout_io_default(self, mock_get_sbd_value_from_config, mock_get_sbd_loop_timeout):
+        mock_get_sbd_value_from_config.return_value = None
+        mock_get_sbd_loop_timeout.return_value = 2
+        result = sbd.SBDTimeout.get_sbd_timeout_io()
+        self.assertEqual(result, 6)
+
+    @patch("crmsh.storage_utils.get_multipath_checker_timeout")
+    @patch("crmsh.storage_utils.get_multipath_max_polling_interval")
+    @patch("crmsh.storage_utils.is_scsi_device")
+    @patch("crmsh.storage_utils.is_multipath_device")
+    @patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
+    @patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
+    def test_get_sbd_watchdog_timeout_from_disk_multipath(
+        self,
+        mock_get_servant_restart_interval,
+        mock_get_timeout_io,
+        mock_is_multipath_device,
+        mock_is_scsi_device,
+        mock_get_multipath_max_polling_interval,
+        mock_get_multipath_checker_timeout,
+    ):
+        mock_get_servant_restart_interval.return_value = 5
+        mock_get_timeout_io.return_value = 3
+        mock_is_multipath_device.return_value = True
+        mock_is_scsi_device.return_value = False
+        mock_get_multipath_max_polling_interval.return_value = 20
+        mock_get_multipath_checker_timeout.return_value = 30
+
+        result = sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk("/dev/mapper/mpatha")
+
+        self.assertEqual(result, 62)
+
+    @patch("crmsh.storage_utils.get_scsi_timeout")
+    @patch("crmsh.storage_utils.is_scsi_device")
+    @patch("crmsh.storage_utils.is_multipath_device")
+    @patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
+    @patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
+    def test_get_sbd_watchdog_timeout_from_disk_scsi(
+        self,
+        mock_get_servant_restart_interval,
+        mock_get_timeout_io,
+        mock_is_multipath_device,
+        mock_is_scsi_device,
+        mock_get_scsi_timeout,
+    ):
+        mock_get_servant_restart_interval.return_value = 5
+        mock_get_timeout_io.return_value = 3
+        mock_is_multipath_device.return_value = False
+        mock_is_scsi_device.return_value = True
+        mock_get_scsi_timeout.return_value = 30
+
+        result = sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk("/dev/sda1")
+
+        self.assertEqual(result, 38)
+
+    @patch("crmsh.storage_utils.get_multipath_checker_timeout")
+    @patch("crmsh.storage_utils.get_multipath_max_polling_interval")
+    @patch("crmsh.storage_utils.is_scsi_device")
+    @patch("crmsh.storage_utils.is_multipath_device")
+    @patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
+    @patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
+    def test_get_sbd_watchdog_timeout_from_disk_clamp(
+        self,
+        mock_get_servant_restart_interval,
+        mock_get_timeout_io,
+        mock_is_multipath_device,
+        mock_is_scsi_device,
+        mock_get_multipath_max_polling_interval,
+        mock_get_multipath_checker_timeout,
+    ):
+        mock_get_servant_restart_interval.return_value = 0
+        mock_get_timeout_io.return_value = 10
+        mock_is_multipath_device.return_value = True
+        mock_is_scsi_device.return_value = False
+        mock_get_multipath_max_polling_interval.return_value = 0
+        mock_get_multipath_checker_timeout.return_value = 0
+
+        result = sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk("/dev/mapper/mpatha")
+
+        self.assertEqual(result, 1)
+
+    @patch("crmsh.storage_utils.is_scsi_device")
+    @patch("crmsh.storage_utils.is_multipath_device")
+    @patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
+    @patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
+    def test_get_sbd_watchdog_timeout_from_disk_not_multipath_nor_scsi(
+        self,
+        mock_get_servant_restart_interval,
+        mock_get_timeout_io,
+        mock_is_multipath_device,
+        mock_is_scsi_device,
+    ):
+        mock_get_servant_restart_interval.return_value = 5
+        mock_get_timeout_io.return_value = 3
+        mock_is_multipath_device.return_value = False
+        mock_is_scsi_device.return_value = False
+
+        self.assertIsNone(sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk("/dev/nvme0n1"))
+
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk')
+    def test_adjust_sbd_watchdog_timeout_with_disk_backstore(self, mock_from_disk):
+        inst = sbd.SBDTimeout(diskless_sbd=False, quiet=True)
+        inst.sbd_devices = ["/dev/sda1"]
+        inst.sbd_watchdog_timeout = 5
+        mock_from_disk.return_value = 38
+
+        inst._adjust_sbd_watchdog_timeout_with_disk_backstore()
+
+        self.assertEqual(inst.sbd_watchdog_timeout, 38)
+        mock_from_disk.assert_called_once_with("/dev/sda1")
+
+    @patch('crmsh.storage_utils.pick_backstore_device')
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk')
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_expected')
+    @patch('crmsh.sbd.SBDTimeout._load_configurations_from_runtime', autospec=True)
+    def test_get_sbd_metadata_expected_from_disk(self, mock_load, mock_watchdog_expected, mock_from_disk, mock_pick):
+        mock_pick.return_value = "/dev/mapper/mpatha"
+        mock_watchdog_expected.return_value = 5
+        mock_from_disk.return_value = 38
+        mock_load.side_effect = lambda inst: [
+            setattr(inst, name, value) for name, value in {
+                "sbd_watchdog_timeout": 5, "sbd_msgwait": 10,
+                "crashdump_watchdog_timeout": None, "sbd_devices": ["/dev/sda1"],
+            }.items()
+        ]
+
+        self.assertEqual(sbd.SBDTimeout.get_sbd_metadata_expected(), (38, 76))
+        mock_pick.assert_called_once_with(["/dev/sda1"])
+        mock_from_disk.assert_called_once_with("/dev/mapper/mpatha")
 
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
     def test_is_sbd_delay_start(self, mock_get_sbd_value_from_config):

@@ -307,6 +307,33 @@ settings based on the calculations with a set of formulas.
 .SBD related timeouts
 `watchdog` timeout: Default value is 15s. This value is from the definition
     in +/etc/crm/profiles.xml+, can be a different value with a different profile.
+    For disk-based SBD, it also needs to cover the timeout of the SBD disk:
+...............
+    # For disk-based SBD directly on top of a multipath device
+    value_from_disk = 1.2 * (multipath_max_polling_interval + multipath_checker_timeout
+                             + servant_restart_interval - timeout_io)
+
+    # For disk-based SBD directly on top of a SCSI device
+    value_from_disk = 1.2 * (SCSI_timeout + servant_restart_interval - timeout_io)
+
+    watchdog = max(value_from_disk, value_from_profiles)
+
+    # How to get the values above:
+    # multipath_max_polling_interval: max_polling_interval in the effective multipath
+    #     configuration, ie. the output of "multipath -T"
+
+    # multipath_checker_timeout: checker_timeout in the effective multipath
+    #     configuration, ie. the output of "multipath -T"; default is SCSI_timeout
+
+    # servant_restart_interval: option -t in SBD_OPTS of /etc/sysconfig/sbd; default is 5s
+
+    # timeout_io: option -I in SBD_OPTS of /etc/sysconfig/sbd;
+    #     default is 3 * loop timeout, loop timeout is from the SBD disk metadata
+    #     and its default is 1s, so default timeout_io is 3s
+
+    # SCSI_timeout: /sys/block/<sdX>/device/timeout, <sdX> is the SBD disk itself,
+    #     or one of the path devices if the SBD disk is a multipath device
+...............
 
 `msgwait` timeout: (only for disk-based SBD)
 ...............
@@ -2233,6 +2260,7 @@ Configure the SBD daemon for both disk-based and disk-less mode.
 
 Main functionailities include:
 - Show configured disk metadata
+- Show disk backstore timeout values
 - Show contents of /etc/sysconfig/sbd
 - Show SBD related cluster properties
 - Update the SBD related configuration parameters
@@ -2244,7 +2272,7 @@ For more details on SBD and related parameters, please see man sbd(8).
 Usage:
 ...............
 # For disk-based SBD
-crm sbd configure show [disk_metadata|sysconfig|property]
+crm sbd configure show [disk_metadata|disk_backstore|sysconfig|property]
 crm sbd configure [watchdog-timeout=<integer>] [allocate-timeout=<integer>] [loop-timeout=<integer>] [msgwait-timeout=<integer>] [crashdump-watchdog-timeout=<integer>] [watchdog-device=<device|driver>] [-F|--force]
 
 # For disk-less SBD
@@ -2256,6 +2284,7 @@ example:
 ...............
 configure show
 configure show disk_metadata
+configure show disk_backstore
 configure show sysconfig
 configure show property
 configure watchdog-timeout=30

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from crmsh import sbd
+from crmsh import storage_utils
 from crmsh import watchdog
 from crmsh import command
 from crmsh import utils, network_utils
@@ -103,7 +104,7 @@ class SBD(command.UI):
         "watchdog", "allocate", "loop", "msgwait", "crashdump-watchdog"
     )
     DISKLESS_TIMEOUT_TYPES = ("watchdog", "crashdump-watchdog")
-    SHOW_TYPES = ("disk_metadata", "sysconfig", "property")
+    SHOW_TYPES = ("disk_metadata", "disk_backstore", "sysconfig", "property")
     DISKLESS_SHOW_TYPES = ("sysconfig", "property")
     PCMK_ATTRS = (
         "have-watchdog",
@@ -218,6 +219,26 @@ class SBD(command.UI):
         for dev in self.device_list_from_config:
             print(sbd.SBDUtils.get_sbd_device_metadata_raw(dev))
 
+    def _show_disk_backstore(self) -> None:
+        """
+        Show SBD and storage timeout values not covered by disk metadata.
+        """
+        if not self.device_list_from_config:
+            return
+        logger.info("crm sbd configure show disk_backstore")
+        dev = storage_utils.pick_backstore_device(self.device_list_from_config)
+        if storage_utils.is_multipath_device(dev):
+            max_polling_interval = storage_utils.get_multipath_max_polling_interval(dev)
+            if max_polling_interval is not None:
+                print(f"multipath max_polling_interval: {max_polling_interval}")
+            checker_timeout = storage_utils.get_multipath_checker_timeout(dev)
+            if checker_timeout is not None:
+                print(f"multipath checker_timeout     : {checker_timeout}")
+        if storage_utils.is_scsi_device(dev):
+            print(f"SCSI timeout                  : {storage_utils.get_scsi_timeout(dev)}")
+        print(f"SBD timeout io                : {sbd.SBDTimeout.get_sbd_timeout_io()}")
+        print(f"SBD servant restart interval  : {sbd.SBDTimeout.get_sbd_servant_restart_interval()}")
+
     def _show_property(self) -> None:
         '''
         Show sbd-related properties from cluster and systemd
@@ -252,6 +273,8 @@ class SBD(command.UI):
                     self._show_disk_metadata()
                 case "sysconfig":
                     self._show_sysconfig()
+                case "disk_backstore":
+                    self._show_disk_backstore()
                 case "property":
                     self._show_property()
                 case _:
@@ -259,6 +282,8 @@ class SBD(command.UI):
         else:
             self._show_disk_metadata()
             if self.device_list_from_config:
+                print()
+                self._show_disk_backstore()
                 print()
             self._show_sysconfig()
             print()
@@ -475,12 +500,21 @@ class SBD(command.UI):
             self.device_list_from_config
         )
 
+        # The new devices may require larger timeouts (e.g. a multipath device
+        # added to SCSI ones); initialize all devices once with the expected values
+        timeout_dict = self.device_meta_dict_runtime
+        expected_watchdog, expected_msgwait = sbd.SBDTimeout.get_sbd_metadata_expected(all_device_list)
+        if expected_watchdog > timeout_dict.get("watchdog", 0) or expected_msgwait > timeout_dict.get("msgwait", 0):
+            logger.info("Adjusting sbd msgwait to %d, watchdog timeout to %d", expected_msgwait, expected_watchdog)
+            timeout_dict = {"watchdog": expected_watchdog, "msgwait": expected_msgwait}
+            devices_to_init = all_device_list
+
         logger.info("Append devices: %s", ';'.join(devices_to_add))
         update_dict = {"SBD_DEVICE": ";".join(all_device_list)}
         sbd_manager = sbd.SBDManager(
             device_list_to_init=devices_to_init,
             update_dict=update_dict,
-            timeout_dict=self.device_meta_dict_runtime
+            timeout_dict=timeout_dict
         )
         sbd_manager.init_and_deploy_sbd()
 

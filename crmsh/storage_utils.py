@@ -198,26 +198,44 @@ def check_no_quorum_policy_with_dlm():
 @dataclass(frozen=True)
 class DeviceInfo:
     device: str
-    parent_device: str|None
+    root_backing_device: str
     under_multipath: bool
 
 
 class MultipathInspector:
+    SYSFS_BLOCK = Path("/sys/class/block")
+
     def __init__(self, dev):
         self._shell = sh.cluster_shell()
+        self._multipath_mapping = None
         self._device_info = self._inspect(dev)
 
-    def _get_parent_device(self, dev) -> str:
-        resolved = Path(dev).resolve()
-        cmd = f"lsblk -dn -o PKNAME {shlex.quote(str(resolved))}"
-        _, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, cmd)
-        return out or resolved.name
+    @classmethod
+    def _get_root_backing_device(cls, dev) -> str:
+        """
+        Walk down the block device stack (partition, dm, multipath map)
+        to the bottom-level device, e.g. sdX.
+        For a multipath map, the first path is used.
+        """
+        name = Path(dev).resolve().name
+        while True:
+            sysfs = cls.SYSFS_BLOCK / name
+            if (sysfs / "partition").exists():
+                name = sysfs.resolve().parent.name
+                continue
+            slaves = sorted(p.name for p in (sysfs / "slaves").glob("*"))
+            if not slaves:
+                return name
+            name = slaves[0]
 
     def _get_multipath_mapping(self) -> dict[str, str]:
+        if self._multipath_mapping is not None:
+            return self._multipath_mapping
         cmd = "multipathd show paths format \"%d %m\""
         rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, cmd)
         mapping = dict()
         if rc != 0:
+            self._multipath_mapping = mapping
             return mapping
         for line in out.splitlines():
             parts = line.split()
@@ -226,24 +244,120 @@ class MultipathInspector:
             dev_name, map_name = parts[0], parts[1]
             if (dev_name, map_name) == ("dev", "multipath"):
                 continue
+            # Paths not belonging to any multipath map are reported as [orphan]
+            if map_name.startswith("["):
+                continue
             mapping[dev_name] = map_name
+        self._multipath_mapping = mapping
         return mapping
 
+    @staticmethod
+    def _get_multipath_name(dev: str) -> str:
+        return re.sub(r"-part\d+$", "", Path(dev).name)
+
+    def _is_multipath_device(self, dev: str) -> bool:
+        return self._get_multipath_name(dev) in self._get_multipath_mapping().values()
+
     def _inspect(self, dev: str) -> DeviceInfo:
-        parent = self._get_parent_device(dev)
+        root = self._get_root_backing_device(dev)
         mapping = self._get_multipath_mapping()
         return DeviceInfo(
             device=dev,
-            parent_device=parent,
-            under_multipath=parent in mapping
+            root_backing_device=root,
+            under_multipath=root in mapping
         )
 
     def _is_under_multipath(self) -> bool:
         return self._device_info.under_multipath
 
+    def _get_multipath_config_value(self, key: str) -> int|None:
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, "multipath -T")
+        if rc != 0:
+            return None
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            if parts[0] == key:
+                return int(parts[1])
+        return None
+
+    def _get_scsi_device_name(self) -> str|None:
+        return self._device_info.root_backing_device
+
+    def get_scsi_timeout(self) -> int:
+        """
+        Get SCSI timeout from /sys/block/<sdX>/device/timeout.
+        """
+        device = self._get_scsi_device_name()
+        if not device:
+            raise ValueError(f"Cannot find backing device for {self._device_info.device}")
+        timeout_path = f"/sys/block/{device}/device/timeout"
+        out = self._shell.get_stdout_or_raise_error(f"cat {shlex.quote(timeout_path)}")
+        return int(out.strip())
+
+    def is_scsi_device(self) -> bool:
+        """
+        Check if the backing device exposes a SCSI device timeout.
+        """
+        device = self._get_scsi_device_name()
+        if not device:
+            return False
+        timeout_path = f"/sys/block/{device}/device/timeout"
+        rc, _, _ = self._shell.get_rc_stdout_stderr_without_input(None, f"test -f {shlex.quote(timeout_path)}")
+        return rc == 0
+
+    def get_max_polling_interval(self) -> int|None:
+        """
+        Get max_polling_interval from multipath effective config.
+        """
+        return self._get_multipath_config_value("max_polling_interval")
+
+    def get_checker_timeout(self) -> int:
+        """
+        Get checker_timeout from multipath effective config, defaulting to SCSI timeout.
+        """
+        value = self._get_multipath_config_value("checker_timeout")
+        return value if value is not None else self.get_scsi_timeout()
+
+    @classmethod
+    def get_device_scsi_timeout(cls, dev) -> int:
+        return cls(dev).get_scsi_timeout()
+
     @classmethod
     def check_device_under_multipath(cls, dev):
         inspector = cls(dev)
-        if inspector._is_under_multipath():
+        if inspector._is_under_multipath() and not inspector._is_multipath_device(dev):
             error_msg = f"Device {dev} is under multipath, please provide the multipath device instead"
             raise ValueError(error_msg)
+
+
+def is_scsi_device(dev) -> bool:
+    return MultipathInspector(dev).is_scsi_device()
+
+
+def is_multipath_device(dev) -> bool:
+    return MultipathInspector(dev)._is_multipath_device(dev)
+
+
+def pick_backstore_device(devs: list[str]) -> str|None:
+    """
+    Pick the device whose timeouts should drive the configuration:
+    the first multipath device if any, otherwise the first device.
+    """
+    for dev in devs:
+        if is_multipath_device(dev):
+            return dev
+    return devs[0] if devs else None
+
+
+def get_multipath_max_polling_interval(dev) -> int|None:
+    return MultipathInspector(dev).get_max_polling_interval()
+
+
+def get_multipath_checker_timeout(dev) -> int:
+    return MultipathInspector(dev).get_checker_timeout()
+
+
+def get_scsi_timeout(dev) -> int:
+    return MultipathInspector.get_device_scsi_timeout(dev)
