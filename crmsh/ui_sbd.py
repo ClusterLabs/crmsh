@@ -623,6 +623,7 @@ class SBD(command.UI):
         '''
         timeout_dict, update_dict = {}, {}
         if self.device_list_from_config:
+            sbd.SBDUtils.verify_sbd_device(self.device_list_from_config, self.cluster_nodes)
             timeout_dict["watchdog"] = self.device_meta_dict_runtime.get("watchdog")
             timeout_dict["msgwait"] = 2 * timeout_dict["watchdog"]
             logger.info("Set msgwait-timeout to 2*watchdog-timeout: %s", timeout_dict["msgwait"])
@@ -651,11 +652,9 @@ class SBD(command.UI):
         '''
         Implement sbd purge command
         '''
-        self._load_attributes()
+        self.service_manager = ServiceManager()
         if not self._service_is_active(constants.SBD_SERVICE):
             return False
-        if self.device_list_from_config:
-            sbd.SBDUtils.verify_sbd_device(self.device_list_from_config, self.cluster_nodes)
 
         args = _handle_force_option(args)
         purge_crashdump = False
@@ -673,6 +672,7 @@ class SBD(command.UI):
         msg = "purging SBD crashdump" if purge_crashdump else "purging SBD"
         utils.check_all_nodes_reachable(msg)
         if purge_crashdump:
+            self._load_attributes()
             self._purge_crashdump()
         else:
             self._purge_sbd()
