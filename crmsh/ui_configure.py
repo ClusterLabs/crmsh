@@ -222,7 +222,16 @@ class CompletionHelp(object):
     lasttopic = ''
 
     @classmethod
+    def enabled(cls):
+        return options.interactive or options.shell_completion
+
+    @classmethod
     def help(cls, topic, helptxt, args):
+        if options.shell_completion:
+            # bash_completion.sh collects these lines and prints them with the prompt redrawn
+            for line in (helptxt or "").splitlines():
+                print(f"{constants.COMPGEN_HELP_PREFIX}{line}")
+            return
         if cls.lasttopic == topic and \
                 time.time() - cls.laststamp < cls.timeout:
             return
@@ -247,7 +256,7 @@ def _prim_params_completer(agent, args):
     if completing == 'params':
         return ['params']
     if completing.endswith('='):
-        if len(completing) > 1 and options.interactive:
+        if len(completing) > 1 and CompletionHelp.enabled():
             topic = completing[:-1]
             CompletionHelp.help(topic, agent.meta_parameter(topic), args)
         return []
@@ -262,7 +271,7 @@ def _prim_meta_completer(agent, args):
     if completing == 'meta':
         return ['meta']
     if completing.endswith('='):
-        if len(completing) > 1 and options.interactive:
+        if len(completing) > 1 and CompletionHelp.enabled():
             topic = completing[:-1]
             CompletionHelp.help(topic, agent.meta_parameter(topic), args)
         return []
@@ -501,7 +510,7 @@ def container_complete_complex(args):
 
     # to show help messages
     if completing.endswith('='):
-        if len(completing) > 1 and options.interactive:
+        if len(completing) > 1 and CompletionHelp.enabled():
             topic = completing[:-1]
             CompletionHelp.help(topic, container_helptxt(args, constants.container_helptxt, topic), args)
         return []

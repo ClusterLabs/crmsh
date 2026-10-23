@@ -221,7 +221,21 @@ __crm_compgen ()
 		;;
 	esac
 
-    __crmcomp_nl "$(2>/dev/null crm --compgen "${COMP_POINT}" "${COMP_LINE}")" "$pfx" "$cur_"
+    local line out="" help=""
+    while IFS= read -r line; do
+        if [[ "$line" == "#help# "* ]]; then
+            help+="${line#\#help\# }"$'\n'
+        else
+            out+="$line"$'\n'
+        fi
+    done < <(2>/dev/null crm --compgen "${COMP_POINT}" "${COMP_LINE}")
+
+    __crmcomp_nl "$out" "$pfx" "$cur_"
+
+    # nothing to complete: show the help text and redraw the prompt
+    if [ ${#COMPREPLY[@]} -eq 0 ] && [ -n "$help" ]; then
+        printf '\n%s\n%s%s' "${help%$'\n'}" "${PS1@P}" "$COMP_LINE" >&2
+    fi
 }
 
 _crm() {
