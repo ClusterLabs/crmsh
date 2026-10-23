@@ -524,3 +524,99 @@ def test_pick_backstore_device(mock_is_mp):
     assert storage_utils.pick_backstore_device(["/dev/sdc7", "/dev/mapper/m-part5"]) == "/dev/mapper/m-part5"
     assert storage_utils.pick_backstore_device(["/dev/sdc7", "/dev/sdd1"]) == "/dev/sdc7"
     assert storage_utils.pick_backstore_device([]) is None
+
+
+def test_parse_multipath_config():
+    out = """
+defaults {
+    no_path_retry fail
+    path_grouping_policy failover
+    path_checker tur
+    detect_checker yes
+}
+blacklist {
+    devnode "^(ram|raw|loop|fd|md|dm-|sr|scd|st)[0-9]*"
+}
+devices {
+    device {
+        vendor "IBM"
+        product "2145"
+        path_checker directio
+        detect_checker no
+    }
+}
+overrides {
+    checker_timeout 30
+}
+multipaths {
+    multipath {
+        wwid "360050768018081c9c00000000000c9b2"
+        alias mpatha
+        no_path_retry 0
+    }
+}
+"""
+    parsed = storage_utils._parse_multipath_config(out)
+    assert parsed["defaults"]["no_path_retry"] == "fail"
+    assert parsed["defaults"]["path_checker"] == "tur"
+    assert parsed["overrides"]["checker_timeout"] == "30"
+    assert parsed["devices"][0]["vendor"] == "IBM"
+    assert parsed["devices"][0]["product"] == "2145"
+    assert parsed["devices"][0]["attrs"]["path_checker"] == "directio"
+    assert parsed["multipaths"][0]["wwid"] == "360050768018081c9c00000000000c9b2"
+    assert parsed["multipaths"][0]["attrs"]["no_path_retry"] == "0"
+
+
+def test_resolve_multipath_value_precedence():
+    parsed = {
+        "defaults": {"no_path_retry": "fail", "path_grouping_policy": "failover"},
+        "overrides": {"path_checker": "directio"},
+        "devices": [{"vendor": "IBM", "product": "2145", "attrs": {"detect_checker": "no"}}],
+        "multipaths": [{"wwid": "3600", "attrs": {"no_path_retry": "0"}}],
+    }
+    # multipaths section takes precedence over defaults
+    assert storage_utils._resolve_multipath_value(parsed, "no_path_retry", "3600", "IBM", "2145") == "0"
+    # overrides section takes precedence over devices
+    assert storage_utils._resolve_multipath_value(parsed, "path_checker", "3600", "IBM", "2145") == "directio"
+    # devices section takes precedence over defaults
+    assert storage_utils._resolve_multipath_value(parsed, "detect_checker", "3600", "IBM", "2145") == "no"
+    # falls back to defaults
+    assert storage_utils._resolve_multipath_value(parsed, "path_grouping_policy", "3600", "IBM", "2145") == "failover"
+    # not configured anywhere
+    assert storage_utils._resolve_multipath_value(parsed, "checker_timeout", "3600", "IBM", "2145") is None
+    # device vendor/product not matching
+    assert storage_utils._resolve_multipath_value(parsed, "detect_checker", "3600", "VENDOR", "PRODUCT") is None
+
+
+@mock.patch.object(storage_utils.MultipathInspector, "_get_root_backing_device", return_value="sda")
+@mock.patch('crmsh.sh.cluster_shell')
+def test_get_multipath_config_values(mock_cluster_shell, mock_get_root):
+    mock_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+        (0, "dev multipath\nsda mpatha", ""),  # multipathd show paths
+        (0, "mpatha 360050768018081c9c00000000000c9b2", ""),  # multipathd show maps
+        (0, "IBM    ", ""),  # cat vendor
+        (0, "2145   ", ""),  # cat model
+        (0, "defaults {\n no_path_retry fail\n path_checker tur\n}\n", ""),  # multipath -T
+    ]
+
+    inspector = storage_utils.MultipathInspector("/dev/mapper/mpatha")
+    config = inspector.get_multipath_config_values()
+
+    assert config["no_path_retry"] == "fail"
+    assert config["path_checker"] == "tur"
+    assert config["path_grouping_policy"] is None
+    assert config["checker_timeout"] is None
+
+
+@mock.patch.object(storage_utils.MultipathInspector, "_get_root_backing_device", return_value="sda")
+@mock.patch('crmsh.sh.cluster_shell')
+def test_get_multipath_config_not_multipath(mock_cluster_shell, mock_get_root):
+    mock_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+        (0, "", ""),  # multipathd show paths (empty)
+    ]
+
+    assert storage_utils.get_multipath_config("/dev/sda1") is None
