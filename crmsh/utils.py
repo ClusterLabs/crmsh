@@ -2842,6 +2842,20 @@ def validate_and_get_reachable_nodes(
     return member_list + remote_list
 
 
+def handle_trailing_force_option(args: typing.Sequence[str]) -> typing.Sequence[str]:
+    """
+    Strip a trailing -F/--force from a subcommand's argument list and set options.force.
+
+    crm's global option parser only recognizes -F/--force before the
+    subcommand, because the subcommand and its arguments are captured as
+    a single REMAINDER.
+    """
+    if args and args[-1] in ("-F", "--force"):
+        options.force = True
+        return args[:-1]
+    return args
+
+
 def able_to_restart_cluster(in_maintenance_mode: bool = False) -> bool:
     """
     Check whether it is able to restart cluster now

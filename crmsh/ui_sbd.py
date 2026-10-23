@@ -14,7 +14,6 @@ from crmsh import completers
 from crmsh import sh
 from crmsh import xmlutil
 from crmsh import constants
-from crmsh import options
 from crmsh.service_manager import ServiceManager
 
 
@@ -78,15 +77,6 @@ def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str
         if not any(c.startswith(p) for c in completed_list)
     ]
     return parameters_pool
-
-
-def _handle_force_option(args):
-    _force = False
-    if args and args[-1] in ("-F", "--force"):
-        _force = True
-        args = args[:-1]
-    options.force |= _force
-    return args
 
 
 class SBD(command.UI):
@@ -557,7 +547,7 @@ class SBD(command.UI):
             logger.info("Please use 'crm cluster init sbd -s <dev1> [-s <dev2> [-s <dev3>]]' to configure the disk-based SBD first")
             return False
 
-        args = _handle_force_option(args)
+        args = utils.handle_trailing_force_option(args)
         try:
             if not args:
                 raise self.SyntaxError("No argument")
@@ -590,7 +580,7 @@ class SBD(command.UI):
         '''
         Implement sbd configure command
         '''
-        args = _handle_force_option(args)
+        args = utils.handle_trailing_force_option(args)
         try:
             self._load_attributes()
             if not args:
@@ -656,7 +646,7 @@ class SBD(command.UI):
         if not self._service_is_active(constants.SBD_SERVICE):
             return False
 
-        args = _handle_force_option(args)
+        args = utils.handle_trailing_force_option(args)
         purge_crashdump = False
         if args:
             if args[0] == "crashdump":
