@@ -467,6 +467,34 @@ Flags:            Quorate
     mock_run.assert_called_once_with("corosync-quorumtool -s", None, success_exit_status={0, 2})
 
 
+@mock.patch("crmsh.corosync.is_qdevice_configured")
+@mock.patch("crmsh.utils.get_quorum_votes_dict")
+def test_cluster_will_lose_quorum_after_stopping_nodes(mock_get_votes, mock_is_qdevice):
+    mock_is_qdevice.return_value = False
+    # 2-node cluster: stopping one node loses quorum
+    mock_get_votes.return_value = {'Expected': '2', 'Total': '2'}
+    assert utils.cluster_will_lose_quorum_after_stopping_nodes(1) is True
+    # 3-node cluster: stopping one node keeps quorum
+    mock_get_votes.return_value = {'Expected': '3', 'Total': '3'}
+    assert utils.cluster_will_lose_quorum_after_stopping_nodes(1) is False
+    # 3-node cluster: stopping two nodes loses quorum
+    assert utils.cluster_will_lose_quorum_after_stopping_nodes(2) is True
+    # stopping all online nodes leaves nothing to fence
+    assert utils.cluster_will_lose_quorum_after_stopping_nodes(3) is False
+
+
+@mock.patch("crmsh.corosync.is_qdevice_configured")
+@mock.patch("crmsh.utils.get_quorum_votes_dict")
+def test_cluster_will_lose_quorum_after_stopping_nodes_with_qdevice(mock_get_votes, mock_is_qdevice):
+    mock_is_qdevice.return_value = True
+    # 2-node cluster with qdevice: stopping one node keeps quorum
+    mock_get_votes.return_value = {'Expected': '3', 'Total': '3'}
+    assert utils.cluster_will_lose_quorum_after_stopping_nodes(1) is False
+    # single node with qdevice: stopping the node leaves nothing to fence
+    mock_get_votes.return_value = {'Expected': '2', 'Total': '2'}
+    assert utils.cluster_will_lose_quorum_after_stopping_nodes(1) is False
+
+
 def test_re_split_string():
     assert utils.re_split_string('[; ]', "/dev/sda1; /dev/sdb1 ; ") == ["/dev/sda1", "/dev/sdb1"]
     assert utils.re_split_string('[; ]', "/dev/sda1 ") == ["/dev/sda1"]
