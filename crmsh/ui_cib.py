@@ -215,7 +215,7 @@ class CibShadow(command.UI):
             context.error_message("the requested CIB is different from the current one")
             if options.force:
                 context.info("CIB overwrite forced")
-            elif not utils.ask("All changes will be dropped. Do you want to proceed?"):
+            elif not utils.ask("All changes will be dropped. Do you want to proceed?", default=False):
                 self._use(saved_cib, '')  # revert to the previous CIB
                 return False
         return self._use(name, withstatus)  # now load the status too
