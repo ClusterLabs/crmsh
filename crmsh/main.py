@@ -162,12 +162,6 @@ def usage(rc):
     sys.exit(rc)
 
 
-def set_interactive():
-    '''Set the interactive option only if we're on a tty.'''
-    if utils.can_ask():
-        options.interactive = True
-
-
 def add_quotes(args):
     '''
     Add quotes if there's whitespace in one of the
@@ -245,7 +239,6 @@ def _enter_level_from_args(context, user_args):
     if not context.run(cmd):
         return False
 
-    set_interactive()
     if options.interactive:
         logger_utils.reset_lineno(-1)
     return True

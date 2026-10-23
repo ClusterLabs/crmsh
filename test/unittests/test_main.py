@@ -114,24 +114,18 @@ class TestEnterLevelFromArgs(unittest.TestCase):
         options.interactive = self.orig_interactive
 
     @mock.patch('crmsh.main.logger_utils.reset_lineno')
-    @mock.patch('crmsh.main.set_interactive')
-    def test_conf_shorthand_success(self, mock_set_interactive, mock_reset_lineno):
+    def test_conf_shorthand_success(self, mock_reset_lineno):
         self.context.run.return_value = True
-
-        def make_interactive():
-            options.interactive = True
-        mock_set_interactive.side_effect = make_interactive
+        options.interactive = True
 
         result = main._enter_level_from_args(self.context, ["conf"])
 
         self.assertTrue(result)
         self.context.run.assert_called_once_with("configure")
-        mock_set_interactive.assert_called_once_with()
         mock_reset_lineno.assert_called_once_with(-1)
 
     @mock.patch('crmsh.main.logger_utils.reset_lineno')
-    @mock.patch('crmsh.main.set_interactive')
-    def test_level_success(self, mock_set_interactive, mock_reset_lineno):
+    def test_level_success(self, mock_reset_lineno):
         self.context.run.return_value = True
         options.interactive = False
 
@@ -139,8 +133,18 @@ class TestEnterLevelFromArgs(unittest.TestCase):
 
         self.assertTrue(result)
         self.context.run.assert_called_once_with("corosync link")
-        mock_set_interactive.assert_called_once_with()
         mock_reset_lineno.assert_not_called()
+
+    @mock.patch('crmsh.main.logger_utils.reset_lineno')
+    def test_level_success_interactive(self, mock_reset_lineno):
+        self.context.run.return_value = True
+        options.interactive = True
+
+        result = main._enter_level_from_args(self.context, ["corosync", "link"])
+
+        self.assertTrue(result)
+        self.context.run.assert_called_once_with("corosync link")
+        mock_reset_lineno.assert_called_once_with(-1)
 
     def test_enter_level_failure(self):
         self.context.run.return_value = False

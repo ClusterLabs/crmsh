@@ -246,11 +246,6 @@ class Context(object):
         Pushes an instance of the given UILevel
         subclass onto self.stack.
         '''
-        # on entering new level we need to set the
-        # interactive option _before_ creating the level
-        if not options.interactive and not self.command_args:
-            self._set_interactive()
-
         # not sure what this is all about
         self._in_transit = True
 
@@ -261,11 +256,6 @@ class Context(object):
                 self.fatal_error("Missing requirements")
         self.stack.append(entry)
         self.clear_readline_cache()
-
-    def _set_interactive(self):
-        '''Set the interactive option only if we're on a tty.'''
-        if utils.can_ask():
-            options.interactive = True
 
     def execute_command(self):
         # build argument list
