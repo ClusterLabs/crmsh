@@ -37,32 +37,24 @@ class TestInitShadowCib(unittest.TestCase):
 class TestHandleSingleShot(unittest.TestCase):
     def setUp(self):
         self.context = mock.Mock()
-        self.orig_in_repl = options.in_repl()
-
-    def tearDown(self):
-        options.set_in_repl(self.orig_in_repl)
 
     @mock.patch('crmsh.main.logger_utils.reset_lineno')
     def test_success(self, mock_reset_lineno):
         self.context.run.return_value = True
-        options.set_in_repl(True)
 
         rc = main.handle_single_shot(self.context, ["status"])
 
         self.assertEqual(rc, 0)
-        self.assertFalse(options.in_repl())
         mock_reset_lineno.assert_called_once_with()
         self.context.run.assert_called_once_with("status")
 
     @mock.patch('crmsh.main.logger_utils.reset_lineno')
     def test_failure(self, mock_reset_lineno):
         self.context.run.return_value = False
-        options.set_in_repl(True)
 
         rc = main.handle_single_shot(self.context, ["status"])
 
         self.assertEqual(rc, 1)
-        self.assertFalse(options.in_repl())
         mock_reset_lineno.assert_called_once_with()
         self.context.run.assert_called_once_with("status")
 
@@ -108,43 +100,22 @@ class TestIsLevelNavigation(unittest.TestCase):
 class TestEnterLevelFromArgs(unittest.TestCase):
     def setUp(self):
         self.context = mock.Mock()
-        self.orig_in_repl = options.in_repl()
 
-    def tearDown(self):
-        options.set_in_repl(self.orig_in_repl)
-
-    @mock.patch('crmsh.main.logger_utils.reset_lineno')
-    def test_conf_shorthand_success(self, mock_reset_lineno):
+    def test_conf_shorthand_success(self):
         self.context.run.return_value = True
-        options.set_in_repl(True)
 
         result = main._enter_level_from_args(self.context, ["conf"])
 
         self.assertTrue(result)
         self.context.run.assert_called_once_with("configure")
-        mock_reset_lineno.assert_called_once_with(-1)
 
-    @mock.patch('crmsh.main.logger_utils.reset_lineno')
-    def test_level_success(self, mock_reset_lineno):
+    def test_level_success(self):
         self.context.run.return_value = True
-        options.set_in_repl(False)
 
         result = main._enter_level_from_args(self.context, ["corosync", "link"])
 
         self.assertTrue(result)
         self.context.run.assert_called_once_with("corosync link")
-        mock_reset_lineno.assert_not_called()
-
-    @mock.patch('crmsh.main.logger_utils.reset_lineno')
-    def test_level_success_interactive(self, mock_reset_lineno):
-        self.context.run.return_value = True
-        options.set_in_repl(True)
-
-        result = main._enter_level_from_args(self.context, ["corosync", "link"])
-
-        self.assertTrue(result)
-        self.context.run.assert_called_once_with("corosync link")
-        mock_reset_lineno.assert_called_once_with(-1)
 
     def test_enter_level_failure(self):
         self.context.run.return_value = False
@@ -233,7 +204,7 @@ class TestMainInputLoop(unittest.TestCase):
     @mock.patch('crmsh.utils.multi_input')
     def test_input_loop_runs_and_exits(self, mock_multi_input, mock_setup_context):
         options.batch = False
-        options.set_in_repl(True)
+        options.set_in_repl(False)
         mock_multi_input.side_effect = ["node status", None]
         self.context.run.return_value = True
         self.context.quit.side_effect = SystemExit(0)
@@ -242,6 +213,7 @@ class TestMainInputLoop(unittest.TestCase):
             main.main_input_loop(self.context)
 
         self.assertEqual(cm.exception.code, 0)
+        self.assertTrue(options.in_repl())
         mock_setup_context.assert_called_once_with(self.context)
         self.context.run.assert_called_once_with("node status")
         self.context.quit.assert_called_once_with(0)

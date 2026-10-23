@@ -196,7 +196,6 @@ def handle_single_shot(context, user_args):
     Returns exit code 0 on success, 1 on failure.
     """
     logger_utils.reset_lineno()
-    options.set_in_repl(False)
 
     l = add_quotes(user_args)
     if context.run(' '.join(l)):
@@ -236,12 +235,7 @@ def _enter_level_from_args(context, user_args):
     else:
         cmd = ' '.join(add_quotes(user_args))
 
-    if not context.run(cmd):
-        return False
-
-    if options.in_repl():
-        logger_utils.reset_lineno(-1)
-    return True
+    return bool(context.run(cmd))
 
 
 def dispatch(context, user_args):
@@ -249,10 +243,7 @@ def dispatch(context, user_args):
     Dispatch CLI invocation to single-shot command execution or REPL input loop.
     """
     if _is_level_navigation(context, user_args):
-        if not options.batch:
-            options.set_in_repl(True)
         if not _enter_level_from_args(context, user_args):
-            options.set_in_repl(False)
             return 1
         return main_input_loop(context)
     elif user_args:
@@ -341,7 +332,6 @@ def compgen():
     if idx >= 0:
         line = line[idx+3:].lstrip()
 
-    options.set_in_repl(False)
     ui = ui_root.Root()
     context = ui_context.Context(ui)
     last_word = line.rsplit(' ', 1)
