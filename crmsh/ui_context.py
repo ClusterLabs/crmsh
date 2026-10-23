@@ -278,7 +278,7 @@ class Context(object):
             return True
 
         by_level = self.current_level().should_wait()
-        transit_or_noninteractive = self.is_in_transit() or not options.interactive
+        transit_or_noninteractive = self.is_in_transit() or not options.in_repl()
         return by_level and transit_or_noninteractive
 
     def is_in_transit(self):
@@ -341,7 +341,7 @@ class Context(object):
             ok = self.current_level().end_game()
         except utils.TerminateSubCommand:
             return
-        if options.interactive and not options.batch:
+        if options.in_repl():
             if constants.need_reset:
                 utils.ext_cmd("reset")
             else:

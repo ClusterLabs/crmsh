@@ -174,7 +174,7 @@ class CliOptions(command.UI):
         config.reset()
 
     def end_game(self, no_questions_asked=False):
-        if no_questions_asked and not options.interactive:
+        if no_questions_asked and not options.in_repl():
             self.do_save(None)
 
 # vim:ts=4:sw=4:et:

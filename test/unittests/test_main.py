@@ -37,32 +37,32 @@ class TestInitShadowCib(unittest.TestCase):
 class TestHandleSingleShot(unittest.TestCase):
     def setUp(self):
         self.context = mock.Mock()
-        self.orig_interactive = options.interactive
+        self.orig_in_repl = options.in_repl()
 
     def tearDown(self):
-        options.interactive = self.orig_interactive
+        options.set_in_repl(self.orig_in_repl)
 
     @mock.patch('crmsh.main.logger_utils.reset_lineno')
     def test_success(self, mock_reset_lineno):
         self.context.run.return_value = True
-        options.interactive = True
+        options.set_in_repl(True)
 
         rc = main.handle_single_shot(self.context, ["status"])
 
         self.assertEqual(rc, 0)
-        self.assertFalse(options.interactive)
+        self.assertFalse(options.in_repl())
         mock_reset_lineno.assert_called_once_with()
         self.context.run.assert_called_once_with("status")
 
     @mock.patch('crmsh.main.logger_utils.reset_lineno')
     def test_failure(self, mock_reset_lineno):
         self.context.run.return_value = False
-        options.interactive = True
+        options.set_in_repl(True)
 
         rc = main.handle_single_shot(self.context, ["status"])
 
         self.assertEqual(rc, 1)
-        self.assertFalse(options.interactive)
+        self.assertFalse(options.in_repl())
         mock_reset_lineno.assert_called_once_with()
         self.context.run.assert_called_once_with("status")
 
@@ -108,15 +108,15 @@ class TestIsLevelNavigation(unittest.TestCase):
 class TestEnterLevelFromArgs(unittest.TestCase):
     def setUp(self):
         self.context = mock.Mock()
-        self.orig_interactive = options.interactive
+        self.orig_in_repl = options.in_repl()
 
     def tearDown(self):
-        options.interactive = self.orig_interactive
+        options.set_in_repl(self.orig_in_repl)
 
     @mock.patch('crmsh.main.logger_utils.reset_lineno')
     def test_conf_shorthand_success(self, mock_reset_lineno):
         self.context.run.return_value = True
-        options.interactive = True
+        options.set_in_repl(True)
 
         result = main._enter_level_from_args(self.context, ["conf"])
 
@@ -127,7 +127,7 @@ class TestEnterLevelFromArgs(unittest.TestCase):
     @mock.patch('crmsh.main.logger_utils.reset_lineno')
     def test_level_success(self, mock_reset_lineno):
         self.context.run.return_value = True
-        options.interactive = False
+        options.set_in_repl(False)
 
         result = main._enter_level_from_args(self.context, ["corosync", "link"])
 
@@ -138,7 +138,7 @@ class TestEnterLevelFromArgs(unittest.TestCase):
     @mock.patch('crmsh.main.logger_utils.reset_lineno')
     def test_level_success_interactive(self, mock_reset_lineno):
         self.context.run.return_value = True
-        options.interactive = True
+        options.set_in_repl(True)
 
         result = main._enter_level_from_args(self.context, ["corosync", "link"])
 
@@ -222,18 +222,18 @@ class TestDispatch(unittest.TestCase):
 class TestMainInputLoop(unittest.TestCase):
     def setUp(self):
         self.context = mock.Mock()
-        self.orig_interactive = options.interactive
+        self.orig_in_repl = options.in_repl()
         self.orig_batch = options.batch
 
     def tearDown(self):
-        options.interactive = self.orig_interactive
+        options.set_in_repl(self.orig_in_repl)
         options.batch = self.orig_batch
 
     @mock.patch('crmsh.main.setup_context')
     @mock.patch('crmsh.utils.multi_input')
     def test_input_loop_runs_and_exits(self, mock_multi_input, mock_setup_context):
-        options.interactive = True
         options.batch = False
+        options.set_in_repl(True)
         mock_multi_input.side_effect = ["node status", None]
         self.context.run.return_value = True
         self.context.quit.side_effect = SystemExit(0)
@@ -249,7 +249,8 @@ class TestMainInputLoop(unittest.TestCase):
     @mock.patch('crmsh.main.setup_context')
     @mock.patch('crmsh.utils.multi_input')
     def test_input_loop_keyboard_interrupt(self, mock_multi_input, mock_setup_context):
-        options.interactive = False
+        options.batch = True
+        options.set_in_repl(False)
         mock_multi_input.side_effect = KeyboardInterrupt
         self.context.quit.side_effect = SystemExit(1)
 
