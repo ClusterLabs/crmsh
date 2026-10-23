@@ -750,18 +750,41 @@ class TestSBD(unittest.TestCase):
         self.assertFalse(res)
         mock_purge_sbd_from_cluster.assert_not_called()
 
+    @mock.patch('crmsh.ui_sbd.ServiceManager')
     @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
     @mock.patch('crmsh.utils.check_all_nodes_reachable')
-    def test_do_purge(self, mock_check_all_nodes_reachable, mock_verify_sbd_device):
+    def test_do_purge(self, mock_check_all_nodes_reachable, mock_verify_sbd_device, mock_ServiceManager):
         self.sbd_instance_diskbased._load_attributes = mock.Mock()
         self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
         self.sbd_instance_diskbased._purge_sbd = mock.Mock()
         res = self.sbd_instance_diskbased.do_purge(mock.Mock())
         self.assertTrue(res)
         self.sbd_instance_diskbased._purge_sbd.assert_called_once_with()
-        self.sbd_instance_diskbased._load_attributes.assert_called_once()
+        self.sbd_instance_diskbased._load_attributes.assert_not_called()
         self.sbd_instance_diskbased._service_is_active.assert_called_once_with(constants.SBD_SERVICE)
         mock_check_all_nodes_reachable.assert_called_once_with("purging SBD")
+        mock_verify_sbd_device.assert_not_called()
+
+    @mock.patch('crmsh.ui_sbd.ServiceManager')
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    def test_do_purge_crashdump(self, mock_check_all_nodes_reachable, mock_ServiceManager):
+        self.sbd_instance_diskbased._load_attributes = mock.Mock()
+        self.sbd_instance_diskbased._service_is_active = mock.Mock(return_value=True)
+        self.sbd_instance_diskbased._is_crashdump_configured = mock.Mock(return_value=True)
+        self.sbd_instance_diskbased._purge_crashdump = mock.Mock()
+        res = self.sbd_instance_diskbased.do_purge(mock.Mock(), "crashdump")
+        self.assertTrue(res)
+        self.sbd_instance_diskbased._load_attributes.assert_called_once_with()
+        self.sbd_instance_diskbased._purge_crashdump.assert_called_once_with()
+        mock_check_all_nodes_reachable.assert_called_once_with("purging SBD crashdump")
+
+    @mock.patch('crmsh.sbd.SBDManager')
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
+    def test_purge_crashdump_verifies_device(self, mock_verify_sbd_device, mock_SBDManager):
+        self.sbd_instance_diskbased._set_sbd_opts = mock.Mock(return_value={})
+        self.sbd_instance_diskbased._purge_crashdump()
+        mock_verify_sbd_device.assert_called_once_with(["/dev/sda1"], ["node1", "node2"])
+        mock_SBDManager.return_value.init_and_deploy_sbd.assert_called_once_with()
 
     @mock.patch('crmsh.xmlutil.CrmMonXMLParser')
     def test_print_sbd_agent_status(self, mock_CrmMonXMLParser):
