@@ -67,7 +67,7 @@ def exit_handler():
     '''
     Write the history file. Remove tmp files.
     '''
-    if options.interactive and not options.batch:
+    if options.in_repl():
         try:
             from readline import write_history_file
             write_history_file(userdir.HISTORY_FILE)
@@ -162,12 +162,6 @@ def usage(rc):
     sys.exit(rc)
 
 
-def set_interactive():
-    '''Set the interactive option only if we're on a tty.'''
-    if utils.can_ask():
-        options.interactive = True
-
-
 def add_quotes(args):
     '''
     Add quotes if there's whitespace in one of the
@@ -190,42 +184,77 @@ def add_quotes(args):
     return l
 
 
-def handle_noninteractive_use(context, user_args):
-    """
-    returns: either a status code of 0 or 1, or
-    None to indicate that nothing was done here.
-    """
+def _init_shadow_cib(context):
     if options.shadow:
-        if not context.run("cib use " + options.shadow):
-            return 1
+        return bool(context.run("cib use " + options.shadow))
+    return True
 
-    # this special case is silly, but we have to keep it to
-    # preserve the backward compatibility
+
+def handle_single_shot(context, user_args):
+    """
+    Execute a single-shot command directly without entering the input loop.
+    Returns exit code 0 on success, 1 on failure.
+    """
+    logger_utils.reset_lineno()
+
+    l = add_quotes(user_args)
+    if context.run(' '.join(l)):
+        return 0
+    return 1
+
+
+handle_noninteractive_use = handle_single_shot
+
+
+def _is_level_navigation(context, user_args):
+    """
+    Check if the user arguments are navigating into UI levels rather than executing a command.
+    """
+    if not user_args:
+        return False
+
     if len(user_args) == 1 and user_args[0].startswith("conf"):
-        if not context.run("configure"):
-            return 1
-    elif len(user_args) > 0:
-        # we're not sure yet whether it's an interactive session or not
-        # (single-shot commands aren't)
-        logger_utils.reset_lineno()
-        options.interactive = False
+        return True
 
-        l = add_quotes(user_args)
-        if context.run(' '.join(l)):
-            # if the user entered a level, then just continue
-            if not context.previous_level():
-                return 0
-            set_interactive()
-            if options.interactive:
-                logger_utils.reset_lineno(-1)
-        else:
+    current_level = context.current_level()
+    for token in user_args:
+        child = current_level.get_child(token)
+        if not child or child.type != 'level':
+            return False
+        current_level = child.level()
+    return True
+
+
+def _enter_level_from_args(context, user_args):
+    """
+    Enter UI levels specified in user_args for an interactive session.
+    Returns True on success, False on failure.
+    """
+    if len(user_args) == 1 and user_args[0].startswith("conf"):
+        cmd = "configure"
+    else:
+        cmd = ' '.join(add_quotes(user_args))
+
+    return bool(context.run(cmd))
+
+
+def dispatch(context, user_args):
+    """
+    Dispatch CLI invocation to single-shot command execution or REPL input loop.
+    """
+    if _is_level_navigation(context, user_args):
+        if not _enter_level_from_args(context, user_args):
             return 1
-    return None
+        return main_input_loop(context)
+    elif user_args:
+        return handle_single_shot(context, user_args)
+    else:
+        return main_input_loop(context)
 
 
 def render_prompt(context):
     rendered_prompt = constants.prompt
-    if options.interactive and not options.batch:
+    if options.in_repl():
         # TODO: fix how color interacts with readline,
         # seems the color prompt messes it up
         promptstr = "crm(%s/%s)%s# " % (cib_prompt(), utils.this_node(), context.prompt())
@@ -245,18 +274,17 @@ def setup_context(context):
             logger.error(msg)
             usage(2)
 
-    if options.interactive and not options.batch:
+    if options.in_repl():
         context.setup_readline()
 
 
-def main_input_loop(context, user_args):
+def main_input_loop(context):
     """
     Main input loop for crmsh. Parses input
     line by line.
     """
-    rc = handle_noninteractive_use(context, user_args)
-    if rc is not None:
-        return rc
+    if not options.batch:
+        options.set_in_repl(True)
 
     setup_context(context)
 
@@ -265,7 +293,7 @@ def main_input_loop(context, user_args):
         try:
             inp = utils.multi_input(render_prompt(context))
             if inp is None:
-                if options.interactive:
+                if options.in_repl():
                     rc = 0
                 context.quit(rc)
             try:
@@ -275,7 +303,7 @@ def main_input_loop(context, user_args):
                 rc = 1
                 logger.error(e, exc_info=e)
         except KeyboardInterrupt:
-            if options.interactive and not options.batch:
+            if options.in_repl():
                 print("Ctrl-C, leaving")
             context.quit(1)
         except Exception as e:
@@ -304,7 +332,6 @@ def compgen():
     if idx >= 0:
         line = line[idx+3:].lstrip()
 
-    options.interactive = False
     ui = ui_root.Root()
     context = ui_context.Context(ui)
     last_word = line.rsplit(' ', 1)
@@ -327,7 +354,7 @@ def parse_options():
     options.force = opts.force
     if opts.filename:
         logger_utils.reset_lineno()
-        options.input_file, options.batch, options.interactive = opts.filename, True, False
+        options.input_file, options.batch = opts.filename, True
     options.history = opts.history or options.history
     config.core.wait = opts.wait or config.core.wait
     options.shadow = opts.cib or options.shadow
@@ -345,9 +372,9 @@ def parse_options():
 
 def profile_run(context, user_args):
     import cProfile
-    cProfile.runctx('main_input_loop(context, user_args)',
+    cProfile.runctx('dispatch(context, user_args)',
                     globals(),
-                    {'context': context, 'user_args': user_args},
+                    {'context': context, 'user_args': user_args, 'dispatch': dispatch},
                     filename=options.profile)
     # print how to use the profile file, but don't disturb
     # the regression tests
@@ -372,18 +399,19 @@ def run():
 
         load_rc(context, userdir.RC_FILE)
         atexit.register(exit_handler)
-        options.interactive = utils.can_ask()
-        if not options.interactive:
+        if not utils.can_ask():
             logger_utils.reset_lineno()
             options.batch = True
         user_args = parse_options()
+        if not _init_shadow_cib(context):
+            return 1
         if config.core.debug:
             logger.debug(utils.debug_timestamp())
         term.init()
         if options.profile:
             return profile_run(context, user_args)
         else:
-            return main_input_loop(context, user_args)
+            return dispatch(context, user_args)
     except network_utils.NoSSHError as msg:
         logger.error('%s', msg)
         sys.exit(1)

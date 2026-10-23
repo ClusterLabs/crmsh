@@ -202,9 +202,11 @@ test/unittests/test_gv.py
 test/unittests/test_handles.py
 test/unittests/test_lock.py
 test/unittests/test_log.py
+test/unittests/test_main.py
 test/unittests/test_migration.py
 test/unittests/test_network_utils.py
 test/unittests/test_objset.py
+test/unittests/test_options.py
 test/unittests/test_parallax.py
 test/unittests/test_parse.py
 test/unittests/test_prun.py
