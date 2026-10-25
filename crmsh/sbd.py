@@ -455,7 +455,7 @@ class SBDTimeout(object):
             self.disk_based = False
             self.sbd_watchdog_timeout = SBDTimeout.get_sbd_watchdog_timeout()
             self.fencing_watchdog_timeout = SBDTimeout.get_fencing_watchdog_timeout_expected()
-        self.sbd_delay_start_value_expected = self.get_sbd_delay_start_expected() if utils.detect_virt() else "no"
+        self.sbd_delay_start_value_expected = self.get_sbd_delay_start_expected() if (utils.detect_virt() and self.two_node_without_qdevice) else "no"
         self.sbd_delay_start_value_from_config = SBDUtils.get_sbd_value_from_config("SBD_DELAY_START")
         if not self.sbd_delay_start_value_from_config:
             logger.error("No SBD_DELAY_START entry found in %s", SBDManager.SYSCONFIG_SBD)
@@ -975,25 +975,28 @@ class SBDConfigChecker:
         config_value = self.sbd_timeout.sbd_delay_start_value_from_config
         if config_value == expected_value:
             return CheckResult.SUCCESS
-        elif config_value.isdigit() and expected_value.isdigit():
-            if int(config_value) < int(expected_value):
-                self.sbd_timeout.logger.error(
-                    "It's required that SBD_DELAY_START is set to %s, now is %s",
-                    expected_value, config_value
-                )
-                return CheckResult.ERROR
-            else:
-                self.sbd_timeout.logger.warning(
-                    "It's recommended that SBD_DELAY_START is set to %s, now is %s",
-                    expected_value, config_value
-                )
-                return CheckResult.WARNING
-        else:
+        if expected_value == "no":
+            self.sbd_timeout.logger.error(
+                "It's required that SBD_DELAY_START is set to no, now is %s", config_value
+            )
+            return CheckResult.ERROR
+        if not config_value.isdigit():
             self.sbd_timeout.logger.error(
                 "It's required that SBD_DELAY_START is set to %s, now is %s",
                 expected_value, config_value
             )
             return CheckResult.ERROR
+        if int(config_value) < int(expected_value):
+            self.sbd_timeout.logger.error(
+                "It's required that SBD_DELAY_START is set to %s, now is %s",
+                expected_value, config_value
+            )
+            return CheckResult.ERROR
+        self.sbd_timeout.logger.warning(
+            "It's recommended that SBD_DELAY_START is set to %s, now is %s",
+            expected_value, config_value
+        )
+        return CheckResult.WARNING
 
     def _fix_sbd_delay_start(self):
         advised_value = str(self.sbd_timeout.sbd_delay_start_value_expected)

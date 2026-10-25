@@ -435,6 +435,48 @@ class TestSBDTimeout(unittest.TestCase):
         mock_token_and_consensus_timeout.return_value = 10
         self.assertEqual(inst.get_sbd_delay_start_expected(), 20)
 
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_systemd_start_timeout_expected')
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_delay_start_expected')
+    @patch('crmsh.utils.detect_virt')
+    @patch('crmsh.sbd.SBDTimeout.get_fencing_watchdog_timeout_expected')
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    @patch('crmsh.sbd.SBDUtils.get_sbd_device_from_config')
+    @patch('crmsh.sbd.SBDUtils.get_crashdump_watchdog_timeout')
+    @patch('crmsh.utils.is_2node_cluster_without_qdevice')
+    @patch('logging.Logger.debug')
+    def test_load_configurations_from_runtime_delay_start(self, mock_debug, mock_two_node, mock_crashdump,
+            mock_dev, mock_watchdog, mock_fencing, mock_virt, mock_delay_expected,
+            mock_get_value, mock_systemd):
+        inst = sbd.SBDTimeout(diskless_sbd=False, quiet=False)
+        mock_crashdump.return_value = None
+        mock_dev.return_value = []
+        mock_watchdog.return_value = 5
+        mock_fencing.return_value = 10
+        mock_delay_expected.return_value = 20
+        mock_get_value.return_value = "no"
+        mock_systemd.return_value = 90
+
+        mock_two_node.return_value = True
+        mock_virt.return_value = True
+        inst._load_configurations_from_runtime()
+        self.assertEqual(inst.sbd_delay_start_value_expected, 20)
+
+        mock_virt.return_value = False
+        inst._load_configurations_from_runtime()
+        self.assertEqual(inst.sbd_delay_start_value_expected, "no")
+
+        mock_virt.return_value = True
+        mock_two_node.return_value = False
+        inst._load_configurations_from_runtime()
+        self.assertEqual(inst.sbd_delay_start_value_expected, "no")
+
+        mock_virt.return_value = False
+        inst._load_configurations_from_runtime()
+        self.assertEqual(inst.sbd_delay_start_value_expected, "no")
+
+        mock_delay_expected.assert_called_once()
+
     @patch('crmsh.sbd.SBDTimeout.get_fencing_timeout_expected')
     @patch('crmsh.sbd.SBDTimeout._load_configurations_from_runtime')
     def test_get_fencing_timeout(self, mock_load_configurations_from_runtime, mock_get_sbd_delay_start_expected):
@@ -837,6 +879,17 @@ class TestSBDConfigChecker(unittest.TestCase):
         self.instance_check.sbd_timeout.sbd_delay_start_value_from_config = "80"
         self.assertEqual(self.instance_check._check_sbd_delay_start(), sbd.CheckResult.WARNING)
         self.mock_quiet_logger_warning.assert_called_once_with("It's recommended that SBD_DELAY_START is set to %s, now is %s", "70", "80")
+
+    def test_check_sbd_delay_start_no_failure(self):
+        self.instance_check.sbd_timeout.sbd_delay_start_value_expected = "no"
+        self.instance_check.sbd_timeout.sbd_delay_start_value_from_config = "87"
+        self.assertEqual(self.instance_check._check_sbd_delay_start(), sbd.CheckResult.ERROR)
+        self.mock_quiet_logger_error.assert_called_once_with("It's required that SBD_DELAY_START is set to no, now is %s", "87")
+
+    def test_check_sbd_delay_start_no_success(self):
+        self.instance_check.sbd_timeout.sbd_delay_start_value_expected = "no"
+        self.instance_check.sbd_timeout.sbd_delay_start_value_from_config = "no"
+        self.assertEqual(self.instance_check._check_sbd_delay_start(), sbd.CheckResult.SUCCESS)
 
     @patch('crmsh.sbd.SBDManager.update_sbd_configuration')
     def test_fix_sbd_delay_start(self, mock_update_sbd_configuration):

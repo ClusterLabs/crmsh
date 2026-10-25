@@ -15,7 +15,8 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
     And     Resource "fencing-sbd" type "fence_sbd" is "Started"
-    And     SBD option "SBD_DELAY_START" value is "87"
+    # SBD_DELAY_START is only set for a 2-node cluster without qdevice, otherwise no
+    And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "76"
     # original value is 43, which is calculated by external/sbd RA
@@ -43,9 +44,8 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     And     Service "sbd" is "started" on "hanode3"
-    # SBD_DELAY_START >= (token + consensus + pcmk_delay_max + msgwait)  # for disk-based sbd
-    # runtime value is "87", we keep the larger one here
-    And     SBD option "SBD_DELAY_START" value is "87"
+    # not a 2-node cluster anymore, SBD_DELAY_START is no
+    And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "76"
     # value_from_sbd >= 1.2 * msgwait  # for disk-based sbd
@@ -56,17 +56,18 @@ Feature: configure sbd delay start correctly
 
     # Increase expected value
     When    Run "crm sbd configure watchdog-timeout=45" on "hanode1"
-    Then    SBD option "SBD_DELAY_START" value is "101"
+    Then    SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "msgwait" value for "/dev/sda1" is "90"
     And     Cluster property "fencing-timeout" is "119"
-    And     Start timeout for sbd.service is "121" seconds
+    # SBD_DELAY_START is no, so the default systemd start timeout is used
+    And     Start timeout for sbd.service is "90" seconds
 
     # Decrease expected value
     When    Run "crm sbd configure watchdog-timeout=38" on "hanode1"
-    Then    SBD option "SBD_DELAY_START" value is "87"
+    Then    SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "msgwait" value for "/dev/sda1" is "76"
     And     Cluster property "fencing-timeout" is "102"
-    And     Start timeout for sbd.service is "104" seconds
+    And     Start timeout for sbd.service is "90" seconds
 
     When    Run "crm cluster remove hanode3 -y" on "hanode1"
     Then    Cluster service is "stopped" on "hanode3"
@@ -86,7 +87,7 @@ Feature: configure sbd delay start correctly
     Given   Cluster service is "stopped" on "hanode1"
     When    Run "crm cluster init -S -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
-    And     SBD option "SBD_DELAY_START" value is "41"
+    And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     Cluster property "fencing-timeout" is "71"
 
@@ -103,7 +104,7 @@ Feature: configure sbd delay start correctly
     Given   Cluster service is "stopped" on "hanode3"
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
-    And     SBD option "SBD_DELAY_START" value is "41"
+    And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "15"
     And     Cluster property "fencing-timeout" is "71"
 
@@ -134,7 +135,7 @@ Feature: configure sbd delay start correctly
     Then    Cluster service is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode1"
     And     Resource "fencing-sbd" type "fence_sbd" is "Started"
-    And     SBD option "SBD_DELAY_START" value is "131"
+    And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
     # original value is 172, which is calculated by external/sbd RA
@@ -166,13 +167,14 @@ Feature: configure sbd delay start correctly
     When    Run "crm cluster join -c hanode1 -y" on "hanode3"
     Then    Cluster service is "started" on "hanode3"
     And     Service "sbd" is "started" on "hanode3"
-    And     SBD option "SBD_DELAY_START" value is "131"
+    And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "120"
     And     Cluster property "fencing-timeout" is "155"
     And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
+    # SBD_DELAY_START is no, so the systemd start timeout falls back to the default value(1min 30s)
     And     Run "test -f /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
-    And     Run "grep 'TimeoutStartSec=157' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
+    And     Run "grep 'TimeoutStartSec=90' /etc/systemd/system/sbd.service.d/sbd_delay_start.conf" OK
 
     When    Run "crm cluster remove hanode3 -y" on "hanode1"
     Then    Cluster service is "stopped" on "hanode3"
@@ -229,7 +231,8 @@ Feature: configure sbd delay start correctly
     And     Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
 
-    And     SBD option "SBD_DELAY_START" value is "87"
+    # 2-node cluster with qdevice, SBD_DELAY_START is no
+    And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "5"
     And     SBD option "msgwait" value for "/dev/sda1" is "76"
     And     Cluster property "fencing-timeout" is "102"
@@ -252,7 +255,8 @@ Feature: configure sbd delay start correctly
     And     Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
 
-    And     SBD option "SBD_DELAY_START" value is "81"
+    # 2-node cluster with qdevice, SBD_DELAY_START is no
+    And     SBD option "SBD_DELAY_START" value is "no"
     And     SBD option "SBD_WATCHDOG_TIMEOUT" value is "35"
     And     Cluster property "fencing-timeout" is "95"
     And     Cluster property "fencing-watchdog-timeout" is "70"
@@ -280,14 +284,17 @@ Feature: configure sbd delay start correctly
     And     Service "sbd" is "started" on "hanode1"
     And     Service "sbd" is "started" on "hanode2"
     And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
+    And     SBD option "SBD_DELAY_START" value is "117"
     When    Run "crm cluster init qdevice --qnetd-hostname=qnetd-node -y" on "hanode1"
     Then    Service "corosync-qdevice" is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode2"
     And     Parameter "pcmk_delay_max" not configured in "fencing-sbd"
+    And     SBD option "SBD_DELAY_START" value is "no"
     When    Run "crm cluster remove --qdevice -y" on "hanode1"
     Then    Service "corosync-qdevice" is "stopped" on "hanode1"
     And     Service "corosync-qdevice" is "stopped" on "hanode2"
     And     Parameter "pcmk_delay_max" configured in "fencing-sbd"
+    And     SBD option "SBD_DELAY_START" value is "117"
 
   @clean
   Scenario: Test priority-fence-delay and priority
