@@ -571,16 +571,23 @@ class SBDTimeout(object):
         return utils.get_systemd_timeout_start_in_sec(out)
 
     @staticmethod
-    def able_to_set_fencing_watchdog_timeout(name: str, value: int) -> bool:
+    def is_fencing_watchdog_timeout_valid(name: str, value: int) -> bool:
         """
-        Check if able to set fencing-watchdog-timeout or stonith-watchdog-timeout property
+        Check if the fencing-watchdog-timeout or stonith-watchdog-timeout value is valid
         """
         if not ServiceManager().service_is_active(constants.SBD_SERVICE):
-            logger.error("Can't set %s because sbd.service is not active", name)
+            if value == 0:
+                return True
+            logger.error("%s shouldn't be configured when sbd.service is not active", name)
+            return False
+        if SBDUtils.is_using_disk_based_sbd():
+            if value == 0:
+                return True
+            logger.error("%s shouldn't be configured when disk-based SBD is used", name)
             return False
 
         expected_fencing_watchdog_timeout = 2 * SBDTimeout.get_sbd_watchdog_timeout()
-        if value == -1:
+        if value < 0:
             logger.warning(
                 "It's recommended to set %s to a positive value (at least 2*SBD_WATCHDOG_TIMEOUT: %d)",
                 name, expected_fencing_watchdog_timeout
