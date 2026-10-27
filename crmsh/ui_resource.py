@@ -71,7 +71,7 @@ def set_deep_meta_attr_node(target_node, attr, value):
                 if config.core.manage_children == "always" or \
                         (config.core.manage_children == "ask" and
                         utils.ask("'%s' conflicts with '%s' attribute. Remove '%s' for child resource %s?" %
-                                (attr, conflicting_attr, conflicting_attr, c.get("id")))):
+                                (attr, conflicting_attr, conflicting_attr, c.get("id")), default=False)):
                     logger.debug("force remove meta attr %s from %s", conflicting_attr, c.get("id"))
                     rm_meta_attribute(c, conflicting_attr, nvpair_l, force_children=True)
         # remove the same attributes from all children (if wanted)
@@ -80,7 +80,7 @@ def set_deep_meta_attr_node(target_node, attr, value):
             if config.core.manage_children == "always" or \
                     (config.core.manage_children == "ask" and
                      utils.ask("Do you want to override '%s' for child resource %s?" %
-                               (attr, c.get("id")))):
+                               (attr, c.get("id")), default=False)):
                 logger.debug("force remove meta attr %s from %s", attr, c.get("id"))
                 rm_meta_attribute(c, attr, nvpair_l, force_children=True)
     xmlutil.rmnodes(list(set(nvpair_l)))
@@ -88,7 +88,7 @@ def set_deep_meta_attr_node(target_node, attr, value):
         nvpairs = target_node.xpath("./meta_attributes/nvpair[@name='%s']" % (conflicting_attr))
         if len(nvpairs) > 0:
             if (utils.ask("'%s' conflicts with '%s' attribute. Remove '%s' for resource %s?" %
-                        (attr, conflicting_attr, conflicting_attr, target_node.get("id")))):
+                        (attr, conflicting_attr, conflicting_attr, target_node.get("id")), default=False)):
                 xmlutil.rmnodes(list(set(nvpairs)))
     xmlutil.xml_processnodes(target_node,
                              xmlutil.is_emptynvpairs, xmlutil.rmnodes)

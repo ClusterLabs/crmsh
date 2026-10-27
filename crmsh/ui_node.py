@@ -46,7 +46,7 @@ def remove_redundant_attrs(objs, attributes_tag, attr, conflicting_attr = None):
                 (config.core.manage_children == "always" or \
                 (config.core.manage_children == "ask" and
                 utils.ask("'%s' attribute already exists in %s. Remove it?" %
-                        (attr, r.get(field2show))))):
+                        (attr, r.get(field2show)), default=False))):
                 logger.debug("force remove meta attr %s from %s", attr, r.get(field2show))
                 xmlutil.rmnode(a)
                 xmlutil.xml_processnodes(r, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
@@ -56,7 +56,7 @@ def remove_redundant_attrs(objs, attributes_tag, attr, conflicting_attr = None):
                     (config.core.manage_children == "always" or \
                     (config.core.manage_children == "ask" and
                     utils.ask("'%s' conflicts with '%s' in %s. Remove it?" %
-                            (conflicting_attr, attr, r.get(field2show))))):
+                            (conflicting_attr, attr, r.get(field2show)), default=False))):
                     logger.debug("force remove meta attr %s from %s", conflicting_attr, r.get(field2show))
                     xmlutil.rmnode(a)
                     xmlutil.xml_processnodes(r, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
@@ -117,7 +117,7 @@ def update_xml_node(cluster_node_name, attr, value):
     nvpairs = xml_node.xpath("./instance_attributes/nvpair[@name='%s']" % (conflicting_attr))
     if len(nvpairs) > 0 and \
         utils.ask("'%s' conflicts with '%s' in %s. Remove it?" %
-                        (conflicting_attr, attr, xml_node.get("uname"))):
+                        (conflicting_attr, attr, xml_node.get("uname")), default=False):
         for nvpair in nvpairs:
             xmlutil.rmnode(nvpair)
             xmlutil.xml_processnodes(xml_node, xmlutil.is_emptynvpairs, xmlutil.rmnodes)
@@ -536,7 +536,7 @@ class NodeMgmt(command.UI):
             logger.error("fence command requires fence device configured and running")
             return False
         if not options.force and \
-                not utils.ask("Fencing %s will shut down the node and migrate any resources that are running on it! Do you want to fence %s?" % (node, node)):
+                not utils.ask("Fencing %s will shut down the node and migrate any resources that are running on it! Do you want to fence %s?" % (node, node), default=False):
             return False
         if xmlutil.is_remote_node(node):
             return utils.ext_cmd("stonith_admin -F '%s'" % (node)) == 0
@@ -552,7 +552,7 @@ class NodeMgmt(command.UI):
         if not utils.is_name_sane(node):
             return False
         if not options.force and \
-                not utils.ask("Do you really want to drop state for node %s?" % node):
+                not utils.ask("Do you really want to drop state for node %s?" % node, default=False):
             return False
 
         cib_elem = xmlutil.cibdump2elem()

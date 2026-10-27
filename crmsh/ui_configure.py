@@ -862,7 +862,7 @@ class CibConfig(command.UI):
         cib_factory.ensure_cib_updated()
         if method == "replace":
             if options.interactive and cib_factory.has_cib_changed():
-                if not utils.ask("This operation will erase all changes. Do you want to proceed?"):
+                if not utils.ask("This operation will erase all changes. Do you want to proceed?", default=False):
                     return False
             cib_factory.erase()
         if xml:
@@ -940,7 +940,7 @@ class CibConfig(command.UI):
     def do_refresh(self, context):
         "usage: refresh"
         if options.interactive and cib_factory.has_cib_changed():
-            if not utils.ask("All changes will be dropped. Do you want to proceed?"):
+            if not utils.ask("All changes will be dropped. Do you want to proceed?", default=False):
                 return
         cib_factory.refresh()
 
@@ -974,7 +974,7 @@ class CibConfig(command.UI):
         if force or options.force:
             logger.info("commit forced")
             return cib_factory.commit(force=True, replace=replace)
-        if utils.ask("Do you still want to commit?"):
+        if utils.ask("Do you still want to commit?", default=False):
             return cib_factory.commit(force=True, replace=replace)
         return False
 
@@ -1302,7 +1302,7 @@ class CibConfig(command.UI):
                 print("There are changes pending:")
                 self._show_diff()
                 confirm_msg = "Do you want to commit them, or cancel the operation?"
-                rc = utils.ask(confirm_msg, cancel_option=True)
+                rc = utils.ask(confirm_msg, default=False, cancel_option=True)
                 if rc:
                     ok = self._commit()
         cib_factory.reset()
