@@ -300,105 +300,100 @@ crm(test-2)configure# commit
 [[topics.TimeoutFormulas,Timeout formulas]]
 === TimeoutFormulas
 
-If you use `crm cluster init` command to set up a cluster, especially
-with SBD as the fence device, crmsh configures several fencing related
-settings based on the calculations with a set of formulas.
+A healthy cluster, especially one that uses SBD for fencing, needs several
+timeouts that are consistent with each other. `crm cluster init` sets them
+to the minimum values below, and you can use the same formulas to check a
+running cluster. A setting that is equal to or larger than the value given
+by its formula is fine. A smaller one can cause unexpected fencing or fencing
+failures.
 
 .SBD related timeouts
-`watchdog` timeout: Default value is 15s. This value is from the definition
-    in +/etc/crm/profiles.xml+, can be a different value with a different profile.
-    For disk-based SBD, it also needs to cover the timeout of the SBD disk:
+`watchdog` timeout:
 ...............
-    # For disk-based SBD directly on top of a multipath device
-    value_from_disk = 1.2 * (multipath_max_polling_interval + multipath_checker_timeout
-                             + servant_restart_interval - timeout_io)
+  # The default is 15s, taken from /etc/crm/profiles.yml (it can differ with another profile).
 
-    # For disk-based SBD directly on top of a SCSI device
-    value_from_disk = 1.2 * (SCSI_timeout + servant_restart_interval - timeout_io)
+  # For disk-based SBD, it must also cover the timeout of the SBD disk:
+  # If on top of a multipath device:
+  value_from_disk = 1.2 * (multipath_max_polling_interval + multipath_checker_timeout
+                           + servant_restart_interval - timeout_io)
+  # If on top of a SCSI device:
+  value_from_disk = 1.2 * (SCSI_timeout + servant_restart_interval - timeout_io)
 
-    watchdog = max(value_from_disk, value_from_profiles)
+  watchdog >= max(value_from_disk, value_from_profiles)
 
-    # How to get the values above:
-    # multipath_max_polling_interval: max_polling_interval in the effective multipath
-    #     configuration, ie. the output of "multipath -T"
+  # Where to find the values above:
+  # multipath_max_polling_interval: max_polling_interval in the output of "multipath -T"
 
-    # multipath_checker_timeout: checker_timeout in the effective multipath
-    #     configuration, ie. the output of "multipath -T"; default is SCSI_timeout
+  # multipath_checker_timeout: checker_timeout in the output of "multipath -T"; default is SCSI_timeout
 
-    # servant_restart_interval: option -t in SBD_OPTS of /etc/sysconfig/sbd; default is 5s
+  # servant_restart_interval: option -t in SBD_OPTS of /etc/sysconfig/sbd; default is 5s
 
-    # timeout_io: option -I in SBD_OPTS of /etc/sysconfig/sbd;
-    #     default is 3 * loop timeout, loop timeout is from the SBD disk metadata
-    #     and its default is 1s, so default timeout_io is 3s
+  # timeout_io: option -I in SBD_OPTS of /etc/sysconfig/sbd;
+  #     default is 3 * loop timeout. The loop timeout comes from the SBD disk
+  #     metadata and defaults to 1s, so the default timeout_io is 3s
 
-    # SCSI_timeout: /sys/block/<sdX>/device/timeout, <sdX> is the SBD disk itself,
-    #     or one of the path devices if the SBD disk is a multipath device
+  # SCSI_timeout: /sys/block/<sdX>/device/timeout, where <sdX> is the SBD disk
+  #     itself, or one of its path devices if the SBD disk is a multipath device
 ...............
-
 `msgwait` timeout: (only for disk-based SBD)
 ...............
-    msgwait = 2 * watchdog
+  msgwait >= 2 * watchdog
 
-    # When setting crashdump watchdog timeout
-    msgwait = 2 * watchdog + crashdump_watchdog_timeout
+  # With a crashdump watchdog timeout
+  msgwait >= 2 * watchdog + crashdump_watchdog_timeout
+
+  # crashdump_watchdog_timeout: option -C in SBD_OPTS of /etc/sysconfig/sbd
 ...............
-`SBD_WATCHDOG_TIMEOUT`:
+`SBD_WATCHDOG_TIMEOUT`: (only for diskless SBD)
 ...............
-    # For diskless SBD
-    SBD_WATCHDOG_TIMEOUT = Default value is 15s. This value is from the definition
-    in +/etc/crm/profiles.xml+, can be a different value with a different profile.
+  # The default for diskless SBD is 15s, taken from /etc/crm/profiles.yml
+  # (it can differ with another profile)
 
-    # When adding diskless SBD and QDevice together from crm cluster init
-    if SBD_WATCHDOG_TIMEOUT < 35s:
-	SBD_WATCHDOG_TIMEOUT = 35s
-
-    # When adding diskless SBD in a cluster with QDevice already
-    if SBD_WATCHDOG_TIMEOUT < qdevice_sync_timeout:
-	SBD_WATCHDOG_TIMEOUT = qdevice_sync_timeout + 5s
-
-    # When adding QDevice in a cluster with diskless SBD already
-    if SBD_WATCHDOG_TIMEOUT < 35s:
-	SBD_WATCHDOG_TIMEOUT = 35s
+  # With QDevice
+  SBD_WATCHDOG_TIMEOUT >= max(35, qdevice_sync_timeout+5)
+  # qdevice_sync_timeout: "Sync HB interval" in the output of "corosync-qdevice-tool -sv", in seconds
 ...............
 `SBD_DELAY_START`:
 ...............
-    # For disk-based SBD
-    SBD_DELAY_START =  pcmk_delay_max + msgwait + corosync.token + corosync.consensus
+  # For disk-based SBD
+  SBD_DELAY_START >= pcmk_delay_max + msgwait + corosync.token + corosync.consensus
 
-    # For diskless SBD
-    SBD_DELAY_START = 2 * SBD_WATCHDOG_TIMEOUT + corosync.token + corosync.consensus
+  # For diskless SBD
+  SBD_DELAY_START >= 2 * SBD_WATCHDOG_TIMEOUT + corosync.token + corosync.consensus
 
-    # For bare metal environment
-    SBD_DELAY_START = no
+  # For bare-metal environments and any cluster that is not a 2-node cluster without QDevice
+  SBD_DELAY_START = no
+
+  # pcmk_delay_max: pcmk_delay_max of the fencing resources in the CIB (the largest one
+  #     if several are set); if not set, it is 30s for a two-node cluster without QDevice, otherwise 0
 ...............
-`TimeoutSec` of sbd.service systemd unit:
+`TimeoutSec` of the sbd.service systemd unit:
 ...............
-    default_value = 1min30s
-    if SBD_DELAY_START > default_value:
-	TimeoutSec = 1.2 * SBD_DELAY_START
-    else:
-	TimeoutSec = default_value
+  TimeoutSec >= max(1min30s, 1.2 * SBD_DELAY_START)
 ...............
 .Pacemaker related timeouts
 `fencing-watchdog-timeout`: (only for diskless SBD)
 ...............
-    fencing-watchdog-timeout = 2 * SBD_WATCHDOG_TIMEOUT
+  fencing-watchdog-timeout >= 2 * SBD_WATCHDOG_TIMEOUT
 
-    # When setting crashdump watchdog timeout
-    fencing-watchdog-timeout = max(SBD_WATCHDOG_TIMEOUT + crashdump_watchdog_timeout, 2 * SBD_WATCHDOG_TIMEOUT)
+  # With a crashdump watchdog timeout
+  fencing-watchdog-timeout >= max(SBD_WATCHDOG_TIMEOUT + crashdump_watchdog_timeout,
+                                  2 * SBD_WATCHDOG_TIMEOUT)
+
+  # crashdump_watchdog_timeout: option -C in SBD_OPTS of /etc/sysconfig/sbd
 ...............
 `fencing-timeout`:
 ...............
-    # For disk-based SBD
-    _value_from_sbd = 1.2 * msgwait
-    fencing-timeout = max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
+  # For disk-based SBD
+  _value_from_sbd = 1.2 * msgwait
+  fencing-timeout >= max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
 
-    # For diskless SBD
-    _value_from_sbd = 1.2 * max(fencing-watchdog-timeout, 2*SBD_WATCHDOG_TIMEOUT)
-    fencing-timeout = max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
+  # For diskless SBD
+  _value_from_sbd = 1.2 * max(fencing-watchdog-timeout, 2 * SBD_WATCHDOG_TIMEOUT)
+  fencing-timeout >= max(_value_from_sbd, 60s) + corosync.token + corosync.consensus
 
-    # For general scenarios
-    fencing-timeout = 60s + corosync.token + corosync.consensus
+  # For general scenarios
+  fencing-timeout >= 60s + corosync.token + corosync.consensus
 ...............
 
 [[topics.Features.Checks,Configuration semantic checks]]
