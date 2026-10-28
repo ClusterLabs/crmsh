@@ -220,6 +220,61 @@ class TestSBDTimeout(unittest.TestCase):
         mock_cluster_shell.return_value.get_stdout_or_raise_error.assert_called_once_with(sbd.SBDTimeout.SHOW_SBD_START_TIMEOUT_CMD, None)
         mock_get_systemd_timeout_start_in_sec.assert_called_once_with("1min 30s")
 
+    @patch('logging.Logger.error')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_is_fencing_watchdog_timeout_valid_sbd_inactive_zero(self, mock_service_manager, mock_logger_error):
+        mock_service_manager.return_value.service_is_active.return_value = False
+        self.assertTrue(sbd.SBDTimeout.is_fencing_watchdog_timeout_valid("fencing-watchdog-timeout", 0))
+        mock_logger_error.assert_not_called()
+
+    @patch('logging.Logger.error')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_is_fencing_watchdog_timeout_valid_sbd_inactive_nonzero(
+            self, mock_service_manager, mock_logger_error
+    ):
+        mock_service_manager.return_value.service_is_active.return_value = False
+        self.assertFalse(sbd.SBDTimeout.is_fencing_watchdog_timeout_valid("fencing-watchdog-timeout", 30))
+        mock_logger_error.assert_called_once()
+
+    @patch('logging.Logger.error')
+    @patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_is_fencing_watchdog_timeout_valid_zero_disk_based(
+            self, mock_service_manager, mock_is_disk_based, mock_logger_error
+    ):
+        mock_service_manager.return_value.service_is_active.return_value = True
+        mock_is_disk_based.return_value = True
+        for name in ("fencing-watchdog-timeout", "stonith-watchdog-timeout"):
+            self.assertTrue(sbd.SBDTimeout.is_fencing_watchdog_timeout_valid(name, 0))
+            self.assertFalse(sbd.SBDTimeout.is_fencing_watchdog_timeout_valid(name, 30))
+        self.assertEqual(mock_logger_error.call_count, 2)
+
+    @patch('logging.Logger.error')
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    @patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_is_fencing_watchdog_timeout_valid_zero_diskless(
+            self, mock_service_manager, mock_is_disk_based, mock_get_watchdog_timeout, mock_logger_error
+    ):
+        mock_service_manager.return_value.service_is_active.return_value = True
+        mock_is_disk_based.return_value = False
+        mock_get_watchdog_timeout.return_value = 15
+        self.assertFalse(sbd.SBDTimeout.is_fencing_watchdog_timeout_valid("fencing-watchdog-timeout", 0))
+        mock_logger_error.assert_called_once()
+
+    @patch('logging.Logger.warning')
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout')
+    @patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
+    @patch('crmsh.sbd.ServiceManager')
+    def test_is_fencing_watchdog_timeout_valid_negative_diskless(
+            self, mock_service_manager, mock_is_disk_based, mock_get_watchdog_timeout, mock_logger_warning
+    ):
+        mock_service_manager.return_value.service_is_active.return_value = True
+        mock_is_disk_based.return_value = False
+        mock_get_watchdog_timeout.return_value = 15
+        self.assertTrue(sbd.SBDTimeout.is_fencing_watchdog_timeout_valid("fencing-watchdog-timeout", -2))
+        mock_logger_warning.assert_called_once()
+
     @patch('crmsh.corosync.token_and_consensus_timeout')
     def test_get_sbd_delay_start_expected_diskbased(self, mock_token_and_consensus_timeout):
         inst = sbd.SBDTimeout()
