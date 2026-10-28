@@ -5,7 +5,6 @@
 Session-only options (not saved).
 '''
 
-interactive = False
 batch = False
 ask_no = False
 regression_tests = False
@@ -17,3 +16,16 @@ scriptdir = ""
 # set to true when completing non-interactively
 shell_completion = False
 force = False
+
+_in_repl = False
+
+
+def in_repl():
+    '''Return True if running in the interactive REPL shell.'''
+    return _in_repl
+
+
+def set_in_repl(val=True):
+    global _in_repl
+    _in_repl = bool(val)
+
