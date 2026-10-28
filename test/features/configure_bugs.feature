@@ -83,9 +83,11 @@ Feature: Functional test for configure sub level
     Then    Run "crm -F configure filter "sed 's/cpu=/#cpu='/g"" OK on "hanode1"
 
   @clean
-  Scenario: Set stonith-watchdog-timeout when sbd.service is disactive
+  Scenario: Set stonith-watchdog-timeout when sbd.service is inactive
     Given   Cluster service is "stopped" on "hanode1"
     When    Run "crm cluster init -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     When    Try "crm configure property stonith-watchdog-timeout=20" on "hanode1"
-    Then    Except "Can't set stonith-watchdog-timeout because sbd.service is not active" in stderr
+    Then    Except "stonith-watchdog-timeout shouldn't be configured when sbd.service is not active" in stderr
+    When    Run "crm configure property stonith-watchdog-timeout=0" on "hanode1"
+    Then    Cluster property "stonith-watchdog-timeout" is "0"
