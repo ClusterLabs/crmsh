@@ -195,10 +195,12 @@ class TestMainInputLoop(unittest.TestCase):
         self.context = mock.Mock()
         self.orig_in_repl = options.in_repl()
         self.orig_batch = options.batch
+        self.orig_force = options.force
 
     def tearDown(self):
         options.set_in_repl(self.orig_in_repl)
         options.batch = self.orig_batch
+        options.force = self.orig_force
 
     @mock.patch('crmsh.main.setup_context')
     @mock.patch('crmsh.utils.multi_input')
@@ -217,6 +219,33 @@ class TestMainInputLoop(unittest.TestCase):
         mock_setup_context.assert_called_once_with(self.context)
         self.context.run.assert_called_once_with("node status")
         self.context.quit.assert_called_once_with(0)
+
+    @mock.patch('crmsh.main.setup_context')
+    @mock.patch('crmsh.utils.multi_input')
+    def test_input_loop_force_option_resets_per_iteration(self, mock_multi_input, mock_setup_context):
+        options.batch = False
+        options.force = False
+        mock_multi_input.side_effect = ["sbd purge -F", "cluster init sbd -S -y", None]
+
+        observed_force = []
+
+        def side_effect_run(cmd):
+            observed_force.append((cmd, options.force))
+            if "-F" in cmd:
+                options.force = True
+            return True
+
+        self.context.run.side_effect = side_effect_run
+        self.context.quit.side_effect = SystemExit(0)
+
+        with self.assertRaises(SystemExit) as cm:
+            main.main_input_loop(self.context)
+
+        self.assertEqual(cm.exception.code, 0)
+        self.assertEqual(observed_force, [
+            ("sbd purge -F", False),
+            ("cluster init sbd -S -y", False),
+        ])
 
     @mock.patch('crmsh.main.setup_context')
     @mock.patch('crmsh.utils.multi_input')

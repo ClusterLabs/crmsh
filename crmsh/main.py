@@ -288,9 +288,11 @@ def main_input_loop(context):
 
     setup_context(context)
 
+    initial_force = options.force
     rc = 0
     while True:
         try:
+            options.force = initial_force
             inp = utils.multi_input(render_prompt(context))
             if inp is None:
                 if options.in_repl():
