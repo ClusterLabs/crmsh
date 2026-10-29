@@ -294,13 +294,13 @@ class SBD(command.UI):
 
     @staticmethod
     def check_sbd_health() -> bool:
-        check_rc = sbd.CheckResult.SUCCESS
+        checker = sbd.SBDConfigChecker()
         try:
-            check_rc = sbd.SBDConfigChecker().check_and_fix()
+            check_rc = checker.check_and_fix()
         except sbd.FixAborted as e:
             logger.error('%s', e)
             return False
-        return sbd.SBDConfigChecker.log_and_return(check_rc)
+        return sbd.SBDConfigChecker.log_and_return(check_rc, fixable=checker.has_fixable_issue)
 
     def _parse_args(self, args: tuple[str, ...]) -> dict[str, int|str]:
         '''
