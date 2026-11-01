@@ -552,6 +552,18 @@ Legacy 003-10-11T22:14:15.003Z log data log
         self.assertEqual(out, "")
         mock_diff.assert_called_once_with("/opt/workdir/node1/file1", "/opt/workdir/node2/file1")
 
+    @mock.patch('crmsh.report.utils.diff_check')
+    def test_do_compare_middle_node_differs(self, mock_diff):
+        mock_ctx_inst = mock.Mock(work_dir="/opt/workdir", node_list=["node1", "node2", "node3"])
+        mock_diff.side_effect = [(1, "diff out"), (0, "")]
+        rc, out = utils.do_compare(mock_ctx_inst, "file1")
+        self.assertEqual(rc, 1)
+        self.assertEqual(out, "diff out\n")
+        mock_diff.assert_has_calls([
+            mock.call("/opt/workdir/node1/file1", "/opt/workdir/node2/file1"),
+            mock.call("/opt/workdir/node1/file1", "/opt/workdir/node3/file1"),
+        ])
+
     @mock.patch('os.path.isfile')
     def test_diff_check_return(self, mock_isfile):
         mock_isfile.return_value = False

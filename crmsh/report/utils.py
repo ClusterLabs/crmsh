@@ -124,9 +124,9 @@ def do_compare(context: core.Context, file: str) -> Tuple[int, str]:
         current_file_path = os.path.join(context.work_dir, n, file)
 
         if prev_file_path:
-            rc, out = diff_check(prev_file_path, current_file_path)
+            node_rc, out = diff_check(prev_file_path, current_file_path)
             out_string += f"{out}\n" if out else ""
-            rc += rc
+            rc = rc or node_rc
         else:
             prev_file_path = current_file_path
 
