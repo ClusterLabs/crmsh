@@ -7,6 +7,8 @@ LOG_PATTERNS = ["CRIT:", "ERROR:", "WARNING:", "crit:", "error:", "warning:"]
 PTEST = "crm_simulate"
 SSH_OPTS = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
 CHECK_LOG_LINES = 10
+# Lines in crm_mon output that differ between nodes only because of collection time
+CRM_MON_VOLATILE_LINES = [r"^ *\* Last updated:", r"^ *<last_update "]
 STAMP_TYPE = ""
 
 DECRIPTION_TMPLATE = """
