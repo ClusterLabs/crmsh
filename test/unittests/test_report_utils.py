@@ -582,6 +582,27 @@ Legacy 003-10-11T22:14:15.003Z log data log
         self.assertEqual(rc, 0)
         self.assertEqual(out, "")
 
+    @mock.patch('crmsh.report.utils.txt_diff')
+    @mock.patch('os.path.isfile')
+    def test_diff_check_crm_mon(self, mock_isfile, mock_txt_diff):
+        mock_isfile.return_value = True
+        mock_txt_diff.return_value = (0, "")
+        rc, out = utils.diff_check("/opt/node1/crm_mon.txt", "/opt/node2/crm_mon.txt")
+        self.assertEqual(rc, 0)
+        mock_txt_diff.assert_called_once_with(
+            "/opt/node1/crm_mon.txt", "/opt/node2/crm_mon.txt", constants.CRM_MON_VOLATILE_LINES
+        )
+
+    @mock.patch('crmsh.report.utils.ShellUtils')
+    def test_txt_diff_ignore_regex(self, mock_run):
+        mock_run_inst = mock.Mock()
+        mock_run.return_value = mock_run_inst
+        mock_run_inst.get_stdout_stderr.return_value = (0, "", None)
+        utils.txt_diff("txt1", "txt2", ["^ *\\* Last updated:", "<a b>"])
+        mock_run_inst.get_stdout_stderr.assert_called_once_with(
+            "diff -bBu -I '^ *\\* Last updated:' -I '<a b>' txt1 txt2"
+        )
+
     @mock.patch('crmsh.report.utils.ShellUtils')
     def test_txt_diff(self, mock_run):
         mock_run_inst = mock.Mock()

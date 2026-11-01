@@ -195,8 +195,12 @@ def diff_check(file1: str, file2: str) -> Tuple[int, str]:
         if not os.path.isfile(f):
             return (1, f"{f} does not exist\n")
 
-    diff_func = cib_diff if os.path.basename(file1) == constants.CIB_F else txt_diff
-    return diff_func(file1, file2)
+    basename = os.path.basename(file1)
+    if basename == constants.CIB_F:
+        return cib_diff(file1, file2)
+    if basename == constants.CRM_MON_F:
+        return txt_diff(file1, file2, constants.CRM_MON_VOLATILE_LINES)
+    return txt_diff(file1, file2)
 
 
 def get_distro_info() -> str:
@@ -491,8 +495,9 @@ def tail(n: int, indata: str) -> List[str]:
     return indata.split('\n')[-n:]
 
 
-def txt_diff(file1: str, file2: str) -> Tuple[int, str]:
-    cmd = f"diff -bBu {shlex.quote(file1)} {shlex.quote(file2)}"
+def txt_diff(file1: str, file2: str, ignore_regex_list: List[str] = ()) -> Tuple[int, str]:
+    ignore_opts = ''.join(f" -I {shlex.quote(regex)}" for regex in ignore_regex_list)
+    cmd = f"diff -bBu{ignore_opts} {shlex.quote(file1)} {shlex.quote(file2)}"
     rc, out, _ = ShellUtils().get_stdout_stderr(cmd)
     return rc, out
 
