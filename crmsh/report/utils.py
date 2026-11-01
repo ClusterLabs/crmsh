@@ -81,7 +81,7 @@ def analyze(context: core.Context) -> None:
     """
     result_list = []
 
-    result_list.append(compare_and_consolidate_files(context))
+    result_list.append(compare_files(context))
     result_list += check_collected_files(context)
     result_list += extract_critical_log(context)
 
@@ -89,7 +89,7 @@ def analyze(context: core.Context) -> None:
     crmutils.str2file('\n'.join(result_list), analyze_f)
 
 
-def compare_and_consolidate_files(context: core.Context) -> str:
+def compare_files(context: core.Context) -> str:
     out_string: str = ""
     workdir = context.work_dir
     compare_file_list = [
@@ -105,10 +105,8 @@ def compare_and_consolidate_files(context: core.Context) -> str:
         if not glob.glob(f"{workdir}/*/{f}"):
             out_string += f"no {f} found in {workdir}\n"
             continue
-        rc, out = do_compare(context, f)
+        _, out = do_compare(context, f)
         out_string += f"\n{out}\n" if out else "OK\n"
-        if rc == 0 and f != constants.CIB_F:
-            consolidate(context, f)
 
     return out_string + '\n'
 
@@ -187,20 +185,6 @@ def cib_diff(file1: str, file2: str) -> Tuple[int, str]:
     else:
         code, out_string = 1, "Can't compare cibs from running and stopped systems\n"
     return code, out_string
-
-
-def consolidate(context: core.Context, target_file: str) -> None:
-    """
-    Remove duplicates if files are same, make links instead
-    """
-    workdir = context.work_dir
-    for node in context.node_list:
-        target_file_in_path = os.path.join(workdir, node, target_file)
-        if os.path.isfile(os.path.join(workdir, target_file)):
-            os.remove(target_file_in_path)
-        else:
-            shutil.move(target_file_in_path, workdir)
-        os.symlink(f"../{target_file}", target_file_in_path)
 
 
 def diff_check(file1: str, file2: str) -> Tuple[int, str]:
