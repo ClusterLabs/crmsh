@@ -7,7 +7,7 @@ import yaml
 
 import behave
 from behave import given, when, then
-import behave_agent
+import behave_agent_client as behave_agent
 from crmsh import corosync, userdir, bootstrap
 from crmsh import utils as crmutils
 from crmsh import xmlutil

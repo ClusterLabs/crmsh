@@ -1,7 +1,7 @@
 import random
 from behave import given, when, then
 
-import behave_agent
+import behave_agent_client as behave_agent
 
 
 _rng = random.SystemRandom()
