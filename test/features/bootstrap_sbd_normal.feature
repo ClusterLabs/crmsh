@@ -129,6 +129,26 @@ Feature: crmsh bootstrap sbd management
     And     Resource "stonith-sbd" type "external/sbd" is "Started"
 
   @clean
+  Scenario: Configure sbd with softdog on running cluster via stage
+    Given   Cluster service is "stopped" on "hanode1"
+    Given   Cluster service is "stopped" on "hanode2"
+    When    Try "lsmod |grep softdog && rmmod softdog" on "hanode1"
+    And     Try "lsmod |grep softdog && rmmod softdog" on "hanode2"
+    When    Run "crm cluster init -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    When    Run "crm cluster init sbd -s /dev/sda1 -w softdog -y" on "hanode1"
+    Then    Service "sbd" is "started" on "hanode1"
+    And     Service "sbd" is "started" on "hanode2"
+    And     Resource "stonith-sbd" type "external/sbd" is "Started"
+    When    Try "lsmod |grep softdog" on "hanode1"
+    Then    Expected return code is "0"
+    When    Try "lsmod |grep softdog" on "hanode2"
+    Then    Expected return code is "0"
+
+  @clean
   Scenario: Configure sbd on running cluster via stage with ra running(bsc#1181906)
     Given   Cluster service is "stopped" on "hanode1"
     Given   Cluster service is "stopped" on "hanode2"
