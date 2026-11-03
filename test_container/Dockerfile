@@ -15,7 +15,7 @@ RUN ssh-keygen -t rsa -f /root/.ssh/id_rsa -N '' && \
 
 RUN mkdir -p /var/log/crmsh
 
-COPY behave_agent.py /opt
+COPY behave_agent_server.py /opt/behave_agent.py
 COPY behave-agent.socket /etc/systemd/system
 COPY behave-agent@.service /etc/systemd/system
 RUN systemctl enable behave-agent.socket

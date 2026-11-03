@@ -6,7 +6,7 @@ import re
 import socket
 from crmsh import utils, userdir
 from crmsh.sh import ShellUtils
-import behave_agent
+import behave_agent_client as behave_agent
 
 
 COLOR_MODE = r'\x1b\[[0-9]+m'
