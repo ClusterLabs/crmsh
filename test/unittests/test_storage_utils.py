@@ -524,3 +524,68 @@ def test_pick_backstore_device(mock_is_mp):
     assert storage_utils.pick_backstore_device(["/dev/sdc7", "/dev/mapper/m-part5"]) == "/dev/mapper/m-part5"
     assert storage_utils.pick_backstore_device(["/dev/sdc7", "/dev/sdd1"]) == "/dev/sdc7"
     assert storage_utils.pick_backstore_device([]) is None
+
+
+@mock.patch.object(storage_utils.MultipathInspector, "_get_root_backing_device", return_value="sda")
+@mock.patch('crmsh.sh.cluster_shell')
+def test_get_multipath_config_values(mock_cluster_shell, mock_get_root):
+    mock_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+        (0, "dev multipath\nsda mpatha\nsdb mpatha", ""),  # multipathd show paths
+        (0, "queueing\noff\n", ""),  # multipathd show map
+        (0, "2 dependencies\t: (8, 0) (8, 16)\n", ""),  # dmsetup deps
+        (0, "mpatha dm-0\n|-+- policy='service-time 0' prio=1 status=active\n`-+- policy='service-time 0' prio=1 status=enabled\n", ""),  # multipath -ll
+        (0, "other tur\nmpatha directio\n", ""),  # multipathd show paths raw
+        (0, "16264.5 | sdb: detect_checker = yes (setting: x)\n16264.6 | sda: detect_checker = no (setting: multipath.conf defaults/devices section)\n", ""),  # multipath -d -v3
+        (0, "defaults {\n checker_timeout 30\n}\n", ""),  # multipath -T
+    ]
+
+    inspector = storage_utils.MultipathInspector("/dev/mapper/mpatha")
+    config = inspector.get_multipath_config_values()
+
+    assert config == {
+        "no_path_retry": "fail",
+        "path_grouping_policy": "failover",
+        "path_checker": "directio",
+        "detect_checker": "no",
+        "checker_timeout": 30,
+    }
+
+
+@mock.patch.object(storage_utils.MultipathInspector, "_get_root_backing_device", return_value="sda")
+@mock.patch('crmsh.sh.cluster_shell')
+def test_get_multipath_config_values_non_failover(mock_cluster_shell, mock_get_root):
+    mock_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+        (0, "dev multipath\nsda mpatha", ""),
+        (0, "queueing\n5 chk\n", ""),
+        (0, "2 dependencies\t: (8, 0) (8, 16)\n", ""),
+        (0, "mpatha dm-0\n`-+- policy='service-time 0' prio=1 status=active\n", ""),
+        (1, "", "err"),
+        (0, "", ""),
+        (1, "", "err"),
+    ]
+
+    config = storage_utils.MultipathInspector("/dev/mapper/mpatha").get_multipath_config_values()
+
+    assert config == {
+        "no_path_retry": "5 chk",
+        "path_grouping_policy": "other",
+        "path_checker": None,
+        "detect_checker": None,
+        "checker_timeout": None,
+    }
+
+
+@mock.patch.object(storage_utils.MultipathInspector, "_get_root_backing_device", return_value="sda")
+@mock.patch('crmsh.sh.cluster_shell')
+def test_get_multipath_config_not_multipath(mock_cluster_shell, mock_get_root):
+    mock_shell_inst = mock.Mock()
+    mock_cluster_shell.return_value = mock_shell_inst
+    mock_shell_inst.get_rc_stdout_stderr_without_input.side_effect = [
+        (0, "", ""),  # multipathd show paths (empty)
+    ]
+
+    assert storage_utils.get_multipath_config("/dev/sda1") is None

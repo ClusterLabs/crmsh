@@ -282,6 +282,63 @@ class MultipathInspector:
                 return int(parts[1])
         return None
 
+    def _run_multipath_cmd(self, cmd: str) -> str|None:
+        rc, out, _ = self._shell.get_rc_stdout_stderr_without_input(None, cmd)
+        return out if rc == 0 else None
+
+    def _get_no_path_retry(self, map_name: str) -> str|None:
+        out = self._run_multipath_cmd(f'multipathd show map {shlex.quote(map_name)} format "%Q"')
+        lines = out.strip().splitlines() if out else []
+        if not lines:
+            return None
+        value = lines[-1].strip()
+        # The queueing mode is "off" when no_path_retry is fail or 0
+        return "fail" if value == "off" else value
+
+    def _get_path_grouping_policy(self, map_name: str) -> str|None:
+        """
+        Infer the policy from the map layout instead of the configuration:
+        one path per path group means failover.
+        """
+        quoted = shlex.quote(map_name)
+        deps = self._run_multipath_cmd(f"dmsetup deps {quoted}")
+        topology = self._run_multipath_cmd(f"multipath -ll {quoted}")
+        if not deps or topology is None:
+            return None
+        num_paths = int(deps.split()[0])
+        num_pg = len(re.findall(r"-\+- policy=", topology))
+        return "failover" if num_paths == num_pg else "other"
+
+    def _get_path_checker(self, map_name: str) -> str|None:
+        out = self._run_multipath_cmd('multipathd show paths raw format "%m %c"')
+        for line in (out or "").splitlines():
+            parts = line.split()
+            if len(parts) == 2 and parts[0] == map_name:
+                return parts[1]
+        return None
+
+    def _get_detect_checker(self) -> str|None:
+        out = self._run_multipath_cmd("multipath -d -v3 2>&1")
+        root = re.escape(self._device_info.root_backing_device)
+        m = re.search(rf"\b{root}: detect_checker = (\S+)", out or "")
+        return m.group(1) if m else None
+
+    def get_multipath_config_values(self) -> dict[str, str|int|None]:
+        """
+        Get the multipath settings in effect for this multipath device from
+        the multipath runtime state. Returns attribute -> value (None when unknown).
+        """
+        if not self._is_multipath_device(self._device_info.device):
+            return {}
+        map_name = self._get_multipath_name(self._device_info.device)
+        return {
+            "no_path_retry": self._get_no_path_retry(map_name),
+            "path_grouping_policy": self._get_path_grouping_policy(map_name),
+            "path_checker": self._get_path_checker(map_name),
+            "detect_checker": self._get_detect_checker(),
+            "checker_timeout": self._get_multipath_config_value("checker_timeout"),
+        }
+
     def _get_scsi_device_name(self) -> str|None:
         return self._device_info.root_backing_device
 
@@ -349,6 +406,17 @@ def pick_backstore_device(devs: list[str]) -> str|None:
         if is_multipath_device(dev):
             return dev
     return devs[0] if devs else None
+
+
+def get_multipath_config(dev) -> dict[str, str|None]|None:
+    """
+    Return the effective multipath configuration values for the given device,
+    or None when the device is not a multipath device.
+    """
+    inspector = MultipathInspector(dev)
+    if not inspector._is_multipath_device(dev):
+        return None
+    return inspector.get_multipath_config_values()
 
 
 def get_multipath_max_polling_interval(dev) -> int|None:
