@@ -880,8 +880,9 @@ to get the geo cluster configuration.""",
 
             case 'sbd':
                 fix = parsed_args.fix
+                checker = sbd.SBDConfigChecker(quiet=fix, fix=fix)
                 try:
-                    result = sbd.SBDConfigChecker(quiet=fix, fix=fix).check_and_fix()
+                    result = checker.check_and_fix()
                 except sbd.FixFailure as e:
                     logger.error('%s', e)
                     return False
@@ -889,7 +890,7 @@ to get the geo cluster configuration.""",
                     logger.error('%s', e)
                     logger.error('SBD: Check SBD-related configurations: FAIL.')
                     return False
-                return sbd.SBDConfigChecker.log_and_return(result, fix)
+                return sbd.SBDConfigChecker.log_and_return(result, fix, checker.has_fixable_issue)
 
             case 'sles16':
                 try:
