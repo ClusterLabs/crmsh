@@ -352,10 +352,8 @@ class RscMgmt(command.UI):
         "usage: scores"
         if utils.is_program('crm_simulate'):
             utils.ext_cmd('crm_simulate -sUL')
-        elif utils.is_program('ptest'):
-            utils.ext_cmd('ptest -sUL')
         else:
-            context.fatal_error("Need crm_simulate or ptest in path to display scores")
+            context.fatal_error("Need crm_simulate in path to display scores")
 
     @command.completers_repeating(compl.resources)
     def do_locate(self, context, *resources):

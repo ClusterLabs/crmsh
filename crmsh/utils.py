@@ -1013,13 +1013,10 @@ def wait_dc_stable(what="", show_progress=True):
 
 def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
     '''
-    Pipe graph_s thru ptest(8). Show graph using dotty if requested.
+    Pipe graph_s thru crm_simulate(8). Show graph using dotty if requested.
     '''
     actions_filter = "grep LogActions: | grep -vw Leave"
-    ptest = "2>&1 %s -x -" % config.core.ptest
-    if re.search("simulate", ptest) and \
-            not re.search("-[RS]", ptest):
-        ptest = "%s -S" % ptest
+    ptest = "2>&1 %s -x - -S" % config.core.ptest
     if verbosity:
         if actions:
             verbosity = 'v' * max(3, len(verbosity))

@@ -250,11 +250,6 @@ tmp_cib = False
 tmp_cib_prompt = "@tmp@"
 live_cib_prompt = "live"
 
-simulate_programs = {
-    "ptest": "ptest",
-    "simulate": "crm_simulate",
-}
-
 meta_progs_20 = ("pacemaker-controld", "pacemaker-schedulerd", "pacemaker-fenced", "pacemaker-based")
 
 # elide these properties from tab completion
