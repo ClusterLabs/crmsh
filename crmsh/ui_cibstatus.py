@@ -91,10 +91,10 @@ class CibStatusUI(command.UI):
     @command.completers(compl.choice(['nograph']))
     def do_run(self, context, *args):
         "usage: run [nograph] [v...] [scores] [utilization]"
-        return ui_utils.ptestlike(cib_status.run, '', context.get_command_name(), args)
+        return ui_utils.run_simulate_cmd(cib_status.run, '', context.get_command_name(), args)
 
     @command.skill_level('administrator')
     @command.completers(compl.choice(['nograph']))
     def do_simulate(self, context, *args):
         "usage: simulate [nograph] [v...] [scores] [utilization]"
-        return ui_utils.ptestlike(cib_status.simulate, '', context.get_command_name(), args)
+        return ui_utils.run_simulate_cmd(cib_status.simulate, '', context.get_command_name(), args)
