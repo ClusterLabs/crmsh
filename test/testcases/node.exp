@@ -73,8 +73,8 @@ node1: member(offline)
 </cib>
 
 .TRY -F node maintenance node1
-INFO: 'maintenance' attribute already exists in p5. Remove it? [YES]
-INFO: 'maintenance' attribute already exists in g0. Remove it? [YES]
+INFO: 'maintenance' attribute already exists in p5. Remove it (y/N)? Y (--force)
+INFO: 'maintenance' attribute already exists in g0. Remove it (y/N)? Y (--force)
 INFO: Setting maintenance=true on node node1
 .INP: configure
 .INP: _regtest on
@@ -185,6 +185,7 @@ Deleted nodes attribute: id=nodes-node1-a1 name=a1
 </cib>
 
 .TRY node clearstate node1
+INFO: Do you really want to drop state for node node1 (y/N)? N (auto-answered non-interactively)
 .INP: configure
 .INP: _regtest on
 .INP: show xml node1

@@ -215,18 +215,9 @@ def ask(
     * cancel_option: Include '/c' option in the prompt.
 
     Global Options:
-    * options.force: return default if specified, otherwise return True without asking
+    * options.force: do not ask and return True
     * options.ask_no: do not ask and return False
     """
-    if options.force:
-        res = default if default is not None else True
-        logger.info("%s [%s]", msg, "YES" if res else "NO")
-        return res
-    if options.ask_no:
-        return False
-    if not can_ask(background_wait):
-        return default if default is not None else False
-
     if default is True:
         opt_str = "Y/n"
     elif default is False:
@@ -238,6 +229,24 @@ def ask(
         opt_str += "/c"
 
     prompt = f"{msg.rstrip('? ')} ({opt_str})? "
+
+    if options.force:
+        logger.info("%sY (--force)", prompt)
+        return True
+    if options.ask_no:
+        logger.info("%sN (--no)", prompt)
+        return False
+
+    if not can_ask(background_wait):
+        if default is None:
+            logger.info("%sN (rejected non-interactively)", prompt)
+            return False
+        elif default:
+            logger.info("%sY (auto-answered non-interactively)", prompt)
+            return True
+        else:
+            logger.info("%sN (auto-answered non-interactively)", prompt)
+            return False
 
     while True:
         try:
@@ -667,7 +676,7 @@ def safe_open_w(fname):
         f = sys.stdout
     else:
         if not options.batch and os.access(fname, os.F_OK):
-            if not ask("File %s exists. Do you want to overwrite it?" % fname):
+            if not ask("File %s exists. Do you want to overwrite it?" % fname, default=False):
                 return None
         try:
             f = open(fname, "w")

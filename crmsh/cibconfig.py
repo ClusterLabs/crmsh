@@ -285,7 +285,7 @@ class CibObjectSet(object):
                     ok = self.save(self._post_edit(edited_config_text))
                     if not ok and options.force:
                         logger.error("Save failed and --force is set, aborting edit to avoid infinite loop")
-                    elif not ok and utils.ask("Edit or discard changes (yes to edit, no to discard)?"):
+                    elif not ok and utils.ask("Edit or discard changes (yes to edit, no to discard)?", default=False):
                         continue
                 rc = True
             os.unlink(tmp)
