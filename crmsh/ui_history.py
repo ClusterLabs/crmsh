@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 logger_utils = log.LoggerUtils(logger)
 
 
-ptest_options = ["@v+", "nograph", "scores", "actions", "utilization"]
+simulate_options = ["@v+", "nograph", "scores", "actions", "utilization"]
 
 
 @cache
@@ -190,14 +190,14 @@ class History(command.UI):
         self._init_source()
         return crm_report().show_log(*args)
 
-    def ptest(self, nograph, scores, utilization, actions, verbosity):
-        'Send a decompressed self.pe_file to ptest'
+    def simulate(self, nograph, scores, utilization, actions, verbosity):
+        'Send a decompressed self.pe_file to crm_simulate'
         try:
             bits = bz2.decompress(open(self.pe_file, "rb").read())
         except IOError as msg:
             logger.error("open: %s", msg)
             return False
-        return utils.run_ptest(bits, nograph, scores, utilization, actions, verbosity)
+        return utils.run_simulate(bits, nograph, scores, utilization, actions, verbosity)
 
     @command.skill_level('administrator')
     def do_events(self, context):
@@ -274,8 +274,8 @@ class History(command.UI):
         return f
 
     def _show_pe(self, f, opt_l):
-        self.pe_file = f  # self.pe_file needed by self.ptest
-        ui_utils.ptestlike(self.ptest, 'vv', "transition", opt_l)
+        self.pe_file = f  # self.pe_file needed by self.simulate
+        ui_utils.run_simulate_cmd(self.simulate, 'vv', "transition", opt_l)
         return crm_report().show_transition_log(f)
 
     def _display_dot(self, f):
@@ -318,7 +318,7 @@ class History(command.UI):
             subcmd = argl[0]
             del argl[0]
         if subcmd == "show":
-            opt_l = utils.fetch_opts(argl, ptest_options)
+            opt_l = utils.fetch_opts(argl, simulate_options)
         if argl:
             f = self._get_pe_input(argl[0])
             del argl[0]

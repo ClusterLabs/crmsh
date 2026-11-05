@@ -634,7 +634,7 @@ class CibObjectSetRaw(CibObjectSet):
             return utils.VerifyResult.NON_FATAL_ERROR
         return utils.VerifyResult.SUCCESS
 
-    def ptest(self, nograph, scores, utilization, actions, verbosity):
+    def simulate(self, nograph, scores, utilization, actions, verbosity):
         if not cib_factory.is_cib_sane():
             return False
         cib_elem = cib_factory.obj_set2cib(self.obj_set)
@@ -644,7 +644,7 @@ class CibObjectSetRaw(CibObjectSet):
             return False
         cib_elem.append(copy.deepcopy(status))
         graph_s = etree.tostring(cib_elem)
-        return utils.run_ptest(graph_s, nograph, scores, utilization, actions, verbosity)
+        return utils.run_simulate(graph_s, nograph, scores, utilization, actions, verbosity)
 
 
 def find_comment_nodes(node):

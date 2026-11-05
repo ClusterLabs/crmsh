@@ -936,14 +936,15 @@ class CibConfig(command.UI):
                 return
         cib_factory.refresh()
 
+    @command.name('ptest')
     @command.alias('simulate')
     @command.completers(compl.choice(['nograph']))
-    def do_ptest(self, context, *args):
+    def do_simulate(self, context, *args):
         "usage: ptest [nograph] [v...] [scores] [utilization] [actions]"
         if not config.core.ptest:
             return False
         set_obj = cibconfig.mkset_obj("xml")
-        return ui_utils.ptestlike(set_obj.ptest, 'vv', context.get_command_name(), args)
+        return ui_utils.run_simulate_cmd(set_obj.simulate, 'vv', context.get_command_name(), args)
 
     def _commit(self, force=False, replace=False):
         if not cib_factory.has_cib_changed():

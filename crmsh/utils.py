@@ -1011,34 +1011,34 @@ def wait_dc_stable(what="", show_progress=True):
                 sys.stderr.write(".")
 
 
-def run_ptest(graph_s, nograph, scores, utilization, actions, verbosity):
+def run_simulate(graph_s, nograph, scores, utilization, actions, verbosity):
     '''
     Pipe graph_s thru crm_simulate(8). Show graph using dotty if requested.
     '''
     actions_filter = "grep LogActions: | grep -vw Leave"
-    ptest = "2>&1 %s -x - -S" % config.core.ptest
+    cmd = "2>&1 %s -x - -S" % config.core.ptest
     if verbosity:
         if actions:
             verbosity = 'v' * max(3, len(verbosity))
-        ptest = "%s -%s" % (ptest, verbosity.upper())
+        cmd = "%s -%s" % (cmd, verbosity.upper())
     if scores:
-        ptest = "%s -s" % ptest
+        cmd = "%s -s" % cmd
     if utilization:
-        ptest = "%s -U" % ptest
+        cmd = "%s -U" % cmd
     if config.core.dotty and not nograph:
         fd, dotfile = mkstemp()
-        ptest = "%s -D %s" % (ptest, dotfile)
+        cmd = "%s -D %s" % (cmd, dotfile)
     else:
         dotfile = None
-    # ptest prints to stderr
+    # crm_simulate prints to stderr
     if actions:
-        ptest = "%s | %s" % (ptest, actions_filter)
+        cmd = "%s | %s" % (cmd, actions_filter)
     if options.regression_tests:
-        ptest = ">/dev/null %s" % ptest
-    logger.debug("invoke: %s", ptest)
-    rc, s = ShellUtils().get_stdout(ptest, input_s=graph_s)
+        cmd = ">/dev/null %s" % cmd
+    logger.debug("invoke: %s", cmd)
+    rc, s = ShellUtils().get_stdout(cmd, input_s=graph_s)
     if rc != 0:
-        logger.debug("'%s' exited with (rc=%d)", ptest, rc)
+        logger.debug("'%s' exited with (rc=%d)", cmd, rc)
         if actions and rc == 1:
             logger.warning("No actions found.")
         else:
