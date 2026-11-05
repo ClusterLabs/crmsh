@@ -44,7 +44,7 @@ class TestCluster(unittest.TestCase):
     def test_do_start_already_started(self, mock_qdevice_configured, mock_parse_nodes, mock_active, mock_info):
         mock_qdevice_configured.return_value = False
         context_inst = mock.Mock()
-        mock_parse_nodes.return_value = ["node1", "node2"], False
+        mock_parse_nodes.return_value = ["node1", "node2"], False, False
         mock_active.side_effect = [True, True]
         self.ui_cluster_inst.do_start(context_inst, "node1", "node2")
         mock_parse_nodes.assert_called_once_with("start", "node1", "node2")
@@ -69,7 +69,7 @@ class TestCluster(unittest.TestCase):
     def test_do_start(self, mock_parse_nodes, mock_active, mock_start, mock_qdevice_configured, mock_info, mock_error, mock_start_pacemaker, mock_check_qdevice, mock_get_failed_services):
         context_inst = mock.Mock()
         mock_start_pacemaker.return_value = ["node1"]
-        mock_parse_nodes.return_value = ["node1", "node2"], False
+        mock_parse_nodes.return_value = ["node1", "node2"], False, False
         mock_active.side_effect = [False, False, False, False]
         mock_qdevice_configured.return_value = True
         mock_get_failed_services.return_value = []
@@ -92,7 +92,7 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
     @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
     def test_do_stop_return(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc):
-        mock_parse_nodes.return_value = ["node1", "node2"], False
+        mock_parse_nodes.return_value = ["node1", "node2"], False, False
         mock_node_ready_to_stop_cluster_service.side_effect = [False, False]
 
         context_inst = mock.Mock()
@@ -102,6 +102,7 @@ class TestCluster(unittest.TestCase):
         mock_node_ready_to_stop_cluster_service.assert_has_calls([mock.call("node1"), mock.call("node2")])
         mock_dc.assert_not_called()
 
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
     @mock.patch('crmsh.utils.is_cluster_in_maintenance_mode')
     @mock.patch('logging.Logger.debug')
     @mock.patch('logging.Logger.info')
@@ -111,14 +112,16 @@ class TestCluster(unittest.TestCase):
     @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
     @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
     def test_do_stop(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service, mock_dc,
-                     mock_set_dlm, mock_service_manager, mock_info, mock_debug, mock_is_in_maintenance_mode):
-        mock_parse_nodes.return_value = ["node1", "node2"], False
+                     mock_set_dlm, mock_service_manager, mock_info, mock_debug, mock_is_in_maintenance_mode,
+                     mock_is_diskless_sbd):
+        mock_parse_nodes.return_value = ["node1", "node2"], False, False
         mock_node_ready_to_stop_cluster_service.side_effect = [True, False]
         mock_service_manager_inst = mock.Mock()
         mock_service_manager.return_value = mock_service_manager_inst
         mock_service_manager_inst.stop_service.side_effect = [["node1"], ["node1"], ["node1"]]
         mock_service_manager_inst.service_is_active.return_value = True
         mock_is_in_maintenance_mode.return_value = False
+        mock_is_diskless_sbd.return_value = False
 
         context_inst = mock.Mock()
         self.ui_cluster_inst.do_stop(context_inst, "node1", "node2")
@@ -134,6 +137,63 @@ class TestCluster(unittest.TestCase):
             mock.call("corosync", node_list=["node1"]),
             ])
         mock_info.assert_called_once_with("The cluster stack stopped on node1")
+
+    @mock.patch('crmsh.options.force', False)
+    @mock.patch('crmsh.utils.cluster_will_lose_quorum_after_stopping_nodes')
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.ui_cluster.Cluster._set_dlm')
+    @mock.patch('crmsh.utils.wait_for_dc')
+    @mock.patch('crmsh.utils.is_cluster_in_maintenance_mode')
+    @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
+    @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
+    def test_do_stop_reject_without_force(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service,
+                                          mock_is_in_maintenance_mode, mock_dc, mock_set_dlm, mock_error,
+                                          mock_is_diskless_sbd, mock_lose_quorum):
+        mock_parse_nodes.return_value = ["node1"], False, False
+        mock_node_ready_to_stop_cluster_service.side_effect = [True]
+        mock_is_in_maintenance_mode.return_value = False
+        mock_is_diskless_sbd.return_value = True
+        mock_lose_quorum.return_value = True
+
+        context_inst = mock.Mock()
+        res = self.ui_cluster_inst.do_stop(context_inst, "node1")
+
+        assert res is False
+        mock_lose_quorum.assert_called_once_with(1)
+        mock_error.assert_called_once_with(
+            "Stopping cluster service on %s will cause the remaining node(s) to lose quorum "
+            "and fence themselves (diskless SBD). Use 'crm cluster stop --all' to stop all nodes "
+            "at once, or pass -F/--force to proceed.", ["node1"])
+        mock_dc.assert_not_called()
+        mock_set_dlm.assert_not_called()
+
+    @mock.patch('crmsh.options.force', False)
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.ui_cluster.ServiceManager')
+    @mock.patch('crmsh.ui_cluster.Cluster._set_dlm')
+    @mock.patch('crmsh.utils.wait_for_dc')
+    @mock.patch('crmsh.utils.is_cluster_in_maintenance_mode')
+    @mock.patch('crmsh.ui_cluster.Cluster._node_ready_to_stop_cluster_service')
+    @mock.patch('crmsh.ui_utils.parse_and_validate_node_args')
+    def test_do_stop_force(self, mock_parse_nodes, mock_node_ready_to_stop_cluster_service,
+                           mock_is_in_maintenance_mode, mock_dc, mock_set_dlm, mock_service_manager,
+                           mock_error, mock_is_diskless_sbd):
+        mock_parse_nodes.return_value = ["node1"], False, True
+        mock_node_ready_to_stop_cluster_service.side_effect = [True]
+        mock_is_in_maintenance_mode.return_value = False
+        mock_is_diskless_sbd.return_value = True
+        mock_service_manager_inst = mock.Mock()
+        mock_service_manager.return_value = mock_service_manager_inst
+        mock_service_manager_inst.stop_service.side_effect = [["node1"], ["node1"], ["node1"]]
+        mock_service_manager_inst.service_is_active.return_value = True
+
+        context_inst = mock.Mock()
+        self.ui_cluster_inst.do_stop(context_inst, "node1")
+
+        mock_dc.assert_called_once_with("node1")
+        mock_error.assert_not_called()
 
     @mock.patch('logging.Logger.info')
     @mock.patch('crmsh.ui_cluster.ServiceManager')
