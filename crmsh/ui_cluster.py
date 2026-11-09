@@ -842,13 +842,20 @@ to get the geo cluster configuration.""",
         if not args:
             return Cluster._do_health_legacy()
         parser = argparse.ArgumentParser('health')
-        parser.add_argument('component', choices=Cluster.HEALTH_COMPONENTS)
-        parser.add_argument('-f', '--fix', action='store_true')
-        parsed_args, remaining_args = parser.parse_known_args(args)
+        subparsers = parser.add_subparsers(dest='component', required=True)
+        for component in Cluster.HEALTH_COMPONENTS:
+            subparsers.add_parser(component).add_argument('-f', '--fix', action='store_true')
+        # crm's global parser only sees -F/--force before the subcommand,
+        # so only the sbd component accepts it, and only after the component
+        subparsers.choices['sbd'].add_argument('-F', '--force', action='store_true')
+        try:
+            parsed_args, remaining_args = parser.parse_known_args(args)
+        except SystemExit:
+            return False
         match parsed_args.component:
             case 'hawk2':
                 if remaining_args:
-                    logger.error('Known arguments: %s', ' '.join(remaining_args))
+                    logger.error('Unknown arguments: %s', ' '.join(remaining_args))
                     return False
                 nodes = utils.list_cluster_nodes()
                 if parsed_args.fix:
@@ -879,6 +886,10 @@ to get the geo cluster configuration.""",
                         return False
 
             case 'sbd':
+                if remaining_args:
+                    logger.error('Unknown arguments: %s', ' '.join(remaining_args))
+                    return False
+                crmsh.options.force |= parsed_args.force
                 fix = parsed_args.fix
                 checker = sbd.SBDConfigChecker(quiet=fix, fix=fix)
                 try:
