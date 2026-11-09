@@ -192,7 +192,7 @@ class Cluster(command.UI):
         Starts the cluster stack on all nodes or specific node(s)
         '''
         try:
-            node_list, _ = ui_utils.parse_and_validate_node_args("start", *args)
+            node_list, _, _ = ui_utils.parse_and_validate_node_args("start", *args)
         except network_utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster start' on each node")
@@ -280,11 +280,12 @@ class Cluster(command.UI):
         Stops the cluster stack on all nodes or specific node(s)
         '''
         try:
-            node_list, _ = ui_utils.parse_and_validate_node_args("stop", *args)
+            node_list, _, force = ui_utils.parse_and_validate_node_args("stop", *args)
         except network_utils.NoSSHError as msg:
             logger.error('%s', msg)
             logger.info("Please try 'crm cluster stop' on each node")
             return False
+        crmsh.options.force |= force
 
         node_list = [n for n in node_list if self._node_ready_to_stop_cluster_service(n)]
         if not node_list:
@@ -299,6 +300,13 @@ class Cluster(command.UI):
                 node_list.remove(node)
         if not node_list:
             return
+
+        if not crmsh.options.force and sbd.SBDUtils.is_using_diskless_sbd() \
+                and utils.cluster_will_lose_quorum_after_stopping_nodes(len(node_list)):
+            logger.error("Stopping cluster service on %s will cause the remaining node(s) to lose quorum "
+                         "and fence themselves (diskless SBD). Use 'crm cluster stop --all' to stop all nodes "
+                         "at once, or pass -F/--force to proceed.", node_list)
+            return False
 
         utils.wait_for_dc(node_list[0])
 
@@ -333,7 +341,7 @@ class Cluster(command.UI):
         '''
         Enable the cluster services on this node
         '''
-        node_list, now_flag = ui_utils.parse_and_validate_node_args("enable", *args)
+        node_list, now_flag, _ = ui_utils.parse_and_validate_node_args("enable", *args)
         service_manager = ServiceManager()
         node_list = service_manager.enable_service("pacemaker.service", node_list=node_list, now=now_flag)
         if service_manager.service_is_available("corosync-qdevice.service") and corosync.is_qdevice_configured():
@@ -348,7 +356,7 @@ class Cluster(command.UI):
         '''
         Disable the cluster services on this node
         '''
-        node_list, now_flag = ui_utils.parse_and_validate_node_args("disable", *args)
+        node_list, now_flag, _ = ui_utils.parse_and_validate_node_args("disable", *args)
         service_manager = ServiceManager()
         node_list = service_manager.disable_service("pacemaker.service", node_list=node_list, now=now_flag)
         service_manager.disable_service("corosync-qdevice.service", node_list=node_list, now=now_flag)
