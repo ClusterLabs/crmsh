@@ -2432,7 +2432,9 @@ def _set_raw_property(property_name, property_value, property_type="crm_config",
     if origin_value and str(origin_value) != str(property_value):
         logger.warning("\"%s\" in %s is set to %s, it was %s", property_name, property_type, property_value, origin_value)
     property_sub_cmd = "property" if property_type == "crm_config" else property_type
-    cmd = "crm configure {} {}".format(property_sub_cmd, shlex.quote(f"{property_name}={property_value}"))
+    # Without any fencing resource, pacemaker complains and crm asks for confirmation to commit
+    force_opt = "" if has_fence_device_registered() else "-F "
+    cmd = "crm {}configure {} {}".format(force_opt, property_sub_cmd, shlex.quote(f"{property_name}={property_value}"))
     sh.cluster_shell().get_stdout_or_raise_error(cmd)
 
 
@@ -2777,8 +2779,6 @@ def cleanup_fencing_related_properties():
     for p in related_properties:
         if get_property(p, get_default=False):
             delete_property(p)
-    if get_property("fencing-enabled") == "true":
-        set_property("fencing-enabled", "false")
 
 
 def strip_ansi_escape_sequences(text):

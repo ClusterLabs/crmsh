@@ -597,6 +597,7 @@ def test_get_property(mock_run, mock_env, mock_translator):
     mock_run_inst.get_rc_stdout_stderr_without_input.assert_called_once_with(None, "CIB_file=cib.xml sudo --preserve-env=CIB_file crm configure get_property no-quorum-policy")
 
 
+@mock.patch('crmsh.utils.has_fence_device_registered', new=mock.Mock(return_value=True))
 @mock.patch('crmsh.utils.delete_property')
 @mock.patch('crmsh.utils.DeprecatedTermTranslator')
 @mock.patch('logging.Logger.warning')
@@ -637,6 +638,7 @@ def test_set_property_conditional(mock_get, mock_msec, mock_translator):
     mock_msec.assert_has_calls([mock.call("10s"), mock.call("10")])
 
 
+@mock.patch('crmsh.utils.has_fence_device_registered', new=mock.Mock(return_value=True))
 @mock.patch('crmsh.utils.delete_property')
 @mock.patch('crmsh.utils.DeprecatedTermTranslator')
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
@@ -655,6 +657,7 @@ def test_set_property_cleans_deprecated_alias(mock_get, mock_run, mock_translato
     mock_delete.assert_called_once_with('stonith-timeout')
 
 
+@mock.patch('crmsh.utils.has_fence_device_registered', new=mock.Mock(return_value=True))
 @mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
 @mock.patch('crmsh.utils._get_raw_property')
 def test_set_raw_property_skips_deprecated_translation(mock_get, mock_run):
@@ -664,6 +667,17 @@ def test_set_raw_property_skips_deprecated_translation(mock_get, mock_run):
 
     mock_get.assert_called_once_with('fencing-timeout', 'crm_config', get_default=False)
     mock_run.assert_called_once_with('crm configure property fencing-timeout=120')
+
+
+@mock.patch('crmsh.utils.has_fence_device_registered', new=mock.Mock(return_value=False))
+@mock.patch('crmsh.sh.ClusterShell.get_stdout_or_raise_error')
+@mock.patch('crmsh.utils._get_raw_property')
+def test_set_raw_property_force_without_fence_device(mock_get, mock_run):
+    mock_get.return_value = None
+
+    utils._set_raw_property('fencing-timeout', '120')
+
+    mock_run.assert_called_once_with('crm -F configure property fencing-timeout=120')
 
 
 def _deprecated_resolution(deprecated_configured, new_configured, new_term='fencing-timeout'):

@@ -1447,7 +1447,6 @@ class SBDManager:
   are a good choice.  Note that all data on the partition you
   specify here will be destroyed.
 '''
-    NO_SBD_WARNING = "Not configuring SBD - fence will be disabled."
     DISKLESS_SBD_MIN_EXPECTED_VOTE = 3
     DISKLESS_SBD_WARNING = "Diskless SBD requires cluster with three or more nodes. If you want to use diskless SBD for 2-node cluster, should be combined with QDevice."
     SBD_NOT_INSTALLED_MSG = "Package sbd is not installed"
@@ -1581,10 +1580,6 @@ class SBDManager:
             if expected_vote < SBDManager.DISKLESS_SBD_MIN_EXPECTED_VOTE:
                 logger.warning('%s', SBDManager.DISKLESS_SBD_WARNING)
 
-    def _warn_and_raise_no_sbd(self):
-        logger.warning('%s', self.NO_SBD_WARNING)
-        raise self.NotConfigSBD
-
     def _wants_to_overwrite(self, configured_devices):
         wants_to_overwrite_msg = f"SBD_DEVICE in {self.SYSCONFIG_SBD} is already configured to use '{';'.join(configured_devices)}' - overwrite?"
         if not bootstrap.confirm(wants_to_overwrite_msg):
@@ -1631,10 +1626,10 @@ class SBDManager:
         Get sbd device on interactive mode
         """
         if self.bootstrap_context.args.yes_to_all:
-            self._warn_and_raise_no_sbd()
+            raise self.NotConfigSBD
         logger.info(self.SBD_STATUS_DESCRIPTION)
         if not bootstrap.confirm("Do you wish to use SBD?"):
-            self._warn_and_raise_no_sbd()
+            raise self.NotConfigSBD
         if not utils.package_is_installed("sbd"):
             utils.fatal(self.SBD_NOT_INSTALLED_MSG)
 

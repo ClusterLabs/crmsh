@@ -153,6 +153,9 @@ class GlobalVariables(object):
         self.current_user = None
         self.qdevice_inst: typing.Optional[qdevice.QDevice] = None
         self.sbd_manager = None
+        # True if this bootstrap run set fencing-enabled=false, so it knows to set it back to true at the end;
+        # a fencing-enabled=false configured by the user is left untouched
+        self.fencing_disabled_temporarily = False
         self.ui_context = None
         self.interfaces_inst = None
         self.cluster_is_running = None
@@ -1456,12 +1459,34 @@ def init_cluster():
 
     logger.info("Loading initial cluster configuration")
 
-    crm_configure_load("update", """property cib-bootstrap-options: fencing-enabled=false
-op_defaults op-options: timeout=600
+    initial_config = """op_defaults op-options: timeout=600
 rsc_defaults rsc-options: resource-stickiness=1 migration-threshold=3
-""")
+"""
+    # Without fencing resource, pacemaker complains about it on every configuration change.
+    # Disable fencing until the end of the bootstrap process, see restore_fencing_enabled()
+    disable_fencing = not utils.has_fence_device_registered()
+    if disable_fencing:
+        initial_config = "property cib-bootstrap-options: fencing-enabled=false\n" + initial_config
+    crm_configure_load("update", initial_config)
+    _global_variables.fencing_disabled_temporarily = disable_fencing
 
     adjust_properties()
+
+
+def restore_fencing_enabled():
+    """
+    Set fencing-enabled back to true if it was disabled temporarily by init_cluster()
+    """
+    if _global_variables.fencing_disabled_temporarily:
+        # The flag only means fencing-enabled was disabled at the beginning. Fence device,
+        # like disk-based SBD, could be configured since then, so check again
+        if not utils.has_fence_device_registered():
+            logger.error(
+                "Resource start-up disabled since no fencing resources have been defined. "
+                "Either configure some or disable fencing with the fencing-enabled option"
+            )
+        utils.set_property("fencing-enabled", "true")
+        _global_variables.fencing_disabled_temporarily = False
 
 
 def init_admin():
@@ -2263,6 +2288,7 @@ def bootstrap_init(context):
         except lock.ClaimLockError as err:
             utils.fatal(err)
 
+    restore_fencing_enabled()
     bootstrap_finished()
 
 
@@ -2731,9 +2757,8 @@ def get_fencing_timeout_generally_expected():
 
     fencing-timeout = FENCING_TIMEOUT_DEFAULT + token + consensus
     """
-    fencing_enabled = utils.get_property("fencing-enabled")
-    # When fencing disabled, return
-    if utils.is_boolean_false(fencing_enabled):
+    # When no fence device registered, return
+    if not utils.has_fence_device_registered():
         return None
 
     return FENCING_TIMEOUT_DEFAULT + corosync.token_and_consensus_timeout()
