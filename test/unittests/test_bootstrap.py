@@ -1603,6 +1603,18 @@ done
         bootstrap.adjust_pcmk_delay_max(False)
         mock_run.assert_called_once_with("crm resource param res_1 delete pcmk_delay_max")
 
+    @mock.patch('crmsh.utils.has_fence_device_registered')
+    def test_get_fencing_timeout_generally_expected_no_fence_device(self, mock_has_fence):
+        mock_has_fence.return_value = False
+        self.assertIsNone(bootstrap.get_fencing_timeout_generally_expected())
+
+    @mock.patch('crmsh.corosync.token_and_consensus_timeout')
+    @mock.patch('crmsh.utils.has_fence_device_registered')
+    def test_get_fencing_timeout_generally_expected(self, mock_has_fence, mock_token_consensus):
+        mock_has_fence.return_value = True
+        mock_token_consensus.return_value = 12
+        self.assertEqual(bootstrap.FENCING_TIMEOUT_DEFAULT + 12, bootstrap.get_fencing_timeout_generally_expected())
+
     @mock.patch('crmsh.utils.set_property')
     @mock.patch('crmsh.bootstrap.get_fencing_timeout_generally_expected')
     def test_adjust_fencing_timeout(self, mock_get_timeout, mock_set):
@@ -1633,6 +1645,59 @@ done
         mock_get_pcmk_delay.return_value = 0
         bootstrap.adjust_priority_fencing_delay(False)
         mock_set.assert_called_once_with("priority-fencing-delay", 0)
+
+    def _run_init_cluster(self, has_fence_device):
+        bootstrap._global_variables = mock.Mock(fencing_disabled_temporarily=False)
+        with mock.patch('crmsh.bootstrap.ServiceManager'), \
+                mock.patch('crmsh.bootstrap.generate_pacemaker_remote_auth'), \
+                mock.patch('crmsh.bootstrap.init_cluster_local'), \
+                mock.patch('crmsh.xmlutil.CrmMonXMLParser') as mock_parser, \
+                mock.patch('crmsh.utils.has_fence_device_registered', return_value=has_fence_device), \
+                mock.patch('crmsh.bootstrap.crm_configure_load') as mock_load, \
+                mock.patch('crmsh.bootstrap.adjust_properties'):
+            mock_parser.return_value.get_node_list.return_value = ["node1"]
+            bootstrap.init_cluster()
+        return mock_load.call_args[0][1]
+
+    def test_init_cluster_disable_fencing_without_fence_device(self):
+        config = self._run_init_cluster(has_fence_device=False)
+        self.assertIn("fencing-enabled=false", config)
+        self.assertTrue(bootstrap._global_variables.fencing_disabled_temporarily)
+
+    def test_init_cluster_keep_fencing_with_fence_device(self):
+        config = self._run_init_cluster(has_fence_device=True)
+        self.assertNotIn("fencing-enabled", config)
+        self.assertFalse(bootstrap._global_variables.fencing_disabled_temporarily)
+
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.utils.has_fence_device_registered')
+    @mock.patch('crmsh.utils.set_property')
+    def test_restore_fencing_enabled(self, mock_set, mock_has_fence, mock_error):
+        mock_has_fence.return_value = True
+        bootstrap._global_variables = mock.Mock(fencing_disabled_temporarily=True)
+        bootstrap.restore_fencing_enabled()
+        mock_error.assert_not_called()
+        mock_set.assert_called_once_with("fencing-enabled", "true")
+        self.assertFalse(bootstrap._global_variables.fencing_disabled_temporarily)
+
+    @mock.patch('logging.Logger.error')
+    @mock.patch('crmsh.utils.has_fence_device_registered')
+    @mock.patch('crmsh.utils.set_property')
+    def test_restore_fencing_enabled_no_fence_device(self, mock_set, mock_has_fence, mock_error):
+        mock_has_fence.return_value = False
+        bootstrap._global_variables = mock.Mock(fencing_disabled_temporarily=True)
+        bootstrap.restore_fencing_enabled()
+        mock_error.assert_called_once_with(
+            "Resource start-up disabled since no fencing resources have been defined. "
+            "Either configure some or disable fencing with the fencing-enabled option"
+        )
+        mock_set.assert_called_once_with("fencing-enabled", "true")
+
+    @mock.patch('crmsh.utils.set_property')
+    def test_restore_fencing_enabled_not_disabled(self, mock_set):
+        bootstrap._global_variables = mock.Mock(fencing_disabled_temporarily=False)
+        bootstrap.restore_fencing_enabled()
+        mock_set.assert_not_called()
 
     @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
     def test_adjust_properties_no_service(self, mock_is_active):

@@ -1485,11 +1485,8 @@ class TestSBDManager(unittest.TestCase):
     def test_get_sbd_device_interactive_yes_to_all(self, mock_ServiceManager):
         mock_bootstrap_ctx = self._make_bootstrap_ctx(yes_to_all=True)
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
-        sbdmanager_instance._warn_and_raise_no_sbd = Mock()
-        sbdmanager_instance._warn_and_raise_no_sbd.side_effect = SBDManager.NotConfigSBD
         with self.assertRaises(SBDManager.NotConfigSBD):
             sbdmanager_instance.get_sbd_device_interactive()
-        sbdmanager_instance._warn_and_raise_no_sbd.assert_called_once()
 
     @patch('crmsh.bootstrap.confirm')
     @patch('logging.Logger.info')
@@ -1498,12 +1495,9 @@ class TestSBDManager(unittest.TestCase):
         mock_bootstrap_ctx = self._make_bootstrap_ctx(yes_to_all=False)
         mock_confirm.return_value = False
         sbdmanager_instance = SBDManager(bootstrap_context=mock_bootstrap_ctx)
-        sbdmanager_instance._warn_and_raise_no_sbd = Mock()
-        sbdmanager_instance._warn_and_raise_no_sbd.side_effect = SBDManager.NotConfigSBD
         with self.assertRaises(SBDManager.NotConfigSBD):
             sbdmanager_instance.get_sbd_device_interactive()
         mock_logger_info.assert_called_once_with(SBDManager.SBD_STATUS_DESCRIPTION)
-        sbdmanager_instance._warn_and_raise_no_sbd.assert_called_once()
 
     @patch('crmsh.utils.fatal')
     @patch('crmsh.utils.package_is_installed')
@@ -1567,13 +1561,6 @@ class TestSBDManager(unittest.TestCase):
         mock_check_devices_metadata_consistent.return_value = False
         with self.assertRaises(utils.TerminateSubCommand):
             sbdmanager_instance._wants_to_overwrite(['/dev/sbd_device'])
-
-    @patch('logging.Logger.warning')
-    def test_warn_and_raise_no_sbd(self, mock_logger_warning):
-        sbdmanager_instance = SBDManager()
-        with self.assertRaises(SBDManager.NotConfigSBD):
-            sbdmanager_instance._warn_and_raise_no_sbd()
-        mock_logger_warning.assert_called_once_with('%s', SBDManager.NO_SBD_WARNING)
 
     @patch('crmsh.utils.get_quorum_votes_dict')
     @patch('logging.Logger.warning')
