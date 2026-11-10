@@ -290,6 +290,7 @@ class SBDTimeout(object):
             self._adjust_sbd_watchdog_timeout_with_diskless_and_qdevice()
         else:
             self._adjust_sbd_watchdog_timeout_with_disk_backstore()
+            self._adjust_sbd_watchdog_timeout_with_disk_based_and_qdevice()
             self._set_sbd_msgwait()
 
     def _set_sbd_watchdog_timeout(self):
@@ -321,10 +322,26 @@ class SBDTimeout(object):
             return
         if self.sbd_watchdog_timeout < watchdog_from_disk:
             self.logger.warning(
-                "SBD watchdog_timeout is set to %d, it was %d",
+                "SBD watchdog_timeout is set to %d to cover the disk backstore (multipath/SCSI) timeout, it was %d",
                 watchdog_from_disk, self.sbd_watchdog_timeout
             )
             self.sbd_watchdog_timeout = watchdog_from_disk
+
+    def _adjust_sbd_watchdog_timeout_with_disk_based_and_qdevice(self):
+        """
+        When using disk-based SBD with QDevice, the watchdog timeout must also
+        cover the QDevice sync timeout
+        """
+        watchdog_with_qdevice = self.get_sbd_watchdog_timeout_with_qdevice()
+        # add sbd and qdevice together from beginning
+        if watchdog_with_qdevice is None and self.context.qdevice_inst:
+            watchdog_with_qdevice = self.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE
+        if watchdog_with_qdevice is not None and self.sbd_watchdog_timeout < watchdog_with_qdevice:
+            self.logger.warning(
+                "SBD watchdog_timeout is set to %d to cover the qdevice sync timeout, it was %d",
+                watchdog_with_qdevice, self.sbd_watchdog_timeout
+            )
+            self.sbd_watchdog_timeout = watchdog_with_qdevice
 
     def _set_sbd_msgwait(self):
         """
@@ -425,6 +442,17 @@ class SBDTimeout(object):
         else:
             return None
         return max(1, int(1.2 * (timeout + servant_restart_interval - timeout_io)))
+
+    @staticmethod
+    def get_sbd_watchdog_timeout_with_qdevice() -> int|None:
+        """
+        Get the watchdog timeout required by QDevice: qdevice_sync_timeout + 5
+
+        Returns None when QDevice is not configured or not running yet
+        """
+        if not corosync.is_qdevice_configured() or not ServiceManager().service_is_active("corosync-qdevice.service"):
+            return None
+        return qdevice.QDevice.get_qdevice_sync_timeout() + SBDTimeout.QDEVICE_SYNC_TIMEOUT_MARGIN
 
     @staticmethod
     def get_fencing_watchdog_timeout_expected(
