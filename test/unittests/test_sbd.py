@@ -244,57 +244,20 @@ class TestSBDTimeout(unittest.TestCase):
         result = sbd.SBDTimeout.get_sbd_servant_restart_interval()
         self.assertEqual(result, 0)
 
-    @patch("crmsh.sbd.SBDUtils.get_sbd_device_metadata")
-    @patch("crmsh.sbd.SBDUtils.get_sbd_device_from_config")
-    def test_get_sbd_loop_timeout(self, mock_get_sbd_device_from_config, mock_get_sbd_device_metadata):
-        mock_get_sbd_device_from_config.return_value = ["/dev/sbd_device"]
-        mock_get_sbd_device_metadata.return_value = {"loop": 2}
-        result = sbd.SBDTimeout.get_sbd_loop_timeout()
-        self.assertEqual(result, 2)
-
-    @patch("crmsh.sbd.SBDUtils.get_sbd_device_from_config")
-    def test_get_sbd_loop_timeout_default(self, mock_get_sbd_device_from_config):
-        mock_get_sbd_device_from_config.return_value = []
-        result = sbd.SBDTimeout.get_sbd_loop_timeout()
-        self.assertEqual(result, 1)
-
-    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
-    def test_get_sbd_timeout_io(self, mock_get_sbd_value_from_config):
-        mock_get_sbd_value_from_config.return_value = "-S 1 -I 9 -P"
-        result = sbd.SBDTimeout.get_sbd_timeout_io()
-        self.assertEqual(result, 9)
-
-    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
-    def test_get_sbd_timeout_io_zero(self, mock_get_sbd_value_from_config):
-        mock_get_sbd_value_from_config.return_value = "-I 0"
-        result = sbd.SBDTimeout.get_sbd_timeout_io()
-        self.assertEqual(result, 0)
-
-    @patch("crmsh.sbd.SBDTimeout.get_sbd_loop_timeout")
-    @patch("crmsh.sbd.SBDUtils.get_sbd_value_from_config")
-    def test_get_sbd_timeout_io_default(self, mock_get_sbd_value_from_config, mock_get_sbd_loop_timeout):
-        mock_get_sbd_value_from_config.return_value = None
-        mock_get_sbd_loop_timeout.return_value = 2
-        result = sbd.SBDTimeout.get_sbd_timeout_io()
-        self.assertEqual(result, 6)
-
     @patch("crmsh.storage_utils.get_multipath_checker_timeout")
     @patch("crmsh.storage_utils.get_multipath_max_polling_interval")
     @patch("crmsh.storage_utils.is_scsi_device")
     @patch("crmsh.storage_utils.is_multipath_device")
-    @patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
     @patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
     def test_get_sbd_watchdog_timeout_from_disk_multipath(
         self,
         mock_get_servant_restart_interval,
-        mock_get_timeout_io,
         mock_is_multipath_device,
         mock_is_scsi_device,
         mock_get_multipath_max_polling_interval,
         mock_get_multipath_checker_timeout,
     ):
         mock_get_servant_restart_interval.return_value = 5
-        mock_get_timeout_io.return_value = 3
         mock_is_multipath_device.return_value = True
         mock_is_scsi_device.return_value = False
         mock_get_multipath_max_polling_interval.return_value = 20
@@ -302,48 +265,42 @@ class TestSBDTimeout(unittest.TestCase):
 
         result = sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk("/dev/mapper/mpatha")
 
-        self.assertEqual(result, 62)
+        self.assertEqual(result, 66)
 
     @patch("crmsh.storage_utils.get_scsi_timeout")
     @patch("crmsh.storage_utils.is_scsi_device")
     @patch("crmsh.storage_utils.is_multipath_device")
-    @patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
     @patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
     def test_get_sbd_watchdog_timeout_from_disk_scsi(
         self,
         mock_get_servant_restart_interval,
-        mock_get_timeout_io,
         mock_is_multipath_device,
         mock_is_scsi_device,
         mock_get_scsi_timeout,
     ):
         mock_get_servant_restart_interval.return_value = 5
-        mock_get_timeout_io.return_value = 3
         mock_is_multipath_device.return_value = False
         mock_is_scsi_device.return_value = True
         mock_get_scsi_timeout.return_value = 30
 
         result = sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk("/dev/sda1")
 
-        self.assertEqual(result, 38)
+        self.assertEqual(result, 42)
 
     @patch("crmsh.storage_utils.get_multipath_checker_timeout")
     @patch("crmsh.storage_utils.get_multipath_max_polling_interval")
     @patch("crmsh.storage_utils.is_scsi_device")
     @patch("crmsh.storage_utils.is_multipath_device")
-    @patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
     @patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
     def test_get_sbd_watchdog_timeout_from_disk_clamp(
         self,
         mock_get_servant_restart_interval,
-        mock_get_timeout_io,
         mock_is_multipath_device,
         mock_is_scsi_device,
         mock_get_multipath_max_polling_interval,
         mock_get_multipath_checker_timeout,
     ):
         mock_get_servant_restart_interval.return_value = 0
-        mock_get_timeout_io.return_value = 10
         mock_is_multipath_device.return_value = True
         mock_is_scsi_device.return_value = False
         mock_get_multipath_max_polling_interval.return_value = 0
@@ -355,17 +312,14 @@ class TestSBDTimeout(unittest.TestCase):
 
     @patch("crmsh.storage_utils.is_scsi_device")
     @patch("crmsh.storage_utils.is_multipath_device")
-    @patch("crmsh.sbd.SBDTimeout.get_sbd_timeout_io")
     @patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
     def test_get_sbd_watchdog_timeout_from_disk_not_multipath_nor_scsi(
         self,
         mock_get_servant_restart_interval,
-        mock_get_timeout_io,
         mock_is_multipath_device,
         mock_is_scsi_device,
     ):
         mock_get_servant_restart_interval.return_value = 5
-        mock_get_timeout_io.return_value = 3
         mock_is_multipath_device.return_value = False
         mock_is_scsi_device.return_value = False
 
