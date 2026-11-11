@@ -391,12 +391,6 @@ CLOUD_AZURE = "microsoft-azure"
 CLOUD_GCP = "google-cloud-platform"
 
 
-RED = '\033[31m'
-YELLOW = '\033[33m'
-GREEN = '\033[32m'
-END = '\033[0m'
-
-
 CIB_QUERY = "cibadmin -Q"
 CIB_UPGRADE = "crm configure upgrade force"
 CIB_RAW_FILE = "/var/lib/pacemaker/cib/cib.xml"

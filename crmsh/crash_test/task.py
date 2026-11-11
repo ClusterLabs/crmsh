@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from crmsh import utils as crmshutils
 from crmsh import xmlutil
 from crmsh import log
+from crmsh import term
 from . import utils
 from . import config
 from ..service_manager import ServiceManager
@@ -247,9 +248,9 @@ class TaskCheck(Task):
             utils.get_handler(logger, "console").setFormatter(utils.MyLoggingFormatter(flush=False))
 
             if self.passed:
-                message = "{} [{}]".format(self.description, utils.CGREEN + "Pass" + utils.CEND)
+                message = "{} [{}]".format(self.description, term.colorize('green', "Pass"))
             else:
-                message = "{} [{}]".format(self.description, utils.CRED + "Fail" + utils.CEND)
+                message = "{} [{}]".format(self.description, term.colorize('red', "Fail"))
             logger.info(message, extra={'timestamp': '[{}]'.format(self.timestamp.strftime(self.TIME_STR_FORMAT))})
 
             for msg in self.messages:

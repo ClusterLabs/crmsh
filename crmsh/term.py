@@ -174,6 +174,17 @@ def render(template):
     return re.sub(r'\${\w+}', render_sub, template)
 
 
+def colorize(color, text):
+    """
+    Wrap text in the named color (e.g. "green"), or return it unchanged
+    if the terminal does not support colors.
+    """
+    code = getattr(colors, color.upper(), "")
+    if not code:
+        return text
+    return f"{code}{text}{colors.NORMAL}"
+
+
 def is_color(s):
     return hasattr(colors, s.upper())
 
