@@ -117,15 +117,19 @@ jobs:
   functional_test_bootstrap_bugs:
     needs: build_image
     runs-on: ubuntu-26.04
+    strategy:
+      matrix:
+        shard: ['1/3', '2/3', '3/3']
+      fail-fast: false
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
     - name: Set up test container
       uses: ./.github/actions/setup-functional-tests
-    - name: functional test for bootstrap bugs
+    - name: functional test for bootstrap bugs, shard ${{ matrix.shard }}
       run:  |
         index=`$GET_INDEX_OF bootstrap_bugs`
-        $CONTAINER_SCRIPT $index
+        $CONTAINER_SCRIPT $index -s ${{ matrix.shard }}
     - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -134,15 +138,19 @@ jobs:
   functional_test_bootstrap_bugs_non_root:
     needs: build_image
     runs-on: ubuntu-26.04
+    strategy:
+      matrix:
+        shard: ['1/3', '2/3', '3/3']
+      fail-fast: false
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
     - name: Set up test container
       uses: ./.github/actions/setup-functional-tests
-    - name: functional test for bootstrap bugs, under non root user
+    - name: functional test for bootstrap bugs, under non root user, shard ${{ matrix.shard }}
       run:  |
         index=`$GET_INDEX_OF bootstrap_bugs`
-        $CONTAINER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index -u -s ${{ matrix.shard }}
     - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -271,15 +279,19 @@ jobs:
   functional_test_qdevice_setup_remove:
     needs: build_image
     runs-on: ubuntu-26.04
+    strategy:
+      matrix:
+        shard: ['1/3', '2/3', '3/3']
+      fail-fast: false
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
     - name: Set up test container
       uses: ./.github/actions/setup-functional-tests
-    - name: functional test for qdevice setup and remove
+    - name: functional test for qdevice setup and remove, shard ${{ matrix.shard }}
       run:  |
         index=`$GET_INDEX_OF qdevice_setup_remove`
-        $CONTAINER_SCRIPT $index
+        $CONTAINER_SCRIPT $index -s ${{ matrix.shard }}
     - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -288,15 +300,19 @@ jobs:
   functional_test_qdevice_setup_remove_non_root:
     needs: build_image
     runs-on: ubuntu-26.04
+    strategy:
+      matrix:
+        shard: ['1/3', '2/3', '3/3']
+      fail-fast: false
     timeout-minutes: 40
     steps:
     - uses: actions/checkout@v6
     - name: Set up test container
       uses: ./.github/actions/setup-functional-tests
-    - name: functional test for qdevice setup and remove, under non root user
+    - name: functional test for qdevice setup and remove, under non root user, shard ${{ matrix.shard }}
       run:  |
         index=`$GET_INDEX_OF qdevice_setup_remove`
-        $CONTAINER_SCRIPT $index -u
+        $CONTAINER_SCRIPT $index -u -s ${{ matrix.shard }}
     - uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
