@@ -72,10 +72,8 @@ BuildRequires:  firewall-macros
 
 %if 0%{?suse_version}
 # Suse splits this off into a separate package
-Requires:       python3-curses
 Requires:       python3-python-dateutil
 BuildRequires:  fdupes
-BuildRequires:  python3-curses
 BuildRequires:  python3-python-dateutil
 %else
 Requires:       python3-dateutil

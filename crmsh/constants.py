@@ -391,10 +391,16 @@ CLOUD_AZURE = "microsoft-azure"
 CLOUD_GCP = "google-cloud-platform"
 
 
-RED = '\033[31m'
-YELLOW = '\033[33m'
-GREEN = '\033[32m'
-END = '\033[0m'
+# ANSI SGR escape sequences, see term.py
+RED = "\033[31m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+BLUE = "\033[34m"
+MAGENTA = "\033[35m"
+CYAN = "\033[36m"
+BOLD = "\033[1m"
+UNDERLINE = "\033[4m"
+NORMAL = "\033[0m"
 
 
 CIB_QUERY = "cibadmin -Q"

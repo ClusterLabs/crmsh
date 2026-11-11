@@ -1392,3 +1392,20 @@ class TestAsk(unittest.TestCase):
         mock_input.assert_not_called()
         mock_logger_info.assert_called_once_with("%sN (auto-answered non-interactively)", "Do you want to commit them, or cancel the operation (y/N/c)? ")
 
+
+
+class TestGetWinsize(unittest.TestCase):
+    @mock.patch("os.get_terminal_size")
+    def test_tty(self, mock_size):
+        mock_size.return_value = os.terminal_size((132, 40))
+        self.assertEqual((132, 40), utils.get_winsize())
+
+    @mock.patch("os.get_terminal_size")
+    def test_not_tty(self, mock_size):
+        mock_size.side_effect = OSError
+        self.assertEqual((80, 25), utils.get_winsize())
+
+    @mock.patch("os.get_terminal_size")
+    def test_unknown_size(self, mock_size):
+        mock_size.return_value = os.terminal_size((0, 0))
+        self.assertEqual((80, 25), utils.get_winsize())

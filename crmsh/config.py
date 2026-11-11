@@ -208,10 +208,9 @@ class opt_dir(object):
 class opt_color(object):
     def __init__(self, val):
         self.default = val
-        self.completions = ('black', 'blue', 'green', 'cyan',
-                            'red', 'magenta', 'yellow', 'white',
-                            'bold', 'blink', 'dim', 'reverse',
-                            'underline', 'normal')
+        self.completions = ('blue', 'green', 'cyan',
+                            'red', 'magenta', 'yellow',
+                            'bold', 'underline', 'normal')
 
     def validate(self, val):
         for v in val.split(' '):

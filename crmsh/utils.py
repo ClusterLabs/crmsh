@@ -1272,18 +1272,10 @@ def page_file(filename):
 
 def get_winsize():
     try:
-        import curses
-        curses.setupterm()
-        w = curses.tigetnum('cols')
-        h = curses.tigetnum('lines')
-    except:
-        try:
-            w = os.environ['COLS']
-            h = os.environ['LINES']
-        except KeyError:
-            w = 80
-            h = 25
-    return w, h
+        w, h = os.get_terminal_size()
+    except OSError:
+        w = h = 0
+    return (w, h) if w > 0 and h > 0 else (80, 25)
 
 
 def multicolumn(l):
