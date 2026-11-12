@@ -29,6 +29,17 @@ def before_step(context, step):
     context.logger = logging.getLogger("Step:{}".format(step.name))
 
 
+def before_feature(context, feature):
+    # run only the scenarios of the given shard, "-D shard=<index>/<total>", for example "-D shard=2/3"
+    shard = context.config.userdata.get("shard")
+    if not shard:
+        return
+    index, total = (int(x) for x in shard.split("/"))
+    for i, scenario in enumerate(feature.scenarios):
+        if i % total != index - 1:
+            scenario.mark_skipped()
+
+
 def before_tag(context, tag):
     # tag @clean means need to stop cluster service
     if tag == "clean":
