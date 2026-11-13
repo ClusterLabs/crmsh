@@ -285,6 +285,13 @@ def get_values(path):
     return ConfParser.get_values(path)
 
 
+def get_node_ring_addrs(node: dict) -> list[str]:
+    """
+    Get the configured ringX_addr values of a nodelist node, ordered by link number.
+    """
+    return [node[key] for i in range(KNET_LINK_NUM_LIMIT) if node.get(key := f"ring{i}_addr")]
+
+
 def _get_local_node_ring_addresses() -> list[str]:
     """
     Get configured ring[0-7]_addr entries for local node from corosync.conf.
@@ -326,13 +333,7 @@ def _get_local_node_ring_addresses() -> list[str]:
     if not target_node or not isinstance(target_node, dict):
         return []
 
-    ring_addrs = []
-    for i in range(8):
-        key = f"ring{i}_addr"
-        if key in target_node and target_node[key]:
-            ring_addrs.append(target_node[key])
-
-    return ring_addrs
+    return get_node_ring_addrs(target_node)
 
 
 def get_corosync_interfaces() -> list[str]:
@@ -439,12 +440,13 @@ def del_node(addrs: list[str]) -> bool:
     '''
     try:
         inst = ConfParser()
-        addr_list = inst.get_all("nodelist.node.ring0_addr")
-        index = -1
-        for addr in addrs:
-            if addr in addr_list:
-                index = addr_list.index(addr)
-                break
+        index = next(
+            (
+                i for i, node in enumerate(inst.get_all("nodelist.node"))
+                if any(addr in addrs for addr in get_node_ring_addrs(node))
+            ),
+            -1,
+        )
         if index == -1:
             return False
         inst.remove("nodelist.node", index)

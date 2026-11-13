@@ -856,15 +856,40 @@ def test_del_node_by_nodeid_not_found(mock_parser):
     assert corosync.del_node_by_nodeid(99) is False
 
 
+def test_get_node_ring_addrs():
+    node = {"name": "node1", "ring2_addr": "10.2.0.1", "ring0_addr": "", "ring1_addr": "10.1.0.1", "nodeid": "1"}
+    assert corosync.get_node_ring_addrs(node) == ["10.1.0.1", "10.2.0.1"]
+    assert corosync.get_node_ring_addrs({"nodeid": "2"}) == []
+
+
 @mock.patch("crmsh.corosync.ConfParser")
 def test_del_node_list(mock_parser):
     mock_inst = mock.Mock()
     mock_parser.return_value = mock_inst
-    mock_inst.get_all.return_value = ["10.16.35.101", "10.16.35.102", "10.16.35.103"]
+    mock_inst.get_all.return_value = [
+        {"ring0_addr": "10.16.35.101", "nodeid": "1"},
+        {"ring0_addr": "10.16.35.102", "nodeid": "2"},
+        {"ring0_addr": "10.16.35.103", "nodeid": "3"},
+    ]
 
     assert corosync.del_node(["10.16.35.200", "10.16.35.103"]) is True
-    mock_inst.get_all.assert_called_once_with("nodelist.node.ring0_addr")
+    mock_inst.get_all.assert_called_once_with("nodelist.node")
     mock_inst.remove.assert_called_once_with("nodelist.node", 2)
+    mock_inst.save.assert_called_once()
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_del_node_without_ring0_addr(mock_parser):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = [
+        {"ring0_addr": "10.16.35.101", "nodeid": "1"},
+        {"ring1_addr": "10.17.35.102", "nodeid": "2"},
+        {"ring0_addr": "10.16.35.103", "ring1_addr": "10.17.35.103", "nodeid": "3"},
+    ]
+
+    assert corosync.del_node(["10.17.35.102"]) is True
+    mock_inst.remove.assert_called_once_with("nodelist.node", 1)
     mock_inst.save.assert_called_once()
 
 
@@ -872,7 +897,10 @@ def test_del_node_list(mock_parser):
 def test_del_node_not_found(mock_parser):
     mock_inst = mock.Mock()
     mock_parser.return_value = mock_inst
-    mock_inst.get_all.return_value = ["10.16.35.101", "10.16.35.102"]
+    mock_inst.get_all.return_value = [
+        {"ring0_addr": "10.16.35.101", "nodeid": "1"},
+        {"ring0_addr": "10.16.35.102", "nodeid": "2"},
+    ]
 
     assert corosync.del_node(["10.16.35.200", "10.16.35.201"]) is False
 
