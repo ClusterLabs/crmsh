@@ -112,7 +112,30 @@ Feature: Use "crm configure set" to update attributes and operations
     When    Try "crm resource move d xxxx PT5M force"
     Then    Except "ERROR: resource.move: Not our node: xxxx"
     When    Try "crm resource move d"
-    Then    Except "ERROR: resource.move: No target node: Move requires either a target node or 'force'"
+    Then    Except "ERROR: resource.move: No destination node: specify a destination node or use 'force' to move away from the current node"
+
+  @clean
+  Scenario: Parse ban options correctly (bsc#1262141)
+    Given   Resource "d" is started on "hanode1"
+    # ban <res> <node> force
+    When    Run "crm resource ban d hanode1 force" on "hanode1"
+    When    Run "sleep 2" on "hanode1"
+    Then    Resource "d" is started on "hanode2"
+    When    Run "crm resource clear d" on "hanode1"
+
+    # ban <res> force
+    Given   Resource "d" is started on "hanode2"
+    When    Run "crm resource ban d force" on "hanode1"
+    When    Run "sleep 2" on "hanode1"
+    Then    Resource "d" is started on "hanode1"
+    When    Run "crm resource clear d" on "hanode1"
+
+    # ban <res> <lifetime> force
+    Given   Resource "d" is started on "hanode1"
+    When    Run "crm resource ban d PT5M force" on "hanode1"
+    When    Run "sleep 2" on "hanode1"
+    Then    Resource "d" is started on "hanode2"
+    When    Run "crm resource clear d" on "hanode1"
 
   @clean
   Scenario: promote and demote promotable clone resource (bsc#1194125)
