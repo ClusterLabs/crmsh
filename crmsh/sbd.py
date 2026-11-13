@@ -250,8 +250,6 @@ class SBDTimeout(object):
     SBD_WATCHDOG_TIMEOUT_DEFAULT_S390 = 15
     SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE = 35
     SBD_SERVANT_RESTART_INTERVAL_DEFAULT = 5
-    SBD_LOOP_TIMEOUT_DEFAULT = 1
-    SBD_TIMEOUT_IO_LOOP_TIMEOUT_FACTOR = 3
     QDEVICE_SYNC_TIMEOUT_MARGIN = 5
     SHOW_SBD_START_TIMEOUT_CMD = "systemctl daemon-reload; systemctl show -p TimeoutStartUSec sbd.service --value"
     SHOW_DEFAULT_START_TIMEOUT_CMD = "systemctl show -p DefaultTimeoutStartUSec --value"
@@ -385,38 +383,16 @@ class SBDTimeout(object):
         return SBDTimeout.SBD_SERVANT_RESTART_INTERVAL_DEFAULT if value is None else value
 
     @staticmethod
-    def get_sbd_loop_timeout() -> int:
-        """
-        Get loop timeout from the first configured SBD device metadata.
-        """
-        dev_list = SBDUtils.get_sbd_device_from_config()
-        if not dev_list:
-            return SBDTimeout.SBD_LOOP_TIMEOUT_DEFAULT
-        device_metadata = SBDUtils.get_sbd_device_metadata(dev_list[0], timeout_only=True)
-        return device_metadata.get("loop", SBDTimeout.SBD_LOOP_TIMEOUT_DEFAULT)
-
-    @staticmethod
-    def get_sbd_timeout_io() -> int:
-        """
-        Get sbd async IO read timeout from SBD_OPTS -I option.
-        """
-        value = SBDUtils.get_sbd_opts_int_value("-I")
-        if value is None:
-            return SBDTimeout.SBD_TIMEOUT_IO_LOOP_TIMEOUT_FACTOR * SBDTimeout.get_sbd_loop_timeout()
-        return value
-
-    @staticmethod
     def get_sbd_watchdog_timeout_from_disk(dev) -> int|None:
         """
         Get the watchdog timeout required by the SBD disk backstore.
 
-        multipath: 1.2 * (max_polling_interval + checker_timeout + servant_restart_interval - timeout_io)
-        SCSI:      1.2 * (scsi_timeout + servant_restart_interval - timeout_io)
+        multipath: 1.2 * (max_polling_interval + checker_timeout + servant_restart_interval)
+        SCSI:      1.2 * (scsi_timeout + servant_restart_interval)
 
         Returns None when the device is neither multipath nor SCSI.
         """
         servant_restart_interval = SBDTimeout.get_sbd_servant_restart_interval()
-        timeout_io = SBDTimeout.get_sbd_timeout_io()
         if storage_utils.is_multipath_device(dev):
             timeout = (storage_utils.get_multipath_max_polling_interval(dev) or 0) \
                 + storage_utils.get_multipath_checker_timeout(dev)
@@ -424,7 +400,7 @@ class SBDTimeout(object):
             timeout = storage_utils.get_scsi_timeout(dev)
         else:
             return None
-        return max(1, int(1.2 * (timeout + servant_restart_interval - timeout_io)))
+        return max(1, int(1.2 * (timeout + servant_restart_interval)))
 
     @staticmethod
     def get_fencing_watchdog_timeout_expected(
