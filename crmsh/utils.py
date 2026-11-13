@@ -1673,9 +1673,9 @@ def get_address_list_from_corosync_conf():
     if not os.path.exists(corosync.conf()):
         return []
     return [
-        ring_addrs[0]
-        for ring_addrs in map(corosync.get_node_ring_addrs, corosync.get_values("nodelist.node"))
-        if ring_addrs
+        next(iter(link_addrs.values()))
+        for link_addrs in map(corosync.get_node_link_addrs, corosync.get_values("nodelist.node"))
+        if link_addrs
     ]
 
 

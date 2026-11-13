@@ -54,12 +54,11 @@ def is_using_ipv6() -> bool:
     return res and res == "ipv6"
 
 
-def get_link_number() -> int:
-    link_num = 1
-    for key, value in ConfParser.get_value("nodelist.node").items():
-        if re.search("ring[1-7]_addr", key) and value:
-            link_num += 1
-    return link_num
+def get_link_numbers() -> list[int]:
+    """
+    Get the link numbers in use, according to the first node in nodelist.
+    """
+    return list(get_node_link_addrs(ConfParser.get_value("nodelist.node")))
 
 
 def is_qdevice_configured() -> bool:
@@ -285,11 +284,11 @@ def get_values(path):
     return ConfParser.get_values(path)
 
 
-def get_node_ring_addrs(node: dict) -> list[str]:
+def get_node_link_addrs(node: dict) -> dict[int, str]:
     """
-    Get the configured ringX_addr values of a nodelist node, ordered by link number.
+    Get the configured ringX_addr values of a nodelist node, keyed by link number.
     """
-    return [node[key] for i in range(KNET_LINK_NUM_LIMIT) if node.get(key := f"ring{i}_addr")]
+    return {i: node[key] for i in range(KNET_LINK_NUM_LIMIT) if node.get(key := f"ring{i}_addr")}
 
 
 def _get_local_node_ring_addresses() -> list[str]:
@@ -333,7 +332,7 @@ def _get_local_node_ring_addresses() -> list[str]:
     if not target_node or not isinstance(target_node, dict):
         return []
 
-    return get_node_ring_addrs(target_node)
+    return list(get_node_link_addrs(target_node).values())
 
 
 def get_corosync_interfaces() -> list[str]:
@@ -390,15 +389,17 @@ def find_configured_ip(ip_list):
         raise IPAlreadyConfiguredError("IP {} was already configured".format(','.join(configured_ip)))
 
 
-def add_node_config(ip_list: typing.List[str]) -> None:
+def add_node_config(ip_list: typing.List[str], link_numbers: typing.List[int]) -> None:
     """
     Add nodelist in corosync.conf
+
+    ip_list[i] is the address of the link link_numbers[i]
     """
     find_configured_ip(ip_list)
     inst = ConfParser()
     node_index = len(inst.get_all("nodelist.node"))
-    for i, addr in enumerate(ip_list):
-        inst.set("nodelist.node.ring{}_addr".format(i), addr, node_index)
+    for linknumber, addr in zip(link_numbers, ip_list):
+        inst.set("nodelist.node.ring{}_addr".format(linknumber), addr, node_index)
     inst.set("nodelist.node.name", utils.this_node(), node_index)
     inst.set("nodelist.node.nodeid", get_free_nodeid(), node_index)
     inst.save()
@@ -443,7 +444,7 @@ def del_node(addrs: list[str]) -> bool:
         index = next(
             (
                 i for i, node in enumerate(inst.get_all("nodelist.node"))
-                if any(addr in addrs for addr in get_node_ring_addrs(node))
+                if any(addr in addrs for addr in get_node_link_addrs(node).values())
             ),
             -1,
         )

@@ -856,10 +856,46 @@ def test_del_node_by_nodeid_not_found(mock_parser):
     assert corosync.del_node_by_nodeid(99) is False
 
 
-def test_get_node_ring_addrs():
+def test_get_node_link_addrs():
     node = {"name": "node1", "ring2_addr": "10.2.0.1", "ring0_addr": "", "ring1_addr": "10.1.0.1", "nodeid": "1"}
-    assert corosync.get_node_ring_addrs(node) == ["10.1.0.1", "10.2.0.1"]
-    assert corosync.get_node_ring_addrs({"nodeid": "2"}) == []
+    assert corosync.get_node_link_addrs(node) == {1: "10.1.0.1", 2: "10.2.0.1"}
+    assert corosync.get_node_link_addrs({"nodeid": "2"}) == {}
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_get_link_numbers_without_ring0_addr(mock_parser):
+    mock_parser.get_value.return_value = {"ring1_addr": "10.1.0.1", "nodeid": "1"}
+    assert corosync.get_link_numbers() == [1]
+    mock_parser.get_value.assert_called_once_with("nodelist.node")
+
+
+@mock.patch("crmsh.corosync.ConfParser")
+def test_get_link_numbers_not_contiguous(mock_parser):
+    mock_parser.get_value.return_value = {"ring0_addr": "10.0.0.1", "ring2_addr": "10.2.0.1", "nodeid": "1"}
+    assert corosync.get_link_numbers() == [0, 2]
+
+
+@mock.patch("crmsh.corosync.get_free_nodeid")
+@mock.patch("crmsh.utils.this_node")
+@mock.patch("crmsh.corosync.ConfParser")
+@mock.patch("crmsh.corosync.find_configured_ip")
+def test_add_node_config_with_link_numbers(mock_find, mock_parser, mock_this_node, mock_nodeid):
+    mock_inst = mock.Mock()
+    mock_parser.return_value = mock_inst
+    mock_inst.get_all.return_value = [{}, {}]
+    mock_this_node.return_value = "node3"
+    mock_nodeid.return_value = 3
+
+    corosync.add_node_config(["10.0.0.3", "10.2.0.3"], [0, 2])
+
+    mock_find.assert_called_once_with(["10.0.0.3", "10.2.0.3"])
+    assert mock_inst.set.mock_calls == [
+        mock.call("nodelist.node.ring0_addr", "10.0.0.3", 2),
+        mock.call("nodelist.node.ring2_addr", "10.2.0.3", 2),
+        mock.call("nodelist.node.name", "node3", 2),
+        mock.call("nodelist.node.nodeid", 3, 2),
+    ]
+    mock_inst.save.assert_called_once()
 
 
 @mock.patch("crmsh.corosync.ConfParser")

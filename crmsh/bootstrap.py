@@ -1989,7 +1989,8 @@ def join_cluster(seed_host, remote_user):
 
     init_network()
 
-    link_number = corosync.get_link_number()
+    link_numbers = corosync.get_link_numbers()
+    link_number = len(link_numbers)
     join_link_number = len(_global_variables.default_ip_list)
     # the join link number can't be greater than the peer's link number
     # or less than the peer's link number if -y is set
@@ -2005,7 +2006,7 @@ def join_cluster(seed_host, remote_user):
     _global_variables.sbd_manager.join_sbd(seed_host)
 
     ringXaddr_res = []
-    for i in range(link_number):
+    for i in link_numbers:
         while True:
             ringXaddr = prompt_for_string(
                     'Address for ring{}'.format(i),
@@ -2019,7 +2020,7 @@ def join_cluster(seed_host, remote_user):
     print("")
     invoke("rm -f /var/lib/pacemaker/cib/*")
     try:
-        corosync.add_node_config(ringXaddr_res)
+        corosync.add_node_config(ringXaddr_res, link_numbers)
     except corosync.IPAlreadyConfiguredError as e:
         logger.warning(e)
     sync_path(corosync.conf(), seed_host)
