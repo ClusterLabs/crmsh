@@ -1077,6 +1077,28 @@ def test_verify_result():
     assert utils.VerifyResult.NON_FATAL_ERROR in rc
 
 
+@mock.patch('crmsh.corosync.get_values')
+@mock.patch('os.path.exists')
+def test_get_address_list_from_corosync_conf_no_file(mock_exists, mock_get_values):
+    mock_exists.return_value = False
+    assert utils.get_address_list_from_corosync_conf() == []
+    mock_get_values.assert_not_called()
+
+
+@mock.patch('crmsh.corosync.get_values')
+@mock.patch('os.path.exists')
+def test_get_address_list_from_corosync_conf(mock_exists, mock_get_values):
+    mock_exists.return_value = True
+    mock_get_values.return_value = [
+        {"ring0_addr": "10.0.0.1", "ring1_addr": "10.1.0.1", "nodeid": "1"},
+        {"ring1_addr": "10.1.0.2", "nodeid": "2"},
+        {"ring2_addr": "10.2.0.3", "nodeid": "3"},
+        {"nodeid": "4"},
+    ]
+    assert utils.get_address_list_from_corosync_conf() == ["10.0.0.1", "10.1.0.2", "10.2.0.3"]
+    mock_get_values.assert_called_once_with("nodelist.node")
+
+
 @mock.patch('crmsh.utils.fatal')
 @mock.patch('crmsh.utils.get_address_list_from_corosync_conf')
 @mock.patch('crmsh.utils.list_cluster_nodes')
