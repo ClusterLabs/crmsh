@@ -383,6 +383,75 @@ class TestSBDTimeout(unittest.TestCase):
         self.assertEqual(inst.sbd_watchdog_timeout, 38)
         mock_from_disk.assert_called_once_with("/dev/sda1")
 
+    @patch('crmsh.qdevice.QDevice.get_qdevice_sync_timeout')
+    @patch('crmsh.sbd.ServiceManager')
+    @patch('crmsh.corosync.is_qdevice_configured')
+    def test_get_sbd_watchdog_timeout_with_qdevice(self, mock_configured, mock_service, mock_sync_timeout):
+        mock_configured.return_value = True
+        mock_service.return_value.service_is_active.return_value = True
+        mock_sync_timeout.return_value = 30
+
+        self.assertEqual(sbd.SBDTimeout.get_sbd_watchdog_timeout_with_qdevice(), 35)
+
+    @patch('crmsh.sbd.ServiceManager')
+    @patch('crmsh.corosync.is_qdevice_configured')
+    def test_get_sbd_watchdog_timeout_with_qdevice_not_configured(self, mock_configured, mock_service):
+        mock_configured.return_value = False
+
+        self.assertIsNone(sbd.SBDTimeout.get_sbd_watchdog_timeout_with_qdevice())
+
+    @patch('crmsh.sbd.ServiceManager')
+    @patch('crmsh.corosync.is_qdevice_configured')
+    def test_get_sbd_watchdog_timeout_with_qdevice_not_running(self, mock_configured, mock_service):
+        mock_configured.return_value = True
+        mock_service.return_value.service_is_active.return_value = False
+
+        self.assertIsNone(sbd.SBDTimeout.get_sbd_watchdog_timeout_with_qdevice())
+
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_with_qdevice')
+    def test_adjust_sbd_watchdog_timeout_with_disk_based_and_qdevice(self, mock_with_qdevice):
+        inst = sbd.SBDTimeout(diskless_sbd=False, quiet=True)
+        inst.context = Mock(qdevice_inst=None)
+        inst.sbd_watchdog_timeout = 15
+        mock_with_qdevice.return_value = 35
+
+        inst._adjust_sbd_watchdog_timeout_with_disk_based_and_qdevice()
+
+        self.assertEqual(inst.sbd_watchdog_timeout, 35)
+
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_with_qdevice')
+    def test_adjust_sbd_watchdog_timeout_with_disk_based_and_qdevice_larger(self, mock_with_qdevice):
+        inst = sbd.SBDTimeout(diskless_sbd=False, quiet=True)
+        inst.context = Mock(qdevice_inst=None)
+        inst.sbd_watchdog_timeout = 50
+        mock_with_qdevice.return_value = 35
+
+        inst._adjust_sbd_watchdog_timeout_with_disk_based_and_qdevice()
+
+        self.assertEqual(inst.sbd_watchdog_timeout, 50)
+
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_with_qdevice')
+    def test_adjust_sbd_watchdog_timeout_with_disk_based_and_qdevice_together(self, mock_with_qdevice):
+        inst = sbd.SBDTimeout(diskless_sbd=False, quiet=True)
+        inst.context = Mock(qdevice_inst=Mock())
+        inst.sbd_watchdog_timeout = 15
+        mock_with_qdevice.return_value = None
+
+        inst._adjust_sbd_watchdog_timeout_with_disk_based_and_qdevice()
+
+        self.assertEqual(inst.sbd_watchdog_timeout, sbd.SBDTimeout.SBD_WATCHDOG_TIMEOUT_DEFAULT_WITH_QDEVICE)
+
+    @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_with_qdevice')
+    def test_adjust_sbd_watchdog_timeout_with_disk_based_no_qdevice(self, mock_with_qdevice):
+        inst = sbd.SBDTimeout(diskless_sbd=False, quiet=True)
+        inst.context = Mock(qdevice_inst=None)
+        inst.sbd_watchdog_timeout = 15
+        mock_with_qdevice.return_value = None
+
+        inst._adjust_sbd_watchdog_timeout_with_disk_based_and_qdevice()
+
+        self.assertEqual(inst.sbd_watchdog_timeout, 15)
+
     @patch('crmsh.storage_utils.pick_backstore_device')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk')
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_expected')
