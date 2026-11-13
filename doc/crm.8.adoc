@@ -1796,7 +1796,7 @@ See `move` for details on other arguments.
 
 Usage:
 ...............
-ban <rsc> [<node>] [<lifetime>] [force]
+ban <rsc> [<node>] [<lifetime>]
 ...............
 
 [[cmdhelp.resource.cleanup,cleanup resource status]]

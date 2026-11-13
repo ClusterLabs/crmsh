@@ -109,7 +109,7 @@ Feature: Functional test to cover SAP clusterAPI
     When    Try "crm resource move d xxxx PT5M force"
     Then    Except "ERROR: resource.move: Not our node: xxxx"
     When    Try "crm resource move d"
-    Then    Except "ERROR: resource.move: No target node: Move requires either a target node or 'force'"
+    Then    Except "ERROR: resource.move: No destination node: specify a destination node or use 'force' to move away from the current node"
 
   @clean
   Scenario: Run "crm configure show" by hacluster
