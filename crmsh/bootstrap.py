@@ -2148,7 +2148,7 @@ def remove_node_from_cluster(node, dead_node=False):
         utils.fatal("Failed to remove {}.".format(node))
 
     # Remove node from nodelist
-    if corosync.get_values("nodelist.node.ring0_addr"):
+    if corosync.get_values("nodelist.node"):
         if corosync.del_node_by_name(node):
             pass
         elif nodeid and corosync.del_node_by_nodeid(nodeid):

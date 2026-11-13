@@ -2301,7 +2301,7 @@ class TestValidation(unittest.TestCase):
         mock_cal_delnode.assert_called_once_with("node1")
         mock_cluster_shell_inst.get_stdout_or_raise_error.assert_called_once_with("corosync-cfgtool -R")
         mock_error.assert_not_called()
-        mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
+        mock_get_values.assert_called_once_with("nodelist.node")
         mock_del_by_name.assert_called_once_with("node1")
         mock_csync2.assert_called_once_with("/etc/corosync/corosync.conf")
 
@@ -2349,7 +2349,7 @@ class TestValidation(unittest.TestCase):
 
         mock_get_nodeid.assert_called_once_with('node1')
         mock_get_ips.assert_not_called()
-        mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
+        mock_get_values.assert_called_once_with("nodelist.node")
         mock_del_by_name.assert_called_once_with("node1")
         mock_del_by_id.assert_called_once_with("1")
         mock_csync2.assert_called_once_with("/etc/corosync/corosync.conf")
@@ -2396,7 +2396,7 @@ class TestValidation(unittest.TestCase):
         bootstrap._global_variables = mock.Mock(rm_list=['file1', 'file2'], args=mock.Mock(cluster_node='node1'))
         bootstrap.remove_node_from_cluster('node1')
 
-        mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
+        mock_get_values.assert_called_once_with("nodelist.node")
         mock_del_by_name.assert_called_once_with("node1")
         mock_del_by_id.assert_called_once_with("1")
         mock_get_ips.assert_called_once_with("node1")
@@ -2440,7 +2440,7 @@ class TestValidation(unittest.TestCase):
         with self.assertRaises(SystemExit):
             bootstrap.remove_node_from_cluster('node1')
 
-        mock_get_values.assert_called_once_with("nodelist.node.ring0_addr")
+        mock_get_values.assert_called_once_with("nodelist.node")
         mock_del_by_id.assert_not_called()
         mock_get_ips.assert_called_once_with("node1")
         mock_del_node.assert_called_once_with(["node1"])
