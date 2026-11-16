@@ -67,18 +67,6 @@ class TestGlobalVariables(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.bootstrap.Validation.valid_admin_ip')
-    @mock.patch('crmsh.utils.fatal')
-    def test_validate_network_options_one_link(self, mock_error, valid_ip):
-        self.ctx_inst.args.admin_ip = "10.10.10.123"
-        self.ctx_inst.args.type = "init"
-        self.ctx_inst.args.transport = "udpu"
-        self.ctx_inst.args.nic_addr_list = ["eth1", "eth2"]
-        mock_error.side_effect = SystemExit
-        with self.assertRaises(SystemExit):
-            self.ctx_inst._validate_network_options()
-        mock_error.assert_called_once_with("Only one link is allowed for the 'udpu' transport type")
-
     @mock.patch('crmsh.utils.fatal')
     def test_validate_network_options_max_link(self, mock_error):
         self.ctx_inst.args.admin_ip = None
@@ -89,19 +77,6 @@ class TestGlobalVariables(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.ctx_inst._validate_network_options()
         mock_error.assert_called_once_with("Maximum number of interfaces is 8")
-
-    @mock.patch('crmsh.utils.detect_cloud')
-    @mock.patch('crmsh.utils.fatal')
-    def test_validate_network_options_udp_cloud(self, mock_error, mock_cloud):
-        mock_cloud.return_value = "aws"
-        self.ctx_inst.args.admin_ip = None
-        self.ctx_inst.args.type = "init"
-        self.ctx_inst.args.transport = "udp"
-        self.ctx_inst.args.nic_addr_list = ["eth1"]
-        mock_error.side_effect = SystemExit
-        with self.assertRaises(SystemExit):
-            self.ctx_inst._validate_network_options()
-        mock_error.assert_called_once_with("Transport udp(multicast) cannot be used in aws platform")
 
     def test_set_args(self):
         options = mock.Mock(yes_to_all=True, ipv6=False)
@@ -1689,75 +1664,6 @@ done
             mock.call(None, f"systemctl is-failed {constants.PCMK_SERVICE}")
         ])
 
-    @mock.patch('crmsh.bootstrap.logger.warning')
-    @mock.patch('crmsh.bootstrap.adjust_corosync_parameters_according_to_profiles')
-    @mock.patch('crmsh.bootstrap.config_corosync_conf')
-    @mock.patch('crmsh.bootstrap.init_corosync_auth')
-    @mock.patch('os.path.exists')
-    def test_init_corosync_warning_non_knet(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
-        mock_exists.return_value = False
-        bootstrap._global_variables = mock.Mock(args=mock.Mock(transport='udpu'))
-        bootstrap.init_corosync()
-        mock_warning.assert_called_once_with(
-            'Transport %s is deprecated and does not support encryption and message authentication. '
-            'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.',
-            'udpu',
-        )
-
-    @mock.patch('crmsh.bootstrap.logger.warning')
-    @mock.patch('crmsh.bootstrap.adjust_corosync_parameters_according_to_profiles')
-    @mock.patch('crmsh.bootstrap.config_corosync_conf')
-    @mock.patch('crmsh.bootstrap.init_corosync_auth')
-    @mock.patch('os.path.exists')
-    def test_init_corosync_no_warning_knet(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
-        mock_exists.return_value = False
-        profiles = {
-            'corosync.totem.crypto_cipher': 'aes256',
-            'corosync.totem.crypto_hash': 'sha256',
-            'corosync.totem.secauth': None
-        }
-        bootstrap._global_variables = mock.Mock(profiles_dict=profiles, args=mock.Mock(transport='knet'))
-        bootstrap.init_corosync()
-        mock_warning.assert_not_called()
-
-    @mock.patch('crmsh.bootstrap.logger.warning')
-    @mock.patch('crmsh.bootstrap.adjust_corosync_parameters_according_to_profiles')
-    @mock.patch('crmsh.bootstrap.config_corosync_conf')
-    @mock.patch('crmsh.bootstrap.init_corosync_auth')
-    @mock.patch('os.path.exists')
-    def test_init_corosync_knet_warning_disabled(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
-        mock_exists.return_value = False
-        profiles = {
-            'corosync.totem.crypto_cipher': 'none',
-            'corosync.totem.crypto_hash': 'sha256',
-            'corosync.totem.secauth': None
-        }
-        bootstrap._global_variables = mock.Mock(profiles_dict=profiles, args=mock.Mock(transport='knet'))
-        bootstrap.init_corosync()
-        mock_warning.assert_called_once_with(
-            'It is deprecated to disable knet encryption/authentication. '
-            'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.'
-        )
-
-    @mock.patch('crmsh.bootstrap.logger.warning')
-    @mock.patch('crmsh.bootstrap.adjust_corosync_parameters_according_to_profiles')
-    @mock.patch('crmsh.bootstrap.config_corosync_conf')
-    @mock.patch('crmsh.bootstrap.init_corosync_auth')
-    @mock.patch('os.path.exists')
-    def test_init_corosync_knet_warning_secauth_on_but_none(self, mock_exists, mock_auth, mock_conf, mock_adjust, mock_warning):
-        mock_exists.return_value = False
-        profiles = {
-            'corosync.totem.crypto_cipher': 'none',
-            'corosync.totem.crypto_hash': 'sha256',
-            'corosync.totem.secauth': 'on'
-        }
-        bootstrap._global_variables = mock.Mock(profiles_dict=profiles, args=mock.Mock(transport='knet'))
-        bootstrap.init_corosync()
-        mock_warning.assert_called_once_with(
-            'It is deprecated to disable knet encryption/authentication. '
-            'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.'
-        )
-
     @mock.patch('crmsh.bootstrap.utils.ask')
     def test_confirm_default_forward(self, mock_ask):
         # FIXME: antipattern: variable cannot be mocked in unit tests
@@ -1830,14 +1736,6 @@ class TestValidation(unittest.TestCase):
         Global tearDown.
         """
 
-    @mock.patch('crmsh.network_utils.IP.is_mcast')
-    def test_is_mcast_addr(self, mock_mcast):
-        mock_mcast.return_value = False
-        with self.assertRaises(ValueError) as err:
-            self.validate_inst._is_mcast_addr()
-        self.assertEqual("10.10.10.1 is not multicast address", str(err.exception))
-        mock_mcast.assert_called_once_with("10.10.10.1")
-
     def test_is_local_addr(self):
         with self.assertRaises(ValueError) as err:
             self.validate_inst._is_local_addr(["20.20.20.1", "20.20.20.2"])
@@ -1853,24 +1751,12 @@ class TestValidation(unittest.TestCase):
             self.validate_port_inst_out_of_range._is_valid_port()
         self.assertEqual("Valid port range should be 1025-65535", str(err.exception))
 
-    @mock.patch('crmsh.bootstrap.Validation._is_mcast_addr')
-    def test_valid_mcast_address(self, mock_mcast):
-        bootstrap.Validation.valid_mcast_address("10.10.10.1")
-        mock_mcast.assert_called_once_with()
-
     @mock.patch('crmsh.bootstrap.Validation._is_local_addr')
     def test_valid_ucast_ip(self, mock_local_addr):
         interfaces_inst = mock.Mock(ip_list=["10.10.10.2", "10.10.10.3"])
         bootstrap._global_variables = mock.Mock(interfaces_inst=interfaces_inst, args=mock.Mock())
         bootstrap.Validation.valid_ucast_ip("10.10.10.1")
         mock_local_addr.assert_called_once_with(["10.10.10.2", "10.10.10.3"])
-
-    @mock.patch('crmsh.bootstrap.Validation._is_local_addr')
-    def test_valid_mcast_ip(self, mock_local_addr):
-        interfaces_inst = mock.Mock(ip_list=["10.10.10.2", "10.10.10.3"], network_list=["10.10.10.0"])
-        bootstrap._global_variables = mock.Mock(interfaces_inst=interfaces_inst, args=mock.Mock())
-        bootstrap.Validation.valid_mcast_ip("10.10.10.1")
-        mock_local_addr.assert_called_once_with(["10.10.10.2", "10.10.10.3", "10.10.10.0"])
 
     @mock.patch('crmsh.bootstrap.Validation._is_valid_port')
     def test_valid_port(self, mock_port):

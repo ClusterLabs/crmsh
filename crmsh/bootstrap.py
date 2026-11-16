@@ -143,7 +143,6 @@ class GlobalVariables(object):
     to every bootstrap method.
     """
     DEFAULT_PROFILE_NAME = "default"
-    KNET_DEFAULT_PROFILE_NAME = "knet-default"
     S390_PROFILE_NAME = "s390"
     CORE_PACKAGES = ("corosync", "pacemaker")
 
@@ -255,14 +254,8 @@ class GlobalVariables(object):
         """
         if self.args.admin_ip:
             Validation.valid_admin_ip(self.args.admin_ip)
-        if self.args.type == "init" and self.args.transport != "knet" and len(self.args.nic_addr_list) > 1:
-            utils.fatal(f"Only one link is allowed for the '{self.args.transport}' transport type")
         if len(self.args.nic_addr_list) > corosync.KNET_LINK_NUM_LIMIT:
             utils.fatal(f"Maximum number of interfaces is {corosync.KNET_LINK_NUM_LIMIT}")
-        if self.args.transport == "udp":
-            cloud_type = utils.detect_cloud()
-            if cloud_type:
-                utils.fatal(f"Transport udp(multicast) cannot be used in {cloud_type} platform")
 
     def _validate_sbd_option(self):
         """
@@ -452,10 +445,6 @@ class GlobalVariables(object):
             return
 
         default_profile_dict = self.load_specific_profile(self.DEFAULT_PROFILE_NAME)
-        if self.args.transport == "knet":
-            knet_profile_dict = self.load_specific_profile(self.KNET_DEFAULT_PROFILE_NAME)
-            # merge two dictionaries
-            default_profile_dict = {**default_profile_dict, **knet_profile_dict}
         specific_profile_dict = self.load_specific_profile(profile_type)
         # merge two dictionaries
         self.profiles_dict = {**default_profile_dict, **specific_profile_dict}
@@ -1290,10 +1279,6 @@ class Validation(network_utils.BootstrapValidation):
     def valid_ucast_ip(cls, addr, prev_value_list=[]):
         super().valid_ucast_ip(addr, _global_variables.interfaces_inst.ip_list, prev_value_list)
 
-    @classmethod
-    def valid_mcast_ip(cls, addr, prev_value_list=[]):
-        super().valid_mcast_ip(addr, _global_variables.interfaces_inst.ip_list, _global_variables.interfaces_inst.network_list, prev_value_list)
-
     @staticmethod
     def valid_admin_ip(addr, prev_value_list=[]):
         network_utils.BootstrapValidation.valid_admin_ip(addr, invokerc, prev_value_list)
@@ -1315,11 +1300,6 @@ def get_address_list() -> typing.List[str]:
     """
     Get address list, for both interactive and non-interactive ways
     """
-    if _global_variables.args.transport == "udp":
-        valid_func = Validation.valid_mcast_ip
-    else:
-        valid_func = Validation.valid_ucast_ip
-
     if _global_variables.args.yes_to_all or _global_variables.args.nic_addr_list:
         loop_count = len(_global_variables.default_ip_list)
     else:
@@ -1330,7 +1310,7 @@ def get_address_list() -> typing.List[str]:
     for i in range(loop_count):
         addr = prompt_for_string("Address for ring{}".format(i),
                 default=pick_default_value(_global_variables.default_ip_list, ringXaddr_list),
-                valid_func=valid_func,
+                valid_func=Validation.valid_ucast_ip,
                 prev_value=ringXaddr_list)
         ringXaddr_list.append(addr)
         # only confirm when not the last loop and without -i option specified
@@ -1365,7 +1345,7 @@ def config_corosync_conf() -> None:
 
 def init_corosync() -> None:
     """
-    Configure corosync (unicast or multicast, encrypted?)
+    Configure corosync
     """
     init_corosync_auth()
 
@@ -1373,30 +1353,6 @@ def init_corosync() -> None:
         if not confirm("%s already exists - overwrite?" % (corosync.conf())):
             return
 
-    if _global_variables.args.transport != 'knet':
-        logger.warning(
-            'Transport %s is deprecated and does not support encryption and message authentication. '
-            'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.',
-            _global_variables.args.transport,
-        )
-    else:
-        cipher = _global_variables.profiles_dict.get('corosync.totem.crypto_cipher')
-        hash_algo = _global_variables.profiles_dict.get('corosync.totem.crypto_hash')
-        secauth = _global_variables.profiles_dict.get('corosync.totem.secauth')
-
-        is_encrypted = True
-        if secauth == 'on':
-            if cipher == 'none' or hash_algo == 'none':
-                is_encrypted = False
-        else:
-            if not cipher or cipher == 'none' or not hash_algo or hash_algo == 'none':
-                is_encrypted = False
-
-        if not is_encrypted:
-            logger.warning(
-                'It is deprecated to disable knet encryption/authentication. '
-                'Corosync traffic will be in cleartext. Encryption will be enforced in future versions.'
-            )
     config_corosync_conf()
     adjust_corosync_parameters_according_to_profiles()
 
