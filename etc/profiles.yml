@@ -21,8 +21,6 @@ default:
   # sbd.msgwait is set to sbd.watchdog_timeout*2 by crmsh
   # or, you can define your own value in profiles.yml
   sbd.watchdog_timeout: 15
-
-knet-default:
   corosync.totem.crypto_hash: sha256
   corosync.totem.crypto_cipher: aes256
 
