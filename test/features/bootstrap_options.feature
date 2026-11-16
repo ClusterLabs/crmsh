@@ -73,12 +73,18 @@ Feature: crmsh bootstrap process - options
   @clean
   Scenario: Validate "-i" option
     Given   Cluster service is "stopped" on "hanode1"
-    When    Try "crm cluster init -t udpu -i eth0 -i eth1"
-    Then    Except "ERROR: cluster.init: Only one link is allowed for the 'udpu' transport type"
     When    Try "crm cluster init -i eth0 -i eth1 -i eth2 -i eth3 -i eth4 -i eth5 -i eth6 -i eth7 -i eth8"
     Then    Except "ERROR: cluster.init: Maximum number of interfaces is 8"
     When    Try "crm cluster init -i eth11 -y"
     Then    Except "ERROR: cluster.init: Invalid value 'eth11' for -i/--interface option"
+
+  @clean
+  Scenario: invalid "--transport" option
+    Given   Cluster service is "stopped" on "hanode1"
+    When    Try "crm cluster init -t udpu"
+    Then    Except "argument -t/--transport: invalid choice: 'udpu'"
+    When    Try "crm cluster init -t udp"
+    Then    Except "argument -t/--transport: invalid choice: 'udp'"
 
   @clean
   Scenario: Using multiple network interface using "-i" option
@@ -166,28 +172,6 @@ Feature: crmsh bootstrap process - options
     When    Run "crm cluster init -N hanode1 -N hanode2 -y" on "hanode1"
     Then    Cluster service is "started" on "hanode1"
     And     Cluster service is "started" on "hanode2"
-
-  @clean
-  Scenario: Setup cluster with udpu transport
-    Given   Cluster service is "stopped" on "hanode1"
-    Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y -t udpu" on "hanode1"
-    Then    Except "Transport udpu is deprecated and does not support encryption and message authentication. Corosync traffic will be in cleartext. Encryption will be enforced in future versions." in stderr
-    And     Cluster service is "started" on "hanode1"
-    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
-    Then    Cluster service is "started" on "hanode2"
-    Then    Cluster is using "udpu" transport mode
-
-  @clean
-  Scenario: Setup cluster with udp transport
-    Given   Cluster service is "stopped" on "hanode1"
-    Given   Cluster service is "stopped" on "hanode2"
-    When    Run "crm cluster init -y -t udp" on "hanode1"
-    Then    Except "Transport udp is deprecated and does not support encryption and message authentication. Corosync traffic will be in cleartext. Encryption will be enforced in future versions." in stderr
-    And     Cluster service is "started" on "hanode1"
-    When    Run "crm cluster join -c hanode1 -y" on "hanode2"
-    Then    Cluster service is "started" on "hanode2"
-    Then    Cluster is using "udp" transport mode
 
   @clean
   Scenario: Check if the join side provides the corresponding network interface

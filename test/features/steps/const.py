@@ -95,12 +95,9 @@ Network configuration:
   -i, --interface IF    Bind to IP address on interface IF. Allowed value is
                         nic name or IP address. If a nic name is provided, the
                         first IP of that nic will be used. Use multiple -i for
-                        more links. Note: Only one link is allowed for the non
-                        knet transport type
+                        more links.
   -t, --transport TRANSPORT
-                        The transport mechanism. Allowed value is
-                        knet(kronosnet)/udpu(unicast)/udp(multicast). Default
-                        is knet
+                        The transport mechanism. Only knet is supported
   -A, --admin-ip IP     Configure IP address as an administration virtual IP
   -I, --ipv6            Configure corosync use IPv6
 
@@ -255,8 +252,7 @@ Network configuration:
   -i, --interface IF    Bind to IP address on interface IF. Allowed value is
                         nic name or IP address. If a nic name is provided, the
                         first IP of that nic will be used. Use multiple -i for
-                        more links. Note: Only one link is allowed for the non
-                        knet transport type
+                        more links.
 
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <host>)
