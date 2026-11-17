@@ -16,6 +16,7 @@ from . import config
 from . import options
 from . import userdir
 from . import utils
+from . import sh
 from .sh import ShellUtils
 from . import log
 
@@ -662,6 +663,37 @@ class RAInfo(object):
             rc |= sanity_check_op(op, op_dict)
         return rc
 
+    def _in_agent_list(self, agents: list[str]) -> bool:
+        ra_type = self.ra_type
+        if self.ra_class == "systemd":
+            ra_type = re.sub(r"^([^@]*@).+$", r"\1", ra_type.removesuffix(".service"))
+        return ra_type in agents
+
+    def missing_nodes(self) -> list[str]:
+        '''
+        Other cluster nodes on which this RA is not available.
+        Nodes that cannot be queried are reported and skipped.
+        '''
+        if self.ra_class not in ("ocf", "stonith", "systemd"):
+            return []
+        try:
+            nodes = utils.list_cluster_nodes_except_me()
+        except ValueError:
+            return []
+        spec = f"ocf:{self.ra_provider}" if self.ra_class == "ocf" else self.ra_class
+        cmd = f"crm_resource --list-agents {spec}"
+        missing = []
+        for node in nodes:
+            try:
+                rc, out, _ = sh.cluster_shell().get_rc_stdout_stderr_without_input(node, cmd)
+            except sh.Error as e:
+                self.warn(f"cannot check availability on {node}: {e}")
+                continue
+            if rc != 0:
+                self.warn(f"cannot check availability on {node}: '{cmd}' failed")
+            elif out and not self._in_agent_list(out.split()):
+                missing.append(node)
+        return missing
 
     def meta(self):
         '''
@@ -675,6 +707,9 @@ class RAInfo(object):
             l = self.meta_string.split('\n')
         elif self.ra_class in constants.meta_progs_20:
             l = prog_meta(self.ra_class)
+        elif self.ra_class == "systemd" and not self._in_agent_list(ra_types("systemd")):
+            # crm_resource returns stub meta-data for a unit that doesn't exist
+            return None
         else:
             l = ra_meta(self.ra_class, self.ra_type, self.ra_provider)
         if not l:

@@ -50,6 +50,7 @@ from .service_manager import ServiceManager
 from .sh import ShellUtils
 from .ui_node import NodeMgmt
 from .user_of_host import UserOfHost, UserNotFoundError
+from . import ra
 from . import sbd
 from . import watchdog
 import crmsh.healthcheck
@@ -289,6 +290,10 @@ class GlobalVariables(object):
                     utils.fatal(sbd.SBDManager.SBD_NOT_INSTALLED_MSG + f" on {node}")
                 if self.args.sbd_devices and not utils.package_is_installed("fence-agents-sbd", node):
                     utils.fatal(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG + f" on {node}")
+            if self.args.sbd_devices:
+                missing_nodes = ra.RAInfo("stonith", "fence_sbd").missing_nodes()
+                if missing_nodes:
+                    utils.fatal(f"Resource agent {sbd.SBDManager.SBD_RA} not found on node(s): {', '.join(missing_nodes)}")
 
             if not with_sbd_option and self.args.yes_to_all:
                 utils.fatal("Stage sbd should specify sbd device by -s or diskless sbd by -S option")
