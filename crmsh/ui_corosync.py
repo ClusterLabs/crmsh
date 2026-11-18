@@ -22,38 +22,6 @@ from .service_manager import ServiceManager
 logger = logging.getLogger(__name__)
 
 
-def _push_completer(args):
-    try:
-        n = utils.list_cluster_nodes()
-        n.remove(utils.this_node())
-        if args[-1] in n:
-            # continue complete
-            return [args[-1]]
-        for item in args:
-            if item in n:
-                n.remove(item)
-        return n
-    except:
-        n = []
-
-
-def _diff_nodes(args):
-    try:
-        if len(args) > 3:
-            return []
-        n = utils.list_cluster_nodes()
-        if args[-1] in n:
-            # continue complete
-            return [args[-1]]
-        for item in args:
-            if item in n:
-                # remove already complete item
-                n.remove(item)
-        return n
-    except:
-        return []
-
-
 @dataclasses.dataclass
 class LinkArgumentParser:
     linknumber: int = -1
@@ -214,10 +182,10 @@ class Link(command.UI):
             return False
 
 
-    @command.completer(completers.call(lambda: [
+    @command.completers(completers.call(lambda: [
         str(link.linknumber)
         for link in corosync.LinkManager.load_config_file().links()
-        if link and link.linknumber != 0
+        if link
     ]))
     def do_remove(self, context, linknumber: str):
         if not linknumber.isdecimal():
@@ -338,7 +306,11 @@ class Corosync(command.UI):
         return corosync.cfgtool('-R')[0] == 0
 
     @command.skill_level('administrator')
-    @command.completers_repeating(_push_completer)
+    @command.completers_repeating(
+        completers.exclude_completed(
+            completers.call(utils.list_cluster_nodes_except_me)
+        )
+    )
     def do_push(self, context, *nodes):
         '''
         Push corosync configuration to other cluster nodes.
@@ -351,14 +323,16 @@ class Corosync(command.UI):
         return corosync.push_configuration(nodes)
 
     @command.skill_level('administrator')
-    @command.completers(_push_completer)
+    @command.completers(completers.call(utils.list_cluster_nodes_except_me))
     def do_pull(self, context, node):
         '''
         Pull corosync configuration from another node.
         '''
         return corosync.pull_configuration(node)
 
-    @command.completers_repeating(_diff_nodes)
+    @command.completers_repeating(
+        completers.exclude_completed(completers.call(lambda: utils.list_cluster_nodes() or []))
+    )
     def do_diff(self, context, *nodes):
         '''
         Compare corosync configuration between nodes.

@@ -301,7 +301,9 @@ class NodeMgmt(command.UI):
         return known
 
     @command.wait
-    @command.completers(compl.nodes, compl.choice(['on', 'off']))
+    @command.completers_repeating(
+        compl.exclude_completed(compl.join(compl.nodes, compl.choice(['on', 'off'])))
+    )
     def do_standby(self, context, *args):
         """
         usage: standby [<node>...] [on|off] [<lifetime>]
@@ -446,7 +448,7 @@ class NodeMgmt(command.UI):
             logger.info("Setting standby=true on node %s", node)
 
     @command.wait
-    @command.completers(compl.standby_nodes)
+    @command.completers_repeating(compl.exclude_completed(compl.standby_nodes))
     def do_online(self, context, *args):
         """
         usage: online [<node>]
