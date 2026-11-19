@@ -1,109 +1,126 @@
 #!/usr/bin/env python3
+"""Preprocessor for crm.8.adoc that expands 'From Code' sections and include:: directives."""
 
-
+import argparse
+import io
+import os
 import re
-import shlex
+import subprocess
 import sys
 import typing
+
+TOOLCHAIN_LIB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib'))
+if TOOLCHAIN_LIB_DIR not in sys.path:
+    sys.path.insert(0, TOOLCHAIN_LIB_DIR)
+
+from help2adoc import generator
+from help2adoc import parser
 
 
 RE_FROM_CODE = re.compile(r'^\[\[([^,]+),[^,]*,From Code]]$')
 RE_TAG = re.compile('^cmdhelp\\.(.*)$')
 RE_SECTION_TITLE = re.compile('^=')
 RE_ANCHOR_OR_SECTION_TITLE=re.compile(r'^(?:\[\[.*]]$|=)')
+RE_INCLUDE_DIRECTIVE = re.compile(r'^include::(.*)\[]\s*$')
 
 TAG_EXCLUDES = {
     'cmdhelp.root.report',
 }
 
 
-def generate_makefile(stdin, stdout):
-    tags = list()
-    for line in stdin:
-        found = RE_FROM_CODE.match(line)
-        if found:
-            tag = found.group(1)
-            if tag in TAG_EXCLUDES:
-                continue
-            command = extract_command(tag)
-            tags.append(tag)
-            stdout.write(tag)
-            stdout.write('.txt:\n\t')
-            stdout.write(shlex.join(command))
-            stdout.write(' > "$@"\n\n')
-    end(tags, stdout)
-
-
-def extract_command(tag: str) -> typing.Sequence[str]:
+def extract_command(tag: str, crm_bin: str) -> typing.Sequence[str]:
     found = RE_TAG.match(tag)
     if not found:
         raise RuntimeError(f'Invalid tag {tag}')
-    args = ['crm']
+    args = [sys.executable, crm_bin]
     args.extend(found.group(1).split('.', 1))
     args.append('--help-without-redirect')
     return args
 
 
-def end(tags: typing.Sequence[str], stdout):
-    stdout.write(
-        '%.adoc: %.txt\n\thelp2adoc "$<" > "$*".adoc\n\n'
-    )
-    stdout.write(
-        '.PHONY: clean all\n\nclean:\n\t$RM *.txt *.adoc\n\nall: '
-    )
-    for tag in tags:
-        stdout.write(tag)
-        stdout.write('.adoc ')
-    stdout.write('\n\n')
+def convert_help_to_adoc(help_text: str, out: typing.TextIO):
+    lines = help_text.splitlines(keepends=True)
+    tokens = parser.LookAheadIterator(parser.lexer(iter(lines)))
+    generator.AsciiDocGenerator(out.write).parse_help(tokens)
+    token = tokens.lookahead()
+    if token is None:
+        return
+    epilog_start = token.lineno
+    out.write('....\n')
+    for line in lines[epilog_start:]:
+        out.write(line)
+        if not line.endswith('\n'):
+            out.write('\n')
+    out.write('....\n')
 
 
-def generate_include(stdin, stdout):
+def render_tag_adoc(tag: str, crm_bin: str, out: typing.TextIO):
+    cmd = extract_command(tag, crm_bin)
+    res = subprocess.run(cmd, stdout=subprocess.PIPE, text=True, check=True)
+    convert_help_to_adoc(res.stdout, out)
+    out.write('\n')
+
+
+def process_file(path: str, crm_bin: str, out: typing.TextIO):
+    base_dir = os.path.dirname(os.path.abspath(path))
     tag = None
     section_title = None
-    for line in stdin:
-        go_next_line = False
-        while not go_next_line:
-            match tag:
-                case None:
-                    # initial state
-                    found = RE_FROM_CODE.match(line)
-                    if found:
-                        found_tag = found.group(1)
-                        if found_tag not in TAG_EXCLUDES:
-                            tag = found_tag
-                    stdout.write(line)
-                    go_next_line = True
-                case _:
-                    # found a tag
-                    match section_title:
-                        case None:
-                            # waiting a section title
-                            found = RE_SECTION_TITLE.match(line)
-                            if found:
-                                section_title = line
-                                stdout.write(section_title)
-                                print(f'include::{tag}.adoc[]\n', file=stdout)
-                            break
-                        case _:
-                            # waiting for next section
-                            found = RE_ANCHOR_OR_SECTION_TITLE.match(line)
-                            if found:
-                                tag = None
-                                section_title = None
-                            else:
-                                go_next_line = True
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            include_match = RE_INCLUDE_DIRECTIVE.match(line)
+            if include_match and tag is None:
+                included_filepath = os.path.join(base_dir, include_match.group(1))
+                process_file(included_filepath, crm_bin, out)
+                continue
+
+            go_next_line = False
+            while not go_next_line:
+                match tag:
+                    case None:
+                        # initial state
+                        found = RE_FROM_CODE.match(line)
+                        if found:
+                            found_tag = found.group(1)
+                            if found_tag not in TAG_EXCLUDES:
+                                tag = found_tag
+                        out.write(line)
+                        go_next_line = True
+                    case _:
+                        # found a tag
+                        match section_title:
+                            case None:
+                                # waiting a section title
+                                found = RE_SECTION_TITLE.match(line)
+                                if found:
+                                    section_title = line
+                                    out.write(section_title)
+                                    render_tag_adoc(tag, crm_bin, out)
+                                break
+                            case _:
+                                # waiting for next section
+                                found = RE_ANCHOR_OR_SECTION_TITLE.match(line)
+                                if found:
+                                    tag = None
+                                    section_title = None
+                                else:
+                                    go_next_line = True
 
 
 def main():
-    if len(sys.argv) != 2:
-        print(f'Usage: {sys.argv[0]} gen-makefile|gen-include', file=sys.stderr)
-        return 1
-    match sys.argv[1]:
-        case 'gen-makefile':
-            generate_makefile(sys.stdin, sys.stdout)
-        case 'gen-include':
-            generate_include(sys.stdin, sys.stdout)
-    
+    ap = argparse.ArgumentParser(prog='adocxt')
+    ap.add_argument('--crm', required=True, help='Path to bin/crm script')
+    ap.add_argument('-o', '--output', help='Output file path (default: stdout)')
+    ap.add_argument('input', help='Input adoc file')
+    args = ap.parse_args()
+
+    buf = io.StringIO()
+    process_file(args.input, args.crm, buf)
+
+    if args.output:
+        with open(args.output, 'w', encoding='utf-8') as out_f:
+            out_f.write(buf.getvalue())
+    else:
+        sys.stdout.write(buf.getvalue())
 
 
 if __name__ == '__main__':

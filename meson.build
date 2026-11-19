@@ -97,26 +97,32 @@ meson.add_install_script(
 )
 
 # Process documentation
-make = find_program('make')
-sh = find_program('sh')
 a2x = find_program('a2x')
 asciidoc = find_program('asciidoc')
 
 env = environment()
-env.prepend('PATH', meson.project_source_root() / 'bin')
-env.prepend('PATH', meson.project_source_root() / 'doc/toolchain/bin')
 env.set('PYTHONPATH', meson.project_source_root())
 env.set('CRM_HELP_FILE', meson.project_source_root() / 'doc/crm.8.adoc')
 
 install_data('doc/crm.8.adoc', install_dir: datadir / 'crmsh')
-crm_8 = custom_target('crm_8',
+crm_8_aio_adoc = custom_target('crm_8_aio_adoc',
   input: ['doc/crm.8.adoc'],
-  output: ['crm.8'],
+  output: ['crm.8.aio.adoc'],
+  depend_files: ['doc/profiles.adoc', 'bin/crm'] + py_sources,
   command: [
-    sh, '-c',
-    'make -C "@0@/doc" all && cp "@0@/doc/generated-sources/crm.8" "@OUTPUT@"'.format(meson.project_source_root())
+    py,
+    meson.project_source_root() / 'doc/toolchain/bin/adocxt',
+    '--crm', meson.project_source_root() / 'bin/crm',
+    '-o', '@OUTPUT@',
+    '@INPUT@',
   ],
   env: env,
+)
+
+crm_8 = custom_target('crm_8',
+  input: [crm_8_aio_adoc],
+  output: ['crm.8'],
+  command: [a2x, '-f', 'manpage', '-D', '@OUTDIR@', '@INPUT@'],
   install: true,
   install_dir: get_option('mandir') / 'man8'
 )
