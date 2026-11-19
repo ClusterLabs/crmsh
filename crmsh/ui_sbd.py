@@ -236,7 +236,6 @@ class SBD(command.UI):
                 print(f"multipath checker_timeout     : {checker_timeout}")
         if storage_utils.is_scsi_device(dev):
             print(f"SCSI timeout                  : {storage_utils.get_scsi_timeout(dev)}")
-        print(f"SBD timeout io                : {sbd.SBDTimeout.get_sbd_timeout_io()}")
         print(f"SBD servant restart interval  : {sbd.SBDTimeout.get_sbd_servant_restart_interval()}")
 
     def _show_property(self) -> None:
