@@ -33,6 +33,7 @@ COROSYNC_CONF_TEMPLATE = """
 # For more details please see corosync.conf.5 man page
 totem {
     version: 2
+    secauth: on
 }
 
 quorum {

@@ -21,6 +21,8 @@ Feature: crmsh bootstrap process - init, join and remove
   Scenario: Init cluster service on node "hanode1", and join on node "hanode2"
     Then    Run "corosync-cmapctl|grep "votequorum.two_node .* = 1"" OK
     Then    Run "corosync-cmapctl|grep "votequorum.two_node .* = 1"" OK on "hanode2"
+    And     Run "grep 'secauth: on' /etc/corosync/corosync.conf" OK
+    And     Run "grep 'secauth: on' /etc/corosync/corosync.conf" OK on "hanode2"
 
   Scenario: Support --all or specific node to manage cluster and nodes
     When    Run "crm node standby --all" on "hanode1"
