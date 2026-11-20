@@ -268,6 +268,29 @@ class TestGlobalVariables(unittest.TestCase):
         ])
         mock_fatal.assert_called_once_with(sbd.SBDManager.FENCE_SBD_NOT_INSTALLED_MSG + " on node1")
 
+    @mock.patch('crmsh.utils.list_cluster_nodes')
+    @mock.patch('crmsh.utils.check_all_nodes_reachable')
+    @mock.patch('crmsh.utils.calculate_quorate_status')
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('crmsh.utils.package_is_installed')
+    @mock.patch('crmsh.ra.RAInfo.missing_nodes')
+    @mock.patch('crmsh.sbd.SBDUtils.verify_sbd_device')
+    def test_validate_sbd_option_fence_sbd_missing_on_nodes(self, mock_verify, mock_missing, mock_installed, mock_fatal, mock_quorate, mock_check_all, mock_list):
+        mock_quorate.return_value = True
+        mock_list.return_value = ["node1", "node2"]
+        mock_installed.return_value = True
+        mock_missing.return_value = ["node2"]
+        mock_fatal.side_effect = ValueError
+        args = crmsh.bootstrap.Arguments()
+        ctx = crmsh.bootstrap.GlobalVariables(args)
+        ctx.args.sbd_devices = ["/dev/sda1"]
+        ctx.args.stage = "sbd"
+
+        with self.assertRaises(ValueError):
+            ctx._validate_sbd_option()
+
+        mock_fatal.assert_called_once_with("Resource agent stonith:fence_sbd not found on node(s): node2")
+
     @mock.patch('crmsh.utils.fatal')
     @mock.patch('socket.gethostbyname')
     @mock.patch('crmsh.network_utils.InterfacesInfo.ip_in_local')

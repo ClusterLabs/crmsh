@@ -1592,6 +1592,11 @@ class CibPrimitive(CibObject):
                 return rc3
             ra_inst.error("no such resource agent")
             return utils.get_check_rc()
+        if xmlutil.is_live_cib() and not cib_factory.is_asymm_cluster():
+            missing_nodes = ra_inst.missing_nodes()
+            if missing_nodes:
+                ra_inst.error("not found on node(s): %s" % ", ".join(missing_nodes))
+                return utils.get_check_rc()
         actions = xmlutil.get_rsc_operations(r_node)
         default_timeout = get_default_timeout()
         rc2 = ra_inst.sanity_check_ops(self.obj_id, actions, default_timeout)
