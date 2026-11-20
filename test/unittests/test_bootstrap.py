@@ -1275,9 +1275,7 @@ class TestBootstrap(unittest.TestCase):
         mock_remove_db.assert_called_once_with()
 
     @mock.patch('crmsh.service_manager.ServiceManager.start_service')
-    @mock.patch('crmsh.qdevice.QDevice')
-    @mock.patch('crmsh.corosync.get_value')
-    @mock.patch('crmsh.utils.is_qdevice_tls_on')
+    @mock.patch('crmsh.bootstrap.retrieve_data')
     @mock.patch('crmsh.bootstrap.invoke')
     @mock.patch('crmsh.bootstrap.sync_file')
     @mock.patch('crmsh.corosync.conf')
@@ -1285,15 +1283,9 @@ class TestBootstrap(unittest.TestCase):
     @mock.patch('crmsh.corosync.is_unicast')
     @mock.patch('crmsh.log.LoggerUtils.status_long')
     def test_start_qdevice_on_join_node(self, mock_status_long, mock_is_unicast, mock_add_nodelist,
-            mock_conf, mock_csync2_update, mock_invoke, mock_qdevice_tls,
-            mock_get_value, mock_qdevice, mock_start_service):
+            mock_conf, mock_csync2_update, mock_invoke, mock_retrieve_data, mock_start_service):
         mock_is_unicast.return_value = False
-        mock_qdevice_tls.return_value = True
         mock_conf.return_value = "corosync.conf"
-        mock_get_value.return_value = "10.10.10.123"
-        mock_qdevice_inst = mock.Mock()
-        mock_qdevice.return_value = mock_qdevice_inst
-        mock_qdevice_inst.certificate_process_on_join = mock.Mock()
 
         bootstrap.start_qdevice_on_join_node("node2")
 
@@ -1303,10 +1295,6 @@ class TestBootstrap(unittest.TestCase):
         mock_conf.assert_called_once_with()
         mock_csync2_update.assert_called_once_with("corosync.conf")
         mock_invoke.assert_called_once_with("crm corosync reload")
-        mock_qdevice_tls.assert_called_once_with()
-        mock_get_value.assert_called_once_with("quorum.device.net.host")
-        mock_qdevice.assert_called_once_with("10.10.10.123", cluster_node="node2")
-        mock_qdevice_inst.certificate_process_on_join.assert_called_once_with()
         mock_start_service.assert_called_once_with("corosync-qdevice.service", enable=True)
 
     @mock.patch('crmsh.sh.ShellUtils.get_stdout_stderr')
