@@ -61,7 +61,7 @@ def manage_attr(cmd, attr_ext_commands, rsc, subcmd, attr, value):
         return False
 
 
-def ptestlike(simfun, def_verb, cmd, args):
+def run_simulate_cmd(simfun, def_verb, cmd, args):
     verbosity = def_verb  # default verbosity
     nograph = False
     scores = False
