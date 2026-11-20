@@ -124,16 +124,12 @@ def cmd_status(args):
 
 def cmd_verify(args):
     '''
-    Calls crm_verify -LV; ptest -L -VVVV
+    Calls crm_verify -LVVV; crm_simulate -LjV
     '''
     from . import config
-    if "ptest" in config.core.ptest:
-        cmd1 = "crm_verify -LVVV; %s -L -VVVV" % (config.core.ptest)
-    else:
-        cmd1 = "crm_verify -LVVV; %s -LjV" % (config.core.ptest)
-
-        if "scores" in args:
-            cmd1 += " -s"
+    cmd1 = "crm_verify -LVVV; %s -LjV" % (config.core.ptest)
+    if "scores" in args:
+        cmd1 += " -s"
 
     cmd1 = utils.add_sudo(cmd1)
     rc, s, e = ShellUtils().get_stdout_stderr(cmd1)

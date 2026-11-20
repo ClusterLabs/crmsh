@@ -13,7 +13,7 @@
 ; add_quotes = yes
 ; manage_children = ask
 ; debug = no
-; ptest = ptest, crm_simulate
+; ptest = crm_simulate
 ; dotty = dotty
 ; dot = dot
 ; ignore_missing_metadata = no
