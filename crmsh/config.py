@@ -249,7 +249,6 @@ DEFAULTS = {
         'add_quotes': opt_boolean('yes'),
         'manage_children': opt_choice('ask', ('ask', 'never', 'always')),
         'debug': opt_boolean('no'),
-        'ptest': opt_program('', ('ptest', 'crm_simulate')),
         'dotty': opt_program('', ('dotty',)),
         'dot': opt_program('', ('dot',)),
         'ignore_missing_metadata': opt_boolean('no'),

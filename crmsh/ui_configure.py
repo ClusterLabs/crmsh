@@ -541,19 +541,7 @@ class CibConfig(command.UI):
         # immediately so that tab completion works
 
     def requires(self):
-        if not cib_factory.initialize(no_side_effects=True):
-            return True
-        # see the configure ptest/simulate command
-        has_ptest = utils.is_program('ptest')
-        has_simulate = utils.is_program('crm_simulate')
-        if not has_ptest:
-            constants.simulate_programs["ptest"] = "crm_simulate"
-        if not has_simulate:
-            constants.simulate_programs["simulate"] = "ptest"
-        if not (has_ptest or has_simulate):
-            logger.warning("neither ptest nor crm_simulate exist, check your installation")
-            constants.simulate_programs["ptest"] = ""
-            constants.simulate_programs["simulate"] = ""
+        cib_factory.initialize(no_side_effects=True)
         return True
 
     @command.name('_test')
@@ -957,17 +945,12 @@ class CibConfig(command.UI):
                 return
         cib_factory.refresh()
 
-    @command.alias('simulate')
+    @command.alias('ptest')
     @command.completers(compl.choice(['nograph']))
-    def do_ptest(self, context, *args):
-        "usage: ptest [nograph] [v...] [scores] [utilization] [actions]"
-        # use ptest/crm_simulate depending on which command was
-        # used
-        config.core.ptest = constants.simulate_programs[context.get_command_name()]
-        if not config.core.ptest:
-            return False
+    def do_simulate(self, context, *args):
+        "usage: simulate [nograph] [v...] [scores] [utilization] [actions]"
         set_obj = cibconfig.mkset_obj("xml")
-        return ui_utils.ptestlike(set_obj.ptest, 'vv', context.get_command_name(), args)
+        return ui_utils.run_simulate_cmd(set_obj.simulate, 'vv', context.get_command_name(), args)
 
     def _commit(self, force=False, replace=False):
         if not cib_factory.has_cib_changed():
