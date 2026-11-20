@@ -247,10 +247,6 @@ class TestTaskCheck(TestCase):
         mock_myformatter.side_effect = [myformatter_inst1, myformatter_inst2]
 
         self.task_check_inst.messages = [("info", "info message"), ("warn", "warn message")]
-        utils.CGREEN = ""
-        utils.CEND = ""
-        utils.CRED = ""
-
         self.task_check_inst.to_stdout()
 
         mock_block_log_filter.assert_called_once_with(log.LOGFILE_FILTER)

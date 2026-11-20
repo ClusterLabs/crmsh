@@ -26,6 +26,7 @@ from crmsh import iproute2
 from crmsh import parallax
 from crmsh import service_manager
 from crmsh import sh
+from crmsh import term
 from crmsh import utils
 from crmsh import xmlutil
 from crmsh.prun import prun
@@ -116,7 +117,7 @@ class CheckResultInteractiveHandler(CheckResultHandler):
         self.need_auto_fix = False
 
     def log_info(self, fmt: str, *args):
-        self.write_in_color(sys.stdout, constants.GREEN, '[INFO] ')
+        self.write_in_color(sys.stdout, 'green', '[INFO] ')
         print(fmt % args)
 
     def handle_problem(self, need_auto_fix: bool, is_blocker: bool, level:int, title: str, detail: typing.Iterable[str]):
@@ -125,9 +126,9 @@ class CheckResultInteractiveHandler(CheckResultHandler):
         self.need_auto_fix = self.need_auto_fix or need_auto_fix
         match level:
             case self.LEVEL_ERROR:
-                self.write_in_color(sys.stdout, constants.YELLOW, '[FAIL] ')
+                self.write_in_color(sys.stdout, 'yellow', '[FAIL] ')
             case self.LEVEL_WARN:
-                self.write_in_color(sys.stdout, constants.YELLOW, '[WARN] ')
+                self.write_in_color(sys.stdout, 'yellow', '[WARN] ')
         print(title)
         for line in detail:
             sys.stdout.write('       ')
@@ -135,12 +136,7 @@ class CheckResultInteractiveHandler(CheckResultHandler):
 
     @staticmethod
     def write_in_color(f, color: str, text: str):
-        if f.isatty():
-            f.write(color)
-            f.write(text)
-            f.write(constants.END)
-        else:
-            f.write(text)
+        f.write(term.colorize(color, text) if f.isatty() else text)
 
     def end(self):
         sys.stdout.write('\n')
@@ -193,18 +189,18 @@ def check(args: typing.Sequence[str]) -> int:
         print('****** summary ******')
         match ret:
             case CheckReturnCode.ALREADY_MIGRATED:
-                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, 'green', '[INFO]')
                 sys.stdout.write(' This cluster works on SLES 16. No migration is needed.\n')
             case CheckReturnCode.PASS_NO_AUTO_FIX:
-                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, 'green', '[PASS]')
                 sys.stdout.write(' This cluster works on SLES 16 with some warnings. Please fix the remaining warnings manually.\n')
             case CheckReturnCode.PASS_NEED_AUTO_FIX:
-                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[INFO]')
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, 'green', '[INFO]')
                 sys.stdout.write(' Please run "crm cluster health sles16 --fix" on on any one of above nodes.\n')
-                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.GREEN, '[PASS]')
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, 'green', '[PASS]')
                 sys.stdout.write(' This cluster is good to migrate to SLES 16.\n')
             case _:
-                CheckResultInteractiveHandler.write_in_color(sys.stdout, constants.RED, '[FAIL]')
+                CheckResultInteractiveHandler.write_in_color(sys.stdout, 'red', '[FAIL]')
                 sys.stdout.write(' The pacemaker cluster stack can not migrate to SLES 16.\n')
     return ret
 
@@ -266,7 +262,7 @@ def check_remote():
         match result:
             case prun.SSHError() as e:
                 handler.write_in_color(
-                    sys.stdout, constants.YELLOW,
+                    sys.stdout, 'yellow',
                     str(e)
                 )
                 sys.stdout.write('\n')
@@ -277,7 +273,7 @@ def check_remote():
                 except (UnicodeDecodeError, json.JSONDecodeError):
                     print(result.stdout.decode('utf-8', 'backslashreplace'))
                     handler.write_in_color(
-                        sys.stderr, constants.YELLOW,
+                        sys.stderr, 'yellow',
                         result.stderr.decode('utf-8', 'backslashreplace')
                     )
                     sys.stdout.write('\n')

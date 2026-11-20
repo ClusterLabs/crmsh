@@ -10,17 +10,12 @@ from . import config
 from crmsh import ra
 from crmsh import log
 from crmsh.sh import ShellUtils
-from crmsh import constants
+from crmsh import term
 from crmsh import xmlutil
 
 
 logger = logging.getLogger(__name__)
 
-
-CRED = constants.RED
-CYELLOW = constants.YELLOW
-CGREEN = constants.GREEN
-CEND = constants.END
 
 LEVEL = {
     "info": logging.INFO,
@@ -38,9 +33,9 @@ class MyLoggingFormatter(logging.Formatter):
     FORMAT_NOFLUSH = "%(timestamp)s%(levelname)s: %(message)s"
 
     COLORS = {
-        'WARNING': CYELLOW,
-        'INFO': CGREEN,
-        'ERROR': CRED
+        'WARNING': 'yellow',
+        'INFO': 'green',
+        'ERROR': 'red',
     }
 
     def __init__(self, flush=True):
@@ -50,8 +45,7 @@ class MyLoggingFormatter(logging.Formatter):
     def format(self, record):
         levelname = record.levelname
         if levelname in self.COLORS:
-            levelname_color = self.COLORS[levelname] + levelname + CEND
-            record.levelname = levelname_color
+            record.levelname = term.colorize(self.COLORS[levelname], levelname)
         return logging.Formatter.format(self, record)
 
 
@@ -215,7 +209,7 @@ def warning_ask(warn_string):
         return False
         
     try:
-        ans = input(CYELLOW + warn_string + CEND)
+        ans = input(term.colorize('yellow', warn_string))
     except EOFError:
         return False
     return True if ans == "Yes" else False

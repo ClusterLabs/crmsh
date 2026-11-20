@@ -12,6 +12,7 @@ from contextlib import contextmanager
 
 from . import options
 from . import constants
+from . import term
 
 DEBUG2 = logging.DEBUG - 1
 CRMSH_LOG_FILE = "/var/log/crmsh/crmsh.log"
@@ -150,27 +151,25 @@ class NoBacktraceFormatter(logging.Formatter):
 class ConsoleColoredFormatter(NoBacktraceFormatter):
     """Print levelname with colors and suppress backtrace."""
     COLORS = {
-        logging.WARNING: constants.YELLOW,
-        logging.INFO: constants.GREEN,
-        logging.ERROR: constants.RED
+        logging.WARNING: "yellow",
+        logging.INFO: "green",
+        logging.ERROR: "red",
     }
     FORMAT = "%(levelname)s: %(message)s"
 
     def __init__(self, fmt=None):
-        super().__init__(fmt)
-        if not fmt:
-            fmt = self.FORMAT
-        self._colored_formatter: typing.Mapping[int, logging.Formatter] = {
-            level: NoBacktraceFormatter(fmt.replace('%(levelname)s', f'{color}%(levelname)s{constants.END}'))
-            for level, color in self.COLORS.items()
-        }
+        super().__init__(fmt or self.FORMAT)
 
     def format(self, record):
-        colored_formatter = self._colored_formatter.get(record.levelno)
-        if colored_formatter is not None:
-            return colored_formatter.format(record)
-        else:
+        color = self.COLORS.get(record.levelno)
+        if color is None:
             return super().format(record)
+        levelname = record.levelname
+        record.levelname = term.colorize(color, levelname)
+        try:
+            return super().format(record)
+        finally:
+            record.levelname = levelname
 
 
 class LeveledFormatter(logging.Formatter):
@@ -568,7 +567,7 @@ def setup_logging(only_help=False):
         with open(CRMSH_LOG_FILE, 'a'):
             pass
     except (PermissionError, FileNotFoundError) as e:
-        print('{}WARNING:{} Failed to open log file: {}'.format(constants.YELLOW, constants.END, e), file=sys.stderr)
+        print('WARNING: Failed to open log file: {}'.format(e), file=sys.stderr)
         LOGGING_CFG["handlers"]["file"] = {'class': 'logging.NullHandler'}
     logging.addLevelName(DEBUG2, "DEBUG2")
     if os.environ.get('CRMSH_REGRESSION_TEST'):

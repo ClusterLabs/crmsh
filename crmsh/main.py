@@ -405,11 +405,11 @@ def run():
             logger_utils.reset_lineno()
             options.batch = True
         user_args = parse_options()
+        term.init()
         if not _init_shadow_cib(context):
             return 1
         if config.core.debug:
             logger.debug(utils.debug_timestamp())
-        term.init()
         if options.profile:
             return profile_run(context, user_args)
         else:
