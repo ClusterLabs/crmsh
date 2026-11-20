@@ -33,6 +33,7 @@ COROSYNC_CONF_TEMPLATE = """
 # For more details please see corosync.conf.5 man page
 totem {
     version: 2
+    secauth: on
 }
 
 quorum {
@@ -706,11 +707,6 @@ class Link:
     knet_ping_precision: typing.Optional[int] = None
     knet_pong_count: typing.Optional[int] = None
     knet_transport: typing.Optional[str] = None
-    # UDP only
-    # bindnet_addr: typing.Optional[str] = None
-    # broadcast: typing.Optional[bool] = None
-    # mcastaddr: typing.Optional[str] = None
-    # ttl: typing.Optional[int] = None
 
     def load_options(self, options: dict[str, str]):
         for field in dataclasses.fields(self):

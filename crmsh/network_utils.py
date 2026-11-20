@@ -160,14 +160,6 @@ class IP(object):
         return self.ip_address.version
 
     @classmethod
-    def is_mcast(cls, addr):
-        """
-        Check whether the address is multicast address
-        """
-        cls_inst = cls(addr)
-        return cls_inst.ip_address.is_multicast
-
-    @classmethod
     def is_ipv6(cls, addr):
         """
         Check whether the address is IPV6 address
@@ -397,10 +389,6 @@ class BootstrapValidation(object):
         if self.value in self.prev_value_list:
             raise ValueError("Already in use: {}".format(self.value))
 
-    def _is_mcast_addr(self):
-        if not IP.is_mcast(self.value):
-            raise ValueError("{} is not multicast address".format(self.value))
-
     def _is_local_addr(self, local_addr_list):
         if self.value not in local_addr_list:
             raise ValueError("Address must be a local address (one of {})".format(local_addr_list))
@@ -412,19 +400,9 @@ class BootstrapValidation(object):
             raise ValueError("Valid port range should be 1025-65535")
 
     @classmethod
-    def valid_mcast_address(cls, addr, prev_value_list=[]):
-        cls_inst = cls(addr, prev_value_list)
-        cls_inst._is_mcast_addr()
-
-    @classmethod
     def valid_ucast_ip(cls, addr, local_addr_list, prev_value_list=[]):
         cls_inst = cls(addr, prev_value_list)
         cls_inst._is_local_addr(local_addr_list)
-
-    @classmethod
-    def valid_mcast_ip(cls, addr, local_addr_list, network_list, prev_value_list=[]):
-        cls_inst = cls(addr, prev_value_list)
-        cls_inst._is_local_addr(local_addr_list + network_list)
 
     @classmethod
     def valid_port(cls, port, prev_value_list=[]):

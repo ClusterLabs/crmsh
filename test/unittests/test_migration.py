@@ -216,3 +216,62 @@ class TestDeprecatedCibProperties(unittest.TestCase):
         mock_service_is_active.return_value = False
         migration.migrate_deprecated_cib_properties()
         mock_translator.assert_not_called()
+
+
+class TestCheckUnsupportedCorosyncTransport(unittest.TestCase):
+    def setUp(self):
+        self._handler = mock.Mock(migration.CheckResultHandler)
+        self._handler.LEVEL_ERROR = migration.CheckResultHandler.LEVEL_ERROR
+        self._handler.LEVEL_WARN = migration.CheckResultHandler.LEVEL_WARN
+
+    def test_check_transport_knet(self):
+        dom = {'totem': {'transport': 'knet'}}
+        migration._check_unsupported_corosync_transport(self._handler, dom)
+        self._handler.handle_problem.assert_not_called()
+
+    def test_check_transport_udpu(self):
+        dom = {'totem': {'transport': 'udpu'}}
+        migration._check_unsupported_corosync_transport(self._handler, dom)
+        self._handler.handle_problem.assert_called_once_with(
+            True, False, migration.CheckResultHandler.LEVEL_ERROR,
+            'Corosync transport "udpu" is removed in corosync 3. Please use knet.',
+            [],
+        )
+
+    def test_check_transport_udp(self):
+        dom = {'totem': {'transport': 'udp'}}
+        migration._check_unsupported_corosync_transport(self._handler, dom)
+        self._handler.handle_problem.assert_called_once_with(
+            True, False, migration.CheckResultHandler.LEVEL_ERROR,
+            'Corosync transport "udp" is removed in corosync 3. Please use knet.',
+            [],
+        )
+
+    def test_check_transport_none_corosync2_multicast(self):
+        dom = {'totem': {'interface': [{'bindnetaddr': '192.168.1.0'}]}}
+        migration._check_unsupported_corosync_transport(self._handler, dom)
+        self._handler.handle_problem.assert_called_once_with(
+            True, False, migration.CheckResultHandler.LEVEL_ERROR,
+            'Corosync transport "udp" is removed in corosync 3. Please use knet.',
+            [],
+        )
+
+
+class TestMigrateTransport(unittest.TestCase):
+    def test_migrate_transport_knet(self):
+        dom = {'totem': {'transport': 'knet'}}
+        migration.migrate_transport(dom)
+        self.assertEqual('knet', dom['totem']['transport'])
+
+    def test_migrate_transport_udpu(self):
+        dom = {
+            'totem': {
+                'transport': 'udpu',
+                'interface': [{'ringnumber': 0, 'mcastport': 5405, 'ttl': 1, 'bindnetaddr': '10.0.0.1'}]
+            },
+            'quorum': {'expected_votes': 2}
+        }
+        migration.migrate_transport(dom)
+        self.assertEqual('knet', dom['totem']['transport'])
+        self.assertEqual({'linknumber': 0, 'mcastport': 5405}, dom['totem']['interface'][0])
+        self.assertNotIn('expected_votes', dom['quorum'])

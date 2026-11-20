@@ -371,12 +371,13 @@ def _check_unsupported_corosync_transport(handler: CheckResultHandler, dom):
     if transport is None:
         try:
             dom['totem']['interface'][0]['bindnetaddr']
+            transport = 'udp'
         except KeyError:
             # looks like a corosync 3 config
             return
     handler.handle_problem(
-        True, False, handler.LEVEL_WARN,
-        f'Corosync transport "{transport}" is deprecated in corosync 3. Please use knet.', [],
+        True, False, handler.LEVEL_ERROR,
+        f'Corosync transport "{transport}" is removed in corosync 3. Please use knet.', [],
     )
 
 
@@ -436,7 +437,7 @@ def migrate_transport(dom):
                 migrate_multicast(dom)
             else:
                 # looks like a corosync 3 config
-                pass
+                dom['totem']['transport'] = 'knet'
 
 
 def migrate_udpu(dom):

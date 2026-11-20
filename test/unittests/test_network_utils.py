@@ -112,14 +112,6 @@ class TestIP(unittest.TestCase):
         self.assertEqual(res, mock_ip_address_inst.version)
         mock_ip_address.assert_called_once_with()
 
-    @mock.patch('crmsh.network_utils.IP.ip_address', new_callable=mock.PropertyMock)
-    def test_is_mcast(self, mock_ip_address):
-        mock_ip_address_inst = mock.Mock(is_multicast=False)
-        mock_ip_address.return_value = mock_ip_address_inst
-        res = network_utils.IP.is_mcast("10.10.10.1")
-        self.assertEqual(res, False)
-        mock_ip_address.assert_called_once_with()
-
     @mock.patch('crmsh.network_utils.IP.version', new_callable=mock.PropertyMock)
     def test_is_ipv6(self, mock_version):
         mock_version.return_value = 4
