@@ -32,6 +32,20 @@ from crmsh import qdevice
 from crmsh import sbd
 
 
+def test_profiles_cannot_override_secauth(tmp_path):
+    config_file = tmp_path / "corosync.conf"
+    config_file.write_text(bootstrap.corosync.COROSYNC_CONF_TEMPLATE)
+    profiles = {"corosync.totem.secauth": "off", "corosync.totem.token": 5000}
+
+    with mock.patch.object(bootstrap, "_global_variables", mock.Mock(profiles_dict=profiles)), \
+            mock.patch.object(bootstrap.corosync, "conf", return_value=str(config_file)):
+        bootstrap.adjust_corosync_parameters_according_to_profiles()
+
+    config = bootstrap.corosync.ConfParser(config_file=str(config_file))
+    assert config.get("totem.secauth") == "on"
+    assert config.get("totem.token") == "5000"
+
+
 class TestGlobalVariables(unittest.TestCase):
     """
     Unitary tests for crmsh.bootstrap.GlobalVariables

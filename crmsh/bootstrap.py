@@ -1292,7 +1292,9 @@ def adjust_corosync_parameters_according_to_profiles():
         return
     for k, v in _global_variables.profiles_dict.items():
         # Format like: corosync.totem.token: 5000
-        if k.startswith("corosync."):
+        if k == "corosync.totem.secauth":
+            logger.warning("Ignoring profile setting %s: secauth is required", k)
+        elif k.startswith("corosync."):
             corosync.set_value('.'.join(k.split('.')[1:]), v)
 
 
