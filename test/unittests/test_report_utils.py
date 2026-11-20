@@ -552,6 +552,18 @@ Legacy 003-10-11T22:14:15.003Z log data log
         self.assertEqual(out, "")
         mock_diff.assert_called_once_with("/opt/workdir/node1/file1", "/opt/workdir/node2/file1")
 
+    @mock.patch('crmsh.report.utils.diff_check')
+    def test_do_compare_middle_node_differs(self, mock_diff):
+        mock_ctx_inst = mock.Mock(work_dir="/opt/workdir", node_list=["node1", "node2", "node3"])
+        mock_diff.side_effect = [(1, "diff out"), (0, "")]
+        rc, out = utils.do_compare(mock_ctx_inst, "file1")
+        self.assertEqual(rc, 1)
+        self.assertEqual(out, "diff out\n")
+        mock_diff.assert_has_calls([
+            mock.call("/opt/workdir/node1/file1", "/opt/workdir/node2/file1"),
+            mock.call("/opt/workdir/node1/file1", "/opt/workdir/node3/file1"),
+        ])
+
     @mock.patch('os.path.isfile')
     def test_diff_check_return(self, mock_isfile):
         mock_isfile.return_value = False
@@ -569,6 +581,27 @@ Legacy 003-10-11T22:14:15.003Z log data log
         rc, out = utils.diff_check("/opt/node1/cib.xml", "/opt/node2/cib.xml")
         self.assertEqual(rc, 0)
         self.assertEqual(out, "")
+
+    @mock.patch('crmsh.report.utils.txt_diff')
+    @mock.patch('os.path.isfile')
+    def test_diff_check_crm_mon(self, mock_isfile, mock_txt_diff):
+        mock_isfile.return_value = True
+        mock_txt_diff.return_value = (0, "")
+        rc, out = utils.diff_check("/opt/node1/crm_mon.txt", "/opt/node2/crm_mon.txt")
+        self.assertEqual(rc, 0)
+        mock_txt_diff.assert_called_once_with(
+            "/opt/node1/crm_mon.txt", "/opt/node2/crm_mon.txt", constants.CRM_MON_VOLATILE_LINES
+        )
+
+    @mock.patch('crmsh.report.utils.ShellUtils')
+    def test_txt_diff_ignore_regex(self, mock_run):
+        mock_run_inst = mock.Mock()
+        mock_run.return_value = mock_run_inst
+        mock_run_inst.get_stdout_stderr.return_value = (0, "", None)
+        utils.txt_diff("txt1", "txt2", ["^ *\\* Last updated:", "<a b>"])
+        mock_run_inst.get_stdout_stderr.assert_called_once_with(
+            "diff -bBu -I '^ *\\* Last updated:' -I '<a b>' txt1 txt2"
+        )
 
     @mock.patch('crmsh.report.utils.ShellUtils')
     def test_txt_diff(self, mock_run):
@@ -597,23 +630,6 @@ Legacy 003-10-11T22:14:15.003Z log data log
         self.assertEqual(rc, 0)
         self.assertEqual(out, "")
         mock_run_inst.get_stdout_stderr.assert_called_once_with("crm_diff -c -n /opt/node1/cib.xml -o /opt/node2/cib.xml")
-
-    @mock.patch('os.symlink')
-    @mock.patch('shutil.move')
-    @mock.patch('os.remove')
-    @mock.patch('os.path.isfile')
-    def test_consolidate(self, mock_isfile, mock_remove, mock_move, mock_symlink):
-        mock_isfile.side_effect = [True, False]
-        mock_ctx_inst = mock.Mock(node_list=["node1", "node2"], work_dir="/opt/workdir")
-        utils.consolidate(mock_ctx_inst, "target_file")
-        mock_isfile.assert_has_calls([
-            mock.call("/opt/workdir/target_file"),
-            mock.call("/opt/workdir/target_file")
-        ])
-        mock_symlink.assert_has_calls([
-            mock.call('../target_file', '/opt/workdir/node1/target_file'),
-            mock.call('../target_file', '/opt/workdir/node2/target_file')
-        ])
 
     @mock.patch('crmsh.report.utils.Sanitizer')
     def test_do_sanitize(self, mock_sanitizer):
@@ -709,7 +725,7 @@ Legacy 003-10-11T22:14:15.003Z log data log
     @mock.patch('crmsh.utils.str2file')
     @mock.patch('crmsh.report.utils.extract_critical_log')
     @mock.patch('crmsh.report.utils.check_collected_files')
-    @mock.patch('crmsh.report.utils.compare_and_consolidate_files')
+    @mock.patch('crmsh.report.utils.compare_files')
     @mock.patch('glob.glob')
     def test_analyze(self, mock_glob, mock_compare, mock_check_collected, mock_extract, mock_str2file):
         mock_compare.return_value = "data"
@@ -719,14 +735,13 @@ Legacy 003-10-11T22:14:15.003Z log data log
         utils.analyze(mock_ctx_inst)
         mock_str2file.assert_called_once_with("data", f"/opt/work_dir/{constants.ANALYSIS_F}")
 
-    @mock.patch('crmsh.report.utils.consolidate')
     @mock.patch('crmsh.report.utils.do_compare')
     @mock.patch('glob.glob')
-    def test_compare_and_consolidate_files(self, mock_glob, mock_compare, mock_consolidate):
+    def test_compare_files(self, mock_glob, mock_compare):
         mock_ctx_inst = mock.Mock(work_dir="/opt/work_dir")
         mock_glob.side_effect = [False, True, True, True, True]
         mock_compare.side_effect = [(0, ""), (0, ""), (0, ""), (0, "")]
-        res = utils.compare_and_consolidate_files(mock_ctx_inst)
+        res = utils.compare_files(mock_ctx_inst)
         self.assertEqual(f"Diff {constants.MEMBERSHIP_F}... no {constants.MEMBERSHIP_F} found in /opt/work_dir\nDiff {constants.CRM_MON_F}... OK\nDiff {constants.COROSYNC_F}... OK\nDiff {constants.SYSINFO_F}... OK\nDiff {constants.CIB_F}... OK\n\n", res)
 
     @mock.patch('crmsh.utils.read_from_file')
