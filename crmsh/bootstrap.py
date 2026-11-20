@@ -2389,6 +2389,16 @@ def remove_qdevice() -> None:
         return
 
     utils.check_all_nodes_reachable("removing QDevice from the cluster")
+
+    if not crmsh.options.force and sbd.SBDUtils.is_using_diskless_sbd():
+        quorum_votes_dict = utils.get_quorum_votes_dict()
+        expected_votes = int(quorum_votes_dict["Expected"])
+        total_votes = int(quorum_votes_dict["Total"])
+        if not utils.calculate_quorate_status(expected_votes, total_votes - 1):
+            logger.error("Removing QDevice will cause the cluster to lose quorum and the remaining "
+                         "diskless SBD node(s) will fence themselves. Pass -F/--force to proceed.")
+            return
+
     qdevice_reload_policy = qdevice.evaluate_qdevice_quorum_effect(qdevice.QDEVICE_REMOVE)
     if qdevice_reload_policy == qdevice.QdevicePolicy.QDEVICE_RESTART_LATER:
         with utils.leverage_maintenance_mode() as enabled:

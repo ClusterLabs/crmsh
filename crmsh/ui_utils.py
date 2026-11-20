@@ -6,6 +6,7 @@ import re
 import inspect
 from . import utils
 from . import log
+from . import constants
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 
@@ -165,10 +166,10 @@ def validate_arguments(f, args, nskip=0):
                          (mknamed(), max_args-nskip, len(args)-nskip))
 
 
-def parse_and_validate_node_args(command_name, *args) -> tuple[list[str], bool]:
+def parse_and_validate_node_args(command_name, *args) -> tuple[list[str], bool, bool]:
     '''
     Parses option for node-related commands
-    Then validates and returns the reachable node list and now flag
+    Then validates and returns the reachable node list, now flag and force flag
     '''
     action_target = "node" if command_name in ["standby", "online"] else "cluster service"
     action = f"{command_name} {action_target}"
@@ -204,6 +205,9 @@ future release. Use `crm node standby [<node>] off` instead."""
     if command_name in ["enable", "disable"]:
         help_str = "start" if command_name == "enable" else "stop"
         parser.add_argument("--now", action="store_true", dest="now", help=f"To {help_str} cluster service immediately")
+    if command_name == "stop":
+        parser.add_argument("-F", "--force", dest="force", action="store_true", default=False,
+                            help=constants.FORCE_HELP)
 
     options, args = parser.parse_known_args(args)
     if options.help:
@@ -217,4 +221,4 @@ future release. Use `crm node standby [<node>] off` instead."""
     include_remote = command_name in ["standby", "online"]
     nodes = utils.validate_and_get_reachable_nodes(args, options.all, include_remote)
 
-    return nodes, getattr(options, "now", False)
+    return nodes, getattr(options, "now", False), getattr(options, "force", False)
