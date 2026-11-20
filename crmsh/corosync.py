@@ -370,7 +370,7 @@ def push_configuration(nodes):
     '''
     Push the local configuration to the list of remote nodes
     '''
-    return utils.cluster_copy_file(conf(), nodes)
+    return utils.cluster_copy_path(conf(), nodes)
 
 
 def pull_configuration(from_node):
