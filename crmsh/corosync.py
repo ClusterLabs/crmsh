@@ -54,14 +54,6 @@ def is_using_ipv6() -> bool:
     return res and res == "ipv6"
 
 
-def get_link_number() -> int:
-    link_num = 1
-    for key, value in ConfParser.get_value("nodelist.node").items():
-        if re.search("ring[1-7]_addr", key) and value:
-            link_num += 1
-    return link_num
-
-
 def is_qdevice_configured() -> bool:
     return get_value("quorum.device.model") == "net"
 
@@ -285,6 +277,25 @@ def get_values(path):
     return ConfParser.get_values(path)
 
 
+def _node_link_addrs(node: dict) -> dict[int, str]:
+    """
+    Get the ringX_addr of a nodelist node, as a mapping of linknumber->addr.
+    """
+    return {i: node[f'ring{i}_addr'] for i in range(KNET_LINK_NUM_LIMIT) if f'ring{i}_addr' in node}
+
+
+def get_first_ring_addresses() -> list[str]:
+    """
+    Get the lowest-numbered ringX_addr of each node in nodelist.
+    Nodes without any ringX_addr are skipped.
+    """
+    return [
+        link_addrs[min(link_addrs)]
+        for link_addrs in map(_node_link_addrs, get_values("nodelist.node"))
+        if link_addrs
+    ]
+
+
 def _get_local_node_ring_addresses() -> list[str]:
     """
     Get configured ring[0-7]_addr entries for local node from corosync.conf.
@@ -326,13 +337,7 @@ def _get_local_node_ring_addresses() -> list[str]:
     if not target_node or not isinstance(target_node, dict):
         return []
 
-    ring_addrs = []
-    for i in range(8):
-        key = f"ring{i}_addr"
-        if key in target_node and target_node[key]:
-            ring_addrs.append(target_node[key])
-
-    return ring_addrs
+    return list(_node_link_addrs(target_node).values())
 
 
 def get_corosync_interfaces() -> list[str]:
@@ -389,15 +394,17 @@ def find_configured_ip(ip_list):
         raise IPAlreadyConfiguredError("IP {} was already configured".format(','.join(configured_ip)))
 
 
-def add_node_config(ip_list: typing.List[str]) -> None:
+def add_node_config(link_addrs: typing.Mapping[int, str]) -> None:
     """
     Add nodelist in corosync.conf
+
+    link_addrs: a mapping of linknumber->addr
     """
-    find_configured_ip(ip_list)
+    find_configured_ip(list(link_addrs.values()))
     inst = ConfParser()
     node_index = len(inst.get_all("nodelist.node"))
-    for i, addr in enumerate(ip_list):
-        inst.set("nodelist.node.ring{}_addr".format(i), addr, node_index)
+    for linknumber, addr in link_addrs.items():
+        inst.set("nodelist.node.ring{}_addr".format(linknumber), addr, node_index)
     inst.set("nodelist.node.name", utils.this_node(), node_index)
     inst.set("nodelist.node.nodeid", get_free_nodeid(), node_index)
     inst.save()
@@ -439,12 +446,13 @@ def del_node(addrs: list[str]) -> bool:
     '''
     try:
         inst = ConfParser()
-        addr_list = inst.get_all("nodelist.node.ring0_addr")
-        index = -1
-        for addr in addrs:
-            if addr in addr_list:
-                index = addr_list.index(addr)
-                break
+        index = next(
+            (
+                i for i, node in enumerate(inst.get_all("nodelist.node"))
+                if any(addr in addrs for addr in _node_link_addrs(node).values())
+            ),
+            -1,
+        )
         if index == -1:
             return False
         inst.remove("nodelist.node", index)
@@ -776,6 +784,14 @@ class LinkManager:
             corosync_config_format.DomSerializer(dom, f)
             os.fchmod(f.fileno(), file_mode)
 
+    def link_numbers(self) -> list[int]:
+        """Returns the numbers of the existing links, according to the first node in nodelist.
+        Unlike links(), it does not need the node names, so the CIB is never queried."""
+        try:
+            return list(_node_link_addrs(self._config['nodelist']['node'][0]))
+        except (KeyError, IndexError):
+            return []
+
     def totem_transport(self):
         try:
             return self._config['totem']['transport']
@@ -797,11 +813,8 @@ class LinkManager:
         ids = [int(node['nodeid']) for node in nodelist]
         names = self._get_node_names(nodelist)
         links: list[typing.Optional[Link]] = [None] * KNET_LINK_NUM_LIMIT
-        for i in range(KNET_LINK_NUM_LIMIT):
-            # enumerate ringX_addr for X = 0, 1, ...
-            # each ringX_addr is corresponding to a link
-            if f'ring{i}_addr' not in nodelist[0]:
-                continue
+        # each ringX_addr is corresponding to a link
+        for i in self.link_numbers():
             # If the link exists, load the ringX_addr of all nodes on this link
             addrs = [node[f'ring{i}_addr'] for node in nodelist]
             assert len(addrs) == len(ids)   # both nodeid and ringX_address are required for every node

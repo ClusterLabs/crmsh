@@ -1077,6 +1077,22 @@ def test_verify_result():
     assert utils.VerifyResult.NON_FATAL_ERROR in rc
 
 
+@mock.patch('crmsh.corosync.get_first_ring_addresses')
+@mock.patch('os.path.exists')
+def test_get_address_list_from_corosync_conf_no_file(mock_exists, mock_first_addrs):
+    mock_exists.return_value = False
+    assert utils.get_address_list_from_corosync_conf() == []
+    mock_first_addrs.assert_not_called()
+
+
+@mock.patch('crmsh.corosync.get_first_ring_addresses')
+@mock.patch('os.path.exists')
+def test_get_address_list_from_corosync_conf(mock_exists, mock_first_addrs):
+    mock_exists.return_value = True
+    mock_first_addrs.return_value = ["10.0.0.1", "10.1.0.2"]
+    assert utils.get_address_list_from_corosync_conf() == ["10.0.0.1", "10.1.0.2"]
+
+
 @mock.patch('crmsh.utils.fatal')
 @mock.patch('crmsh.utils.get_address_list_from_corosync_conf')
 @mock.patch('crmsh.utils.list_cluster_nodes')

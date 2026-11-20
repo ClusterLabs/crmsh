@@ -51,6 +51,38 @@ Feature: crm corosync ui test cases
     When    Try "crm corosync link add hanode1=192.0.2.101 hanode2=192.0.2.102 options knet_link_priority=10" on "hanode1"
     Then    Expected "not a configured interface address" in stderr
 
+  Scenario: nodelist without ring0_addr
+    Given   Nodes ["hanode1", "hanode2"] are cleaned up
+    And     Cluster service is "stopped" on "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm cluster init -i eth0 -i eth1 -y" on "hanode1"
+    Then    Cluster service is "started" on "hanode1"
+    When    Run "crm cluster join -c hanode1 -i eth0 -i eth1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    # remove link 0, then no node has ring0_addr
+    When    Run "crm corosync link remove 0" on "hanode1"
+    And     Try "grep -c ring0_addr /etc/corosync/corosync.conf" on "hanode1"
+    Then    Expected "0" in stdout
+    When    Run "crm corosync get nodelist.node.ring1_addr" on "hanode1"
+    Then    Expect stdout contains snippets ["@hanode1.ip.1", "@hanode2.ip.1"].
+    # remove a node by its ring1_addr
+    When    Run "crm cluster remove hanode2 -y" on "hanode1"
+    Then    Online nodes are "hanode1"
+    And     Cluster service is "stopped" on "hanode2"
+    When    Run "crm corosync get nodelist.node.ring1_addr" on "hanode1"
+    Then    Expected "@hanode1.ip.1" in stdout
+    When    Run "crm corosync get nodelist.node.ring1_addr" on "hanode1"
+    Then    Expected "@hanode2.ip.1" not in stdout
+    # join keeps the link number of the cluster
+    When    Run "crm cluster join -c hanode1 -i eth1 -y" on "hanode2"
+    Then    Cluster service is "started" on "hanode2"
+    And     Online nodes are "hanode1 hanode2"
+    When    Run "crm corosync get nodelist.node.ring1_addr" on "hanode1"
+    Then    Expected "@hanode2.ip.1" in stdout
+    When    Try "grep -c ring0_addr /etc/corosync/corosync.conf" on "hanode2"
+    Then    Expected "0" in stdout
+
   Scenario: corosync set
     Given   Nodes ["hanode1", "hanode2"] are cleaned up
     And     Cluster service is "stopped" on "hanode1"
