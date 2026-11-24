@@ -585,8 +585,8 @@ INFO: 27: transition history-test/15sp1-2/pengine/pe-input-19.bz2 saved to shado
 .INP: transition tags 49
 stonith-sbd
 .INP: # reset timeframe
-.INP: timeframe
 WARNING: 31: This command 'timeframe' is deprecated, please use 'limit'
+.INP: timeframe
 INFO: 31: "timeframe" is accepted as "limit"
 .INP: session save _crmsh_regtest
 .INP: session load _crmsh_regtest
