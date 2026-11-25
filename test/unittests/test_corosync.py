@@ -60,42 +60,35 @@ def test_query_qdevice_status(mock_configured, mock_run):
 
 
 @mock.patch('subprocess.run')
-@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
 @mock.patch("crmsh.corosync.query_ring_status")
-def test_query_status_ring(mock_ring_status, mock_check_vote, mock_run):
+def test_query_status_ring(mock_ring_status, mock_run):
     mock_run.return_value = mock.Mock(returncode=0)
     with mock.patch.dict(corosync.STATUS_FUNC_DICT, {'ring': mock_ring_status}):
         corosync.query_status("ring")
     mock_ring_status.assert_called_once_with()
-    mock_check_vote.assert_called_once()
 
 
 @mock.patch('subprocess.run')
-@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
 @mock.patch("crmsh.corosync.query_quorum_status")
-def test_query_status_quorum(mock_quorum_status, mock_check_vote, mock_run):
+def test_query_status_quorum(mock_quorum_status, mock_run):
     mock_run.return_value = mock.Mock(returncode=0)
     with mock.patch.dict(corosync.STATUS_FUNC_DICT, {'quorum': mock_quorum_status}):
         corosync.query_status("quorum")
     mock_quorum_status.assert_called_once_with()
-    mock_check_vote.assert_called_once()
 
 
 @mock.patch('subprocess.run')
-@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
 @mock.patch("crmsh.corosync.query_qnetd_status")
-def test_query_status_qnetd(mock_qnetd_status, mock_check_vote, mock_run):
+def test_query_status_qnetd(mock_qnetd_status, mock_run):
     mock_run.return_value = mock.Mock(returncode=0)
     with mock.patch.dict(corosync.STATUS_FUNC_DICT, {'qnetd': mock_qnetd_status}):
         corosync.query_status("qnetd")
     mock_qnetd_status.assert_called_once_with()
-    mock_check_vote.assert_called_once()
 
 
 @mock.patch('subprocess.run')
-@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
 @mock.patch('crmsh.utils.term_render')
-def test_query_status_all(mock_render, mock_check_vote, mock_run):
+def test_query_status_all(mock_render, mock_run):
     mock_run.return_value = mock.Mock(returncode=0)
     mock_render.side_effect = lambda x: x
 
@@ -107,7 +100,6 @@ def test_query_status_all(mock_render, mock_check_vote, mock_run):
 
     for st, m in mock_funcs.items():
         m.assert_called_once()
-    mock_check_vote.assert_called_once()
     mock_run.assert_called_once_with(["crm_node", "-l"])
 
 
@@ -120,8 +112,7 @@ def test_query_status_crm_node_fail(mock_run):
 
 
 @mock.patch('subprocess.run')
-@mock.patch('crmsh.qdevice.QDevice.check_qdevice_vote')
-def test_query_status_value_error_continue(mock_check_vote, mock_run):
+def test_query_status_value_error_continue(mock_run):
     mock_run.return_value = mock.Mock(returncode=0)
 
     # Mock status functions: 'ring' fails with ValueError, 'quorum' succeeds
@@ -140,7 +131,6 @@ def test_query_status_value_error_continue(mock_check_vote, mock_run):
 
     mock_ring.assert_called_once()
     mock_quorum.assert_called_once()
-    mock_check_vote.assert_called_once()
 
 
 @mock.patch('subprocess.run')
@@ -712,10 +702,10 @@ class TestLinkManagerRemoveLink(unittest.TestCase):
 
 
 @mock.patch('crmsh.cibquery.get_node_name_by_id')
-@mock.patch('crmsh.xmlutil.text2elem')
+@mock.patch('lxml.etree.fromstring')
 @mock.patch('crmsh.sh.LocalShell')
 class TestLinkManagerGetNodeNames(unittest.TestCase):
-    def test_get_name_from_nodelist(self, mock_shell, mock_text2elem, mock_get_node_name):
+    def test_get_name_from_nodelist(self, mock_shell, mock_fromstring, mock_get_node_name):
         nodelist = [
             {'name': 'node1', 'nodeid': '1'},
             {'name': 'node2', 'nodeid': '2'},
@@ -723,14 +713,14 @@ class TestLinkManagerGetNodeNames(unittest.TestCase):
         names = corosync.LinkManager._get_node_names(nodelist)
         self.assertEqual(['node1', 'node2'], names)
         mock_shell.assert_not_called()
-        mock_text2elem.assert_not_called()
+        mock_fromstring.assert_not_called()
         mock_get_node_name.assert_not_called()
 
-    def test_get_name_from_cib(self, mock_shell, mock_text2elem, mock_get_node_name):
+    def test_get_name_from_cib(self, mock_shell, mock_fromstring, mock_get_node_name):
         mock_shell_inst = mock.Mock()
         mock_shell.return_value = mock_shell_inst
         mock_shell_inst.get_stdout_or_raise_error.return_value = '<cib/>'
-        mock_text2elem.return_value = 'cib_element'
+        mock_fromstring.return_value = 'cib_element'
         mock_get_node_name.side_effect = ['node1', 'node2']
         nodelist = [
             {'nodeid': '1'},
@@ -739,17 +729,17 @@ class TestLinkManagerGetNodeNames(unittest.TestCase):
         names = corosync.LinkManager._get_node_names(nodelist)
         self.assertEqual(['node1', 'node2'], names)
         mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with(None, 'crm configure show xml')
-        mock_text2elem.assert_called_once_with('<cib/>')
+        mock_fromstring.assert_called_once_with('<cib/>')
         mock_get_node_name.assert_has_calls([
             mock.call('cib_element', '1'),
             mock.call('cib_element', '2'),
         ])
 
-    def test_get_name_mixed(self, mock_shell, mock_text2elem, mock_get_node_name):
+    def test_get_name_mixed(self, mock_shell, mock_fromstring, mock_get_node_name):
         mock_shell_inst = mock.Mock()
         mock_shell.return_value = mock_shell_inst
         mock_shell_inst.get_stdout_or_raise_error.return_value = '<cib/>'
-        mock_text2elem.return_value = 'cib_element'
+        mock_fromstring.return_value = 'cib_element'
         mock_get_node_name.return_value = 'node2'
         nodelist = [
             {'name': 'node1', 'nodeid': '1'},
@@ -758,7 +748,7 @@ class TestLinkManagerGetNodeNames(unittest.TestCase):
         names = corosync.LinkManager._get_node_names(nodelist)
         self.assertEqual(['node1', 'node2'], names)
         mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with(None, 'crm configure show xml')
-        mock_text2elem.assert_called_once_with('<cib/>')
+        mock_fromstring.assert_called_once_with('<cib/>')
         mock_get_node_name.assert_called_once_with('cib_element', '2')
 
 
