@@ -16,6 +16,7 @@ from . import command, sh, parallax, iproute2
 from . import completers
 from . import utils, network_utils
 from . import corosync
+from . import qdevice
 from .prun import prun
 from .service_manager import ServiceManager
 
@@ -294,6 +295,7 @@ class Corosync(command.UI):
 
         try:
             corosync.query_status(status_type)
+            qdevice.QDevice.check_qdevice_vote()
         except ValueError as err:
             logger.error(str(err))
             return False

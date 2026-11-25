@@ -61,7 +61,6 @@ logger_utils = log.LoggerUtils(logger)
 
 CSYNC2_KEY = "/etc/csync2/key_hagroup"
 CSYNC2_CFG = "/etc/csync2/csync2.cfg"
-COROSYNC_AUTH = "/etc/corosync/authkey"
 CRM_CFG = "/etc/crm/crm.conf"
 PROFILES_FILE = "/etc/crm/profiles.yml"
 SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
@@ -72,7 +71,7 @@ SERVICES_DISABLE_LIST = ["pacemaker.service", "sbd.service"]
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
 BOOTH_AUTH = "/etc/booth/authkey"
-STATIC_FILES_TO_SYNC = (BOOTH_DIR, COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
+STATIC_FILES_TO_SYNC = (BOOTH_DIR, corosync.COROSYNC_AUTH, CSYNC2_CFG, CSYNC2_KEY, "/etc/ctdb/nodes",
         "/etc/drbd.conf", "/etc/drbd.d", "/etc/ha.d/ldirectord.cf", "/etc/lvm/lvm.conf", "/etc/multipath.conf",
         "/etc/samba/smb.conf", SYSCONFIG_NFS, SYSCONFIG_PCMK, PCMK_REMOTE_AUTH, PROFILES_FILE, CRM_CFG)
 
@@ -162,7 +161,7 @@ class GlobalVariables(object):
         self.default_nic = None
         self.default_ip_list = []
         self.corosync_conf_orig = None
-        self.rm_list = [corosync.conf(), COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
+        self.rm_list = [corosync.conf(), corosync.COROSYNC_AUTH, "/var/lib/pacemaker/cib/*",
                 "/var/lib/corosync/*", "/var/lib/pacemaker/pengine/*", PCMK_REMOTE_AUTH, "~/.config/crm/*"]
         self.populate_user()
 
@@ -1231,11 +1230,11 @@ def init_corosync_auth():
     """
     Generate the corosync authkey
     """
-    if os.path.exists(COROSYNC_AUTH):
-        if not confirm("%s already exists - overwrite?" % (COROSYNC_AUTH)):
+    if os.path.exists(corosync.COROSYNC_AUTH):
+        if not confirm("%s already exists - overwrite?" % (corosync.COROSYNC_AUTH)):
             return
-        utils.rmfile(COROSYNC_AUTH)
-    invoke("corosync-keygen -l -k {}".format(COROSYNC_AUTH))
+        utils.rmfile(corosync.COROSYNC_AUTH)
+    invoke("corosync-keygen -l -k {}".format(corosync.COROSYNC_AUTH))
 
 
 def generate_pacemaker_remote_auth():
