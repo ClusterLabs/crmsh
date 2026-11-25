@@ -99,10 +99,27 @@ Feature: migration
     And Run "crm cluster copy /etc/corosync/corosync.conf" on "hanode1"
     And Try "crm cluster health sles16" on "hanode1"
     Then    Expected return code is "1"
-    And     Expect stdout contains snippets ["[PASS] This cluster is good to migrate to SLES 16.", "[INFO] Please run \"crm cluster health sles16 --fix\" on on any one of above nodes.", "[WARN] Corosync transport \"udpu\" is deprecated in corosync 3. Please use knet.", "----- node: localhost -----", "----- node: hanode2 -----"].
+    And     Expect stdout contains snippets ["[PASS] This cluster is good to migrate to SLES 16.", "[INFO] Please run \"crm cluster health sles16 --fix\" on on any one of above nodes.", "[FAIL] Corosync transport \"udpu\" is unsupported in corosync 3. Please use knet.", "[FAIL] \"totem.secauth: off\" is unsupported in corosync 3.", "[WARN] Setting crypto_hash and crypto_cipher are not recommended in corosync 3.", "----- node: localhost -----", "----- node: hanode2 -----"].
 
   Scenario: Run fixes against corosync.conf generated in crmsh-4.6
     When    Try "crm cluster health sles16 --fix" on "hanode1"
+    Then    Expected return code is "0"
+    And     Run "grep -F 'secauth: on' /etc/corosync/corosync.conf" OK on "hanode1"
+    And     Run "grep -F 'secauth: on' /etc/corosync/corosync.conf" OK on "hanode2"
+    When    Try "crm cluster health sles16" on "hanode1"
+    Then    Expected return code is "0"
+
+  Scenario: Run pre-migration checks and fixes against missing Corosync authkey
+    When    Run "rm -f /etc/corosync/authkey" on "hanode1"
+    And     Run "rm -f /etc/corosync/authkey" on "hanode2"
+    And     Try "crm cluster health sles16" on "hanode1"
+    Then    Expected return code is "1"
+    And     Expect stdout contains snippets ["[PASS] This cluster is good to migrate to SLES 16.", "[FAIL] Corosync authkey file \"/etc/corosync/authkey\" does not exist."].
+    When    Try "crm cluster health sles16 --fix" on "hanode1"
+    Then    Expected return code is "0"
+    And     Run "test -f /etc/corosync/authkey" OK on "hanode1"
+    And     Run "test -f /etc/corosync/authkey" OK on "hanode2"
+    When    Try "crm cluster health sles16" on "hanode1"
     Then    Expected return code is "0"
 
   Scenario: Run fixes against multicast corosync.conf containing incorrect bindnetaddr.

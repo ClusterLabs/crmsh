@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -362,6 +363,7 @@ def check_unsupported_corosync_features(handler: CheckResultHandler):
             ],
         )
     _check_unsupported_corosync_transport(handler, config)
+    _check_corosync_crypto(handler, config)
 
 
 def _check_unsupported_corosync_transport(handler: CheckResultHandler, dom):
@@ -375,9 +377,56 @@ def _check_unsupported_corosync_transport(handler: CheckResultHandler, dom):
             # looks like a corosync 3 config
             return
     handler.handle_problem(
-        True, False, handler.LEVEL_WARN,
-        f'Corosync transport "{transport}" is deprecated in corosync 3. Please use knet.', [],
+        True, False, handler.LEVEL_ERROR,
+        f'Corosync transport "{transport}" is unsupported in corosync 3. Please use knet.', [],
     )
+
+
+def _check_corosync_crypto(handler: CheckResultHandler, dom):
+    totem = dom['totem']
+    if totem.get('secauth') != 'on':
+        handler.handle_problem(
+            True, False, handler.LEVEL_ERROR,
+            '"totem.secauth: off" is unsupported in corosync 3.', [],
+        )
+    if 'crypto_hash' in totem or 'crypto_cipher' in totem:
+        handler.handle_problem(
+            True, False, handler.LEVEL_WARN,
+            'Setting crypto_hash and crypto_cipher are not recommended in corosync 3.', [
+                'Corosync 3 uses default cryptographic algorithms. Explicit crypto_hash and crypto_cipher settings should be removed.',
+            ],
+        )
+    authkey_path = totem.get('keyfile', corosync.COROSYNC_AUTH)
+    if not os.path.exists(authkey_path):
+        handler.handle_problem(
+            True, False, handler.LEVEL_ERROR,
+            f'Corosync authkey file "{authkey_path}" does not exist.', [],
+        )
+
+
+def migrate_corosync_authkey(authkey_path: str, local: bool):
+    if local:
+        if not os.path.exists(authkey_path):
+            logger.warning(
+                'Corosync authkey "%s" is missing. Skip generating authkey in local mode. '
+                'Please generate and distribute it across all nodes.',
+                authkey_path,
+            )
+        return
+
+    if not os.path.exists(authkey_path):
+        logger.info('Generating corosync authkey: %s', authkey_path)
+        sh.LocalShell().get_stdout_or_raise_error(None, f'corosync-keygen -l -k {shlex.quote(authkey_path)}')
+        for host, result in prun.pcopy_to_remote(
+                authkey_path,
+                utils.list_cluster_nodes_except_me(), authkey_path,
+                atomic_write=True,
+        ).items():
+            match result:
+                case None:
+                    pass
+                case prun.PRunError() as e:
+                    logger.error("Failed to copy %s to host %s: %s", os.path.basename(authkey_path), host, e)
 
 
 def migrate_corosync_conf(local: bool):
@@ -405,7 +454,9 @@ def migrate_corosync_conf(local: bool):
                 case None:
                     pass
                 case prun.PRunError() as e:
-                    logger.error("Failed to copy crmsh.conf to host %s: %s", host, e)
+                    logger.error("Failed to copy %s to host %s: %s", os.path.basename(conf_path), host, e)
+    authkey_path = config['totem'].get('keyfile', corosync.COROSYNC_AUTH)
+    migrate_corosync_authkey(authkey_path, local=local)
 
 
 def migrate_corosync_conf_impl(config):
@@ -514,13 +565,14 @@ class _BindnetaddrFixer:
 
 
 def migrate_crypto(dom):
-    try:
-        # corosync 3 change the default hash algorithm to sha256 when `secauth` is enabled
-        if dom['totem'].get('crypto_hash', None) == 'sha1':
-            dom['totem']['crypto_hash'] = 'sha256'
-            logger.info('Upgrade totem.crypto_hash from "sha1" to "sha256".')
-    except KeyError:
-        dom['totem']['crypto_hash'] = 'sha256'
+    totem = dom['totem']
+    if totem.get('secauth') != 'on':
+        totem['secauth'] = 'on'
+        logger.info('Enable totem.secauth.')
+    if totem.pop('crypto_hash', None) is not None:
+        logger.info('Remove totem.crypto_hash.')
+    if totem.pop('crypto_cipher', None) is not None:
+        logger.info('Remove totem.crypto_cipher.')
 
 
 def migrate_rrp(dom):

@@ -216,3 +216,172 @@ class TestDeprecatedCibProperties(unittest.TestCase):
         mock_service_is_active.return_value = False
         migration.migrate_deprecated_cib_properties()
         mock_translator.assert_not_called()
+
+
+class TestCheckCorosyncTransport(unittest.TestCase):
+    def setUp(self):
+        self.handler = mock.Mock(migration.CheckResultHandler)
+
+    def test_knet_transport(self):
+        dom = {'totem': {'transport': 'knet'}}
+        migration._check_unsupported_corosync_transport(self.handler, dom)
+        self.handler.handle_problem.assert_not_called()
+
+    def test_udpu_transport(self):
+        dom = {'totem': {'transport': 'udpu'}}
+        migration._check_unsupported_corosync_transport(self.handler, dom)
+        self.handler.handle_problem.assert_called_once_with(
+            True, False, self.handler.LEVEL_ERROR,
+            'Corosync transport "udpu" is unsupported in corosync 3. Please use knet.',
+            [],
+        )
+
+    def test_udp_transport(self):
+        dom = {'totem': {'transport': 'udp'}}
+        migration._check_unsupported_corosync_transport(self.handler, dom)
+        self.handler.handle_problem.assert_called_once_with(
+            True, False, self.handler.LEVEL_ERROR,
+            'Corosync transport "udp" is unsupported in corosync 3. Please use knet.',
+            [],
+        )
+
+    def test_implicit_multicast_corosync2(self):
+        dom = {'totem': {'interface': [{'bindnetaddr': '192.168.1.0'}]}}
+        migration._check_unsupported_corosync_transport(self.handler, dom)
+        self.handler.handle_problem.assert_called_once_with(
+            True, False, self.handler.LEVEL_ERROR,
+            'Corosync transport "None" is unsupported in corosync 3. Please use knet.',
+            [],
+        )
+
+    def test_implicit_knet_corosync3(self):
+        dom = {'totem': {}}
+        migration._check_unsupported_corosync_transport(self.handler, dom)
+        self.handler.handle_problem.assert_not_called()
+
+
+class TestCheckCorosyncCrypto(unittest.TestCase):
+    def setUp(self):
+        self.handler = mock.Mock(migration.CheckResultHandler)
+
+    @mock.patch('os.path.exists')
+    def test_valid_crypto_config(self, mock_exists):
+        mock_exists.return_value = True
+        dom = {'totem': {'secauth': 'on'}}
+        migration._check_corosync_crypto(self.handler, dom)
+        self.handler.handle_problem.assert_not_called()
+
+    @mock.patch('os.path.exists')
+    def test_secauth_off(self, mock_exists):
+        mock_exists.return_value = True
+        dom = {'totem': {'secauth': 'off'}}
+        migration._check_corosync_crypto(self.handler, dom)
+        self.handler.handle_problem.assert_called_once_with(
+            True, False, self.handler.LEVEL_ERROR,
+            '"totem.secauth: off" is unsupported in corosync 3.',
+            [],
+        )
+
+    @mock.patch('os.path.exists')
+    def test_secauth_missing(self, mock_exists):
+        mock_exists.return_value = True
+        dom = {'totem': {}}
+        migration._check_corosync_crypto(self.handler, dom)
+        self.handler.handle_problem.assert_called_once_with(
+            True, False, self.handler.LEVEL_ERROR,
+            '"totem.secauth: off" is unsupported in corosync 3.',
+            [],
+        )
+
+    @mock.patch('os.path.exists')
+    def test_crypto_hash_and_cipher_present(self, mock_exists):
+        mock_exists.return_value = True
+        dom = {'totem': {'secauth': 'on', 'crypto_hash': 'sha256', 'crypto_cipher': 'aes256'}}
+        migration._check_corosync_crypto(self.handler, dom)
+        self.handler.handle_problem.assert_called_once_with(
+            True, False, self.handler.LEVEL_WARN,
+            'Setting crypto_hash and crypto_cipher are not recommended in corosync 3.',
+            ['Corosync 3 uses default cryptographic algorithms. Explicit crypto_hash and crypto_cipher settings should be removed.'],
+        )
+
+    @mock.patch('os.path.exists')
+    def test_authkey_missing_default_path(self, mock_exists):
+        mock_exists.return_value = False
+        dom = {'totem': {'secauth': 'on'}}
+        migration._check_corosync_crypto(self.handler, dom)
+        mock_exists.assert_called_once_with('/etc/corosync/authkey')
+        self.handler.handle_problem.assert_called_once_with(
+            True, False, self.handler.LEVEL_ERROR,
+            'Corosync authkey file "/etc/corosync/authkey" does not exist.',
+            [],
+        )
+
+    @mock.patch('os.path.exists')
+    def test_authkey_missing_custom_keyfile(self, mock_exists):
+        mock_exists.return_value = False
+        dom = {'totem': {'secauth': 'on', 'keyfile': '/etc/corosync/custom_key'}}
+        migration._check_corosync_crypto(self.handler, dom)
+        mock_exists.assert_called_once_with('/etc/corosync/custom_key')
+        self.handler.handle_problem.assert_called_once_with(
+            True, False, self.handler.LEVEL_ERROR,
+            'Corosync authkey file "/etc/corosync/custom_key" does not exist.',
+            [],
+        )
+
+
+class TestMigrateCrypto(unittest.TestCase):
+    def test_enable_secauth_and_remove_crypto_settings(self):
+        dom = {'totem': {'secauth': 'off', 'crypto_hash': 'sha1', 'crypto_cipher': 'aes256'}}
+        migration.migrate_crypto(dom)
+        self.assertEqual(dom['totem'], {'secauth': 'on'})
+
+    def test_missing_secauth_adds_on(self):
+        dom = {'totem': {'crypto_hash': 'sha256'}}
+        migration.migrate_crypto(dom)
+        self.assertEqual(dom['totem'], {'secauth': 'on'})
+
+    def test_already_clean(self):
+        dom = {'totem': {'secauth': 'on'}}
+        migration.migrate_crypto(dom)
+        self.assertEqual(dom['totem'], {'secauth': 'on'})
+
+
+class TestMigrateCorosyncAuthkey(unittest.TestCase):
+    @mock.patch('crmsh.prun.prun.pcopy_to_remote')
+    @mock.patch('crmsh.utils.list_cluster_nodes_except_me')
+    @mock.patch('crmsh.sh.LocalShell')
+    @mock.patch('os.path.exists')
+    def test_authkey_missing_non_local(self, mock_exists, mock_shell, mock_list_nodes, mock_pcopy):
+        mock_exists.return_value = False
+        mock_list_nodes.return_value = ['node2']
+        mock_pcopy.return_value = {'node2': None}
+        mock_shell_inst = mock.Mock()
+        mock_shell.return_value = mock_shell_inst
+
+        migration.migrate_corosync_authkey('/etc/corosync/authkey', local=False)
+
+        mock_shell_inst.get_stdout_or_raise_error.assert_called_once_with(
+            None, 'corosync-keygen -l -k /etc/corosync/authkey'
+        )
+        mock_pcopy.assert_called_once_with(
+            '/etc/corosync/authkey', ['node2'], '/etc/corosync/authkey', atomic_write=True
+        )
+
+    @mock.patch('crmsh.prun.prun.pcopy_to_remote')
+    @mock.patch('crmsh.sh.LocalShell')
+    @mock.patch('os.path.exists')
+    def test_authkey_missing_local(self, mock_exists, mock_shell, mock_pcopy):
+        mock_exists.return_value = False
+        migration.migrate_corosync_authkey('/etc/corosync/authkey', local=True)
+        mock_shell.assert_not_called()
+        mock_pcopy.assert_not_called()
+
+    @mock.patch('crmsh.prun.prun.pcopy_to_remote')
+    @mock.patch('crmsh.sh.LocalShell')
+    @mock.patch('os.path.exists')
+    def test_authkey_exists(self, mock_exists, mock_shell, mock_pcopy):
+        mock_exists.return_value = True
+        migration.migrate_corosync_authkey('/etc/corosync/authkey', local=False)
+        mock_shell.assert_not_called()
+        mock_pcopy.assert_not_called()
+
