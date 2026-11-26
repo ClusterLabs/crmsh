@@ -934,5 +934,10 @@ def test_get_corosync_interfaces(mock_get_addrs, mock_get_nic):
     assert res == ["eth0", "eth1"]
 
 
+def test_corosync_conf_template_secauth():
+    inst = corosync.ConfParser(config_data=corosync.COROSYNC_CONF_TEMPLATE)
+    assert inst.get("totem.secauth") == "on"
+
+
 if __name__ == '__main__':
     unittest.main()
