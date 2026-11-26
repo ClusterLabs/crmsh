@@ -32,6 +32,64 @@ from crmsh import qdevice
 from crmsh import sbd
 
 
+def test_profiles_cannot_override_secauth(tmp_path, caplog):
+    config_file = tmp_path / "corosync.conf"
+    config_file.write_text(bootstrap.corosync.COROSYNC_CONF_TEMPLATE)
+    profiles = {"corosync.totem.secauth": "off", "corosync.totem.token": 5000}
+
+    with mock.patch.object(bootstrap, "_global_variables", mock.Mock(profiles_dict=profiles)), \
+            mock.patch.object(bootstrap.corosync, "conf", return_value=str(config_file)):
+        bootstrap.adjust_corosync_parameters_according_to_profiles()
+
+    config = bootstrap.corosync.ConfParser(config_file=str(config_file))
+    assert config.get("totem.secauth") == "on"
+    assert config.get("totem.token") == "5000"
+    assert "Ignoring profile setting corosync.totem.secauth: off: secauth is required" in caplog.text
+
+
+def test_profiles_secauth_on_allowed(tmp_path, caplog):
+    config_file = tmp_path / "corosync.conf"
+    config_file.write_text(bootstrap.corosync.COROSYNC_CONF_TEMPLATE)
+    profiles = {"corosync.totem.secauth": "on"}
+
+    with mock.patch.object(bootstrap, "_global_variables", mock.Mock(profiles_dict=profiles)), \
+            mock.patch.object(bootstrap.corosync, "conf", return_value=str(config_file)):
+        bootstrap.adjust_corosync_parameters_according_to_profiles()
+
+    config = bootstrap.corosync.ConfParser(config_file=str(config_file))
+    assert config.get("totem.secauth") == "on"
+    assert "Ignoring profile setting" not in caplog.text
+
+
+def test_profiles_cannot_disable_crypto_hash(tmp_path, caplog):
+    config_file = tmp_path / "corosync.conf"
+    config_file.write_text(bootstrap.corosync.COROSYNC_CONF_TEMPLATE)
+    profiles = {"corosync.totem.crypto_hash": "none", "corosync.totem.token": 5000}
+
+    with mock.patch.object(bootstrap, "_global_variables", mock.Mock(profiles_dict=profiles)), \
+            mock.patch.object(bootstrap.corosync, "conf", return_value=str(config_file)):
+        bootstrap.adjust_corosync_parameters_according_to_profiles()
+
+    config = bootstrap.corosync.ConfParser(config_file=str(config_file))
+    assert config.get("totem.crypto_hash") is None
+    assert config.get("totem.token") == "5000"
+    assert "Ignoring profile setting corosync.totem.crypto_hash: none: message authentication is required" in caplog.text
+
+
+def test_profiles_valid_crypto_hash_allowed(tmp_path, caplog):
+    config_file = tmp_path / "corosync.conf"
+    config_file.write_text(bootstrap.corosync.COROSYNC_CONF_TEMPLATE)
+    profiles = {"corosync.totem.crypto_hash": "sha256"}
+
+    with mock.patch.object(bootstrap, "_global_variables", mock.Mock(profiles_dict=profiles)), \
+            mock.patch.object(bootstrap.corosync, "conf", return_value=str(config_file)):
+        bootstrap.adjust_corosync_parameters_according_to_profiles()
+
+    config = bootstrap.corosync.ConfParser(config_file=str(config_file))
+    assert config.get("totem.crypto_hash") == "sha256"
+    assert "Ignoring profile setting" not in caplog.text
+
+
 class TestGlobalVariables(unittest.TestCase):
     """
     Unitary tests for crmsh.bootstrap.GlobalVariables
