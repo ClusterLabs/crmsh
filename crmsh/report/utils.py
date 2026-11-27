@@ -11,7 +11,7 @@ import shutil
 import sys
 import traceback
 from dateutil import tz
-from enum import Enum
+from enum import Enum, auto
 from collections import Counter
 from typing import Optional, List, Tuple
 
@@ -29,6 +29,12 @@ class LogType(Enum):
     EMPTY = 2            # empty log; exclude
     BEFORE_TIMESPAN = 3  # log before timespan; exclude
     AFTER_TIMESPAN = 4   # log after timespan; exclude
+
+
+class LogFormat(Enum):
+    SYSLOG = auto()
+    RFC5424 = auto()
+    LEGACY = auto()
 
 
 def convert_logtype_to_str(log_type: LogType) -> str:
@@ -292,12 +298,12 @@ def find_files_in_timespan(context: core.Context, target_dir_list: List[str]) ->
     return file_list
 
 
-def find_first_timestamp(data: List[str], log_file: str) -> float:
+def find_first_timestamp(data: List[str], log_file: str, log_format: LogFormat) -> float | None:
     """
     Find the first timestamp in the given list of log line
     """
     for line in data:
-        timestamp = get_timestamp(line, log_file)
+        timestamp = get_timestamp(line, log_file, log_format)
         if timestamp:
             return timestamp
     return None
@@ -316,7 +322,7 @@ def filter_lines(data: str, from_line: int, to_line: int) -> str:
     return ''.join(filtered_lines)
 
 
-def determin_log_format(data: str) -> str:
+def determin_log_format(data: str) -> LogFormat | None:
     """
     Determines the log format based on the given log line
     """
@@ -327,19 +333,21 @@ def determin_log_format(data: str) -> str:
         # syslog format:
         # Feb 12 18:30:08 15sp1-1 kernel: e820: BIOS-provided physical RAM map:
         if len(_list) >= 3 and crmutils.parse_time(' '.join(_list[0:3]), quiet=True):
-            return "syslog"
+            return LogFormat.SYSLOG
         # rfc5424 format:
         # 2003-10-11T22:14:15.003Z mymachine.example.com su
         if crmutils.parse_time(_list[0], quiet=True):
-            return "rfc5424"
+            return LogFormat.RFC5424
         if len(_list) > 1 and crmutils.parse_time(_list[1], quiet=True):
-            return "legacy"
+            return LogFormat.LEGACY
     return None
 
 
-def findln_by_timestamp(data: str, given_timestamp: float, log_file: str) -> int:
+def findln_by_timestamp(data: str, given_timestamp: float, log_file: str, log_format: LogFormat) -> int | None:
     """
     Get line number of the specific time stamp
+
+    log_format is the format detected by determin_log_format for the data
     """
     data_list = data.split('\n')
     first, last = 1, len(data_list)
@@ -348,7 +356,7 @@ def findln_by_timestamp(data: str, given_timestamp: float, log_file: str) -> int
         middle = (last + first) // 2
         trycnt = 10
         while trycnt > 0:
-            middle_timestamp = get_timestamp(data_list[middle - 1], log_file)
+            middle_timestamp = get_timestamp(data_list[middle - 1], log_file, log_format)
             if middle_timestamp:
                 break
             # shift the whole first-last segment
@@ -394,9 +402,9 @@ def get_pkg_mgr() -> str:
     return ""
 
 
-def get_timestamp_from_time_line(time_line: str, stamp_type: str, log_file: str):
+def get_timestamp_from_time_line(time_line: str, log_format: LogFormat, log_file: str):
     timestamp = crmutils.parse_to_timestamp(time_line, quiet=True)
-    if timestamp and stamp_type == "syslog":
+    if timestamp and log_format == LogFormat.SYSLOG:
         now = datetime.datetime.now()
         # got a timestamp in the future
         if timestamp > now.timestamp():
@@ -417,22 +425,25 @@ def get_timestamp_from_time_line(time_line: str, stamp_type: str, log_file: str)
         return timestamp
 
 
-def get_timestamp(line: str, log_file: str) -> float:
+def get_timestamp(line: str, log_file: str, log_format: LogFormat) -> float | None:
     """
-    Get timestamp for the given line
+    Get timestamp for the given line, parsed according to log_format,
+    the format detected by determin_log_format for the file the line comes from
     """
-    if not line or not constants.STAMP_TYPE:
+    if not line:
         return None
 
-    stamp_type = constants.STAMP_TYPE
-    if stamp_type == "rfc5424":
-        time_line = line.split()[0]
-    elif stamp_type == "syslog":
-        time_line = ' '.join(line.split()[0:3])
-    elif stamp_type == "legacy":
-        time_line = line.split()[1]
+    fields = line.split()
+    if log_format == LogFormat.RFC5424 and len(fields) >= 1:
+        time_line = fields[0]
+    elif log_format == LogFormat.SYSLOG and len(fields) >= 3:
+        time_line = ' '.join(fields[0:3])
+    elif log_format == LogFormat.LEGACY and len(fields) >= 2:
+        time_line = fields[1]
+    else:
+        return None
 
-    return get_timestamp_from_time_line(time_line, stamp_type, log_file)
+    return get_timestamp_from_time_line(time_line, log_format, log_file)
 
 
 
@@ -449,13 +460,12 @@ def is_our_log(context: core.Context, logf: str) -> int:
     data = crmutils.read_from_file(logf)
     if not data:
         return LogType.EMPTY
-    stamp_type = determin_log_format(data)
-    if not stamp_type:
+    log_format = determin_log_format(data)
+    if log_format is None:
         return LogType.IRREGULAR
-    constants.STAMP_TYPE = stamp_type
 
-    first_time = find_first_timestamp(head(constants.CHECK_LOG_LINES, data), logf)
-    last_time = find_first_timestamp(tail(constants.CHECK_LOG_LINES, data), logf)
+    first_time = find_first_timestamp(head(constants.CHECK_LOG_LINES, data), logf, log_format)
+    last_time = find_first_timestamp(tail(constants.CHECK_LOG_LINES, data), logf, log_format)
     from_time = context.from_time
     to_time = context.to_time
 
@@ -493,11 +503,17 @@ def print_logseg(log_file: str, from_time: float, to_time: float) -> str:
     if not data:
         return ""
 
-    from_line = 1 if from_time == 0 else findln_by_timestamp(data, from_time, log_file)
-    to_line = len(data.split('\n')) if to_time == 0 else findln_by_timestamp(data, to_time, log_file)
-
-    if from_line is None or to_line is None:
-        return ""
+    last_line = len(data.split('\n'))
+    if from_time == 0 and to_time == 0:
+        from_line, to_line = 1, last_line
+    else:
+        log_format = determin_log_format(data)
+        if log_format is None:
+            return ""
+        from_line = 1 if from_time == 0 else findln_by_timestamp(data, from_time, log_file, log_format)
+        to_line = last_line if to_time == 0 else findln_by_timestamp(data, to_time, log_file, log_format)
+        if from_line is None or to_line is None:
+            return ""
 
     logger.debug2("Including segment [%d-%d] from %s", from_line, to_line, log_file)
     return filter_lines(data, from_line, to_line)
