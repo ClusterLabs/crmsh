@@ -4,7 +4,7 @@ BIN_CRM = "/usr/sbin/crm"
 BIN_COLLECTOR = f"{BIN_CRM} report __collector"
 COMPRESS_DATA_FLAG = "COMPRESS CRM_REPORT DATA:::"
 LOG_PATTERNS = ["CRIT:", "ERROR:", "WARNING:", "crit:", "error:", "warning:"]
-PTEST = "crm_simulate"
+CRM_SIMULATE = "crm_simulate"
 SSH_OPTS = "-o StrictHostKeyChecking=no -o EscapeChar=none -o ConnectTimeout=15"
 CHECK_LOG_LINES = 10
 STAMP_TYPE = ""

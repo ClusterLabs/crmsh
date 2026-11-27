@@ -463,7 +463,7 @@ def collect_config(context: core.Context) -> None:
 
 def pe_to_dot(pe_file: str) -> None:
     dotf = os.path.splitext(pe_file)[0] + '.dot'
-    cmd = f"{constants.PTEST} -D {shlex.quote(dotf)} -x {shlex.quote(pe_file)}"
+    cmd = f"{constants.CRM_SIMULATE} -D {shlex.quote(dotf)} -x {shlex.quote(pe_file)}"
     code, _, _ = ShellUtils().get_stdout_stderr(cmd)
     if code != 0:
         logger.warning("pe_to_dot: %s -> %s failed", pe_file, dotf)

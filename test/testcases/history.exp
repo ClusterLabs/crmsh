@@ -512,12 +512,12 @@ history-test/15sp1-2/pengine/pe-input-19.bz2
 2019-03-22T11:46:15.797222+08:00 15sp1-2 sbd[2770]:   notice: main: Doing flush + writing 'b' to sysrq on timeout
 2019-03-22T11:46:15.812786+08:00 15sp1-2 sbd[2774]:   notice: main: Doing flush + writing 'b' to sysrq on timeout
 .INP: transition nograph
-INFO: 25: running ptest with history-test/15sp1-2/pengine/pe-input-19.bz2
+INFO: 25: running crm_simulate with history-test/15sp1-2/pengine/pe-input-19.bz2
 .EXT >/dev/null 2>&1 crm_simulate -x - -S -VV
 Transition 15sp1-2:pe-input-19 (19:46:15 - 19:46:16):
 	total 1 actions: 1 Complete
 .INP: transition -1 nograph
-INFO: 26: running ptest with history-test/15sp1-2/pengine/pe-input-18.bz2
+INFO: 26: running crm_simulate with history-test/15sp1-2/pengine/pe-input-18.bz2
 .EXT >/dev/null 2>&1 crm_simulate -x - -S -VV
 Transition 15sp1-2:pe-input-18 (19:46:15 - 19:46:15):
 	total 12 actions: 7 Complete, 1 Skipped, 4 Incomplete

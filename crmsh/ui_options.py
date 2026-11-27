@@ -21,7 +21,6 @@ _legacy_map = {
     'add_quotes': ('core', 'add_quotes'),
     'manage_children': ('core', 'manage_children'),
     'debug': ('core', 'debug'),
-    'ptest': ('core', 'ptest'),
     'dotty': ('core', 'dotty'),
     'dot': ('core', 'dot'),
     'output': ('color', 'style'),
