@@ -1672,7 +1672,7 @@ def get_address_list_from_corosync_conf():
     """
     if not os.path.exists(corosync.conf()):
         return []
-    return corosync.get_values("nodelist.node.ring0_addr")
+    return corosync.get_first_ring_addresses()
 
 
 def list_cluster_nodes(no_reg=False) -> list[str]:

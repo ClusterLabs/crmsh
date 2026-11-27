@@ -1948,7 +1948,8 @@ def join_cluster(seed_host, remote_user):
 
     init_network()
 
-    link_number = corosync.get_link_number()
+    link_numbers = corosync.LinkManager.load_config_file().link_numbers()
+    link_number = len(link_numbers)
     join_link_number = len(_global_variables.default_ip_list)
     # the join link number can't be greater than the peer's link number
     # or less than the peer's link number if -y is set
@@ -1963,22 +1964,23 @@ def join_cluster(seed_host, remote_user):
 
     _global_variables.sbd_manager.join_sbd(seed_host)
 
-    ringXaddr_res = []
-    for i in range(link_number):
+    link_addrs = {}
+    for i in link_numbers:
         while True:
+            prev_addrs = list(link_addrs.values())
             ringXaddr = prompt_for_string(
                     'Address for ring{}'.format(i),
-                    default=pick_default_value(_global_variables.default_ip_list, ringXaddr_res),
+                    default=pick_default_value(_global_variables.default_ip_list, prev_addrs),
                     valid_func=Validation.valid_ucast_ip,
-                    prev_value=ringXaddr_res)
+                    prev_value=prev_addrs)
             if not ringXaddr:
                 error("No value for ring{}".format(i))
-            ringXaddr_res.append(ringXaddr)
+            link_addrs[i] = ringXaddr
             break
     print("")
     invoke("rm -f /var/lib/pacemaker/cib/*")
     try:
-        corosync.add_node_config(ringXaddr_res)
+        corosync.add_node_config(link_addrs)
     except corosync.IPAlreadyConfiguredError as e:
         logger.warning(e)
     sync_path(corosync.conf(), seed_host)
@@ -2107,7 +2109,7 @@ def remove_node_from_cluster(node, dead_node=False):
         utils.fatal("Failed to remove {}.".format(node))
 
     # Remove node from nodelist
-    if corosync.get_values("nodelist.node.ring0_addr"):
+    if corosync.get_values("nodelist.node"):
         if corosync.del_node_by_name(node):
             pass
         elif nodeid and corosync.del_node_by_nodeid(nodeid):
