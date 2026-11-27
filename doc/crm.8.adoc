@@ -2260,7 +2260,7 @@ Configure the SBD daemon for both disk-based and disk-less mode.
 
 Main functionailities include:
 - Show configured disk metadata
-- Show disk backstore timeout values
+- Show disk backstore timeout values, only when SBD_PACEMAKER is disabled
 - Show contents of /etc/sysconfig/sbd
 - Show SBD related cluster properties
 - Update the SBD related configuration parameters
