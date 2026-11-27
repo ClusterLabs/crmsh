@@ -56,6 +56,8 @@ def sbd_configure_completer(completed_list: typing.List[str]) -> typing.List[str
     show_types, timeout_types = (), ()
     if is_diskbased:
         show_types = SBD.SHOW_TYPES
+        if sbd.SBDUtils.is_sbd_pacemaker_enabled():
+            show_types = tuple(t for t in show_types if t != "disk_backstore")
         timeout_types = SBD.DISKBASED_TIMEOUT_TYPES
     elif is_diskless:
         show_types = SBD.DISKLESS_SHOW_TYPES
@@ -219,11 +221,14 @@ class SBD(command.UI):
         for dev in self.device_list_from_config:
             print(sbd.SBDUtils.get_sbd_device_metadata_raw(dev))
 
+    def _should_show_disk_backstore(self) -> bool:
+        return bool(self.device_list_from_config) and not sbd.SBDUtils.is_sbd_pacemaker_enabled()
+
     def _show_disk_backstore(self) -> None:
         """
         Show SBD and storage timeout values not covered by disk metadata.
         """
-        if not self.device_list_from_config:
+        if not self._should_show_disk_backstore():
             return
         logger.info("crm sbd configure show disk_backstore")
         dev = storage_utils.pick_backstore_device(self.device_list_from_config)
@@ -282,8 +287,9 @@ class SBD(command.UI):
             self._show_disk_metadata()
             if self.device_list_from_config:
                 print()
-                self._show_disk_backstore()
-                print()
+                if self._should_show_disk_backstore():
+                    self._show_disk_backstore()
+                    print()
             self._show_sysconfig()
             print()
             self._show_property()

@@ -244,6 +244,7 @@ class TestSBDTimeout(unittest.TestCase):
         result = sbd.SBDTimeout.get_sbd_servant_restart_interval()
         self.assertEqual(result, 0)
 
+    @patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", new=Mock(return_value=False))
     @patch("crmsh.storage_utils.get_multipath_checker_timeout")
     @patch("crmsh.storage_utils.get_multipath_max_polling_interval")
     @patch("crmsh.storage_utils.is_scsi_device")
@@ -267,6 +268,7 @@ class TestSBDTimeout(unittest.TestCase):
 
         self.assertEqual(result, 66)
 
+    @patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", new=Mock(return_value=False))
     @patch("crmsh.storage_utils.get_scsi_timeout")
     @patch("crmsh.storage_utils.is_scsi_device")
     @patch("crmsh.storage_utils.is_multipath_device")
@@ -287,6 +289,7 @@ class TestSBDTimeout(unittest.TestCase):
 
         self.assertEqual(result, 42)
 
+    @patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", new=Mock(return_value=False))
     @patch("crmsh.storage_utils.get_multipath_checker_timeout")
     @patch("crmsh.storage_utils.get_multipath_max_polling_interval")
     @patch("crmsh.storage_utils.is_scsi_device")
@@ -310,6 +313,7 @@ class TestSBDTimeout(unittest.TestCase):
 
         self.assertEqual(result, 1)
 
+    @patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", new=Mock(return_value=False))
     @patch("crmsh.storage_utils.is_scsi_device")
     @patch("crmsh.storage_utils.is_multipath_device")
     @patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
@@ -324,6 +328,10 @@ class TestSBDTimeout(unittest.TestCase):
         mock_is_scsi_device.return_value = False
 
         self.assertIsNone(sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk("/dev/nvme0n1"))
+
+    @patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", new=Mock(return_value=True))
+    def test_get_sbd_watchdog_timeout_from_disk_sbd_pacemaker_enabled(self):
+        self.assertIsNone(sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk("/dev/mapper/mpatha"))
 
     @patch('crmsh.sbd.SBDTimeout.get_sbd_watchdog_timeout_from_disk')
     def test_adjust_sbd_watchdog_timeout_with_disk_backstore(self, mock_from_disk):
@@ -1211,6 +1219,35 @@ class TestSBDConfigChecker(unittest.TestCase):
     def test_fix_sbd_delay_start_unset_dropin(self, mock_logger_info, mock_unset_sbd_delay_start):
         self.instance_check._fix_sbd_delay_start_unset_dropin()
         mock_logger_info.assert_called_once_with("Createing runtime drop-in file %s to unset SBD_DELAY_START", sbd.SBDManager.SBD_SYSTEMD_DELAY_START_DISABLE_FILE)
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_get_sbd_opts_list(self, mock_get_sbd_value_from_config):
+        for value, expected in (
+            (None, []),
+            ("", []),
+            ("-S 1 -P", ["-S", "1", "-P"]),
+            ("-S 1 'unbalanced", ["-S", "1", "'unbalanced"]),
+        ):
+            with self.subTest(value=value):
+                mock_get_sbd_value_from_config.return_value = value
+                self.assertEqual(sbd.SBDUtils.get_sbd_opts_list(), expected)
+
+    @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
+    def test_is_sbd_pacemaker_enabled(self, mock_get_sbd_value_from_config):
+        for opts, value, expected in (
+            (None, None, True),
+            (None, "yes", True),
+            (None, "true", True),
+            (None, "no", False),
+            (None, "false", False),
+            ("-S 1 -P", "no", True),
+            ("-S 1 -PP", "yes", False),
+            ("-S 1", "no", False),
+            ("-S 1", "yes", True),
+        ):
+            with self.subTest(opts=opts, value=value):
+                mock_get_sbd_value_from_config.side_effect = [opts, value]
+                self.assertEqual(sbd.SBDUtils.is_sbd_pacemaker_enabled(), expected)
 
     @patch('crmsh.sbd.SBDUtils.get_sbd_value_from_config')
     def test_check_sbd_pacemaker_in_sysconfig(self, mock_get_sbd_value_from_config):

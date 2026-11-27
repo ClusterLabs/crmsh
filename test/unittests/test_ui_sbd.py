@@ -54,6 +54,22 @@ class TestOutterFunctions(unittest.TestCase):
             mock.call(constants.SBD_SERVICE)
         ])
 
+    @mock.patch('crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled', new=mock.Mock(return_value=True))
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
+    @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
+    @mock.patch('crmsh.ui_sbd.ServiceManager')
+    def test_sbd_configure_completer_show_return_sbd_pacemaker_enabled(
+        self, mock_ServiceManager, mock_is_using_disk_based_sbd, mock_is_using_diskless_sbd
+    ):
+        mock_ServiceManager.return_value.service_is_active.side_effect = [True, True]
+        mock_is_using_disk_based_sbd.return_value = True
+        mock_is_using_diskless_sbd.return_value = False
+        self.assertEqual(
+            ui_sbd.sbd_configure_completer(["configure", "show", ""]),
+            ["disk_metadata", "sysconfig", "property"]
+        )
+
+    @mock.patch('crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled', new=mock.Mock(return_value=False))
     @mock.patch('crmsh.sbd.SBDUtils.is_using_diskless_sbd')
     @mock.patch('crmsh.sbd.SBDUtils.is_using_disk_based_sbd')
     @mock.patch('crmsh.ui_sbd.ServiceManager')
@@ -197,6 +213,7 @@ class TestSBD(unittest.TestCase):
         res = self.sbd_instance_diskbased.do_configure(mock.Mock(), "test")
         self.assertFalse(res)
 
+    @mock.patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", new=mock.Mock(return_value=False))
     @mock.patch("crmsh.storage_utils.get_multipath_checker_timeout")
     @mock.patch("crmsh.storage_utils.get_multipath_max_polling_interval")
     @mock.patch("crmsh.storage_utils.is_multipath_device")
@@ -233,6 +250,7 @@ class TestSBD(unittest.TestCase):
             mock.call("SBD servant restart interval  : 5"),
         ])
 
+    @mock.patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", new=mock.Mock(return_value=False))
     @mock.patch("crmsh.storage_utils.get_multipath_checker_timeout")
     @mock.patch("crmsh.storage_utils.get_multipath_max_polling_interval")
     @mock.patch("crmsh.storage_utils.is_multipath_device")
@@ -267,6 +285,7 @@ class TestSBD(unittest.TestCase):
             mock.call("SBD servant restart interval  : 5"),
         ])
 
+    @mock.patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", new=mock.Mock(return_value=False))
     @mock.patch("crmsh.storage_utils.is_multipath_device")
     @mock.patch("crmsh.storage_utils.is_scsi_device")
     @mock.patch("crmsh.sbd.SBDTimeout.get_sbd_servant_restart_interval")
@@ -393,6 +412,27 @@ class TestSBD(unittest.TestCase):
             self.assertIsNotNone(match)
             self.assertEqual(match.groups(), expected)
 
+    @mock.patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", new=mock.Mock(return_value=True))
+    @mock.patch("logging.Logger.info")
+    @mock.patch("builtins.print")
+    def test_show_disk_backstore_sbd_pacemaker_enabled(self, mock_print, mock_logger_info):
+        self.sbd_instance_diskbased._show_disk_backstore()
+        mock_logger_info.assert_not_called()
+        mock_print.assert_not_called()
+
+    @mock.patch('crmsh.sbd.SBDConfigChecker')
+    @mock.patch('crmsh.ui_sbd.SBD._show_sysconfig')
+    @mock.patch('builtins.print')
+    def test_configure_show_sbd_pacemaker_enabled(self, mock_print, mock_show_sysconfig, mock_sbd_timeout_checker):
+        self.sbd_instance_diskbased._show_disk_metadata = mock.Mock()
+        self.sbd_instance_diskbased._show_disk_backstore = mock.Mock()
+        self.sbd_instance_diskbased._show_property = mock.Mock()
+        with mock.patch("crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled", return_value=True):
+            self.sbd_instance_diskbased._configure_show(["show"])
+        self.sbd_instance_diskbased._show_disk_backstore.assert_not_called()
+        self.assertEqual(mock_print.call_count, 3)
+
+    @mock.patch('crmsh.sbd.SBDUtils.is_sbd_pacemaker_enabled', new=mock.Mock(return_value=False))
     @mock.patch('crmsh.sbd.SBDConfigChecker')
     @mock.patch('crmsh.ui_sbd.SBD._show_sysconfig')
     @mock.patch('builtins.print')
@@ -404,7 +444,8 @@ class TestSBD(unittest.TestCase):
         self.sbd_instance_diskbased._show_disk_backstore = mock.Mock()
         self.sbd_instance_diskbased._show_property = mock.Mock()
         self.sbd_instance_diskbased._configure_show(["show"])
-        mock_print.assert_has_calls([mock.call(), mock.call(), mock.call()])
+        self.sbd_instance_diskbased._show_disk_backstore.assert_called_once()
+        self.assertEqual(mock_print.call_count, 4)
         mock_sbd_timeout_checker_instance.check_and_fix.assert_called_once()
 
     def test_parse_args_invalid_args(self):

@@ -129,6 +129,34 @@ class SBDUtils:
         return None
 
     @staticmethod
+    def get_sbd_opts_list() -> list[str]:
+        """
+        Get SBD_OPTS in /etc/sysconfig/sbd as a list
+        """
+        sbd_opts = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
+        if not sbd_opts:
+            return []
+        try:
+            return shlex.split(sbd_opts)
+        except ValueError:
+            return sbd_opts.split()
+
+    @staticmethod
+    def is_sbd_pacemaker_enabled() -> bool:
+        """
+        Check if SBD_PACEMAKER is enabled, which is the default
+
+        -P in SBD_OPTS enables it and -PP disables it, they override the value of SBD_PACEMAKER
+        """
+        opts_list = SBDUtils.get_sbd_opts_list()
+        if "-PP" in opts_list:
+            return False
+        if "-P" in opts_list:
+            return True
+        value = SBDUtils.get_sbd_value_from_config("SBD_PACEMAKER")
+        return not value or value in ("yes", "true")
+
+    @staticmethod
     def get_crashdump_watchdog_timeout() -> typing.Optional[int]:
         return SBDUtils.get_sbd_opts_int_value("-C")
 
@@ -407,8 +435,11 @@ class SBDTimeout(object):
         multipath: 1.2 * (max_polling_interval + checker_timeout + servant_restart_interval)
         SCSI:      1.2 * (scsi_timeout + servant_restart_interval)
 
-        Returns None when the device is neither multipath nor SCSI.
+        Returns None when SBD_PACEMAKER is enabled, since sbd doesn't self-fence on
+        temporary storage loss then, or when the device is neither multipath nor SCSI.
         """
+        if SBDUtils.is_sbd_pacemaker_enabled():
+            return None
         servant_restart_interval = SBDTimeout.get_sbd_servant_restart_interval()
         if storage_utils.is_multipath_device(dev):
             timeout = (storage_utils.get_multipath_max_polling_interval(dev) or 0) \
@@ -1086,22 +1117,16 @@ class SBDConfigChecker:
 
         # -P in SBD_OPTS is to enable SBD_PACEMAKER, -PP is to disable it
         # option in SBD_OPTS will override the value in SBD_PACEMAKER
-        value_from_opts = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
-        if value_from_opts:
-            try:
-                opts_list = shlex.split(value_from_opts)
-            except ValueError:
-                opts_list = value_from_opts.split()
-            if "-PP" in opts_list:
-                self.sbd_timeout.logger.warning(common_warning_msg)
-                self.sbd_timeout.logger.warning(
-                    "In %s, SBD_OPTS contains -PP, which disables SBD_PACEMAKER, please use -P to enable it",
-                    SBDManager.SYSCONFIG_SBD
-                )
-                return CheckResult.WARNING
-
-            elif "-P" in opts_list:
-                return CheckResult.SUCCESS
+        opts_list = SBDUtils.get_sbd_opts_list()
+        if "-PP" in opts_list:
+            self.sbd_timeout.logger.warning(common_warning_msg)
+            self.sbd_timeout.logger.warning(
+                "In %s, SBD_OPTS contains -PP, which disables SBD_PACEMAKER, please use -P to enable it",
+                SBDManager.SYSCONFIG_SBD
+            )
+            return CheckResult.WARNING
+        elif "-P" in opts_list:
+            return CheckResult.SUCCESS
 
         value = SBDUtils.get_sbd_value_from_config("SBD_PACEMAKER")
         if not value or value in ("yes", "true"):
@@ -1115,18 +1140,13 @@ class SBDConfigChecker:
         return CheckResult.WARNING
 
     def _fix_sbd_pacemaker_in_sysconfig(self):
-        value_from_opts = SBDUtils.get_sbd_value_from_config("SBD_OPTS")
-        if value_from_opts:
-            try:
-                opts_list = shlex.split(value_from_opts)
-            except ValueError:
-                opts_list = value_from_opts.split()
-            if "-PP" in opts_list:
-                opts_list = ["-P" if opt == "-PP" else opt for opt in opts_list]
-                new_opts_value = shlex.join(opts_list)
-                logger.info("Replacing -PP with -P in SBD_OPTS in %s", SBDManager.SYSCONFIG_SBD)
-                SBDManager.update_sbd_configuration({"SBD_OPTS": new_opts_value})
-                return
+        opts_list = SBDUtils.get_sbd_opts_list()
+        if "-PP" in opts_list:
+            opts_list = ["-P" if opt == "-PP" else opt for opt in opts_list]
+            new_opts_value = shlex.join(opts_list)
+            logger.info("Replacing -PP with -P in SBD_OPTS in %s", SBDManager.SYSCONFIG_SBD)
+            SBDManager.update_sbd_configuration({"SBD_OPTS": new_opts_value})
+            return
 
         logger.info("Setting SBD_PACEMAKER in %s to yes", SBDManager.SYSCONFIG_SBD)
         SBDManager.update_sbd_configuration({"SBD_PACEMAKER": "yes"})
