@@ -18,7 +18,7 @@ transitions
 refresh
 resource d1
 # reduce report span
-timeframe "2019-03-22 15:07:37"
+limit "2019-03-22 15:07:37"
 peinputs
 resource d1
 exclude corosync|pacemaker-based|pacemaker-fenced|pacemaker-execd|pacemaker-attrd|pacemaker-schedulerd|pacemaker-controld|sshd
@@ -28,8 +28,8 @@ transition -1 nograph
 transition save 0 _crmsh_regtest
 transition log 49
 transition tags 49
-# reset timeframe
-timeframe
+# reset limit
+limit
 session save _crmsh_regtest
 session load _crmsh_regtest
 session

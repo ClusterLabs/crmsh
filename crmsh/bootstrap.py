@@ -66,7 +66,7 @@ PROFILES_FILE = "/etc/crm/profiles.yml"
 SYSCONFIG_PCMK = "/etc/sysconfig/pacemaker"
 SYSCONFIG_NFS = "/etc/sysconfig/nfs"
 PCMK_REMOTE_AUTH = "/etc/pacemaker/authkey"
-SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk.service"]
+SERVICES_STOP_LIST = ["corosync-qdevice.service", "corosync.service", "hawk-apiserver.service", "hawk.service"]
 SERVICES_DISABLE_LIST = ["pacemaker.service", "sbd.service"]
 BOOTH_DIR = "/etc/booth"
 BOOTH_CFG = "/etc/booth/booth.conf"
@@ -762,8 +762,20 @@ def init_cluster_local():
 
     # only try to start hawk if hawk is installed
     service_manager = ServiceManager()
-    if service_manager.service_is_available("hawk.service"):
-        service_manager.start_service("hawk.service", enable=True)
+    hawk_service = None
+    # First try to start the new hawk-apiserver (Go),
+    # if there is none -> fall back to the old hawk & hawk-backend (Ruby)
+    for service in ("hawk-apiserver.service", "hawk.service"):
+        if service_manager.service_is_available(service):
+            hawk_service = service
+            break
+
+    if hawk_service:
+        if hawk_service == "hawk-apiserver.service":
+            for service in ("hawk.service", "hawk-backend.service"):
+                if service_manager.service_is_available(service):
+                    service_manager.stop_service(service, disable=True)
+        service_manager.start_service(hawk_service, enable=True)
         logger.info("Hawk cluster interface is now running. To see cluster status, open:")
         logger.info("  https://{}:7630/".format(_global_variables.default_ip_list[0]))
         logger.info("Log in with username 'hacluster'{}".format(pass_msg))

@@ -438,9 +438,7 @@ Refreshing log data...
 2019-03-22T11:03:05.193318+08:00 15sp1-1 pacemaker-execd[1746]:  notice: executing - rsc:d1 action:start call_id:21
 2019-03-22T11:03:05.226554+08:00 15sp1-1 pacemaker-execd[1746]:  notice: finished - rsc:d1 action:start call_id:21 pid:1848 exit-code:0 exec-time:33ms queue-time:0ms
 .INP: # reduce report span
-.INP: timeframe "2019-03-22 15:07:37"
-WARNING: 20: This command 'timeframe' is deprecated, please use 'limit'
-INFO: 20: "timeframe" is accepted as "limit"
+.INP: limit "2019-03-22 15:07:37"
 .INP: peinputs
 history-test/15sp1-2/pengine/pe-input-3.bz2
 history-test/15sp1-2/pengine/pe-input-4.bz2
@@ -584,10 +582,8 @@ INFO: 27: transition history-test/15sp1-2/pengine/pe-input-19.bz2 saved to shado
 2019-03-22T11:00:42.765239+08:00 15sp1-1 systemd[1]: Stopped target Host and Network Name Lookups.
 .INP: transition tags 49
 stonith-sbd
-.INP: # reset timeframe
-.INP: timeframe
-WARNING: 31: This command 'timeframe' is deprecated, please use 'limit'
-INFO: 31: "timeframe" is accepted as "limit"
+.INP: # reset limit
+.INP: limit
 .INP: session save _crmsh_regtest
 .INP: session load _crmsh_regtest
 .INP: session

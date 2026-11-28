@@ -2148,11 +2148,13 @@ class TestValidation(unittest.TestCase):
         mock_active.assert_has_calls([
             mock.call("corosync-qdevice.service", remote_addr=None),
             mock.call("corosync.service", remote_addr=None),
+            mock.call("hawk-apiserver.service", remote_addr=None),
             mock.call("hawk.service", remote_addr=None),
             ])
         mock_status.assert_has_calls([
             mock.call('Stopping and disable %s on node %s', 'corosync-qdevice.service', 'node1'),
             mock.call('Stopping and disable %s on node %s', 'corosync.service', 'node1'),
+            mock.call('Stopping and disable %s on node %s', 'hawk-apiserver.service', 'node1'),
             mock.call('Stopping and disable %s on node %s', 'hawk.service', 'node1'),
             mock.call('Disable %s on node %s', 'pacemaker.service', 'node1'),
             mock.call('Disable %s on node %s', 'sbd.service', 'node1'),
@@ -2160,6 +2162,7 @@ class TestValidation(unittest.TestCase):
         mock_stop.assert_has_calls([
             mock.call("corosync-qdevice.service", disable=True, remote_addr=None),
             mock.call("corosync.service", disable=True, remote_addr=None),
+            mock.call("hawk-apiserver.service", disable=True, remote_addr=None),
             mock.call("hawk.service", disable=True, remote_addr=None),
             ])
 
